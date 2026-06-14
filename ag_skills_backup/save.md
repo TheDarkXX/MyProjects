@@ -43,9 +43,10 @@ Hybrid save pipeline สำหรับทุกโปรเจกต์ใน M
 ### Phase 2: Openclaw-VPS Sync (ศูนย์บัญชาการ)
 6. **Copy** the same file to `c:\My Claw\Openclaw-VPS\Quick Save\Active\[ProjectName]\` (or `Complete\[ProjectName]\` if done).
 7. **Update Openclaw Manifest:** Run `node scripts/qs-indexer.js --incremental` in Openclaw-VPS.
+8. **Commit & Push to VPS:** `cd "c:\My Claw\Openclaw-VPS"` → `git add .` → `git commit -m "[AG] Sync Quick Save: [ProjectName] [version]"` → `git push vps` → `git push origin`.
 
 ### Phase 3: Git (MyProjects repo)
-8. **Commit:** `git add .` + `git commit -m "[AG] Save [ProjectName] [version]"` in MyProjects root.
-9. **Push:** `git push origin` (sync between PCs).
-10. **Report:** Done.
+9. **Commit:** `git add .` + `git commit -m "[AG] Save [ProjectName] [version]"` in MyProjects root.
+10. **Push:** `git push origin` (sync between PCs).
+11. **Report:** Done.
 
