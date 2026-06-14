@@ -1,0 +1,32 @@
+# 💊 DoctorBank Band — Agent Navigator
+
+> **อ่านไฟล์นี้ก่อนเสมอ** เมื่อ Agent Focus Lock มาที่โปรเจกต์นี้
+
+## 🎯 Project Overview
+- **DoctorBank Band** คือโปรเจกต์ Brand/Business ของ Doctor Bank (พี่แบงค์)
+- เป้าหมาย: วางแผนสินค้า สร้างแบรนด์ การขายสินค้าแบบครบ loop
+- อุตสาหกรรม: อาหารเสริม (Supplement) + Health Content
+- **Location:** `c:\My Claw\MyProjects\DoctorBank-Band\`
+- **Environment:** Git (via MyProjects umbrella repo)
+
+## 📦 Products (Sub-projects)
+
+| Product | Path | สถานะ |
+|---------|------|-------|
+| **Magnesium Night Plus** | `Products/Magnesium-Night-Plus/` | 🟡 Pre-launch |
+
+## 📜 Memory Inheritance
+
+```
+🌍 Global: Openclaw-VPS/AGENTS.md
+    ↓
+🏠 Root: MyProjects/AGENT_CONTEXT.md (Focus Protocol)
+    ↓
+💊 Project: memory.md (กฎเฉพาะ DoctorBank Band) ← คุณอยู่ที่นี่
+    ↓
+📦 Product: Products/[name]/PRODUCT_MEMORY.md
+```
+
+## 🔗 Essential Files
+- กฎโปรเจกต์: [memory.md](memory.md)
+- ดัชนีสกิล (Global): [MyProjects/ag_skills_backup/AG_SKILLS_INDEX.md](file:///c:/My%20Claw/MyProjects/ag_skills_backup/AG_SKILLS_INDEX.md)

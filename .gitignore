@@ -1,0 +1,20 @@
+# Node
+node_modules/
+
+# Secrets
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Scratch
+scratch/
+
+# Media (ถ้ามีโปรเจกต์ Content/Media)
+*.mp4
+*.mov
+*.avi
+*.mkv

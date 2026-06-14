@@ -1,0 +1,12 @@
+{
+  "folders": [
+    { "path": "." },
+    { "path": "c:\\My Claw\\Openclaw-VPS", "name": "🔧 Openclaw-VPS (ศูนย์บัญชาการ)" }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.git": true
+    }
+  }
+}
