@@ -1,7 +1,6 @@
 {
   "folders": [
-    { "path": "." },
-    { "path": "c:\\My Claw\\Openclaw-VPS", "name": "🔧 Openclaw-VPS (ศูนย์บัญชาการ)" }
+    { "path": "." }
   ],
   "settings": {
     "files.exclude": {
