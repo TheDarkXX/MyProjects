@@ -30,6 +30,7 @@
 - Product image: [Products/Magnesium-Night-Plus/product-hero.png](Products/Magnesium-Night-Plus/product-hero.png)
 - 1M Battle Plan (กลยุทธ์): [Sales/1M-battle-plan.md](Sales/1M-battle-plan.md)
 - Road to 1M Execution (ปฏิบัติการ): [Sales/road-to-1m-execution.md](Sales/road-to-1m-execution.md)
+- Daily Action Plan (รายวัน): [Sales/Daily-Action-Plan/](Sales/Daily-Action-Plan/00-overview.md)
 
 ## 🕒 Changelog & Updates
 - **2026-06-14:** 📝 Initialized project structure.
