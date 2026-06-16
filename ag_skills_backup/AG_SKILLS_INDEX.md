@@ -10,6 +10,7 @@
 | `/save` | `c:\My Claw\MyProjects\ag_skills_backup\save.md` | Hybrid save — uses Focus Lock project path |
 | `/qc` | `c:\My Claw\MyProjects\ag_skills_backup\qc.md` | Quick Clear — cleanup Focus Lock project |
 | `/reviewchat` | `c:\My Claw\MyProjects\ag_skills_backup\reviewchat.md` | Self-review — target Focus Lock project memory |
+| `/reorg` | `c:\My Claw\MyProjects\ag_skills_backup\reorg.md` | Reorganize folder — scan, classify, propose & move |
 
 ## 📋 Global Skills (from Openclaw-VPS)
 
