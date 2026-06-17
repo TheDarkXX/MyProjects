@@ -16,15 +16,14 @@
 
 ## Execution Steps
 
-### Phase 0: Triage (ใช้แล้ว vs ยังใช้อยู่)
+### Phase 0: Triage & Analysis (วิเคราะห์ก่อน ห้ามโยนให้ User คิด)
 1. **Scan target folder** — list ไฟล์และ subdirectories ทั้งหมด
-2. **Check usage status** ของแต่ละไฟล์:
-   - ถาม User: "ไฟล์/โฟลเดอร์เหล่านี้ยังใช้อยู่ไหม หรือดึงข้อมูลหมดแล้ว?"
-   - แสดง list ให้เลือกเป็นกลุ่ม (multi-select)
-   - Mark เป็น: `🟢 KEEP` / `🔴 DELETE` / `🟡 UNSURE`
-3. **ถ้ามีไฟล์ `🔴 DELETE`:**
-   - แสดง list ยืนยันก่อนลบ
-   - ลบเฉพาะที่ User ยืนยันแล้วเท่านั้น
+2. **Analyze & Auto-Classify**:
+   - AI ต้อง **คิดวิเคราะห์เนื้อหาและบริบทของไฟล์เองก่อน**
+   - กำหนดสถานะเบื้องต้นเป็น `🟢 KEEP` (เตรียมจัดหมวดหมู่), `🔴 DELETE` (ดูเป็นไฟล์ขยะ/ดึงข้อมูลแล้ว), หรือ `🟡 UNSURE`
+   - **ห้าม** โยน list ไฟล์ดิบๆ ไปให้ User นั่งเลือกเองตั้งแต่แรก
+3. **ถ้ามีไฟล์ `🔴 DELETE` หรือ `🟡 UNSURE`:**
+   - นำเสนอการวิเคราะห์ให้ User ดูและรอการยืนยัน
 
 ### Phase 1: Classify (จัดหมวดไฟล์ที่ KEEP)
 4. **จัดประเภทไฟล์ตามเนื้อหา:**
@@ -42,24 +41,26 @@
    - ชื่อ subdirectories ที่คล้ายกัน → จัดรวมกัน (e.g., brand folders → `Brands/`)
    - ไฟล์ที่ชื่อ prefix เดียวกัน → จัดรวมกัน
 
-### Phase 2: Propose Plan
+### Phase 2: Propose Plan (ย้ายออกนอก Staging Area)
 6. **แสดง Reorganization Plan:**
+   - **กฎเหล็ก:** โฟลเดอร์ต้นทาง (เช่น `Quick Upload`) เป็นเพียงจุดพักไฟล์ (Staging Area) **ห้ามจัดระเบียบแล้วทิ้งไว้ในนี้เด็ดขาด**
+   - ต้องเสนอให้ย้ายออกไปยังโฟลเดอร์เก็บข้อมูลหลัก (เช่น `Organized Assets`) เพื่อเคลียร์ให้ต้นทางว่างเปล่า
    ```
-   📂 [Target Folder]
+   📂 [Destination Folder] (เช่น Organized Assets)
    │
-   │  🔴 DELETE (x files):
-   │  ├── old_file.pdf
-   │  └── used_data.csv
-   │
-   │  🟢 REORGANIZE:
+   │  🟢 REORGANIZE (ย้ายมาจาก [Target Folder]):
    │  ├── 📁 Brands/
    │  │   ├── brand_a/  ← (moved)
    │  │   └── brand_b/  ← (moved)
    │  └── 📁 Reports/
    │      ├── report1.pdf  ← (moved)
    │      └── report2.pdf  ← (moved)
+   
+   🗑️ ลบทิ้ง (DELETE):
+   ├── old_file.pdf
+   └── used_data.csv
    ```
-7. **ถาม User ยืนยัน** ก่อนดำเนินการ
+7. **ถาม User ยืนยัน** ก่อนดำเนินการ (เปิดโอกาสให้ User แก้ไขชื่อ Destination Folder ได้)
 
 ### Phase 3: Execute
 8. **Delete** ไฟล์ที่ User ยืนยัน `🔴 DELETE`
@@ -85,25 +86,28 @@
 ### Example 1: Product comparison project (cleanup + reorg)
 ```
 Before:                              After:
-Quick Upload/                        Quick Upload/
+Quick Upload/                        Organized Assets/
 ├── brand_a/          🟢 KEEP        ├── Brands/
 ├── brand_b/          🟢 KEEP        │   ├── brand_a/
 ├── old_draft.pdf     🔴 DELETE      │   └── brand_b/
 ├── report_v1.pdf     🔴 DELETE      └── Reports/
 ├── report_final.pdf  🟢 KEEP            └── report_final.pdf
-└── raw_data.csv      🔴 DELETE
+└── raw_data.csv      🔴 DELETE      
+                                     Quick Upload/ (Empty)
                                      🗑️ Deleted: 3 files (2.1 MB freed)
 ```
 
 ### Example 2: Mixed media raw dump
 ```
 Before:                              After:
-Quick Upload/                        Quick Upload/
+Quick Upload/                        Organized Assets/
 ├── product_front.jpg  🟢 KEEP       ├── Product Images/
 ├── product_back.jpg   🟢 KEEP       │   ├── product_front.jpg
 ├── ingredients.png    🟢 KEEP       │   └── product_back.jpg
 ├── old_screenshot.png 🔴 DELETE     └── Ingredients/
 └── nutrition.pdf      🟢 KEEP           ├── ingredients.png
                                          └── nutrition.pdf
+                                     
+                                     Quick Upload/ (Empty)
                                      🗑️ Deleted: 1 file (0.3 MB freed)
 ```
