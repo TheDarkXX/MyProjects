@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magnesium Infographic - DoctorBank Theme</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #1a202c;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 1rem;
+        }
+        .clinic-card {
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px -5px rgba(11, 32, 70, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .clinic-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px -10px rgba(11, 32, 70, 0.15);
+        }
+        /* Soft blue waves decoration for the card */
+        .wave-decoration {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg"><path fill="%23e8f0fe" fill-opacity="0.5" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,165.3C960,149,1056,171,1152,186.7C1248,203,1344,213,1392,218.7L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+            background-size: cover;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .text-navy {
+            color: #0b2046;
+        }
+        .bg-navy {
+            background-color: #0b2046;
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-6xl w-full">
+        <!-- Header -->
+        <div class="text-center mb-16">
+            <div class="inline-block mb-3 px-6 py-2 rounded-full bg-navy text-white text-sm tracking-widest uppercase font-semibold shadow-md">
+                DOCTORBANK® OFFICIAL
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 text-navy tracking-tight mt-4">
+                MAGNESIUM 4 รูปแบบ
+            </h1>
+            <p class="text-xl text-gray-600 font-medium">เลือกทานแบบไหน ให้ตอบโจทย์และแก้ปัญหาสุขภาพคุณที่สุด?</p>
+        </div>
+
+        <!-- Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- Bisglycinate -->
+            <div class="clinic-card p-8 flex flex-col items-center text-center group">
+                <div class="wave-decoration"></div>
+                <div class="relative z-10 w-20 h-20 rounded-full bg-[#f0f4f8] flex items-center justify-center text-4xl mb-6 text-navy border-2 border-[#d9e2ec] group-hover:bg-navy group-hover:text-white transition-colors duration-300">
+                    <i class="fa-solid fa-moon"></i>
+                </div>
+                <h2 class="text-xl font-bold mb-3 text-navy uppercase tracking-wide">Bisglycinate</h2>
+                <div class="px-4 py-1 rounded-full text-xs font-semibold mb-5 bg-[#e2e8f0] text-navy">
+                    NIGHT FORMULA (สายพักผ่อน)
+                </div>
+                <p class="text-gray-600 text-sm mb-6 leading-relaxed flex-grow relative z-10 font-medium">
+                    ฟอร์มที่ดูดซึมดีที่สุด อ่อนโยนต่อกระเพาะ ไม่ทำให้ท้องเสีย ทะลวงเข้าสู่สมองได้ดีเยี่ยม
+                </p>
+                <div class="w-full pt-5 border-t border-gray-100 text-left relative z-10">
+                    <p class="text-navy text-sm font-bold mb-2"><i class="fa-solid fa-check-circle mr-2 text-[#48bb78]"></i>เหมาะสำหรับ</p>
+                    <ul class="text-sm text-gray-600 space-y-1.5 font-medium">
+                        <li>• คนหลับยาก / นอนไม่หลับ</li>
+                        <li>• ลดความเครียด วิตกกังวล</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Amino Acid Chelate -->
+            <div class="clinic-card p-8 flex flex-col items-center text-center group">
+                <div class="wave-decoration"></div>
+                <div class="relative z-10 w-20 h-20 rounded-full bg-[#f0f4f8] flex items-center justify-center text-4xl mb-6 text-navy border-2 border-[#d9e2ec] group-hover:bg-navy group-hover:text-white transition-colors duration-300">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2 class="text-xl font-bold mb-3 text-navy uppercase tracking-wide">Amino Chelate</h2>
+                <div class="px-4 py-1 rounded-full text-xs font-semibold mb-5 bg-[#e2e8f0] text-navy">
+                    BALANCE (สายบาลานซ์)
+                </div>
+                <p class="text-gray-600 text-sm mb-6 leading-relaxed flex-grow relative z-10 font-medium">
+                    จับตัวกับกรดอะมิโน ร่างกายนำไปใช้ได้ง่าย เป็นฟอร์มรวมๆ ที่ใช้ดูแลสุขภาพพื้นฐานได้อย่างดี
+                </p>
+                <div class="w-full pt-5 border-t border-gray-100 text-left relative z-10">
+                    <p class="text-navy text-sm font-bold mb-2"><i class="fa-solid fa-check-circle mr-2 text-[#48bb78]"></i>เหมาะสำหรับ</p>
+                    <ul class="text-sm text-gray-600 space-y-1.5 font-medium">
+                        <li>• บำรุงสุขภาพโดยรวม</li>
+                        <li>• ฟื้นฟูกล้ามเนื้อทั่วไป</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Citrate -->
+            <div class="clinic-card p-8 flex flex-col items-center text-center group">
+                <div class="wave-decoration"></div>
+                <div class="relative z-10 w-20 h-20 rounded-full bg-[#f0f4f8] flex items-center justify-center text-4xl mb-6 text-navy border-2 border-[#d9e2ec] group-hover:bg-navy group-hover:text-white transition-colors duration-300">
+                    <i class="fa-solid fa-droplet"></i>
+                </div>
+                <h2 class="text-xl font-bold mb-3 text-navy uppercase tracking-wide">Citrate</h2>
+                <div class="px-4 py-1 rounded-full text-xs font-semibold mb-5 bg-[#e2e8f0] text-navy">
+                    DIGESTION (สายขับถ่าย)
+                </div>
+                <p class="text-gray-600 text-sm mb-6 leading-relaxed flex-grow relative z-10 font-medium">
+                    ดูดซึมดี ราคาเข้าถึงง่าย มีคุณสมบัติดึงน้ำเข้าลำไส้ จึงมีฤทธิ์เป็น<span class="whitespace-nowrap">ยาระบายอ่อนๆ</span>
+                </p>
+                <div class="w-full pt-5 border-t border-gray-100 text-left relative z-10">
+                    <p class="text-navy text-sm font-bold mb-2"><i class="fa-solid fa-check-circle mr-2 text-[#48bb78]"></i>เหมาะสำหรับ</p>
+                    <ul class="text-sm text-gray-600 space-y-1.5 font-medium">
+                        <li>• คนที่มีปัญหาท้องผูก</li>
+                        <li>• ลดอาการตะคริว</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Malate -->
+            <div class="clinic-card p-8 flex flex-col items-center text-center group">
+                <div class="wave-decoration"></div>
+                <div class="relative z-10 w-20 h-20 rounded-full bg-[#f0f4f8] flex items-center justify-center text-4xl mb-6 text-navy border-2 border-[#d9e2ec] group-hover:bg-navy group-hover:text-white transition-colors duration-300">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <h2 class="text-xl font-bold mb-3 text-navy uppercase tracking-wide">Malate</h2>
+                <div class="px-4 py-1 rounded-full text-xs font-semibold mb-5 bg-[#e2e8f0] text-navy">
+                    ENERGY (สายพลังงาน)
+                </div>
+                <p class="text-gray-600 text-sm mb-6 leading-relaxed flex-grow relative z-10 font-medium">
+                    จับกับกรดมาลิก ซึ่งอยู่ในวงจรสร้างพลังงานของเซลล์ ทานแล้วรู้สึกสดชื่น มีเรี่ยวแรง
+                </p>
+                <div class="w-full pt-5 border-t border-gray-100 text-left relative z-10">
+                    <p class="text-navy text-sm font-bold mb-2"><i class="fa-solid fa-check-circle mr-2 text-[#48bb78]"></i>เหมาะสำหรับ</p>
+                    <ul class="text-sm text-gray-600 space-y-1.5 font-medium">
+                        <li>• คนอ่อนเพลียเรื้อรัง</li>
+                        <li>• ปวดเมื่อย / ทานตอนเช้า</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Footer note -->
+        <div class="text-center mt-12 text-navy text-sm font-semibold flex items-center justify-center gap-2">
+            <i class="fa-solid fa-shield-check text-lg"></i>
+            <span>DOCTORBANK® PREMIUM SUPPLEMENTS</span>
+        </div>
+    </div>
+</body>
+</html>
