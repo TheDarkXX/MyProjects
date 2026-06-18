@@ -12,9 +12,10 @@
 | **แบรนด์** | DR.BANK |
 | **ประเภท** | อาหารเสริม — Night Formula |
 | **ขนาดบรรจุ** | 30 Capsules |
-| **ราคา** | 650–750 บาท |
-| **สถานะ** | 🟡 Pre-launch |
+| **ราคาขายจริง (Hero SKU)** | 890 บาท / 30 capsules |
+| **สถานะ** | 🟢 Active (TikTok Shop) |
 | **Strategic role** | Hero SKU ตัวแรก — ใช้ปั้นตลาดผ่าน social commerce |
+| **เลขที่ อย.** | 26-1-02465-5-0114 |
 
 ---
 
@@ -159,9 +160,18 @@
 
 ## 💰 Price & Market Frame
 
-- **ราคา:** 650–750 บาท / 30 capsules
 - **Segment:** Premium Mass / Entry Premium Sleep Support
 - **แนวคิดการแข่งขัน:** ไม่แข่งราคาถูกสุด แต่แข่งด้วย "สูตรที่ดูครบกว่า ประสบการณ์ที่ดีกว่า และน่าเชื่อถือกว่า magnesium เดี่ยว"
+
+### 🟢 โครงสร้างราคาจำหน่ายจริง (TikTok Shop — อัปเดต มิ.ย. 2569)
+
+> ใช้ฐานราคาป้ายที่ **1,590 บาทต่อขวด** ทำให้ส่วนลดขยับขึ้นตามเซตอย่างสมเหตุสมผล (44% → 50% → 58%)
+
+| SKU | ราคาป้าย (ขีดฆ่า) | ส่วนลด | ราคาขาย | คูปอง -100 | ราคาที่ลูกค้าจ่ายจริง | ตกขวดละ |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| 1 ขวด (Anchor) | ~~1,590~~ | -44% | **890** | -100 | **790** | 790 |
+| เซตคู่ 2 ขวด (Decoy) | ~~3,180~~ | -50% | **1,590** | -100 | **1,490** | 745 |
+| เซตสุดคุ้ม 3 แถม 1 / 4 ขวด (Hero ⭐) | ~~6,360~~ | -58% | **2,670** | -100 | **2,570** | **642.50** |
 
 ---
 
@@ -198,3 +208,5 @@ Doctorbank Magnesium Night Plus is a premium non-melatonin night formula under D
 
 - **2026-06-14:** Initialized product memory.
 - **2026-06-15:** 🔄 Major update — Imported full data from Quick Upload (brand context + product context + product image). Added formula details, certified ingredients (NovoMin®, PharmaGABA®, AlphaWave®), differentiators, messaging pillars, visual identity, marketplace framework, FAQ, and AI prompt block.
+- **2026-06-17:** ➕ Added FDA Number (เลขสารบบอาหาร 26-1-02465-5-0114) to Product Identity.
+- **2026-06-18:** 💰 อัปเดตโครงสร้างราคาจำหน่ายจริง (3-Tier Decoy) — ราคาป้าย 1,590/ขวด, ส่วนลด 44%→50%→58%, ราคาขาย 890/1,590/2,670 บาท (มี คูปอง -100/ออเดอร์). สถานะเปลี่ยนจาก Pre-launch เป็น Active.
