@@ -150,6 +150,8 @@ def run_transcription():
         print(f"Detected language: {info.language} (probability: {info.language_probability:.2f})")
         
         print("\n--- Transcription Results (Word-Level Grouped) ---")
+        all_grouped_words = []
+        
         with open("whisper_grouper_result.txt", "w", encoding="utf-8") as f:
             for segment in segments:
                 line = f"\n[{segment.start:.2f}s -> {segment.end:.2f}s]: {segment.text}"
@@ -159,13 +161,27 @@ def run_transcription():
                 if segment.words:
                     # Apply PyThaiNLP grouper
                     grouped_words = group_whisper_chars(segment.words)
+                    all_grouped_words.extend(grouped_words) # Accumulate for SRT
+                    
                     for gw in grouped_words:
                         w_line = f"  - [{gw['start']:.2f}s -> {gw['end']:.2f}s]: {gw['word']}"
                         print(w_line)
                         f.write(w_line + "\n")
+                        
+        # ----------------------------------------------------
+        # Generate SRT Files using Subtitle Generator
+        # ----------------------------------------------------
+        try:
+            import subtitle_generator
+            print("\n=== Generating Subtitle Files (.srt) ===")
+            subtitle_generator.generate_srt(all_grouped_words, "hypercut_preset_hormozi.srt", preset="hormozi")
+            subtitle_generator.generate_srt(all_grouped_words, "hypercut_preset_flow.srt", preset="flow")
+            subtitle_generator.generate_srt(all_grouped_words, "hypercut_preset_classic.srt", preset="classic")
+        except Exception as srt_err:
+            print(f"[-] Failed to generate SRT: {srt_err}")
             
         transcribe_time = time.time() - transcribe_start
-        print(f"\n[+] Transcription completed in {transcribe_time:.2f} seconds.")
+        print(f"\n[+] Transcription & Subtitle generation completed in {transcribe_time:.2f} seconds.")
     except Exception as e:
         print(f"[-] Transcription failed: {e}")
 
