@@ -1,0 +1,106 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#video-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Prevents stretching */
+    z-index: -1;
+}
+
+#subtitle-container {
+    position: absolute;
+    bottom: 12%; 
+    width: 90%;
+    text-align: center;
+    z-index: 10;
+    line-height: 1.4;
+}
+
+/* Base Subtitle Style */
+.subtitle-word {
+    font-family: var(--font-family, 'Prompt', sans-serif);
+    display: inline-block;
+    margin: 0 4px;
+    opacity: 0;
+    transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* =========================================
+   Preset 1: Hormozi (Pop & Bold)
+========================================= */
+.preset-hormozi .subtitle-word {
+    font-size: var(--font-size, 85px);
+    font-weight: 800;
+    color: #FFFFFF;
+    -webkit-text-stroke: var(--stroke-width, 3px) var(--stroke-color, #000000);
+    text-shadow: var(--text-shadow, 4px 4px 0px var(--stroke-color, #000000), 0px 8px 15px rgba(0,0,0,0.6));
+    text-transform: uppercase;
+}
+.preset-hormozi .subtitle-word.active {
+    opacity: 1;
+    color: var(--text-color, #FFDE59); /* Yellow Gold */
+    transform: scale(1.15) translateY(-5px);
+}
+.preset-hormozi .subtitle-word.past {
+    display: none; /* Only show active word in Hormozi */
+}
+.preset-hormozi .subtitle-word.future {
+    display: none;
+}
+
+/* =========================================
+   Preset 2: Flow (Smooth Fade In)
+========================================= */
+.preset-flow .subtitle-word {
+    font-size: var(--font-size, 64px);
+    font-weight: 700;
+    color: #FFFFFF;
+    -webkit-text-stroke: var(--stroke-width, 2px) var(--stroke-color, #000000);
+    text-shadow: var(--text-shadow, 2px 2px 8px rgba(0,0,0,0.9));
+}
+.preset-flow .subtitle-word.active {
+    opacity: 1;
+    color: var(--text-color, #00E5FF); /* Cyan */
+    transform: scale(1.05);
+}
+.preset-flow .subtitle-word.past {
+    opacity: 1;
+    color: #E0E0E0;
+}
+.preset-flow .subtitle-word.future {
+    opacity: 0;
+}
+
+/* =========================================
+   Preset 3: Classic (Black background box)
+========================================= */
+.preset-classic {
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px 25px;
+    border-radius: 12px;
+    display: inline-block;
+}
+.preset-classic .subtitle-word {
+    font-size: var(--font-size, 48px);
+    font-weight: 500;
+    color: #FFFFFF;
+    opacity: 1;
+    -webkit-text-stroke: var(--stroke-width, 0px) var(--stroke-color, #000000);
+    text-shadow: var(--text-shadow, none);
+}
+.preset-classic .subtitle-word.active {
+    color: var(--text-color, #FFD700);
+}

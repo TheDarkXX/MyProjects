@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperCut AI</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/theme.css">
+    <link rel="stylesheet" href="./styles/layout.css">
+    <link rel="stylesheet" href="./styles/components.css">
+</head>
+<body>
+    <div id="app" class="dark-theme">
+        <header class="app-header">
+            <div class="logo">HyperCut AI ✨</div>
+            <nav class="tabs">
+                <button class="tab-btn active" data-target="cut-lab">✂️ Cut Lab</button>
+                <button class="tab-btn" data-target="editor">📹 Editor</button>
+                <button class="tab-btn" data-target="presets">🎨 Presets</button>
+                <button class="tab-btn" data-target="ai-room">🤖 AI Room</button>
+                <button class="tab-btn" data-target="settings">⚙️ Settings</button>
+            </nav>
+        </header>
+
+        <main class="app-content">
+            
+            <!-- CUT LAB PAGE -->
+            <div id="cut-lab" class="page active">
+                <div class="grid-cut-lab">
+                    <!-- Left: Video & Waveform -->
+                    <section class="col-cut-preview">
+                        <div class="panel-header">Source Preview</div>
+                        <div class="panel-body video-container" style="position: relative;">
+                            <!-- Drop Zone for Cut Lab -->
+                            <div id="cut-drop-zone" class="drop-zone">
+                                <div class="drop-icon">🎬</div>
+                                <div class="drop-title">Drag &amp; Drop Video Here</div>
+                                <div class="drop-sub">or</div>
+                                <button id="cut-browse-btn" class="btn primary" style="margin-top: 8px; padding: 8px 20px;">📂 Browse File</button>
+                                <div class="drop-types">mp4 · mkv · mov · webm · avi</div>
+                            </div>
+                            <video id="cut-video" style="display:none; width:100%; height:100%; object-fit:contain; background:#000;" controls></video>
+                        </div>
+                        <div class="panel-header" style="margin-top: 10px;">Waveform & Silence Map</div>
+                        <div class="panel-body waveform-container" id="wave-container" style="position: relative; flex: none; height: 180px; background: #1a1f28; border-radius: 4px; overflow-x: auto; overflow-y: hidden; margin-bottom: 10px;">
+                            <div id="waveform-scroll-inner" style="position: relative; height: 100%; min-width: 100%; cursor: pointer;">
+                                <canvas id="silence-canvas" style="position: absolute; top:0; left:0; height:100%; pointer-events:none; z-index:1;"></canvas>
+                                <canvas id="waveform-canvas" style="position: absolute; top:0; left:0; height:100%; pointer-events:none; z-index:2;"></canvas>
+                                <div id="playhead" style="position:absolute; top:0; bottom:0; left:0; width:2px; background: #FFDE59; pointer-events:none; z-index:10; box-shadow: 0 0 4px #FFDE59;"></div>
+                            </div>
+                        </div>
+                        <div id="cut-stats" style="text-align: center; font-size: 0.9rem; color: #a1a1aa;">
+                            Load a video to scan silence...
+                        </div>
+                    </section>
+
+                    <!-- Right: Settings & Actions -->
+                    <section class="col-cut-controls">
+                        <div class="panel-header">⚙️ Settings</div>
+                        <div class="panel-body">
+                            
+                            <div class="style-row">
+                                <span>Threshold (dB)</span>
+                                <div class="slider-group">
+                                    <input type="range" id="cut-threshold" min="-60" max="-10" value="-35" class="style-slider">
+                                    <span id="cut-threshold-val" class="slider-label">-35</span>
+                                </div>
+                            </div>
+                            
+                            <div class="style-row">
+                                <span style="font-size:0.8rem">Min Duration (s)</span>
+                                <div class="slider-group">
+                                    <input type="range" id="cut-min-dur" min="0.1" max="2.0" step="0.1" value="0.5" class="style-slider">
+                                    <span id="cut-min-dur-val" class="slider-label">0.5</span>
+                                </div>
+                            </div>
+
+                            <div class="style-row">
+                                <span>Pre-Pad (s)</span>
+                                <div class="slider-group">
+                                    <input type="range" id="cut-pre-pad" min="0.0" max="1.0" step="0.1" value="0.2" class="style-slider">
+                                    <span id="cut-pre-pad-val" class="slider-label">0.2</span>
+                                </div>
+                            </div>
+
+                            <div class="style-row">
+                                <span>Post-Pad (s)</span>
+                                <div class="slider-group">
+                                    <input type="range" id="cut-post-pad" min="0.0" max="1.0" step="0.1" value="0.3" class="style-slider">
+                                    <span class="value-display" id="cut-post-pad-val">0.3</span>
+                                </div>
+                            </div>
+                            <div class="style-row">
+                                <span>Waveform Zoom</span>
+                                <div class="slider-group">
+                                    <input type="range" id="cut-wave-zoom" min="1" max="10" step="0.5" value="1" class="style-slider">
+                                    <span class="value-display" id="cut-wave-zoom-val">1x</span>
+                                </div>
+                            </div>
+
+                            <div class="style-row" style="margin-top: 15px;">
+                                <span>Playback Speed</span>
+                                <select id="cut-playback-speed" class="style-select">
+                                    <option value="1">1x</option>
+                                    <option value="1.5">1.5x</option>
+                                    <option value="2">2x</option>
+                                    <option value="2.5">2.5x</option>
+                                    <option value="3">3x</option>
+                                    <option value="4">4x</option>
+                                    <option value="5">5x</option>
+                                </select>
+                            </div>
+                            <div class="style-row" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                                <span>Audio Normalize (EBU R128)</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="cut-audio-norm" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+
+                            <div class="control-section" style="margin-top: 20px;">
+                                <h3>ACTIONS</h3>
+                                <div class="actions-grid" style="grid-template-columns: 1fr;">
+                                    <button id="scan-silence-btn" class="btn">🔍 Scan Silence</button>
+                                    <button id="apply-cut-btn" class="btn primary" style="background: #e94560; margin-top:10px;">✂️ Apply & Send to Editor →</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- EDITOR PAGE -->
+            <div id="editor" class="page" style="display: none;">
+                <div class="grid-4-col">
+                    <section class="col-assets">
+                        <div class="panel-header">Assets</div>
+                        <div class="panel-body">
+                            <div class="asset-tree">
+                                <div class="asset-folder">📁 Projects</div>
+                                <div class="asset-folder">📁 B-Roll</div>
+                                <div class="asset-folder">📁 SFX</div>
+                                <div class="asset-folder">📁 BGM</div>
+                            </div>
+                            <button class="btn" style="width:100%; margin-top: 20px;">🔍 Scan Assets</button>
+                        </div>
+                    </section>
+                    <section class="col-preview">
+                        <div class="panel-header">Video Preview</div>
+                        <div class="panel-body video-container" id="video-container-panel" style="position: relative; overflow: hidden;">
+                            <!-- Drop Zone -->
+                            <div id="drop-zone" class="drop-zone">
+                                <div class="drop-icon">🎬</div>
+                                <div class="drop-title">Drag &amp; Drop Video Here</div>
+                                <div class="drop-sub">or</div>
+                                <button id="browse-btn" class="btn primary" style="margin-top: 8px; padding: 8px 20px;">📂 Browse File</button>
+                                <div class="drop-types">mp4 · mkv · mov · webm · avi</div>
+                            </div>
+                            <!-- Video element (shown after loading) -->
+                            <video id="main-video" style="display:none; width:100%; height:100%; object-fit:contain; border-radius:8px; background:#000;"></video>
+                            
+                            <!-- Subtitle Overlay - NEVER removed from DOM -->
+                            <div id="subtitle-overlay" style="
+                                position: absolute; 
+                                bottom: 12%; left: 0; right: 0;
+                                text-align: center;
+                                pointer-events: none;
+                                z-index: 20;
+                                padding: 0 16px;
+                                display: none;
+                            "></div>
+                        </div>
+                        <div class="playback-controls">
+                            ▶ ════════●═══════════════ 00:15 / 02:05
+                        </div>
+                    </section>
+                    <section class="col-transcript">
+                        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Transcript</span>
+                            <div style="display:flex; gap:6px;">
+                                <button id="import-transcript-btn" class="btn btn-xs" title="Import transcript JSON">📂 Import</button>
+                                <button id="export-transcript-btn" class="btn btn-xs" title="Export transcript JSON">💾 Export</button>
+                            </div>
+                        </div>
+                        <div class="panel-body transcript-content">
+                            <div class="transcript-line"><span class="time">0:00</span> <span class="text">หยุดกิน</span></div>
+                            <div class="transcript-line"><span class="time">0:01</span> <span class="text">เด็ดขาด</span></div>
+                            <div class="transcript-line"><span class="time">0:01</span> <span class="text">ถ้าน้ำ</span></div>
+                            <div class="transcript-line"><span class="time">0:02</span> <span class="text">ขวดนี้</span></div>
+                            <div class="transcript-line"><span class="time">0:02</span> <span class="text">ตากแดด</span></div>
+                            <div class="transcript-line"><span class="time">0:03</span> <span class="text">มาแล้ว</span></div>
+                            <div class="transcript-line"><span class="time">0:03</span> <span class="text">เกิน</span></div>
+                            <div class="transcript-line"><span class="time">0:04</span> <span class="text">30</span></div>
+                            <div class="transcript-line"><span class="time">0:04</span> <span class="text">นาที</span></div>
+                            <button class="btn" style="margin-top:20px;">📝 Edit Inline</button>
+                        </div>
+                    </section>
+                    <section class="col-controls">
+                        <div class="panel-header">Controls</div>
+                        <div class="panel-body controls-scrollable">
+
+                            <!-- PRESETS -->
+                            <div class="control-section">
+                                <h3>PRESETS</h3>
+                                <div class="preset-grid">
+                                    <div class="preset-card" data-preset="hormozi">Hormozi</div>
+                                    <div class="preset-card active" data-preset="flow">Flow</div>
+                                    <div class="preset-card" data-preset="classic">Classic</div>
+                                    <div class="preset-card" data-preset="custom">+</div>
+                                </div>
+                            </div>
+
+                            <!-- STYLE -->
+                            <div class="control-section">
+                                <h3>STYLE</h3>
+
+                                <!-- Font -->
+                                <div class="style-row">
+                                    <span>Font</span>
+                                    <select id="style-font">
+                                        <option value="Prompt">Prompt</option>
+                                        <option value="Inter">Inter</option>
+                                        <option value="Kanit">Kanit</option>
+                                        <option value="Sarabun">Sarabun</option>
+                                        <option value="Arial">Arial</option>
+                                        <option value="Impact">Impact</option>
+                                    </select>
+                                </div>
+
+                                <!-- Bold / Italic / Underline -->
+                                <div class="style-row">
+                                    <span>Format</span>
+                                    <div class="format-btns">
+                                        <button id="style-bold" class="fmt-btn" title="Bold"><b>B</b></button>
+                                        <button id="style-italic" class="fmt-btn" title="Italic"><i>I</i></button>
+                                        <button id="style-underline" class="fmt-btn" title="Underline"><u>U</u></button>
+                                    </div>
+                                </div>
+
+                                <!-- Size (slider) -->
+                                <div class="style-row">
+                                    <span>Size</span>
+                                    <div class="slider-group">
+                                        <input type="range" id="style-size" min="20" max="120" value="64" class="style-slider">
+                                        <span id="style-size-label" class="slider-label">64</span>
+                                    </div>
+                                </div>
+
+                                <!-- Alignment -->
+                                <div class="style-row">
+                                    <span>Align</span>
+                                    <div class="align-btns">
+                                        <button id="style-align-left"  class="fmt-btn" title="Left">☰</button>
+                                        <button id="style-align-center" class="fmt-btn active" title="Center">≡</button>
+                                        <button id="style-align-right" class="fmt-btn" title="Right">☲</button>
+                                    </div>
+                                </div>
+
+                                <!-- Text Color -->
+                                <div class="style-row">
+                                    <span>Color</span>
+                                    <div class="color-group">
+                                        <input type="color" id="style-color" value="#FFDE59" class="color-swatch" title="Text Color">
+                                        <span class="color-label" id="style-color-label">#FFDE59</span>
+                                    </div>
+                                </div>
+
+                                <!-- Background Color -->
+                                <div class="style-row">
+                                    <span>BG</span>
+                                    <div class="color-group">
+                                        <input type="color" id="style-bg" value="#000000" class="color-swatch" title="Background Color">
+                                        <select id="style-bg-opacity" style="width:80px;">
+                                            <option value="0">None</option>
+                                            <option value="0.4">40%</option>
+                                            <option value="0.65">65%</option>
+                                            <option value="0.85">85%</option>
+                                            <option value="1">100%</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Stroke -->
+                                <div class="style-row">
+                                    <span>Stroke</span>
+                                    <div class="color-group">
+                                        <input type="color" id="style-stroke-color" value="#000000" class="color-swatch" title="Stroke Color">
+                                        <select id="style-stroke" style="width:80px;">
+                                            <option value="0">None</option>
+                                            <option value="2">2px</option>
+                                            <option value="3" selected>3px</option>
+                                            <option value="5">5px</option>
+                                            <option value="7">7px</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Shadow -->
+                                <div class="style-row">
+                                    <span>Shadow</span>
+                                    <select id="style-shadow">
+                                        <option value="none">None</option>
+                                        <option value="soft">Soft Drop</option>
+                                        <option value="hard" selected>Hard Block</option>
+                                        <option value="glow">Neon Glow</option>
+                                        <option value="outline">All-side Outline</option>
+                                    </select>
+                                </div>
+
+                                <!-- Animation -->
+                                <div class="style-row">
+                                    <span>Animation</span>
+                                    <select id="style-animation">
+                                        <option value="none">None</option>
+                                        <option value="pop" selected>Pop In (CapCut)</option>
+                                        <option value="spring">Bouncy Spring</option>
+                                        <option value="zoom-out">Zoom Out</option>
+                                        <option value="wobble">Wobble Swing</option>
+                                        <option value="fade">Fade In</option>
+                                    </select>
+                                </div>
+
+                                <!-- Letter Spacing -->
+                                <div class="style-row">
+                                    <span>Spacing</span>
+                                    <div class="slider-group">
+                                        <input type="range" id="style-spacing" min="-5" max="20" value="0" class="style-slider">
+                                        <span id="style-spacing-label" class="slider-label">0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Opacity -->
+                                <div class="style-row">
+                                    <span>Opacity</span>
+                                    <div class="slider-group">
+                                        <input type="range" id="style-opacity" min="10" max="100" value="100" class="style-slider">
+                                        <span id="style-opacity-label" class="slider-label">100%</span>
+                                    </div>
+                                </div>
+
+                                <!-- Vertical Position -->
+                                <div class="style-row">
+                                    <span>Position</span>
+                                    <div class="slider-group">
+                                        <input type="range" id="style-position" min="5" max="95" value="85" class="style-slider">
+                                        <span id="style-position-label" class="slider-label">Bottom</span>
+                                    </div>
+                                </div>
+
+                            </div><!-- end STYLE -->
+
+                            <!-- ACTIONS -->
+                            <div class="control-section">
+                                <h3>ACTIONS</h3>
+                                <div class="actions-grid">
+                                    <button id="transcribe-btn" class="btn primary">🎤 Transcribe</button>
+                                    <button id="cut-silence-btn" class="btn">✂️ Cut Silence</button>
+                                    <button id="render-btn" class="btn">🎬 Render</button>
+                                    <button id="export-btn" class="btn">📦 Export</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </section>
+                </div>
+                <section class="timeline">
+                    <div class="timeline-header">Timeline</div>
+                    <div class="timeline-tracks">
+                        <div class="track">🔊 ████░░░████░░████████░░░████████</div>
+                        <div class="track">📝 [หยุดกิน][เด็ดขาด] [ถ้าน้ำขวด][นี้ตากแดด]</div>
+                        <div class="track">🎞️      [🎬 bottle_sun]</div>
+                        <div class="track">🔊                [whoosh]</div>
+                        <div class="track">🎵 ══════════════════════ dark_suspense</div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="presets" class="page" style="display: none;">
+                <div class="placeholder-page">
+                    <h2>🎨 Presets Management</h2>
+                    <p>Coming in Phase 2</p>
+                </div>
+            </div>
+            <div id="ai-room" class="page" style="display: none;">
+                <div class="placeholder-page">
+                    <h2>🤖 AI Room</h2>
+                    <p>Coming in Phase 5</p>
+                </div>
+            </div>
+            <div id="settings" class="page" style="display: none;">
+                <div class="placeholder-page">
+                    <h2>⚙️ Settings</h2>
+                    <p>Coming later in Phase 4</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <div class="status-bar">
+                <span>ℹ️ Ready</span>
+                <span>GPU: GTX 1070 Ti</span>
+                <span>VRAM: 3.2/8GB</span>
+                <span>Mode: Semi-Auto</span>
+                <span>v0.1.0</span>
+            </div>
+        </footer>
+    </div>
+    <script type="module" src="./app.js"></script>
+</body>
+</html>

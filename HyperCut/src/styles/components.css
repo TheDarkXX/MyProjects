@@ -1,0 +1,346 @@
+/* Assets Panel */
+.asset-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.asset-folder {
+    padding: 8px 12px;
+    background-color: var(--bg-surface-hover);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.asset-folder:hover {
+    background-color: var(--border-color);
+}
+
+/* Video Preview Component */
+.video-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #000;
+    border-radius: 8px;
+    height: calc(100% - 40px); /* Leave room for playback controls */
+    position: relative;     /* Needed for subtitle-overlay absolute positioning */
+    overflow: hidden;
+}
+
+.video-placeholder {
+    color: var(--text-secondary);
+    border: 2px dashed var(--border-color);
+    padding: 50px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.playback-controls {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: monospace;
+    color: var(--text-secondary);
+    background-color: var(--bg-surface);
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+/* Transcript Panel */
+.transcript-content {
+    font-family: var(--font-sub);
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+.transcript-line {
+    display: flex;
+    gap: 15px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: text;
+    margin-bottom: 8px;
+    align-items: flex-start;
+}
+
+.transcript-line:hover {
+    background-color: var(--bg-surface-hover);
+}
+
+.transcript-line .time {
+    color: var(--text-secondary);
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    min-width: 45px;
+    cursor: pointer;
+    padding-top: 3px;
+}
+.transcript-line .time:hover {
+    color: var(--accent);
+}
+
+.chunk-text {
+    flex: 1;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: border-color 0.15s, background 0.15s;
+    outline: none;
+    cursor: text;
+    line-height: 1.5;
+    word-break: break-all;
+    font-size: 1rem;
+    font-family: var(--font-sub);
+}
+.chunk-text:hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--border-color);
+}
+.chunk-text.editing {
+    border-color: var(--accent);
+    background: rgba(233, 69, 96, 0.07);
+}
+
+.transcript-line .text {
+    flex: 1;
+}
+
+/* Controls Panel */
+.control-section {
+    margin-bottom: 25px;
+}
+
+.control-section h3 {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.preset-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.preset-card {
+    padding: 10px 6px;
+    background-color: var(--bg-surface-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.preset-card:hover {
+    border-color: var(--text-secondary);
+}
+
+.preset-card.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background-color: rgba(233, 69, 96, 0.1);
+}
+
+/* Style Panel Rows */
+.style-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+    gap: 8px;
+}
+
+.style-row span {
+    color: var(--text-secondary);
+    min-width: 50px;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.style-row select {
+    flex: 1;
+    background: var(--bg-surface-hover);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+.style-row select:hover, .style-row select:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+/* Color picker styled as a swatch */
+.style-row input[type="color"] {
+    flex: 1;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    padding: 2px 4px;
+    background: var(--bg-surface-hover);
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+.style-row input[type="color"]:hover {
+    border-color: var(--accent);
+}
+
+.color-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font-ui);
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* ─── Live Preview Subtitle Overlay ─── */
+#subtitle-overlay {
+    line-height: 1.1;
+    word-break: keep-all;
+}
+
+@keyframes pop-in {
+    0% { transform: scale(0.7); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+@keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+#subtitle-overlay .lp-word {
+    display: inline-block;
+    margin: 0;
+    transition: color 0.08s ease, transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-origin: center bottom;
+    white-space: nowrap;
+}
+
+/* ─── Controls Panel Scrollable ─── */
+.controls-scrollable {
+    overflow-y: auto;
+    max-height: calc(100% - 40px);
+    padding-bottom: 20px;
+}
+.controls-scrollable::-webkit-scrollbar { width: 4px; }
+.controls-scrollable::-webkit-scrollbar-track { background: transparent; }
+.controls-scrollable::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+/* ─── Format Buttons (B/I/U, Align) ─── */
+.format-btns, .align-btns {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+
+.fmt-btn {
+    flex: 1;
+    padding: 5px 8px;
+    background: var(--bg-surface-hover);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+    font-family: var(--font-ui);
+}
+.fmt-btn:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+.fmt-btn.active {
+    background: rgba(233, 69, 96, 0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* ─── Slider Controls ─── */
+.slider-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.style-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--border-color);
+    outline: none;
+    cursor: pointer;
+}
+.style-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.style-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.slider-label {
+    min-width: 32px;
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-family: monospace;
+}
+
+/* ─── Color Swatches ─── */
+.color-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.color-swatch {
+    width: 36px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    padding: 2px;
+    background: var(--bg-surface-hover);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.color-swatch:hover { border-color: var(--accent); }
+
+.color-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-family: monospace;
+    flex: 1;
+}
