@@ -36,6 +36,7 @@
 - 1M Battle Plan (กลยุทธ์): [Sales/3.1_Plan_1M-battle-plan.md](Sales/3.1_Plan_1M-battle-plan.md)
 - Road to 1M Execution (ปฏิบัติการ): [Sales/4.1_Execution_road-to-1m-execution.md](Sales/4.1_Execution_road-to-1m-execution.md)
 - Daily Action Plan (รายวัน): [Sales/Daily-Action-Plan/](Sales/Daily-Action-Plan/00-overview.md)
+- GPT-Researcher AI Guide: [gpt-researcher/AI_GUIDE.md](gpt-researcher/AI_GUIDE.md)
 - Local Skills Bridge: `C:\My Claw\MyProjects\ag_skills_backup\AG_SKILLS_INDEX.md`
 
 ## 🕒 Changelog & Updates
