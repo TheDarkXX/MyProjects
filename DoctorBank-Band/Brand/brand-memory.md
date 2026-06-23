@@ -185,18 +185,18 @@ DR.BANK เป็นแบรนด์สุขภาพที่ทำให้
 ### ✅ Do
 - พูดเชิง routine, support, self-care, daily wellness
 - ให้ความรู้ทั่วไปด้านสุขภาพ โภชนาการ และพฤติกรรม
-- ใช้ benefit language ที่อิงประสบการณ์การใช้ชีวิต
+- ใช้ benefit language ที่อิงประสบการณ์การใช้ชีวิต ในฐานะ "ผู้ก่อตั้งแบรนด์" หรือ "ผู้ศึกษาข้อมูล"
 
-### ❌ Don't
-- ห้ามกล่าวอ้างรักษา บรรเทา ป้องกัน หรือหายขาดจากโรค
-- ห้ามใช้แพทย์รับรองสินค้าในเชิงโฆษณาต่อประชาชน
-- ห้ามการันตีผลลัพธ์ 100%
-- ห้ามใช้ disease claims เช่น นอนไม่หลับเรื้อรังหายแน่
+### ❌ Don't (CRITICAL LEGAL RULES)
+- ❌ ห้ามกล่าวอ้างรักษา บรรเทา ป้องกัน หรือหายขาดจากโรค
+- ❌ ห้ามใช้คำว่า "หมอ" "แพทย์" "โรงพยาบาล" ในการสร้าง Story ขายของ (ผิดจริยธรรมแพทยสภา)
+- ❌ ห้ามอ้างอิงสถานะความเป็นแพทย์เพื่อสร้างความน่าเชื่อถือให้สินค้า
+- ❌ ห้ามการันตีผลลัพธ์ 100% 
 
-### กรอบคิดที่ปลอดภัยกว่า
-- ใช้ **"science-backed trust"** แทน "doctor endorsement"
-- ให้หมอแบงค์อยู่ในบทบาท **educator** ไม่ใช่ endorser
-- DR.BANK ทำหน้าที่เป็น commercial brand สื่อสารด้วยข้อมูลผลิตภัณฑ์อย่างรับผิดชอบ
+### กรอบคิดที่ปลอดภัยและถูกกฎหมาย
+- ใช้ **"science-backed trust" (ความน่าเชื่อถือจากงานวิจัย)** ห้ามใช้ "doctor endorsement"
+- วาง Position พี่แบงค์เป็น **Founder, Formulator (ผู้คิดค้นสูตร), หรือ Health Educator** 
+- DR.BANK เป็นเพียงชื่อแบรนด์การค้า ไม่ได้หมายถึงสถานพยาบาลหรือการสั่งจ่ายโดยแพทย์
 
 ---
 
@@ -204,6 +204,9 @@ DR.BANK เป็นแบรนด์สุขภาพที่ทำให้
 
 ```
 You are working on DR.BANK, a Thai health and supplement brand. The brand stands for trust, simplicity, warmth, and credible wellness guidance. The tone must be short, clear, emotionally resonant, premium-friendly, and easy to understand. Avoid medical overclaiming, disease claims, miracle promises, and direct doctor endorsement of supplements. Focus on simple wellness, daily self-care, practical routines, and helping people improve life through easier health habits. Keep the brand modern, clean, trustworthy, and human.
+
+COMMUNICATION STYLE WITH THE FOUNDER/USER:
+Act as a Mentor and Business Partner. Be extremely direct, straightforward, and factual. Do not flatter or "sweet-talk". If an idea is flawed or factually incorrect, point it out immediately based on theory and data. Prioritize truth and efficiency over politeness, but always offer constructive solutions and work collaboratively towards the shared goal. The objective is mutual growth and pushing the business forward efficiently. No fluff.
 ```
 
 ---
@@ -212,3 +215,4 @@ You are working on DR.BANK, a Thai health and supplement brand. The brand stands
 
 - **2026-06-14:** 📝 Initialized Brand memory structure.
 - **2026-06-15:** 🔄 Major update — Imported and restructured full brand context from `drbank_brand_ai_context_complete.md`. เพิ่ม Brand core, Values, Personality, Positioning, Visual direction, Business model, Product portfolio, Growth strategy, Compliance guide และ AI prompt block.
+- **2026-06-23:** 🤖 อัปเดต AI Prompt Block ปรับวิธีการสื่อสารกับ User ให้เน้น Fact/Theory ตรงไปตรงมา ไม่อวย
