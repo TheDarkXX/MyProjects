@@ -24,7 +24,9 @@
 
 | Command | Project | Target File | Description |
 |---------|---------|-------------|-------------|
-| (เพิ่มเมื่อมี workflow เฉพาะโปรเจกต์) | | | |
+| `/web` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\web.md` | General web research — Inline Citations 15–50, Word ~1,500, Time ~3–5 min |
+| `/res` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\res.md` | Medical/Academic normal research — Inline Citations 15–50, Word ~2,500, Time ~5–8 min |
+| `/deep` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\deep.md` | Medical/Academic DEEP research — Inline Citations ≥80, Word ~2,500, Time ~7–12 min |
 
 ---
 
