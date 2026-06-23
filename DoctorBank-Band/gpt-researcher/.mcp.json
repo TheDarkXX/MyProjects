@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "gpt-researcher": {
+      "command": "C:\\My Claw\\MyProjects\\DoctorBank-Band\\gpt-researcher\\venv\\Scripts\\python.exe",
+      "args": [
+        "C:\\My Claw\\MyProjects\\DoctorBank-Band\\gpt-researcher\\mcp_server.py"
+      ],
+      "env": {}
+    }
+  }
+}
