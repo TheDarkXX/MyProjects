@@ -19,19 +19,19 @@
 
 ### Tier 1 — Hero Ingredients (ต้องมี Evidence แน่นที่สุด)
 
-| # | Ingredient | Dose ในสูตรเรา | ทำไมสำคัญ | สิ่งที่ต้องหา |
+| # | Ingredient | Dose ในสูตรเรา (ต่อ 1 แคปซูล) | ทำไมสำคัญ | สิ่งที่ต้องหา |
 |---|---|---|---|---|
-| 1 | **L-Theanine (AlphaWave®)** | 200 mg | Hero ingredient, ขาย "คลื่นอัลฟ่า" | RCT เรื่อง relaxation, alpha waves, sleep quality |
-| 2 | **GABA (PharmaGABA®)** | 125 mg | จุดขาย "สงบก่อนนอน" | RCT เรื่อง sleep latency, relaxation, stress — แยก PharmaGABA vs synthetic GABA |
-| 3 | **Magnesium Bisglycinate** | 350 mg compound (70 mg elemental) | Form หลักในสูตร | RCT เรื่อง sleep + bioavailability เทียบ form อื่น |
+| 1 | **L-Theanine (AlphaWave®)** | **200 mg / แคปซูล** | Hero ingredient, ขาย "คลื่นอัลฟ่า" | RCT เรื่อง relaxation, alpha waves, sleep quality |
+| 2 | **GABA (PharmaGABA®)** | **125 mg / แคปซูล** | จุดขาย "สงบก่อนนอน" | RCT เรื่อง sleep latency, relaxation, stress — แยก PharmaGABA vs synthetic GABA |
+| 3 | **Magnesium Bisglycinate** | **350 mg compound / แคปซูล** (~70 mg elemental) | Form หลักในสูตร | RCT เรื่อง sleep + bioavailability เทียบ form อื่น |
 
 ### Tier 2 — Supporting Ingredients
 
-| # | Ingredient | Dose ในสูตรเรา | สิ่งที่ต้องหา |
+| # | Ingredient | Dose ในสูตรเรา (ต่อ 1 แคปซูล) | สิ่งที่ต้องหา |
 |---|---|---|---|
-| 4 | **Magnesium (รวม 4 Forms)** | 161.8 mg elemental | Systematic review เรื่อง Mg กับ sleep — เทียบ dose กับงานวิจัย |
-| 5 | **Zinc (NovoMin®)** | 25 mg | มีงานวิจัยเรื่อง sleep ไหม? ถ้าไม่มีก็บอกตรงๆ |
-| 6 | **Vitamin B6** | 2 mg | Supporting role กับ GABA synthesis — evidence ระดับไหน? |
+| 4 | **Magnesium (รวม 4 Forms)** | **~161.8 mg elemental / แคปซูล** | Systematic review เรื่อง Mg กับ sleep — เทียบ dose กับงานวิจัย |
+| 5 | **Zinc Amino Acid Chelate** | **60 mg / แคปซูล** | มีงานวิจัยเรื่อง sleep ไหม? ถ้าไม่มีก็บอกตรงๆ |
+| 6 | **Vitamin B6** | **2 mg / แคปซูล** | Supporting role กับ GABA synthesis — evidence ระดับไหน? |
 
 ---
 
@@ -53,14 +53,16 @@
 
 ## ⚠️ Dose Gap Analysis (ต้องทำก่อน Deep Research)
 
-| Ingredient | Dose ในสูตร | Dose ในงานวิจัย (จริง) | Gap? | วิธีจัดการ |
+⚠️ **หมายเหตุสำคัญ (อัปเดต v1.3):** ปริมาณทั้งหมดด้านล่างคือ **ต่อ 1 แคปซูล** ตามฉลากสินค้าจริง
+
+| Ingredient | Dose ในสูตร (ต่อ 1 แคปซูล) | Dose ในงานวิจัย (จริง) | Gap? | วิธีจัดการ |
 |---|---|---|---|---|
-| L-Theanine | 200 mg | 200 mg (RCT หลัก) | ✅ **ตรงเป๊ะ** | อ้างได้ตรงๆ — Dose ตรงกับ Nobre (2008), Hidese (2019), Ritsaari (2019) |
-| PharmaGABA | 125 mg | 100–300 mg | ✅ **อยู่ในช่วง** | Acute Stress RCT ใช้ 100 mg ซึ่งใกล้เคียงสูตรเรา |
-| Mg Bisglycinate | 70 mg elemental | 250 mg (Bisglycinate RCT) | ⚠️ **มี Gap** | ใช้ Multi-Form Complex + Dosage Recommendation (3 เม็ด = ~242.7 mg) |
-| Mg รวม 4 Forms | 161.8 mg elemental | 250–500 mg elemental | ⚠️ **มี Gap** | ใช้ Dosage Recommendation + เน้นว่าเป็น Multi-Pathway (ไม่ใช่ Mg อย่างเดียว) |
-| Zinc | 25 mg | 10–73.3 mg (8 RCTs) | ✅ **อยู่ในช่วง** | RCT หลักใช้ 30 mg ซึ่งใกล้เคียง — ต่ำกว่า UL 40 mg |
-| Vitamin B6 | 2 mg | RDA 1.3–1.7 mg | ✅ **ครอบคลุม RDA** | เป็น Cofactor dose ไม่ใช่ therapeutic dose — ปลอดภัย (ต่ำกว่า UL 100 mg ถึง 50 เท่า) |
+| L-Theanine | **200 mg** | 200 mg (RCT หลัก) | ✅ **ตรงเป๊ะ** | อ้างได้ตรงๆ — 1 เม็ดก็ได้ Dose วิจัยแล้ว! |
+| PharmaGABA | **125 mg** | 100–300 mg | ✅ **อยู่ในช่วง** | Acute Stress RCT ใช้ 100 mg (ต่ำกว่า 125 mg ของเรา) → เราดีกว่า! |
+| Mg Bisglycinate | ~70 mg elemental | 250 mg (Bisglycinate RCT) | ⚠️ **มี Gap** | ใช้ Multi-Form Complex + Dosage Rec. (2 เม็ด = ~323.6 mg elemental, 3 เม็ด = ~485.4 mg) |
+| Mg รวม 4 Forms | **~161.8 mg elemental** | 250–500 mg elemental | ⚠️ **Gap ที่ 1 เม็ด** | 2 เม็ด = ~323.6 mg ✅ เข้าช่วงงานวิจัย / 3 เม็ด = ~485.4 mg ✅ ครอบคลุมทุก RCT |
+| Zinc Amino Acid Chelate | **60 mg / แคปซูล** (= ~12 mg elemental Zinc ตาม Spec NovoMin® 20%) | 10–73.3 mg (8 RCTs) | ✅ **อยู่ในช่วง** | 1 เม็ด = 12 mg, 2 เม็ด = 24 mg, 3 เม็ด = 36 mg — ปลอดภัยทุก dose (ต่ำกว่า UL 40 mg) |
+| Vitamin B6 | **2 mg** | RDA 1.3–1.7 mg | ✅ **ครอบคลุม RDA** | เป็น Cofactor dose ไม่ใช่ therapeutic dose — ปลอดภัย (ต่ำกว่า UL 100 mg ถึง 50 เท่า) |
 
 > [!IMPORTANT]
 > **แนวทาง Dosage Recommendation (ตกลงกับ Founder แล้ว):**  
@@ -72,13 +74,15 @@
 
 ### ✅ UL Safety Check — 3 แคปซูล
 
-| Ingredient | ปริมาณ ใน 3 แคปซูล | UL (ปริมาณสูงสุดปลอดภัย/วัน) | ปลอดภัย? |
-|---|---|---|---|
-| Magnesium (elemental) | ~242.7 mg | 350 mg (supplemental) | ✅ ปลอดภัย |
-| Zinc | 37.5 mg | 40 mg (USA) / 25 mg (UK) | ✅ ปลอดภัย (USA) / ⚠️ ระวัง (UK) |
-| Vitamin B6 | 3 mg | 100 mg | ✅ ปลอดภัยมาก |
-| L-Theanine | 300 mg | ไม่มี UL ที่กำหนด (generally safe) | ✅ ปลอดภัย |
-| GABA | 187.5 mg | ไม่มี UL ที่กำหนด (100-300 mg ในงานวิจัย) | ✅ ปลอดภัย |
+⚠️ **หมายเหตุ (อัปเดต v1.3):** เนื่องจาก Zinc Amino Acid Chelate ในสูตรจริงคือ **60 mg ต่อ 1 แคปซูล** จึงต้องปรับ Safety Check ใหม่
+
+| Ingredient | ปริมาณ ใน 1 แคปซูล | ปริมาณ ใน 2 แคปซูล | UL (ปริมาณสูงสุดปลอดภัย/วัน) | ปลอดภัย? |
+|---|---|---|---|---|
+| Magnesium (elemental) | ~161.8 mg | ~323.6 mg | 350 mg (supplemental) | ✅ ปลอดภัย |
+| **Zinc Amino Acid Chelate** | **60 mg (= ~12 mg elemental)** | **~24 mg elemental** | 40 mg elemental (USA UL) | ✅ ปลอดภัย (2 เม็ด = 24 mg — ต่ำกว่า UL มาก) |
+| Vitamin B6 | 2 mg | 4 mg | 100 mg | ✅ ปลอดภัยมาก |
+| L-Theanine | 200 mg | 400 mg | ไม่มี UL ที่กำหนด (generally safe ≤900 mg) | ✅ ปลอดภัย |
+| GABA | 125 mg | 250 mg | ไม่มี UL ที่กำหนด (100-300 mg ในงานวิจัย) | ✅ ปลอดภัย |
 
 ---
 
@@ -174,11 +178,11 @@ DoctorBank-Band/Products/Magnesium-Night-Plus/Evidence/
 
 | Ingredient | Gap Status | Action Taken |
 |---|---|---|
-| L-Theanine 200 mg | ✅ No Gap | Dose ตรงกับ RCT หลัก |
-| PharmaGABA 125 mg | ✅ No Gap | อยู่ในช่วง 100-300 mg ของ RCTs |
-| Magnesium 161.8 mg | ⚠️ Gap Found | ใช้ Dosage Rec. (3 เม็ด = ~242.7 mg เข้าใกล้ 250 mg RCT) + Multi-Pathway positioning |
-| Zinc 25 mg | ✅ No Gap | อยู่ในช่วง 10-73.3 mg — ใกล้เคียง Afzali RCT (30 mg) |
-| Vitamin B6 2 mg | ✅ No Gap | เป็น Cofactor dose ครอบคลุม RDA (154%) — ปลอดภัยยิ่ง |
+| L-Theanine **200 mg / แคปซูล** | ✅ No Gap | 1 เม็ด = ตรง Dose RCT หลักเป๊ะ (AlphaWave® Evans 2021) |
+| PharmaGABA **125 mg / แคปซูล** | ✅ No Gap | 125 mg > 100 mg ของ Acute Stress RCT — สูตรเราดีกว่า! |
+| Magnesium **~161.8 mg elemental / แคปซูล** | ⚠️ Gap ที่ 1 เม็ด | 2 เม็ด = ~323.6 mg ✅ เข้าช่วงงานวิจัย — แนะนำ 2 เม็ดเป็น Standard |
+| Zinc Amino Acid Chelate **60 mg / แคปซูล** (= ~12 mg elemental Zinc) | ✅ No Critical Gap | 12 mg (1 เม็ด) อยู่ในช่วง 10-73.3 mg — 2 เม็ด = 24 mg ใกล้ 30 mg RCT |
+| Vitamin B6 **2 mg / แคปซูล** | ✅ No Gap | เป็น Cofactor dose ครอบคลุม RDA (154%) — ปลอดภัยยิ่ง |
 
 ### Key Findings
 

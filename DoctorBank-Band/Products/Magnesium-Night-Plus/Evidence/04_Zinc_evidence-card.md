@@ -1,11 +1,12 @@
 # Zinc (NovoMin® Zinc Citrate) — Evidence Card
 
 ## Quick Reference (ใช้อ้างอิงเร็วๆ)
-* **One-liner สำหรับพูดในคลิป:** "สังกะสี (Zinc) เป็นแร่ธาตุสำคัญที่ร่างกายใช้ในกระบวนการสร้าง Melatonin ตามธรรมชาติ ช่วยหนุนให้ระบบประสาทพร้อมเข้าสู่การนอนหลับ โดยมี Systematic Review ล่าสุดปี 2024 ที่รวบรวม 8 งานวิจัยทางคลินิกพบว่า Zinc ช่วยปรับปรุงคุณภาพการนอนหลับในผู้ใหญ่ได้"
+* **One-liner สำหรับพูดในคลิป:** "สังกะสี (Zinc) เป็นแร่ธาตุสำคัญที่ร่างกายใช้ในกระบวนการสร้าง Melatonin ตามธรรมชาติ ช่วยหนุนให้ระบบประสาทพร้อมเข้าสู่การนอนหลับ โดยมี Systematic Review ล่าสุดปี 2024 ที่รวบรวบ 8 งานวิจัยทางคลินิกพบว่า Zinc ช่วยปรับปรุงคุณภาพการนอนหลับในผู้ใหญ่ได้"
 * **Dose ที่ใช้ในงานวิจัย vs Dose ในสูตรเรา:**
-  * **ในสูตรเรา:** 25 mg Zinc Citrate ต่อ 2 แคปซูล
-  * **ในงานวิจัย:** 10 – 73.3 mg/day (ช่วงที่ใช้ในการศึกษา)
-* **ระดับความแข็งแกร่งของ Evidence:** ⭐⭐⭐ (มี Systematic Review 2024 จาก 8 RCTs + RCT เฉพาะ n=150 ในผู้สูงอายุ แต่ยังไม่มี Meta-analysis ที่รวมผล quantitative)
+  * **ในสูตรเรา:** **60 mg Zinc Amino Acid Chelate (NovoMin®) ต่อ 1 แคปซูล**  
+    = **elemental Zinc ~12 mg** (คำนวณจาก Spec: 60 mg × 20% = 12 mg elemental Zinc)
+  * **ในงานวิจัย:** 10 – 73.3 mg elemental Zinc/day (ช่วงที่ใช้ในการศึกษา)
+* **ระดับความแข็งแกร่งของ Evidence:** ⭐⭐⭐ (Systematic Review 2024 จาก 8 RCTs + RCT เฉพาะ n=150 ในผู้สูงอายุ แต่ยังไม่มี Meta-analysis ที่รวมผล quantitative)
 * **บทบาทในสูตร:** Supporting Ingredient — หนุนการทำงานของ Magnesium และ GABA ไม่ใช่ Hero Claim
 
 ---
@@ -63,15 +64,18 @@
 
 ## Dose Comparison & Dose Gap Analysis
 
-* **ปริมาณในงานวิจัยหลัก:** 10 – 73.3 mg/day (แต่ RCT เดี่ยวที่ดีที่สุดใช้ 30 mg)
-* **ปริมาณในสูตรเรา:** 25 mg Zinc Citrate ต่อ 2 แคปซูล
+* **ปริมาณในงานวิจัยหลัก:** 10 – 73.3 mg elemental Zinc/day (แต่ RCT เดี่ยวที่ดีที่สุดใช้ 30 mg elemental Zinc)
+* **ปริมาณในสูตรเรา:** **60 mg Zinc Amino Acid Chelate (NovoMin®) ต่อ 1 แคปซูล**
+  * Elemental Zinc (20% ตาม Spec NovoMin® NutraPure): **~12 mg ต่อ 1 แคปซูล**
+  * 2 แคปซูล = ~24 mg elemental Zinc
+  * 3 แคปซูล = ~36 mg elemental Zinc
 * **ประเมินระดับ Dose Gap:** ✅ **อยู่ในช่วง (No Critical Gap)**
-  * 25 mg อยู่ในช่วง 10–73.3 mg ที่ใช้ในงานวิจัย
-  * ใกล้เคียงกับปริมาณ 30 mg ที่ใช้ใน Afzali RCT (n=150)
-  * ต่ำกว่า UL ของ Zinc (40 mg/day ตามมาตรฐาน USA) อย่างปลอดภัย
+  * **elemental Zinc 12 mg (ต่อ 1 แคปซูล)** อยู่ในช่วง 10–73.3 mg ที่ใช้ในงานวิจัย
+  * 2 แคปซูล = 24 mg → ใกล้เคียง 30 mg ของ Afzali RCT (n=150)
+  * ต่ำกว่า UL ที่ 40 mg elemental/day อย่างปลอดภัย แม้ทาน 3 แคปซูล (36 mg)
 * **Dosage Recommendation:**
-  * **Night routine ปกติ:** 2 แคปซูล (25 mg Zinc) ✅ เพียงพอ
-  * **ไม่แนะนำเพิ่มเป็น 3 แคปซูลเพื่อ Zinc:** เพราะ 3 แคปซูล = 37.5 mg ยังปลอดภัย แต่ Zinc ไม่ใช่เหตุผลหลักในการเพิ่ม dose (เพิ่มเพื่อ L-Theanine/Mg มากกว่า)
+  * **Night routine ปกติ:** 1-2 แคปซูล (12-24 mg elemental Zinc) ✅ ปลอดภัยและเข้าช่วงงานวิจัย
+  * **ไม่แนะนำเพิ่มเป็น 3 แคปซูลเพื่อ Zinc:** 3 แคปซูล = 36 mg elemental Zinc → ใกล้ UL 40 mg — ถ้าเพิ่มให้เพิ่มเพื่อ L-Theanine/Mg เป็นหลัก ไม่ใช่เพื่อ Zinc
 
 ---
 

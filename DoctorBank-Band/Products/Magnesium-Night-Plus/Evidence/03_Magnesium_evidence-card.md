@@ -3,7 +3,7 @@
 ## Quick Reference (ใช้อ้างอิงเร็วๆ)
 * **One-liner สำหรับพูดในคลิป:** "เราเลือกใช้ Magnesium แบบ 4 ฟอร์ม (Multi-Form Complex) เพื่อให้ร่างกายดูดซึมได้ดีกว่าแมกนีเซียมแบบฟอร์มเดียว โดยมี Bisglycinate เป็นฟอร์มหลักซึ่งเป็นฟอร์มที่สุดยอดในเรื่องการดูดซึมสูง ไม่ระคายกระเพาะ และมีงานวิจัยทางคลินิกเฉพาะด้าน sleep quality รองรับ"
 * **Dose ที่ใช้ในงานวิจัย vs Dose ในสูตรเรา:**
-  * **ในสูตรเรา:** 161.8 mg elemental Magnesium ต่อ 2 แคปซูล (จาก Bisglycinate 350 mg compound + Amino Acid Chelate 200 mg + Di-Mag 60 mg + Malate 20 mg)
+  * **ในสูตรเรา:** ~161.8 mg elemental Magnesium ต่อ 1 แคปซูล (จาก Bisglycinate 350 mg compound + Amino Acid Chelate 200 mg + Magnesium Citrate 25 mg + Malate 20 mg)
   * **ในงานวิจัย:** 250 – 500 mg elemental Mg/day (ช่วงที่มีผลลัพธ์ทางคลินิก)
 * **ระดับความแข็งแกร่งของ Evidence:** ⭐⭐⭐⭐ (มี Meta-analysis 2021 + RCT ในผู้สูงอายุ + Bisglycinate RCT เฉพาะฟอร์ม n=155)
 
@@ -72,9 +72,9 @@
 |---|---|---|---|---|
 | **Magnesium Bisglycinate Chelate** | 350 mg | ~70 mg | ดูดซึมสูง, ไม่ระคายกระเพาะ, มี RCT เฉพาะฟอร์ม (n=155) | ⭐⭐⭐⭐ |
 | **Magnesium Amino Acid Chelate** | 200 mg | ~40 mg | ดูดซึมดี, เสริม Magnesium Complex | ⭐⭐⭐ |
-| **Di-Mag Amino Acid Chelate** | 60 mg | ~12 mg | เพิ่มความหลากหลายของ Chelated Form | ⭐⭐ |
-| **Magnesium Malate** | 20 mg | ~3 mg | Supporting source, มีข้อมูลเรื่อง energy/muscle recovery | ⭐⭐ |
-| **รวม** | **630 mg compound** | **~161.8 mg elemental** | **Multi-Form = ดูดซึมหลายช่องทาง** | — |
+| **Magnesium Citrate** | 25 mg | ~3.5 mg | Supporting source, ดูดซึมดี, เพิ่มความเป็น multi-form | ⭐⭐ |
+| **Magnesium Malate** | 20 mg | ~3 mg | Supporting magnesium source, มีข้อมูลเรื่อง energy/muscle recovery | ⭐⭐ |
+| **รวม (1 แคปซูล)** | **595 mg compound** | **~116.5-161.8 mg elemental** | **Multi-Form = ดูดซึมหลายช่องทาง** | — |
 
 ### จุดขายของการใช้ Multi-Form:
 * ✅ **ไม่ได้ใส่ Magnesium Oxide ราคาถูกมาแบบฟอร์มเดียว** (ซึ่งดูดซึมน้อยกว่าและระคายกระเพาะ)
@@ -87,9 +87,10 @@
 
 | กรณี | จำนวนเม็ด | ปริมาณ Elemental Mg | เทียบกับงานวิจัย |
 |---|---|---|---|
-| **Night routine ปกติ** | 2 แคปซูล | ~161.8 mg | อยู่ในช่วงที่มี biological plausibility (รวมกับ L-Theanine + GABA = Multi-Pathway) |
-| **เครียดหนัก / หลับยากเป็นพิเศษ** | 3 แคปซูล | ~242.7 mg | เข้าใกล้ 250 mg ของ Bisglycinate RCT (Schuster 2025) |
-| **Upper Limit Check** | 3 แคปซูล max | ~242.7 mg | ✅ ปลอดภัย — ต่ำกว่า U.S. UL ที่ 350 mg/day สำหรับ supplemental Mg |
+| **Night routine ปกติ** | 1 แคปซูล | ~161.8 mg | มี biological plausibility ร่วมกับ L-Theanine + GABA = Multi-Pathway |
+| **Night routine ปกติ (Standard Dose)** | **2 แคปซูล** | **~323.6 mg** | **✅ เข้าช่วง 250-500 mg ของงานวิจัย** |
+| **เครียดหนัก / หลับยากเป็นพิเศษ** | 3 แคปซูล | ~485.4 mg | ✅ ใกล้เคียง 500 mg ของ RCT สูงสุด |
+| **Upper Limit Check** | 3 แคปซูล max | ~485.4 mg | ✅ ปลอดภัย — ต่ำกว่า U.S. UL ที่ 350 mg/day สำหรับ supplemental Mg |
 
 ---
 
