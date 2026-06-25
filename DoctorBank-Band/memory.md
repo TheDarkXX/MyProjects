@@ -25,6 +25,11 @@
 11. **Thai Medical Ethics Compliance (Critical):** ห้ามใช้คำว่า "หมอ" "แพทย์" "โรงพยาบาล" ในการขายสินค้า ให้ใช้ Founder / Formulator เท่านั้น (ผิดประมวลจริยธรรมแพทยสภาไทย มีความเสี่ยงถอนใบประกอบวิชาชีพ)
 12. **Research Citation Dose Gate:** ตรวจสอบ Dose ในสูตร vs งานวิจัยก่อนอ้างอิงทุกครั้ง ถ้าต่ำกว่าห้ามพูดว่า "สูตรเราให้ผลเหมือนงานวิจัย" ให้แนะนำเป็น Dosage ตามกรณีแทน (cross-check UL ก่อน)
 13. **Evidence Citation Footnote Required:** ทุกครั้งที่ใช้ภาพ/กราฟ/ตัวเลขจากงานวิจัยในสื่อ ต้องมี footnote อ้างอิง Paper ต้นฉบับ (เช่น *Nobre et al., 2008, Asia Pac J Clin Nutr*)
+14. **STRICT FORMULA & DOSAGE LOCK:** การสื่อสารทั้งหมดอ้างอิงฐาน "1 แคปซูล" เท่านั้น: Mg Complex 595mg, L-Theanine (AlphaWave) 200mg, PharmaGABA 125mg, Zinc AAC (NovoMin) 60mg (12mg elemental), B6 2mg. ห้ามหลอนใส่ Chamomile หรือ Zinc ฟอร์มอื่น
+15. **VISUAL THEME - CLEAN WHITE MEDICAL:** ทุกการออกแบบต้องใช้ธีมพื้นขาว/เทาอ่อน, สีหลัก Midnight Navy, จุดเน้น Amber/Gold ห้ามใช้ Dark Mode ห้ามสร้างขวดปลอม ต้องระบุให้ใช้ "ภาพขวด Doctorbank Magnesium Night Plus" เสมอ
+16. **PRODUCTION-READY PROMPT FRAMEWORK:** Prompt AI ทำภาพต้องใช้ 7 โครงสร้าง: Objective, Main message, Visual concept, Exact copy, Data/dose (ระบุ Status), Layout and composition, และ Negative instructions เสมอ
+17. **FDA COMPLIANCE & SAFE COPYWRITING:** ห้ามใช้คำเคลมเสี่ยง อย. (เช่น รักษา, แก้นอนไม่หลับ, หลับทันที, ไม่มีผลข้างเคียง, ผ่าน อย. แน่นอน) ให้ใช้คำที่ปลอดภัย (สนับสนุนการพักผ่อน, ไม่ใส่เมลาโทนินสังเคราะห์, 5 สารสำคัญ)
+18. **AUDIENCE-FIRST IDEATION:** ก่อนเสนอไอเดียคอนเทนต์หรือภาพบุคคล ต้องระบุ Target Audience Persona เสมอ (เช่น ผู้บริหาร, ออฟฟิศซินโดรม) ห้ามเสนอไอเดียลอยๆ โดยไม่ล็อกกลุ่มเป้าหมายที่มีกำลังซื้อ
 
 ---
 
@@ -46,3 +51,4 @@
 - **2026-06-15:** 🔄 Major data import from Quick Upload — Brand memory, Product memory (full), product image (product-hero.png) อัปเดตแล้ว.
 - **2026-06-15:** 🛡️ `/reviewchat` — Added Iron Rules 8 & 9 (Supplement Knowledge strict Separation, E-Commerce Coupon Math).
 - **2026-06-23:** 🛡️ `/reviewchat` — Added Iron Rules 10-13 (Thai Medical Ethics, Research Dose Gate, Citation Footnote, Local Skills Lookup). Updated Key Files paths.
+- **2026-06-24:** 🛡️ `/reviewchat` — Added Iron Rules 14-18 (Formula lock, Clean White theme, Production-Ready Prompt framework, FDA Compliance, Audience-first ideation).

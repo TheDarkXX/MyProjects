@@ -1,0 +1,30 @@
+---
+proposal_id: EVO-20260502-301
+status: awaiting_human
+persona: bold
+category: experiment
+risk_level: safe
+date: 2026-05-02T05:01:00.354Z
+---
+# 🚀 Evolution Proposal: Reduce daily token cost by 50K via response compression and batch coalescing
+
+**Triggered By Persona:** BOLD
+
+## 📋 What & Why
+**Category:** experiment | **Risk:** safe
+**Root Cause:** ระบบ cache ปัจจุบันเก็บ response แบบ full JSON โดยไม่ compress ทำให้ storage และ retrieval overhead สูง นอกจากนี้ rapid-fire requests ที่มาพร้อมกันภายใน 50ms coalesce window ยังไม่ถูก batch อย่างเต็มที่
+
+**Description:**
+เพิ่ม 2 กลไกลหลักเพื่อลด token consumption: (1) Response Compression - บีบอัด JSON response ก่อนเก็บเข้า L2 Redis cache เพื่อลด storage overhead และ network transfer, (2) Batch Coalescing - รวม requests ที่เข้ามาภายใน 200ms window ให้เป็น batch เดียว แทนที่จะ call แยกกัน ลด duplicate API calls อย่างมีนัยสำคัญ
+
+## 🛠️ Proposed Changes
+| File | Action | Risk |
+|------|--------|------|
+| `lib/ai-call.js` | Add zlib.promises.deflate/inflate for response compression before Redis cache set/get. Add batch que | safe |
+
+## 🎯 Innovation Score: 82/100
+- Novelty: 7 | Depth: 9 | Compounding: 10 | Specificity: 8
+
+## 🤖 AG Decision Guide
+- **ถ้า Approve:** ให้ AG ลงมือเขียนโค้ดและแก้ไขระบบตาม *Proposed Changes* ข้างต้น
+- **ถ้า Reject:** เปลี่ยนสถานะไฟล์นี้เป็น rejected หรือลบทิ้ง ระบบ Memory จะบันทึกไว้สอน Ideator
