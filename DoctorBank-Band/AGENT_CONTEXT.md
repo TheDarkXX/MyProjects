@@ -30,3 +30,8 @@
 ## 🔗 Essential Files
 - กฎโปรเจกต์: [memory.md](memory.md)
 - ดัชนีสกิล (Global): [MyProjects/ag_skills_backup/AG_SKILLS_INDEX.md](file:///c:/My%20Claw/MyProjects/ag_skills_backup/AG_SKILLS_INDEX.md)
+
+## 🔬 Research Tools
+โปรเจกต์นี้ขับเคลื่อนด้วย Research-backed content โดยใช้ Skills:
+- **`/cons`** (Consensus MCP): ใช้สำหรับหา evidence เร็วๆ (10-30s) จากเปเปอร์ล้วน (20 papers/search) *คุณสามารถเรียกใช้ `call_mcp_tool` ไปที่ server `consensus` ได้เลย*
+- **`/deep`** & **`/res`**: ใช้ `gpt-researcher/medical_research.py` สำหรับหาอ้างอิงระดับลึก (80+ citations)
