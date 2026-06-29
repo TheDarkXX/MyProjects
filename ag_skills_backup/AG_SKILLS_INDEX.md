@@ -12,6 +12,7 @@
 | `/reviewchat` | `c:\My Claw\MyProjects\ag_skills_backup\reviewchat.md` | Self-review — target Focus Lock project memory |
 | `/reorg` | `c:\My Claw\MyProjects\ag_skills_backup\reorg.md` | Reorganize folder — scan, classify, propose & move |
 | `/cons` | `c:\My Claw\MyProjects\ag_skills_backup\cons.md` | Consensus MCP Research |
+| `/consdeep` | `c:\My Claw\MyProjects\ag_skills_backup\consdeep.md` | Multi-Query Consensus Deep Research |
 
 ## 📋 Global Skills (from Openclaw-VPS)
 
@@ -29,6 +30,7 @@
 | `/res` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\res.md` | Medical/Academic normal research — Inline Citations 15–50, Word ~2,500, Time ~5–8 min |
 | `/deep` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\deep.md` | Medical/Academic DEEP research — Inline Citations ≥80, Word ~2,500, Time ~7–12 min |
 | `/cons` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\cons.md` | Consensus MCP Research — Peer-reviewed papers, Pro Quota, Time ~10-30s |
+| `/consdeep` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\consdeep.md` | Multi-Query Consensus Deep Research — 3-5 sub-queries, 60-100 papers |
 
 ---
 

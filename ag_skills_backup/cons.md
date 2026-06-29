@@ -1,190 +1,169 @@
-# 🔬 Skill: `/cons`
+# Skill: `/cons` (Consensus MCP Research)
 
-## Objective
-Academic research ผ่าน **Consensus MCP Server** — ค้นหางานวิจัย Peer-Reviewed จากฐานข้อมูล 200 ล้านฉบับ เหมาะสำหรับ Evidence-Based claims, Compliance checks, และ Content verification. ผลลัพธ์มาพร้อม **Inline Citations + URL อ้างอิงจริง** จากต้นทาง
+**Command:** `/cons`
+**Trigger:** เมื่อผู้ใช้พิมพ์คำสั่ง `/cons` ตามด้วยหัวข้อวิจัยที่ต้องการค้นหา
+**Description:** ใช้ Consensus MCP Server ในการค้นหางานวิจัยวิชาการและเปเปอร์ที่มีการ Peer-Review จากฐานข้อมูลกว่า 200 ล้านฉบับของ Consensus เพื่อนำมาสนับสนุนเนื้อหาหรือหา Insight
 
-## Target Output
-- **Inline Citations:** ทุกข้อความที่อ้างงานวิจัย ต้องมี `[1]`, `[2]` เสมอ (ห้ามเขียนลอยๆ)
-- **References:** ทุกเปเปอร์ที่ใช้ ต้องแสดง Title, Authors, Year, Journal, Citations, **URL ดั้งเดิม**
-- **Word Count:** ไม่จำกัด — ขึ้นอยู่กับจำนวนเปเปอร์ที่ Consensus ส่งกลับมา
-- **Source Quality:** Peer-Reviewed Academic Papers (Consensus ทำ curation ให้แล้ว)
-- **Time:** ~10–30 วินาที (MCP call เดียว, ไม่ต้องรัน script)
+---
 
-## 📊 Plan Quota (เราใช้ Pro)
+> ⛔ **อ่านก่อนทำงาน! (Agent — ทุก Session ต้องอ่านตรงนี้ก่อน)**
+>
+> `call_mcp_tool` ของ IDE **ใช้งานกับ Consensus ไม่ได้** (error: `tool search is not enabled`)
+> เพราะ IDE ยังไม่รองรับ MCP Server แบบ OAuth remote (mcp-remote) อย่างสมบูรณ์
+>
+> **วิธีที่ใช้งานได้จริง 100% คือ Node.js Script** ที่ยิงเข้า Consensus ตรงๆ ผ่าน `mcp-remote`
+> → ข้ามไปอ่าน **Step 2 (Node.js Script)** ได้เลย ไม่ต้องลอง `call_mcp_tool` ให้เสียเวลา
 
-| Plan | Papers per Search | Monthly Searches | Extra Features |
-|------|:-----------------:|:----------------:|----------------|
-| No Account | 3 | Unlimited | — |
-| Free | 10 | 30 | Full abstracts |
-| **Pro (ของเรา)** | **20** | **250** | **Study type, key takeaways** |
-| Deep | 20 | 1,000 | Study type, key takeaways |
-| Teams | 20 | 1,000 | Study type, key takeaways |
+---
 
-> ⚠️ **Budget Awareness:** Pro = **250 searches/เดือน** (~8 ครั้ง/วัน) ถ้าใช้เกินจะโดน rate limit
-> ✅ ควร batch query ให้ดี อย่ายิงซ้ำ query เดิม — ถ้าต้องการข้อมูลเพิ่มให้ refine filter แทน
-> 📎 Sign-up: [consensus.app/sign-up](https://consensus.app/sign-up) | Upgrade: [consensus.app/pricing](https://consensus.app/pricing)
+## ⚙️ Workflow (การทำงาน)
 
-## Execution Steps
+### Step 1. ตรวจสอบคำค้นหา (Query)
+- ดึงหัวข้อที่ผู้ใช้ต้องการค้นหาหลังจากคำสั่ง `/cons`
+- หากผู้ใช้พิมพ์แค่ `/cons` ให้ถามผู้ใช้กลับว่าต้องการค้นหางานวิจัยเรื่องใด
 
-### Pre-Flight Checklist (MANDATORY)
+### Step 2. ⭐ เรียกใช้ Consensus ผ่าน Node.js Script (วิธีหลัก)
 
-1. **ดึง Query จากผู้ใช้:**
-   - ถ้าพิมพ์แค่ `/cons` → ถามกลับว่าต้องการค้นหาเรื่องอะไร
-   - ถ้าพิมพ์ `/cons L-Theanine alpha waves sleep` → ใช้เป็น query ได้เลย
+**นี่คือวิธีเดียวที่ใช้งานได้จริง** — ใช้ `mcp-remote` ยิงเข้า Consensus MCP Server ตรงๆ
 
-2. **เลือก Preset Profile (MANDATORY — อย่าปล่อยให้ AI เดา):**
+**ขั้นตอน:**
 
-   ตรวจสอบบริบทของ query แล้วเลือก Profile ด้านล่างนี้ให้ตรงกับความต้องการ **ก่อนเรียก MCP ทุกครั้ง**:
+**2.1) สร้างไฟล์สคริปต์** — เขียนลง `$env:TEMP\cons-search.js`:
 
-   ---
+```javascript
+const { spawn } = require('child_process');
+const query = "<USER_QUERY>";  // ← แทนที่ด้วยคำค้นหาจริง
+const mcp = spawn('cmd.exe', ['/c', 'npx.cmd -y mcp-remote https://mcp.consensus.app/mcp']);
 
-   ### 🅐 Profile: Brand Claims / Supplement Evidence ← **ใช้บ่อยที่สุด (DoctorBank)**
-   > เช่น: "Does Magnesium Bisglycinate improve sleep quality?"
-   ```json
-   {
-     "query": "<topic>",
-     "study_types": ["rct", "meta-analysis", "systematic_review"],
-     "human": true,
-     "sample_size_min": 30,
-     "exclude_preprints": true,
-     "year_min": 2015
-   }
-   ```
-   > 🎯 ได้ Gold Standard evidence ที่ใช้อ้างอิงใน Content / Compliance ได้ทันที
+let outputData = '';
+let searchReturned = false;
 
-   ---
+mcp.stdout.on('data', (data) => {
+    outputData += data.toString();
+    if (outputData.includes('"id":2')) {
+        searchReturned = true;
+        console.log(outputData);
+        process.exit(0);
+    }
+});
 
-   ### 🅑 Profile: Clinical / Medical Research
-   > เช่น: "Find RCTs on CBT for insomnia", "Treatments for anxiety disorder"
-   ```json
-   {
-     "query": "<topic>",
-     "study_types": ["rct", "meta-analysis"],
-     "human": true,
-     "sample_size_min": 50,
-     "exclude_preprints": true,
-     "medical_mode": true,
-     "year_min": 2018
-   }
-   ```
-   > 🎯 เน้น Top Medical Journals + Human RCT เท่านั้น
+const init = { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "test", version: "1.0.0" } } };
+const callTool = { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "search", arguments: { query: query } } };
 
-   ---
+mcp.stdin.write(JSON.stringify(init) + '\n');
+mcp.stdin.write(JSON.stringify(callTool) + '\n');
 
-   ### 🅒 Profile: Exploratory / New Topic (ไม่รู้ field)
-   > เช่น: "What does research say about remote work productivity?"
-   ```json
-   {
-     "query": "<topic>",
-     "exclude_preprints": true
-   }
-   ```
-   > 🎯 Broad — ได้ภาพรวม landscape ก่อน แล้วค่อย refine ด้วย Profile อื่น
-
-   ---
-
-   ### 🅓 Profile: Technology / AI / Non-Medical
-   > เช่น: "LLM hallucination", "Transformer architecture efficiency"
-   ```json
-   {
-     "query": "<topic>",
-     "year_min": 2022,
-     "exclude_preprints": false
-   }
-   ```
-   > 🎯 AI/CS research มักอยู่ใน preprints (arXiv) → ไม่ต้อง exclude
-
-   ---
-
-   ### 🅔 Profile: Clinical Guidelines Only
-   > เช่น: "Current guidelines for hypertension management"
-   ```json
-   {
-     "query": "<topic>",
-     "clinical_guideline": true,
-     "human": true,
-     "year_min": 2019
-   }
-   ```
-   > 🎯 ได้เฉพาะ Official Guidelines จาก Medical Associations
-
-   ---
-
-   **Available Parameters Reference:**
-   | Parameter | Type | ค่าที่รับได้ |
-   |-----------|------|------------|
-   | `study_types` | array | `"rct"`, `"meta-analysis"`, `"systematic_review"`, `"observational"`, `"case_study"`, `"review"` |
-   | `human` | boolean | `true` / `false` |
-   | `sample_size_min` | integer | เช่น `30`, `50`, `100` |
-   | `exclude_preprints` | boolean | `true` / `false` |
-   | `medical_mode` | boolean | `true` / `false` |
-   | `clinical_guideline` | boolean | `true` / `false` |
-   | `year_min` | integer | เช่น `2015`, `2018`, `2020` |
-   | `year_max` | integer | เช่น `2024` |
-
-### Run MCP Call
-
-```
-ServerName: consensus
-ToolName:   search
-Arguments:  {
-  "query": "<user_research_topic>",
-  // ... filters ตามที่เลือกจาก Pre-Flight
-}
+setTimeout(() => { if (!searchReturned) { console.log("TIMEOUT:", outputData); process.exit(1); } }, 30000);
 ```
 
-> 💡 **PICO Framework (สำหรับ query ที่ซับซ้อน):**
-> ถ้า query กว้างเกินไป ให้ช่วยผู้ใช้ refine เป็น PICO:
-> - **P**opulation: กลุ่มคนที่ศึกษา (เช่น adults with insomnia)
-> - **I**ntervention: สารที่สนใจ (เช่น Magnesium Bisglycinate 200mg)
-> - **C**omparison: เทียบกับอะไร (เช่น placebo, Magnesium Oxide)
-> - **O**utcome: ผลลัพธ์ที่วัด (เช่น sleep quality, ISI score)
+**2.2) รันสคริปต์** — redirect ผลลัพธ์ลงไฟล์ (สำคัญมาก! ห้ามอ่านจาก stdout ตรงๆ เพราะจะถูก truncate):
 
-### Post-Run Validation
-
-| Check | Action |
-|-------|--------|
-| ผลลัพธ์เป็น 0 เปเปอร์ | ลอง rephrase query ให้กว้างขึ้น หรือลด filter ออก |
-| เปเปอร์ไม่ตรงประเด็น | เพิ่ม filter เช่น `study_types`, `human`, `year_min` |
-| มีข้อความ Sign-up / Upgrade / Usage limit | **คัดลอกข้อความนั้นแสดงท้ายสุดแบบ word-for-word** (กฎเหล็ก) |
-| URL ในผลลัพธ์เป็น link จริง | ใช้ URL ดั้งเดิมเท่านั้น ⛔ **ห้ามดัดแปลง ย่อ หรือสร้าง URL ใหม่เด็ดขาด** |
-
-### Formatting Output (กฎเหล็ก)
-
-**เนื้อหาหลัก:**
-- สรุป Key Findings จากเปเปอร์ที่เกี่ยวข้องมากที่สุด
-- ทุกประโยคที่อ้างงานวิจัย → ใส่ `[1]`, `[2]` ทันที
-- ใส่บริบท: Study Design, Sample Size (n), Dose, Duration, Outcome
-
-**References (ส่วนท้าย — MANDATORY):**
-```
-[1] [Paper Title](original_url) — Authors, Year, Journal, Citations: X
-[2] [Paper Title](original_url) — Authors, Year, Journal, Citations: X
+```powershell
+node "$env:TEMP\cons-search.js" > "$env:TEMP\cons_result.json"
 ```
 
-## 💬 Example Prompts
+**2.3) อ่านผลลัพธ์ครบทุกเปเปอร์** — ใช้ `Get-Content` หรือ `view_file` อ่านไฟล์ `$env:TEMP\cons_result.json`
 
-ตัวอย่าง query ที่ส่งเข้า MCP ได้โดยตรง (เรียงจาก simple → advanced):
+> ⚠️ **ไฟล์ผลลัพธ์จะยาวมาก (20 เปเปอร์)** — ถ้า `view_file` โชว์ไม่ครบ ให้อ่านทีละส่วนด้วย StartLine/EndLine
 
-| # | Prompt | ใช้เมื่อ |
-|:-:|--------|----------|
-| 1 | `"What does the research say about the effectiveness of remote work on productivity?"` | Broad exploration ทั่วไป |
-| 2 | `"Find RCTs and meta-analyses since 2020 on cognitive behavioral therapy for anxiety"` | กำหนด study type + ปี |
-| 3 | `"Search for high quality human studies on gut microbiome and mental health with at least 100 participants"` | กำหนด human + sample size |
-| 4 | `"Recent research on large language model hallucination from top tier journals"` | Non-medical, เน้น top journals |
-| 5 | `"Use Consensus Deep Research to compare evidence for different treatments for insomnia"` | Deep Research mode (เปรียบเทียบหลาย intervention) |
+**2.4) Dependency ที่ต้องมี (ติดตั้งแล้ว):**
+- `mcp-remote` — เรียกผ่าน `npx.cmd -y mcp-remote` ในสคริปต์แล้ว (ไม่ต้อง Fix Path แบบเดิม)
+- Auth Token — แคชไว้แล้ว (OAuth ผ่าน consensus.app, port 6761)
+- ⛔ ถ้า `mcp-remote` หายหรือ Token หมดอายุ → รัน `npx -y mcp-remote https://mcp.consensus.app/mcp` เพื่อ re-auth
 
-> 💡 **Pro Tip:** Prompt #5 เรียก Consensus Deep Research ซึ่งจะทำ multi-step synthesis ให้โดยอัตโนมัติ — ดีสำหรับ comparative evidence review
+### Step 3. ⛔ Full Log Reading (กฎเหล็ก — ห้ามละเมิด!)
 
-## ⚠️ Known Pitfalls
-- **Auth Token Caching:** Consensus MCP ต้อง authenticate ผ่าน OAuth ตอน IDE เปิดครั้งแรก ถ้า token expired → ปิดเปิด AG IDE ใหม่
-- **Tool Not Found:** ถ้า `call_mcp_tool` แจ้ง `tool search is not enabled for server consensus` → แจ้งผู้ใช้ว่า **"ระบบมี Auth Token แล้ว แต่ IDE ยังแคชสถานะเดิมอยู่ รบกวนปิดแล้วเปิด AG IDE ใหม่ครับ"**
-- **Broad Query = Noise:** ถ้า query กว้างเกินไป (เช่น "magnesium") จะได้เปเปอร์หลากหลายเกินไป → ควร refine ด้วย PICO หรือ filter
-- **Pro Plan Quota:** เราใช้ Pro = **250 searches/เดือน** (20 papers/search) — ถ้าเจอข้อความ upgrade/quota ให้แสดงข้อความนั้นตามจริงเสมอ อย่ายิง query ซ้ำโดยไม่จำเป็น
+Consensus ส่งเปเปอร์กลับมาสูงสุด **20 เปเปอร์ต่อการค้นหา** ในรูปแบบ Text ยาวมาก
 
-## 🔗 Related Skills
-| Skill | เมื่อไหร่ใช้แทน/ใช้คู่กัน |
-|-------|--------------------------|
-| `/res` | ต้องการ broader web + academic research (gpt-researcher) ~15–50 citations |
-| `/deep` | ต้องการ deep systematic-review level ≥80 citations (medical_research.py) |
-| `/cons` | ต้องการ quick peer-reviewed evidence check จาก Consensus โดยเฉพาะ |
+**ห้ามสรุปตอบผู้ใช้จากข้อมูลที่ถูก Truncate เด็ดขาด!**
+
+**วิธีอ่าน Full Log (ต้องทำทุกครั้ง):**
+1. ✅ อ่านจากไฟล์ `$env:TEMP\cons_result.json` ที่ redirect ไว้ใน Step 2.2
+2. ✅ อ่าน **ทีละส่วน** จนเห็นเปเปอร์ [1] ถึง [20] ครบ
+3. ⛔ **ต้องยืนยันกับตัวเองว่าเห็นเปเปอร์ครบทุกตัว** ก่อนเริ่มเขียนสรุป
+
+### Step 4. Fallback สุดท้าย (กรณี Node.js Script ก็ใช้ไม่ได้)
+
+ถ้า Node.js Script ข้างบน Timeout หรือ Error → แจ้งผู้ใช้ว่า **"Auth Token อาจหมดอายุ รบกวนรัน `npx -y mcp-remote https://mcp.consensus.app/mcp` ใน Terminal เพื่อ re-authenticate ครับ"**
+
+---
+
+## 📝 การจัดรูปแบบผลลัพธ์ (Formatting Rules)
+
+### 5. Evidence Hierarchy (เรียงตามความแข็งแกร่งของหลักฐาน)
+
+เมื่อเลือกเปเปอร์มาอ้างอิง ต้องจัดลำดับความสำคัญตามประเภท:
+
+| ลำดับ | ประเภทหลักฐาน | น้ำหนัก |
+|-------|--------------|---------|
+| 1 | Network Meta-Analysis (NMA) / Umbrella Review | สูงสุด |
+| 2 | Meta-Analysis / Systematic Review | สูง |
+| 3 | Randomized Controlled Trial (RCT) | ปานกลาง-สูง |
+| 4 | Observational Study / Narrative Review | ปานกลาง |
+| 5 | Conference Paper / Case Report | ต่ำ |
+
+- ⛔ **ห้ามให้เปเปอร์ที่มี 0 citations จากงานประชุม มีน้ำหนักเท่า NMA จาก BMJ**
+- ✅ ให้ระบุประเภทหลักฐานกำกับชื่อเปเปอร์เสมอ เช่น "(RCT, n=101)" หรือ "(NMA, 99 RCTs)"
+
+### 6. ⛔ NO MAGIC Rule (ห้ามเดา — กฎเหล็กที่สำคัญที่สุด!)
+
+**ห้ามสรุปสิ่งที่ไม่มีเปเปอร์รองรับโดยตรง**
+
+| ❌ ผิด | ✅ ถูก |
+|--------|--------|
+| "18/6 น่าจะลดได้ไวกว่า 16/8" (ไม่มีเปเปอร์เปรียบเทียบตรง) | "ยังไม่มีงานวิจัยเปรียบเทียบ 18/6 กับ 16/8 โดยตรง แต่มีงานเปรียบเทียบ 16:8 vs 14:10 พบว่า..." |
+| "Keto + IF เป็นสูตรคอมโบที่เวิร์ค" (เดาจาก mechanism) | "มีเปเปอร์ [X] ที่เปรียบเทียบ Keto vs IF โดยตรง พบว่า..." |
+| "น่าจะช่วยเรื่อง X ได้" | "เปเปอร์ [Y] พบว่า X (p < 0.05, n=100)" |
+
+- ⛔ **ห้ามใช้คำว่า "น่าจะ", "คาดว่า", "ตามหลักการแล้ว"** ถ้าไม่มีเปเปอร์รองรับ
+- ✅ **ต้องบอกตรงๆ** ว่า "ไม่มีหลักฐานตรงสำหรับประเด็นนี้" ถ้าไม่มีจริงๆ
+
+### 7. ⛔ Contradictory Evidence (ต้องนำเสนอข้อขัดแย้ง!)
+
+หากเปเปอร์ 2 ตัวขึ้นไปให้ผลลัพธ์ขัดแย้งกัน:
+
+- ❌ **ห้ามเลือกนำเสนอแค่ด้านเดียว** ที่สนับสนุนคำตอบที่อยากให้
+- ✅ **ต้องนำเสนอทั้งสองด้าน** พร้อมบอกว่าเปเปอร์ไหนมีหลักฐานแข็งกว่า (ดูจาก Evidence Hierarchy)
+
+**รูปแบบการนำเสนอข้อขัดแย้ง:**
+```
+> ⚠️ **ข้อขัดแย้งในหลักฐาน:**
+> - เปเปอร์ [X] (RCT, n=30) พบว่า A ดีกว่า B
+> - แต่เปเปอร์ [Y] (Systematic Review, 7 studies) พบว่า B ดีกว่า A
+> - **น้ำหนัก:** [Y] มีหลักฐานครอบคลุมกว่า แต่ [X] เป็นการทดลองตรง 12 เดือน
+```
+
+### 8. Inline Citation (บังคับ)
+
+- ทุกครั้งที่อ้างถึงผลการวิจัย **ต้องใส่ Inline Citation** เสมอ เช่น `[1]`, `[2]`
+- ⛔ ห้ามเขียนสรุปโดยไม่มีตัวเลขอ้างอิงกำกับ
+- ✅ ใส่เลขอ้างอิงทุกประโยคที่อ้างข้อมูลจากเปเปอร์
+
+### 9. สรุปเนื้อหาสำคัญ
+
+- สรุป Key Findings ให้ผู้ใช้อ่านเข้าใจง่าย
+- ⛔ **ห้ามย่อเหลือ 3-4 เปเปอร์** ถ้ามี 20 เปเปอร์ที่เกี่ยวข้อง → ต้องอ้างอิงทุกตัวที่ตอบคำถามได้
+- ✅ จัดกลุ่มเปเปอร์ตามประเด็นที่ผู้ใช้ถาม แล้วสังเคราะห์ข้อมูลจากหลายเปเปอร์เข้าด้วยกัน
+
+### 10. References Section (ส่วนท้ายของการตอบกลับ)
+
+ต้องมีรายการอ้างอิงเปเปอร์ **ทั้งหมด** ที่อ้างถึงในเนื้อหา พร้อมรายละเอียด:
+- `[1] [Paper Title](url) (Authors, Year, Journal, Citations)`
+- ⛔ **ห้ามดัดแปลง ย่อ หรือสร้าง URL ใหม่** ให้ใช้ URL ดั้งเดิมจากผลลัพธ์ของ Tool เท่านั้น!
+
+### 11. ⛔ กฎเหล็กของ Consensus
+
+- หากในผลลัพธ์มีข้อความแจ้งเตือนเกี่ยวกับการใช้งาน, โควต้า, หรือการอัปเกรด (Sign-up, upgrade, usage message) **จะต้องคัดลอกข้อความเหล่านั้นมาแสดงไว้ตอนท้ายสุดแบบคำต่อคำ (word-for-word)** เสมอ
+
+---
+
+## ✅ Checklist ก่อนตอบผู้ใช้ (ห้ามข้ามข้อ!)
+
+- [ ] ผมอ่าน Full Log ครบทุกเปเปอร์ (1 ถึง 20) แล้วหรือยัง?
+- [ ] ผมอ้างอิงเปเปอร์ **ทุกตัวที่เกี่ยวข้อง** กับคำถามของผู้ใช้แล้วหรือยัง? (ไม่ใช่แค่ 3-4 ตัว)
+- [ ] ผมจัดลำดับหลักฐานตาม Evidence Hierarchy (NMA > RCT > SR > Review) แล้วหรือยัง?
+- [ ] ผมนำเสนอข้อขัดแย้งระหว่างเปเปอร์ (ถ้ามี) แล้วหรือยัง?
+- [ ] ทุกข้อสรุปมี Inline Citation กำกับหรือยัง?
+- [ ] ผมไม่ได้เดาหรือสรุปสิ่งที่ไม่มีเปเปอร์รองรับใช่ไหม? (NO MAGIC)
+- [ ] References ท้ายข้อความครบทุกเปเปอร์ที่อ้างถึง พร้อม URL ดั้งเดิมใช่ไหม?
+- [ ] มีข้อความแจ้งเตือนจาก Consensus (quota/upgrade) ที่ต้องคัดลอกมาแสดงไหม?
