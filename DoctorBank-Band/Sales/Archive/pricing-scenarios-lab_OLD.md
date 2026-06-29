@@ -287,3 +287,5 @@
 
 ## 📝 Changelog
 - **2026-06-15:** สร้างไฟล์ 20 Scenarios Pricing Lab พร้อม 5 เมนูแนะนำ + Decoy Master strategy
+
+- **2026-06-29 14:00** | [LIVE Pricing & Margin Analysis](file:///C:/My%20Claw/Openclaw-VPS/Quick%20Save/Complete/DoctorBank-Band/V1.6.2_[study]_DoctorBank-Band_live-pricing-margin-analysis.md) -- Context from LIVE (Zero Aff) minimum floor analysis

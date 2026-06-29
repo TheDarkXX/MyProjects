@@ -267,3 +267,5 @@ DR.BANK: "ซื้อ 1 แถม 1" ได้ 2 ขวด = 1,290 บาท (=
 ## 📝 Changelog
 - **2026-06-15 V1:** สร้างไฟล์วิเคราะห์ตำแหน่งราคาเทียบคู่แข่ง (500-890 บาท/ขวด)
 - **2026-06-15 V2:** แก้ปัญหา "ยิ่งขายยิ่งเจ๊ง" — ปรับราคา Bundle ขึ้น (1,290→1,490, 1,790→1,990) ให้กำไรส่วนเพิ่มต่อขวด scale อย่างสมเหตุสมผล
+
+- **2026-06-29 14:00** | [LIVE Pricing & Margin Analysis](file:///C:/My%20Claw/Openclaw-VPS/Quick%20Save/Complete/DoctorBank-Band/V1.6.2_[study]_DoctorBank-Band_live-pricing-margin-analysis.md) -- Context from LIVE (Zero Aff) minimum floor analysis
