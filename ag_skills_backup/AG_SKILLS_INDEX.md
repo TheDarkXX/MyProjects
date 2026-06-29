@@ -28,6 +28,7 @@
 | `/web` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\web.md` | General web research — Inline Citations 15–50, Word ~1,500, Time ~3–5 min |
 | `/res` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\res.md` | Medical/Academic normal research — Inline Citations 15–50, Word ~2,500, Time ~5–8 min |
 | `/deep` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\deep.md` | Medical/Academic DEEP research — Inline Citations ≥80, Word ~2,500, Time ~7–12 min |
+| `/cons` | DoctorBank-Band | `c:\My Claw\MyProjects\ag_skills_backup\cons.md` | Consensus MCP Research — Peer-reviewed papers, Pro Quota, Time ~10-30s |
 
 ---
 
