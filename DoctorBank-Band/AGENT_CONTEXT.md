@@ -35,6 +35,7 @@
 | Style ID | ต้นแบบจากเพจ | Blueprint | Default? |
 |---|---|---|---|
 | `winbiz` | BestWinbiz | `Content/Writing/Styles/Health_Supplement_Winbiz_Style/Blueprints/Health_Supplement_Writing_Blueprint.md` | ✅ |
+| `drjade` | drjadehealth (หมอเจด) | `Content/Writing/Styles/DR_Jade_Health_Style/Blueprints/DR_Jade_Health_Writing_Blueprint.md` | |
 
 > **เพิ่ม Style ใหม่:** clone จากเพจใหม่ → สร้างโฟลเดอร์ + Blueprint → เพิ่มรายการในตารางนี้ + ใน SKILL.md
 
