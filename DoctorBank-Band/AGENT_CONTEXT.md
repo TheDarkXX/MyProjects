@@ -27,12 +27,44 @@
 📦 Product: Products/[name]/PRODUCT_MEMORY.md
 ```
 
+## ✍️ Writing Style Registry
+
+> เมื่อ User สั่ง `/drbpost [style] [หัวข้อ]` → AI ไปอ่าน **Blueprint** ของ Style นั้น
+> Blueprint = สูตรเขียนทั้งหมด (แกะจากเพจต้นแบบ) จบครบในไฟล์เดียว
+
+| Style ID | ต้นแบบจากเพจ | Blueprint | Default? |
+|---|---|---|---|
+| `winbiz` | BestWinbiz | `Content/Writing/Styles/Health_Supplement_Winbiz_Style/Blueprints/Health_Supplement_Writing_Blueprint.md` | ✅ |
+
+> **เพิ่ม Style ใหม่:** clone จากเพจใหม่ → สร้างโฟลเดอร์ + Blueprint → เพิ่มรายการในตารางนี้ + ใน SKILL.md
+
+## 🛠️ Skill Index — คำสั่งทั้งหมดของโปรเจกต์นี้
+
+| คำสั่ง | หน้าที่ | ไฟล์ Skill | หมวด |
+|---|---|---|---|
+| **`/drbpost`** | เขียนโพสต์ (Multi-Style) | [SKILL.md](.agents/skills/post/SKILL.md) | ✍️ Writing |
+| **`/clonepost`** | แกะสไตล์เขียนจากเพจต้นแบบ (CSV/Excel/TXT) | [SKILL.md](.agents/skills/clonepost/SKILL.md) | 🔬 Analysis |
+| **`/cons`** | หา evidence จากเปเปอร์ (Consensus MCP) | *Built-in MCP* | 📚 Research |
+| **`/deep`** / **`/res`** | หาอ้างอิงระดับลึก (80+ citations) | [medical_research.py](gpt-researcher/medical_research.py) | 📚 Research |
+
+## 📂 โครงสร้างโฟลเดอร์หลัก
+
+```
+DoctorBank-Band/
+├── .agents/skills/          ← 🛠️ AI Skills (คำสั่ง /slash)
+│   ├── post/SKILL.md            → /drbpost
+│   └── clonepost/SKILL.md       → /clonepost
+├── AGENT_CONTEXT.md         ← 📍 คุณอยู่ที่นี่
+├── memory.md                ← ⚖️ กฎเหล็ก (Iron Rules)
+├── Brand/                   ← 🏷️ Brand Identity + Memory
+├── Products/                ← 📦 สินค้า (แต่ละตัวมี PRODUCT_MEMORY.md)
+├── Content/                 ← ✍️ เนื้อหาทั้งหมด
+│   └── Writing/Styles/          → Style Registry (Blueprint ของแต่ละเพจ)
+├── Sales/                   ← 💰 การขาย
+├── Assets/                  ← 🖼️ ไฟล์ Media
+└── gpt-researcher/          ← 🔬 Research Tools
+```
+
 ## 🔗 Essential Files
 - กฎโปรเจกต์: [memory.md](memory.md)
-- ดัชนีสกิล (Global): [MyProjects/ag_skills_backup/AG_SKILLS_INDEX.md](file:///c:/My%20Claw/MyProjects/ag_skills_backup/AG_SKILLS_INDEX.md)
-- **`/drbpost`** (Post Writer Skill): [.agents/skills/post/SKILL.md](.agents/skills/post/SKILL.md)
-
-## 🔬 Research Tools
-โปรเจกต์นี้ขับเคลื่อนด้วย Research-backed content โดยใช้ Skills:
-- **`/cons`** (Consensus MCP): ใช้สำหรับหา evidence เร็วๆ (10-30s) จากเปเปอร์ล้วน (20 papers/search) *คุณสามารถเรียกใช้ `call_mcp_tool` ไปที่ server `consensus` ได้เลย*
-- **`/deep`** & **`/res`**: ใช้ `gpt-researcher/medical_research.py` สำหรับหาอ้างอิงระดับลึก (80+ citations)
+- ดัชนีสกิล (Global): [AG_SKILLS_INDEX.md](file:///c:/My%20Claw/MyProjects/ag_skills_backup/AG_SKILLS_INDEX.md)
