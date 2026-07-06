@@ -25,8 +25,9 @@ def find_best_window(video_path: str, target_duration: float, step_sec: float = 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Extract frames using ffmpeg at 1/step_sec fps
         fps = 1.0 / step_sec
+        ffmpeg_exe = r"C:\Users\Admin\AppData\Local\CapCut\Apps\8.9.1.3802\ffmpeg.exe"
         cmd = [
-            "ffmpeg", "-y", "-i", video_path, 
+            ffmpeg_exe, "-y", "-i", video_path, 
             "-vf", f"fps={fps}", 
             "-q:v", "2", 
             os.path.join(temp_dir, "thumb_%04d.jpg")
@@ -57,31 +58,48 @@ def find_best_window(video_path: str, target_duration: float, step_sec: float = 
                 
         return best_start_idx * step_sec
 
-def assemble_footage(scene_table_path: str, footage_dir: str, capcut_project: str):
-    """
-    Matches scenes with footage, trims using Smart Center Crop (Sharpness Analysis),
-    and generates CapCut injection script.
-    """
+def assemble_footage(job_dir: str):
+    job_path = Path(job_dir)
+    scene_table_path = job_path / "scene_table.json"
+    footage_path = job_path / "Footage"
+    inter_path = job_path / "intermediates"
+    inter_path.mkdir(exist_ok=True)
+    
+    if not scene_table_path.exists():
+        print(f"Error: scene_table.json not found in {job_dir}")
+        sys.exit(1)
+        
+    if not footage_path.exists():
+        print(f"Error: Footage directory not found in {job_dir}")
+        sys.exit(1)
+        
     with open(scene_table_path, 'r', encoding='utf-8') as f:
         scenes = json.load(f)
         
-    footage_path = Path(footage_dir)
-    if not footage_path.exists():
-        print(f"Error: Footage directory {footage_dir} not found.")
-        sys.exit(1)
-        
     commands = []
+    
+    # Load existing commands if any to append
+    commands_file = inter_path / "timeline_commands.json"
+    if commands_file.exists():
+        with open(commands_file, 'r', encoding='utf-8') as f:
+            try:
+                commands = json.load(f)
+            except:
+                commands = []
+                
+    new_cmds_count = 0
     
     for scene in scenes:
         scene_id = scene["id"]
         target_duration = scene["duration"]
         start_timeline = scene["start"]
         
-        # Find matching footage (prefix S01_, S02_, etc.)
+        # Find matching footage (prefix [S01] or S01)
         matched_file = None
-        for file in footage_path.glob(f"{scene_id}_*.mp4"):
-            matched_file = file
-            break
+        for file in footage_path.glob("*.mp4"):
+            if file.name.startswith(f"[{scene_id}]") or file.name.startswith(f"{scene_id}_"):
+                matched_file = file
+                break
             
         if not matched_file:
             print(f"Warning: No footage found for {scene_id}. Skipping.")
@@ -93,28 +111,31 @@ def assemble_footage(scene_table_path: str, footage_dir: str, capcut_project: st
         best_start = find_best_window(str(matched_file), target_duration)
         print(f"  -> Best window starts at {best_start}s")
         
-        # Microseconds conversion for capcut-cli
-        capcut_start_timeline = int(start_timeline * 1_000_000)
-        capcut_duration = int(target_duration * 1_000_000)
-        capcut_media_start = int(best_start * 1_000_000)
+        # NOTE: capcut-cli expects time in SECONDS (float)
+        capcut_start_timeline = start_timeline
+        capcut_duration = target_duration
+        capcut_media_start = best_start
         
-        # Command to add video to track 1 (overlay track)
-        cmd = f'capcut-cli add-video --project "{capcut_project}" --file "{matched_file.absolute()}" --start {capcut_start_timeline} --duration {capcut_duration} --media-start {capcut_media_start} --track 1'
+        # Command array for capcut-cli
+        cmd = [
+            "add-video",
+            str(matched_file.absolute()),
+            str(capcut_start_timeline),
+            str(capcut_duration),
+            "--media-start", str(capcut_media_start),
+            "--track", "1"
+        ]
         commands.append(cmd)
+        new_cmds_count += 1
         
-    # Output execution script
-    out_script = Path("inject_footage.bat")
-    with open(out_script, "w", encoding="utf-8") as f:
-        f.write("@echo off\n")
-        for cmd in commands:
-            f.write(cmd + "\n")
+    with open(commands_file, 'w', encoding='utf-8') as f:
+        json.dump(commands, f, indent=4, ensure_ascii=False)
             
-    print(f"\nAssembly complete! {len(commands)} clips matched.")
-    print(f"Run {out_script.name} to inject into CapCut.")
+    print(f"\nAssembly complete! {new_cmds_count} clips matched and commands written to timeline_commands.json.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print("Usage: python footage_assembler.py <scene_table.json> <footage_dir> <capcut_project_path>")
+    if len(sys.argv) < 2:
+        print("Usage: python 06-footage-assembler.py <job_dir>")
         sys.exit(1)
         
-    assemble_footage(sys.argv[1], sys.argv[2], sys.argv[3])
+    assemble_footage(sys.argv[1])

@@ -1,79 +1,115 @@
 import json
 import sys
+import os
+import random
 from pathlib import Path
 
-def place_sfx(transcript_path: str, manifest_path: str, capcut_project: str):
-    """
-    Scans the raw ElevenLabs transcript for trigger keywords,
-    aligns SFX peaks with word start times, and generates capcut-cli commands.
-    """
+def place_sfx(job_dir: str):
+    job_path = Path(job_dir)
+    transcript_files = list(job_path.glob("*.transcript.json"))
+    if not transcript_files:
+        print(f"Error: No .transcript.json found in {job_dir}")
+        sys.exit(1)
+    transcript_path = transcript_files[0]
+        
+    sfx_dir = Path(r"V:\DoctorBank Family\DoctorBank Brand\Sound Effect")
+    manifest_path = sfx_dir / "sfx_manifest.json"
+    
     with open(transcript_path, 'r', encoding='utf-8') as f:
         transcript = json.load(f)
         
-    with open(manifest_path, 'r', encoding='utf-8') as f:
-        manifest = json.load(f)
+    manifest = []
+    if manifest_path.exists():
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            manifest = json.load(f)
         
     words = transcript.get("words", [])
     if not words:
         print("Error: No character/word data in transcript.")
         sys.exit(1)
         
-    # Reconstruct whole words from character-level JSON for matching
-    # ElevenLabs Scribe Thai outputs chars. We need to group them by actual spoken words loosely,
-    # or just match substrings and use the timestamp of the first char of the substring.
     full_text = "".join([w["text"] for w in words])
     
-    commands = []
+    inter_path = job_path / "intermediates"
+    inter_path.mkdir(exist_ok=True)
+    commands_file = inter_path / "timeline_commands.json"
     
+    if commands_file.exists():
+        with open(commands_file, 'r', encoding='utf-8') as f:
+            try:
+                commands = json.load(f)
+            except:
+                commands = []
+    else:
+        commands = []
+        
+    new_cmds_count = 0
+    
+    def get_audio_duration(file_path):
+        if str(file_path).lower().endswith('.wav'):
+            import wave
+            try:
+                with wave.open(str(file_path), 'rb') as w:
+                    return w.getnframes() / float(w.getframerate())
+            except: pass
+        return 1.0
+
+    def add_sfx_cmd(sound_file, start_sec, vol=0.3):
+        nonlocal new_cmds_count
+        full_path = sfx_dir / sound_file
+        if full_path.exists():
+            cmd = ["add-audio", str(full_path.absolute()), str(start_sec), str(get_audio_duration(full_path)), "--volume", str(vol)]
+            commands.append(cmd)
+            new_cmds_count += 1
+            print(f"Placed {sound_file} at {start_sec:.3f}s")
+    
+    # 1. Manifest Matching
     for sfx in manifest:
         keywords = sfx.get("trigger_keywords", [])
-        if not keywords:
-            continue
-            
         peak_offset_sec = sfx.get("peak_offset_ms", 0) / 1000.0
         file_path = sfx["file"]
         vol = sfx.get("volume_default", 0.3)
-        
-        for keyword in keywords:
-            # Find keyword in the full text
+        for kw in keywords:
             start_idx = 0
             while True:
-                idx = full_text.find(keyword, start_idx)
-                if idx == -1:
-                    break
-                    
-                # The word starts at character index `idx`.
-                # Get the start timestamp of that character
-                char_start_time = words[idx]["start"]
+                idx = full_text.find(kw, start_idx)
+                if idx == -1: break
+                sfx_start = max(0, words[idx]["start"] - peak_offset_sec)
+                add_sfx_cmd(file_path, sfx_start, vol)
+                start_idx = idx + len(kw)
+
+    # 2. Algorithmic High-Density SFX Engine
+    print("Running Algorithmic High-Density SFX Engine...")
+    sfx_pools = {
+        "pop": [f.name for f in sfx_dir.glob("*.wav") if "pop" in f.name.lower() or "pluck" in f.name.lower()],
+        "slide": [f.name for f in sfx_dir.glob("*.wav") if "slide" in f.name.lower() or "swoosh" in f.name.lower()],
+        "ding": [f.name for f in sfx_dir.glob("*.wav") if "ding" in f.name.lower() or "bell" in f.name.lower() or "ping" in f.name.lower()]
+    }
+    
+    high_density_kws = {
+        "pop": ['ไต', 'แคลเซียม', 'กระดูก', 'โอเมก้า', 'วิตามิน', 'พัง', 'อักเสบ', 'ดีจริง', 'จุก', 'อันตราย', 'เสื่อม', 'สำคัญ'],
+        "slide": ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'ข้อแรก', 'ข้อที่'],
+        "ding": ['สนใจ', 'พิมพ์', 'สั่งซื้อ', 'ตะกร้า', 'คลิก']
+    }
+    
+    for word_obj in words:
+        w_text = word_obj["text"]
+        w_start = word_obj["start"]
+        
+        # Check categories
+        for cat, kws in high_density_kws.items():
+            if any(k in w_text for k in kws):
+                if sfx_pools[cat]:
+                    add_sfx_cmd(random.choice(sfx_pools[cat]), max(0, w_start - 0.1), vol=0.4)
+                break # only one sfx per word
                 
-                # Apply peak offset
-                sfx_start = char_start_time - peak_offset_sec
-                if sfx_start < 0:
-                    sfx_start = 0
-                    
-                # Generate capcut-cli command
-                capcut_start = int(sfx_start * 1_000_000)
-                cmd = f'capcut-cli add-audio --project "{capcut_project}" --file "{Path(manifest_path).parent / file_path}" --start {capcut_start} --volume {vol}'
-                commands.append(cmd)
-                
-                print(f"Matched '{keyword}' at {char_start_time}s -> placing {Path(file_path).name} at {sfx_start:.3f}s")
-                
-                # Move past this keyword to find next occurrences
-                start_idx = idx + len(keyword)
-                
-    # Output execution script
-    out_script = Path("inject_sfx.bat")
-    with open(out_script, "w", encoding="utf-8") as f:
-        f.write("@echo off\n")
-        for cmd in commands:
-            f.write(cmd + "\n")
+    with open(commands_file, 'w', encoding='utf-8') as f:
+        json.dump(commands, f, indent=4, ensure_ascii=False)
             
-    print(f"\nSFX Placement complete! {len(commands)} sound effects matched.")
-    print(f"Run {out_script.name} to inject into CapCut.")
+    print(f"\nSFX Placement complete! {new_cmds_count} sound effects placed.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print("Usage: python sfx_placer.py <transcript.json> <sfx_manifest.json> <capcut_project_path>")
+    if len(sys.argv) < 2:
+        print("Usage: python 07-sfx-placer.py <job_dir>")
         sys.exit(1)
-        
-    place_sfx(sys.argv[1], sys.argv[2], sys.argv[3])
+    place_sfx(sys.argv[1])

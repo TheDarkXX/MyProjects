@@ -267,3 +267,35 @@ pacing_rules:
 
 ### ⚡ Bottleneck เดียวที่เหลือ
 สิ่งเดียวที่ยังเป็นคอขวดคือ **CapCut ไม่มี CLI สำหรับ Export** ต้องเปิดแอปแล้วกด Export ด้วยมือ (หรือเขียน Auto-click Script ซึ่งทำได้ แต่เปราะบาง) ถ้า CapCut เปิด API สำหรับ Headless Render ในอนาคต ระบบนี้จะกลายเป็น **100% Fully Automated** ทันที
+
+
+## ?? Code Snippet: Dynamic Split-Screen Layout (Backup)
+
+�����͹Ҥ���ͧ��ù��к� Split-Screen (B-Roll ���觺� 55%, ��ͤ�����ҧ 45%) ��Ѻ���� ����ö�� Code Python ��ҹ��ҧ����᷹���� `08b-capcut-auto-style.py` �����:
+
+``python
+broll_ranges = []
+for bt in broll_tracks:
+    for seg in bt.get('segments', []):
+        if 'target_timerange' in seg:
+            is_split = random.random() < 0.6 # �͡�� 60% ������ Split Screen
+            broll_ranges.append((seg['target_timerange'], is_split))
+            if 'clip' in seg and 'transform' in seg['clip']:
+                if is_split:
+                    seg['clip']['transform']['y'] = -0.290 # �ѹ B-Roll ��鹺�
+                else:
+                    seg['clip']['transform']['y'] = 0.0    # �����
+
+for seg in main_track.get('segments', []):
+    if 'target_timerange' in seg:
+        overlaps_split = any(is_overlap(seg['target_timerange'], br[0]) for br in broll_ranges if br[1])
+        if 'clip' in seg and 'transform' in seg['clip']:
+            if overlaps_split:
+                seg['clip']['transform']['y'] = 0.625 # �ѹ���ŧ��ҧ
+                seg['clip']['scale']['x'] = 1.26
+                seg['clip']['scale']['y'] = 1.26
+            else:
+                seg['clip']['transform']['y'] = 0.0
+                seg['clip']['scale']['x'] = 1.0
+                seg['clip']['scale']['y'] = 1.0
+``
