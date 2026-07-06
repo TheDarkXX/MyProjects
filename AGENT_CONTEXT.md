@@ -17,6 +17,8 @@
 | Project | Path | ประเภท | สถานะ |
 |---------|------|--------|-------|
 | **DoctorBank Band** | `DoctorBank-Band/` | Brand/Business | ✅ Active |
+| **Viral VDO Editing (VVE)** | `Viral VDO Editing (VVE)/` | Code/App (AI Video Editing) | ✅ Active |
+| **App Builder AI** | `App Builder AI/` | Content/Media (Google Flow Tools) | ✅ Active |
 
 ## 📜 Memory Inheritance
 
