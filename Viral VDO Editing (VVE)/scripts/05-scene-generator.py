@@ -69,6 +69,7 @@ def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5):
         f.write("Please act as the AI Art Director. Read the `doctorbank_masterprompt.yaml` to understand the 8 Categories.\n")
         f.write("Then, analyze the following scenes and generate a **TSV Table** containing the following columns:\n")
         f.write("`Scene ID` | `Subtitle` | `Scene Story` | `Category` | `Image Prompt` | `Motion Prompt`\n\n")
+        f.write("> **CRITICAL RULE:** For both `Image Prompt` and `Motion Prompt`, you MUST wrap the Scene ID at the very beginning like this: `[S01] Premium food...` or `[S01] Slow pan...`\n\n")
         f.write("Do NOT output JSON. Output the raw TSV inside a markdown code block so I can copy-paste to Excel.\n\n")
         f.write("```json\n")
         json.dump(scenes, f, ensure_ascii=False, indent=2)

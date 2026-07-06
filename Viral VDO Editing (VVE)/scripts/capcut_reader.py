@@ -1,73 +1,69 @@
-import os
 import json
-import argparse
+import os
 import sys
+from pathlib import Path
+from typing import Dict, Any
 
-def get_capcut_project_path(project_name: str) -> str:
-    # On Windows, CapCut drafts are typically here:
-    appdata_local = os.environ.get('LOCALAPPDATA', r'C:\Users\Admin\AppData\Local')
-    drafts_dir = os.path.join(appdata_local, 'CapCut', 'User Data', 'Projects', 'com.lveditor.draft')
+def read_capcut_draft(project_path: str) -> None:
+    """Reads and summarizes a CapCut draft timeline."""
+    proj_dir = Path(project_path)
     
-    project_path = os.path.join(drafts_dir, project_name)
-    if not os.path.exists(project_path):
-        raise FileNotFoundError(f"Project '{project_name}' not found at {project_path}")
-    
-    return project_path
-
-def extract_main_video(project_path: str):
-    draft_json_path = os.path.join(project_path, 'draft_content.json')
-    if not os.path.exists(draft_json_path):
-        raise FileNotFoundError(f"draft_content.json not found in {project_path}")
+    # CapCut 8.8.0+ uses template-2.tmp for the active timeline. Older versions use draft_content.json
+    draft_file = proj_dir / "template-2.tmp"
+    if not draft_file.exists():
+        draft_file = proj_dir / "draft_content.json"
         
-    with open(draft_json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    if not draft_file.exists():
+        print(f"Error: Could not find CapCut draft file in {proj_dir}")
+        sys.exit(1)
         
-    # Find the main video track
-    tracks = data.get('tracks', [])
-    main_video_track = None
-    for track in tracks:
-        # flag 0 typically means the main track in CapCut
-        if track.get('type') == 'video' and track.get('flag') == 0:
-            main_video_track = track
-            break
-            
-    if not main_video_track:
-        raise ValueError("No main video track (flag: 0) found in draft.")
-        
-    segments = main_video_track.get('segments', [])
-    if not segments:
-        raise ValueError("Main video track has no segments.")
-        
-    # Get the material ID of the first segment
-    first_segment = segments[0]
-    material_id = first_segment.get('material_id')
-    
-    # Look up the material path
-    materials = data.get('materials', {}).get('videos', [])
-    video_path = None
-    for mat in materials:
-        if mat.get('id') == material_id:
-            video_path = mat.get('path')
-            break
-            
-    if not video_path:
-        raise ValueError(f"Could not find video material with ID {material_id}")
-        
-    return {
-        "project_path": project_path,
-        "draft_json_path": draft_json_path,
-        "video_path": video_path
-    }
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Read CapCut project and find the main video.")
-    parser.add_argument("project_name", type=str, help="Name of the CapCut project folder")
-    args = parser.parse_args()
+    print(f"Reading draft: {draft_file.name}")
     
     try:
-        proj_path = get_capcut_project_path(args.project_name)
-        result = extract_main_video(proj_path)
-        print(json.dumps({"status": "success", "data": result}, ensure_ascii=False, indent=2))
+        with open(draft_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
     except Exception as e:
-        print(json.dumps({"status": "error", "message": str(e)}, ensure_ascii=False))
+        print(f"Failed to parse JSON: {e}")
         sys.exit(1)
+        
+    # Summarize Tracks
+    tracks = data.get("tracks", [])
+    print(f"\n--- Timeline Overview ---")
+    print(f"Total Tracks: {len(tracks)}")
+    
+    track_types = {}
+    for i, track in enumerate(tracks):
+        t_type = track.get("type", "unknown")
+        track_types[t_type] = track_types.get(t_type, 0) + 1
+        
+        segments = track.get("segments", [])
+        print(f"Track {i} ({t_type}): {len(segments)} segments")
+        
+    # Summarize Materials
+    materials = data.get("materials", {})
+    print(f"\n--- Materials Loaded ---")
+    print(f"Videos: {len(materials.get('videos', []))}")
+    print(f"Audios: {len(materials.get('audios', []))}")
+    print(f"Texts: {len(materials.get('texts', []))}")
+    print(f"Stickers: {len(materials.get('stickers', []))}")
+    
+    # Calculate total duration based on main video track (usually track 0 or first 'video' type)
+    main_duration = 0
+    for track in tracks:
+        if track.get("type") == "video":
+            for seg in track.get("segments", []):
+                tr = seg.get("target_timerange", {})
+                end_time = tr.get("start", 0) + tr.get("duration", 0)
+                if end_time > main_duration:
+                    main_duration = end_time
+                    
+    # CapCut durations are in microseconds (1,000,000 = 1 second)
+    duration_secs = main_duration / 1_000_000
+    print(f"\nTotal Timeline Duration: ~{duration_secs:.2f} seconds")
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python capcut_reader.py <capcut_project_folder_path>")
+        sys.exit(1)
+        
+    read_capcut_draft(sys.argv[1])

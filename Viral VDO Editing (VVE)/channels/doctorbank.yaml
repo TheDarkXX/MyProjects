@@ -1,0 +1,65 @@
+channel_name: "DoctorBank"
+description: "ช่องให้ความรู้สุขภาพ + ขายอาหารเสริม"
+
+# Source video
+source_aspect: "9:16"
+auto_frame_916: false
+
+# Transcription
+language: "tha"
+subtitle_max_chars: 15
+
+# Hook & CTA
+hook_in_script: true
+cta_in_script: true
+
+# Scene & B-Roll Configuration
+scene_duration_sec: 3.5
+
+# ==========================================
+# AI Image & Motion Generation Styles
+# ==========================================
+# ดูรายละเอียดเต็มที่ doctorbank_masterprompt.yaml
+masterprompt_file: "doctorbank_masterprompt.yaml"
+# สรุป 8 Categories:
+#   A: คน (People — Premium UGC) → อาการ/ชีวิตประจำวัน
+#   B: อวัยวะ (Organs — Medical CG) → กลไกของโรค
+#   C: ระดับเซลล์ (Micro — Sci-Fi) → สารอาหาร/วิตามิน
+#   D: อุปมาอุปไมย (Visual Metaphor) → เปรียบเปรย
+#   E: อาหาร (Food Photography) → อาหารดี/ไม่ดี
+#   F: สินค้า/เม็ดยา (Product) → อาหารเสริม/ขวดยา/แคปซูล
+#   G: ไลฟ์สไตล์ (Lifestyle) → ออกกำลังกาย/กิจกรรม
+#   H: สมุนไพร (Nature & Herbs) → พืช/สารสกัดธรรมชาติ
+
+# Layout
+layout: "Dynamic Center-Aligned, Big Hooks"
+
+# SFX
+sfx_library: "./sfx-library"
+sfx_auto_place: true
+
+# Transition
+transition_pool:
+  - "Zoom Shake"
+  - "Zoom Shake 2"
+  - "Rotate & Change"
+  - "Get Closer"
+  - "Zoom Swipe"
+  - "Pull Out"
+
+# Layout Config (Dr. Jade Standard)
+layout_config:
+  default_style: "Hybrid Split-Screen"
+  split_ratio: "55:45" # B-Roll top : Speaker bottom
+  pip_position: "top-right"
+  point_marker_style: "Big numbers with shadow"
+
+# Pacing Rules
+pacing_rules:
+  max_scene_duration_sec: 3.5
+  zoom_interrupt_interval_sec: 3.0
+  sfx_on_popups:
+    - "pop"
+    - "pluck"
+    - "whoosh"
+    - "ding"

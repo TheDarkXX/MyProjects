@@ -1,0 +1,29 @@
+{
+  "folders": [
+    {
+      "name": "🚀 App Builder AI",
+      "path": "App Builder AI"
+    },
+    {
+      "name": "🔧 Skills & Docs",
+      "path": "ag_skills_backup"
+    },
+    {
+      "name": "📚 Docs",
+      "path": "docs"
+    },
+    {
+      "name": "🤖 Agents Rules",
+      "path": ".agents"
+    },
+    {
+      "name": "💾 Quick Save",
+      "path": "Quick Save"
+    },
+    {
+      "name": "📤 Quick Upload",
+      "path": "Quick Upload"
+    }
+  ],
+  "settings": {}
+}
