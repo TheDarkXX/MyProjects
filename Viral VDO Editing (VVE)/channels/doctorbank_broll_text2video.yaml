@@ -14,12 +14,19 @@ system_instruction: >
   กฎหลัก:
   1. อ่านประโยคซับไทเทิลที่ได้รับ แล้วจำแนกว่าควรใช้ Category ไหน (A-H)
   2. สร้าง Video Prompt (ภาษาอังกฤษ) อันเดียว ที่รวมทั้งภาพและการเคลื่อนไหว
-  3. Prompt ต้องระบุ: สไตล์ภาพ, องค์ประกอบ, การเคลื่อนไหวของกล้อง, แสง, ความยาว
+  3. Prompt ต้องระบุทุกองค์ประกอบต่อไปนี้:
+     - สไตล์ภาพ + คุณภาพ (เช่น "8K, cinematic")
+     - ตัวแบบ/วัตถุหลัก + ท่าทาง/สถานะ + เสื้อผ้า/ลักษณะ (ถ้ามีคน)
+     - ฉากหลัง/สถานที่ (ละเอียด เช่น "clean modern Thai condo living room")
+     - การเคลื่อนไหวของกล้อง (เช่น "smooth handheld slowly zooming in")
+     - แสง/สี/อารมณ์ (เช่น "soft natural window lighting, warm golden tones")
+     - เอฟเฟกต์พิเศษ (เช่น "steam rising", "particles floating")
+     - ความยาว (3-4 วินาที)
   4. ห้ามใช้ภาพน่าเบื่อหรือซ้ำซาก
   5. ภาพต้อง "อ่านรู้เรื่อง" ภายใน 1 วินาที
 
   โครงสร้าง Video Prompt:
-  "[สไตล์], [องค์ประกอบหลัก + ท่าทาง/สถานะ], [การเคลื่อนไหวของกล้อง], [แสง/สี/อารมณ์], [ความยาว]"
+  "[สไตล์ + คุณภาพ], [ตัวแบบ + ท่าทาง + เสื้อผ้า], [ฉากหลัง], [camera movement], [แสง/สี/อารมณ์], [เอฟเฟกต์], [ความยาว]"
 
 
 # =====================================================
@@ -30,35 +37,69 @@ category_a_people:
   trigger_keywords: ["ปวด", "เจ็บ", "เหนื่อย", "อ้วน", "นอนไม่หลับ", "ท้องอืด", "จุกเสียด", "ใครเป็นบ้าง", "ผิวแห้ง", "ผมร่วง"]
   
   video_rules: >
-    - สไตล์: High-end smartphone footage (Premium UGC)
-    - ตัวแบบ: Well-groomed middle-class Thai woman, aged 40-60
-    - เฟรม: Head-and-shoulders MCU เห็นหน้าและจุดปวดในเฟรมเดียว
-    - กล้อง: Smooth handheld → subtle zoom in ไปที่จุดปวด
-    - ท่าทาง: คลาสสิค Stock Photo ที่เข้าใจทันที + การเคลื่อนไหวเล็กน้อย (บีบ, กด, ถู)
-    - แสง: Soft natural lighting, clean modern Thai home
-    - ห้าม: Full body, Wide shot, มุมแปลก, หน้าหลอน
+    - สไตล์: High-end smartphone footage (Premium UGC), 8K, cinematic shallow depth of field
+    - ตัวแบบ: Well-groomed middle-class Thai woman, aged 40-60, clean casual home clothing (ดูดี สะอาด แพง แต่ยัง relatable)
+    - เฟรม: Head-and-shoulders MCU เห็นทั้งหน้าและจุดปวดในเฟรมเดียว
+    - กล้อง: Smooth handheld mobile camera → subtle zoom in ไปที่จุดปวดและสีหน้า
+    - ท่าทาง: ใช้ท่าคลาสสิคแบบ Stock Photo ที่เรียบง่ายเข้าใจทันที + การเคลื่อนไหวเล็กน้อยที่ดูเป็นธรรมชาติ (บีบ, กด, ถู, ขยับตัว)
+    - แสง: Soft natural window lighting, clean modern Thai condo setting
+    - อารมณ์: ดูดี สะอาด แพง แต่ยัง relatable — ไม่ดูโทรมหรือน่าสงสาร
+    - ห้าม: Full body shot, Wide shot, มุมกล้องแปลกๆ, หน้าน่ากลัว/หลอน/โทรมเกิน, ดราม่าเกินไป
     - ความยาว: 3-4 วินาที
 
   classic_poses:
-    ปวดเข่า: "sitting on stairs, hands gently holding knee, wincing, slight rocking motion"
-    ปวดหลัง: "standing, hand pressing lower back, slight arch, shifting weight uncomfortably"
-    ปวดหัว: "sitting, fingers pressing temples, eyes closing slowly, stressed"
-    นอนไม่หลับ: "lying in bed, eyes open staring blankly, slight restless tossing"
-    ท้องอืด: "sitting at table, hand on stomach, leaning back slightly, grimacing"
-    เหนื่อยง่าย: "on sofa, leaning back exhausted, hand slowly rising to forehead"
-    อ้วนลงพุง: "standing sideways, looking down at stomach, hand touching belly"
-    ผิวแห้ง: "close-up of hands touching dry skin, slightly scratching"
-    ผมร่วง: "looking at hair strands on hand, worried expression"
-    กินยา: "holding supplement bottle, reading label, curious expression"
+    ปวดเข่า: >
+      Sitting on modern condo stairs, both hands gently holding the knee,
+      slight forward lean, wincing face showing sharp pain, slight rocking motion.
+      Clean casual home clothing, well-groomed appearance.
+    ปวดหลัง: >
+      Standing beside bed in morning, one hand firmly pressing lower back,
+      slight arch and shifting weight uncomfortably, uncomfortable expression.
+      Wearing clean sleepwear, hair slightly tousled but still presentable.
+    ปวดหัว: >
+      Sitting at clean dining table, fingers pressing on temples, eyes closing slowly,
+      stressed and exhausted expression. Clean casual clothing,
+      soft natural window lighting from behind.
+    นอนไม่หลับ: >
+      Lying on side in bed, eyes wide open staring blankly at nothing,
+      pillow visible, clean white bedding, tired but clean well-groomed look.
+      Subtle restless tossing motion, dim warm bedside lamp light.
+    ท้องอืด: >
+      Sitting at dining table after a meal, one hand on stomach area,
+      leaning back slightly with grimacing expression, food in foreground blurred.
+      Clean modern Thai condo kitchen setting.
+    เหนื่อยง่าย: >
+      Sitting on modern sofa, leaning back with visible exhaustion,
+      hand slowly rising to forehead, tired but well-groomed appearance.
+      Clean modern living room, soft afternoon window light.
+    อ้วนลงพุง: >
+      Standing sideways in front of mirror, looking down at stomach area,
+      hand lightly touching belly, concerned and self-conscious expression.
+      Clean modern bedroom or bathroom setting.
+    ผิวแห้ง: >
+      Close-up of hands touching dry skin area, slightly scratching or rubbing,
+      slightly concerned expression visible in background. Clean vanity setting,
+      soft natural window light highlighting skin texture.
+    ผมร่วง: >
+      Looking at hair strands on hand or hairbrush with worried expression,
+      bathroom vanity mirror setting, clean towel on shoulders.
+      Subtle hand trembling motion showing distress.
+    กินยา: >
+      Holding supplement bottle at eye level, reading label carefully,
+      curious and hopeful expression. Clean modern kitchen counter setting,
+      morning sunlight, well-groomed casual morning appearance.
 
   example_prompt:
     subtitle: "ใครเป็นบ้างคะ เวลาเดินขึ้นบันไดทีไร เสียวแปร๊บที่หัวเข่าทุกที"
     video: >
-      High-end smartphone footage, MCU of a well-groomed Thai woman aged 55
-      sitting on modern condo stairs, both hands gently gripping her knee,
-      wincing face showing sharp pain, slight rocking motion.
-      Camera smoothly zooms in on her face and hands.
-      Soft natural window lighting, clean setting, 3 seconds.
+      High-end smartphone footage style, 8K, cinematic shallow depth of field.
+      Head-and-shoulders MCU of a well-groomed middle-class Thai woman aged 55,
+      wearing clean casual home clothing, sitting on modern condo stairs.
+      Both hands gently gripping her knee, slight forward lean, wincing face
+      showing sharp pain, subtle rocking motion back and forth.
+      Smooth handheld camera gently zooming in on her face and hands.
+      Clean modern Thai condo setting, soft natural window lighting,
+      warm tones, relatable and premium feel, 3 seconds.
 
 
 # =====================================================
@@ -69,22 +110,27 @@ category_b_organs:
   trigger_keywords: ["ตับ", "ไต", "กระดูก", "ข้อ", "ลำไส้", "กระเพาะ", "หัวใจ", "ปอด", "สมอง", "หลอดเลือด", "เส้นเลือด", "กล้ามเนื้อ"]
   
   video_rules: >
-    - สไตล์: Medical CG 3D anatomical render
-    - เฟรม: Isolated organ on dark gradient, dramatic rim lighting
-    - กล้อง: Slow 360-degree orbit → zoom into problem area
-    - เอฟเฟกต์: Glowing highlight on problem area, pulsating
-    - สี: Warm = healthy, Red/Orange glow = inflamed
-    - จังหวะ: ช้า สง่า ดูมีน้ำหนัก
+    - สไตล์: Medical CG 3D anatomical render, 8K, highly detailed textures
+    - เฟรม: Isolated organ on dark/gradient background, dramatic rim lighting
+    - กล้อง: Slow 360-degree orbit around the organ → zoom into problem area
+    - เอฟเฟกต์: Glowing highlight on problem area, pulsating red/orange glow, subtle particle effects
+    - สี: Warm tones = healthy organs, Red/Orange glow = inflamed/damaged areas
+    - ระดับ: Semi-realistic (จำได้ว่าคืออวัยวะอะไร แต่ไม่ต้องเหมือนจริง 100%)
+    - จังหวะ: ช้า สง่า ดูมีน้ำหนัก ดูน่าเชื่อถือ
+    - ห้าม: ภาพเลือด/กอร์ ที่น่ากลัวเกินไป, ภาพแบน 2D
     - ความยาว: 3-4 วินาที
 
   example_prompt:
     subtitle: "น้ำหล่อเลี้ยงข้อเข่าก็แห้งลง ทำให้กระดูกเสียดสีกัน"
     video: >
-      Medical CG 3D render of a human knee joint cross-section,
-      cartilage layer visibly thinning and cracked, two bone surfaces
-      almost touching with pulsating orange-red glow at friction point.
-      Camera slowly orbits then zooms into the friction area.
-      Dark gradient background, dramatic rim lighting, 4 seconds.
+      Medical CG 3D anatomical render, 8K, highly detailed textures.
+      Human knee joint cross-section view, cartilage layer visibly
+      thinning and cracked with fine fracture lines, two bone surfaces
+      almost touching with intense pulsating orange-red glow at the friction point.
+      Subtle particle effects showing cartilage debris floating away.
+      Camera slowly orbits 360-degrees then smoothly zooms into the friction area.
+      Isolated on dark gradient background, dramatic rim lighting,
+      authoritative medical feel, 4 seconds.
 
 
 # =====================================================
@@ -95,31 +141,35 @@ category_c_micro:
   trigger_keywords: ["วิตามิน", "แคลเซียม", "โปรตีน", "คอลลาเจน", "ภูมิคุ้มกัน", "เม็ดเลือด", "เซลล์", "สารอาหาร", "น้ำตาล", "ไขมัน", "โมเลกุล", "แอนตี้ออกซิแดนท์"]
   
   video_rules: >
-    - สไตล์: Hyper-realistic microscopic visualization, Unreal Engine 5
-    - เฟรม: Cinematic dark background, floating particles
-    - กล้อง: Slow smooth zoom in, shallow depth of field shift
-    - เอฟเฟกต์: Floating particles, gentle fluid dynamics, glowing accents
-    - สี: ทอง = ดี, แดง/ส้ม = อันตราย, ฟ้า = เซลล์ปกติ
-    - จังหวะ: Cinematic slow motion
+    - สไตล์: Hyper-realistic microscopic visualization, 8K, Unreal Engine 5 render, extremely detailed textures
+    - เฟรม: Cinematic dark background with floating particles, shallow depth of field
+    - กล้อง: Slow smooth zoom in, with depth of field shift (rack focus)
+    - เอฟเฟกต์: Microscopic floating particles, gentle fluid dynamics, glowing accents, volumetric light rays
+    - สี: ทอง/Warm White = สารอาหารดี, แดง/ส้ม/Spiky crystals = อันตราย, ฟ้า/Teal = เซลล์ปกติ, ม่วงดำ = ไวรัส/แบคทีเรีย
+    - อารมณ์: เหมือนสารคดี Netflix / ดูว้าวล้ำ / Sci-Fi medical
+    - จังหวะ: Cinematic slow motion, ช้ามาก สง่า
     - ความยาว: 3-4 วินาที
 
   color_coding:
-    สารอาหาร_ดี: "Golden / Warm White glow"
-    สารอาหาร_ร้าย: "Red / Dark Orange / Spiky crystals"
-    เซลล์_ปกติ: "Soft Blue / Teal pulsating"
-    เซลล์_ถูกโจมตี: "Dimming blue with cracks"
-    ภูมิคุ้มกัน: "Golden energy shield / barrier"
-    ไวรัส_แบคทีเรีย: "Dark spiky particles / Purple-black"
+    สารอาหาร_ดี: "Golden / Warm White glow, smooth spherical particles"
+    สารอาหาร_ร้าย: "Red / Dark Orange / Spiky crystals, jagged edges"
+    เซลล์_ปกติ: "Soft Blue / Teal pulsating, smooth membrane"
+    เซลล์_ถูกโจมตี: "Dimming blue with cracks and flickering light"
+    ภูมิคุ้มกัน: "Golden energy shield / barrier with hexagonal pattern"
+    ไวรัส_แบคทีเรีย: "Dark spiky particles / Purple-black, menacing motion"
 
   example_prompt:
     subtitle: "วิตามินจะเปรียบเสมือนเกราะป้องกัน ไม่ให้ไวรัสเข้าสู่เซลล์"
     video: >
-      Hyper-realistic microscopic visualization, a vibrant glowing golden
-      energy shield surrounding a healthy pulsating blue cell,
-      dark spiky virus particles bouncing off the shield in slow motion,
-      glowing particle trails scattering. Camera slowly zooms in,
-      shallow depth of field shift. Cinematic dark background,
-      ethereal lighting, UE5 render, 4 seconds.
+      Hyper-realistic microscopic visualization, 8K, Unreal Engine 5 render,
+      extremely detailed textures. A vibrant glowing golden energy shield
+      with hexagonal pattern surrounding a healthy pulsating soft blue cell
+      with smooth translucent membrane. Dark spiky purple-black virus particles
+      bouncing off the golden shield in cinematic slow motion, glowing particle
+      trails scattering on each impact, volumetric light rays piercing through.
+      Camera slowly zooms in with rack focus shift from background viruses
+      to foreground shield detail. Cinematic dark background with floating
+      microscopic particles, ethereal lighting, Netflix documentary feel, 4 seconds.
 
 
 # =====================================================
@@ -130,31 +180,54 @@ category_d_metaphor:
   trigger_keywords: ["เหมือน", "เปรียบ", "เสมือน", "คล้ายกับ", "ถ้าเทียบ", "ลองนึกภาพ"]
   
   video_rules: >
-    - สไตล์: Hyper-realistic visual metaphor, cinematic
-    - เฟรม: Close-up of the metaphorical object
+    - สไตล์: Hyper-realistic visual metaphor, 8K, cinematic dramatic lighting, highly detailed
+    - แนวคิด: แปลง concept ทางการแพทย์ให้เป็นสิ่งของ/เครื่องจักร/ธรรมชาติ ที่ทุกคนเข้าใจ
+    - เฟรม: Close-up ของ metaphorical object, shallow depth of field
     - กล้อง: Close-up pan across + slow motion action
-    - เอฟเฟกต์: Particles, sparks, fluid dynamics ตามบริบท
-    - สี: ส้ม/แดง = อันตราย, ทอง/เขียว = ดี
-    - จังหวะ: Intense slow motion
+    - เอฟเฟกต์: Particles, sparks, fluid dynamics, smoke/steam ตามบริบท
+    - สี: ส้ม/แดง = อันตราย/ร้อน, ทอง/เขียว = ดี/สุขภาพ
+    - พื้นหลัง: Cinematic dark background, dramatic rim lighting
+    - จังหวะ: Intense slow motion, epic feel
     - ความยาว: 3-4 วินาที
 
   metaphor_mapping:
-    ข้อเสื่อม: "Rusted mechanical hinge joint grinding with flying sparks"
-    ตับทำงานหนัก: "Overloaded factory machine overheating, steam bursting, red warning lights flashing"
-    ลำไส้ไม่ดี: "Clogged dirty pipe system with dark sludge slowly oozing"
-    เผาผลาญไขมัน: "Glowing furnace melting wobbly gelatin fat blocks, dripping golden liquid"
-    คอลลาเจนถูกทำลาย: "Sharp crystal sugar shards piercing through bouncy pink collagen matrix, particles scattering"
-    ภูมิคุ้มกันอ่อนแอ: "Crumbling castle wall, dark invaders approaching through the cracks"
-    หลอดเลือดตีบ: "Narrowing tunnel with flowing golden particles slowing down and congesting"
+    ข้อเสื่อม: >
+      Rusted mechanical hinge joint grinding together with flying golden sparks,
+      visible rust flakes crumbling off, metal screeching motion.
+      Dark industrial background, dramatic rim lighting.
+    ตับทำงานหนัก: >
+      Overloaded factory machine overheating, pressurized steam bursting from
+      cracked pipes, red warning lights flashing intensely, heavy rusted gears
+      grinding together with visible heat distortion in the air.
+    ลำไส้ไม่ดี: >
+      Clogged dirty pipe system with thick dark sludge slowly oozing through,
+      pipe walls corroded and leaking dark liquid, dim industrial lighting.
+    เผาผลาญไขมัน: >
+      Glowing furnace with intense orange-red flames melting wobbly translucent
+      gelatin fat blocks, golden liquid dripping down, heat waves rising,
+      satisfying melting motion.
+    คอลลาเจนถูกทำลาย: >
+      Sharp glowing crystal sugar shards violently piercing through a bouncy
+      pink collagen matrix network, pink particles and debris scattering
+      on each impact in slow motion, dramatic backlighting.
+    ภูมิคุ้มกันอ่อนแอ: >
+      Crumbling ancient stone castle wall, dark menacing invaders approaching
+      through widening cracks, dust and debris falling, ominous red sky background.
+    หลอดเลือดตีบ: >
+      Narrowing tunnel with flowing golden particles (blood cells) slowing down
+      and congesting at a bottleneck, particles stacking up,
+      dramatic volumetric light from the far end dimming.
 
   example_prompt:
     subtitle: "น้ำตาลที่คุณกินเข้าไปทุกวัน มันจะเข้าไปทำลายคอลลาเจนใต้ผิวหนัง"
     video: >
-      Hyper-realistic visual metaphor. Sharp glowing crystal sugar shards
-      violently piercing through a bouncy pink collagen matrix in intense
-      slow motion, pink particles scattering on each impact.
-      Camera pans close-up across the collagen surface.
-      Cinematic dark background, dramatic rim lighting, 4 seconds.
+      Hyper-realistic visual metaphor, 8K, highly detailed, cinematic dramatic lighting.
+      Sharp glowing crystal sugar shards violently piercing through a bouncy
+      glowing pink collagen matrix network in intense slow motion.
+      Pink particles and translucent debris scattering beautifully on each impact,
+      subtle particle trails lingering in the air. Camera pans close-up across
+      the collagen surface following the destruction path.
+      Cinematic dark background, dramatic rim lighting, epic feel, 4 seconds.
 
 
 # =====================================================
@@ -165,29 +238,50 @@ category_e_food:
   trigger_keywords: ["กิน", "อาหาร", "ผัก", "ผลไม้", "ปลา", "ไข่", "นม", "ข้าว", "ของทอด", "น้ำตาล", "ไขมัน", "เมนู", "สูตร", "หลีกเลี่ยง", "ควรกิน", "ไม่ควรกิน"]
 
   video_rules: >
-    - สไตล์: Premium food photography / food commercial
-    - เฟรม: Overhead flat-lay หรือ 45-degree angle
-    - กล้อง: Slow overhead dolly หรือ gentle rotating orbit
-    - เอฟเฟกต์: Steam rising, juice splashing, satisfying slow motion
-    - อาหารดี: สีสดใส, golden hour, น่ากิน
-    - อาหารร้าย: สีหม่น, มืดลงเล็กน้อย, ดูมัน/หนัก
-    - แสง: Soft natural daylight, warm tones
+    - สไตล์: Premium food photography / food commercial, 8K, appetizing and vibrant
+    - เฟรม: Overhead flat-lay หรือ 45-degree angle (มุมคลาสสิคถ่ายอาหาร)
+    - กล้อง: Slow overhead dolly หรือ gentle rotating orbit around the dish
+    - เอฟเฟกต์: Steam rising from hot food, juice splashing from cut fruit, oil drizzling in slow motion
+    - จานชาม: Clean, minimal, modern tableware (จานขาว/ไม้ สวยๆ)
+    - สำหรับอาหารดี: สีสดใส, golden hour warm tones, น่ากิน, appetizing
+    - สำหรับอาหารร้าย: สีหม่น desaturated, มืดลงเล็กน้อย, ดูมัน/หนัก, moody (แต่ไม่น่าเกลียด)
+    - แสง: Soft natural daylight, warm tones, clean modern kitchen/dining setting
+    - จังหวะ: Satisfying slow motion (แบบ Tasty / Food ASMR)
+    - ห้าม: ภาพผลไม้เรียงบนโต๊ะแบบ generic Stock Photo, ภาพอาหารดูไม่น่ากิน
     - ความยาว: 3-4 วินาที
 
   classic_shots:
-    อาหารดี_ผัก: "overhead dolly across colorful fresh vegetables on wooden board, vibrant, natural light"
-    อาหารดี_ปลา: "45-degree orbit around plated grilled salmon with steamed veg, steam rising, golden hour"
-    อาหารดี_สลัด: "overhead shot of vibrant salad bowl, olive oil drizzling down in slow motion"
-    อาหารร้าย_ของทอด: "45-degree slow orbit around greasy deep-fried food, desaturated moody lighting, visible oil"
-    อาหารร้าย_น้ำตาล: "close-up of sugar cubes stacking up next to sweet drinks, ominous warm lighting"
+    อาหารดี_ผัก: >
+      Slow overhead dolly across a colorful arrangement of fresh vegetables and fruits
+      on a clean natural wood cutting board. Vibrant greens, reds, oranges glistening
+      with water droplets. Soft natural daylight, appetizing premium feel.
+    อาหารดี_ปลา: >
+      45-degree gentle orbit around a beautifully plated grilled salmon fillet
+      with steamed vegetables on a clean white plate. Gentle steam rising from
+      the warm fish, warm golden hour lighting, appetizing and inviting.
+    อาหารดี_สลัด: >
+      Overhead shot of a vibrant fresh salad bowl with avocado, quinoa,
+      cherry tomatoes. Olive oil drizzling down in satisfying slow motion,
+      clean marble countertop, soft natural daylight.
+    อาหารร้าย_ของทอด: >
+      45-degree slow orbit around greasy deep-fried food piled on a plate,
+      visible oil sheen reflecting light. Slightly desaturated moody lighting,
+      heavy and indulgent atmosphere, dark wood table surface.
+    อาหารร้าย_น้ำตาล: >
+      Close-up of sugar cubes stacking up ominously next to colorful sweet drinks
+      and donuts. Slightly ominous warm lighting, slow dolly pushing in,
+      sugar granules visible on surface.
 
   example_prompt:
     subtitle: "ลองเปลี่ยนมากินผักใบเขียว ปลา ไข่ แทนของทอดๆ มันๆ"
     video: >
-      Premium food photography, slow overhead dolly across a colorful
-      healthy meal: grilled fish, steamed broccoli, boiled eggs, brown rice
-      on a clean white plate, natural wood table. Gentle steam rising
-      from warm food, vibrant colors, soft natural daylight, 3 seconds.
+      Premium food photography, 8K, appetizing and vibrant. Slow overhead dolly
+      across a colorful healthy meal beautifully arranged on a clean white plate:
+      grilled fish fillet with grill marks, steamed broccoli florets,
+      perfectly boiled eggs cut in half showing golden yolk, fluffy brown rice.
+      Clean natural wood dining table. Gentle steam rising from warm food,
+      vibrant saturated colors, soft natural daylight with warm golden tones,
+      appetizing Food ASMR feel, 3 seconds.
 
 
 # =====================================================
@@ -198,29 +292,50 @@ category_f_product:
   trigger_keywords: ["อาหารเสริม", "วิตามิน", "เม็ด", "แคปซูล", "ขวด", "ทาน", "รับประทาน", "สูตร", "ผลิตภัณฑ์", "ตัวนี้", "ตัวช่วย", "กล่อง"]
 
   video_rules: >
-    - สไตล์: Premium commercial product photography
-    - เฟรม: Hero shot (สินค้ากลางเฟรม) หรือ Close-up เม็ดยา
-    - กล้อง: Slow smooth orbit around product, or slow tilt-up reveal
-    - เอฟเฟกต์: Soft particle glow, subtle light flares
-    - พื้นหลัง: Clean gradient หรือ marble surface
-    - สี: สะอาด พรีเมียม (ขาว, เขียว, ทอง)
-    - จังหวะ: Elegant, premium slow motion
+    - สไตล์: Premium commercial product photography, luxury cosmetic ad style, 8K
+    - เฟรม: Hero shot (สินค้ากลางเฟรม) หรือ Close-up ของเม็ดยา/แคปซูล
+    - กล้อง: Slow smooth orbit around product, or slow tilt-up reveal from base to cap
+    - เอฟเฟกต์: Soft particle glow, subtle light flares, gentle reflection on surface
+    - พื้นหลัง: Clean gradient background (ขาว, เบจ, เขียวอ่อน) หรือ clean marble/stone surface
+    - แสง: Soft studio lighting with subtle reflections, rim light on product edges
+    - สี: สะอาด พรีเมียม น่าเชื่อถือ (ขาว, เขียว, ทอง)
+    - เม็ดยา: ถ้าเป็นแคปซูลให้ดูโปร่งใส เห็นผงข้างในเล็กน้อย (translucent visible powder inside)
+    - จังหวะ: Elegant, premium, slow motion — ดูแพง
+    - ห้าม: ดูเหมือนโฆษณาตลาดนัด, ตัวหนังสือเต็มกล่อง, สีฉูดฉาดถูกๆ
     - ความยาว: 3-4 วินาที
 
   classic_shots:
-    ขวดอาหารเสริม: "slow orbit around sleek supplement bottle on marble, studio rim lighting, golden flares"
-    เม็ดยา_แคปซูล: "close-up golden capsules gently falling onto white surface in slow motion, soft light"
-    เม็ดยา_เม็ดกลม: "slow dolly across white tablets, one in focus foreground, soft bokeh"
-    มือถือขวด: "MCU of elegant hand holding bottle, slowly turning to show label"
-    เทเม็ดยาลงมือ: "close-up capsules pouring from bottle into open palm in slow motion"
+    ขวดอาหารเสริม: >
+      Slow smooth orbit around a sleek minimalist supplement bottle on a clean
+      marble surface. Soft studio rim lighting with warm golden accents,
+      subtle reflections on marble, premium luxury cosmetic ad feel.
+    เม็ดยา_แคปซูล: >
+      Close-up of golden translucent capsules gently falling and scattering
+      onto a clean white surface in elegant slow motion. Visible powder inside
+      each capsule, soft natural light creating a warm glow, premium feel.
+    เม็ดยา_เม็ดกลม: >
+      Slow dolly across round white tablets arranged neatly, one tablet in sharp
+      focus foreground with soft bokeh background. Clean surface, studio rim light,
+      clinical yet premium aesthetic.
+    มือถือขวด: >
+      MCU of a well-groomed Thai woman's elegant hand holding a supplement bottle
+      at eye level, slowly turning to show label. Clean blurred background,
+      soft natural light, curious and hopeful expression visible.
+    เทเม็ดยาลงมือ: >
+      Close-up of golden capsules being poured from a premium bottle into a clean
+      open palm in slow motion. Each capsule catching soft light as it falls,
+      gentle particle glow, subtle light flares, warm tones.
 
   example_prompt:
     subtitle: "ลองทานวันละ 1 เม็ดก่อนนอน ต่อเนื่อง 2 สัปดาห์"
     video: >
-      Premium product photography, close-up of golden translucent capsules
-      gently cascading onto a clean white marble surface in slow motion.
-      Camera slowly orbits, subtle golden light flares and soft particle glow.
-      Studio rim lighting, premium luxury feel, 3 seconds.
+      Premium commercial product photography, luxury cosmetic ad style, 8K.
+      Close-up of golden translucent capsules with visible powder inside,
+      gently cascading onto a clean white marble surface in elegant slow motion.
+      Each capsule bouncing softly and settling with a satisfying motion.
+      Camera slowly orbits around the arrangement, subtle golden light flares
+      and soft particle glow. Soft studio rim lighting with warm golden accents,
+      premium luxury feel, 3 seconds.
 
 
 # =====================================================
@@ -231,30 +346,57 @@ category_g_lifestyle:
   trigger_keywords: ["ออกกำลังกาย", "ยืดเส้น", "เดิน", "วิ่ง", "โยคะ", "นอน", "ตื่น", "น้ำ", "ดื่มน้ำ", "นิสัย", "ทุกเช้า", "ทุกวัน", "เปลี่ยน", "ลองทำ"]
 
   video_rules: >
-    - สไตล์: Aspirational lifestyle, warm and motivational
-    - ตัวแบบ: Well-groomed Thai woman, 40-60 (อารมณ์ดี, มีพลัง)
-    - เฟรม: Medium shot (MS) หรือ MCU
-    - กล้อง: Smooth tracking shot or gentle handheld
-    - การเคลื่อนไหว: Natural, fluid (stretching, walking, pouring water)
-    - แสง: Warm golden hour / soft morning light
-    - สถานที่: สวน, ห้องนั่งเล่น, ห้องนอนตอนเช้า
-    - จังหวะ: Energetic but graceful
+    - สไตล์: Aspirational lifestyle photography, warm and motivational, 8K, cinematic
+    - ตัวแบบ: Well-groomed middle-class Thai woman, aged 40-60 (เดียวกับ Category A แต่อารมณ์ดี มีพลัง สดใส)
+    - เสื้อผ้า: Casual comfortable activewear or clean home clothing (ไม่ใช่ชุด gym แบบนางแบบฟิตเนส)
+    - เฟรม: Medium shot (MS) หรือ Medium Close-up (MCU)
+    - กล้อง: Smooth tracking shot or gentle handheld, natural fluid motion
+    - แสง: Warm golden hour / soft morning light, lens flares welcome
+    - สถานที่: สวนสาธารณะเขียวๆ, ห้องนั่งเล่นสะอาดสว่าง, ห้องนอนตอนเช้ามีแสงทอง
+    - อารมณ์: สดใส มีความสุข มีพลัง ดูมีสุขภาพดี (ตรงข้ามกับ Category A ที่ดูเจ็บปวด)
+    - จังหวะ: Energetic but graceful, natural movement
+    - ห้าม: ดูเหมือนโฆษณา gym / นางแบบฟิตเนส, ท่าทางเกร็งไม่เป็นธรรมชาติ
     - ความยาว: 3-4 วินาที
 
   classic_shots:
-    ยืดเส้น: "Thai woman stretching arms overhead in bright living room, morning sunlight, smiling"
-    เดิน: "tracking shot of Thai woman walking briskly in green park, golden hour"
-    ดื่มน้ำ: "MCU of Thai woman drinking water, morning kitchen, fresh look"
-    นอนหลับดี: "Thai woman sleeping peacefully on white bed, soft morning light"
-    ตื่นเช้า: "MCU of Thai woman waking up refreshed, stretching with gentle smile, golden light"
+    ยืดเส้น: >
+      Medium shot of a well-groomed Thai woman aged 50 stretching her arms overhead
+      in a bright modern living room. Genuine peaceful smile, morning sunlight
+      streaming through clean white curtains, energetic but graceful movement.
+      Casual comfortable home clothing, healthy and refreshed appearance.
+    เดิน: >
+      Smooth tracking shot following a well-groomed Thai woman walking briskly
+      in a lush green park. Golden hour lighting creating warm lens flares,
+      healthy and energetic expression, casual comfortable activewear.
+      Trees and greenery in soft bokeh background.
+    ดื่มน้ำ: >
+      MCU of a well-groomed Thai woman drinking a glass of crystal-clear water
+      in a clean modern kitchen, morning sunlight highlighting the water.
+      Fresh and healthy look, satisfied expression after drinking.
+    นอนหลับดี: >
+      Medium shot of a Thai woman sleeping peacefully on a clean white bed with
+      plump pillows. Soft warm morning light streaming in through sheer curtains,
+      serene gentle expression, slight smile. Premium bedding, calming atmosphere.
+    ตื่นเช้า: >
+      MCU of a Thai woman waking up refreshed, stretching arms with a gentle smile,
+      eyes slowly opening. Soft golden morning light filling the room,
+      clean white bedding, well-rested healthy glow on skin.
+    ทำอาหาร: >
+      Medium shot of a Thai woman happily preparing a healthy salad in a clean
+      modern kitchen. Vibrant colorful ingredients on the counter,
+      natural fluid chopping motion, warm natural light, genuine smile.
 
   example_prompt:
     subtitle: "ลองเปลี่ยนนิสัยง่ายๆ แค่เดินวันละ 30 นาที"
     video: >
-      Aspirational lifestyle footage, smooth tracking shot of a well-groomed
-      Thai woman aged 50 walking briskly in a lush green park,
-      healthy and energetic expression, casual comfortable clothing.
-      Warm golden hour lighting, gentle handheld motion, 3 seconds.
+      Aspirational lifestyle footage, 8K, cinematic warm tones.
+      Smooth tracking shot following a well-groomed middle-class Thai woman
+      aged 50 walking briskly in a lush green park with tall trees.
+      Healthy and energetic expression, genuine happy smile,
+      casual comfortable activewear, arms swinging naturally.
+      Warm golden hour lighting creating soft lens flares through the leaves,
+      green foliage in soft bokeh background.
+      Gentle handheld motion, energetic but graceful pace, 3 seconds.
 
 
 # =====================================================
@@ -265,31 +407,58 @@ category_h_nature:
   trigger_keywords: ["สมุนไพร", "ขมิ้น", "โสม", "ใบบัวบก", "ว่านหางจระเข้", "มะขามป้อม", "กระชาย", "ฟ้าทะลายโจร", "สารสกัด", "ธรรมชาติ", "ออร์แกนิก", "น้ำมันปลา", "น้ำมันมะพร้าว"]
 
   video_rules: >
-    - สไตล์: Premium botanical photography, lush and natural
-    - เฟรม: Close-up / Macro ของพืช/สมุนไพร
-    - กล้อง: Slow macro dolly across surface, or gentle pull-back reveal
-    - เอฟเฟกต์: Morning dew drops, soft wind on leaves, natural light flares
-    - สี: เขียวสด, ทอง, น้ำตาลดิน
-    - อารมณ์: สด สะอาด บริสุทธิ์ Organic
-    - จังหวะ: Peaceful, calming
+    - สไตล์: Premium botanical photography, lush and natural, 8K, macro detail
+    - เฟรม: Close-up หรือ Macro ของพืช/สมุนไพร ให้เห็นรายละเอียดพื้นผิว
+    - กล้อง: Slow macro dolly across leaves/herbs surface, or gentle pull-back reveal
+    - เอฟเฟกต์: Morning dew drops glistening, soft wind rustling on leaves, natural golden hour light flares, particles floating
+    - สี: เขียวสด, ทอง, น้ำตาลดิน — โทนธรรมชาติ organic
+    - ฉากหลัง: ต้นไม้สด, สวนสมุนไพร, หรือ clean dark wood surface กับใบไม้ประดับ
+    - อารมณ์: สด สะอาด บริสุทธิ์ น่าไว้ใจ (Organic/Natural feel) — เหมือนแบรนด์ premium organic
+    - จังหวะ: Peaceful, organic, calming — ช้าสบายๆ
+    - ห้าม: ดูเหมือนสมุนไพรแห้งในถุงพลาสติก / ตลาดสด / สมุนไพรจีนเก่าๆ
     - ความยาว: 3-4 วินาที
 
   classic_shots:
-    ขมิ้น: "slow macro dolly across fresh turmeric root, golden powder particles floating, warm backlight"
-    โสม: "gentle pull-back reveal of fresh ginseng root on linen cloth, natural backlighting"
-    ใบบัวบก: "macro of centella leaves with dew drops, soft wind movement, green bokeh"
-    น้ำมันปลา: "close-up golden fish oil flowing in slow motion, translucent amber, clean background"
-    กระชาย: "macro of fresh fingerroot on dark stone, vibrant yellow interior, steam rising"
-    สมุนไพรรวม: "slow overhead dolly across assorted Thai herbs on wooden board, natural light"
+    ขมิ้น: >
+      Slow macro dolly across a freshly cut vibrant turmeric root revealing
+      intense golden-orange interior on a dark wood surface. Scattered turmeric
+      powder particles floating gently in the air, warm golden hour backlighting
+      creating a glowing halo effect.
+    โสม: >
+      Gentle pull-back reveal of a fresh ginseng root with fine delicate root hairs
+      placed on natural linen cloth. Soft natural backlighting, morning dew droplets
+      on the surface, organic earthy feel, premium botanical aesthetic.
+    ใบบัวบก: >
+      Macro shot of fresh green centella asiatica (gotu kola) leaves with
+      glistening morning dew drops. Soft wind rustling the leaves gently,
+      lush green bokeh background, natural garden setting, calming atmosphere.
+    น้ำมันปลา: >
+      Close-up of golden translucent fish oil flowing in beautiful slow motion,
+      amber liquid catching and refracting light. Clean white background,
+      premium pharmaceutical feel, volumetric light rays through the oil.
+    กระชาย: >
+      Macro close-up of fresh fingerroot (krachai) on a dark stone surface,
+      vibrant yellow interior visible from a clean diagonal cut.
+      Subtle steam or mist rising, warm natural backlighting, earthy organic feel.
+    ฟ้าทะลายโจร: >
+      Macro shot of fresh andrographis paniculata leaves with delicate small
+      white flowers. Natural garden setting, morning dew on petals,
+      soft wind movement, peaceful and medicinal atmosphere.
+    สมุนไพรรวม: >
+      Slow overhead dolly across assorted Thai herbs beautifully arranged
+      on a clean wooden board: turmeric, lemongrass, galangal, kaffir lime leaves.
+      Soft natural daylight, vibrant earthy colors, organic premium feel.
 
   example_prompt:
     subtitle: "ขมิ้นชันมีสาร Curcumin ที่ช่วยลดการอักเสบได้อย่างดี"
     video: >
-      Premium botanical macro footage, slow dolly across a freshly cut
-      vibrant turmeric root revealing intense golden-orange interior,
-      golden powder particles floating gently in the air.
-      Dark wooden surface, soft natural daylight with golden hour backlight,
-      peaceful and organic feel, 4 seconds.
+      Premium botanical macro footage, 8K, extremely detailed textures.
+      Slow macro dolly across a freshly cut vibrant turmeric root revealing
+      its intense golden-orange interior with visible fiber textures.
+      Placed on a dark wooden surface with scattered turmeric powder.
+      Golden powder particles floating gently in the air, catching warm backlight.
+      Soft natural daylight with golden hour backlighting creating a warm glowing halo.
+      Organic and pure atmosphere, premium botanical brand feel, 4 seconds.
 
 
 # =====================================================
@@ -299,18 +468,22 @@ general_rules:
   aspect_ratio: "9:16 (Vertical / Portrait)"
   duration_per_scene: "3-4 seconds"
   language: "All prompts must be in English"
+  quality_tags: "Always include: 8K, cinematic, detailed textures (หรือ equivalent ตาม Category)"
   prompt_format: >
-    Video Prompt = "[สไตล์], [องค์ประกอบ + ท่าทาง/action], [camera movement], [lighting/mood], [duration]"
+    Video Prompt = "[สไตล์ + คุณภาพ], [ตัวแบบ + ท่าทาง + เสื้อผ้า/ลักษณะ], [ฉากหลัง/สถานที่],
+    [camera movement], [แสง/สี/อารมณ์], [เอฟเฟกต์], [ความยาว]"
     ทุกอย่างรวมใน prompt เดียว ไม่ต้องแยก image / motion
+    ทุก prompt ต้องมีอย่างน้อย 4-6 บรรทัดของรายละเอียด
   dopamine_rule: >
-    กฎ Dopamine Hit:
-    1. เลือก Category ตาม "เนื้อหาของซับ" เป็นหลัก
-    2. ถ้าซับ 2-3 ประโยคติดกัน Category เดียวกัน → เปลี่ยนมุมกล้อง/ท่าทาง/องค์ประกอบ
-    3. ห้ามบังคับ Category ที่ไม่ตรงกับเนื้อหา
-    4. ความหลากหลาย Category เป็นเรื่องรอง — ซ้ำได้แต่ต้องเปลี่ยน "มุมมอง"
+    กฎ Dopamine Hit (สร้างจังหวะเปลี่ยนภาพทุก 3-5 วินาที):
+    1. เลือก Category ตาม "เนื้อหาของซับไทเทิล" เป็นหลัก — ภาพต้องตรงกับสิ่งที่พูดเสมอ
+    2. ถ้าซับ 2-3 ประโยคติดกันตรงกับ Category เดียวกัน (เช่น A-A-A) ให้พยายามเปลี่ยนมุมกล้อง/ท่าทาง/องค์ประกอบภาพ เพื่อให้ยังมี "ภาพเปลี่ยน" ทุก 3-5 วิ ถึงแม้จะอยู่ Category เดิม
+    3. ห้ามบังคับ Category ที่ไม่ตรงกับเนื้อหาเด็ดขาด (เช่น ซับพูดเรื่องปวดเข่า แต่ไปโชว์ภาพขมิ้น)
+    4. ความหลากหลายของ Category เป็นเรื่องรอง — ถ้าเนื้อหาพาให้ซ้ำ Category ก็ซ้ำได้ แต่ต้องเปลี่ยน "มุมมอง" ภายใน Category นั้น
   forbidden:
-    - "ภาพน่าเบื่อ (คนนั่งคุยหมอ, ผลไม้เรียงบนโต๊ะ)"
+    - "ภาพน่าเบื่อ (คนนั่งคุยหมอ, ผลไม้เรียงบนโต๊ะ, คนวิ่งจ๊อกกิ้ง)"
     - "ภาพเลือด/กอร์ ที่น่ากลัวเกินไป"
-    - "Full Body / Wide shot (สำหรับ Category A)"
-    - "มุมกล้องแปลกๆ ที่ไม่คลาสสิค"
-    - "หน้าคนที่ดูน่ากลัว/หลอน/โทรมมากเกินไป"
+    - "ภาพคน Full Body / Wide shot (สำหรับ Category A)"
+    - "ภาพมุมกล้องแปลกๆ ที่ไม่คลาสสิค"
+    - "ภาพหน้าคนที่ดูน่ากลัว/หลอน/โทรมมากเกินไป"
+    - "Prompt ที่สั้นเกินไป (น้อยกว่า 3 บรรทัด) — ต้องละเอียดเสมอ"
