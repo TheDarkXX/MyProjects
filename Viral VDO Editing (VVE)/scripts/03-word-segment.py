@@ -63,6 +63,15 @@ def segment_and_group(raw_json_path: str):
             "text": w,
         })
 
+    try:
+        from config_loader import load_channel_config, get_style
+        config = load_channel_config()
+    except ImportError:
+        config = {}
+        def get_style(c, s, k, d): return d
+        
+    preset = get_style(config, "subtitle", "preset", "drb")
+    
     # DRB STYLE MASTER PROMPT RULES
     START_NEW_LINE_WORDS = {'แต่', 'และ', 'หรือ', 'เพราะ', 'ซึ่ง', 'ที่', 'จน', 'เพื่อ', 'เหมือน', 'ดั่ง', 'ราวกับ', 'คือ', 'ถ้า'}
     NEVER_END_LINE_WORDS = {'แต่', 'และ', 'หรือ', 'เพราะ', 'ที่', 'ซึ่ง', 'ของ', 'ใน', 'กับ', 'จาก', 'สู่', 'บน', 'ล่าง', 'เหมือน', 'คือ', 'ให้', 'ความ', 'การ'}
@@ -77,44 +86,75 @@ def segment_and_group(raw_json_path: str):
             "text": "".join(cw["text"] for cw in chunk)
         }
 
-    for i, w in enumerate(aligned_words):
-        word_text = w["text"]
-        
-        if not current_chunk:
-            current_chunk.append(w)
-            continue
+    if preset == "drb":
+        for i, w in enumerate(aligned_words):
+            word_text = w["text"]
             
-        current_char_count = sum(len(cw["text"]) for cw in current_chunk)
-        should_break = False
-        
-        # Rule 1 & 3: Connector & Metaphor (Start New Lines)
-        if word_text in START_NEW_LINE_WORDS:
-            should_break = True
-            
-        # Rule: Visual Rhythm (Short Lines are Good)
-        # We aim for punchy action-object splits, breaking aggressively around 10-14 chars
-        elif current_char_count >= 10:
-            should_break = True
-            
-        # Rule 2 & Anti-Patterns: Prepositions Cling to Object (Never end line with these)
-        last_word = current_chunk[-1]["text"]
-        if last_word in NEVER_END_LINE_WORDS:
+            if not current_chunk:
+                current_chunk.append(w)
+                continue
+                
+            current_char_count = sum(len(cw["text"]) for cw in current_chunk)
             should_break = False
             
-        # Rule 4: Unit & Modifier (Keep numbers/units together)
-        # If the word is a number or very short modifier, keep it attached
-        if word_text.isnumeric() or word_text in {"ๆ", "วัน", "เดือน", "ปี", "คน", "บาท", "%", "แรก"}:
-            should_break = False
-            
-        # Absolute safeguard: If it's getting ridiculously long due to clinging rules, force break
-        if current_char_count + len(word_text) > 20:
-            should_break = True
+            if word_text in START_NEW_LINE_WORDS:
+                should_break = True
+            elif current_char_count >= 10:
+                should_break = True
+                
+            last_word = current_chunk[-1]["text"]
+            if last_word in NEVER_END_LINE_WORDS:
+                should_break = False
+                
+            if word_text.isnumeric() or word_text in {"ๆ", "วัน", "เดือน", "ปี", "คน", "บาท", "%", "แรก"}:
+                should_break = False
+                
+            if current_char_count + len(word_text) > 20:
+                should_break = True
 
-        if should_break:
-            groups.append(flush_chunk(current_chunk))
-            current_chunk = [w]
-        else:
-            current_chunk.append(w)
+            if should_break:
+                groups.append(flush_chunk(current_chunk))
+                current_chunk = [w]
+            else:
+                current_chunk.append(w)
+    else:
+        if preset == "hormozi":
+            max_words = 1
+            max_chars = 15
+            max_pause = 0.5
+        elif preset == "classic":
+            max_words = 10
+            max_chars = 40
+            max_pause = 0.8
+        else: # "flow" preset
+            max_words = 3
+            max_chars = 15
+            max_pause = 0.3
+            
+        for i, w in enumerate(aligned_words):
+            if not current_chunk:
+                current_chunk.append(w)
+                continue
+                
+            prev_w = current_chunk[-1]
+            pause_duration = w["start"] - prev_w["end"]
+            current_chars = sum(len(cw["text"]) for cw in current_chunk)
+            current_word_count = len(current_chunk)
+            
+            should_break = False
+            
+            if pause_duration > max_pause:
+                should_break = True
+            elif current_word_count >= max_words:
+                should_break = True
+            elif current_chars + len(w["text"]) > max_chars:
+                should_break = True
+                
+            if should_break:
+                groups.append(flush_chunk(current_chunk))
+                current_chunk = [w]
+            else:
+                current_chunk.append(w)
 
     if current_chunk:
         groups.append(flush_chunk(current_chunk))
@@ -137,8 +177,17 @@ if __name__ == "__main__":
     json_path = sys.argv[1]
     groups = segment_and_group(json_path)
     
+    # Get preset name for logging (same logic as inside function)
+    try:
+        from config_loader import load_channel_config, get_style
+        _cfg = load_channel_config()
+        _preset = get_style(_cfg, "subtitle", "preset", "drb")
+    except ImportError:
+        _preset = "drb"
+    
     out_path = str(Path(json_path).with_suffix("")) + ".grouped.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump({"groups": groups}, f, ensure_ascii=False, indent=2)
         
-    print(f"Success! Segmented into {len(groups)} chunks using DRB Style Rules. Saved to {out_path}")
+    print(f"Success! Segmented into {len(groups)} chunks using '{_preset}' preset. Saved to {out_path}")
+

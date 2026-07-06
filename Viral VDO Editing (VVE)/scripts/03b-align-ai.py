@@ -24,16 +24,23 @@ def align_ai_text(json_path: str, text_path: str):
     char_idx = 0
     n = len(char_map)
 
+    # Load replacements if any
+    replacements = {}
+    job_dir = os.path.dirname(text_path)
+    rep_file = os.path.join(job_dir, "replacements.json")
+    if os.path.exists(rep_file):
+        try:
+            with open(rep_file, "r", encoding="utf-8") as f:
+                replacements = json.load(f)
+        except Exception as e:
+            print(f"Warning: Failed to load replacements.json: {e}")
+
     for line in lines:
         line_clean = line.replace(" ", "")
         
-        # Mapping rules strictly for character matching (preserves original text in output)
         match_text = line_clean
-        match_text = match_text.replace("1.", "หนึ่ง").replace("2.", "สอง").replace("3.", "สาม").replace("4.", "สี่")
-        match_text = match_text.replace("5.", "ห้า").replace("6.", "หก").replace("7.", "เจ็ด").replace("7", "เจ็ด")
-        match_text = match_text.replace("3", "สาม")
-        match_text = match_text.replace("แบบไม่อิ่มตัว", "แบบไม่อินตัว")
-        match_text = match_text.replace("Pal", "Proud")
+        for k, v in replacements.items():
+            match_text = match_text.replace(k, v)
         
         if not match_text: continue
         

@@ -25,7 +25,12 @@ def find_best_window(video_path: str, target_duration: float, step_sec: float = 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Extract frames using ffmpeg at 1/step_sec fps
         fps = 1.0 / step_sec
-        ffmpeg_exe = r"C:\Users\Admin\AppData\Local\CapCut\Apps\8.9.1.3802\ffmpeg.exe"
+        capcut_apps = Path(r"C:\Users\Admin\AppData\Local\CapCut\Apps")
+        ffmpeg_exe = "ffmpeg"
+        if capcut_apps.exists():
+            ffmpeg_paths = list(capcut_apps.glob("*/ffmpeg.exe"))
+            if ffmpeg_paths:
+                ffmpeg_exe = str(sorted(ffmpeg_paths)[-1])
         cmd = [
             ffmpeg_exe, "-y", "-i", video_path, 
             "-vf", f"fps={fps}", 
@@ -111,9 +116,19 @@ def assemble_footage(job_dir: str):
         best_start = find_best_window(str(matched_file), target_duration)
         print(f"  -> Best window starts at {best_start}s")
         
-        # NOTE: capcut-cli expects time in SECONDS (float)
-        capcut_start_timeline = start_timeline
-        capcut_duration = target_duration
+        # Determine timing with L-Cut and padding
+        # Read from config if available
+        try:
+            from config_loader import load_channel_config, get_style
+            config = load_channel_config()
+            pre_roll = config.get("pacing", {}).get("broll_preroll_sec", 0.15)
+            min_dur = config.get("pacing", {}).get("broll_min_duration_sec", 1.5)
+        except:
+            pre_roll = 0.15
+            min_dur = 1.5
+            
+        capcut_start_timeline = max(0.0, start_timeline - pre_roll)
+        capcut_duration = max(min_dur, target_duration + pre_roll + 0.1)
         capcut_media_start = best_start
         
         # Command array for capcut-cli

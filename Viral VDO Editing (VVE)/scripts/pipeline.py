@@ -9,6 +9,7 @@ from pathlib import Path
 STAGES = [
     ("01-extract-audio.py",    "EXTRACT_AUDIO"),
     ("02-transcribe.py",       "TRANSCRIBE"),
+    ("02b-editorial-agent.py", "EDITORIAL_AGENT"),
     ("03-word-segment.py",     "WORD_SEGMENT"),
     # --- PAUSE: Wait for AI Refiner (AG/LLM) to write ai_segmented.txt ---
     ("03b-align-ai.py",        "ALIGN_AI_TEXT"),
@@ -62,6 +63,8 @@ def main():
     parser = argparse.ArgumentParser(description="VVE Video Processing Pipeline")
     parser.add_argument("job_dir", help="Path to the job directory")
     parser.add_argument("--resume", action="store_true", help="Resume from last checkpoint")
+    parser.add_argument("--channel", help="Channel name for config (default: doctorbank)", default="doctorbank")
+    parser.add_argument("--auto-silence", action="store_true", help="Use auto-editor instead of Timebolt for silence removal")
     args = parser.parse_args()
 
     job_dir = args.job_dir
@@ -69,11 +72,16 @@ def main():
         print(f"❌ Job directory not found: {job_dir}")
         sys.exit(1)
 
-    print(f"🚀 Starting VVE Pipeline for job: {job_dir}")
+    os.environ["VVE_CHANNEL"] = args.channel
+    print(f"🚀 Starting VVE Pipeline for job: {job_dir} (Channel: {args.channel})")
     
     checkpoints = load_checkpoints(job_dir) if args.resume else {}
 
     for script, stage_name in STAGES:
+        # Check for auto-silence replacement
+        if stage_name == "EXTRACT_AUDIO" and args.auto_silence:
+            script = "01b-silence-cut.py"
+            
         if args.resume and checkpoints.get(stage_name):
             print(f"⏩ Skipped {stage_name} (already completed)")
             continue

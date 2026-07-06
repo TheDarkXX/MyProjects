@@ -1,65 +1,107 @@
 channel_name: "DoctorBank"
 description: "ช่องให้ความรู้สุขภาพ + ขายอาหารเสริม"
 
-# Source video
-source_aspect: "9:16"
-auto_frame_916: false
+# ==========================================
+# 🎨 STYLE PROFILE
+# ==========================================
+style:
+  layout:
+    mode: "hybrid-split"
+    split_ratio: "55:45"
+    pip_position: "top-right"
+  
+  header:
+    font_size: 18.0
+    color: "#FFE600"
+    stroke_color: "#000000"
+    stroke_width: 0.1
+    shadow_alpha: 0.9
+    default_text: "คลิปความรู้สุขภาพ"
 
-# Transcription
-language: "tha"
-subtitle_max_chars: 15
+  subtitle:
+    font_size: 14.0
+    color: "#FFFFFF"
+    stroke_color: "#000000"  
+    stroke_width: 0.08
+    shadow_alpha: 0.8
+    shadow_distance: 6.0
+    max_chars: 15
 
-# Hook & CTA
-hook_in_script: true
-cta_in_script: true
+  highlight:
+    enabled: true
+    color: "#FFE600"
+    stroke_color: "#000000"
+    stroke_width: 0.12
+    size_multiplier: 1.2
+    keywords:
+      - "อักเสบ"
+      - "กระดูก"
+      - "แคลเซียม"
+      - "วิตามิน"
+      - "โอเมก้า"
+      - "DMK"
+      - "โปรไบโอติกส์"
+      - "พรุน"
+      - "เสื่อม"
+      - "อันตราย"
+      - "ลด"
+      - "ช่วย"
+      - "ป้องกัน"
+      - "ฟื้นฟู"
+      - "ดูดซึม"
+      - "บำรุง"
+      - "สร้าง"
+      - "%"
+      - "mg"
+      - "เท่า"
+      - "ปี"
 
-# Scene & B-Roll Configuration
-scene_duration_sec: 3.5
+# ==========================================  
+# 🔊 AUDIO PROFILE
+# ==========================================
+audio:
+  sfx:
+    library: "V:\\DoctorBank Family\\DoctorBank Brand\\Sound Effect"
+    auto_place: true
+    hook_impact_vol: 0.5
+    whoosh_vol: 0.25
+    emphasis_vol: 0.4
+    cooldowns:
+      hook: 0
+      whoosh: 2.0
+      point: 3.0
+      emphasis: 1.5
+      emotion: 5.0
+      cta: 0
+    global_min_gap: 0.3
+
+  bgm:
+    library: "V:\\DoctorBank Family\\DoctorBank Brand\\BGM"
+    stage1: "bgm_hook_clockwork_1.mp3"
+    stage2: "bgm_edu_focus_1.mp3"
+    stage3: "bgm_hype_sigma_1.mp3"
+    stage1_vol: 0.15
+    stage2_vol: 0.15
+    stage3_vol: 0.18
+
+  silence:
+    margin: "0.2s,0.4s"
+    threshold_dbfs: -40
 
 # ==========================================
-# AI Image & Motion Generation Styles
+# 🎬 TRANSITION & PACING
 # ==========================================
-# ดูรายละเอียดเต็มที่ doctorbank_masterprompt.yaml
-masterprompt_file: "doctorbank_masterprompt.yaml"
-# สรุป 8 Categories:
-#   A: คน (People — Premium UGC) → อาการ/ชีวิตประจำวัน
-#   B: อวัยวะ (Organs — Medical CG) → กลไกของโรค
-#   C: ระดับเซลล์ (Micro — Sci-Fi) → สารอาหาร/วิตามิน
-#   D: อุปมาอุปไมย (Visual Metaphor) → เปรียบเปรย
-#   E: อาหาร (Food Photography) → อาหารดี/ไม่ดี
-#   F: สินค้า/เม็ดยา (Product) → อาหารเสริม/ขวดยา/แคปซูล
-#   G: ไลฟ์สไตล์ (Lifestyle) → ออกกำลังกาย/กิจกรรม
-#   H: สมุนไพร (Nature & Herbs) → พืช/สารสกัดธรรมชาติ
+transitions:
+  pool:
+    - "Zoom Shake"
+    - "Zoom Shake 2"
+    - "Rotate & Change"
+    - "Get Closer"
+    - "Zoom Swipe"
+    - "Pull Out"
 
-# Layout
-layout: "Dynamic Center-Aligned, Big Hooks"
-
-# SFX
-sfx_library: "./sfx-library"
-sfx_auto_place: true
-
-# Transition
-transition_pool:
-  - "Zoom Shake"
-  - "Zoom Shake 2"
-  - "Rotate & Change"
-  - "Get Closer"
-  - "Zoom Swipe"
-  - "Pull Out"
-
-# Layout Config (Dr. Jade Standard)
-layout_config:
-  default_style: "Hybrid Split-Screen"
-  split_ratio: "55:45" # B-Roll top : Speaker bottom
-  pip_position: "top-right"
-  point_marker_style: "Big numbers with shadow"
-
-# Pacing Rules
-pacing_rules:
-  max_scene_duration_sec: 3.5
-  zoom_interrupt_interval_sec: 3.0
-  sfx_on_popups:
-    - "pop"
-    - "pluck"
-    - "whoosh"
-    - "ding"
+pacing:
+  scene_duration_sec: 3.5
+  zoom_interrupt_sec: 3.0
+  broll_preroll_sec: 0.15
+  broll_min_duration_sec: 1.5

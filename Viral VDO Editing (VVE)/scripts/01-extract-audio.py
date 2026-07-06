@@ -42,15 +42,29 @@ def extract_cut_audio(video_path, timebolt_json_path, output_wav):
     print("✅ Extraction complete!")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python 01-extract-audio.py <video_path> <timebolt_json_path>")
+    if len(sys.argv) < 2:
+        print("Usage: python 01-extract-audio.py <job_dir>")
         sys.exit(1)
         
-    video_path = sys.argv[1]
-    tb_json = sys.argv[2]
+    job_dir = Path(sys.argv[1])
+    
+    # Auto-discover video and timebolt json
+    video_files = list(job_dir.glob("*.mp4"))
+    json_files = list(job_dir.glob("*.json"))
+    
+    if not video_files:
+        print(f"❌ Error: No .mp4 file found in {job_dir}")
+        sys.exit(1)
+        
+    # Exclude pipeline-generated jsons
+    tb_files = [f for f in json_files if not f.name.endswith(".transcript.json") and not f.name.endswith(".grouped.json") and not f.name.startswith("scene_table") and not f.name.startswith("timeline_commands") and not f.name.startswith("checkpoint")]
+    
+    if not tb_files:
+        print(f"❌ Error: No Timebolt .json file found in {job_dir}")
+        sys.exit(1)
+        
+    video_path = str(video_files[0])
+    tb_json = str(tb_files[0])
     out_wav = str(Path(video_path).with_suffix("")) + ".cut_audio_16k.wav"
     
-    if len(sys.argv) > 3:
-        out_wav = sys.argv[3]
-        
     extract_cut_audio(video_path, tb_json, out_wav)

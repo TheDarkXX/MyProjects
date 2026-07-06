@@ -40,19 +40,38 @@ def json_to_srt(grouped_json_path: str, output_srt_path: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python generate_srt.py <grouped_json_file>")
+        print("Usage: python 04-generate-srt.py <job_dir>")
         sys.exit(1)
         
-    json_path = sys.argv[1]
+    job_dir = Path(sys.argv[1])
     
-    if len(sys.argv) > 2:
-        out_path = sys.argv[2]
-    else:
-        # Default to replacing .grouped.json with .srt
-        out_path = str(Path(json_path).with_suffix(""))
-        if out_path.endswith(".grouped"):
-            out_path = out_path[:-8]
-        out_path += ".srt"
+    json_files = list(job_dir.glob("*.grouped.json"))
+    if not json_files:
+        print(f"❌ Error: No .grouped.json found in {job_dir}")
+        sys.exit(1)
         
+    json_path = str(json_files[0])
+    
+    out_path = str(Path(json_path).with_suffix(""))
+    if out_path.endswith(".grouped"):
+        out_path = out_path[:-8]
+    out_path += ".srt"
+    
+    # Also save a copy to intermediates
+    inter_path = job_dir / "intermediates"
+    inter_path.mkdir(exist_ok=True)
+    inter_srt_path = inter_path / "subtitles.srt"
+    
     json_to_srt(json_path, out_path)
-    print(f"Success! SRT saved to {out_path}")
+    json_to_srt(json_path, str(inter_srt_path))
+    
+    # Auto-copy SRT to the source video folder (same name as video)
+    video_files = list(job_dir.glob("*.mp4"))
+    if video_files:
+        video_path = video_files[0]
+        source_srt_path = video_path.with_suffix(".srt")
+        import shutil
+        shutil.copy2(out_path, source_srt_path)
+        print(f"Success! SRT saved to {out_path}, {inter_srt_path}, and beside source video {source_srt_path}")
+    else:
+        print(f"Success! SRT saved to {out_path} and {inter_srt_path}")

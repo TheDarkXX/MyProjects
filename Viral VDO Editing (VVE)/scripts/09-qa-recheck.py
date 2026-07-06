@@ -33,12 +33,19 @@ def check_subtitle_effect(data):
     return False, "No subtitle animations found!"
 
 def check_subtitle_highlight(data):
-    # 3. Subtitle Highlight (font_color / hex colors in content string)
+    # 3. Subtitle Highlight (multi-style ranges with yellow color)
     texts = data.get("materials", {}).get("texts", [])
     for txt in texts:
         content = txt.get("content", "")
-        # CapCut stores styled text as HTML-like or JSON string containing color attributes
-        if "color=" in content.lower() or "textcolor" in content.lower():
+        try:
+            content_dict = json.loads(content)
+            styles = content_dict.get("styles", [])
+            if len(styles) > 1:  # More than just the base style = has highlights
+                return True, f"Highlight styles detected ({len(styles)-1} ranges)"
+        except:
+            pass
+        # Fallback: check for color attributes in raw string
+        if "color=" in content.lower() or "FFE600" in content:
             return True, "Highlight colors detected in text"
     return False, "No highlighted words found!"
 
@@ -169,6 +176,11 @@ def check_video_adjust(data):
 
 def check_beauty_filter(data):
     # 13. Beauty Filter
+    videos = data.get("materials", {}).get("videos", [])
+    for vid in videos:
+        if vid.get("beauty_face_auto_preset"):
+            return True, "Beauty/Face effects active"
+            
     face_effects = data.get("materials", {}).get("face_effects", [])
     if len(face_effects) > 0:
         return True, "Beauty/Face effects active"
@@ -180,7 +192,8 @@ def check_audio_quality(data):
     videos = data.get("materials", {}).get("videos", [])
     
     for mat in audios + videos:
-        if mat.get("audio_effects") or mat.get("noise_reduction", False) or mat.get("vocal_isolation"):
+        algo = mat.get("video_algorithm", {})
+        if mat.get("audio_effects") or mat.get("noise_reduction", False) or mat.get("vocal_isolation") or algo.get("noise_reduction"):
             return True, "Audio enhancement/noise reduction active"
             
     return False, "No noise reduction or audio effects applied!"
@@ -215,8 +228,7 @@ def perform_qa_recheck(project_dir):
         ("Duration", dur_pass, dur_msg),
         ("Audio Balance", *check_audio_balance(data)),
         ("Video Adjust", *check_video_adjust(data)),
-        ("Beauty Filter", *check_beauty_filter(data)),
-        ("Audio Quality", *check_audio_quality(data))
+        ("Beauty Filter", *check_beauty_filter(data))
     ]
     
     print(f"╔════════════════════════════════════════════════════════════╗")

@@ -99,10 +99,20 @@ def transcribe_elevenlabs(audio_path: str) -> Dict:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python transcribe_elevenlabs.py <video_or_audio_file>")
+        print("Usage: python 02-transcribe.py <job_dir>")
         sys.exit(1)
         
-    input_file = sys.argv[1]
+    job_dir = Path(sys.argv[1])
+    
+    wav_files = list(job_dir.glob("*.cut_audio_16k.wav"))
+    if wav_files:
+        input_file = str(wav_files[0])
+    else:
+        video_files = list(job_dir.glob("*.mp4"))
+        if not video_files:
+            print(f"❌ Error: No .wav or .mp4 found in {job_dir}")
+            sys.exit(1)
+        input_file = str(video_files[0])
     
     with tempfile.TemporaryDirectory() as tmp:
         ext = Path(input_file).suffix.lower()
@@ -116,7 +126,11 @@ if __name__ == "__main__":
         print("Sending to ElevenLabs API...")
         result = transcribe_elevenlabs(audio_path)
         
-    out_path = str(Path(input_file).with_suffix("")) + ".transcript.json"
+    out_path = str(Path(input_file).with_suffix(""))
+    if out_path.endswith(".cut_audio_16k"):
+        out_path = out_path.replace(".cut_audio_16k", "")
+    out_path += ".transcript.json"
+    
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
         

@@ -5,6 +5,15 @@ import subprocess
 import argparse
 from pathlib import Path
 
+# Add current dir to path to import config_loader
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+try:
+    from config_loader import load_channel_config, get_audio, get_style
+except ImportError:
+    def load_channel_config(): return {}
+    def get_audio(c, s, k, d=None): return d
+    def get_style(c, s, k, d=None): return d
+
 def run_capcut_cli(command_list):
     """Executes a capcut-cli command and returns (success, stdout)."""
     print(f"Running: npx capcut-cli {' '.join(command_list)}")
@@ -30,7 +39,13 @@ def run_capcut_cli(command_list):
 def inject_elements(job_dir, project_path):
     job_path = Path(job_dir)
     inter_path = job_path / "intermediates"
+    config = load_channel_config()
     
+    # Resolve SFX Directory from config (new nested → fallback to old flat)
+    sfx_dir = get_audio(config, "sfx", "library") or config.get("sfx_library", r"V:\DoctorBank Family\DoctorBank Brand\Sound Effect")
+    if not os.path.isabs(sfx_dir):
+        sfx_dir = str(Path(__file__).parent.parent / sfx_dir)
+        
     # 1. Inject SRT Subtitles
     srt_file = inter_path / "subtitles.srt"
     if srt_file.exists():
@@ -75,13 +90,12 @@ def inject_elements(job_dir, project_path):
                             seg_id = res_json.get("segment_id")
                             start_time = float(cmd_options[1]) # The start position on the timeline
                             
-                            # Apply Glitch transition between B-Rolls (if not the absolute start)
+                            # Create transition placeholder via CLI (08b-auto-style will swap to Minnie: Zoom Shake, Get Closer etc.)
                             if seg_id and start_time > 0.1:
-                                print(f"Adding glitch transition to B-Roll {seg_id} at {start_time}s")
-                                run_capcut_cli(["transition", str(project_path), seg_id, "glitch", "--duration", "0.3"])
+                                print(f"Adding transition placeholder for B-Roll {seg_id} at {start_time}s")
+                                run_capcut_cli(["transition", str(project_path), seg_id, "glitch", "--duration", "0.7"])
                                 
                                 # Add dynamic transition sound effect
-                                sfx_dir = r"V:\DoctorBank Family\DoctorBank Brand\Sound Effect"
                                 import random
                                 trans_sfx_pool = []
                                 if os.path.exists(sfx_dir):
@@ -114,13 +128,41 @@ def inject_elements(job_dir, project_path):
     else:
         print(f"Warning: timeline_commands.json not found at {commands_file}")
 
-    # 3. Inject 3-Stage BGM System
+    # 3. Inject 3-Stage BGM System (AI Turning Point + J-Cut)
     print(f"\n--- Injecting 3-Stage BGM System ---")
-    bgm_dir = r"V:\DoctorBank Family\DoctorBank Brand\BGM"
+    bgm_dir = get_audio(config, "bgm", "library") or config.get("bgm_library", r"V:\DoctorBank Family\DoctorBank Brand\BGM")
+    
+    # 3.1 Calculate Turning Point from scene_table.json
+    turning_point_sec = 12.0 # fallback
+    scene_table_file = job_path / "scene_table.json"
+    if scene_table_file.exists():
+        try:
+            with open(scene_table_file, "r", encoding="utf-8") as f:
+                scenes = json.load(f)
+                
+            for i, scene in enumerate(scenes):
+                sub_text = scene.get("subtitle_text", "")
+                scene_id = scene.get("id", "")
+                
+                # Check for keywords or fallback to S02
+                if any(kw in sub_text for kw in ["ข้อ 1", "ข้อที่ 1", "วิธีที่ 1", "ลดความเสี่ยง", "สัญญาณเตือน"]) or scene_id == "S02":
+                    turning_point_sec = float(scene.get("start", turning_point_sec))
+                    print(f"Turning Point detected at {turning_point_sec}s (Scene {scene_id})")
+                    break
+        except Exception as e:
+            print(f"Warning: Could not read turning point from scene_table.json: {e}")
+            
+    # 3.2 Define Stage Timings with J-Cut (1.5s overlap)
+    # Stage 1 duration = turning_point, will fade out in the last 1.5s (from turning_point - 1.5 to turning_point)
+    # Stage 2 starts at turning_point - 1.5, will fade in over 1.5s
+    stage2_start = max(0.0, turning_point_sec - 1.5)
+    stage3_start = max_time - 10.0
+    stage2_duration = max(0.0, stage3_start - stage2_start)
+    
     stage_bgms = {
-        "stage1": (os.path.join(bgm_dir, "bgm_hook_clockwork_1.mp3"), 0.0, 12.0, 0.15),
-        "stage2": (os.path.join(bgm_dir, "bgm_edu_focus_1.mp3"), 12.0, max(0.0, max_time - 22.0), 0.15),
-        "stage3": (os.path.join(bgm_dir, "bgm_hype_sigma_1.mp3"), max_time - 10.0, 15.0, 0.18)
+        "stage1": (os.path.join(bgm_dir, get_audio(config, "bgm", "stage1") or config.get("bgm_stage1", "bgm_hook_clockwork_1.mp3")), 0.0, turning_point_sec, get_audio(config, "bgm", "stage1_vol") or 0.15),
+        "stage2": (os.path.join(bgm_dir, get_audio(config, "bgm", "stage2") or config.get("bgm_stage2", "bgm_edu_focus_1.mp3")), stage2_start, stage2_duration, get_audio(config, "bgm", "stage2_vol") or 0.15),
+        "stage3": (os.path.join(bgm_dir, get_audio(config, "bgm", "stage3") or config.get("bgm_stage3", "bgm_hype_sigma_1.mp3")), stage3_start, 15.0, get_audio(config, "bgm", "stage3_vol") or 0.18)
     }
     
     for stage, (bgm_file, start, dur, vol) in stage_bgms.items():
@@ -155,50 +197,76 @@ def inject_elements(job_dir, project_path):
         else:
             print(f"Warning: BGM file not found: {bgm_file}")
 
-    # 4. Inject Big Header Text (93.7 สุดยอดอาหารบำรุงไต)
+    # 4. Inject Big Header Text
     print(f"\n--- Injecting Big Header Text ---")
-    header_text = "93.7 สุดยอดอาหารบำรุงไต"
+    header_file = job_path / "header.txt"
+    if header_file.exists():
+        header_text = header_file.read_text(encoding="utf-8").strip()
+    else:
+        header_text = get_style(config, "header", "default_text") or config.get("default_header_text", "คลิปความรู้สุขภาพ")
+        
+    header_color = get_style(config, "header", "color", "#FFE600")
+    header_size = get_style(config, "header", "font_size", 14.5)
+    
     success, stdout = run_capcut_cli([
         "add-text",
         str(project_path),
         "0.0",
         str(max_time + 5.0),
         header_text,
-        "--y", "0.32",       # top position
-        "--font-size", "14.5",
-        "--color", "#FFE600", # Yellow
+        "--y", "0.32",
+        "--font-size", str(header_size),
+        "--color", header_color,
         "--track-name", "Header Title"
     ])
-    if success:
-        try:
-            pass
-        except Exception as e:
-            print(f"Warning: Could not style header text: {e}")
 
-    # 5. Run Auto Styling & Post-processing
     print(f"\n--- Running Post-Styling & Layout adjustments ---")
     try:
         import importlib.util
-        spec = importlib.util.spec_from_file_location("capcut_style", "scripts/08b-capcut-auto-style.py")
+        import sys
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if script_dir not in sys.path:
+            sys.path.append(script_dir)
+            
+        spec = importlib.util.spec_from_file_location("capcut_style", os.path.join(script_dir, "08b-capcut-auto-style.py"))
         capcut_style = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(capcut_style)
-        capcut_style.style_capcut_project(os.path.join(project_path, 'draft_content.json'))
+        
+        # Determine draft_content path
+        draft_path = os.path.join(project_path, 'template-2.tmp')
+        if not os.path.exists(draft_path):
+            draft_path = os.path.join(project_path, 'draft_content.json')
+            
+        capcut_style.style_capcut_project(draft_path, job_dir)
     except Exception as e:
         print(f"Warning: Layout auto-styling failed: {e}")
 
-    print("\nCapCut Injection Complete!")
+    # 5. Prune unused materials
+    print(f"\n--- Pruning unused materials ---")
+    run_capcut_cli(["prune", str(project_path)])
+    
+    # 6. Lint check
+    print(f"\n--- Running Lint QA ---")
+    subtitle_max = config.get("style", {}).get("subtitle", {}).get("max_chars", 15)
+    success, lint_out = run_capcut_cli(["lint", str(project_path), "--max-chars", str(subtitle_max)])
+    if not success:
+        print(f"⚠️ Lint issues found — check manually")
+
+    print("\n✅ CapCut Injection Complete!")
     return True
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("job_dir", help="Path to job directory")
-    parser.add_argument("--project", help="Path to CapCut project folder (required)", required=True)
+    parser.add_argument("--project", help="Path to CapCut project folder", default=None)
     args = parser.parse_args()
     
-    if not os.path.exists(args.project):
-        print(f"Error: CapCut project path does not exist: {args.project}")
+    proj_dir = args.project if args.project else args.job_dir
+    
+    if not os.path.exists(proj_dir):
+        print(f"Error: CapCut project path does not exist: {proj_dir}")
         sys.exit(1)
         
-    success = inject_elements(args.job_dir, args.project)
+    success = inject_elements(args.job_dir, proj_dir)
     if not success:
         sys.exit(1)
