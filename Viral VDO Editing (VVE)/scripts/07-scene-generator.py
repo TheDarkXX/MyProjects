@@ -7,7 +7,7 @@ import os
 # Add current dir to path to import config_loader
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
-    from config_loader import load_channel_config
+    from utils.config_loader import load_channel_config
 except ImportError:
     def load_channel_config(): return {}
 
@@ -102,7 +102,7 @@ def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python 05-scene-generator.py <job_dir>")
+        print("Usage: python 07-scene-generator.py <job_dir>")
         sys.exit(1)
         
     job_dir = sys.argv[1]

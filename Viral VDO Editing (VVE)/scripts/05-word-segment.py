@@ -64,7 +64,7 @@ def segment_and_group(raw_json_path: str):
         })
 
     try:
-        from config_loader import load_channel_config, get_style
+        from utils.config_loader import load_channel_config, get_style
         config = load_channel_config()
     except ImportError:
         config = {}
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     
     # Get preset name for logging (same logic as inside function)
     try:
-        from config_loader import load_channel_config, get_style
+        from utils.config_loader import load_channel_config, get_style
         _cfg = load_channel_config()
         _preset = get_style(_cfg, "subtitle", "preset", "drb")
     except ImportError:

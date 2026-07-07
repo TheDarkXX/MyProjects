@@ -87,7 +87,7 @@ def align_ai_text(json_path: str, text_path: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python 03b-align-ai.py <job_dir>")
+        print("Usage: python 05b-align-ai.py <job_dir>")
         sys.exit(1)
         
     job_dir = sys.argv[1]

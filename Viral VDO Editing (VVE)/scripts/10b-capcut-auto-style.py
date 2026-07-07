@@ -2,6 +2,9 @@ import json
 import os
 import shutil
 import sys
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils.capcut_utils import safe_save_draft
 def is_overlap(range1, range2):
     s1, d1 = range1.get('start', 0), range1.get('duration', 0)
     e1 = s1 + d1
@@ -17,7 +20,7 @@ def style_capcut_project(project_path, job_dir=None):
         sys.path.append(script_dir)
         
     try:
-        from config_loader import load_channel_config, get_style
+        from utils.config_loader import load_channel_config, get_style
         config = load_channel_config()
     except ImportError:
         config = {}
@@ -183,8 +186,8 @@ def style_capcut_project(project_path, job_dir=None):
         except Exception as e:
             print(f"Error parsing text content: {e}")
 
-    with open(project_path, 'w', encoding='utf-8') as f:
-        json.dump(draft, f, ensure_ascii=False, separators=(',', ':'))
+    # Save via gateway (auto: force close CapCut → backup → write JSON)
+    safe_save_draft(project_path, draft, step_name="09b")
     print("SUCCESS: CapCut project successfully styled!")
 
 if __name__ == "__main__":
@@ -192,4 +195,4 @@ if __name__ == "__main__":
         job_dir = sys.argv[2] if len(sys.argv) > 2 else None
         style_capcut_project(sys.argv[1], job_dir)
     else:
-        print("Usage: python 08b-capcut-auto-style.py <draft_content.json> [job_dir]")
+        print("Usage: python 10b-capcut-auto-style.py <draft_content.json> [job_dir]")

@@ -7,20 +7,21 @@ from pathlib import Path
 
 # STAGES defines the order of execution
 STAGES = [
-    ("01-extract-audio.py",    "EXTRACT_AUDIO"),
-    ("02-transcribe.py",       "TRANSCRIBE"),
-    ("02b-editorial-agent.py", "EDITORIAL_AGENT"),
-    ("03-word-segment.py",     "WORD_SEGMENT"),
+    ("02-extract-audio.py",    "EXTRACT_AUDIO"),
+    ("03-transcribe.py",       "TRANSCRIBE"),
+    ("04-editorial-agent.py", "EDITORIAL_AGENT"),
+    ("04b-apply-editorial-cuts.py", "APPLY_EDITORIAL_CUTS"),
+    ("05-word-segment.py",     "WORD_SEGMENT"),
     # --- PAUSE: Wait for AI Refiner (AG/LLM) to write ai_segmented.txt ---
-    ("03b-align-ai.py",        "ALIGN_AI_TEXT"),
-    ("04-generate-srt.py",     "GENERATE_SRT"),
-    ("05-scene-generator.py",  "SCENE_TABLE"),
+    ("05b-align-ai.py",        "ALIGN_AI_TEXT"),
+    ("06-generate-srt.py",     "GENERATE_SRT"),
+    ("07-scene-generator.py",  "SCENE_TABLE"),
     # --- PAUSE: User runs God Flow ---
-    ("06-footage-assembler.py","FOOTAGE_ASSEMBLY"),
-    ("07-sfx-placer.py",       "SFX_PLACEMENT"),
-    ("08-capcut-inject.py",    "CAPCUT_INJECT"),
-    ("09-qa-recheck.py",       "QA_RECHECK"),      # Gate: Fails if missing elements
-    ("10-viral-score.py",      "VIRAL_SCORE"),
+    ("08-footage-assembler.py","FOOTAGE_ASSEMBLY"),
+    ("09-sfx-placer.py",       "SFX_PLACEMENT"),
+    ("10-capcut-inject.py",    "CAPCUT_INJECT"),
+    ("11-qa-recheck.py",       "QA_RECHECK"),      # Gate: Fails if missing elements
+    ("12-viral-score.py",      "VIRAL_SCORE"),
 ]
 
 def get_checkpoint_path(job_dir):

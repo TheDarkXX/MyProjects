@@ -16,6 +16,6 @@ def main(job_dir):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python 10-viral-score.py <job_dir>")
+        print("Usage: python 12-viral-score.py <job_dir>")
         sys.exit(1)
     main(sys.argv[1])

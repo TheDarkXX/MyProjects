@@ -4,6 +4,10 @@ import xml.etree.ElementTree as ET
 import copy
 import uuid
 import shutil
+import sys
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils.capcut_utils import safe_save_draft, get_draft_path
 
 def generate_uuid():
     return str(uuid.uuid4()).upper()
@@ -124,19 +128,23 @@ def timebolt_xml_to_capcut_json(xml_path, json_path):
     total_sec = accumulated_target / 1000000
     print(f"\nTimeline: {len(new_segments)} segments, total {total_sec:.1f}s ({total_sec/60:.1f}min)")
     
-    # 6. Save backup of original (only if not already backed up)
-    if not os.path.exists(bak_path):
-        shutil.copy2(json_path, bak_path)
-        print(f"Original backed up to: {bak_path}")
+    # 6. Save via gateway (Force Close CapCut + Backup + Save)
+    safe_save_draft(json_path, data, step_name="01a")
         
-    # 7. Save modified JSON
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
-        
-    print(f"\n✅ SUCCESS! CapCut project updated with {len(new_segments)} cut segments.")
-    print(f"⚠️  IMPORTANT: Close CapCut completely, then re-open the project!")
+    print(f"\n✅ SUCCESS! CapCut project updated with {len(new_segments)} Timebolt cuts.")
 
 if __name__ == "__main__":
-    xml_file = r"V:\DoctorBank Family\DR.POW\93.7 สุดยอดอาหารบำรุงไต\video_20250929_145057.mp4.30.00_1.xml"
-    json_file = r"C:\Users\Admin\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\93.7 สุดยอดอาหารบำรุงไต\draft_content.json"
+    if len(sys.argv) < 3:
+        print("Usage: python 01a-timebolt-cut.py <timebolt_xml_file> <capcut_project_name_or_path>")
+        sys.exit(1)
+        
+    xml_file = sys.argv[1]
+    
+    # Try to resolve CapCut JSON path via utility
+    try:
+        json_file = get_draft_path(sys.argv[2])
+    except FileNotFoundError as e:
+        print(f"❌ {e}")
+        sys.exit(1)
+        
     timebolt_xml_to_capcut_json(xml_file, json_file)

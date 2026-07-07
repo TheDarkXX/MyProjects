@@ -53,7 +53,7 @@ try:
                     'end': c['end']
                 })
     
-    # We save this as "words" so 03-word-segment.py parses it as before
+    # We save this as "words" so 04-word-segment.py parses it as before
     # but now each entry is a single true character!
     result = {'text': data.get('text', ''), 'words': exact_chars}
     out_path = r'V:\DoctorBank Family\DR.POW\93.7 สุดยอดอาหารบำรุงไต\video_20250929_145057.transcript.json'

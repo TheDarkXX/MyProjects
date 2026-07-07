@@ -13,6 +13,11 @@ import shutil
 import glob
 import copy
 
+sys_path = os.path.dirname(os.path.abspath(__file__))
+if sys_path not in __import__('sys').path:
+    __import__('sys').path.append(sys_path)
+from .capcut_utils import safe_save_draft, force_close_capcut
+
 MICROSECONDS = 1_000_000
 TEMPLATE_PROJECT = r"C:\Users\Admin\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\35.7 สุดยอดอาหารบำรุงสายตา\draft_content.json"
 
@@ -338,17 +343,9 @@ def modify_single_file(draft_json_path, vad_data, edit_data, templates):
         draft['tracks'].append(broll_track)
         print(f"  Added {len(broll_track['segments'])} B-Rolls")
 
-    # --- Write output ---
-    with open(draft_json_path, 'w', encoding='utf-8') as f:
-        json.dump(draft, f, separators=(',', ':'), ensure_ascii=False)
-
-    # Force overwrite .bak
-    bak_path = draft_json_path + ".bak"
-    if os.path.exists(bak_path):
-        os.remove(bak_path)
-    shutil.copy2(draft_json_path, bak_path)
-
-    print(f"  Done! (+ .bak overwritten)")
+    # --- Write output via gateway (force close CapCut → backup → save) ---
+    safe_save_draft(draft_json_path, draft, step_name="09")
+    print(f"  Done!")
 
 
 def process_draft(project_path, vad_json_path, editorial_json_path=None):

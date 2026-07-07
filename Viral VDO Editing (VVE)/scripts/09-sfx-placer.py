@@ -7,7 +7,7 @@ from pathlib import Path
 # Add current dir to path to import config_loader
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
-    from config_loader import load_channel_config, get_audio
+    from utils.config_loader import load_channel_config, get_audio
 except ImportError:
     def load_channel_config(): return {}
     def get_audio(c, s, k, d): return d
@@ -198,6 +198,6 @@ def place_sfx(job_dir: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python 07-sfx-placer.py <job_dir>")
+        print("Usage: python 09-sfx-placer.py <job_dir>")
         sys.exit(1)
     place_sfx(sys.argv[1])

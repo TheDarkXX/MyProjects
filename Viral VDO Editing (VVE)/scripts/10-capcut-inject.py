@@ -8,7 +8,7 @@ from pathlib import Path
 # Add current dir to path to import config_loader
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
-    from config_loader import load_channel_config, get_audio, get_style
+    from utils.config_loader import load_channel_config, get_audio, get_style
 except ImportError:
     def load_channel_config(): return {}
     def get_audio(c, s, k, d=None): return d
@@ -228,7 +228,7 @@ def inject_elements(job_dir, project_path):
         if script_dir not in sys.path:
             sys.path.append(script_dir)
             
-        spec = importlib.util.spec_from_file_location("capcut_style", os.path.join(script_dir, "08b-capcut-auto-style.py"))
+        spec = importlib.util.spec_from_file_location("capcut_style", os.path.join(script_dir, "10b-capcut-auto-style.py"))
         capcut_style = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(capcut_style)
         

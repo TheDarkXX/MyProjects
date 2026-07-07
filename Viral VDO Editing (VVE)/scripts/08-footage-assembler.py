@@ -119,7 +119,7 @@ def assemble_footage(job_dir: str):
         # Determine timing with L-Cut and padding
         # Read from config if available
         try:
-            from config_loader import load_channel_config, get_style
+            from utils.config_loader import load_channel_config, get_style
             config = load_channel_config()
             pre_roll = config.get("pacing", {}).get("broll_preroll_sec", 0.15)
             min_dur = config.get("pacing", {}).get("broll_min_duration_sec", 1.5)
@@ -150,7 +150,7 @@ def assemble_footage(job_dir: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python 06-footage-assembler.py <job_dir>")
+        print("Usage: python 08-footage-assembler.py <job_dir>")
         sys.exit(1)
         
     assemble_footage(sys.argv[1])

@@ -40,7 +40,7 @@ def json_to_srt(grouped_json_path: str, output_srt_path: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python 04-generate-srt.py <job_dir>")
+        print("Usage: python 06-generate-srt.py <job_dir>")
         sys.exit(1)
         
     job_dir = Path(sys.argv[1])
