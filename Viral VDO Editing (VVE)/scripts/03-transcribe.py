@@ -85,13 +85,14 @@ def transcribe_elevenlabs(audio_path: str) -> Dict:
         start = float(w.get("start", 0))
         end = float(w.get("end", start))
         
-        if wtype == "spacing" or text.isspace():
+        if wtype == "spacing" or text.isspace() or (cur_start is not None and (end - cur_start > 0.4 or len(cur_text) >= 4)):
             if cur_text:
                 merged.append({"text": cur_text, "start": cur_start or 0, "end": cur_end})
                 cur_text = ""
                 cur_start = None
                 cur_end = 0.0
-            continue
+            if wtype == "spacing" or text.isspace():
+                continue
             
         if cur_start is None:
             cur_start = start

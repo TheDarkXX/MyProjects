@@ -171,14 +171,31 @@ def segment_and_group(raw_json_path: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python word_segment.py <raw_json_file>")
+        print("Usage: python 05-word-segment.py <job_dir_or_json_path>")
         sys.exit(1)
         
-    json_path = sys.argv[1]
+    input_arg = sys.argv[1]
+    
+    # Support both direct JSON path and job_dir
+    if input_arg.endswith('.json') and os.path.exists(input_arg):
+        json_path = input_arg
+    else:
+        # Import here to avoid error if script used standalone
+        import os
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from utils.capcut_utils import get_project_path
+        project_dir = get_project_path(input_arg)
+        json_path = os.path.join(project_dir, "transcript.json")
+        
+        if not os.path.exists(json_path):
+            print(f"❌ Error: {json_path} not found.")
+            sys.exit(1)
+
     groups = segment_and_group(json_path)
     
     # Get preset name for logging (same logic as inside function)
     try:
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
         from utils.config_loader import load_channel_config, get_style
         _cfg = load_channel_config()
         _preset = get_style(_cfg, "subtitle", "preset", "drb")
@@ -189,5 +206,5 @@ if __name__ == "__main__":
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump({"groups": groups}, f, ensure_ascii=False, indent=2)
         
-    print(f"Success! Segmented into {len(groups)} chunks using '{_preset}' preset. Saved to {out_path}")
+    print(f"✅ Success! Segmented into {len(groups)} chunks using '{_preset}' preset. Saved to {out_path}")
 

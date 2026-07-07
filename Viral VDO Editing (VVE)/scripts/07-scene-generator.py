@@ -11,7 +11,7 @@ try:
 except ImportError:
     def load_channel_config(): return {}
 
-def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5):
+def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5, all_broll: bool = False):
     """
     Reads a grouped transcript and chunks it into scenes of approximately `target_duration_sec`.
     Outputs a scene table JSON and MD.
@@ -34,6 +34,10 @@ def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5):
     current_scene_start = groups[0]["start"]
     current_scene_end = current_scene_start
     
+    # Kallaway Wave Pacing: A-Roll (Authority), B-Roll (Proof), B-Roll (Context), repeat.
+    # If all_broll is True, everything is B-Roll.
+    pacing_pattern = ["A-Roll (Main Clip)", "B-Roll (AI Generated)", "B-Roll (AI Generated)"]
+    
     for group in groups:
         current_scene_text.append(group["text"])
         current_scene_end = group["end"]
@@ -41,12 +45,17 @@ def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5):
         duration = current_scene_end - current_scene_start
         if duration >= target_duration_sec:
             # Finalize scene
-            scene_id = f"S{len(scenes) + 1:02d}"
+            scene_idx = len(scenes)
+            scene_id = f"S{scene_idx + 1:02d}"
+            
+            visual_type = "B-Roll (AI Generated)" if all_broll else pacing_pattern[scene_idx % len(pacing_pattern)]
+            
             scenes.append({
                 "id": scene_id,
                 "start": current_scene_start,
                 "end": current_scene_end,
                 "duration": round(duration, 3),
+                "visual_type": visual_type,
                 "subtitle_text": "".join(current_scene_text)
             })
             # Reset for next scene
@@ -56,7 +65,9 @@ def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5):
             
     # Handle remainder if any
     if current_scene_text:
-        scene_id = f"S{len(scenes) + 1:02d}"
+        scene_idx = len(scenes)
+        scene_id = f"S{scene_idx + 1:02d}"
+        visual_type = "B-Roll (AI Generated)" if all_broll else pacing_pattern[scene_idx % len(pacing_pattern)]
         scenes.append({
             "id": scene_id,
             "start": current_scene_start,
@@ -76,12 +87,12 @@ def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5):
     
     if prompt_mode == "video":
         masterprompt_file = "doctorbank_broll_text2video.yaml"
-        columns = "`Scene ID` | `Subtitle` | `Scene Story` | `Category` | `Video Prompt`"
-        critical_rule = "> **CRITICAL RULE:** For `Video Prompt`, you MUST wrap the Scene ID at the very beginning like this: `[S01] Premium food photography, slow dolly...`"
+        columns = "`Scene ID` | `Visual Type` | `Subtitle` | `Scene Story` | `Category` | `Video Prompt`"
+        critical_rule = "> **CRITICAL RULE:** For `Video Prompt`, you MUST wrap the Scene ID at the very beginning like this: `[S01] Premium food photography, slow dolly...`\n> **CRITICAL RULE 2:** If Visual Type is 'A-Roll (Main Clip)', DO NOT include it in the TSV table at all. Only output rows that are 'B-Roll (AI Generated)' so the user can copy-paste the entire table without A-Roll rows."
     else:
         masterprompt_file = "doctorbank_broll_image+motion.yaml"
-        columns = "`Scene ID` | `Subtitle` | `Scene Story` | `Category` | `Image Prompt` | `Motion Prompt`"
-        critical_rule = "> **CRITICAL RULE:** For both `Image Prompt` and `Motion Prompt`, you MUST wrap the Scene ID at the very beginning like this: `[S01] Premium food...` or `[S01] Slow pan...`"
+        columns = "`Scene ID` | `Visual Type` | `Subtitle` | `Scene Story` | `Category` | `Image Prompt` | `Motion Prompt`"
+        critical_rule = "> **CRITICAL RULE:** For both `Image Prompt` and `Motion Prompt`, you MUST wrap the Scene ID at the very beginning like this: `[S01] Premium food...` or `[S01] Slow pan...`\n> **CRITICAL RULE 2:** If Visual Type is 'A-Roll (Main Clip)', DO NOT include it in the TSV table at all. Only output rows that are 'B-Roll (AI Generated)' so the user can copy-paste the entire table without A-Roll rows."
 
     # Output MD for user to paste to AG
     out_md = path.with_name("scene_table.md")
@@ -101,16 +112,27 @@ def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5):
     print("Next step: Paste the contents of scene_table.md to AG to get your Master Prompts.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 07-scene-generator.py <job_dir>")
-        sys.exit(1)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("job_dir", help="Project name or job directory")
+    parser.add_argument("--all-broll", action="store_true", help="Generate B-Roll for every scene (Old style)")
+    args = parser.parse_args()
         
-    job_dir = sys.argv[1]
+    input_arg = args.job_dir
     
-    # Try to find the grouped JSON file in the job_dir
-    json_files = list(Path(job_dir).glob("*.transcript.grouped.json"))
+    # Resolve job_dir properly using capcut_utils
+    import os
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        from utils.capcut_utils import get_project_path
+        job_dir = Path(get_project_path(input_arg))
+    except Exception as e:
+        print(f"❌ Error resolving project path: {e}")
+        job_dir = Path(input_arg)
+    
+    json_files = list(job_dir.glob("*.grouped.json"))
     if not json_files:
-        print(f"❌ Error: No .transcript.grouped.json found in {job_dir}")
+        print(f"❌ Error: No .grouped.json found in {job_dir}")
         sys.exit(1)
         
     json_path = str(json_files[0])
@@ -118,4 +140,4 @@ if __name__ == "__main__":
     config = load_channel_config()
     target_dur = config.get("scene_duration_sec", 3.5)
     
-    generate_scenes(json_path, target_duration_sec=target_dur)
+    generate_scenes(json_path, target_duration_sec=target_dur, all_broll=args.all_broll)

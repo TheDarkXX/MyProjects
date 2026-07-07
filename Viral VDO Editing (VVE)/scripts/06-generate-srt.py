@@ -2,6 +2,10 @@ import json
 import sys
 from pathlib import Path
 
+# Fix Windows console encoding for emojis
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 def format_time(seconds: float) -> str:
     """Format seconds into SRT timestamp (HH:MM:SS,mmm)"""
     hours = int(seconds // 3600)
@@ -43,7 +47,17 @@ if __name__ == "__main__":
         print("Usage: python 06-generate-srt.py <job_dir>")
         sys.exit(1)
         
-    job_dir = Path(sys.argv[1])
+    input_arg = sys.argv[1]
+    
+    # Resolve job_dir properly using capcut_utils
+    import os
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        from utils.capcut_utils import get_project_path
+        job_dir = Path(get_project_path(input_arg))
+    except Exception as e:
+        print(f"❌ Error resolving project path: {e}")
+        job_dir = Path(input_arg)
     
     json_files = list(job_dir.glob("*.grouped.json"))
     if not json_files:

@@ -46,11 +46,17 @@ def inject_elements(job_dir, project_path):
     if not os.path.isabs(sfx_dir):
         sfx_dir = str(Path(__file__).parent.parent / sfx_dir)
         
+    try:
+        from utils.capcut_utils import force_close_capcut
+        force_close_capcut()
+    except Exception as e:
+        print(f"Warning: Failed to close CapCut: {e}")
+        
     # 1. Inject SRT Subtitles
     srt_file = inter_path / "subtitles.srt"
     if srt_file.exists():
         print(f"\n--- Injecting Subtitles ---")
-        success, _ = run_capcut_cli(["import-srt", str(project_path), str(srt_file)])
+        success, _ = run_capcut_cli(["import-srt", str(project_path), str(srt_file), "--force-write"])
         if not success:
             return False
     else:
@@ -93,7 +99,7 @@ def inject_elements(job_dir, project_path):
                             # Create transition placeholder via CLI (08b-auto-style will swap to Minnie: Zoom Shake, Get Closer etc.)
                             if seg_id and start_time > 0.1:
                                 print(f"Adding transition placeholder for B-Roll {seg_id} at {start_time}s")
-                                run_capcut_cli(["transition", str(project_path), seg_id, "glitch", "--duration", "0.7"])
+                                run_capcut_cli(["transition", str(project_path), seg_id, "glitch", "--duration", "0.7", "--force-write"])
                                 
                                 # Add dynamic transition sound effect
                                 import random
@@ -116,7 +122,8 @@ def inject_elements(job_dir, project_path):
                                         str(start_time),
                                         "0.8",
                                         "--volume", "0.25",
-                                        "--track-name", "Transition SFX"
+                                        "--track-name", "Transition SFX",
+                                        "--force-write"
                                     ])
                         except Exception as e:
                             print(f"Warning: Could not add transition or whoosh: {e}")
@@ -217,7 +224,8 @@ def inject_elements(job_dir, project_path):
         "--y", "0.32",
         "--font-size", str(header_size),
         "--color", header_color,
-        "--track-name", "Header Title"
+        "--track-name", "Header Title",
+        "--force-write"
     ])
 
     print(f"\n--- Running Post-Styling & Layout adjustments ---")
@@ -243,7 +251,7 @@ def inject_elements(job_dir, project_path):
 
     # 5. Prune unused materials
     print(f"\n--- Pruning unused materials ---")
-    run_capcut_cli(["prune", str(project_path)])
+    run_capcut_cli(["prune", str(project_path), "--force-write"])
     
     # 6. Lint check
     print(f"\n--- Running Lint QA ---")
@@ -263,6 +271,15 @@ if __name__ == "__main__":
     
     proj_dir = args.project if args.project else args.job_dir
     
+    if not os.path.exists(proj_dir):
+        try:
+            from utils.capcut_utils import get_project_path
+            proj_dir = get_project_path(args.job_dir)
+            # Also treat job_dir as proj_dir so paths like intermediates work
+            args.job_dir = proj_dir
+        except Exception:
+            pass
+            
     if not os.path.exists(proj_dir):
         print(f"Error: CapCut project path does not exist: {proj_dir}")
         sys.exit(1)

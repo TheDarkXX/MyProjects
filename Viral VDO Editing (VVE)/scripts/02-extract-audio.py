@@ -94,42 +94,41 @@ def extract_capcut_audio(project_input: str):
         print("❌ Error: Failed to extract full audio.")
         sys.exit(1)
     
-    # 5. Build FFmpeg concat list pointing to the TEMP WAV file
-    segments_txt = os.path.join(project_dir, "_extract_segments.txt")
+    # 5. Build FFmpeg complex filter for 100% sample-accurate extraction
     out_wav = os.path.join(project_dir, "cut_audio_16k.wav")
     
-    total_duration_sec = 0.0
+    total_dur_us = sum(s.get("source_timerange", {}).get("duration", 0) for s in sorted_segments)
+    total_duration_sec = total_dur_us / 1_000_000.0
+    
     temp_wav_fwd = temp_full_wav.replace('\\', '/')
     
-    with open(segments_txt, 'w', encoding='utf-8') as f:
-        for seg in sorted_segments:
-            # Times are in microseconds
-            start_us = seg.get("source_timerange", {}).get("start", 0)
-            dur_us = seg.get("source_timerange", {}).get("duration", 0)
-            
-            start_sec = start_us / 1_000_000.0
-            end_sec = (start_us + dur_us) / 1_000_000.0
-            
-            f.write(f"file '{temp_wav_fwd}'\n")
-            f.write(f"inpoint {start_sec:.3f}\n")
-            f.write(f"outpoint {end_sec:.3f}\n")
-            
-            total_duration_sec += (dur_us / 1_000_000.0)
-            
+    filters = []
+    concat_inputs = ""
+    for i, seg in enumerate(sorted_segments):
+        start_us = seg.get("source_timerange", {}).get("start", 0)
+        dur_us = seg.get("source_timerange", {}).get("duration", 0)
+        
+        start_sec = start_us / 1_000_000.0
+        end_sec = (start_us + dur_us) / 1_000_000.0
+        
+        filters.append(f"[0:a]atrim=start={start_sec:.3f}:end={end_sec:.3f},asetpts=PTS-STARTPTS[a{i}]")
+        concat_inputs += f"[a{i}]"
+        
+    filters.append(f"{concat_inputs}concat=n={len(sorted_segments)}:v=0:a=1[outa]")
+    filter_str = "; ".join(filters)
+    
     print(f"   Total expected audio duration: {total_duration_sec:.2f}s ({total_duration_sec/60:.2f}min)")
-    print(f"   Splicing audio... (sample-accurate)")
+    print(f"   Splicing audio... (100% sample-accurate)")
     
-    # 6. Run FFmpeg to extract and concatenate
-    subprocess.run([
-        FFMPEG_PATH, "-y", "-f", "concat", "-safe", "0",
-        "-i", segments_txt,
-        "-c", "copy",
+    # 6. Run FFmpeg to extract and concatenate using filtergraph
+    cmd = [
+        FFMPEG_PATH, "-y", "-i", temp_full_wav,
+        "-filter_complex", filter_str,
+        "-map", "[outa]",
+        "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
         out_wav
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
-    # 6. Cleanup
-    #if os.path.exists(segments_txt):
-    #    os.remove(segments_txt)
+    ]
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
     if os.path.exists(out_wav):
         print(f"\n✅ Extraction complete!")
