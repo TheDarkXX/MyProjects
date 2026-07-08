@@ -67,16 +67,33 @@ def do_restore(project_name, step_name):
     project_dir = get_project_path(project_name)
     draft_path = get_draft_path(project_name)
 
-    # Check if snapshot exists
+    # Check if snapshot exists (exact match or prefix match for versions)
     snapshots = list_snapshots(project_dir)
     available = [s[0] for s in snapshots]
+    
+    matched_step = None
+    if step_name in available:
+        matched_step = step_name
+    else:
+        # Try prefix matching (e.g. "08_v1" matches "08_v1_20260708_134500")
+        matches = [s for s in available if s.startswith(step_name + "_v") or s.startswith(step_name + "_")]
+        if len(matches) == 1:
+            matched_step = matches[0]
+        elif len(matches) > 1:
+            print(f"\n❌ Snapshot '{step_name}' กำกวม (พบหลายเวอร์ชั่น) ระบุให้ชัดเจนขึ้น:")
+            for m in matches:
+                print(f"   - {m}")
+            sys.exit(1)
 
-    if step_name not in available:
+    if not matched_step:
         print(f"\n❌ Snapshot '{step_name}' ไม่มีอยู่!")
         print(f"   มีเฉพาะ: {', '.join(available) if available else '(ยังไม่มี snapshot ใดๆ)'}")
         sys.exit(1)
 
-    label = STEP_LABELS.get(step_name, step_name)
+    label = STEP_LABELS.get(matched_step, matched_step)
+    
+    # Use matched_step for restore
+    step_name = matched_step
 
     # Force close CapCut before restoring
     force_close_capcut()

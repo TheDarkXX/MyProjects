@@ -38,13 +38,70 @@ def save_snapshot(project_dir, draft_path, step_name):
         shutil.copy2(bak_path, original_path)
         print(f"   📸 Snapshot saved: original (pre-script state)")
 
-    # Save the post-step snapshot (overwrite if same step ran before)
-    snap_path = os.path.join(snap_dir, f"step_{step_name}.json")
-    shutil.copy2(draft_path, snap_path)
-    print(f"   📸 Snapshot saved: {step_name}")
+    # Determine next version number by scanning existing files
+    version = 1
+    import glob
+    existing_versions = glob.glob(os.path.join(snap_dir, f"step_{step_name}_v*.json"))
+    if existing_versions:
+        # Extract version numbers
+        import re
+        v_numbers = []
+        for f in existing_versions:
+            match = re.search(rf"step_{step_name}_v(\d+)", f)
+            if match:
+                v_numbers.append(int(match.group(1)))
+        if v_numbers:
+            version = max(v_numbers) + 1
 
+    # Create timestamp YYYYMMDD_HHMMSS
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Save the versioned snapshot
+    versioned_name = f"step_{step_name}_v{version}_{timestamp}.json"
+    latest_name = f"step_{step_name}_latest.json"
+    
+    versioned_path = os.path.join(snap_dir, versioned_name)
+    latest_path = os.path.join(snap_dir, latest_name)
+    
+    shutil.copy2(draft_path, versioned_path)
+    shutil.copy2(draft_path, latest_path)
+    
+    print(f"   📸 Snapshot saved: {versioned_name} (and updated latest)")
 
-def list_snapshots(project_dir):
+def save_srt_snapshot(project_dir, srt_path):
+    """
+    Save the generated subtitles.srt as a versioned snapshot.
+    """
+    snap_dir = get_snapshot_dir(project_dir)
+    srt_snap_dir = os.path.join(snap_dir, "srt_versions")
+    os.makedirs(srt_snap_dir, exist_ok=True)
+    
+    version = 1
+    import glob
+    import re
+    existing_versions = glob.glob(os.path.join(srt_snap_dir, "subtitles_v*.srt"))
+    if existing_versions:
+        v_numbers = []
+        for f in existing_versions:
+            match = re.search(r"subtitles_v(\d+)", f)
+            if match:
+                v_numbers.append(int(match.group(1)))
+        if v_numbers:
+            version = max(v_numbers) + 1
+            
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    versioned_name = f"subtitles_v{version}_{timestamp}.srt"
+    latest_name = "subtitles_latest.srt"
+    
+    versioned_path = os.path.join(srt_snap_dir, versioned_name)
+    latest_path = os.path.join(srt_snap_dir, latest_name)
+    
+    shutil.copy2(srt_path, versioned_path)
+    shutil.copy2(srt_path, latest_path)
+    
+    print(f"   📜 SRT Version saved: {versioned_name}")
+
+def list_snapshots(project_dir, step_name=None):
     """
     List all available snapshots for a project.
 
@@ -70,7 +127,14 @@ def restore_snapshot(project_dir, draft_path, step_name):
     Returns True on success, False if snapshot not found.
     """
     snap_dir = get_snapshot_dir(project_dir)
-    snap_path = os.path.join(snap_dir, f"step_{step_name}.json")
+    
+    # Check for latest first
+    latest_path = os.path.join(snap_dir, f"step_{step_name}_latest.json")
+    if os.path.exists(latest_path):
+        snap_path = latest_path
+    else:
+        # Fallback to older exact name
+        snap_path = os.path.join(snap_dir, f"step_{step_name}.json")
 
     if not os.path.exists(snap_path):
         return False

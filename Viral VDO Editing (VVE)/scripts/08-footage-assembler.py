@@ -10,6 +10,26 @@ except ImportError:
     print("Error: opencv-python is required for sharpness analysis. Run: pip install opencv-python")
     sys.exit(1)
 
+# Add current dir to path to import capcut_utils
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+try:
+    from utils.capcut_utils import get_project_path, get_draft_path, force_close_capcut
+    from utils.snapshot import save_snapshot, restore_snapshot
+except ImportError:
+    print("❌ Error: Cannot find capcut_utils.py")
+    sys.exit(1)
+
+def run_capcut_cli(args):
+    cmd = ["npx.cmd", "capcut-cli"] + args
+    print(f"Running: {' '.join(cmd)}")
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
+    if result.returncode != 0:
+        print(f"CLI Error: {result.stderr}")
+        return False, result.stderr
+    print(f"Success: {result.stdout.strip()}")
+    return True, result.stdout
+
+
 def measure_sharpness(image_path: str) -> float:
     """Measures the sharpness of an image using Variance of Laplacian."""
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -64,7 +84,25 @@ def find_best_window(video_path: str, target_duration: float, step_sec: float = 
         return best_start_idx * step_sec
 
 def assemble_footage(job_dir: str):
-    job_path = Path(job_dir)
+    try:
+        project_dir = get_project_path(job_dir)
+        draft_path = get_draft_path(job_dir)
+        job_path = Path(project_dir)
+    except FileNotFoundError as e:
+        print(f"❌ {e}")
+        sys.exit(1)
+        
+    print(f"\n==============================================")
+    print(f"   08 - FOOTAGE ASSEMBLER (DIRECT INJECT)")
+    print(f"==============================================\n")
+    
+    force_close_capcut()
+    
+    # Revert to 06 to clear old B-rolls
+    if not restore_snapshot(project_dir, draft_path, "06"):
+        print("❌ Failed to revert to 06 before injecting B-rolls. Make sure 06 has been run.")
+        sys.exit(1)
+        
     scene_table_path = job_path / "scene_table.json"
     footage_path = job_path / "Footage"
     inter_path = job_path / "intermediates"
@@ -72,10 +110,6 @@ def assemble_footage(job_dir: str):
     
     if not scene_table_path.exists():
         print(f"Error: scene_table.json not found in {job_dir}")
-        sys.exit(1)
-        
-    if not footage_path.exists():
-        print(f"Error: Footage directory not found in {job_dir}")
         sys.exit(1)
         
     with open(scene_table_path, 'r', encoding='utf-8') as f:
@@ -94,6 +128,27 @@ def assemble_footage(job_dir: str):
                 
     new_cmds_count = 0
     
+    # Gather potential footage paths (from Footage dir and CapCut imported materials)
+    potential_footage = []
+    if footage_path.exists():
+        potential_footage.extend(list(footage_path.glob("*.mp4")))
+        
+    meta_path = job_path / "draft_meta_info.json"
+    if meta_path.exists():
+        try:
+            with open(meta_path, 'r', encoding='utf-8') as mf:
+                meta = json.load(mf)
+                draft_materials = meta.get("draft_materials", [])
+                for m in draft_materials:
+                    val = m.get("value", m[1] if isinstance(m, list) else m) if isinstance(m, (dict, list)) else m
+                    if isinstance(val, list):
+                        for v in val:
+                            path = v.get("file_Path", "")
+                            if path.endswith(".mp4"):
+                                potential_footage.append(Path(path))
+        except Exception as e:
+            print(f"Warning: Could not parse draft_meta_info for imported materials: {e}")
+            
     for scene in scenes:
         scene_id = scene["id"]
         target_duration = scene["duration"]
@@ -101,12 +156,12 @@ def assemble_footage(job_dir: str):
         
         # Find matching footage (prefix [S01] or S01)
         matched_file = None
-        for file in footage_path.glob("*.mp4"):
+        for file in potential_footage:
             if file.name.startswith(f"[{scene_id}]") or file.name.startswith(f"{scene_id}_"):
                 matched_file = file
                 break
             
-        if not matched_file:
+        if not matched_file or not matched_file.exists():
             print(f"Warning: No footage found for {scene_id}. Skipping.")
             continue
             
@@ -132,21 +187,56 @@ def assemble_footage(job_dir: str):
         capcut_media_start = best_start
         
         # Command array for capcut-cli
-        cmd = [
+        cmd_args = [
             "add-video",
+            project_dir,
             str(matched_file.absolute()),
             str(capcut_start_timeline),
             str(capcut_duration),
             "--media-start", str(capcut_media_start),
-            "--track", "1"
+            "--track", "1",
+            "--force-write"
         ]
-        commands.append(cmd)
-        new_cmds_count += 1
         
-    with open(commands_file, 'w', encoding='utf-8') as f:
-        json.dump(commands, f, indent=4, ensure_ascii=False)
+        success, stdout = run_capcut_cli(cmd_args)
+        if success:
+            new_cmds_count += 1
+            try:
+                res_json = json.loads(stdout)
+                seg_id = res_json.get("segment_id")
+                if seg_id:
+                    # Inject glitch placeholder transition
+                    run_capcut_cli(["transition", project_dir, seg_id, "glitch", "--duration", "0.7", "--force-write"])
+                    
+                    # Add dynamic transition sound effect
+                    import random
+                    sfx_dir = Path(r"V:\DoctorBank Family\DoctorBank Brand\Sound Effect")
+                    trans_sfx_pool = []
+                    if sfx_dir.exists():
+                        for f in sfx_dir.iterdir():
+                            fname = f.name.lower()
+                            if fname.endswith('.wav') or fname.endswith('.mp3'):
+                                if 'whoosh' in fname or 'swoosh' in fname or 'slide' in fname or 'sweep' in fname:
+                                    trans_sfx_pool.append(str(f))
+                                    
+                    whoosh_path = random.choice(trans_sfx_pool) if trans_sfx_pool else str(sfx_dir / "sfx_whoosh.wav")
+                    
+                    if os.path.exists(whoosh_path):
+                        print(f"Adding transition SFX ({os.path.basename(whoosh_path)}) at {capcut_start_timeline}s")
+                        run_capcut_cli([
+                            "add-audio", project_dir,
+                            whoosh_path,
+                            str(capcut_start_timeline), "0.8",
+                            "--volume", "0.25",
+                            "--track-name", "Transition SFX",
+                            "--force-write"
+                        ])
+            except Exception as e:
+                print(f"Warning: Could not add transition or whoosh: {e}")
             
-    print(f"\nAssembly complete! {new_cmds_count} clips matched and commands written to timeline_commands.json.")
+    # Snapshot 08
+    save_snapshot(project_dir, draft_path, "08")
+    print(f"\nAssembly complete! {new_cmds_count} clips injected into CapCut and step_08 snapshot saved.")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

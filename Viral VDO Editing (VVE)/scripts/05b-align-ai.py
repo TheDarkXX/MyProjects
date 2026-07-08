@@ -92,17 +92,23 @@ if __name__ == "__main__":
         
     job_dir = sys.argv[1]
     
-    # Try to find the transcript JSON file in the job_dir
-    transcript_files = list(Path(job_dir).glob("*.transcript.json"))
-    if not transcript_files:
-        print(f"❌ Error: No .transcript.json found in {job_dir}")
+    # Try to find the latest 04b snapshot
+    from utils.capcut_utils import get_project_path
+    from pathlib import Path
+    import glob
+    import re
+
+    project_dir = get_project_path(job_dir)
+    json_path = os.path.join(project_dir, "transcript.json")
+    
+    if not os.path.exists(json_path):
+        print(f"❌ Error: No transcript.json found in {project_dir}")
         sys.exit(1)
         
-    json_path = str(transcript_files[0])
-    text_path = os.path.join(job_dir, "ai_segmented.txt")
+    text_path = os.path.join(project_dir, "ai_segmented_latest.txt")
     
     if not os.path.exists(text_path):
-        print(f"❌ Error: ai_segmented.txt not found in {job_dir}. Please run AI Refiner first.")
+        print(f"❌ Error: ai_segmented_latest.txt not found in {project_dir}. Please run 05a-subtitle-agent.py first.")
         sys.exit(100) # PAUSE code for pipeline
         
     align_ai_text(json_path, text_path)

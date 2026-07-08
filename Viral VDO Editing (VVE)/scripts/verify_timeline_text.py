@@ -30,16 +30,19 @@ def verify(project_input):
     from utils.capcut_utils import get_project_path, load_draft
     project_dir = get_project_path(project_input)
     
-    # 1. Load 01b draft to map target->source
+    # 1. Load baseline draft to map target->source
     snapshot_dir = os.path.join(project_dir, ".snapshots")
+    path_original = os.path.join(snapshot_dir, "step_original.json")
     path_01b = os.path.join(snapshot_dir, "step_01b.json")
-    if not os.path.exists(path_01b):
-        print("Error: step_01b.json not found")
+    
+    baseline_path = path_original if os.path.exists(path_original) else path_01b
+    if not os.path.exists(baseline_path):
+        print(f"Error: {baseline_path} not found")
         sys.exit(1)
         
-    with open(path_01b, 'r', encoding='utf-8') as f:
-        draft_01b = json.load(f)
-    segments_01b = get_video_segments(draft_01b)
+    with open(baseline_path, 'r', encoding='utf-8') as f:
+        draft_baseline = json.load(f)
+    segments_baseline = get_video_segments(draft_baseline)
     
     # 2. Load final draft
     final_draft = load_draft(project_input)
@@ -64,7 +67,7 @@ def verify(project_input):
         w_mid_target = (w_start_target + w_end_target) / 2.0
         
         # Map to source time
-        w_mid_source = map_target_to_source(w_mid_target, segments_01b)
+        w_mid_source = map_target_to_source(w_mid_target, segments_baseline)
         
         if w_mid_source is None:
             dropped_words += 1
@@ -72,6 +75,7 @@ def verify(project_input):
             
         # Check if this source time exists in final segments
         is_kept = False
+
         for seg in final_segments:
             s_start = seg.get("source_timerange", {}).get("start", 0) / 1000000.0
             s_dur = seg.get("source_timerange", {}).get("duration", 0) / 1000000.0

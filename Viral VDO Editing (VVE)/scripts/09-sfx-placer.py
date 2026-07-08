@@ -8,15 +8,44 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
     from utils.config_loader import load_channel_config, get_audio
+    from utils.capcut_utils import get_project_path, get_draft_path, force_close_capcut
+    from utils.snapshot import save_snapshot, restore_snapshot
 except ImportError:
-    def load_channel_config(): return {}
-    def get_audio(c, s, k, d): return d
+    print("❌ Error: Cannot find utils.py")
+    sys.exit(1)
+
+def run_capcut_cli(args):
+    cmd = ["npx.cmd", "capcut-cli"] + args
+    import subprocess
+    # print(f"Running: {' '.join(cmd)}")
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
+    if result.returncode != 0:
+        print(f"CLI Error: {result.stderr}")
+        return False, result.stderr
+    return True, result.stdout
 
 def place_sfx(job_dir: str):
-    job_path = Path(job_dir)
-    transcript_files = list(job_path.glob("*.transcript.json"))
+    try:
+        project_dir = get_project_path(job_dir)
+        draft_path = get_draft_path(job_dir)
+        job_path = Path(project_dir)
+    except FileNotFoundError as e:
+        print(f"❌ {e}")
+        sys.exit(1)
+        
+    print(f"\n==============================================")
+    print(f"   09 - SFX PLACER (DIRECT INJECT)")
+    print(f"==============================================\n")
+    
+    force_close_capcut()
+    
+    # Revert to 08 to clear old SFX
+    if not restore_snapshot(project_dir, draft_path, "08"):
+        print("❌ Failed to revert to 08 before injecting SFX. Make sure 08 has been run.")
+        sys.exit(1)
+    transcript_files = list(job_path.glob("transcript.json"))
     if not transcript_files:
-        print(f"Error: No .transcript.json found in {job_dir}")
+        print(f"Error: No transcript.json found in {job_dir}")
         sys.exit(1)
     transcript_path = transcript_files[0]
     config = load_channel_config()
@@ -90,8 +119,16 @@ def place_sfx(job_dir: str):
             
         full_path = sfx_dir / sound_file
         if full_path.exists():
-            cmd = ["add-audio", str(full_path.absolute()), str(start_sec), str(get_audio_duration(full_path)), "--volume", str(vol)]
-            commands.append(cmd)
+            cmd_args = [
+                "add-audio", project_dir, 
+                str(full_path.absolute()), 
+                str(start_sec), 
+                str(get_audio_duration(full_path)), 
+                "--volume", str(vol),
+                "--force-write"
+            ]
+            success, stdout = run_capcut_cli(cmd_args)
+            if success:
             new_cmds_count += 1
             last_global_play = start_sec
             last_played[category] = start_sec
@@ -191,10 +228,9 @@ def place_sfx(job_dir: str):
                         
                 start_idx = idx + len(kw)
 
-    with open(commands_file, 'w', encoding='utf-8') as f:
-        json.dump(commands, f, indent=4, ensure_ascii=False)
-            
-    print(f"\n6-Layer SFX Engine Complete! Placed {new_cmds_count} new sound effects.")
+    # Snapshot 09
+    save_snapshot(project_dir, draft_path, "09")
+    print(f"\nSFX Placement complete! {new_cmds_count} SFX injected into CapCut and step_09 snapshot saved.")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

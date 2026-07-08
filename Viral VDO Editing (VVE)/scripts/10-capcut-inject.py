@@ -52,88 +52,12 @@ def inject_elements(job_dir, project_path):
     except Exception as e:
         print(f"Warning: Failed to close CapCut: {e}")
         
-    # 1. Inject SRT Subtitles
-    srt_file = inter_path / "subtitles.srt"
-    if srt_file.exists():
-        print(f"\n--- Injecting Subtitles ---")
-        success, _ = run_capcut_cli(["import-srt", str(project_path), str(srt_file), "--force-write"])
-        if not success:
-            return False
-    else:
-        print(f"Warning: SRT file not found at {srt_file}")
-        
-    # 2. Inject Footage & SFX via timeline_commands.json
-    commands_file = inter_path / "timeline_commands.json"
-    max_time = 135.0  # default duration fallback
-    
-    if commands_file.exists():
-        print(f"\n--- Injecting Footage & SFX ---")
-        try:
-            with open(commands_file, 'r', encoding='utf-8') as f:
-                commands = json.load(f)
-                
-            for cmd in commands:
-                cmd_name = cmd[0]
-                cmd_options = cmd[1:]
-                cmd_args = [cmd_name, str(project_path)] + cmd_options
-                success, stdout = run_capcut_cli(cmd_args)
-                
-                # Get the end time of the last element to calculate project duration
-                if cmd_name == "add-video" and len(cmd_options) >= 3:
-                    try:
-                        start_t = float(cmd_options[1])
-                        dur_t = float(cmd_options[2])
-                        if start_t + dur_t > max_time:
-                            max_time = start_t + dur_t
-                    except ValueError:
-                        pass
-                
-                if success:
-                    # If it's a video segment, add a visual transition and a transition whoosh sound!
-                    if cmd_name == "add-video":
-                        try:
-                            res_json = json.loads(stdout)
-                            seg_id = res_json.get("segment_id")
-                            start_time = float(cmd_options[1]) # The start position on the timeline
-                            
-                            # Create transition placeholder via CLI (08b-auto-style will swap to Minnie: Zoom Shake, Get Closer etc.)
-                            if seg_id and start_time > 0.1:
-                                print(f"Adding transition placeholder for B-Roll {seg_id} at {start_time}s")
-                                run_capcut_cli(["transition", str(project_path), seg_id, "glitch", "--duration", "0.7", "--force-write"])
-                                
-                                # Add dynamic transition sound effect
-                                import random
-                                trans_sfx_pool = []
-                                if os.path.exists(sfx_dir):
-                                    for f in os.listdir(sfx_dir):
-                                        fname = f.lower()
-                                        if fname.endswith('.wav') or fname.endswith('.mp3'):
-                                            if 'whoosh' in fname or 'swoosh' in fname or 'slide' in fname or 'sweep' in fname:
-                                                trans_sfx_pool.append(os.path.join(sfx_dir, f))
-                                                
-                                whoosh_path = random.choice(trans_sfx_pool) if trans_sfx_pool else os.path.join(sfx_dir, "sfx_whoosh.wav")
-                                
-                                if os.path.exists(whoosh_path):
-                                    print(f"Adding transition SFX ({os.path.basename(whoosh_path)}) at {start_time}s")
-                                    run_capcut_cli([
-                                        "add-audio",
-                                        str(project_path),
-                                        whoosh_path,
-                                        str(start_time),
-                                        "0.8",
-                                        "--volume", "0.25",
-                                        "--track-name", "Transition SFX",
-                                        "--force-write"
-                                    ])
-                        except Exception as e:
-                            print(f"Warning: Could not add transition or whoosh: {e}")
-                else:
-                    print(f"Warning: Failed to execute timeline command: {cmd}")
-        except Exception as e:
-            print(f"Error parsing timeline_commands.json: {e}")
-            return False
-    else:
-        print(f"Warning: timeline_commands.json not found at {commands_file}")
+    # 1. Revert to 09
+    print(f"\n--- 1. Reverting to 09 (Clear old BGM/Styling) ---")
+    from utils.snapshot import restore_snapshot
+    if not restore_snapshot(project_dir, draft_path, "09"):
+        print("❌ Failed to revert to 09 before injecting BGM. Make sure 09 has been run.")
+        sys.exit(1)
 
     # 3. Inject 3-Stage BGM System (AI Turning Point + J-Cut)
     print(f"\n--- Injecting 3-Stage BGM System ---")
@@ -182,7 +106,8 @@ def inject_elements(job_dir, project_path):
                 str(start),
                 str(dur),
                 "--volume", str(vol),
-                "--track-name", "Background Music"
+                "--track-name", "Background Music",
+                "--force-write"
             ])
             if success:
                 # Apply Audio Fades for seamless transition
@@ -197,7 +122,8 @@ def inject_elements(job_dir, project_path):
                             str(project_path),
                             seg_id,
                             "--in", str(fade_in),
-                            "--fade-out", str(fade_out)
+                            "--fade-out", str(fade_out),
+                            "--force-write"
                         ])
                 except Exception as e:
                     print(f"Warning: Could not apply fade to BGM {stage}: {e}")
@@ -260,7 +186,9 @@ def inject_elements(job_dir, project_path):
     if not success:
         print(f"⚠️ Lint issues found — check manually")
 
-    print("\n✅ CapCut Injection Complete!")
+    from utils.snapshot import save_snapshot
+    save_snapshot(project_dir, draft_path, "10")
+    print("\n✅ CapCut Injection Complete!\n")
     return True
 
 if __name__ == "__main__":

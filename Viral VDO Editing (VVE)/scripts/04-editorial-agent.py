@@ -78,6 +78,10 @@ def generate_editorial_prompt(transcript_path: str, output_md_path: str):
     
     full_transcript_text = "\n".join(text_lines)
     
+    # Generate continuous raw text for easy reading
+    raw_text = "".join([seg.get('text', '') for seg in items])
+    raw_text_preview = f"## 🔍 Raw Text Preview (For Human Reading)\n\n> {raw_text}\n\n"
+    
     with open(output_md_path, 'w', encoding='utf-8') as f:
         f.write("# 🎬 AI Editorial Agent Prompt\n\n")
         f.write("คำสั่งสำหรับ AG IDE: กรุณาอ่านข้อมูล Transcript ด้านล่าง และคืนค่าเป็นไฟล์ editorial_decisions.json ภายในโฟลเดอร์นี้ทันที\n")
@@ -85,6 +89,7 @@ def generate_editorial_prompt(transcript_path: str, output_md_path: str):
         f.write("หลังจากนั้นให้ใช้เครื่องมือ `ask_question` ให้ตัวเลือกผู้ใช้เลือกแผนการตัดต่อที่ต้องการนำไปใช้ในขั้นตอนต่อไป\n\n")
         f.write("---\n\n")
         f.write(f"{SYSTEM_PROMPT}\n\n")
+        f.write(raw_text_preview)
         f.write(f"## Transcript ({len(items)} words, {total_duration:.1f}s total):\n")
         f.write("```text\n")
         f.write(full_transcript_text)

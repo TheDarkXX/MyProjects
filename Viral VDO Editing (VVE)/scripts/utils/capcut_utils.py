@@ -30,8 +30,8 @@ def get_project_path(project_name: str) -> str:
       - Full path to project folder
       - Full path to draft_content.json
     """
-    # Already a full path to JSON?
-    if project_name.endswith("draft_content.json") and os.path.exists(project_name):
+    # Already a full path to a JSON or TMP file?
+    if os.path.isabs(project_name) and os.path.isfile(project_name):
         return os.path.dirname(project_name)
     
     # Already a full path to project folder?
@@ -50,8 +50,8 @@ def get_draft_path(project_name: str) -> str:
     """Get the active draft_content.json (the one most recently modified by CapCut)."""
     project_path = get_project_path(project_name)
     
-    # If a direct json path was provided
-    if project_name.endswith("draft_content.json") and os.path.exists(project_name):
+    # If a direct json or tmp path was provided
+    if (project_name.endswith("draft_content.json") or project_name.endswith(".tmp")) and os.path.exists(project_name):
         return project_name
         
     import glob
@@ -108,7 +108,7 @@ def safe_save_draft(project_name: str, draft_data: dict, skip_backup: bool = Fal
     
     import glob
     drafts = glob.glob(os.path.join(project_dir, "**", "draft_content.json"), recursive=True)
-    if project_name.endswith("draft_content.json") and os.path.exists(project_name):
+    if (project_name.endswith("draft_content.json") or project_name.endswith(".tmp")) and os.path.exists(project_name):
         drafts = [project_name]
         
     for draft_path in drafts:
@@ -123,13 +123,7 @@ def safe_save_draft(project_name: str, draft_data: dict, skip_backup: bool = Fal
             json.dump(draft_data, f, ensure_ascii=False, separators=(',', ':'))
         
     # Step 4: Force CapCut to read the new JSON by deleting its .tmp caches
-    for tmp_file in glob.glob(os.path.join(project_dir, "**", "template-*.tmp"), recursive=True):
-        try: os.remove(tmp_file)
-        except Exception: pass
-        
-    for tmp_file in glob.glob(os.path.join(project_dir, "**", "template.tmp"), recursive=True):
-        try: os.remove(tmp_file)
-        except Exception: pass
+    clear_capcut_cache(project_dir)
     
     print(f"   ✅ draft_content.json saved successfully (updated {len(drafts)} locations)!")
     
@@ -140,3 +134,15 @@ def safe_save_draft(project_name: str, draft_data: dict, skip_backup: bool = Fal
         save_snapshot(project_dir, root_draft, step_name)
     
     print(f"   💡 Reopen CapCut to see the changes on your timeline.")
+
+def clear_capcut_cache(project_dir):
+    import glob
+    import os
+    for tmp_file in glob.glob(os.path.join(project_dir, "**", "template-*.tmp"), recursive=True):
+        try: os.remove(tmp_file)
+        except Exception: pass
+        
+    for tmp_file in glob.glob(os.path.join(project_dir, "**", "template.tmp"), recursive=True):
+        try: os.remove(tmp_file)
+        except Exception: pass
+    print("   🧹 Cleared CapCut .tmp caches.")

@@ -263,8 +263,17 @@ if __name__ == "__main__":
     parser.add_argument("--project", help="Path to CapCut project folder", default=None)
     args = parser.parse_args()
     
-    # If project is passed, use it, else default to job_dir/capcut_draft
+    # If project is passed, use it, else resolve via capcut_utils
     proj_dir = args.project if args.project else args.job_dir
+    
+    if not os.path.exists(proj_dir):
+        try:
+            # Add current dir to path to import capcut_utils
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            from utils.capcut_utils import get_project_path
+            proj_dir = get_project_path(args.job_dir)
+        except Exception:
+            pass
     
     passed = perform_qa_recheck(proj_dir)
     if not passed:
