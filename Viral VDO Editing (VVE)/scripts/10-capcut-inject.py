@@ -47,10 +47,13 @@ def inject_elements(job_dir, project_path):
         sfx_dir = str(Path(__file__).parent.parent / sfx_dir)
         
     try:
-        from utils.capcut_utils import force_close_capcut
+        from utils.capcut_utils import force_close_capcut, get_project_path, get_draft_path
         force_close_capcut()
+        project_dir = get_project_path(job_dir)
+        draft_path = get_draft_path(job_dir)
     except Exception as e:
-        print(f"Warning: Failed to close CapCut: {e}")
+        print(f"Warning: Failed to close CapCut or find project: {e}")
+        return False
         
     # 1. Revert to 09
     print(f"\n--- 1. Reverting to 09 (Clear old BGM/Styling) ---")
@@ -65,21 +68,25 @@ def inject_elements(job_dir, project_path):
     
     # 3.1 Calculate Turning Point from scene_table.json
     turning_point_sec = 12.0 # fallback
+    max_time = 60.0 # fallback
     scene_table_file = job_path / "scene_table.json"
     if scene_table_file.exists():
         try:
             with open(scene_table_file, "r", encoding="utf-8") as f:
                 scenes = json.load(f)
                 
+            max_time = 0.0
             for i, scene in enumerate(scenes):
                 sub_text = scene.get("subtitle_text", "")
                 scene_id = scene.get("id", "")
+                end_time = float(scene.get("start", 0.0)) + float(scene.get("duration", 0.0))
+                if end_time > max_time:
+                    max_time = end_time
                 
                 # Check for keywords or fallback to S02
                 if any(kw in sub_text for kw in ["ข้อ 1", "ข้อที่ 1", "วิธีที่ 1", "ลดความเสี่ยง", "สัญญาณเตือน"]) or scene_id == "S02":
                     turning_point_sec = float(scene.get("start", turning_point_sec))
                     print(f"Turning Point detected at {turning_point_sec}s (Scene {scene_id})")
-                    break
         except Exception as e:
             print(f"Warning: Could not read turning point from scene_table.json: {e}")
             
@@ -87,7 +94,7 @@ def inject_elements(job_dir, project_path):
     # Stage 1 duration = turning_point, will fade out in the last 1.5s (from turning_point - 1.5 to turning_point)
     # Stage 2 starts at turning_point - 1.5, will fade in over 1.5s
     stage2_start = max(0.0, turning_point_sec - 1.5)
-    stage3_start = max_time - 10.0
+    stage3_start = max(stage2_start + 1.0, max_time - 10.0)
     stage2_duration = max(0.0, stage3_start - stage2_start)
     
     stage_bgms = {

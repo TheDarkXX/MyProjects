@@ -1,5 +1,5 @@
 # Test Auto — VVE Clip Log
-> Last updated: 2026-07-09 16:16:10
+> Last updated: 2026-07-10 00:40:05
 > Channel: doctorbank
 > Created: 2026-07-09 09:58:43
 
@@ -7,7 +7,7 @@
 
 ## 📊 Pipeline Progress Dashboard
 
-**Current State:** ✅ Done (Step 08)
+**Current State:** ✅ Done (Step 07c)
 
 | Step | Status | Description | หมายเหตุ |
 |------|--------|-------------|----------|
@@ -22,12 +22,12 @@
 | 05b | ✅ Done | Align AI Text | |
 | 06 | ✅ Done | Generate SRT | Snapshot: 29v — 2026-07-09 13:57 |
 | 07 | ✅ Done | B-Roll Agent (AI เลือกภาพ) | |
-| **08** | ✅ Done | Footage Assembler | Snapshot: 1v — 2026-07-09 13:57 |
-| **09** | **⏳ Next** | **Audio Polisher** | **👈 ขั้นตอนถัดไป** |
-| **10** | **⏳ Next** | **CapCut Inject** | **👈 ขั้นตอนถัดไป** |
-| **10b** | **⏳ Next** | **Final Subtitles** | **👈 ขั้นตอนถัดไป** |
-| **11** | **⏳ Next** | **QA Recheck** | **👈 ขั้นตอนถัดไป** |
-| **12** | **⏳ Next** | **Final Render** | **👈 ขั้นตอนถัดไป** |
+| 08 | ✅ Done | Footage Assembler | Snapshot: 5v — 2026-07-09 16:29 |
+| 09 | ✅ Done | Audio Polisher | Snapshot: 4v — 2026-07-09 16:29 |
+| 10 | ✅ Done | CapCut Inject | Snapshot: 2v — 2026-07-09 16:30 |
+| 10b | ✅ Done | Final Subtitles | |
+| 11 | ✅ Done | QA Recheck | |
+| 12 | ✅ Done | Final Render | |
 
 ---
 
@@ -40,8 +40,8 @@
 | `transcript.json` | Processed transcript | 25.5KB |
 | `transcript.grouped.json` | Word-segmented groups | 9.5KB |
 | `editorial_decisions.json` | AI editorial cuts | 2.7KB |
-| `scene_table.json` | Scene breakdown | 6.2KB |
-| `scene_table.md` | Scene breakdown (readable) | 7.0KB |
+| `scene_table.json` | Scene breakdown | 11.8KB |
+| `scene_table.md` | Scene breakdown (readable) | 13.0KB |
 | `ai_segmented_latest.txt` | AI-aligned subtitle text | 2.4KB |
 | `transcript.srt` | Final subtitle file | 5.9KB |
 | `replacements.json` | Word corrections | 0.4KB |

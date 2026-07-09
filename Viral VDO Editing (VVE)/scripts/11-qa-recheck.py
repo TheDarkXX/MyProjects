@@ -26,10 +26,9 @@ def check_subtitle(data):
 
 def check_subtitle_effect(data):
     # 2. Subtitle Effect (animations)
-    texts = data.get("materials", {}).get("texts", [])
-    for txt in texts:
-        if txt.get("text_animations") or txt.get("animations"):
-            return True, "Animation property found"
+    material_animations = data.get("materials", {}).get("material_animations", [])
+    if len(material_animations) > 0:
+        return True, f"{len(material_animations)} subtitle animations found"
     return False, "No subtitle animations found!"
 
 def check_subtitle_highlight(data):
@@ -112,13 +111,28 @@ def check_transition(data):
     return False, "No transitions between B-Roll!"
 
 def check_aroll_zoom(data):
-    # 7. A-Roll & Zoom
+    # 7. A-Roll & Zoom (Snap Zoom or Keyframes)
+    # Check keyframes in video materials
     videos = data.get("materials", {}).get("videos", [])
     for vid in videos:
-        # Check for keyframes
         keyframes = vid.get("keyframe_list", [])
         if len(keyframes) > 0:
             return True, "Zoom/Movement keyframes detected"
+
+    # Check snap zoom via clip.scale in A-Roll track (track 0)
+    video_tracks = [t for t in data.get("tracks", []) if t.get("type") == "video"]
+    if video_tracks:
+        aroll_track = video_tracks[0]
+        zoom_count = 0
+        for seg in aroll_track.get("segments", []):
+            scale = seg.get("clip", {}).get("scale", {})
+            sx = scale.get("x", 1.0)
+            sy = scale.get("y", 1.0)
+            if abs(sx - 1.0) > 0.01 or abs(sy - 1.0) > 0.01:
+                zoom_count += 1
+        if zoom_count > 0:
+            return True, f"Snap zoom applied to {zoom_count} A-Roll segments"
+
     return False, "No movement/zoom keyframes detected in A-Roll!"
 
 def check_sfx(data):

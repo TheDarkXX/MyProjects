@@ -90,6 +90,52 @@ def assemble_footage(job_dir: str):
         job_path = Path(project_dir)
     except FileNotFoundError as e:
         print(f"❌ {e}")
+        sys.exit(1)
+        
+    print(f"\n==============================================")
+    print(f"   08 - FOOTAGE ASSEMBLER (DIRECT INJECT)")
+    print(f"==============================================\n")
+    
+    force_close_capcut()
+    
+    # Revert to 06 to clear old B-rolls
+    if not restore_snapshot(project_dir, draft_path, "06"):
+        # We can also revert to "perfect_1" if 06 is missing
+        if not restore_snapshot(project_dir, draft_path, "perfect_1"):
+            print("❌ Failed to revert to 06 before injecting B-rolls. Make sure 06 has been run.")
+            sys.exit(1)
+            
+    scene_table_path = job_path / "scene_table.json"
+    
+    # Try looking in specific V: drive path first
+    v_drive_clips_dir = Path(r"V:\DoctorBank Family\DoctorBank Brand\Raw Clip") / Path(job_dir).name
+    footage_path = v_drive_clips_dir / "VDO footage"
+    
+    if not footage_path.exists():
+        # Try looking in "All Raw Clips" local fallback
+        base_dir = Path(__file__).parent.parent.absolute()
+        raw_clips_dir = base_dir / "All Raw Clips" / Path(job_dir).name
+        footage_path = raw_clips_dir / "VDO footage"
+        
+    if not footage_path.exists():
+        footage_path = raw_clips_dir / "Footage"
+        
+    if not footage_path.exists():
+        # Fallback to capcut project dir
+        footage_path = job_path / "Footage"
+        
+    inter_path = job_path / "intermediates"
+    inter_path.mkdir(exist_ok=True)
+    
+    if not scene_table_path.exists():
+        print(f"Error: scene_table.json not found in {job_dir}")
+        sys.exit(1)
+        
+    with open(scene_table_path, 'r', encoding='utf-8') as f:
+        scenes = json.load(f)
+        
+    commands = []
+    
     commands_file = inter_path / "timeline_commands.json"
     if commands_file.exists():
         with open(commands_file, 'r', encoding='utf-8') as f:

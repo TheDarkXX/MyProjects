@@ -15,12 +15,16 @@ STAGES = [
     # --- PAUSE: Wait for AI Refiner (AG/LLM) to write ai_segmented.txt ---
     ("05b-align-ai.py",        "ALIGN_AI_TEXT"),
     ("06-generate-srt.py",     "GENERATE_SRT"),
-    ("07-scene-generator.py",  "SCENE_TABLE"),
+    ("07a-scene-analyzer.py",  "SCENE_ANALYZE"),     # AI: Analyze role/emphasis/pacing
+    ("07b-scene-splitter.py",  "SCENE_SPLIT"),        # AI: Assign A-Roll / B-Roll
+    ("07c-broll-prompt.py",    "BROLL_PROMPT"),        # Generate B-Roll prompt MD
     # --- PAUSE: User runs God Flow ---
     ("08-footage-assembler.py","FOOTAGE_ASSEMBLY"),
     ("09-sfx-placer.py",       "SFX_PLACEMENT"),
     ("10-capcut-inject.py",    "CAPCUT_INJECT"),
-    ("11-qa-recheck.py",       "QA_RECHECK"),      # Gate: Fails if missing elements
+    ("10b-capcut-auto-style.py", "CAPCUT_STYLE"),
+    ("10c-aroll-zoom.py",      "AROLL_ZOOM"),
+    ("11-qa-recheck.py",       "QA_RECHECK"),         # Gate: Fails if missing elements
     ("12-viral-score.py",      "VIRAL_SCORE"),
 ]
 

@@ -14,6 +14,7 @@ def main():
         "09-sfx-placer.py",
         "10-capcut-inject.py",
         "10b-capcut-auto-style.py",
+        "10c-aroll-zoom.py",
         "11-qa-recheck.py",
         "12-viral-score.py"
     ]

@@ -17,11 +17,14 @@
 | **05a** | `05a-subtitle-agent.py` | (AI Pause Check) สร้าง Prompt ให้ AI จัดวรรคตอนซับไตเติลตามสคริปต์ที่หั่นแล้ว + มีระบบ Auto-Invalidation ทิ้งไฟล์ซับเก่าถ้าแผนตัดต่อเปลี่ยน |
 | **05b** | `05b-align-ai.py` | จับคู่เวลาเสียงให้ตรงกับไฟล์สคริปต์ที่เตรียมไว้ (Custom Text/AI Script) เพื่อซับเป๊ะ 100% |
 | **06** | `06-generate-srt.py` | สร้างไฟล์ซับไทเทิล `.srt` สำหรับใช้งาน |
-| **07** | `07-scene-generator.py` | วางแผน Scene / ตัดสลับ B-Roll โดยวิเคราะห์จากเนื้อหา (ทำ Scene Table) |
+| **07a** | `07a-scene-analyzer.py` | AI วิเคราะห์บทบาท จังหวะ และจุดเน้นของแต่ละ Scene (Kallaway Pacing + Dopamine Hit) |
+| **07b** | `07b-scene-splitter.py` | AI ตัดสินใจแบ่ง A-Roll / B-Roll ตามผลวิเคราะห์ + ใส่ emphasis field |
+| **07c** | `07c-broll-prompt.py` | สร้าง B-Roll Prompt MD ตามสูตร 8 Categories (A-H) สำหรับ God Flow / Text2Video |
 | **08** | `08-footage-assembler.py` | ดึง Footage (รูป/วิดีโอ) มาประกอบลง Timeline ตามแผนที่วางไว้ |
 | **09** | `09-sfx-placer.py` | วาง Sound Effect (SFX) ประกอบฉากตามจุดต่างๆ โดยอัตโนมัติ |
 | **10** | `10-capcut-inject.py` | ยัดทุกอย่าง (ซับ, B-Roll, SFX) ลงไปใน CapCut Project ผ่าน capcut-cli |
 | **10b** | `10b-capcut-auto-style.py` | ตกแต่งซับไทเทิล/ใส่ Transition สีสันต่างๆ ใน CapCut ให้อัตโนมัติ |
+| **10c** | `10c-aroll-zoom.py` | Snap Zoom A-Roll ตาม emphasis จาก AI (07a/07b) — ฟึ้บฟั่บ Dopamine Hit |
 | **11** | `11-qa-recheck.py` | ตรวจสอบความเรียบร้อยของโปรเจกต์ (ไม่มีสื่อหาย, Sync ตรงกัน) |
 | **12** | `12-viral-score.py` | ให้ AI ประเมินคะแนนความไวรัลของคลิปนี้ |
 

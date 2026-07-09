@@ -45,6 +45,14 @@ def style_capcut_project(project_path, job_dir=None):
     except Exception as e:
         pass
         
+    if project_path is None and job_dir:
+        from utils.capcut_utils import get_draft_path
+        project_path = get_draft_path(job_dir)
+        
+    if not project_path:
+        print("❌ Error: Could not determine CapCut project path.")
+        sys.exit(1)
+        
     backup_path = project_path + '.backup'
     shutil.copy2(project_path, backup_path)
     print(f"Backup created at {backup_path}")
