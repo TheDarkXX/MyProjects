@@ -11,8 +11,9 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
     from utils.capcut_utils import get_project_path, get_draft_path, load_draft, safe_save_draft
+    from utils.registry import get_active_project, update_step
 except ImportError:
-    print("❌ Error: utils/capcut_utils.py not found.")
+    print("❌ Error: utils modules not found.")
     sys.exit(1)
 
 MERGE_GAP_THRESHOLD = 0.5  # seconds — if gap between 2 kept words < this, merge into 1 region
@@ -415,8 +416,16 @@ def apply_editorial_cuts(job_dir: str):
     print("   Do NOT assume the text is clean. Do not proceed to 05-word-segment.py until verified.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 04b-apply-editorial-cuts.py <job_dir>")
-        sys.exit(1)
+    if len(sys.argv) >= 2:
+        project_name = sys.argv[1]
+    else:
+        project_name = get_active_project()
+        if not project_name:
+            print("Usage: python 04b-apply-editorial-cuts.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {project_name}")
         
-    apply_editorial_cuts(sys.argv[1])
+    update_step(project_name, "04b", "wip")
+    apply_editorial_cuts(project_name)
+    insurance_backup(project_name)
+    update_step(project_name, "04b", "done")

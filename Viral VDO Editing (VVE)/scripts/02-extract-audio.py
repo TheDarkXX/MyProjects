@@ -6,9 +6,10 @@ from pathlib import Path
 # Add current dir to path to import capcut_utils
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
-    from utils.capcut_utils import get_project_path, load_draft
+    from capcut_utils import get_project_path, load_draft
+    from registry import get_active_project, update_step
 except ImportError:
-    print("❌ Error: Cannot find capcut_utils.py")
+    print("❌ Error: Could not import utils modules. Run from scripts directory.")
     sys.exit(1)
 
 # Resolve ffmpeg binary via imageio_ffmpeg
@@ -137,9 +138,15 @@ def extract_capcut_audio(project_input: str):
         print("\n❌ Error: Failed to generate audio file.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 02-extract-audio.py <capcut_project_name_or_path>")
-        print("  Example: python 02-extract-audio.py 0108")
-        sys.exit(1)
+    if len(sys.argv) >= 2:
+        project_input = sys.argv[1]
+    else:
+        project_input = get_active_project()
+        if not project_input:
+            print("Usage: python 02-extract-audio.py <capcut_project_name_or_path>")
+            sys.exit(1)
+        print(f"📌 Using active project: {project_input}")
         
-    extract_capcut_audio(sys.argv[1])
+    update_step(project_input, "02", "wip")
+    extract_capcut_audio(project_input)
+    update_step(project_input, "02", "wip")

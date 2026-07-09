@@ -192,19 +192,37 @@ def inject_elements(job_dir, project_path):
     return True
 
 if __name__ == "__main__":
+    import os
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from registry import get_active_project, update_step
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
+        sys.exit(1)
+        
     parser = argparse.ArgumentParser()
-    parser.add_argument("job_dir", help="Path to job directory")
+    parser.add_argument("job_dir", nargs="?", help="Path to job directory")
     parser.add_argument("--project", help="Path to CapCut project folder", default=None)
     args = parser.parse_args()
     
-    proj_dir = args.project if args.project else args.job_dir
+    input_arg = args.job_dir
+    if not input_arg:
+        input_arg = get_active_project()
+        if not input_arg:
+            print("Usage: python 10-capcut-inject.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {input_arg}")
+        
+    update_step(input_arg, "10", "wip")
+    
+    proj_dir = args.project if args.project else input_arg
     
     if not os.path.exists(proj_dir):
         try:
             from utils.capcut_utils import get_project_path
-            proj_dir = get_project_path(args.job_dir)
-            # Also treat job_dir as proj_dir so paths like intermediates work
-            args.job_dir = proj_dir
+            proj_dir = get_project_path(input_arg)
+            input_arg = proj_dir
         except Exception:
             pass
             
@@ -212,6 +230,8 @@ if __name__ == "__main__":
         print(f"Error: CapCut project path does not exist: {proj_dir}")
         sys.exit(1)
         
-    success = inject_elements(args.job_dir, proj_dir)
-    if not success:
+    success = inject_elements(input_arg, proj_dir)
+    if success:
+        update_step(input_arg, "10", "done")
+    else:
         sys.exit(1)

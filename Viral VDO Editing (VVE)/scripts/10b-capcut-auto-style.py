@@ -191,8 +191,24 @@ def style_capcut_project(project_path, job_dir=None):
     print("SUCCESS: CapCut project successfully styled!")
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        job_dir = sys.argv[2] if len(sys.argv) > 2 else None
-        style_capcut_project(sys.argv[1], job_dir)
-    else:
-        print("Usage: python 10b-capcut-auto-style.py <draft_content.json> [job_dir]")
+    import os
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from registry import get_active_project, update_step
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
+        sys.exit(1)
+        
+    input_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    if not input_arg:
+        input_arg = get_active_project()
+        if not input_arg:
+            print("Usage: python 10b-capcut-auto-style.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {input_arg}")
+        
+    update_step(input_arg, "10b", "wip")
+    # For 10b, it traditionally accepted draft_content.json path, but we now pass project name/dir
+    style_capcut_project(None, input_arg)
+    update_step(input_arg, "10b", "done")

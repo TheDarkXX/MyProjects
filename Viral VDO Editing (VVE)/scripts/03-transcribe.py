@@ -108,19 +108,25 @@ def transcribe_elevenlabs(audio_path: str) -> Dict:
     }
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 03-transcribe.py <capcut_project_name_or_path>")
-        sys.exit(1)
-        
-    project_input = sys.argv[1]
-    
     # Add utils to path so we can import capcut_utils
     sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
     try:
         from capcut_utils import get_project_path
+        from registry import get_active_project, update_step
     except ImportError:
-        print("❌ Error: Could not import capcut_utils. Run from scripts directory.")
+        print("❌ Error: Could not import utils modules. Run from scripts directory.")
         sys.exit(1)
+        
+    if len(sys.argv) >= 2:
+        project_input = sys.argv[1]
+    else:
+        project_input = get_active_project()
+        if not project_input:
+            print("Usage: python 03-transcribe.py <capcut_project_name_or_path>")
+            sys.exit(1)
+        print(f"📌 Using active project: {project_input}")
+        
+    update_step(project_input, "03", "wip")
         
     try:
         project_dir = get_project_path(project_input)
@@ -183,4 +189,10 @@ if __name__ == "__main__":
     print(f"   - Audio Duration: {duration_sec:.1f} seconds")
     print(f"   - ElevenLabs Scribe Rate: $0.22 / hour")
     print(f"   - Cost for this run: {thb_cost:.2f} บาท")
+    
+    update_step(project_input, "03", "wip")
 
+
+    update_step(project_input, '03', 'done')
+    from utils.backup import insurance_backup
+    insurance_backup(project_input)

@@ -104,11 +104,29 @@ def generate_subtitle_prompt(input_arg: str):
     print("🤖 AG IDE: Please read the file above, format the text, and generate ai_segmented_latest.txt")
 
 if __name__ == "__main__":
+    import os
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from registry import get_active_project, update_step
+        from backup import insurance_backup
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
+        sys.exit(1)
+        
     parser = argparse.ArgumentParser(description="Generate AI Subtitle Segmentation Prompt (05a)")
     parser.add_argument("project", nargs="?", help="Project path or job name")
     args = parser.parse_args()
     
-    if not args.project:
-        args.project = input("Enter project path or job name: ")
+    project_name = args.project
+    if not project_name:
+        project_name = get_active_project()
+        if not project_name:
+            print("❌ Error: No active project set and no project name provided.")
+            print("   Use: python scripts/switch_project.py <name>")
+            sys.exit(1)
+        print(f"📌 Using active project: {project_name}")
         
-    generate_subtitle_prompt(args.project)
+    update_step(project_name, "05a", "wip")
+    generate_subtitle_prompt(project_name)
+    insurance_backup(project_name)
+    update_step(project_name, "05a", "done")

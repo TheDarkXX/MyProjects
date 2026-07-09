@@ -170,26 +170,32 @@ def segment_and_group(raw_json_path: str):
     return groups
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 05-word-segment.py <job_dir_or_json_path>")
+    import os
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from capcut_utils import get_project_path
+        from registry import get_active_project, update_step
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
         sys.exit(1)
-        
-    input_arg = sys.argv[1]
-    
-    # Support both direct JSON path and job_dir
-    if input_arg.endswith('.json') and os.path.exists(input_arg):
-        json_path = input_arg
+
+    if len(sys.argv) >= 2:
+        input_arg = sys.argv[1]
     else:
-        # Import here to avoid error if script used standalone
-        import os
-        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-        from utils.capcut_utils import get_project_path
-        project_dir = get_project_path(input_arg)
-        json_path = os.path.join(project_dir, "transcript.json")
-        
-        if not os.path.exists(json_path):
-            print(f"❌ Error: {json_path} not found.")
+        input_arg = get_active_project()
+        if not input_arg:
+            print("Usage: python 05-word-segment.py <job_dir>")
             sys.exit(1)
+        print(f"📌 Using active project: {input_arg}")
+        
+    update_step(input_arg, "05", "wip")
+    
+    project_dir = get_project_path(input_arg)
+    json_path = os.path.join(project_dir, "transcript.json")
+    
+    if not os.path.exists(json_path):
+        print(f"❌ Error: {json_path} not found.")
+        sys.exit(1)
 
     groups = segment_and_group(json_path)
     
@@ -208,3 +214,7 @@ if __name__ == "__main__":
         
     print(f"✅ Success! Segmented into {len(groups)} chunks using '{_preset}' preset. Saved to {out_path}")
 
+
+    update_step(input_arg, '05', 'done')
+    from utils.backup import insurance_backup
+    insurance_backup(input_arg)

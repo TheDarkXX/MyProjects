@@ -6,8 +6,14 @@ import uuid
 import shutil
 import sys
 
+# Add current dir to path to import from utils/
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from utils.capcut_utils import safe_save_draft, get_draft_path
+try:
+    from utils.capcut_utils import get_project_path, get_draft_path, load_draft, safe_save_draft
+    from utils.registry import get_active_project, update_step
+except ImportError:
+    print("❌ Error: utils modules not found.")
+    sys.exit(1)
 
 def generate_uuid():
     return str(uuid.uuid4()).upper()
@@ -134,17 +140,35 @@ def timebolt_xml_to_capcut_json(xml_path, json_path):
     print(f"\n✅ SUCCESS! CapCut project updated with {len(new_segments)} Timebolt cuts.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python 01a-timebolt-cut.py <timebolt_xml_file> <capcut_project_name_or_path>")
+    import os
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from registry import update_step
+        from project_setup import handle_init_args
+    except ImportError:
+        pass
+
+    if len(sys.argv) < 2:
+        print("Usage: python 01a-timebolt-cut.py <timebolt_xml_file> [raw_folder] [capcut_project_name]")
         sys.exit(1)
         
     xml_file = sys.argv[1]
     
-    # Try to resolve CapCut JSON path via utility
+    # We shift sys.argv down by 1 so handle_init_args thinks [1] is raw and [2] is capcut
+    fake_argv = [sys.argv[0]] + sys.argv[2:]
+    project_name = handle_init_args(fake_argv)
+        
     try:
-        json_file = get_draft_path(sys.argv[2])
+        from capcut_utils import get_draft_path
+        json_file = get_draft_path(project_name)
     except FileNotFoundError as e:
         print(f"❌ {e}")
         sys.exit(1)
-        
+    
+    # Auto-register and update step to 01a (WIP)
+    update_step(project_name, "01a", "wip")
+    
     timebolt_xml_to_capcut_json(xml_file, json_file)
+    
+    # Update step to 01a (Done for this step, though overall it's WIP)
+    update_step(project_name, "01a", "wip")

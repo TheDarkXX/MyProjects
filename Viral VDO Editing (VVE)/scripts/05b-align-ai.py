@@ -86,18 +86,24 @@ def align_ai_text(json_path: str, text_path: str):
     print(f"Success! Aligned {len(groups)} AI segmented chunks to exact timestamps. Saved to {out_path}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 05b-align-ai.py <job_dir>")
+    try:
+        from capcut_utils import get_project_path, get_draft_path, safe_save_draft
+        from registry import get_active_project, update_step
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
         sys.exit(1)
-        
-    job_dir = sys.argv[1]
-    
-    # Try to find the latest 04b snapshot
-    from utils.capcut_utils import get_project_path
-    from pathlib import Path
-    import glob
-    import re
 
+    if len(sys.argv) >= 2:
+        job_dir = sys.argv[1]
+    else:
+        job_dir = get_active_project()
+        if not job_dir:
+            print("Usage: python 05b-align-ai.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {job_dir}")
+        
+    update_step(job_dir, "05b", "wip")
+    
     project_dir = get_project_path(job_dir)
     json_path = os.path.join(project_dir, "transcript.json")
     
@@ -112,3 +118,4 @@ if __name__ == "__main__":
         sys.exit(100) # PAUSE code for pipeline
         
     align_ai_text(json_path, text_path)
+    update_step(job_dir, "05b", "done")

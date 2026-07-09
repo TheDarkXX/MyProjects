@@ -16,11 +16,11 @@ if sys.stdout.encoding.lower() != 'utf-8':
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
     from utils.config_loader import load_channel_config, get_audio
+    from utils.capcut_utils import get_project_path, get_draft_path, load_draft, safe_save_draft
+    from utils.registry import get_active_project, update_step
 except ImportError:
     def load_channel_config(): return {}
     def get_audio(c, s, k, d): return d
-
-from utils.capcut_utils import get_project_path, get_draft_path, load_draft, safe_save_draft
 
 # Resolve ffmpeg binary via imageio_ffmpeg (same as moviepy uses)
 try:
@@ -285,10 +285,16 @@ def run_silence_cut(project_input: str):
     print(f"   💡 Next: Run 02-extract-audio.py to extract the final audio for transcription.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 01b-silence-cut.py <capcut_project_name_or_path>")
-        print("  Example: python 01b-silence-cut.py 0108")
-        print("  Example: python 01b-silence-cut.py \"C:/Users/.../com.lveditor.draft/0108\"")
-        sys.exit(1)
-    
-    run_silence_cut(sys.argv[1])
+    import os
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from registry import update_step
+        from project_setup import handle_init_args
+    except ImportError:
+        pass
+        
+    project_name = handle_init_args(sys.argv)
+        
+    update_step(project_name, "01b", "wip")
+    run_silence_cut(project_name)
+    update_step(project_name, "01b", "done")

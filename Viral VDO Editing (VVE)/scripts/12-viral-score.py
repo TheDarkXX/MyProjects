@@ -15,7 +15,24 @@ def main(job_dir):
     print("="*50)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 12-viral-score.py <job_dir>")
+    import os
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from registry import get_active_project, update_step
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
         sys.exit(1)
-    main(sys.argv[1])
+        
+    if len(sys.argv) >= 2:
+        input_arg = sys.argv[1]
+    else:
+        input_arg = get_active_project()
+        if not input_arg:
+            print("Usage: python 12-viral-score.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {input_arg}")
+        
+    update_step(input_arg, "12", "wip")
+    main(input_arg)
+    update_step(input_arg, "12", "done")

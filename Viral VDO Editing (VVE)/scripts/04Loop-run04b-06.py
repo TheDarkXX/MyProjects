@@ -3,14 +3,22 @@ import sys
 import subprocess
 from pathlib import Path
 
-def run_script(script_name, project_dir):
+# Add utils to path
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+try:
+    from registry import get_active_project, update_step
+except ImportError:
+    print("❌ Error: Could not import utils modules.")
+    sys.exit(1)
+
+def run_script(script_name, job_dir):
     print(f"\n{'='*60}")
     print(f"🚀 Running: {script_name}")
     print(f"{'='*60}\n")
     
     script_path = Path(__file__).parent / script_name
     
-    cmd = [sys.executable, str(script_path), project_dir]
+    cmd = [sys.executable, str(script_path), job_dir]
     
     result = subprocess.run(cmd)
     
@@ -24,11 +32,16 @@ def run_script(script_name, project_dir):
     print(f"\n✅ {script_name} completed successfully.")
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python 04Loop-run04b-06.py <project_dir>")
-        sys.exit(1)
+    if len(sys.argv) >= 2:
+        job_dir = sys.argv[1]
+    else:
+        job_dir = get_active_project()
+        if not job_dir:
+            print("Usage: python 04Loop-run04b-06.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {job_dir}")
         
-    job_dir = sys.argv[1]
+    update_step(job_dir, "04Loop", "wip")
     
     # Try resolving path using capcut_utils
     try:
@@ -53,6 +66,9 @@ def main():
     
     print(f"\n🎉 Editorial Loop completed successfully for '{job_dir}'!")
     print("💡 Please open CapCut and check the final subtitles timeline.")
+
+    
+    update_step(job_dir, "06", "done")
 
 if __name__ == "__main__":
     main()

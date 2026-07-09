@@ -113,18 +113,32 @@ def generate_scenes(transcript_path: str, target_duration_sec: float = 3.5, all_
 
 if __name__ == "__main__":
     import argparse
+    import os
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from registry import get_active_project, update_step
+        from backup import insurance_backup
+        from capcut_utils import get_project_path
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
+        sys.exit(1)
+        
     parser = argparse.ArgumentParser()
-    parser.add_argument("job_dir", help="Project name or job directory")
+    parser.add_argument("job_dir", nargs="?", help="Project name or job directory")
     parser.add_argument("--all-broll", action="store_true", help="Generate B-Roll for every scene (Old style)")
     args = parser.parse_args()
         
     input_arg = args.job_dir
+    if not input_arg:
+        input_arg = get_active_project()
+        if not input_arg:
+            print("Usage: python 07-scene-generator.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {input_arg}")
+        
+    update_step(input_arg, "07", "wip")
     
-    # Resolve job_dir properly using capcut_utils
-    import os
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     try:
-        from utils.capcut_utils import get_project_path
         job_dir = Path(get_project_path(input_arg))
     except Exception as e:
         print(f"❌ Error resolving project path: {e}")
@@ -141,3 +155,5 @@ if __name__ == "__main__":
     target_dur = config.get("scene_duration_sec", 3.5)
     
     generate_scenes(json_path, target_duration_sec=target_dur, all_broll=args.all_broll)
+    insurance_backup(input_arg)
+    update_step(input_arg, "07", "done")

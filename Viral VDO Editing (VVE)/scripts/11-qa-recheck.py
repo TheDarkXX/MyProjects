@@ -258,23 +258,41 @@ def perform_qa_recheck(project_dir):
     return all_passed
 
 if __name__ == "__main__":
+    import os
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from registry import get_active_project, update_step
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
+        sys.exit(1)
+        
     parser = argparse.ArgumentParser()
-    parser.add_argument("job_dir", help="Path to job directory")
+    parser.add_argument("job_dir", nargs="?", help="Path to job directory")
     parser.add_argument("--project", help="Path to CapCut project folder", default=None)
     args = parser.parse_args()
     
-    # If project is passed, use it, else resolve via capcut_utils
-    proj_dir = args.project if args.project else args.job_dir
+    input_arg = args.job_dir
+    if not input_arg:
+        input_arg = get_active_project()
+        if not input_arg:
+            print("Usage: python 11-qa-recheck.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {input_arg}")
+        
+    update_step(input_arg, "11", "wip")
+    
+    proj_dir = args.project if args.project else input_arg
     
     if not os.path.exists(proj_dir):
         try:
-            # Add current dir to path to import capcut_utils
-            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
             from utils.capcut_utils import get_project_path
-            proj_dir = get_project_path(args.job_dir)
+            proj_dir = get_project_path(input_arg)
         except Exception:
             pass
     
     passed = perform_qa_recheck(proj_dir)
-    if not passed:
+    if passed:
+        update_step(input_arg, "11", "done")
+    else:
         sys.exit(1)

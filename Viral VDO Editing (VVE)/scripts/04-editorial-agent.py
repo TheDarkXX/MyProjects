@@ -102,20 +102,33 @@ def generate_editorial_prompt(transcript_path: str, output_md_path: str):
     print("🤖 AG IDE: (ในตัวเลือกให้โชว์เวลาเป็นทั้งวินาทีและนาที เช่น 144.9s (2.4m) เพื่อให้ดูง่าย)")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Create Editorial Prompt for AG IDE")
-    parser.add_argument("project_name", type=str, help="CapCut project name or path")
-    args = parser.parse_args()
-    
-    # Add utils to path so we can import capcut_utils
+    # Add utils to path
     sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
     try:
+        from registry import get_active_project, update_step
         from capcut_utils import get_project_path
     except ImportError:
-        print("❌ Error: Could not import capcut_utils. Run from scripts directory.")
+        print("❌ Error: Could not import registry or capcut_utils.")
         sys.exit(1)
         
+    parser = argparse.ArgumentParser(description="Generate an Editorial Subagent Prompt.")
+    parser.add_argument("project_name", type=str, nargs='?', default=None, help="CapCut project name or path")
+    parser.add_argument("--auto", action="store_true", help="Auto-run AI and save decisions directly.")
+    args = parser.parse_args()
+
+    project_name = args.project_name
+    if not project_name:
+        project_name = get_active_project()
+        if not project_name:
+            print("❌ Error: No project specified and no active project found.")
+            sys.exit(1)
+        print(f"📌 Using active project: {project_name}")
+        
+    update_step(project_name, "04", "wip")
+    
+    # 2. Get CapCut project path
     try:
-        project_dir = Path(get_project_path(args.project_name))
+        project_dir = Path(get_project_path(project_name))
     except FileNotFoundError as e:
         print(f"❌ {e}")
         sys.exit(1)
@@ -134,3 +147,7 @@ if __name__ == "__main__":
     
     out_path = project_dir / "editorial_prompt.md"
     generate_editorial_prompt(str(source), str(out_path))
+
+    update_step(project_name, '04', 'done')
+    from utils.backup import insurance_backup
+    insurance_backup(project_name)

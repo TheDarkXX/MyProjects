@@ -43,19 +43,29 @@ def json_to_srt(grouped_json_path: str, output_srt_path: str):
             f.write(f"{text}\n\n")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 06-generate-srt.py <job_dir>")
-        sys.exit(1)
-        
-    input_arg = sys.argv[1]
-    
-    # Resolve job_dir properly using capcut_utils
     import os
     import subprocess
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from utils.capcut_utils import get_project_path, get_draft_path, force_close_capcut, clear_capcut_cache, load_draft
-    from utils.snapshot import save_snapshot, restore_snapshot, save_srt_snapshot
-    from utils.subtitle_styler import apply_default_style
+    try:
+        from utils.capcut_utils import get_project_path, get_draft_path, force_close_capcut, clear_capcut_cache, load_draft
+        from utils.snapshot import save_snapshot, restore_snapshot, save_srt_snapshot
+        from utils.subtitle_styler import apply_default_style
+        from utils.registry import get_active_project, update_step
+    except ImportError:
+        print("❌ Error: utils modules not found.")
+        sys.exit(1)
+
+    if len(sys.argv) >= 2:
+        input_arg = sys.argv[1]
+    else:
+        input_arg = get_active_project()
+        if not input_arg:
+            print("Usage: python 06-generate-srt.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {input_arg}")
+        
+    update_step(input_arg, "06", "wip")
+    
     try:
         project_dir = get_project_path(input_arg)
         draft_path = get_draft_path(input_arg)
@@ -73,10 +83,17 @@ if __name__ == "__main__":
         
     json_path = str(json_files[0])
     
-    out_path = str(Path(json_path).with_suffix(""))
-    if out_path.endswith(".grouped"):
-        out_path = out_path[:-8]
-    out_path += ".srt"
+    from utils.registry import get_raw_folder
+    raw_folder_str = get_raw_folder(input_arg)
+    
+    if raw_folder_str:
+        out_path = str(Path(raw_folder_str) / (input_arg + "_final.srt"))
+    else:
+        out_path = str(Path(json_path).with_suffix(""))
+        if out_path.endswith(".grouped"):
+            out_path = out_path[:-8]
+        out_path += ".srt"
+
     
     # Also save a copy to intermediates
     inter_path = job_dir / "intermediates"
@@ -169,3 +186,5 @@ if __name__ == "__main__":
     print("="*70)
     print(f"Total cues: {len(blocks)} | Please read the text above carefully to ensure no stutters remain.")
     print("="*70 + "\n")
+
+    update_step(input_arg, '06', 'done')

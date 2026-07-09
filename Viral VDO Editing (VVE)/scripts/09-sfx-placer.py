@@ -233,7 +233,24 @@ def place_sfx(job_dir: str):
     print(f"\nSFX Placement complete! {new_cmds_count} SFX injected into CapCut and step_09 snapshot saved.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 09-sfx-placer.py <job_dir>")
+    import os
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+    try:
+        from registry import get_active_project, update_step
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
         sys.exit(1)
-    place_sfx(sys.argv[1])
+        
+    if len(sys.argv) >= 2:
+        input_arg = sys.argv[1]
+    else:
+        input_arg = get_active_project()
+        if not input_arg:
+            print("Usage: python 09-sfx-placer.py <job_dir>")
+            sys.exit(1)
+        print(f"📌 Using active project: {input_arg}")
+        
+    update_step(input_arg, "09", "wip")
+    place_sfx(input_arg)
+    update_step(input_arg, "09", "done")

@@ -19,15 +19,16 @@ def run_capcut_cli(args):
     return True, result.stdout
 
 def main(job_name):
-    # Try to close CapCut to prevent lock issues
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    # Add utils to path
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
     try:
-        force_close_capcut()
-    except Exception as e:
-        print(f"Warning: Failed to close CapCut: {e}")
+        from capcut_utils import get_project_path, force_close_capcut, load_draft, apply_default_style
+        from registry import get_active_project, update_step
+    except ImportError:
+        print("❌ Error: Could not import utils modules.")
+        sys.exit(1)    
         
-    base_dir = Path(r"C:\Users\Admin\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft")
-    job_dir = base_dir / job_name
+    job_dir = Path(get_project_path(job_name))
     
     if not job_dir.exists():
         print(f"Error: Project '{job_name}' not found at {job_dir}")
@@ -62,7 +63,13 @@ def main(job_name):
         print(f"Error: {json_path} not found")
         sys.exit(1)
         
-    srt_file = job_dir / "intermediates" / "subtitles_raw.srt"
+    from registry import get_raw_folder
+    raw_folder_str = get_raw_folder(job_name)
+    if raw_folder_str:
+        srt_file = Path(raw_folder_str) / (job_name + "_preview.srt")
+    else:
+        srt_file = job_dir / "intermediates" / "subtitles_raw.srt"
+
     srt_file.parent.mkdir(exist_ok=True)
     gen_srt_mod.json_to_srt(str(json_path), str(srt_file))
 
@@ -106,7 +113,17 @@ def main(job_name):
     print("   2. When ready, run 04-editorial-agent.py to let AI make cuts.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 03b-preview-subtitles.py <job_name>")
-        sys.exit(1)
-    main(sys.argv[1])
+    if len(sys.argv) >= 2:
+        project_name = sys.argv[1]
+    else:
+        sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+        from registry import get_active_project, update_step
+        project_name = get_active_project()
+        if not project_name:
+            print("Usage: python 03b-preview-subtitles.py <capcut_project_name>")
+            sys.exit(1)
+        print(f"📌 Using active project: {project_name}")
+        
+    update_step(project_name, "03b", "wip")
+    main(project_name)
+    update_step(project_name, "03b", "done")
