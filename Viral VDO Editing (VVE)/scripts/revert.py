@@ -31,6 +31,7 @@ STEP_LABELS = {
     "original": "🕐 ก่อนรันสคริปต์ใดๆ (Original)",
     "01a":      "✂️  01a — Timebolt Cut (Manual)",
     "01b":      "🤖 01b — Silence Cut (AI/Auto)",
+    "perfect":  "🌟 06  — Perfect Subtitle Sync Checkpoint",
     "09":       "💉 09  — CapCut Inject (ซับ+B-Roll+SFX)",
     "09b":      "🎨 09b — Auto Style (ตกแต่ง Transition/สี)",
 }
@@ -102,6 +103,26 @@ def do_restore(project_name, step_name):
     success = restore_snapshot(project_dir, draft_path, step_name)
 
     if success:
+        # If this is a perfect mark, restore metadata files as well
+        if "perfect" in step_name:
+            import shutil
+            # Use the exact mark name's backup folder (e.g. perfect_1_backup, perfect_2_backup)
+            # Fallback to legacy "perfect_backup" for the old single mark
+            perf_dir = os.path.join(project_dir, ".snapshots", f"{step_name}_backup")
+            if not os.path.exists(perf_dir):
+                perf_dir = os.path.join(project_dir, ".snapshots", "perfect_backup")
+            
+            if os.path.exists(perf_dir):
+                for f in os.listdir(perf_dir):
+                    src = os.path.join(perf_dir, f)
+                    dest = os.path.join(project_dir, f)
+                    if os.path.isdir(src):
+                        shutil.rmtree(dest, ignore_errors=True)
+                        shutil.copytree(src, dest)
+                    else:
+                        shutil.copy2(src, dest)
+                print(f"   Restored metadata from {os.path.basename(perf_dir)}/")
+
         print(f"\n✅ Restored successfully!")
         print(f"   Project: {project_name}")
         print(f"   State:   {label}")

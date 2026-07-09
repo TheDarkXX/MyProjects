@@ -129,13 +129,13 @@ def place_sfx(job_dir: str):
             ]
             success, stdout = run_capcut_cli(cmd_args)
             if success:
-            new_cmds_count += 1
-            last_global_play = start_sec
-            last_played[category] = start_sec
-            last_file_played[category] = sound_file
-            print(f"Placed [{category}] {sound_file} at {start_sec:.3f}s")
-            return True
-        return False
+                new_cmds_count += 1
+                last_global_play = start_sec
+                last_played[category] = start_sec
+                last_file_played[category] = sound_file
+                print(f"Placed [{category}] {sound_file} at {start_sec:.3f}s")
+                return True
+            return False
         
     # Group manifest by category
     pools = {cat: [] for cat in cooldowns.keys()}

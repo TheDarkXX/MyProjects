@@ -90,34 +90,6 @@ def assemble_footage(job_dir: str):
         job_path = Path(project_dir)
     except FileNotFoundError as e:
         print(f"❌ {e}")
-        sys.exit(1)
-        
-    print(f"\n==============================================")
-    print(f"   08 - FOOTAGE ASSEMBLER (DIRECT INJECT)")
-    print(f"==============================================\n")
-    
-    force_close_capcut()
-    
-    # Revert to 06 to clear old B-rolls
-    if not restore_snapshot(project_dir, draft_path, "06"):
-        print("❌ Failed to revert to 06 before injecting B-rolls. Make sure 06 has been run.")
-        sys.exit(1)
-        
-    scene_table_path = job_path / "scene_table.json"
-    footage_path = job_path / "Footage"
-    inter_path = job_path / "intermediates"
-    inter_path.mkdir(exist_ok=True)
-    
-    if not scene_table_path.exists():
-        print(f"Error: scene_table.json not found in {job_dir}")
-        sys.exit(1)
-        
-    with open(scene_table_path, 'r', encoding='utf-8') as f:
-        scenes = json.load(f)
-        
-    commands = []
-    
-    # Load existing commands if any to append
     commands_file = inter_path / "timeline_commands.json"
     if commands_file.exists():
         with open(commands_file, 'r', encoding='utf-8') as f:

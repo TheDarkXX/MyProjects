@@ -1,0 +1,108 @@
+{
+  "rough_cut_remove": [
+    {
+      "words": "W000-W006",
+      "reason": "Intro duplicate"
+    },
+    {
+      "words": "W014-W020",
+      "reason": "Stutter before main phrase"
+    },
+    {
+      "words": "W037-W037",
+      "reason": "Filler 'โอเค'"
+    },
+    {
+      "words": "W057-W057",
+      "reason": "Filler 'โอเค'"
+    },
+    {
+      "words": "W058-W059",
+      "reason": "Stutter 'หนึ่ง'"
+    },
+    {
+      "words": "W073-W087",
+      "reason": "Multiple stutters"
+    },
+    {
+      "words": "W106-W106",
+      "reason": "Stutter 'ช่--'"
+    },
+    {
+      "words": "W107-W120",
+      "reason": "Repeated variations"
+    },
+    {
+      "words": "W138-W140",
+      "reason": "Stutter 'สองชาเขียว'"
+    },
+    {
+      "words": "W153-W154",
+      "reason": "Stutter 'ช่วยลด'"
+    },
+    {
+      "words": "W161-W166",
+      "reason": "Stutter 'ซึ่งมีงานวิจัยพบว่าเมื่อ'"
+    },
+    {
+      "words": "W181-W183",
+      "reason": "Stutter 'วยลดค่า'"
+    },
+    {
+      "words": "W225-W227",
+      "reason": "Stutter 'ที่เรียกว่า'"
+    },
+    {
+      "words": "W235-W238",
+      "reason": "Stutter 'และมีสารสำคัญ'"
+    },
+    {
+      "words": "W243-W251",
+      "reason": "Stutter 'ซึ่งงานวิจัยพบว่าช่วยลดการอักเสบ'"
+    },
+    {
+      "words": "W270-W273",
+      "reason": "Stutter 'และลดและลดข--'"
+    },
+    {
+      "words": "W309-W311",
+      "reason": "Stutter 'ที่ไม่ใช่ --'"
+    },
+    {
+      "words": "W321-W324",
+      "reason": "Stutter 'ได้อย่างชัดเจน'"
+    },
+    {
+      "words": "W331-W338",
+      "reason": "Stutter 'ช่วยกระตุ้นเอนไซม์ในการดีท็อกตับ'"
+    },
+    {
+      "words": "W339-W350",
+      "reason": "Stutter 'ช่วยกระตุ้นเอนไซม์ในการดีท็อกล้างสารพิษในตับ'"
+    },
+    {
+      "words": "W292-W297",
+      "reason": "Stutter 'คะน้า เช่น คะน้า'"
+    },
+    {
+      "words": "W160-W160",
+      "reason": "Stutter ซึ่"
+    },
+    {
+      "words": "W180-W180",
+      "reason": "Stutter ช่"
+    },
+    {
+      "words": "W148-W152",
+      "reason": "Stutter replaced"
+    }
+  ],
+  "rough_cut_plan": {
+    "keep": [],
+    "notes": [
+      "Cut all stutters correctly"
+    ]
+  },
+  "active_plan": "rough_cut_plan",
+  "summary": "Manual Editorial Cut by AG (Perfected Full Pass)"
+}

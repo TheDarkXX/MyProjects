@@ -1,0 +1,182 @@
+# Scene Table
+
+Please act as the AI Art Director. Read the `doctorbank_broll_text2video.yaml` to understand the 8 Categories.
+Then, analyze the following scenes and generate a **TSV Table** containing the following columns:
+`Scene ID` | `Visual Type` | `Subtitle` | `Scene Story` | `Category` | `Video Prompt`
+
+> **CRITICAL RULE:** For `Video Prompt`, you MUST wrap the Scene ID at the very beginning like this: `[S01] Premium food photography, slow dolly...`
+> **CRITICAL RULE 2:** If Visual Type is 'A-Roll (Main Clip)', DO NOT include it in the TSV table at all. Only output rows that are 'B-Roll (AI Generated)' so the user can copy-paste the entire table without A-Roll rows.
+
+Do NOT output JSON. Output the raw TSV inside a markdown code block so I can copy-paste to Excel.
+
+```json
+[
+  {
+    "id": "S01",
+    "start": 0.088,
+    "end": 3.966,
+    "duration": 3.878,
+    "visual_type": "A-Roll (Main Clip)",
+    "subtitle_text": "เจ็ดสุดยอดอาหารบำรุงตับใครที่เริ่มมีปัญหาค่าตับเริ่ม"
+  },
+  {
+    "id": "S02",
+    "start": 3.966,
+    "end": 8.086,
+    "duration": 4.12,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "ขึ้นไขมันพอกตับรีบฟังด่วนซึ่งอาหารเหล่านี้"
+  },
+  {
+    "id": "S03",
+    "start": 8.086,
+    "end": 12.872,
+    "duration": 4.786,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "มีงานวิจัยรองรับชัดเจนว่าช่วยบำรุงสุขภาพของตับได้จริงหนึ่ง"
+  },
+  {
+    "id": "S04",
+    "start": 12.872,
+    "end": 17.462,
+    "duration": 4.59,
+    "visual_type": "A-Roll (Main Clip)",
+    "subtitle_text": "กาแฟดำการดื่มกาแฟวันละสองถึงสี่แก้วช่วยลดการเสียชีวิต"
+  },
+  {
+    "id": "S05",
+    "start": 17.462,
+    "end": 21.805999999999997,
+    "duration": 4.344,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "จาก--จากโรคตับเรื้อรังได้ถึงเจ็ดสิบเปอร์เซ็นต์จากตับแถมยัง"
+  },
+  {
+    "id": "S06",
+    "start": 21.805999999999997,
+    "end": 25.485999999999997,
+    "duration": 3.68,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "ช่วยลดค่าเอนไซม์ตับลดความเสี่ยงตับแข็งและมะเร็งตับ"
+  },
+  {
+    "id": "S07",
+    "start": 25.485999999999997,
+    "end": 29.108,
+    "duration": 3.622,
+    "visual_type": "A-Roll (Main Clip)",
+    "subtitle_text": "อีกด้วยสองชาเขียวมีสารมีสารที่เรียกว่า"
+  },
+  {
+    "id": "S08",
+    "start": 29.108,
+    "end": 32.868,
+    "duration": 3.76,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "EGCGช่วยลดช่วยลดค่าเอนไซม์ในตับซึ่งมีง"
+  },
+  {
+    "id": "S09",
+    "start": 32.868,
+    "end": 37.346000000000004,
+    "duration": 4.478,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "ซึ่งมีงานวิจัยพบว่าเมื่อทานชาเขียวติดต่อกันสิบสองสัปดาห์ช่ช่วย"
+  },
+  {
+    "id": "S10",
+    "start": 37.346000000000004,
+    "end": 41.666000000000004,
+    "duration": 4.32,
+    "visual_type": "A-Roll (Main Clip)",
+    "subtitle_text": "ลดค่าเอนไซม์ตับโดยเฉพาะALTASTในผู้ป่วย"
+  },
+  {
+    "id": "S11",
+    "start": 41.666000000000004,
+    "end": 45.556,
+    "duration": 3.89,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "ไขมันพอกตับได้อย่างชัดเจนสามปลาที่มีไขมันดี"
+  },
+  {
+    "id": "S12",
+    "start": 45.556,
+    "end": 49.436,
+    "duration": 3.88,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "ไม่ว่าจะเป็นปลาแซลมอนปลาซาร์ดีนปลาแมคเคอเรลอุดม"
+  },
+  {
+    "id": "S13",
+    "start": 49.436,
+    "end": 53.196,
+    "duration": 3.76,
+    "visual_type": "A-Roll (Main Clip)",
+    "subtitle_text": "ไปด้วยไขมันดีที่เรียกว่าโอเมก้าสามและมีสารสำคัญ"
+  },
+  {
+    "id": "S14",
+    "start": 53.196,
+    "end": 57.466,
+    "duration": 4.27,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "EPAและDHAซึ่งงานวิจัยพบว่บว่าช่วย"
+  },
+  {
+    "id": "S15",
+    "start": 57.466,
+    "end": 61.396,
+    "duration": 3.93,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "ลดการอักเสบได้ถึงสามสิบถึงสี่สิบเปอร์เซ็นต์และลด"
+  },
+  {
+    "id": "S16",
+    "start": 61.396,
+    "end": 65.756,
+    "duration": 4.36,
+    "visual_type": "A-Roll (Main Clip)",
+    "subtitle_text": "และลดข--ขมันพอกตับได้อีกด้วยสี่ผักใบเขียว"
+  },
+  {
+    "id": "S17",
+    "start": 65.756,
+    "end": 69.506,
+    "duration": 3.75,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "เช่นคะน้าผักโขมบรอกโคลีช่วยลดความเสี่ยง"
+  },
+  {
+    "id": "S18",
+    "start": 69.506,
+    "end": 73.646,
+    "duration": 4.14,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "จากไขมันพอกตับที่ไม่ใช่--โดยเฉพาะกลุ่มที่ไม่ใช่จากแอลกอฮอล์ได้"
+  },
+  {
+    "id": "S19",
+    "start": 73.646,
+    "end": 77.646,
+    "duration": 4.0,
+    "visual_type": "A-Roll (Main Clip)",
+    "subtitle_text": "อย่างชัดเจนได้อย่างมีนัยยะสำคัญช่วยกระตุ้นเอนไซม์"
+  },
+  {
+    "id": "S20",
+    "start": 77.646,
+    "end": 81.84599999999999,
+    "duration": 4.2,
+    "visual_type": "B-Roll (AI Generated)",
+    "subtitle_text": "ในกาอกล้างสารพิษในตับและลดไขมันสะสมไขมันพอก"
+  },
+  {
+    "id": "S21",
+    "start": 81.84599999999999,
+    "end": 82.806,
+    "duration": 0.96,
+    "subtitle_text": "ตับได้อีกด้วย"
+  }
+]
+```

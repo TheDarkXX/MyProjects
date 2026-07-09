@@ -1,5 +1,5 @@
 # Test Auto — VVE Clip Log
-> Last updated: 2026-07-09 11:47:22
+> Last updated: 2026-07-09 16:16:10
 > Channel: doctorbank
 > Created: 2026-07-09 09:58:43
 
@@ -7,27 +7,27 @@
 
 ## 📊 Pipeline Progress Dashboard
 
-**Current State:** 🔄 WIP (Step 00)
+**Current State:** ✅ Done (Step 08)
 
 | Step | Status | Description | หมายเหตุ |
 |------|--------|-------------|----------|
-| 01a | ⏳ Pending | Timebolt Cut | |
+| 01a | ✅ Done | Timebolt Cut | |
 | 01b | ✅ Done | Silence Cut | Snapshot: 1v — 2026-07-09 10:26 |
-| 02 | ⏳ Pending | Extract Audio | |
-| 03 | ⏳ Pending | Transcribe (Whisper) | |
+| 02 | ✅ Done | Extract Audio | |
+| 03 | ✅ Done | Transcribe (Whisper) | |
 | 03b | ✅ Done | Preview Subtitles | 2026-07-08 13:09 |
-| 04 | ⏳ Pending | Editorial Agent (AI ตัดสินใจ) | |
-| 04b | ✅ Done | Apply Editorial Cuts | Snapshot: 20v — 2026-07-09 00:35 |
-| 05 | ⏳ Pending | Word Segment | |
-| 05b | ⏳ Pending | Align AI Text | |
-| 06 | ✅ Done | Generate SRT | Snapshot: 24v — 2026-07-09 00:42 |
-| 07 | ⏳ Pending | B-Roll Agent (AI เลือกภาพ) | |
-| 08 | ⏳ Pending | Footage Assembler | |
-| 09 | ⏳ Pending | Audio Polisher | |
-| 10 | ⏳ Pending | CapCut Inject | |
-| 10b | ⏳ Pending | Final Subtitles | |
-| 11 | ⏳ Pending | QA Recheck | |
-| 12 | ⏳ Pending | Final Render | |
+| 04 | ✅ Done | Editorial Agent (AI ตัดสินใจ) | |
+| 04b | ✅ Done | Apply Editorial Cuts | Snapshot: 28v — 2026-07-09 13:57 |
+| 05 | ✅ Done | Word Segment | |
+| 05b | ✅ Done | Align AI Text | |
+| 06 | ✅ Done | Generate SRT | Snapshot: 29v — 2026-07-09 13:57 |
+| 07 | ✅ Done | B-Roll Agent (AI เลือกภาพ) | |
+| **08** | ✅ Done | Footage Assembler | Snapshot: 1v — 2026-07-09 13:57 |
+| **09** | **⏳ Next** | **Audio Polisher** | **👈 ขั้นตอนถัดไป** |
+| **10** | **⏳ Next** | **CapCut Inject** | **👈 ขั้นตอนถัดไป** |
+| **10b** | **⏳ Next** | **Final Subtitles** | **👈 ขั้นตอนถัดไป** |
+| **11** | **⏳ Next** | **QA Recheck** | **👈 ขั้นตอนถัดไป** |
+| **12** | **⏳ Next** | **Final Render** | **👈 ขั้นตอนถัดไป** |
 
 ---
 
@@ -37,12 +37,12 @@
 |------|---------|------|
 | `cut_audio_16k.wav` | Extracted audio (16kHz) | 3535.3KB |
 | `transcript.raw.json` | Whisper raw transcript | 35.4KB |
-| `transcript.json` | Processed transcript | 25.3KB |
-| `transcript.grouped.json` | Word-segmented groups | 9.6KB |
-| `editorial_decisions.json` | AI editorial cuts | 6.4KB |
+| `transcript.json` | Processed transcript | 25.5KB |
+| `transcript.grouped.json` | Word-segmented groups | 9.5KB |
+| `editorial_decisions.json` | AI editorial cuts | 2.7KB |
 | `scene_table.json` | Scene breakdown | 6.2KB |
 | `scene_table.md` | Scene breakdown (readable) | 7.0KB |
-| `ai_segmented_latest.txt` | AI-aligned subtitle text | 2.6KB |
+| `ai_segmented_latest.txt` | AI-aligned subtitle text | 2.4KB |
 | `transcript.srt` | Final subtitle file | 5.9KB |
 | `replacements.json` | Word corrections | 0.4KB |
 | `final_rendered_text.txt` | Final rendered text | 2.6KB |
