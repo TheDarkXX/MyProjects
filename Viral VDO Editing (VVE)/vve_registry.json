@@ -1,5 +1,5 @@
 {
-  "active_project": "DoctorBank EP2_Test",
+  "active_project": "Test Auto",
   "projects": {
     "Test Auto": {
       "capcut_name": "Test Auto",
@@ -7,8 +7,9 @@
       "created": "2026-07-09 09:58:43",
       "last_step": "00",
       "last_run": "2026-07-09 09:58:43",
-      "status": "new",
-      "notes": ""
+      "status": "wip",
+      "notes": "",
+      "raw_folder": "V:\\DoctorBank Family\\DoctorBank Brand\\Raw Clip\\Test Auto"
     },
     "DoctorBank EP2_Test": {
       "capcut_name": "DoctorBank EP2_Test",
