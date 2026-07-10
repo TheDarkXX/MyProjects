@@ -122,7 +122,7 @@ if __name__ == "__main__":
         project_name = get_active_project()
         if not project_name:
             print("❌ Error: No active project set and no project name provided.")
-            print("   Use: python scripts/switch_project.py <name>")
+            print("   Use: python scripts/cli/switch_project.py <name>")
             sys.exit(1)
         print(f"📌 Using active project: {project_name}")
         

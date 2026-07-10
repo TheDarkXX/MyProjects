@@ -46,7 +46,7 @@ def save_checkpoint(job_dir, stage_name):
         json.dump(ckpt, f, indent=4)
 
 def run_stage(script_name, job_dir):
-    script_path = os.path.join(os.path.dirname(__file__), script_name)
+    script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), script_name)
     if not os.path.exists(script_path):
         print(f"❌ Error: Script {script_name} not found.")
         sys.exit(1)

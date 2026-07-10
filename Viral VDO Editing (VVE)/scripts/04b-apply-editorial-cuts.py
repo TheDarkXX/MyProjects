@@ -307,7 +307,7 @@ def apply_editorial_cuts(job_dir: str):
         
     print(f"   Words mapped perfectly to CapCut segments: {len(new_words)} / {len(old_words)}")
     
-    verify_script = Path(__file__).parent / "verify_timeline_text.py"
+    verify_script = Path(__file__).parent / "debug" / "verify_timeline_text.py"
     if verify_script.exists():
         subprocess.run([sys.executable, str(verify_script), job_dir])
     

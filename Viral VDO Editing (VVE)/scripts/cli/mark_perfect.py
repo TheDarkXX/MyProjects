@@ -149,7 +149,7 @@ def do_mark(project_name, label=None):
     print(f"  Files   : {len(backed_up)} metadata files backed up")
     print(f"{'='*60}")
     print(f"\n  To revert to this point:")
-    print(f'    python scripts/revert.py "{project_name}" {mark_name}')
+    print(f'    python scripts/cli/revert.py "{project_name}" {mark_name}')
     print()
 
 
@@ -161,7 +161,7 @@ def do_list(project_name):
 
     if not manifest["marks"]:
         print(f"\n  No perfect marks for '{project_name}' yet.")
-        print(f'  Create one: python scripts/mark_perfect.py "{project_name}"')
+        print(f'  Create one: python scripts/cli/mark_perfect.py "{project_name}"')
         return
 
     print(f"\n  Perfect Marks for: {project_name}")
@@ -172,7 +172,7 @@ def do_list(project_name):
         print(f"      Step  : {m['step']}")
         print(f"      Time  : {m['timestamp']}")
         print(f"      Files : {len(m.get('files_backed_up', []))} backed up")
-        print(f"      Revert: python scripts/revert.py \"{project_name}\" {m['name']}")
+        print(f"      Revert: python scripts/cli/revert.py \"{project_name}\" {m['name']}")
         print()
     print(f"  {'='*56}")
 

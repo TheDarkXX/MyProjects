@@ -52,6 +52,30 @@
 
 ---
 
+## 🧰 CLI & Management (`scripts/cli/`)
+
+| ชื่อไฟล์ | หน้าที่หลัก (ทำอะไร) |
+|:---|:---|
+| `pipeline.py` | (Main Orchestrator) ตัวรันสคริปต์เรียงตาม STAGES |
+| `run_finish.py` | สคริปต์มัดรวมรัน Phase 3 (Assemble -> Inject -> Style -> Zoom) |
+| `project_status.py` | เช็กสถานะของโปรเจกต์ว่าทำถึง Step ไหนแล้ว |
+| `switch_project.py` | ตั้งค่า (Lock) โปรเจกต์ที่กำลังทำงานอยู่ |
+| `revert.py` | Time-travel ย้อนเวลากลับไปจุด Snapshot เดิม |
+| `mark_perfect.py` | ปักหมุดเซฟโปรเจกต์จุดที่ทำเสร็จแล้วสมบูรณ์ (Perfect Mark) |
+
+---
+
+## 🐛 Debug & Verification (`scripts/debug/`)
+
+| ชื่อไฟล์ | หน้าที่หลัก (ทำอะไร) |
+|:---|:---|
+| `debug_timeline.py` | ปริ้นท์ข้อมูล Timeline ของ CapCut ออกมาดู |
+| `debug_words.py` | ปริ้นท์คำที่สกัดได้จากไฟล์เสียง |
+| `verify_srt.py` | ตรวจสอบไฟล์ `.srt` หาข้อผิดพลาด |
+| `verify_timeline_text.py` | ตรวจสอบความถูกต้องของซับใน Timeline เทียบกับ Text ต้นฉบับ |
+
+---
+
 ## 🧪 Tests & Legacy (`scripts/_legacy/`)
 
 | ชื่อไฟล์ | หน้าที่หลัก (ทำอะไร) |
@@ -61,6 +85,8 @@
 | `split_shutter_1.py` | สคริปต์เทสระบบหั่นไฟล์ |
 | `check_tracks.py` | (Legacy) เช็ค Track ใน CapCut แบบเก่า |
 | `run_transcribe.py` | (Legacy) สคริปต์เทสรันระบบถอดเสียง |
+| `patch_10.py` | (Legacy) แพตช์ข้อมูลเฉพาะกิจ |
+| `test_atrim.py` | (Legacy) เทสระบบตัดเสียง |
 
 ---
 

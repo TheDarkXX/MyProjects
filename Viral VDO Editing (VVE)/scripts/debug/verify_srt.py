@@ -33,7 +33,7 @@ def print_srt_text(srt_path):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python verify_srt.py <job_dir>")
+        print("Usage: python scripts/debug/verify_srt.py <job_dir>")
         sys.exit(1)
         
     from utils.capcut_utils import get_project_path

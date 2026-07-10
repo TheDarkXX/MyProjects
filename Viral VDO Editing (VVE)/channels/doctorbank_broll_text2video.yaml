@@ -14,21 +14,23 @@ system_instruction: >
   กฎหลัก:
   1. อ่านประโยคซับไทเทิลที่ได้รับ แล้วจำแนกว่าควรใช้ Category ไหน (A-H)
   2. สร้าง Video Prompt (ภาษาอังกฤษ) อันเดียว ที่รวมทั้งภาพและการเคลื่อนไหว
-  3. Prompt ต้องระบุทุกองค์ประกอบต่อไปนี้:
-     - สไตล์ภาพ + คุณภาพ (เช่น "8K, ultra-realistic, highly detailed cinematic")
-     - ตัวแบบ/วัตถุหลัก + ท่าทาง/สถานะ + เสื้อผ้า/ลักษณะ (ถ้ามีคน)
-     - ฉากหลัง/สถานที่ (ละเอียด เช่น "clean modern Thai condo living room")
-     - การเคลื่อนไหวของกล้อง (เช่น "smooth handheld slowly zooming in")
-     - แสง/สี/อารมณ์ (เช่น "soft natural window lighting, warm golden tones")
-     - เอฟเฟกต์พิเศษ (เช่น "steam rising", "particles floating")
-     - ความยาว (3-4 วินาที)
-  4. ห้ามใช้ภาพน่าเบื่อหรือซ้ำซาก และต้อง "อ่านรู้เรื่อง" ภายใน 1 วินาที
-  5. **NO TALKING**: ห้ามมีคนกำลังพูด ขยับปาก หรือทำปากพะงาบๆ เด็ดขาด (เน้นให้คนแสดงอารมณ์ทางสีหน้าและท่าทางแทน)
-  6. **NO TEXT OVERLAY**: ห้ามมีตัวหนังสือ ตัวอักษร หรือข้อความใดๆ ปรากฏในวิดีโอเด็ดขาด (เติม "--no text" ไว้ท้าย prompt)
-  7. **REALISM & HIGH QUALITY**: เน้นความสมจริงขั้นสุด (Photorealistic, Hyper-detailed) ภาพต้องดูแพงและสมจริง ห้ามดูเป็นภาพการ์ตูนหรือ 3D ลอยๆ (ยกเว้น Category ที่เป็น 3D Medical Animation)
+  3. เน้นภาพที่เข้าใจง่าย เป็น "ภาพจำ" (Classic angles / Highly recognizable imagery) ที่คนเห็นปุ๊บรู้ทันทีว่าสื่อถึงอะไร ห้ามใช้ภาพปรัชญาหรือนามธรรมที่ซับซ้อนเกินไป
+  4. **T2V MOTION LOCK**: AI วิดีโอมักจะแอบซูมและทำพื้นหลังเพี้ยน ดังนั้นทุก Prompt ต้องระบุการเคลื่อนไหวของกล้องให้ชัดเจนและเฉพาะเจาะจงที่สุด
+     - ถ้าต้องการภาพนิ่ง/อวัยวะหมุน: ต้องล็อกกล้องให้สนิท `MOTION: The camera is absolutely rigidly locked on a tripod. ZERO zoom, ZERO pan.`
+     - ถ้าต้องการมุมกล้องแบบอื่น (ดอลลี่/แพน/ติดตาม): ต้องระบุทิศทางให้ชัดเจน เช่น `MOTION: Extremely slow, smooth overhead dolly from left to right.`
+     - ห้ามปล่อยให้ AI ตัดสินใจมุมกล้องเองเด็ดขาด
+  5. **NEGATIVE CONSTRAINTS**: ต้องใส่คำสั่งห้ามเด็ดขาดเพื่อกัน AI มโนสิ่งประหลาด (กอร์/เส้นเลือด) เช่น `ABSOLUTELY NO internal veins, NO medical UI, NO text, NO talking`
+  6. **NO TALKING & NO TEXT**: ห้ามมีคนพูด หรือมีตัวหนังสือปรากฏในภาพเด็ดขาด
+  7. **DETAIL LOCK (6 ส่วนครบเสมอ)**: 
+     ① STYLE + ANGLE (เช่น WIDE shot of...)
+     ② SUBJECT + TEXTURE (วัตถุหลัก + สี/ผิวสัมผัสที่เจาะจง)
+     ③ FRAMING (ตำแหน่งวัตถุในเฟรม เช่น strictly isolated in the exact center)
+     ④ BACKGROUND (สภาพแวดล้อม/สีพื้นหลัง เช่น dark deep sapphire blue environment)
+     ⑤ LIGHTING (ทิศทางแสงและสไตล์ เช่น High-Key soft lighting)
+     ⑥ MOTION (การระบุการเคลื่อนไหวของกล้องและวัตถุอย่างเจาะจง เช่น กล้องนิ่ง+วัตถุหมุน, หรือกล้องดอลลี่)
 
-  โครงสร้าง Video Prompt:
-  "[สไตล์ + คุณภาพ (เน้นความสมจริง 8K)], [ตัวแบบ + ท่าทาง (no talking)], [ฉากหลัง], [camera movement], [แสง/สี/อารมณ์], [เอฟเฟกต์] --no text, no talking"
+  โครงสร้าง Video Prompt ที่ต้องใช้:
+  "[DETAIL LOCK ① ถึง ⑤], [⑥ MOTION: การล็อคกล้องหรือการเคลื่อนไหวเฉพาะเจาะจง], [พารามิเตอร์: 8K, cinematic] --no text, no talking"
 
 
 # =====================================================
@@ -112,27 +114,28 @@ category_b_organs:
   trigger_keywords: ["ตับ", "ไต", "กระดูก", "ข้อ", "ลำไส้", "กระเพาะ", "หัวใจ", "ปอด", "สมอง", "หลอดเลือด", "เส้นเลือด", "กล้ามเนื้อ"]
   
   video_rules: >
-    - สไตล์: Medical CG 3D anatomical render, 8K, highly detailed textures
-    - เฟรม: Isolated organ on dark/gradient background, dramatic rim lighting
-    - กล้อง: Slow 360-degree orbit around the organ → zoom into problem area
-    - เอฟเฟกต์: Glowing highlight on problem area, pulsating red/orange glow, subtle particle effects
-    - สี: Warm tones = healthy organs, Red/Orange glow = inflamed/damaged areas
-    - ระดับ: Semi-realistic (จำได้ว่าคืออวัยวะอะไร แต่ไม่ต้องเหมือนจริง 100%)
-    - จังหวะ: ช้า สง่า ดูมีน้ำหนัก ดูน่าเชื่อถือ
-    - ห้าม: ภาพเลือด/กอร์ ที่น่ากลัวเกินไป, ภาพแบน 2D
+    - สไตล์: Clean 3D medical illustration, WIDE shot (หลีกเลี่ยงคำว่า macro ป้องกัน AI ซูม)
+    - การตีความ: ให้ใช้คำว่า "clean 3D illustration shaped like a complete [อวัยวะ]" เพื่อหลอก AI ไม่ให้สร้างภาพที่มีเส้นเลือดหรือเนื้อเยื่อที่น่ากลัว (Gore)
+    - พื้นหลัง: Dark deep sapphire blue environment filled with swirling, glowing micro-dust particles and subtle micro-cellular energy grid.
+    - กล้อง (Motion): ควรระบุการเคลื่อนไหวที่นุ่มนวลและช้ามากๆ เช่น `MOTION: Extremely slow, smooth push-in` หรือ `MOTION: Slow 360-degree orbit`. ห้ามปล่อยให้ AI คิดท่าทางการเคลื่อนไหวกล้องเอง
+    - การเคลื่อนไหว (Subject): ให้อวัยวะหมุนรอบตัวเองช้าๆ "rotates extremely slowly, smoothly, and continuously on its vertical axis (like a 3D turntable display)"
+    - สี/Texture: ตับสุขภาพดี = smooth glossy reddish-brown, ข้อเสื่อม/บาดเจ็บ = glowing orange/red core
+    - ข้อห้าม (Negative Constraints): ต้องใส่ ABSOLUTELY NO internal veins, NO blood vessels, NO anatomical details เสมอเพื่อบังคับภาพให้คลีน
     - ความยาว: 3-4 วินาที
 
   example_prompt:
-    subtitle: "น้ำหล่อเลี้ยงข้อเข่าก็แห้งลง ทำให้กระดูกเสียดสีกัน"
+    subtitle: "สูงมากๆ แถมยังช่วยลดค่าเอนไซม์ตับ ลดความเสี่ยง"
     video: >
-      Medical CG 3D anatomical render, 8K, highly detailed textures.
-      Human knee joint cross-section view, cartilage layer visibly
-      thinning and cracked with fine fracture lines, two bone surfaces
-      almost touching with intense pulsating orange-red glow at the friction point.
-      Subtle particle effects showing cartilage debris floating away.
-      Camera slowly orbits 360-degrees then smoothly zooms into the friction area.
-      Isolated on dark gradient background, dramatic rim lighting,
-      authoritative medical feel, 4 seconds.
+      Photorealistic WIDE shot of a clean 3D illustration shaped like a complete human liver, 
+      strictly isolated in the exact center of the frame. The liver has a smooth, glossy 
+      reddish-brown surface with a subtle healthy sheen, completely clean and unblemished. 
+      High-Key soft lighting on the organ. The background is a dark deep sapphire blue environment 
+      filled with swirling, glowing micro-dust particles and a subtle micro-cellular energy grid. 
+      8k resolution, octane render, pristine scientific aesthetic. ABSOLUTELY NO medical UI, 
+      NO internal veins, NO anatomical details. MOTION LOCK: The camera is absolutely rigidly 
+      locked on a tripod. ZERO camera movement, ZERO zoom, ZERO pan. The liver rotates extremely 
+      slowly, smoothly, and continuously on its vertical axis (like a 3D turntable display). 
+      The background particles drift gently. --no text, no talking
 
 
 # =====================================================

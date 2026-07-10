@@ -98,7 +98,7 @@ def generate_dashboard():
     if active_project:
         print(f" ★ = Active Project")
     else:
-        print(f" ⚠️ No active project set. Run: python scripts/switch_project.py <name>")
+        print(f" ⚠️ No active project set. Run: python scripts/cli/switch_project.py <name>")
         
     # --- 2. Markdown Generation ---
     try:
