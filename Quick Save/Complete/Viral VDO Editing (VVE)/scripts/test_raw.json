@@ -1,0 +1,23 @@
+{
+  "text": "นี่คือการทดสอบระบบ",
+  "words": [
+    {"text": "น", "start": 0.0, "end": 0.1},
+    {"text": "ี", "start": 0.1, "end": 0.1},
+    {"text": "่", "start": 0.1, "end": 0.2},
+    {"text": "ค", "start": 0.2, "end": 0.3},
+    {"text": "ื", "start": 0.3, "end": 0.3},
+    {"text": "อ", "start": 0.3, "end": 0.4},
+    {"text": "ก", "start": 0.4, "end": 0.5},
+    {"text": "า", "start": 0.5, "end": 0.6},
+    {"text": "ร", "start": 0.6, "end": 0.7},
+    {"text": "ท", "start": 0.7, "end": 0.8},
+    {"text": "ด", "start": 0.8, "end": 0.9},
+    {"text": "ส", "start": 0.9, "end": 1.0},
+    {"text": "อ", "start": 1.0, "end": 1.1},
+    {"text": "บ", "start": 1.1, "end": 1.2},
+    {"text": "ร", "start": 1.2, "end": 1.3},
+    {"text": "ะ", "start": 1.3, "end": 1.4},
+    {"text": "บ", "start": 1.4, "end": 1.5},
+    {"text": "บ", "start": 1.5, "end": 1.6}
+  ]
+}
