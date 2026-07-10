@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""
+revert.py — Time-travel for CapCut projects.
+
+ย้อนกลับ (revert) draft_content.json ไปยังสถานะของ Pipeline ขั้นตอนใดก็ได้
+ที่เคยรันผ่านแล้ว ข้ามไปข้ามมาได้อิสระ!
+
+Usage:
+    python revert.py <project_name>                  → List all snapshots
+    python revert.py <project_name> <step>           → Restore to step
+    python revert.py <project_name> original         → Restore to pre-script state
+
+Examples:
+    python revert.py "Test Auto"                     → ดูรายการ snapshot ทั้งหมด
+    python revert.py "Test Auto" 01b                 → ย้อนกลับไปหลังรัน 01b
+    python revert.py "Test Auto" original            → ย้อนกลับไปก่อนรัน script ใดๆ
+"""
+
+import os
+import sys
+from datetime import datetime
+
+# Add current dir to path for imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from utils.capcut_utils import get_project_path, get_draft_path, force_close_capcut
+from utils.snapshot import list_snapshots, restore_snapshot
+
+
+STEP_LABELS = {
+    "original": "🕐 ก่อนรันสคริปต์ใดๆ (Original)",
+    "01a":      "✂️  01a — Timebolt Cut (Manual)",
+    "01b":      "🤖 01b — Silence Cut (AI/Auto)",
+    "perfect":  "🌟 06  — Perfect Subtitle Sync Checkpoint",
+    "09":       "💉 09  — CapCut Inject (ซับ+B-Roll+SFX)",
+    "09b":      "🎨 09b — Auto Style (ตกแต่ง Transition/สี)",
+}
+
+
+def print_snapshot_list(project_name):
+    """Show all available snapshots."""
+    project_dir = get_project_path(project_name)
+    snapshots = list_snapshots(project_dir)
+
+    if not snapshots:
+        print(f"\n❌ ยังไม่มี snapshot สำหรับโปรเจกต์ '{project_name}'")
+        print(f"   Snapshot จะถูกสร้างอัตโนมัติเมื่อรัน pipeline script (01a, 01b, 09, 09b)")
+        return
+
+    print(f"\n📸 Snapshots for: {project_name}")
+    print(f"   Location: {os.path.join(project_dir, '.snapshots')}")
+    print(f"{'':─<60}")
+
+    for name, path, mtime, size in snapshots:
+        label = STEP_LABELS.get(name, f"   {name}")
+        time_str = mtime.strftime("%Y-%m-%d %H:%M:%S")
+        size_kb = size / 1024
+        print(f"   {label}")
+        print(f"      └─ Saved: {time_str}  ({size_kb:.0f} KB)")
+
+    print(f"{'':─<60}")
+    print(f"\n💡 Usage: python revert.py \"{project_name}\" <step_name>")
+    print(f"   Example: python revert.py \"{project_name}\" 01b")
+
+
+def do_restore(project_name, step_name):
+    """Restore a snapshot."""
+    project_dir = get_project_path(project_name)
+    draft_path = get_draft_path(project_name)
+
+    # Check if snapshot exists (exact match or prefix match for versions)
+    snapshots = list_snapshots(project_dir)
+    available = [s[0] for s in snapshots]
+    
+    matched_step = None
+    if step_name in available:
+        matched_step = step_name
+    else:
+        # Try prefix matching (e.g. "08_v1" matches "08_v1_20260708_134500")
+        matches = [s for s in available if s.startswith(step_name + "_v") or s.startswith(step_name + "_")]
+        if len(matches) == 1:
+            matched_step = matches[0]
+        elif len(matches) > 1:
+            print(f"\n❌ Snapshot '{step_name}' กำกวม (พบหลายเวอร์ชั่น) ระบุให้ชัดเจนขึ้น:")
+            for m in matches:
+                print(f"   - {m}")
+            sys.exit(1)
+
+    if not matched_step:
+        print(f"\n❌ Snapshot '{step_name}' ไม่มีอยู่!")
+        print(f"   มีเฉพาะ: {', '.join(available) if available else '(ยังไม่มี snapshot ใดๆ)'}")
+        sys.exit(1)
+
+    label = STEP_LABELS.get(matched_step, matched_step)
+    
+    # Use matched_step for restore
+    step_name = matched_step
+
+    # Force close CapCut before restoring
+    force_close_capcut()
+
+    # Do restore
+    success = restore_snapshot(project_dir, draft_path, step_name)
+
+    if success:
+        # If this is a perfect mark, restore metadata files as well
+        if "perfect" in step_name:
+            import shutil
+            # Use the exact mark name's backup folder (e.g. perfect_1_backup, perfect_2_backup)
+            # Fallback to legacy "perfect_backup" for the old single mark
+            perf_dir = os.path.join(project_dir, ".snapshots", f"{step_name}_backup")
+            if not os.path.exists(perf_dir):
+                perf_dir = os.path.join(project_dir, ".snapshots", "perfect_backup")
+            
+            if os.path.exists(perf_dir):
+                for f in os.listdir(perf_dir):
+                    src = os.path.join(perf_dir, f)
+                    dest = os.path.join(project_dir, f)
+                    if os.path.isdir(src):
+                        shutil.rmtree(dest, ignore_errors=True)
+                        shutil.copytree(src, dest)
+                    else:
+                        shutil.copy2(src, dest)
+                print(f"   Restored metadata from {os.path.basename(perf_dir)}/")
+
+        print(f"\n✅ Restored successfully!")
+        print(f"   Project: {project_name}")
+        print(f"   State:   {label}")
+        print(f"   💡 Reopen CapCut to see the restored timeline.")
+    else:
+        print(f"\n❌ Restore failed!")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(1)
+
+    project = sys.argv[1]
+
+    if len(sys.argv) == 2:
+        # List mode
+        print_snapshot_list(project)
+    elif len(sys.argv) >= 3:
+        # Restore mode
+        do_restore(project, sys.argv[2])
