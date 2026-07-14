@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "Folder Manager"
+		},
+		{
+			"path": "Quick Save"
+		},
+		{
+			"path": "ag_skills_backup"
+		},
+		{
+			"path": "docs"
+		},
+		{
+			"path": ".agents"
+		}
+	],
+	"settings": {}
+}
