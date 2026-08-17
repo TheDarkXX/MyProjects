@@ -1,0 +1,110 @@
+﻿"Name","Company","Description"
+"ActionCenter",,
+"AddonsManager",,
+"Adguard","Adguard Software Limited","AdGuard for Windows"
+"AdguardSvc",,
+"AdobeUpdateService",,
+"Antigravity IDE","Google LLC","Antigravity IDE"
+"AppleMobileDeviceService",,
+"audiodg",,
+"avp",,
+"avpui",,
+"BrCcUxSys","Brother Industries, Ltd.","ControlCenter UX System"
+"BrCtrlCntr","Brother Industries, Ltd.","ControlCenter Main Process"
+"CamoService",,
+"codex",,
+"Creative.AudPosService",,
+"Creative.UWPRPCService",,
+"CtxSvc32",,
+"DbxSvc",,
+"DiskDefrag",,
+"DiskDoctor",,
+"Dropbox","Dropbox, Inc.","Dropbox"
+"EWCService",,
+"EyeRest",,
+"FastestVPNService",,
+"FileZilla Server",,
+"GamingApp_Service",,
+"GamingHotkey",,
+"GamingHotkey_Service",,
+"gamingservices",,
+"gamingservicesnet",,
+"git","The Git Development Community","Git for Windows"
+"Integrator",,
+"key-listener-win",,
+"KinectManagementService",,
+"kpm_service",,
+"language_server_windows_x64",,
+"Lavasoft.WCAssistant.WinService",,
+"LDSvc",,
+"LEDKeeper",,
+"Lightshot","Skillbrains","Lightshot"
+"LINE","LY Corporation","LINE"
+"LineCall","LINE Corporation","LineCall"
+"LineMediaPlayer","LINE Corporation","LineMediaPlayer"
+"mDNSResponder",,
+"MSI_ActiveX_Service",,
+"muachost",,
+"MysticLight2_Service",,
+"node","Node.js","Node.js JavaScript Runtime"
+"nvcontainer",,
+"NVDisplay.Container",,
+"NVIDIA Web Helper","Node.js","NVIDIA Web Helper Service"
+"nvsphelper64",,
+"OfficeClickToRun",,
+"OnScreenControlControlService",,
+"pCloud",""," "
+"Pingbooster_service",,
+"Plex Media Server","Plex, Inc.","Plex Media Server"
+"Plex Tuner Service",,
+"Plex Update Service",,
+"PlexScriptHost",,
+"powershell",,
+"PsiService_2",,
+"python","Python Software Foundation","Python"
+"remoting_host",,
+"Rize","GitHub, Inc.","Rize"
+"RocketDock",,
+"RtkAudUService64",,
+"rundll32",,
+"SearchFilterHost",,
+"SearchProtocolHost",,
+"Secure System",,
+"spNMHost","Lamantine Software a.s.","Autofill Engine host for Chromium-based web browsers"
+"spUIAManager","Lamantine Software a.s.","Sticky Password UI Automation Manager"
+"StartupManager",,
+"SteelSeriesGG",,
+"stpass","Lamantine Software a.s.","Sticky Password"
+"SyncFolder.UWP","","SyncFolder.UWP"
+"TabAllTools",,
+"TabCareCenter",,
+"TabCleanUp",,
+"TabDashboard",,
+"TabMaintain",,
+"TabMyTasks",,
+"TabOptimize",,
+"TabProtect",,
+"Taskmgr",,
+"TeamViewer_Service",,
+"TeraCopyService",,
+"timeserv",,
+"TriggerModeMonitor",,
+"UninstallManager",,
+"USBSRService",,
+"VideoCardMonitorII",,
+"vmcompute",,
+"vmwp",,
+"VoiceType","Yaseen AI","VoiceType - Record and transcribe your voice with AI"
+"vpn-unlimited-daemon",,
+"Wacom_Tablet",,
+"Wacom_TabletUser","Wacom Co. Ltd.","Tablet user module for professional driver"
+"Wacom_TouchUser",,
+"Wacom_UpdateUtil",,
+"WacomHost",,
+"wavebox","Bookry Ltd","Wavebox"
+"WinZip Compression Smart Monitor Service",,
+"WinZipCompressionSmartMonitor",,
+"wmpnetwk",,
+"wslservice",,
+"WTabletServicePro",,
+"WUDFHost",,
