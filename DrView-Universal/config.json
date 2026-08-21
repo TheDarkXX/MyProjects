@@ -1,0 +1,20 @@
+{
+  "sources": [
+    {
+      "id": "local-vault",
+      "name": "คอมพิวเตอร์",
+      "type": "local",
+      "roots": [
+        { "name": "Openclaw", "path": "C:/My Claw/Openclaw-VPS" },
+        { "name": "Quick Notes", "path": "D:/Notes" }
+      ]
+    },
+    {
+      "id": "vps-notes",
+      "name": "VPS Cloud",
+      "type": "vps",
+      "apiUrl": "/api/vps-db",
+      "apiKey": "YOUR_SECRET_KEY"
+    }
+  ]
+}

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DrView Universal</title>
+    <!-- DrView CSS -->
+    <link rel="stylesheet" href="viewer.css">
+    
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--vscode-editor-background, #1e1e1e);
+            color: var(--vscode-editor-foreground, #cccccc);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Mock VS Code variables if they don't exist */
+        :root {
+            --vscode-editor-background: #1e1e1e;
+            --vscode-editor-foreground: #d4d4d4;
+            --vscode-sideBar-background: #252526;
+            --vscode-sideBar-border: #333333;
+            --vscode-list-hoverBackground: #2a2d2e;
+            --vscode-list-activeSelectionBackground: #094771;
+            --vscode-list-activeSelectionForeground: #ffffff;
+            --vscode-button-background: #0e639c;
+            --vscode-button-foreground: #ffffff;
+            --vscode-button-hoverBackground: #1177bb;
+            --vscode-input-background: #3c3c3c;
+            --vscode-input-foreground: #cccccc;
+        }
+
+        /* Top Bar */
+        #topbar {
+            height: 40px;
+            background-color: var(--vscode-sideBar-background);
+            border-bottom: 1px solid var(--vscode-sideBar-border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+        
+        #app-title {
+            font-weight: 600;
+            margin-right: 20px;
+            color: var(--vscode-editor-foreground);
+        }
+
+        #current-file-name {
+            flex-grow: 1;
+            font-size: 14px;
+            opacity: 0.8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Buttons */
+        .btn {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 4px 12px;
+            cursor: pointer;
+            margin-left: 8px;
+            font-size: 12px;
+            border-radius: 2px;
+        }
+        .btn:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        /* Main Area */
+        #main-container {
+            display: flex;
+            flex-grow: 1;
+            height: calc(100% - 40px);
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 250px;
+            min-width: 200px;
+            background-color: var(--vscode-sideBar-background);
+            border-right: 1px solid var(--vscode-sideBar-border);
+            display: flex;
+            flex-direction: column;
+            resize: horizontal;
+            overflow: hidden;
+        }
+
+        #tree-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .tree-node {
+            cursor: pointer;
+            padding: 4px 8px 4px 16px;
+            display: flex;
+            align-items: center;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .tree-node:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+        .tree-node.selected {
+            background-color: var(--vscode-list-activeSelectionBackground);
+            color: var(--vscode-list-activeSelectionForeground);
+        }
+        .tree-icon {
+            width: 16px; height: 16px; margin-right: 6px;
+            display: inline-block;
+            text-align: center;
+            line-height: 16px;
+        }
+        .tree-children {
+            display: none;
+            padding-left: 12px;
+        }
+        .tree-children.expanded {
+            display: block;
+        }
+
+        /* Source Switcher */
+        #source-switcher {
+            height: 50px;
+            border-top: 1px solid var(--vscode-sideBar-border);
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            background-color: rgba(0,0,0,0.1);
+        }
+        #source-select {
+            width: 100%;
+            background: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border: 1px solid var(--vscode-sideBar-border);
+            padding: 4px;
+            outline: none;
+        }
+
+        /* Viewer Panels (Split View) */
+        #panels-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .panel-header {
+            height: 30px;
+            background-color: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--vscode-sideBar-border);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            justify-content: space-between;
+        }
+        .panel-close {
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .panel-close:hover { opacity: 1; }
+
+        .panel-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        #panel2 {
+            border-left: 2px solid var(--vscode-sideBar-border);
+            display: none; /* Hidden by default */
+        }
+        
+        /* DrView uses id 'pv' for the markdown container */
+        .markdown-body {
+            padding: 20px;
+            box-sizing: border-box;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        /* Editor */
+        #editor {
+            flex: 1;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            border: none;
+            border-right: 1px solid var(--vscode-sideBar-border);
+            padding: 20px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+            display: none;
+        }
+        
+        .panel-content.edit-mode {
+            display: flex;
+            flex-direction: row;
+        }
+        .panel-content.edit-mode #pv {
+            flex: 1;
+            overflow-y: auto;
+            max-width: none;
+            margin: 0;
+        }
+        .panel-content.edit-mode #editor {
+            display: block;
+        }
+
+        /* Image Viewport */
+        .image-viewport {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: #111;
+        }
+
+    </style>
+</head>
+<body class="vscode-dark">
+    
+    <div id="topbar">
+        <div id="app-title">DrView</div>
+        <div id="current-file-name">No file selected</div>
+        <div id="topbar-actions" style="display: none;">
+            <select id="editor-type" onchange="switchEditorType()" style="margin-right: 10px; font-size: 12px; background: #3c3c3c; color: white; border: none; padding: 2px;">
+                <option value="textarea">Basic Editor</option>
+                <option value="monaco">Monaco Editor</option>
+            </select>
+            <span id="save-status" style="font-size: 12px; margin-right: 10px; opacity: 0.7;"></span>
+            <button id="btn-edit" class="btn" onclick="toggleEditMode()">Edit</button>
+            <button id="btn-save" class="btn btn-success" style="display: none;" onclick="saveFile()">Save</button>
+        </div>
+    </div>
+
+    <div id="main-container">
+        <div id="sidebar">
+            <div id="tree-container">
+                <!-- File tree will be rendered here -->
+            </div>
+            <div id="source-switcher">
+                <select id="source-select">
+                    <!-- Options populated by JS -->
+                </select>
+            </div>
+        </div>
+
+        <div id="panels-container">
+            <!-- Panel 1: Primary View -->
+            <div id="panel1" class="panel">
+                <div class="panel-content" id="panel1-content">
+                    <textarea id="editor" spellcheck="false" oninput="handleInput()"></textarea>
+                    <div id="monaco-container" style="display:none; flex:1; border-right: 1px solid var(--vscode-sideBar-border);"></div>
+                    <div id="pv" class="markdown-body">
+                        <h2>Welcome to DrView Universal</h2>
+                        <p>Select a source and click a file on the left to open it.</p>
+                        <p><b>Tips:</b></p>
+                        <ul>
+                            <li>Ctrl+Click a link to open in Split View.</li>
+                            <li>Image files support Zoom/Pan automatically.</li>
+                            <li>Click Edit to switch to Text Editor mode.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Split View -->
+            <div id="panel2" class="panel">
+                <div class="panel-header">
+                    <span id="panel2-title">Split View</span>
+                    <span class="panel-close" onclick="closeSplitView()">✕</span>
+                </div>
+                <div class="panel-content">
+                    <div id="pv2" class="markdown-body"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="lib/marked.min.js"></script>
+    <script src="lib/panzoom.min.js"></script>
+    <!-- We load mermaid dynamically in viewer.js, but let's pre-load it to avoid path issues -->
+    <script src="mermaid.min.js"></script>
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    
+    <!-- App Logic -->
+    <script src="app.js"></script>
+    <!-- DrView Renderer (modified) -->
+    <script src="viewer.js"></script>
+
+</body>
+</html>
