@@ -5,7 +5,7 @@ const path = require('path');
 let db = null;
 try {
     const Database = require('better-sqlite3');
-    const dbPath = path.join(__dirname, '..', 'drview.db');
+    const dbPath = path.join(__dirname, 'drview.db');
     db = new Database(dbPath);
     
     // Create table if not exists

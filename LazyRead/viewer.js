@@ -164,6 +164,8 @@ function toggleOutline() {
   outlineVisible = !outlineVisible;
   document.getElementById('outlinePanel').classList.toggle('active', outlineVisible);
   document.getElementById('outlineToggleBtn').classList.toggle('active', outlineVisible);
+  var outlineResizer = document.getElementById('outline-resizer');
+  if (outlineResizer) outlineResizer.classList.toggle('active', outlineVisible);
   checkFocusMode();
 }
 
@@ -171,14 +173,17 @@ let focusMode = true;
 function toggleFocus() {
   focusMode = !focusMode;
   document.getElementById('focusBtn').classList.toggle('active', focusMode);
+  var outlineResizer = document.getElementById('outline-resizer');
   if (focusMode) {
     outlineVisible = false;
     document.getElementById('outlinePanel').classList.remove('active');
     document.getElementById('outlineToggleBtn').classList.remove('active');
+    if (outlineResizer) outlineResizer.classList.remove('active');
   } else {
     outlineVisible = true;
     document.getElementById('outlinePanel').classList.add('active');
     document.getElementById('outlineToggleBtn').classList.add('active');
+    if (outlineResizer) outlineResizer.classList.add('active');
   }
 }
 
@@ -338,11 +343,7 @@ function copyCodeBlock(btn) {
 
 // Open Raw Code
 function openRawCode() {
-  if (typeof vscodeApi !== 'undefined') {
-    vscodeApi.postMessage({ command: 'openRawCode' });
-  } else {
-    alert("Raw code editing will be supported in Phase 3");
-  }
+  vscodeApi.postMessage({ command: 'openRawCode' });
 }
 
 // Hotkey: Ctrl + Mouse Wheel for Zoom In/Out
@@ -847,6 +848,9 @@ function renderSingleMermaid(idx) {
     }).catch(function(err) {
       console.error('Mermaid render error:', err);
       content.innerHTML = '<div style="color: #ff7b72; padding: 1rem; font-family: monospace; font-size: 12px; background: rgba(255,123,114,0.1); border-radius: 6px;">⚠️ Diagram Render Error: ' + (err.message || err) + '</div>';
+      // Mermaid leaves the broken SVG in the DOM body, remove it
+      var leakedError = document.getElementById(svgId) || document.querySelector('[id^="d3-error"]');
+      if (leakedError) leakedError.remove();
     });
   } catch(e) {
     console.error(e);
@@ -1629,47 +1633,17 @@ function exportTsvImage(idx, format) {
 }
 
 // Bind scroll events & interactive link handlers
+var _viewerScrollBound = false;
 function initViewer() {
   try { loadSettings(); } catch(e) { console.error('loadSettings error:', e); }
   
   var pv = document.getElementById('pv');
-  if (pv) {
-    // Restore scroll position when tab is restored
-    if (typeof vscodeApi !== 'undefined') {
-      try {
-        var state = vscodeApi.getState();
-        if (state && typeof state.scrollTop === 'number') {
-          pv.scrollTop = state.scrollTop;
-        }
-      } catch(e){}
-    }
+  if (pv && !_viewerScrollBound) {
+    _viewerScrollBound = true;
 
     pv.addEventListener('scroll', function() {
       updateReadingProgress();
       updateScrollSpy();
-      if (typeof vscodeApi !== 'undefined') {
-        try {
-          vscodeApi.setState({ scrollTop: pv.scrollTop });
-        } catch(e){}
-      }
-    });
-
-    // Intercept links for external URLs and internal Markdown files
-    pv.addEventListener('click', function(e) {
-      var a = e.target.closest('a');
-      if (!a) return;
-      var href = a.getAttribute('href');
-      if (!href) return;
-      if (href.startsWith('#')) return; // Allow internal hash anchors
-      
-      e.preventDefault();
-      if (typeof vscodeApi !== 'undefined') {
-        if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
-          vscodeApi.postMessage({ command: 'openExternal', url: href });
-        } else {
-          vscodeApi.postMessage({ command: 'openFile', filePath: href });
-        }
-      }
     });
   }
   

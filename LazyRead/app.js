@@ -36,11 +36,87 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     await fetchSources();
     if (sources.length > 0) {
-        selectSource(sources[0].id);
+        const lastSourceId = localStorage.getItem('lazyread_last_source');
+        if (lastSourceId && sources.find(s => s.id === lastSourceId)) {
+            document.getElementById('source-select').value = lastSourceId;
+            selectSource(lastSourceId);
+        } else {
+            selectSource(sources[0].id);
+        }
+        
+        // Open last file
+        const lastFile = localStorage.getItem('lazyread_last_file');
+        if (lastFile) {
+            try {
+                const lf = JSON.parse(lastFile);
+                if (lf && lf.path) {
+                    setTimeout(() => openFile(lf.path, lf.name), 100);
+                }
+            } catch(e){}
+        }
     }
     
     document.getElementById('source-select').addEventListener('change', (e) => {
         selectSource(e.target.value);
+        localStorage.setItem('lazyread_last_source', e.target.value);
+    });
+    
+    // Sidebar Resizer
+    const savedWidth = localStorage.getItem('lazyread_sidebar_width');
+    if (savedWidth) document.getElementById('sidebar').style.width = savedWidth;
+    
+    let isResizing = false;
+    const resizer = document.getElementById('resizer');
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        document.body.style.cursor = 'col-resize';
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        let newWidth = e.clientX;
+        if (newWidth < 150) newWidth = 150;
+        if (newWidth > 800) newWidth = 800;
+        document.getElementById('sidebar').style.width = newWidth + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = 'default';
+            localStorage.setItem('lazyread_sidebar_width', document.getElementById('sidebar').style.width);
+        }
+    });
+    
+    // Outline Resizer
+    const savedOutlineWidth = localStorage.getItem('lazyread_outline_width');
+    if (savedOutlineWidth) {
+        const op = document.getElementById('outlinePanel');
+        if (op) op.style.width = savedOutlineWidth;
+    }
+    
+    let isResizingOutline = false;
+    const outlineResizer = document.getElementById('outline-resizer');
+    if (outlineResizer) {
+        outlineResizer.addEventListener('mousedown', (e) => {
+            isResizingOutline = true;
+            document.body.style.cursor = 'col-resize';
+        });
+    }
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizingOutline) return;
+        // Width is from right edge, so: window.innerWidth - e.clientX
+        let newWidth = window.innerWidth - e.clientX;
+        if (newWidth < 150) newWidth = 150;
+        if (newWidth > 600) newWidth = 600;
+        document.getElementById('outlinePanel').style.width = newWidth + 'px';
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isResizingOutline) {
+            isResizingOutline = false;
+            document.body.style.cursor = 'default';
+            localStorage.setItem('lazyread_outline_width', document.getElementById('outlinePanel').style.width);
+        }
     });
 });
 
@@ -50,6 +126,7 @@ async function fetchSources() {
         const data = await res.json();
         sources = data.sources || [];
         
+        // Old select (hidden but kept for compat)
         const select = document.getElementById('source-select');
         select.innerHTML = '';
         sources.forEach(src => {
@@ -58,9 +135,38 @@ async function fetchSources() {
             opt.textContent = src.name;
             select.appendChild(opt);
         });
+        
+        // New source tabs
+        renderSourceTabs();
     } catch (e) {
         console.error("Failed to fetch sources", e);
     }
+}
+
+function renderSourceTabs() {
+    const container = document.getElementById('source-tabs');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    sources.forEach(src => {
+        const tab = document.createElement('button');
+        tab.className = 'source-tab' + (currentSource && currentSource.id === src.id ? ' active' : '');
+        tab.textContent = src.name;
+        tab.title = src.name;
+        tab.onclick = () => {
+            selectSource(src.id);
+            document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+        };
+        container.appendChild(tab);
+    });
+    
+    const addBtn = document.createElement('button');
+    addBtn.className = 'source-tab-add';
+    addBtn.textContent = '+';
+    addBtn.title = 'Add Local Folder';
+    addBtn.onclick = addLocalFolder;
+    container.appendChild(addBtn);
 }
 
 function selectSource(id) {
@@ -75,19 +181,72 @@ function selectSource(id) {
         });
     } else if (currentSource.type === 'vps') {
         renderTreeRoot("VPS Cloud", "");
-        // Seed mock data
         fetch(currentSource.apiUrl + '/seed', { method: 'POST' });
     }
 }
 
 // --- Tree Rendering ---
 
+function getFileIconClass(name, isDir) {
+    if (isDir) return 'fi-folder';
+    const ext = name.split('.').pop().toLowerCase();
+    const map = {
+        'md': 'fi-md', 'markdown': 'fi-md',
+        'html': 'fi-html', 'htm': 'fi-html',
+        'js': 'fi-js', 'mjs': 'fi-js', 'ts': 'fi-js', 'tsx': 'fi-js', 'jsx': 'fi-js',
+        'json': 'fi-json', 'jsonc': 'fi-json',
+        'css': 'fi-css', 'scss': 'fi-css', 'less': 'fi-css',
+        'png': 'fi-img', 'jpg': 'fi-img', 'jpeg': 'fi-img', 'gif': 'fi-img', 'svg': 'fi-img', 'webp': 'fi-img', 'ico': 'fi-img',
+    };
+    return map[ext] || 'fi-other';
+}
+
+function getFileIconText(name, isDir, expanded) {
+    if (isDir) return expanded ? '<i class="ri-folder-open-fill"></i>' : '<i class="ri-folder-fill"></i>';
+    const ext = name.split('.').pop().toLowerCase();
+    const map = {
+        'md': '<i class="ri-markdown-fill"></i>', 'markdown': '<i class="ri-markdown-fill"></i>',
+        'html': '<i class="ri-html5-fill"></i>', 'htm': '<i class="ri-html5-fill"></i>',
+        'js': '<i class="ri-javascript-fill"></i>', 'mjs': '<i class="ri-javascript-fill"></i>', 'ts': '<i class="ri-javascript-fill"></i>', 'tsx': '<i class="ri-reactjs-fill"></i>', 'jsx': '<i class="ri-reactjs-fill"></i>',
+        'json': '<i class="ri-brackets-fill"></i>', 'jsonc': '<i class="ri-brackets-fill"></i>',
+        'css': '<i class="ri-css3-fill"></i>', 'scss': '<i class="ri-css3-fill"></i>', 'less': '<i class="ri-css3-fill"></i>',
+        'png': '<i class="ri-image-fill"></i>', 'jpg': '<i class="ri-image-fill"></i>', 'jpeg': '<i class="ri-image-fill"></i>', 'gif': '<i class="ri-image-fill"></i>', 'svg': '<i class="ri-image-fill"></i>', 'webp': '<i class="ri-image-fill"></i>', 'ico': '<i class="ri-image-fill"></i>',
+    };
+    return map[ext] || '<i class="ri-file-text-fill"></i>';
+}
+
+function setBreadcrumb(filePath) {
+    const el = document.getElementById('current-file-name');
+    if (!el) return;
+    // Normalize path separators
+    const parts = filePath.replace(/\\/g, '/').split('/').filter(Boolean);
+    // Show last 4 segments max
+    const shown = parts.slice(-4);
+    el.innerHTML = shown.map((seg, i) => {
+        const partialIdx = parts.length - shown.length + i;
+        const partialPath = parts.slice(0, partialIdx + 1).join('/');
+        return `<span class="breadcrumb-seg" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${partialPath.replace(/'/g, "\\'")}'); this.style.color='var(--success)'; setTimeout(()=>this.style.color='', 500);" title="Click to copy path: ${partialPath.replace(/'/g, "&apos;")}">${seg}</span>` +
+            (i < shown.length - 1 ? '<span class="breadcrumb-arrow">›</span>' : '');
+    }).join('');
+}
+
+function collapseAll() {
+    document.querySelectorAll('.tree-children.expanded').forEach(el => {
+        el.classList.remove('expanded');
+    });
+    document.querySelectorAll('.tree-node.expanded').forEach(el => {
+        el.classList.remove('expanded');
+        const icon = el.querySelector('.tree-icon.fi-folder');
+        if (icon) icon.innerHTML = '<i class="ri-folder-fill"></i>';
+    });
+}
+
 function renderTreeRoot(name, pathStr) {
     const container = document.getElementById('tree-container');
     
     const rootEl = document.createElement('div');
     rootEl.className = 'tree-node';
-    rootEl.innerHTML = `<span class="tree-icon">📁</span> ${name}`;
+    rootEl.innerHTML = `<span class="tree-chevron"><i class="ri-arrow-right-s-line"></i></span><span class="tree-icon fi-folder">${getFileIconText(name, true, false)}</span><span class="tree-label" title="${name}">${name}</span>`;
     rootEl.dataset.path = pathStr;
     rootEl.dataset.loaded = "false";
     
@@ -100,9 +259,10 @@ function renderTreeRoot(name, pathStr) {
             await loadDir(pathStr, childrenContainer);
             rootEl.dataset.loaded = "true";
         }
+        rootEl.classList.toggle('expanded');
         childrenContainer.classList.toggle('expanded');
         const icon = rootEl.querySelector('.tree-icon');
-        icon.textContent = childrenContainer.classList.contains('expanded') ? '📂' : '📁';
+        icon.innerHTML = getFileIconText(name, true, rootEl.classList.contains('expanded'));
     });
     
     container.appendChild(rootEl);
@@ -119,7 +279,7 @@ async function loadDir(dirPath, container) {
         items.forEach(item => {
             const el = document.createElement('div');
             el.className = 'tree-node';
-            el.innerHTML = `<span class="tree-icon">${item.isDirectory ? '📁' : '📄'}</span> ${item.name}`;
+            el.innerHTML = `<span class="tree-chevron" ${!item.isDirectory ? 'style="visibility:hidden"' : ''}><i class="ri-arrow-right-s-line"></i></span><span class="tree-icon ${getFileIconClass(item.name, item.isDirectory)}">${getFileIconText(item.name, item.isDirectory, false)}</span><span class="tree-label" title="${item.name}">${item.name}</span>`;
             el.title = item.path;
             
             if (item.isDirectory) {
@@ -133,8 +293,9 @@ async function loadDir(dirPath, container) {
                         await loadDir(item.path, subContainer);
                         el.dataset.loaded = "true";
                     }
+                    el.classList.toggle('expanded');
                     subContainer.classList.toggle('expanded');
-                    el.querySelector('.tree-icon').textContent = subContainer.classList.contains('expanded') ? '📂' : '📁';
+                    el.querySelector('.tree-icon').innerHTML = getFileIconText(item.name, true, el.classList.contains('expanded'));
                 });
                 
                 container.appendChild(el);
@@ -164,8 +325,9 @@ async function openFile(filePath, fileName, targetPanel = 1) {
     const isSplit = targetPanel === 2;
     
     if (!isSplit) {
-        document.getElementById('current-file-name').textContent = filePath;
+        setBreadcrumb(filePath);
         currentFilePath = filePath;
+        localStorage.setItem('lazyread_last_file', JSON.stringify({path: filePath, name: fileName}));
     } else {
         document.getElementById('panel2-title').textContent = fileName;
         document.getElementById('panel2').style.display = 'flex';
@@ -208,7 +370,10 @@ async function openFile(filePath, fileName, targetPanel = 1) {
             const ext = filePath.split('.').pop().toLowerCase();
             if (ext === 'md' || ext === 'markdown') {
                 if (window.marked) {
-                    container.innerHTML = marked.parse(data.content);
+                    let parsedBody = marked.parse(data.content);
+                    parsedBody = parsedBody.replace(/<li>\s*\[ \]\s*/gi, '<li class="task-list-item"><input type="checkbox" class="drview-task-checkbox" disabled> ')
+                                           .replace(/<li>\s*\[x\]\s*/gi, '<li class="task-list-item"><input type="checkbox" class="drview-task-checkbox" checked disabled> ');
+                    container.innerHTML = parsedBody;
                     // Call viewer.js init if exists
                     if (typeof initViewer === 'function' && !isSplit) {
                         setTimeout(() => initViewer(), 50); // Give DOM time to update
@@ -219,6 +384,9 @@ async function openFile(filePath, fileName, targetPanel = 1) {
                 }
             } else {
                 container.innerHTML = `<pre style="padding:20px;margin:0;"><code>${escapeHtml(data.content)}</code></pre>`;
+            }
+            if (!isSplit) {
+                updateStats(data.content);
             }
         }
     } catch (e) {
@@ -311,12 +479,41 @@ function updatePreview() {
     const ext = currentFilePath.split('.').pop().toLowerCase();
     if (ext === 'md' || ext === 'markdown') {
         if (window.marked) {
-            container.innerHTML = marked.parse(val);
+            let parsedBody = marked.parse(val);
+            parsedBody = parsedBody.replace(/<li>\s*\[ \]\s*/gi, '<li class="task-list-item"><input type="checkbox" class="drview-task-checkbox" disabled> ')
+                                   .replace(/<li>\s*\[x\]\s*/gi, '<li class="task-list-item"><input type="checkbox" class="drview-task-checkbox" checked disabled> ');
+            container.innerHTML = parsedBody;
         } else {
             container.innerHTML = `<pre>${escapeHtml(val)}</pre>`;
         }
     } else {
         container.innerHTML = `<pre style="padding:20px;margin:0;"><code>${escapeHtml(val)}</code></pre>`;
+    }
+    
+    updateStats(val);
+}
+
+function updateStats(text) {
+    const chars = text.length;
+    const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+    const lines = text.split('\n').length;
+    const readMin = Math.max(1, Math.ceil(words / 200));
+    
+    const wordsEl = document.getElementById('stat-words');
+    const charsEl = document.getElementById('stat-chars');
+    const linesEl = document.getElementById('stat-lines');
+    const readEl = document.getElementById('stat-readtime');
+    const ftEl = document.getElementById('stat-filetype');
+    
+    if (wordsEl) wordsEl.textContent = `Words: ${words.toLocaleString()}`;
+    if (charsEl) charsEl.textContent = `Chars: ${chars.toLocaleString()}`;
+    if (linesEl) linesEl.textContent = `Ln ${lines.toLocaleString()}`;
+    if (readEl) readEl.textContent = `~${readMin} min`;
+    
+    if (ftEl && currentFilePath) {
+        const ext = currentFilePath.split('.').pop().toLowerCase();
+        const typeMap = { 'md': 'Markdown', 'markdown': 'Markdown', 'html': 'HTML', 'htm': 'HTML', 'js': 'JavaScript', 'json': 'JSON', 'css': 'CSS', 'txt': 'Text', 'png': 'Image', 'jpg': 'Image', 'svg': 'SVG' };
+        ftEl.textContent = typeMap[ext] || ext.toUpperCase();
     }
 }
 
@@ -331,9 +528,15 @@ async function saveFile() {
     }
     const apiBase = currentSource.type === 'local' ? '/api/local' : currentSource.apiUrl;
     const statusEl = document.getElementById('save-status');
+    const syncEl = document.getElementById('sync-status');
     
     try {
-        statusEl.textContent = 'Saving...';
+        if (statusEl) statusEl.textContent = 'Saving...';
+        if (syncEl) {
+            syncEl.style.display = 'inline-flex';
+            syncEl.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> <span>Syncing...</span>';
+            syncEl.style.color = 'var(--text-secondary)';
+        }
         const res = await fetch(`${apiBase}/write`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -342,14 +545,26 @@ async function saveFile() {
         
         if (res.ok) {
             currentFileContent = content;
-            statusEl.textContent = 'Saved!';
-            setTimeout(() => { statusEl.textContent = ''; }, 2000);
+            if (statusEl) statusEl.textContent = 'Saved';
+            if (syncEl) {
+                syncEl.innerHTML = '<i class="ri-check-line"></i> <span>Synced</span>';
+                syncEl.style.color = 'var(--success)';
+                setTimeout(() => { if (syncEl) syncEl.style.color = 'var(--text-muted)'; }, 2500);
+            }
         } else {
-            const err = await res.json();
-            statusEl.textContent = 'Error: ' + (err.error || 'Failed to save');
+            if (statusEl) statusEl.textContent = 'Save Failed';
+            if (syncEl) {
+                syncEl.innerHTML = '<i class="ri-error-warning-line"></i> <span>Failed</span>';
+                syncEl.style.color = '#ef4444'; /* red */
+            }
         }
     } catch (e) {
-        statusEl.textContent = 'Error: ' + e.message;
+        console.error(e);
+        if (statusEl) statusEl.textContent = 'Save Error';
+        if (syncEl) {
+            syncEl.innerHTML = '<i class="ri-error-warning-line"></i> <span>Error</span>';
+            syncEl.style.color = '#ef4444';
+        }
     }
 }
 
@@ -396,4 +611,32 @@ function escapeHtml(unsafe) {
          .replace(/>/g, "&gt;")
          .replace(/"/g, "&quot;")
          .replace(/'/g, "&#039;");
+}
+
+async function addLocalFolder() {
+    const folderPath = prompt("Enter the absolute path of the folder you want to add (e.g., C:/MyFolder):");
+    if (!folderPath) return;
+    
+    const name = prompt("Enter a display name for this folder (e.g., My Notes):") || "New Folder";
+    
+    try {
+        const res = await fetch('/api/config/add-folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, path: folderPath })
+        });
+        
+        if (res.ok) {
+            await fetchSources();
+            if (currentSource) {
+                document.getElementById('source-select').value = currentSource.id;
+                selectSource(currentSource.id);
+            }
+        } else {
+            alert("Failed to add folder.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error adding folder: " + e.message);
+    }
 }

@@ -5,8 +5,7 @@
       "name": "คอมพิวเตอร์",
       "type": "local",
       "roots": [
-        { "name": "Openclaw", "path": "C:/My Claw/Openclaw-VPS" },
-        { "name": "Quick Notes", "path": "D:/Notes" }
+        { "name": "Products", "path": "C:/My Claw/DoctorBank-Brand/Products" }
       ]
     },
     {

@@ -4,7 +4,7 @@ const path = require('path');
 const router = express.Router();
 
 const getConfig = () => {
-    const configPath = path.join(__dirname, '..', 'config.json');
+    const configPath = path.join(__dirname, 'config.json');
     if (fs.existsSync(configPath)) {
         return JSON.parse(fs.readFileSync(configPath, 'utf8'));
     }

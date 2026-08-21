@@ -2,12 +2,17 @@
   "name": "lazyread",
   "version": "1.0.0",
   "description": "DrView Standalone App",
-  "main": "server.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "electron .",
+    "start:web": "node server.js"
   },
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "electron": "^43.4.1"
   }
 }
