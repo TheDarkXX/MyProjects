@@ -36,7 +36,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`DrView Universal running at http://localhost:${PORT}`);
+    console.log(`LazyRead running at http://localhost:${PORT}`);
     
     // Auto-open in Chrome App Mode
     const { exec } = require('child_process');

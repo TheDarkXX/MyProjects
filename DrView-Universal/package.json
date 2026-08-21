@@ -1,5 +1,5 @@
 {
-  "name": "drview-universal",
+  "name": "lazyread",
   "version": "1.0.0",
   "description": "DrView Standalone App",
   "main": "server.js",
