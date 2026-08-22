@@ -1,0 +1,19 @@
+{
+  "sources": [
+    {
+      "id": "local-vault",
+      "name": "คอมพิวเตอร์",
+      "type": "local",
+      "roots": [
+        { "name": "Products", "path": "C:/My Claw/DoctorBank-Brand/Products" }
+      ]
+    },
+    {
+      "id": "vps-notes",
+      "name": "VPS Cloud",
+      "type": "vps",
+      "apiUrl": "/api/vps-db",
+      "apiKey": "YOUR_SECRET_KEY"
+    }
+  ]
+}

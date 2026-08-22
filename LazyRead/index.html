@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LazyRead</title>
+    <!-- DrView CSS -->
+    <link rel="stylesheet" href="viewer.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+
+    <style>
+        /* ===== DESIGN SYSTEM ===== */
+        :root {
+            /* Surface hierarchy — 4 levels of depth (Brighter) */
+            --surface-0: #18181b; /* Brighter panel/statusbar */
+            --surface-1: #242427; /* Brighter sidebar */
+            --surface-2: #2d2d30; /* Brighter Editor/Main */
+            --surface-3: #3e3e42; /* Hover states */
+            --surface-4: #505055;
+
+            /* Border hierarchy */
+            --border-subtle: rgba(255,255,255,0.1);
+            --border-default: rgba(255,255,255,0.2);
+            --border-strong: rgba(255,255,255,0.3);
+
+            /* Text hierarchy */
+            --text-primary: #ffffff; /* Pure white */
+            --text-secondary: #e4e4e7; /* Very light gray */
+            --text-muted: #a1a1aa; /* Light gray */
+
+            /* Accent (Premium Gold/Amber instead of Blue/Purple) */
+            --accent: #f59e0b;
+            --accent-hover: #fbbf24;
+            --accent-muted: rgba(255, 255, 255, 0.12); /* Neutral gray highlight for the box, instead of colored */
+            --accent-glow: rgba(245, 158, 11, 0.4);
+
+            /* Semantic */
+            --success: #34d399;
+            --warning: #fbbf24;
+            --danger: #f87171;
+
+            /* File type colors */
+            --ft-md: #58a6ff;
+            --ft-html: #f97316;
+            --ft-js: #fbbf24;
+            --ft-json: #34d399;
+            --ft-css: #38bdf8;
+            --ft-img: #c084fc;
+            --ft-other: #5a6480;
+
+            /* Radius */
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 10px;
+
+            /* Transitions */
+            --transition-fast: 120ms ease;
+            --transition-normal: 200ms ease;
+
+            /* Keep VS Code compat vars for viewer.css */
+            --vscode-editor-background: #2d2d30;
+            --vscode-editor-foreground: #ffffff;
+            --vscode-sideBar-background: #242427;
+            --vscode-sideBar-border: rgba(255,255,255,0.1);
+            --vscode-list-hoverBackground: #3e3e42;
+            --vscode-list-activeSelectionBackground: rgba(255, 255, 255, 0.12);
+            --vscode-list-activeSelectionForeground: #ffffff;
+            --vscode-button-background: #f59e0b;
+            --vscode-button-foreground: #000000;
+            --vscode-button-hoverBackground: #fbbf24;
+            --vscode-input-background: #3e3e42;
+            --vscode-input-foreground: #ffffff;
+            --vscode-foreground: #ffffff;
+        }
+
+        /* ===== BASE ===== */
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--surface-2);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            font-size: 13px;
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.08);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+        ::-webkit-scrollbar-corner { background: transparent; }
+
+        /* Text selection */
+        ::selection {
+            background: var(--accent-muted);
+            color: var(--text-primary);
+        }
+
+        /* ===== TOPBAR ===== */
+        #topbar {
+            height: 44px;
+            background: var(--surface-1);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-sizing: border-box;
+            z-index: 10;
+            position: relative;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        #app-title {
+            font-weight: 700;
+            font-size: 14px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.3px;
+            flex-shrink: 0;
+        }
+
+        .topbar-sep {
+            width: 1px;
+            height: 18px;
+            background: var(--border-default);
+            flex-shrink: 0;
+        }
+
+        #current-file-name {
+            flex-grow: 1;
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+        #current-file-name .breadcrumb-seg {
+            color: var(--text-secondary);
+        }
+        #current-file-name .breadcrumb-seg:last-child {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        #current-file-name .breadcrumb-arrow {
+            color: var(--text-muted);
+            margin: 0 4px;
+            font-size: 11px;
+        }
+
+        /* Topbar buttons — ghost style */
+        .tb-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all var(--transition-fast);
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .tb-btn:hover {
+            background: var(--surface-3);
+            border-color: var(--border-default);
+            color: var(--text-primary);
+        }
+        .tb-btn:active {
+            transform: scale(0.97);
+        }
+        .tb-btn.active {
+            background: var(--accent-muted);
+            color: var(--accent);
+            border-color: rgba(124, 92, 252, 0.3);
+        }
+
+        .tb-group {
+            display: flex;
+            gap: 2px;
+            background: var(--surface-0);
+            border-radius: var(--radius-md);
+            padding: 2px;
+        }
+        .tb-group .tb-btn {
+            border-radius: var(--radius-sm);
+        }
+
+        /* Legacy .btn compat */
+        .btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all var(--transition-fast);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background: var(--surface-3);
+            border-color: var(--border-default);
+            color: var(--text-primary);
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn.active {
+            background: var(--accent-muted);
+            color: var(--accent);
+            border-color: rgba(124, 92, 252, 0.3);
+        }
+        .btn-success {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--success);
+            border-color: rgba(52, 211, 153, 0.3);
+        }
+        .btn-success:hover {
+            background: rgba(52, 211, 153, 0.25);
+        }
+
+        /* ===== MAIN CONTAINER ===== */
+        #main-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        /* ===== SIDEBAR ===== */
+        #sidebar {
+            width: 250px;
+            min-width: 180px;
+            background-color: var(--surface-1);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Sidebar Header */
+        #sidebar-header {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+        }
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .sidebar-actions {
+            display: flex;
+            gap: 2px;
+        }
+        .sidebar-actions button {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            transition: all var(--transition-fast);
+        }
+        .sidebar-actions button:hover {
+            background: var(--surface-3);
+            color: var(--text-primary);
+        }
+
+        /* Source Tabs */
+        #source-tabs {
+            display: flex;
+            padding: 6px 8px;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+        }
+        .source-tab {
+            flex: 1;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            text-align: center;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-muted);
+            background: transparent;
+            border: 1px solid transparent;
+            transition: all var(--transition-fast);
+            font-family: inherit;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .source-tab:hover {
+            background: var(--surface-3);
+            color: var(--text-secondary);
+        }
+        .source-tab.active {
+            background: var(--accent-muted);
+            color: var(--accent);
+            border-color: rgba(124, 92, 252, 0.2);
+        }
+        .source-tab-add {
+            flex: 0 0 28px;
+            padding: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-muted);
+            background: transparent;
+            border: 1px dashed var(--border-default);
+            transition: all var(--transition-fast);
+            font-family: inherit;
+        }
+        .source-tab-add:hover {
+            background: var(--surface-3);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Hide old source-switcher */
+        #source-switcher { display: none !important; }
+
+        /* Tree Container */
+        #tree-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 4px 0;
+        }
+
+        /* Tree Nodes */
+        .tree-node {
+            height: 26px;
+            cursor: pointer;
+            padding: 0 8px 0 0;
+            display: flex;
+            align-items: center;
+            user-select: none;
+            white-space: nowrap;
+            overflow: hidden;
+            margin: 0 4px;
+            border-radius: var(--radius-sm);
+            transition: background var(--transition-fast), color var(--transition-fast);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        .tree-node:hover {
+            background: var(--surface-3);
+            color: var(--text-primary);
+        }
+        .tree-node.selected {
+            background: var(--accent-muted);
+            color: var(--text-primary);
+        }
+
+        .tree-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        /* Tree Chevrons */
+        .tree-chevron {
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            transition: transform var(--transition-fast);
+            flex-shrink: 0;
+        }
+        .tree-node.expanded .tree-chevron {
+            transform: rotate(90deg);
+        }
+
+        /* File type icon badge */
+        .tree-icon {
+            width: 16px;
+            height: 16px;
+            margin: 0 4px 0 2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: normal;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .tree-icon.fi-folder { color: var(--accent); } /* Make folder icon accent colored like AG */
+        .tree-icon.fi-md { color: var(--ft-md); }
+        .tree-icon.fi-html { color: var(--ft-html); }
+        .tree-icon.fi-js { color: var(--ft-js); }
+        .tree-icon.fi-json { color: var(--ft-json); }
+        .tree-icon.fi-css { color: var(--ft-css); }
+        .tree-icon.fi-img { color: var(--ft-img); }
+        .tree-icon.fi-other { color: var(--text-muted); }
+
+        /* Indent guides */
+        .tree-children {
+            display: none;
+            margin-left: 12px;
+            padding-left: 10px;
+            border-left: 1px solid var(--border-subtle);
+        }
+        .tree-children.expanded {
+            display: block;
+        }
+
+        /* ===== RESIZERS ===== */
+        #resizer {
+            width: 4px;
+            cursor: col-resize;
+            background: var(--border-subtle);
+            z-index: 10;
+            transition: background var(--transition-normal);
+        }
+        #resizer:hover {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        #outline-resizer {
+            width: 4px;
+            cursor: col-resize;
+            background: var(--border-subtle);
+            z-index: 10;
+            display: none;
+            transition: background var(--transition-normal);
+        }
+        #outline-resizer.active { display: block; }
+        #outline-resizer:hover {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        /* ===== PANELS ===== */
+        #panels-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .panel-header {
+            height: 30px;
+            background-color: var(--surface-0);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            justify-content: space-between;
+            color: var(--text-secondary);
+        }
+        .panel-close {
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity var(--transition-fast);
+        }
+        .panel-close:hover { opacity: 1; color: var(--danger); }
+
+        .panel-content {
+            flex-grow: 1;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: row;
+        }
+
+        #panel2 {
+            border-left: 2px solid var(--border-default);
+            display: none;
+        }
+
+        /* Preview container — must be scroll container */
+        .markdown-body, .preview {
+            padding: 20px;
+            box-sizing: border-box;
+            max-width: 900px;
+            margin: 0 auto;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* ===== EDITOR ===== */
+        #editor {
+            flex: 1;
+            background-color: var(--surface-2);
+            color: var(--text-primary);
+            border: none;
+            border-right: 1px solid var(--border-subtle);
+            padding: 20px;
+            font-family: 'JetBrains Mono', Consolas, "Courier New", monospace;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            line-height: 1.6;
+            display: none;
+        }
+
+        .panel-content.edit-mode #pv {
+            max-width: none;
+            margin: 0;
+        }
+        .panel-content.edit-mode #editor {
+            display: block;
+            flex: 1;
+        }
+
+        /* ===== IMAGE VIEWPORT ===== */
+        .image-viewport {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: var(--surface-0);
+        }
+
+        /* ===== STATUSBAR ===== */
+        #statusbar {
+            height: 28px;
+            background-color: var(--surface-0);
+            border-top: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            z-index: 20;
+            flex-shrink: 0;
+            justify-content: space-between;
+        }
+        .statusbar-left, .statusbar-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .statusbar-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .statusbar-item .stat-icon {
+            font-size: 10px;
+            opacity: 0.6;
+        }
+        #stat-filetype {
+            background: var(--accent-muted);
+            color: var(--accent);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+    </style>
+</head>
+<body class="vscode-dark">
+    
+    <div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()"></div>
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">&#9881; Settings</div>
+        <div class="settings-body">
+            <div class="setting-row">
+                <span class="setting-label">Show YAML Frontmatter</span>
+                <button class="setting-toggle" data-key="showYaml" onclick="toggleSetting('showYaml')"><span class="toggle-knob"></span></button>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Auto-open Outline</span>
+                <button class="setting-toggle" data-key="autoOutline" onclick="toggleSetting('autoOutline')"><span class="toggle-knob"></span></button>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Reading Progress Bar</span>
+                <button class="setting-toggle active" data-key="progressBar" onclick="toggleSetting('progressBar')"><span class="toggle-knob"></span></button>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Auto-render Mermaid</span>
+                <button class="setting-toggle active" data-key="autoRenderMermaid" onclick="toggleSetting('autoRenderMermaid')"><span class="toggle-knob"></span></button>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Auto-render TSV</span>
+                <button class="setting-toggle active" data-key="autoRenderTsv" onclick="toggleSetting('autoRenderTsv')"><span class="toggle-knob"></span></button>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Code Line Numbers</span>
+                <button class="setting-toggle" data-key="codeLineNumbers" onclick="toggleSetting('codeLineNumbers')"><span class="toggle-knob"></span></button>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Word Wrap</span>
+                <button class="setting-toggle" data-key="wordWrap" onclick="toggleSetting('wordWrap')"><span class="toggle-knob"></span></button>
+            </div>
+            <div class="setting-divider"></div>
+            <div class="setting-row">
+                <span class="setting-label">Default Font Size</span>
+                <div class="setting-slider-group">
+                    <input type="range" id="setting-fontSize" min="10" max="24" value="14" class="setting-slider" oninput="setSetting('defaultFontSize', parseInt(this.value))">
+                    <span id="setting-fontSize-label" class="setting-slider-value">14px</span>
+                </div>
+            </div>
+            <div class="setting-row setting-row-col">
+                <span class="setting-label">Custom CSS <span style="font-size: 0.8em; color: #8b949e; font-weight: normal;">(AI Gen)</span></span>
+                <div class="css-presets">
+                    <button class="css-preset-btn" onclick="applyCssPreset('saved')" title="Your last typed CSS">Saved</button>
+                    <button class="css-preset-btn" onclick="applyCssPreset('billpay-dark')">BillPay</button>
+                    <button class="css-preset-btn" onclick="applyCssPreset('cyberpunk-dark')">Cyberpunk</button>
+                    <button class="css-preset-btn" onclick="applyCssPreset('dracula-dark')">Dracula</button>
+                    <button class="css-preset-btn" onclick="applyCssPreset('nord-dark')">Nord</button>
+                    <button class="css-preset-btn" onclick="applyCssPreset('tokyo-dark')">Tokyo</button>
+                    <button class="css-preset-btn" onclick="applyCssPreset('vercel-dark')">Vercel</button>
+                    <span id="custom-presets-container"></span>
+                </div>
+                <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                    <input type="text" id="new-preset-name" placeholder="Name your custom preset..." style="flex: 1; padding: 4px 8px; background: rgba(0,0,0,0.1); border: 1px solid rgba(127,127,127,0.3); color: var(--vscode-foreground); border-radius: 4px; font-family: var(--vscode-font-family); font-size: 12px; outline: none;">
+                    <button class="css-preset-btn" onclick="saveNewCustomPreset()" style="background: rgba(130, 58, 253, 0.15); border-color: #823AFD; color: #823AFD;">+ Save</button>
+                </div>
+                <textarea id="setting-customCss" class="setting-textarea" data-key="customCss" oninput="userBackupCss = this.value; drviewSettings.activeCssPreset = 'saved'; setSetting('customCss', this.value)" placeholder="Paste AI-generated CSS here..."></textarea>
+            </div>
+        </div>
+    </div>
+    
+    <div id="topbar">
+        <div class="reading-progress-bar" id="progressBar"></div>
+        <div id="app-title">LazyRead</div>
+        <div class="topbar-sep"></div>
+        <div id="current-file-name">No file selected</div>
+        <div id="topbar-actions" style="display: none;">
+            <span id="save-status" style="font-size: 11px; margin-right: 6px; color: var(--text-muted);"></span>
+            <div class="tb-group">
+                <button class="tb-btn" onclick="zoomPreview(-1)">A−</button>
+                <button class="tb-btn" onclick="zoomPreview(1)">A+</button>
+            </div>
+            <div class="tb-group">
+                <button class="tb-btn" id="outlineToggleBtn" onclick="toggleOutline()">Outline</button>
+                <button class="tb-btn active" id="focusBtn" onclick="toggleFocus()" title="Focus Mode">Focus</button>
+            </div>
+            <button class="tb-btn" id="settingsBtn" onclick="toggleSettingsPanel()">⚙ Settings</button>
+            <div class="topbar-sep"></div>
+            <select id="editor-type" onchange="switchEditorType()" style="font-size: 11px; background: var(--surface-3); color: var(--text-secondary); border: 1px solid var(--border-default); padding: 3px 6px; border-radius: var(--radius-sm); font-family: inherit; outline: none; cursor: pointer;">
+                <option value="textarea">Basic</option>
+                <option value="monaco">Monaco</option>
+            </select>
+            <button id="btn-edit" class="tb-btn" onclick="toggleEditMode()">Edit</button>
+            <button id="btn-save" class="tb-btn" style="display: none; background: rgba(52,211,153,0.15); color: var(--success); border-color: rgba(52,211,153,0.3);" onclick="saveFile()">Save</button>
+        </div>
+    </div>
+
+    <div id="main-container">
+        <div id="sidebar">
+            <div id="sidebar-header">
+                <span class="sidebar-title">Explorer</span>
+                <div class="sidebar-actions">
+                    <button title="Collapse All" onclick="collapseAll()">⊟</button>
+                    <button title="Add Folder" onclick="addLocalFolder()">+</button>
+                </div>
+            </div>
+            <div id="source-tabs">
+                <!-- Populated by JS -->
+            </div>
+            <div id="tree-container">
+                <!-- File tree will be rendered here -->
+            </div>
+            <div id="source-switcher">
+                <select id="source-select">
+                    <!-- Options populated by JS -->
+                </select>
+                <button id="btn-add-folder" class="btn" style="padding: 4px 8px; margin-left: 4px;" title="Add Local Folder" onclick="addLocalFolder()">+</button>
+            </div>
+        </div>
+        
+        <div id="resizer"></div>
+
+        <div id="panels-container">
+            <!-- Panel 1: Primary View -->
+            <div id="panel1" class="panel">
+                <div class="panel-content" id="panel1-content">
+                    <textarea id="editor" spellcheck="false" oninput="handleInput()"></textarea>
+                    <div id="monaco-container" style="display:none; flex:1; border-right: 1px solid var(--vscode-sideBar-border);"></div>
+                    <div id="pv" class="markdown-body preview">
+                        <h2>Welcome to LazyRead</h2>
+                        <p>Select a source and click a file on the left to open it.</p>
+                        <p><b>Tips:</b></p>
+                        <ul>
+                            <li>Ctrl+Click a link to open in Split View.</li>
+                            <li>Image files support Zoom/Pan automatically.</li>
+                            <li>Click Edit to switch to Text Editor mode.</li>
+                        </ul>
+                    </div>
+                    <div id="outline-resizer"></div>
+                    <div class="outline-panel" id="outlinePanel">
+                        <div class="outline-header">OUTLINE <button onclick="toggleOutline()">&#10005;</button></div>
+                        <div class="outline-content" id="outlineContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Split View -->
+            <div id="panel2" class="panel">
+                <div class="panel-header">
+                    <span id="panel2-title">Split View</span>
+                    <span class="panel-close" onclick="closeSplitView()">✕</span>
+                </div>
+                <div class="panel-content">
+                    <div id="pv2" class="markdown-body"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Status Bar -->
+    <div id="statusbar">
+        <div class="statusbar-left">
+            <span class="statusbar-item" id="sync-status" style="color: var(--text-muted); display: none;"><i class="ri-refresh-line"></i> <span>Ready</span></span>
+            <span class="statusbar-item" id="stat-filetype">—</span>
+        </div>
+        <div class="statusbar-right">
+            <span class="statusbar-item" id="stat-lines">Ln 0</span>
+            <span class="statusbar-item" id="stat-words">Words: 0</span>
+            <span class="statusbar-item" id="stat-chars">Chars: 0</span>
+            <span class="statusbar-item" id="stat-readtime">~0 min</span>
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="lib/marked.min.js"></script>
+    <script src="lib/panzoom.min.js"></script>
+    <!-- We load mermaid dynamically in viewer.js, but let's pre-load it to avoid path issues -->
+    <script src="mermaid.min.js"></script>
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    
+    <!-- App Logic -->
+    <script src="app.js"></script>
+    <!-- DrView Renderer (modified) -->
+    <script src="viewer.js"></script>
+
+</body>
+</html>
