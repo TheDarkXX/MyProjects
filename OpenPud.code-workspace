@@ -1,0 +1,29 @@
+{
+  "folders": [
+    {
+      "path": "OpenPud",
+      "name": "🚀 OpenPud"
+    },
+    {
+      "path": "ag_skills_backup",
+      "name": "🧠 Skills & Docs"
+    },
+    {
+      "path": "docs",
+      "name": "📚 Docs"
+    },
+    {
+      "path": ".agents",
+      "name": "🛡️ Agents Rules"
+    },
+    {
+      "path": "Quick Save",
+      "name": "💾 Quick Save"
+    },
+    {
+      "path": "Quick Upload",
+      "name": "📤 Quick Upload"
+    }
+  ],
+  "settings": {}
+}
