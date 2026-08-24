@@ -14,6 +14,7 @@ export interface AppSettings {
   onboardingCompleted: boolean;
   stripFillersEnabled: boolean;
   aiPolishEnabled: boolean;
+  customSystemPrompt: string;
   chatModel: string;
   translateHotkey: string;
   translateTargetLang: string;
@@ -68,6 +69,7 @@ const defaults: StoredSettings = {
   onboardingCompleted: false,
   stripFillersEnabled: true,
   aiPolishEnabled: false,
+  customSystemPrompt: '',
   chatModel: 'google/gemini-2.5-flash',
   autoTuneModel: 'google/gemini-2.5-pro',
   translateHotkey: 'Control+Alt+T',

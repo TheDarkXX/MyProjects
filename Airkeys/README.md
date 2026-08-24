@@ -1,4 +1,4 @@
-# OpenPud
+# AirKeys
 
 <img width="1047" height="648" alt="image" src="https://github.com/user-attachments/assets/5ba7cc44-ff90-4f9b-b04e-37198390a177" />
 
@@ -6,7 +6,7 @@
 
 สร้างด้วย Electron + TypeScript + Vite + Tailwind CSS v4
 
-**[ดาวน์โหลดตัวติดตั้งล่าสุด](https://github.com/gotzastory/OpenPud/releases/latest)** · [Releases ทั้งหมด](https://github.com/gotzastory/OpenPud/releases)
+**[ดาวน์โหลดตัวติดตั้งล่าสุด](https://github.com/gotzastory/AirKeys/releases/latest)** · [Releases ทั้งหมด](https://github.com/gotzastory/AirKeys/releases)
 
 ---
 
@@ -27,9 +27,9 @@
 
 ## ดาวน์โหลด / ติดตั้ง
 
-ดาวน์โหลดตัวติดตั้งจาก [GitHub Releases](https://github.com/gotzastory/OpenPud/releases/latest) — **ไม่ต้องมี Node.js**
+ดาวน์โหลดตัวติดตั้งจาก [GitHub Releases](https://github.com/gotzastory/AirKeys/releases/latest) — **ไม่ต้องมี Node.js**
 
-1. เปิดหน้า Releases แล้วดาวน์โหลด `OpenPud Setup x.x.x.exe`
+1. เปิดหน้า Releases แล้วดาวน์โหลด `AirKeys Setup x.x.x.exe`
 2. ดับเบิลคลิกเพื่อติดตั้ง (NSIS, ไม่ต้องสิทธิ์ admin)
 3. เปิดแอปครั้งแรก → onboarding wizard จะพาตั้งค่า API key / ไมค์ / ปุ่มลัด
 
@@ -38,7 +38,7 @@
 1. กด **More info**
 2. กด **Run anyway**
 
-แบบ portable (ไม่ติดตั้ง): หลัง build เอง ใช้ `release/win-unpacked/OpenPud.exe`
+แบบ portable (ไม่ติดตั้ง): หลัง build เอง ใช้ `release/win-unpacked/AirKeys.exe`
 
 ---
 
@@ -177,7 +177,7 @@ npm install
 npm run dist
 ```
 
-ได้ไฟล์ `release/OpenPud Setup 0.1.1.exe` และแบบ portable ที่ `release/win-unpacked/OpenPud.exe`
+ได้ไฟล์ `release/AirKeys Setup 0.1.1.exe` และแบบ portable ที่ `release/win-unpacked/AirKeys.exe`
 
 ### สถาปัตยกรรมโดยย่อ
 
@@ -196,10 +196,10 @@ Electron แยก 2 โปรเซส คุยกันผ่าน `contextB
 |---|---|
 | กดปุ่มลัดแล้วไม่มีอะไรเกิดขึ้น | ดูว่าแอปยังรันอยู่ที่ tray หรือไม่ / ปุ่มลัดชนกับโปรแกรมอื่นหรือยัง / ลองเปลี่ยนปุ่มลัดใน Settings |
 | ถอดเสียงไม่สำเร็จ | ตรวจ API key, เครือข่าย, และยอดเครดิตของ provider — แอปจะแจ้งด้วย Windows Notification |
-| ไม่ได้ยินเสียง / waveform ไม่ขยับ | อนุญาตไมค์ให้ OpenPud ใน Windows Settings → Privacy → Microphone แล้วเลือกไมค์ในแอป |
+| ไม่ได้ยินเสียง / waveform ไม่ขยับ | อนุญาตไมค์ให้ AirKeys ใน Windows Settings → Privacy → Microphone แล้วเลือกไมค์ในแอป |
 | ข้อความไม่วางลงแอปเป้าหมาย | คลิกโฟกัสช่องพิมพ์ก่อนกดปุ่มลัด — แอปวางด้วย Ctrl+V ผ่านคลิปบอร์ด |
 | SmartScreen บล็อกตัวติดตั้ง | More info → Run anyway (ดูส่วนติดตั้งด้านบน) |
-| `npm run dist` ขึ้น EPERM | ปิด `npm run dev` / ปิด OpenPud ที่เปิดอยู่ แล้วลบโฟลเดอร์ `release/` ก่อน build ใหม่ |
+| `npm run dist` ขึ้น EPERM | ปิด `npm run dev` / ปิด AirKeys ที่เปิดอยู่ แล้วลบโฟลเดอร์ `release/` ก่อน build ใหม่ |
 
 ---
 

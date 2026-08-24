@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**OpenPud** — a Typeless-style voice dictation app for Windows: hold a global hotkey, speak, and the transcribed text is pasted at the cursor in whatever app currently has focus. Electron + TypeScript + Vite.
+**AirKeys** — a Typeless-style voice dictation app for Windows: hold a global hotkey, speak, and the transcribed text is pasted at the cursor in whatever app currently has focus. Electron + TypeScript + Vite.
 
 ## Commands
 

@@ -11,6 +11,7 @@ export interface AppSettings {
   onboardingCompleted: boolean;
   stripFillersEnabled: boolean;
   aiPolishEnabled: boolean;
+  customSystemPrompt: string;
   chatModel: string;
   translateHotkey: string;
   translateTargetLang: string;

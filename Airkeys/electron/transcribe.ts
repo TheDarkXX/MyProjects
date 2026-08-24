@@ -20,16 +20,37 @@ const UNEXPECTED_SCRIPT =
 const VIETNAMESE_LATIN =
   /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ]/u;
 
-// Whisper tends to insert a space between every Thai word/syllable, unlike
-// normal Thai orthography which runs words together with no spaces. Collapse
-// spaces that sit between two Thai characters, but keep spaces around
-// non-Thai segments (English words, numbers) since Thai writing does put a
-// space around embedded foreign text.
-function normalizeThaiSpacing(text: string): string {
-  return text
-    .replace(/([฀-๿])\s+(?=[฀-๿])/gu, '$1')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
+const THAI_BREAK_WORDS = new Set([
+  'แต่', 'แต่ว่า', 'และ', 'หรือ', 'หรือว่า', 'ซึ่ง', 'เพราะ', 'เพราะว่า', 
+  'ถ้า', 'ถ้าเกิด', 'ถ้าหาก', 'จึง', 'เพื่อ', 'คือ', 'ดังนั้น'
+]);
+
+function localSmartFormat(text: string): string {
+  let formatted = text;
+
+  // 0. Use Regex to cleanly break long Thai phrases at conjunctions
+  // This avoids Electron's missing Thai ICU dictionary issue with Intl.Segmenter.
+  formatted = formatted.replace(/(?<!ตั้ง)(แต่ว่า|แต่|และ|หรือว่า|หรือ|เพราะว่า|เพราะ|ถ้าเกิด|ถ้าหาก|ถ้า|จึง|เพื่อ|คือ|ดังนั้น)/gu, ' $1');
+
+  // 0.5 Add space + question mark after question words (if they are at phrase boundaries)
+  formatted = formatted.replace(/(อย่างไร|ยังไง|เท่าไร|เท่าไหร่|เมื่อใด|เมื่อไหร่|อะไร|ทำไม|ไหม|มั้ย|หรอ|เหรอ|เปล่า|ป่าว|ไหน)(?=\s|$)/gu, '$1?');
+
+  // 1. Force space between Thai and English characters
+  formatted = formatted.replace(/([฀-๿])([a-zA-Z0-9])/gu, '$1 $2');
+  formatted = formatted.replace(/([a-zA-Z0-9])([฀-๿])/gu, '$1 $2');
+
+  // 2. Force space after punctuation if it is missing (except when followed by space or punctuation)
+  formatted = formatted.replace(/([.,!?:;])([^\s.,!?:;])/gu, '$1 $2');
+
+  // Normalize spaces
+  formatted = formatted.replace(/[ \t]{2,}/g, ' ').trim();
+
+  // 3. Add full stop at the end if the text ends with an English word or number
+  if (/[a-zA-Z0-9]$/u.test(formatted)) {
+    formatted += '.';
+  }
+
+  return formatted;
 }
 
 function looksWrongLanguage(text: string): boolean {
@@ -95,7 +116,7 @@ async function requestTranscription(
         settings,
         buildGeminiPrompt(promptBias, language),
       );
-      return normalizeThaiSpacing(text);
+      return localSmartFormat(text);
     } catch (err) {
       throw new TranscriptionError(err instanceof Error ? err.message : String(err));
     }
@@ -108,6 +129,7 @@ async function requestTranscription(
   form.append('model', settings.model || 'openai/whisper-large-v3-turbo');
   form.append('language', language);
   form.append('prompt', buildPrompt(promptBias));
+  form.append('response_format', 'verbose_json');
 
   const res = await fetch(`${settings.apiBaseUrl.replace(/\/$/, '')}/audio/transcriptions`, {
     method: 'POST',
@@ -120,8 +142,15 @@ async function requestTranscription(
     throw new TranscriptionError(`Transcription API error (${res.status}): ${body}`);
   }
 
-  const data = (await res.json()) as { text?: string };
-  return normalizeThaiSpacing(data.text?.trim() ?? '');
+  const data = (await res.json()) as { text?: string; segments?: { text: string }[] };
+  let rawText = '';
+  if (data.segments && data.segments.length > 0) {
+    rawText = data.segments.map(s => s.text.trim()).filter(Boolean).join(' ');
+  } else {
+    rawText = data.text?.trim() ?? '';
+  }
+
+  return localSmartFormat(rawText);
 }
 
 export async function transcribeAudio(

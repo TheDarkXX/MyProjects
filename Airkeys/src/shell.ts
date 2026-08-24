@@ -35,7 +35,7 @@ export function mountShell(root: HTMLElement) {
           </div>
           <div class="flex flex-col">
             <span class="text-[15px] font-extrabold tracking-tight text-white leading-none">AirKeys</span>
-            <span class="text-[11px] font-mono text-neutral-500 mt-1">v1.1.2</span>
+            <span class="text-[11px] font-mono text-neutral-500 mt-1">v1.2.2</span>
           </div>
         </div>
 

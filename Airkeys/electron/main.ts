@@ -43,6 +43,7 @@ const WIDGET_HEIGHT = 90;
 let widget: BrowserWindow | null = null;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let isQuitting = false;
 
 function widgetBounds() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -123,11 +124,13 @@ function createMainWindow(route: string) {
 
   // When closing (clicking X), hide the window instead of destroying it if closeToTray is true
   mainWindow.on('close', (e) => {
+    if (isQuitting) return; // app is shutting down, let the window close
     if (getSettings().closeToTray) {
       e.preventDefault();
       mainWindow?.hide();
     } else {
       // If they don't want to close to tray, quit the entire app when the main window is closed
+      isQuitting = true;
       app.quit();
     }
   });
@@ -139,7 +142,7 @@ function createMainWindow(route: string) {
 
 function createTray() {
   const icon = nativeImage.createFromDataURL(
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAO0lEQVR4nGOQkJBhoATjkviPAxNlAC7NWA0hVTOGIeRoRjGEXM1wQ0YNoKIBFEcjVRISVZIyVTITSRgAW5XnZbzkvwwAAAAASUVORK5CYII=',
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAI4SURBVFhH7VevT8NAFJ5EInElLSRIJJI/AbXghth1BIXEDbMg+RMmJpBIMj2Bn5lcMrMR2C5ZljRZlhz3eo+t7/raXvfD8SWfaPvuvrv3666Vf2wLeV6/lEHjek39jJ8Og6FXO5J+/U4G4ZtmpKk4znzxPvXr99KrHePQ3RFPGIgxJ5jFWRBK6YePsHCcpjxgF3qST07AnWIgvcYpTukOGDQLxJCftBxjb+g8wamLATvfl/gfYRHfXniBEtkwybar23nGmypKTkgcbvC+qBfxilJpxLsvme1bMPryHk5QksKUGzuI5aKnCFadFmuXpnhBSQrpiw9+AMe2WqLwBn21YG1tigFKbhDXfE6HsznvTFCUYtnk7W2mKuLnrH7FGfJsqWiEimqilr3EYnptxp7lDUobwAvLIJvVrlqhnhp11Tz57BoGXW0obVAmAZPuN4mX9IhrGMQzShtMfXHLG9rkxUhFOIRh5odPKG1gznXemDDL3c0+vgMUhwE2jNIG0Bw4Q5sk+8lOaVkWhQGSHqU3KD4DqPtzkRsGMUZJCkgMfgCSuLkI2WHQJ2MbJSkwDJnNyG69RcgMQ979EU4rdpAVY77vWyGCHmHZwJ0RpXgYLzAnInH/REVV6zuStuiUXeR0KcG2TEJB3M/sbE1SptRTqdLLAzYm58OpmFbncwE0J3Oh5CZ0ZlRq5zawMuBnhJs8l5BwTjF3AZQO1C+boAmix/SCS1zDyyJO0vjyCo0LGT8fUPQwqFR+AamN007Bw7giAAAAAElFTkSuQmCC',
   );
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
   tray.setToolTip('AirKeys');
@@ -148,7 +151,11 @@ function createTray() {
       { label: 'เปิดแอป', click: () => createMainWindow('/') },
       { label: 'ตั้งค่า', click: () => createMainWindow('/settings') },
       { type: 'separator' },
-      { label: 'ออกจากโปรแกรม', click: () => app.quit() },
+      { label: 'ออกจากโปรแกรม', click: () => {
+          isQuitting = true;
+          app.quit();
+        } 
+      },
     ]),
   );
   tray.on('click', () => createMainWindow('/'));
@@ -281,4 +288,5 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  if (tray) tray.destroy();
 });

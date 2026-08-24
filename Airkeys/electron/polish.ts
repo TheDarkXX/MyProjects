@@ -10,7 +10,10 @@ const CATEGORY_HINT: Record<AppCategory, string> = {
   general: 'ข้อความทั่วไป',
 };
 
-function polishSystemPrompt(category: AppCategory): string {
+function polishSystemPrompt(category: AppCategory, customPrompt?: string): string {
+  if (customPrompt && customPrompt.trim() !== '') {
+    return customPrompt.trim();
+  }
   return [
     'คุณคือตัวช่วยเก็บงานข้อความที่ถอดเสียงมาจากการพูด',
     `บริบทที่จะใช้ข้อความนี้: ${CATEGORY_HINT[category]}`,
@@ -27,7 +30,7 @@ export async function polishText(
 ): Promise<string> {
   if (!text.trim()) return text;
   try {
-    const result = await chatComplete(settings, polishSystemPrompt(category), text);
+    const result = await chatComplete(settings, polishSystemPrompt(category, settings.customSystemPrompt), text);
     return result || text;
   } catch (err) {
     // Never let a broken polish step block dictation — fall back to the raw transcript.

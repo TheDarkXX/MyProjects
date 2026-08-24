@@ -38,8 +38,6 @@ export function stripFillers(text: string): string {
     .replace(/([,，、])\s*\1+/g, '$1')
     .replace(/^[,\s]+|[,\s]+$/g, '')
     .replace(/\s{2,}/g, ' ')
-    // Re-collapse Thai↔Thai spaces opened by a removal between Thai segments.
-    .replace(/([฀-๿])\s+(?=[฀-๿])/gu, '$1')
     .trim();
 
   return out;

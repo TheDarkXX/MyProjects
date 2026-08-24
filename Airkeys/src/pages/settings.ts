@@ -195,6 +195,13 @@ export async function mountSettings(root: HTMLElement) {
             <input id="aiPolishEnabled" type="checkbox" class="w-auto h-4 w-4 rounded border-white/10 bg-white/5 text-ruby-red focus:ring-ruby-red/50" ${current.aiPolishEnabled ? "checked" : ""} />
             ปรับข้อความด้วย AI หลัง Dictate
           </label>
+          <div id="custom-prompt-container" class="mt-4 ${current.aiPolishEnabled ? "" : "hidden"}">
+            <label class="${FIELD_LABEL} flex justify-between">
+              <span>Custom System Prompt (AI Polish)</span>
+              <span class="text-neutral-500 font-normal normal-case">Optional</span>
+            </label>
+            <textarea id="customSystemPrompt" placeholder="ใส่คำสั่งให้ AI จัดฟอร์แมตตามใจชอบ... ถ้าปล่อยว่างจะใช้ค่า Default (แค่แก้ไวยากรณ์)" class="${FIELD_INPUT} min-h-[100px] resize-y text-xs font-mono" style="line-height: 1.5;">${current.customSystemPrompt || ""}</textarea>
+          </div>
         </div>
 
       </div>
@@ -280,6 +287,16 @@ export async function mountSettings(root: HTMLElement) {
   const saveBtn = document.getElementById("save-btn")!;
   const msg = document.getElementById("save-msg")!;
 
+  const aiPolishEnabledCheckbox = document.getElementById("aiPolishEnabled") as HTMLInputElement;
+  const customPromptContainer = document.getElementById("custom-prompt-container")!;
+  aiPolishEnabledCheckbox.addEventListener("change", () => {
+    if (aiPolishEnabledCheckbox.checked) {
+      customPromptContainer.classList.remove("hidden");
+    } else {
+      customPromptContainer.classList.add("hidden");
+    }
+  });
+
   providerPreset.addEventListener("change", () => {
     provider = providerPreset.value as ProviderKey;
     const apiKeyInput = document.getElementById("apiKey") as HTMLInputElement;
@@ -322,6 +339,9 @@ export async function mountSettings(root: HTMLElement) {
     const aiPolishEnabled = (
       document.getElementById("aiPolishEnabled") as HTMLInputElement
     ).checked;
+    const customSystemPrompt = (
+      document.getElementById("customSystemPrompt") as HTMLTextAreaElement
+    ).value;
     const chatModel = (
       document.getElementById("chatModel") as HTMLInputElement | HTMLSelectElement
     ).value.trim();
@@ -358,6 +378,7 @@ export async function mountSettings(root: HTMLElement) {
         translateTargetLang,
         stripFillersEnabled,
         aiPolishEnabled,
+        customSystemPrompt,
         chatModel,
         autoTuneModel,
         micDeviceId,
