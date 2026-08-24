@@ -54,6 +54,17 @@ export function markAsTuned(ids: string[]): void {
   historyStore.set('entries', entries);
 }
 
+export function deleteHistoryEntry(id: string): void {
+  const entries = historyStore.get('entries').filter(e => e.id !== id);
+  historyStore.set('entries', entries);
+}
+
+export function cleanupOldHistory(keepDays: number): void {
+  const cutoffTime = Date.now() - (keepDays * 24 * 60 * 60 * 1000);
+  const entries = historyStore.get('entries').filter(e => e.timestamp >= cutoffTime);
+  historyStore.set('entries', entries);
+}
+
 export function historyStats() {
   const entries = historyStore.get('entries');
   const totalWords = entries.reduce((sum, e) => sum + e.wordCount, 0);

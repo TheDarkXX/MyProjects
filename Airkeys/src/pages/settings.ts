@@ -254,6 +254,10 @@ export async function mountSettings(root: HTMLElement) {
               รอบทำ Auto-Tune
               <input id="autoTuneThreshold" type="number" min="1" max="100" value="${current.autoTuneThreshold}" class="${FIELD_INPUT}" />
             </label>
+            <label class="${FIELD_LABEL}">
+              ลบประวัติอัตโนมัติ (วัน)
+              <input id="historyKeepDays" type="number" min="1" max="365" value="${current.historyKeepDays ?? 5}" class="${FIELD_INPUT}" title="ลบประวัติที่เก่ากว่าจำนวนวันที่กำหนด" />
+            </label>
           </div>
           <div class="flex flex-col gap-2 mt-2">
             <label class="flex flex-row items-center gap-3 text-[13px] text-neutral-300">
@@ -368,6 +372,10 @@ export async function mountSettings(root: HTMLElement) {
     const closeToTray = (
       document.getElementById("closeToTray") as HTMLInputElement
     ).checked;
+    const historyKeepDays =
+      Number(
+        (document.getElementById("historyKeepDays") as HTMLInputElement).value,
+      ) || 5;
 
     try {
       await window.typeless.setSettings({
@@ -387,6 +395,7 @@ export async function mountSettings(root: HTMLElement) {
         launchAtStartup,
         closeToTray,
         autoTuneThreshold,
+        historyKeepDays,
       });
       msg.className = "mt-1 h-4 text-xs text-emerald-600";
       msg.textContent = "บันทึกแล้ว";

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { getSettings, setSettings, type AppSettings } from './config';
 import { transcribeAudio, TranscriptionError } from './transcribe';
 import { pasteAtCursor } from './pasteText';
-import { addHistoryEntry, listHistory, clearHistory, historyStats } from './history';
+import { addHistoryEntry, listHistory, clearHistory, historyStats, deleteHistoryEntry, cleanupOldHistory } from './history';
 import {
   listDictionaryWords,
   setDictionaryWords,
@@ -186,6 +186,10 @@ function registerHotkeys(settings: AppSettings) {
 app.whenReady().then(() => {
   createWidget();
   createTray();
+
+  const settings = getSettings();
+  cleanupOldHistory(settings.historyKeepDays ?? 5);
+
   registerHotkeys(getSettings());
   applyLaunchAtStartup(getSettings().launchAtStartup);
 
@@ -260,7 +264,13 @@ app.whenReady().then(() => {
   ipcMain.handle('history:stats', () => historyStats());
   ipcMain.handle('history:clear', () => {
     clearHistory();
-    return listHistory();
+    mainWindow?.webContents.send('history:updated');
+    return [];
+  });
+  ipcMain.handle('history:delete', (_e, id: string) => {
+    deleteHistoryEntry(id);
+    mainWindow?.webContents.send('history:updated');
+    return true;
   });
 
   ipcMain.handle('dictionary:list', () => listDictionaryWords());

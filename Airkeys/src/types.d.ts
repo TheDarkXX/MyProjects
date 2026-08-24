@@ -18,6 +18,7 @@ export interface AppSettings {
   closeToTray: boolean;
   autoTuneThreshold: number;
   autoTuneModel: string;
+  historyKeepDays: number;
 }
 
 export type RecordingMode = "dictate" | "translate";
@@ -80,9 +81,10 @@ interface TypelessApi {
   onNavigate(callback: (route: string) => void): () => void;
   onHistoryUpdated(callback: () => void): () => void;
   listHistory(): Promise<HistoryEntry[]>;
-  historyStats(): Promise<HistoryStats>;
-  clearHistory(): Promise<HistoryEntry[]>;
-  listDictionary(): Promise<string[]>;
+  historyStats: () => Promise<{ sessions: number; totalWords: number; totalMinutes: number; wpm: number }>;
+  clearHistory: () => Promise<HistoryEntry[]>;
+  deleteHistory: (id: string) => Promise<boolean>;
+  listDictionary: () => Promise<string[]>;
   setDictionary(words: string[]): Promise<string[]>;
   listCorrections(): Promise<CorrectionRule[]>;
   setCorrections(rules: CorrectionRule[]): Promise<CorrectionRule[]>;

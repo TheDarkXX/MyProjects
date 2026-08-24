@@ -49,6 +49,7 @@ const api = {
   listHistory: (): Promise<HistoryEntry[]> => ipcRenderer.invoke('history:list'),
   historyStats: (): Promise<HistoryStats> => ipcRenderer.invoke('history:stats'),
   clearHistory: (): Promise<HistoryEntry[]> => ipcRenderer.invoke('history:clear'),
+  deleteHistory: (id: string): Promise<boolean> => ipcRenderer.invoke('history:delete', id),
   listDictionary: (): Promise<string[]> => ipcRenderer.invoke('dictionary:list'),
   setDictionary: (words: string[]): Promise<string[]> => ipcRenderer.invoke('dictionary:set', words),
   listCorrections: (): Promise<CorrectionRule[]> => ipcRenderer.invoke('corrections:list'),

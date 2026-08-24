@@ -45,6 +45,7 @@ export async function mountHistory(root: HTMLElement) {
                     <span class="flex items-center gap-1.5 [&_svg]:h-3.5 [&_svg]:w-3.5">${icons.zap} ${(e.durationMs / 1000).toFixed(1)}s</span>
                     ${e.autoTuned ? '<span class="inline-flex items-center gap-1.5 rounded-full bg-ruby-red/15 border border-ruby-red/30 px-2.5 py-0.5 text-[10px] font-bold text-ruby-red tracking-wide uppercase">Tuned</span>' : ''}
                     <button class="copy-btn ${BTN} ml-auto px-3 py-1.5 opacity-0 transition-opacity group-hover:opacity-100" data-id="${e.id}">${icons.copy}<span>คัดลอก</span></button>
+                    <button class="delete-btn ${BTN} ml-2 px-2 py-1.5 opacity-0 transition-opacity group-hover:opacity-100 hover:text-ruby-red hover:border-ruby-red/50 hover:bg-ruby-red/10" data-id="${e.id}" title="ลบรายการนี้">${icons.trash}</button>
                   </div>
                   <div class="text-[13.5px] leading-relaxed text-neutral-200 font-medium">${escapeHtml(e.text) || "<i>(ว่าง)</i>"}</div>
                 </div>
@@ -87,6 +88,18 @@ export async function mountHistory(root: HTMLElement) {
         setTimeout(() => {
           btn.innerHTML = `${icons.copy}<span>คัดลอก</span>`;
         }, 1200);
+      });
+    });
+
+    root.querySelectorAll<HTMLButtonElement>(".delete-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
+        const id = btn.dataset.id;
+        if (id) {
+          await window.typeless.deleteHistory(id);
+          entries = await window.typeless.listHistory();
+          render();
+        }
       });
     });
   }

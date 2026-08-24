@@ -21,6 +21,7 @@ export interface AppSettings {
   closeToTray: boolean;
   autoTuneThreshold: number;
   autoTuneModel: string;
+  historyKeepDays: number;
 }
 
 // On disk, apiKey is kept as a base64-encoded blob encrypted via Electron's
@@ -76,6 +77,7 @@ const defaults: StoredSettings = {
   translateTargetLang: 'en',
   closeToTray: true,
   autoTuneThreshold: 10,
+  historyKeepDays: 5,
 };
 
 const rawStore = new Store<StoredSettings>({ defaults });
