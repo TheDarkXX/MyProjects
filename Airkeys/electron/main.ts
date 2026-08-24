@@ -163,7 +163,15 @@ function createTray() {
 
 function applyLaunchAtStartup(enabled: boolean) {
   if (!app.isPackaged) return; // login item registration is unreliable for `electron .` dev launches
-  app.setLoginItemSettings({ openAtLogin: enabled });
+  
+  // For electron-builder portable targets, the real exe is not app.getPath('exe') (which is in Temp)
+  const exePath = process.env.PORTABLE_EXECUTABLE_FILE || app.getPath('exe');
+  
+  app.setLoginItemSettings({ 
+    openAtLogin: enabled,
+    path: exePath,
+    args: ['--hidden']
+  });
 }
 
 function registerHotkeys(settings: AppSettings) {
@@ -193,11 +201,13 @@ app.whenReady().then(() => {
   registerHotkeys(getSettings());
   applyLaunchAtStartup(getSettings().launchAtStartup);
 
-  // Always open main window so it shows on the taskbar by default
-  const initialRoute = getSettings().onboardingCompleted ? '/' : '/onboarding';
-  console.log(`[DEBUG] Creating main window with route: ${initialRoute}`);
-  createMainWindow(initialRoute);
-  console.log('[DEBUG] Main window created.');
+  // Open main window unless started at login (which passes --hidden)
+  if (!process.argv.includes('--hidden')) {
+    const initialRoute = getSettings().onboardingCompleted ? '/' : '/onboarding';
+    console.log(`[DEBUG] Creating main window with route: ${initialRoute}`);
+    createMainWindow(initialRoute);
+    console.log('[DEBUG] Main window created.');
+  }
 
   ipcMain.handle('settings:get', () => getSettings());
 
