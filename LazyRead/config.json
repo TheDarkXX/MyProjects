@@ -5,7 +5,10 @@
       "name": "คอมพิวเตอร์",
       "type": "local",
       "roots": [
-        { "name": "Products", "path": "C:/My Claw/DoctorBank-Brand/Products" }
+        { "name": "Products", "path": "C:/My Claw/DoctorBank-Brand/Products" },
+        { "name": "docs", "path": "C:/My Claw/DoctorBank-Brand/docs" },
+        { "name": "Sleep-Journal", "path": "C:/My Claw/DoctorBank-Brand/Sleep-Journal" },
+        { "name": "Content", "path": "C:/My Claw/DoctorBank-Brand/Content" }
       ]
     },
     {
