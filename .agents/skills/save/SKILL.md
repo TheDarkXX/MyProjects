@@ -1,25 +1,25 @@
-﻿---
+---
 name: save
 description: "Migrated save skill"
 ---
-# ๐’พ Skill: `/save`
+# 💾 Skill: `/save`
 
 ## Objective
 The ultimate end-of-task pipeline. This unifies Quick Save context gathering, file status handling, cache-busting, and VPS deployment into a single seamless, friction-less flow.
 
-## โ” PRE-SAVE CHECKLIST โ€” MANDATORY (Do NOT skip ANY step)
+## ⛔ PRE-SAVE CHECKLIST — MANDATORY (Do NOT skip ANY step)
 
 Before writing a single word to any Quick Save file, you MUST execute these steps IN ORDER:
 
 1. **Read ALL Artifacts:** Call `view_file` on EVERY artifact file in `brain/<conversation-id>/`. Do NOT rely on memory. Artifacts include `implementation_plan.md`, `task.md`, `dev_proposal_review.md`, and any other `.md` files in that folder.
 2. **Read conversation log** at `C:\Users\Admin\.gemini\antigravity-ide\brain\{conversation-id}\.system_generated\logs\transcript.jsonl` (or use the conversation transcript history) to find any decisions, alternatives, or context NOT captured in artifacts.
-3. **List ALL plans discussed** in this session. Every plan that was talked about โ€” even if it ended up in a separate file โ€” must be cross-referenced in `related_plans_same_conversation`.
+3. **List ALL plans discussed** in this session. Every plan that was talked about — even if it ended up in a separate file — must be cross-referenced in `related_plans_same_conversation`.
 4. **Apply Compiled Truth + Timeline Pattern:** Restructure the document into two halves. Top half: "Compiled Truth" (Current finalized logic, rules, architecture). Bottom half: "Timeline" (Append-only changelog, debugging history, iterations).
 5. **Generate GBRAIN Backlinks (Bidirectional):** Search for and identify 3-5 related files from the archive (`Quick Save/Complete/` or `docs/`). Add a link at the bottom of YOUR document, AND you MUST go edit those target files to add a link back to your new document (Bidirectional). Use the format: `- **YYYY-MM-DD HH:MM** | [page title](path) -- context`.
 6. **Update MOC Hubs:** If the component matches an existing Map of Content (e.g., `MOC_hydra.md`, `MOC_ui.md`, `MOC_infra.md`), append a link to your new file in the Hub file.
-7. **Verify Full-Detail Rule:** Ask yourself: "If AG returns in 3 months and reads this file, can it reconstruct ALL decisions, alternatives considered, code snippets, and reasoning WITHOUT going back to the conversation?" If NO โ€” expand the file until YES.
+7. **Verify Full-Detail Rule:** Ask yourself: "If AG returns in 3 months and reads this file, can it reconstruct ALL decisions, alternatives considered, code snippets, and reasoning WITHOUT going back to the conversation?" If NO — expand the file until YES.
 
-> โ” **Iron Rule:** A summary paragraph is NEVER acceptable for a Deep Study, Architecture, or Implementation session. Paste the content. Do NOT abbreviate.
+> ⛔ **Iron Rule:** A summary paragraph is NEVER acceptable for a Deep Study, Architecture, or Implementation session. Paste the content. Do NOT abbreviate.
 
 ---
 
@@ -29,10 +29,10 @@ Before writing a single word to any Quick Save file, you MUST execute these step
 1. **Intelligent Session Lock (Iron Rule):**
    - Determine the project's subfolder under `Quick Save/Complete/` (e.g., `The-Viral/` for The Viral project, `Core-VPS/` for core MyProjects tasks, or `Shared/` for shared tasks). **CRITICAL:** If the project uses a `0_Latest_Save` directory (e.g., `DoctorBank-Brand/Quick Save/Complete/0_Latest_Save`), you MUST place new files in that folder.
    - Scan that subfolder (and `0_Latest_Save` if it exists) and `Quick Save/Active/` for files matching the current `conversation` ID.
-   - **IF FOUND:** Do NOT bump version. Do NOT create a new file. You MUST **UPDATE the existing file** by appending a `## Changelog` section at the bottom (e.g. `### Update X โ€” HH:MM` -> `- โ… Completed task Y`).
+   - **IF FOUND:** Do NOT bump version. Do NOT create a new file. You MUST **UPDATE the existing file** by appending a `## Changelog` section at the bottom (e.g. `### Update X — HH:MM` -> `- ✅ Completed task Y`).
    - **IF NOT FOUND:** Proceed to create a new file (Step 4).
 2. **Locate Active File:** Check if there is an active file in `Quick Save/Active/`.
-3. **VS Code Buffer Check:** If an active file exists, PAUSE and ask the user perfectly: "เนเธเธฃเธ”เธเธดเธ”เนเธ—เนเธเนเธเธฅเนเนเธ VS Code เธเนเธญเธเธขเนเธฒเธขเน€เธเนเธฒ Complete เธเธฃเธฑเธ" Wait for confirmation.
+3. **VS Code Buffer Check:** If an active file exists, PAUSE and ask the user perfectly: "โปรดปิดแท็บไฟล์ใน VS Code ก่อนย้ายเข้า Complete ครับ" Wait for confirmation.
 4. **Extract Deep Context (RAW DUMP REQUIRED):** 
    - You MUST structure your save file EXACTLY like this template:
      ```markdown
@@ -41,19 +41,25 @@ Before writing a single word to any Quick Save file, you MUST execute these step
      ---
      # [Title]
 
-     ## ๐“ Context (Compiled Truth)
-     (Explain WHY this was done and WHAT was decided)
+     ## ?? Context & Implementation (Compiled Truth)
+     (Explain WHY this was done. ? DO NOT SUMMARIZE CODE. You MUST copy the EXACT code snippets, commands, and configurations that were discussed or implemented during the chat into this section.)
 
-     ## ๐“ฆ RAW ARTIFACT BACKUP (Iron Rule)
+     ## ?? Files Changed This Session
+     (Output of `git diff --name-only`. For EACH file list: path, what changed, why.)
+     | File | What Changed | Why |
+     |------|-------------|-----|
+     | `path/to/file.js` | Added X function | To support feature Y |
+
+     ## ?? RAW ARTIFACT BACKUP (Iron Rule)
      (PASTE 100% OF THE ARTIFACT TEXT HERE. DO NOT SUMMARIZE. If > 1000 lines, use <details> tags. Do NOT abbreviate.)
 
-     ## ๐”ฌ Timeline & Debugging Log
-     (Changelog and iterations)
+     ## ?? Timeline & Debugging Log
+     (Changelog, iterations, and exact error messages + solutions discussed)
 
-     ## ๐”— GBRAIN Backlinks
+     ## ?? GBRAIN Backlinks
      (Bidirectional links)
      ```
-   - If you summarize the artifact instead of pasting it, you have failed the Iron Rule.
+   - If you summarize the artifact, or if you omit the actual implementation code/scripts discussed in chat, you have failed the Iron Rule.
 5. **Version Bump (Smart Versioning v2), Naming, & Aliases:**
    - **Format:** `V{x.y.z}_[type]_component_clear-description.md` (or `EVO-{id}_[study]...md` if unapproved)
    - **Patch (+0.0.1):** Use for `[study]`, `[design]`, `[hotfix]`, `[docs]`, `[spike]`.
@@ -62,9 +68,9 @@ Before writing a single word to any Quick Save file, you MUST execute these step
    - The `component` keyword (e.g., `hydra`, `watchdog`, `ui`) is MANDATORY for AI grepping.
    - **Aliases:** You MUST include `aliases: [keyword1, keyword2]` in the YAML frontmatter to make it easily searchable.
    - **Rolling Archive Check:** If the version bumps to a new Major Version (e.g., hitting `V13.0.0`), you MUST create a folder for the previous era (e.g. `V12/`) inside your project's subfolder (e.g., `Quick Save/Complete/The-Viral/V12/`) and `git mv` all old version files into it to keep the root directory clean.
-   - **Auto-Cleanup (5-7 Rule - Iron Rule):** BEFORE creating your new save file, you MUST count the files floating at the root of the project subfolder. If there are โฅ 7 files of the current major version, you MUST `git mv` the oldest ones into their major version subfolder (e.g., `V13/`) so that ONLY the latest 5 files remain floating. Do this FIRST before you write the new file.
+   - **Auto-Cleanup (5-7 Rule - Iron Rule):** BEFORE creating your new save file, you MUST count the files floating at the root of the project subfolder. If there are ≥ 7 files of the current major version, you MUST `git mv` the oldest ones into their major version subfolder (e.g., `V13/`) so that ONLY the latest 5 files remain floating. Do this FIRST before you write the new file.
 6. **GBRAIN Backlink Generation (Iron Rule - Bidirectional):**
-   - At the absolute bottom of the document, append a `## ๐”— GBRAIN Backlinks` section.
+   - At the absolute bottom of the document, append a `## 🔗 GBRAIN Backlinks` section.
    - Actively search (`grep_search` or `list_dir`) for 3-5 historically related files in `Quick Save/Complete/<Project-Subfolder>/` or `docs/` that share architectural similarities or context.
    - Use categorized lists: `### depends_on`, `### enables`, `### related_to`.
    - **Format:** `- **YYYY-MM-DD HH:MM** | [page title](file:///C:/absolute/path/to/file.md) -- context` (You MUST use the `file:///` Absolute URI format so it is clickable in the IDE).
