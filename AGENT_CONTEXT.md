@@ -21,6 +21,7 @@
 | **App Builder AI** | `App Builder AI/` | Content/Media (Google Flow Tools) | ✅ Active |
 | **Folder Manager** | `Folder Manager/` | Code/App (Standard) | ✅ Active |
 | **OpenPud** | `OpenPud/` | Code/App (Electron Desktop App) | ✅ Active |
+| **My Stock Portfolio** | `My Stock Portfolio/` | Code/App (Github Clone) | ✅ Active |
 
 ## 📜 Memory Inheritance
 

@@ -1,0 +1,159 @@
+import React, { useState, useMemo, useCallback } from 'react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from 'recharts';
+import { Portfolio } from '../../types';
+
+interface AllocationPieChartProps {
+  portfolio: Portfolio;
+  mode: 'value' | 'profit';
+  formatCurrency: (value: number) => string;
+}
+
+const professionalColors = ['#3B82F6', '#14B8A6', '#F97316', '#8B5CF6', '#EC4899', '#F43F5E', '#EAB308', '#22C55E', '#6366F1', '#D946EF'];
+
+const renderActiveShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  return (
+    <g>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 20} // Pop out effect
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        stroke="#1E293B"
+        strokeWidth={2}
+      />
+    </g>
+  );
+};
+
+const CustomTooltip = ({ active, payload, total, formatCurrency }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  
+  const data = payload[0];
+  const value = data.value;
+  const percentage = total > 0 ? ((value / total) * 100).toFixed(2) : 0;
+  
+  return (
+    <div 
+      style={{
+        backgroundColor: 'rgba(17, 24, 39, 0.95)',
+        border: '1px solid rgba(107, 114, 128, 0.5)',
+        borderRadius: '8px',
+        padding: '12px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+      }}
+    >
+      <p style={{ color: '#fff', fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
+        {data.name}
+      </p>
+      <p style={{ color: '#e5e7eb', fontSize: '12px', margin: 0 }}>
+        {formatCurrency(value)} ({percentage}%)
+      </p>
+    </div>
+  );
+};
+
+
+const AllocationPieChart: React.FC<AllocationPieChartProps> = ({ portfolio, mode, formatCurrency }) => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  const onPieEnter = useCallback((_: any, index: number) => {
+    setActiveIndex(index);
+  }, [setActiveIndex]);
+
+  const onPieLeave = useCallback(() => {
+    setActiveIndex(null);
+  }, [setActiveIndex]);
+
+  const chartData = useMemo(() => {
+    let items: { name: string; value: number }[];
+    if (mode === 'value') {
+      items = portfolio.data
+        .filter(d => d.currentValue > 0 && d.assetType !== 'Cash')
+        .map(item => ({ name: item.symbol, value: item.currentValue }));
+    } else { // 'profit'
+      items = portfolio.data
+        .filter(d => d.totalReturn > 0)
+        .map(item => ({ name: item.symbol, value: item.totalReturn }));
+    }
+    
+    return items
+      .sort((a, b) => b.value - a.value)
+      .map((item, index) => ({
+        ...item,
+        color: professionalColors[index % professionalColors.length],
+      }));
+  }, [portfolio, mode]);
+
+  const totalValue = useMemo(() => chartData.reduce((sum, entry) => sum + entry.value, 0), [chartData]);
+
+  if (chartData.length === 0) {
+    return <div className="flex items-center justify-center h-64 text-gray-500">No data available for this view.</div>;
+  }
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-6 items-center w-full">
+        <div className="relative w-full lg:w-2/3 h-72">
+            <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                    <Pie
+                        data={chartData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={110}
+                        paddingAngle={2}
+                        stroke="#1E293B"
+                        strokeWidth={2}
+                        activeIndex={activeIndex}
+                        activeShape={renderActiveShape}
+                        onMouseEnter={onPieEnter}
+                        onMouseLeave={onPieLeave}
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                    >
+                        {chartData.map((entry) => (
+                            <Cell key={`cell-${entry.name}`} fill={entry.color} />
+                        ))}
+                    </Pie>
+                    <Tooltip 
+                        content={<CustomTooltip total={totalValue} formatCurrency={formatCurrency} />}
+                        wrapperStyle={{ zIndex: 1000 }}
+                        position={{ y: 0 }}
+                    />
+                </PieChart>
+            </ResponsiveContainer>
+        </div>
+        <div className="flex-1 w-full lg:w-1/3">
+            <div className="flex flex-col gap-1">
+                {chartData.map((item, idx) => (
+                    <div 
+                        key={idx}
+                        className={`flex items-center gap-3 px-3 py-1 rounded-lg transition-all duration-200 cursor-pointer ${activeIndex === idx ? 'bg-slate-700/80 scale-105' : 'bg-slate-800/50 hover:bg-slate-700/50'}`}
+                        onMouseEnter={() => setActiveIndex(idx)}
+                        onMouseLeave={() => setActiveIndex(null)}
+                    >
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                        <div className="flex-1 min-w-0">
+                            <span className="text-sm font-semibold text-white">{item.name}</span>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <span className="text-sm font-semibold text-white font-mono">{formatCurrency(item.value)}</span>
+                          <span className="ml-2 text-xs text-gray-400 font-mono">
+                              ({totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0.0'}%)
+                          </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+  );
+};
+
+export default AllocationPieChart;

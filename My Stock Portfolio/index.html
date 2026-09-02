@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Stock Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', system-ui, sans-serif;
+      }
+      .num {
+        font-variant-numeric: tabular-nums;
+      }
+      @keyframes price-flash {
+        0% { background-color: rgba(59, 130, 246, 0.3); }
+        100% { background-color: transparent; }
+      }
+      .price-updated-flash {
+        animation: price-flash 1.5s ease-out;
+      }
+      .sr-only {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
+      }
+      .hidden-column { display: none; }
+
+      :root {
+          --header-bg: #111418;
+          --row-bg-hover: #151924;
+      }
+
+      /* --- Column Color Coding --- */
+      .col-price { background-color: rgba(59, 130, 246, 0.12); }
+      .col-perf-pos { background-color: rgba(34, 197, 94, 0.12); }
+      .col-perf-neg { background-color: rgba(239, 68, 68, 0.12); }
+      .col-alloc { background-color: rgba(147, 51, 234, 0.12); }
+      .col-meta { background-color: rgba(107, 114, 128, 0.10); }
+
+      /* Headers get a base color plus tint overrides */
+      thead th { background-color: var(--header-bg); }
+      .col-header-price { background-color: rgba(59, 130, 246, 0.08); }
+      .col-header-alloc { background-color: rgba(147, 51, 234, 0.08); }
+      .col-header-meta { background-color: rgba(107, 114, 128, 0.08); }
+      
+      /* Row hover overrides column colors */
+      tbody tr:hover td, tbody tr:hover th {
+        background-color: var(--row-bg-hover) !important;
+      }
+
+      /* --- Summary Rows --- */
+      .summary-row-cash { background-color: rgba(15, 23, 42, 0.6); border-top: 1px solid #374151; }
+      .summary-row-stocks { background-color: rgba(30, 41, 59, 0.7); }
+      .summary-row-total {
+        background-color: rgba(51, 65, 85, 0.8);
+        border-top: 2px solid #334155;
+        height: 60px; /* Increased row height for hero number */
+      }
+
+      /* Sticky footer column backgrounds */
+      tfoot .summary-row-cash th[scope="row"] { background-color: rgba(15, 23, 42, 0.6); }
+      tfoot .summary-row-stocks th[scope="row"] { background-color: rgba(30, 41, 59, 0.7); }
+      tfoot .summary-row-total th[scope="row"] { background-color: rgba(51, 65, 85, 0.8); }
+
+      tfoot th[scope="row"] { position: sticky; left: 0; z-index: 10; }
+
+      button:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 2px solid #3b82f6;
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
+      @keyframes fade-in-up {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fade-in-up 0.3s ease-out forwards;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "recharts": "https://aistudiocdn.com/recharts@^2.12.7",
+    "xlsx": "https://esm.sh/xlsx",
+    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1",
+    "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1",
+    "d3": "https://aistudiocdn.com/d3@^7.9.0",
+    "@google/genai": "https://esm.sh/@google/genai",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js",
+    "file-saver": "https://aistudiocdn.com/file-saver@^2.0.5",
+    "remark-gfm": "https://aistudiocdn.com/remark-gfm@^4.0.1",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "chart.js/": "https://aistudiocdn.com/chart.js@^4.5.1/",
+    "chart.js": "https://aistudiocdn.com/chart.js@^4.5.1",
+    "react-chartjs-2": "https://aistudiocdn.com/react-chartjs-2@^5.3.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-[#0B1220]">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

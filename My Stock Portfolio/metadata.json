@@ -1,0 +1,5 @@
+{
+  "name": "My Stock Portfolio",
+  "description": "An interactive, sortable table displaying stock portfolio data with a sleek, dark-themed interface inspired by modern trading platforms.",
+  "requestFramePermissions": []
+}
