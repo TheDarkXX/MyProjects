@@ -40,7 +40,7 @@ export const PerformersTable: React.FC<PerformersTableProps> = ({ holdings, form
                   {h.totalReturnPercent >= 0 ? '+' : ''}{h.totalReturnPercent.toFixed(2)}%
                 </td>
                 <td className="px-4 py-3 text-sm text-right text-gray-300">
-                  {formatCurrency(h.currentValue, true)}
+                  {formatCurrency(h.currentValue)}
                 </td>
               </tr>
             )) : (

@@ -260,24 +260,41 @@ export const Dashboard = () => {
   const formatPrimary = (val: number, isPnl = false) => {
     const prefix = isPnl && val > 0 ? '+' : '';
     if (currency === 'THB' && exchangeRate) {
-      return `${prefix}${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val * exchangeRate)}`;
+      return `${prefix}${new Intl.NumberFormat('th-TH', { 
+        style: 'currency', 
+        currency: 'THB',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(Math.round(val * exchangeRate))}`;
     }
-    return `${prefix}${new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(val)}`;
+    return `${prefix}${new Intl.NumberFormat('en-US', { 
+      style: 'currency', 
+      currency: activePortfolio?.base_currency || 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(val)}`;
   };
 
   const formatSecondary = (val: number, isPnl = false) => {
     if (!exchangeRate) return '';
     const prefix = isPnl && val > 0 ? '+' : '';
     if (currency === 'THB') {
-      return `${prefix}${new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(val)}`;
+      return `${prefix}${new Intl.NumberFormat('en-US', { 
+        style: 'currency', 
+        currency: activePortfolio?.base_currency || 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(val)}`;
     }
-    return `${prefix}${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val * exchangeRate)}`;
+    return `${prefix}${new Intl.NumberFormat('th-TH', { 
+      style: 'currency', 
+      currency: 'THB',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(Math.round(val * exchangeRate))}`;
   };
 
-  const formatCurrency = (val: number, usdOnly = false) => {
-    if (usdOnly) {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-    }
+  const formatCurrency = (val: number) => {
     return formatPrimary(val);
   };
 
@@ -437,7 +454,7 @@ export const Dashboard = () => {
                   ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
                   : "text-rose-400 bg-rose-400/10 border-rose-500/20"
               )}>
-                {displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl, true)} ({displayPnl >= 0 ? '+' : ''}{displayPnlPercent.toFixed(2)}%)
+                {displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl)} ({displayPnl >= 0 ? '+' : ''}{displayPnlPercent.toFixed(2)}%)
               </span>
             )}
           </div>
@@ -453,11 +470,22 @@ export const Dashboard = () => {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2A2E45" vertical={false} />
                   <XAxis dataKey="name" stroke="#CBD5E1" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#CBD5E1' }} dy={10} minTickGap={30} />
-                  <YAxis stroke="#CBD5E1" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#CBD5E1' }} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
+                  <YAxis 
+                    stroke="#CBD5E1" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 13, fill: '#CBD5E1' }} 
+                    tickFormatter={(val) => {
+                      if (currency === 'THB' && exchangeRate) {
+                        return `฿${Math.round((val * exchangeRate) / 1000)}k`;
+                      }
+                      return `$${(val / 1000).toFixed(0)}k`;
+                    }} 
+                  />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#111418', borderColor: '#2A2E45', borderRadius: '12px', color: '#fff' }}
                     itemStyle={{ color: '#823AFD', fontWeight: 'bold' }}
-                    formatter={(val: number) => formatCurrency(val, true)}
+                    formatter={(val: number) => [formatCurrency(val), 'Portfolio Value']}
                   />
                   <Area type="monotone" dataKey="value" stroke="#823AFD" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
                 </AreaChart>
