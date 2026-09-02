@@ -11,13 +11,13 @@ To strictly enforce the **BillPay Dark Dashboard Design System** on any given fr
 
 1. **Information Ingestion (Mandatory):**
    - The AI MUST read the `Target File` provided by the user.
-   - The AI MUST instantly execute `view_file` on `C:\My Claw\MyProjects\My Stock Portfolio\DESIGN.md` to load the exact color hexes, typography rules, and gradient specifications. Do not rely on memory for hex codes.
+   - The AI MUST instantly execute `view_file` on `C:\My Claw\Openclaw-VPS\MyDesign\Design System Brain APP Dark Dashboard.md` to load the exact color hexes, typography rules, and gradient specifications. Do not rely on memory for hex codes.
 
 2. **Compliance Audit:**
    - **Colors:** Scan for forbidden default colors (red, green, blue). Replace with the Primary Scale (Electric Violet `#823AFD`, Hot Pink `#FC2D79`, Burnt Orange `#FD5514`).
    - **Gradients:** Ensure ALL charts, progress bars, and solid badges use the **3-Stop Gradient Rule**. No flat fills.
    - **Shadows:** Scan for `rgba(0,0,0, X)` box-shadows. They MUST be neumorphic (paired with a light edge) and use violet/pink tints (e.g., `rgba(130,58,253,0.28)`), never dead black/gray.
-   - **Typography & Legibility:** Ensure `JetBrains Mono` is used strictly for ALL numbers (currency, percentages, counts) with `font-variant-numeric: tabular-nums`. Crucially, NEVER sacrifice legibility for aesthetics. Dark mode sub-text, timestamps, and small metadata MUST be bright and luminous (e.g., `#9898c8`), forbidding dim, unreadable greys (e.g., `#5a5a90`).
+   - **Typography & Legibility:** Ensure `JetBrains Mono` is used strictly for ALL numbers (currency, percentages, counts) with `font-variant-numeric: tabular-nums`. Crucially, NEVER sacrifice legibility for aesthetics. Dark mode sub-text, timestamps, and small metadata MUST be bright and luminous (e.g., `#B8B8D8` or `#9898C8`). Any dark grey text (e.g., `#5A5A90`) is completely forbidden because it's too dark and almost invisible. You MUST brighten it by at least 4 levels (e.g., to `#8A8AC0` or `#9898C8`) in every part of the UI.
 
 3. **Execution:**
    - Apply fixes directly to the target file(s) using native string replacement tools.
