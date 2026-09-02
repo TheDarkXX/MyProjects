@@ -1,4 +1,5 @@
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
+const yahooFinance = new YahooFinance();
 
 /**
  * Fetch historical prices for a symbol.
@@ -22,15 +23,17 @@ export async function fetchYahooHistorical(symbol, from, to) {
       return [];
     }
     
-    // Map the result to our expected format
-    return result.quotes.map(q => {
-      const date = new Date(q.date).toISOString().split('T')[0];
-      return {
-        symbol,
-        date,
-        price: q.close
-      };
-    });
+    // Map the result to our expected format, filtering out invalid quotes
+    return result.quotes
+      .filter(q => q.close !== null && q.close !== undefined)
+      .map(q => {
+        const date = new Date(q.date).toISOString().split('T')[0];
+        return {
+          symbol,
+          date,
+          price: q.close
+        };
+      });
   } catch (error) {
     console.error(`[Yahoo] Error fetching historical for ${symbol}:`, error.message);
     return [];
