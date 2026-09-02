@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { usePriceStore } from '../../stores/priceStore';
+import { useUiStore } from '../../stores/uiStore';
 import { useHoldings } from '../../hooks/useHoldings';
 import { TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Activity, DollarSign, PieChart, Calendar } from 'lucide-react';
 import clsx from 'clsx';
@@ -76,6 +77,7 @@ export const Dashboard = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
   const { transactions, fetchTransactions } = useTransactionStore();
   const { prices, historical, exchangeRate, fetchPrices, fetchHistorical, fetchExchangeRate } = usePriceStore();
+  const { currency, setCurrency } = useUiStore();
 
   const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
 
@@ -255,79 +257,139 @@ export const Dashboard = () => {
     }
   };
 
+  const formatPrimary = (val: number, isPnl = false) => {
+    const prefix = isPnl && val > 0 ? '+' : '';
+    if (currency === 'THB' && exchangeRate) {
+      return `${prefix}${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val * exchangeRate)}`;
+    }
+    return `${prefix}${new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(val)}`;
+  };
+
+  const formatSecondary = (val: number, isPnl = false) => {
+    if (!exchangeRate) return '';
+    const prefix = isPnl && val > 0 ? '+' : '';
+    if (currency === 'THB') {
+      return `${prefix}${new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(val)}`;
+    }
+    return `${prefix}${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val * exchangeRate)}`;
+  };
+
   const formatCurrency = (val: number, usdOnly = false) => {
-    const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(val);
-    if (usdOnly || !exchangeRate) return usd;
-    const thb = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val * exchangeRate);
-    return `${usd} (${thb})`;
+    if (usdOnly) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+    }
+    return formatPrimary(val);
   };
 
   return (
     <div className="space-y-8 animate-fade-in-up pb-12">
-      {/* Global Time Range Selector Bar */}
-      <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-4 px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+      {/* Global Time Range & Currency Selector Bar */}
+      <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-4 px-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-lg">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[#9898C8] text-sm font-medium">Timeframe:</span>
+          <span className="text-[#CBD5E1] text-sm font-semibold">Timeframe:</span>
           <span className="text-white text-sm font-bold">
             {timeRange === 'CUSTOM' && customFrom && customTo ? `${customFrom} to ${customTo}` : getRangeLabel(timeRange)}
           </span>
           <span className={clsx(
-            "text-xs font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1",
+            "text-xs font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1 tabular-nums",
             displayPnl >= 0 
               ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
               : "text-rose-400 bg-rose-400/10 border-rose-500/20"
           )}>
             {displayPnl >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-            <span>{displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl, true)} ({displayPnl >= 0 ? '+' : ''}{displayPnlPercent.toFixed(2)}%)</span>
+            <span>{displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl)} ({displayPnl >= 0 ? '+' : ''}{displayPnlPercent.toFixed(2)}%)</span>
           </span>
         </div>
 
-        {/* Time Range Pills */}
-        <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-2xl text-xs gap-1 overflow-x-auto custom-scrollbar">
-          {(['1D', '1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as DashboardTimeRange[]).map(range => (
+        <div className="flex flex-wrap items-center gap-3 self-start xl:self-auto">
+          {/* Time Range Pills */}
+          <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-2xl text-xs gap-1 overflow-x-auto custom-scrollbar">
+            {(['1D', '1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as DashboardTimeRange[]).map(range => (
+              <button
+                key={range}
+                onClick={() => {
+                  setTimeRange(range);
+                  setShowCustomModal(false);
+                }}
+                className={clsx(
+                  "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap select-none",
+                  timeRange === range
+                    ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_12px_rgba(252,45,121,0.45)]"
+                    : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
+                )}
+              >
+                {range}
+              </button>
+            ))}
             <button
-              key={range}
-              onClick={() => {
-                setTimeRange(range);
-                setShowCustomModal(false);
-              }}
+              onClick={() => setShowCustomModal(!showCustomModal)}
               className={clsx(
-                "px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer whitespace-nowrap",
-                timeRange === range
-                  ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_12px_rgba(252,45,121,0.45)] font-bold"
-                  : "text-[#9898C8] hover:text-white hover:bg-[#2A2E45]/50"
+                "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap select-none",
+                timeRange === 'CUSTOM'
+                  ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_12px_rgba(252,45,121,0.45)]"
+                  : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
               )}
+              title="Custom date range"
             >
-              {range}
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Custom</span>
             </button>
-          ))}
-          <button
-            onClick={() => setShowCustomModal(!showCustomModal)}
-            className={clsx(
-              "px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
-              timeRange === 'CUSTOM'
-                ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_12px_rgba(252,45,121,0.45)] font-bold"
-                : "text-[#9898C8] hover:text-white hover:bg-[#2A2E45]/50"
-            )}
-            title="Custom date range"
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Custom</span>
-          </button>
+          </div>
+
+          {/* Currency Toggle (USD / THB) */}
+          <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-2xl text-xs gap-1 shadow-inner">
+            <button
+              onClick={() => setCurrency('USD')}
+              className={clsx(
+                "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                currency === 'USD'
+                  ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_0_12px_rgba(130,58,253,0.45)]"
+                  : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
+              )}
+              title="Display all portfolio numbers in US Dollars"
+            >
+              <span>🇺🇸</span>
+              <span>USD</span>
+            </button>
+            <button
+              onClick={() => setCurrency('THB')}
+              className={clsx(
+                "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                currency === 'THB'
+                  ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_0_12px_rgba(130,58,253,0.45)]"
+                  : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
+              )}
+              title="Display all portfolio numbers in Thai Baht"
+            >
+              <span>🇹🇭</span>
+              <span>THB</span>
+            </button>
+          </div>
+
+          {/* Live Yahoo FX Rate Badge */}
+          {exchangeRate > 0 && (
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-[#1A1D2D]/80 border border-[#2A2E45] text-xs font-semibold tabular-nums text-[#CBD5E1] shadow-inner" title="Real-time Exchange Rate from Yahoo Finance (THB=X)">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-white font-bold">$1</span>
+              <span>=</span>
+              <span className="text-emerald-400 font-extrabold">฿{exchangeRate.toFixed(2)}</span>
+              <span className="text-[10px] text-[#94A3B8] font-normal uppercase tracking-wider">Yahoo</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Custom Date Picker Inline Form */}
       {showCustomModal && (
         <div className="p-4 bg-[#111418] border border-[#2A2E45] rounded-2xl flex flex-wrap items-center gap-3 animate-fade-in text-xs shadow-md">
-          <span className="text-[#9898C8] font-medium">From:</span>
+          <span className="text-[#CBD5E1] font-medium">From:</span>
           <input
             type="date"
             value={tempCustomFrom}
             onChange={e => setTempCustomFrom(e.target.value)}
             className="bg-[#1A1D2D] border border-[#2A2E45] text-white px-3 py-1.5 rounded-xl focus:outline-none focus:border-[#823AFD]"
           />
-          <span className="text-[#9898C8] font-medium">To:</span>
+          <span className="text-[#CBD5E1] font-medium">To:</span>
           <input
             type="date"
             value={tempCustomTo}
@@ -343,7 +405,7 @@ export const Dashboard = () => {
           </button>
           <button
             onClick={() => setShowCustomModal(false)}
-            className="px-4 py-1.5 bg-[#2A2E45] text-[#9898C8] hover:text-white rounded-xl cursor-pointer transition-colors"
+            className="px-4 py-1.5 bg-[#2A2E45] text-[#CBD5E1] hover:text-white rounded-xl cursor-pointer transition-colors"
           >
             Cancel
           </button>
@@ -354,8 +416,8 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Total Net Worth" 
-          value={new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(totalNetWorth)} 
-          subValue={exchangeRate ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalNetWorth * exchangeRate) : ''}
+          value={formatPrimary(totalNetWorth)} 
+          subValue={formatSecondary(totalNetWorth)}
           change={displayPnlPercent} 
           isPositive={displayPnl >= 0}
           icon={TrendingUp}
@@ -363,8 +425,8 @@ export const Dashboard = () => {
         />
         <StatCard 
           title="Securities Value" 
-          value={new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(totalSecuritiesValue)} 
-          subValue={exchangeRate ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalSecuritiesValue * exchangeRate) : ''}
+          value={formatPrimary(totalSecuritiesValue)} 
+          subValue={formatSecondary(totalSecuritiesValue)}
           change={securitiesReturnPercent}
           isPositive={securitiesReturnPercent >= 0}
           icon={PieChart}
@@ -372,16 +434,16 @@ export const Dashboard = () => {
         />
         <StatCard 
           title="Cash Balance" 
-          value={new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(cashBalance)} 
-          subValue={exchangeRate ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(cashBalance * exchangeRate) : ''}
+          value={formatPrimary(cashBalance)} 
+          subValue={formatSecondary(cashBalance)}
           isPositive={true}
           icon={Wallet}
           gradient="bg-[#FC2D79]"
         />
         <StatCard 
           title={timeRange === 'ALL' ? 'Total P/L' : `${timeRange} P/L`} 
-          value={`${displayPnl >= 0 ? '+' : ''}${new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(displayPnl)}`} 
-          subValue={exchangeRate ? `${displayPnl >= 0 ? '+' : ''}${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(displayPnl * exchangeRate)}` : ''}
+          value={formatPrimary(displayPnl, true)} 
+          subValue={formatSecondary(displayPnl, true)}
           change={displayPnlPercent}
           isPositive={displayPnl >= 0}
           icon={DollarSign}

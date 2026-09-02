@@ -57,3 +57,30 @@ export async function fetchYahooLatest(symbol) {
     return null;
   }
 }
+
+/**
+ * Fetch real-time exchange rate from Yahoo Finance.
+ * e.g. USD to THB -> 'THB=X'
+ */
+export async function fetchYahooExchangeRate(from = 'USD', to = 'THB') {
+  try {
+    let symbol = `${to}=X`;
+    if (from !== 'USD') {
+      symbol = `${from}${to}=X`;
+    }
+    const quote = await yahooFinance.quote(symbol);
+    if (quote && quote.regularMarketPrice) {
+      return {
+        rate: quote.regularMarketPrice,
+        from,
+        to,
+        date: new Date().toISOString().split('T')[0],
+        source: 'yahoo'
+      };
+    }
+  } catch (error) {
+    console.error(`[Yahoo] Error fetching exchange rate ${from}->${to}:`, error.message);
+  }
+  return null;
+}
+
