@@ -3,15 +3,8 @@ import { useTransactionStore } from '../../stores/transactionStore';
 import { ArrowDownRight, ArrowUpRight, Search, Plus } from 'lucide-react';
 import clsx from 'clsx';
 
-const mockTransactions = [
-  { id: '1', date: '2026-09-02', symbol: 'AAPL', type: 'BUY', amount: 10, price: 145.00, total: 1450.00 },
-  { id: '2', date: '2026-09-01', symbol: 'MSFT', type: 'BUY', amount: 5, price: 330.00, total: 1650.00 },
-  { id: '3', date: '2026-08-28', symbol: 'TSLA', type: 'SELL', amount: 2, price: 210.00, total: 420.00 },
-  { id: '4', date: '2026-08-15', symbol: 'USD', type: 'DEPOSIT', amount: 5000, price: 1, total: 5000.00 },
-];
-
 export const TransactionTable = () => {
-  // In real implementation, fetch from useTransactionStore
+  const { transactions } = useTransactionStore();
   
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -46,17 +39,21 @@ export const TransactionTable = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#2A2E45]">
-              {mockTransactions.map((tx) => {
+              {transactions.map((tx) => {
                 const isPositive = tx.type === 'SELL' || tx.type === 'WITHDRAW';
+                const dateStr = new Date(tx.date).toLocaleDateString();
+                const total = tx.amount * (tx.price || 1);
+                const displaySymbol = tx.symbol || tx.type.slice(0, 3);
+
                 return (
                   <tr key={tx.id} className="hover:bg-[#1A1D2D]/50 transition-colors group">
-                    <td className="py-4 px-6 text-[#9898C8] text-sm">{tx.date}</td>
+                    <td className="py-4 px-6 text-[#9898C8] text-sm">{dateStr}</td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#0F111A] border border-[#2A2E45] flex items-center justify-center">
-                          <span className="text-white font-bold text-xs">{tx.symbol}</span>
+                          <span className="text-white font-bold text-xs">{displaySymbol}</span>
                         </div>
-                        <span className="text-white font-bold">{tx.symbol}</span>
+                        <span className="text-white font-bold">{displaySymbol}</span>
                       </div>
                     </td>
                     <td className="py-4 px-6">
@@ -69,10 +66,10 @@ export const TransactionTable = () => {
                         {tx.type}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right text-white tabular-nums">${tx.price.toFixed(2)}</td>
+                    <td className="py-4 px-6 text-right text-white tabular-nums">${(tx.price || 0).toFixed(2)}</td>
                     <td className="py-4 px-6 text-right text-white tabular-nums">{tx.amount}</td>
                     <td className="py-4 px-6 text-right text-white font-bold tabular-nums">
-                      ${tx.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
                 );

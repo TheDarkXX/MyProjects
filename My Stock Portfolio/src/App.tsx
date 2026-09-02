@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAuthStore } from './stores/authStore';
+import { usePortfolioStore } from './stores/portfolioStore';
 import { useUiStore } from './stores/uiStore';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -69,10 +70,14 @@ const MainLayout = () => {
 
 export const App = () => {
   const { isAuthenticated, verify } = useAuthStore();
+  const fetchPortfolios = usePortfolioStore((s) => s.fetchPortfolios);
 
   useEffect(() => {
-    if (isAuthenticated) verify();
-  }, [isAuthenticated, verify]);
+    if (isAuthenticated) {
+      verify();
+      fetchPortfolios();
+    }
+  }, [isAuthenticated, verify, fetchPortfolios]);
 
   if (!isAuthenticated) return <Login />;
   
