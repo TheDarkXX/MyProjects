@@ -72,18 +72,19 @@ export const Dashboard = () => {
   }, [transactions, activePortfolio]);
 
   const activeSymbols = Object.keys(holdings).filter(s => holdings[s] > 0);
+  const allSymbols = Object.keys(holdings);
 
   // Fetch prices and historical data
   useEffect(() => {
-    if (activeSymbols.length > 0) {
-      fetchPrices(activeSymbols);
+    if (allSymbols.length > 0) {
+      fetchPrices(allSymbols);
       const to = new Date().toISOString().split('T')[0];
       const fromDate = new Date();
       fromDate.setMonth(fromDate.getMonth() - 6);
       const from = fromDate.toISOString().split('T')[0];
-      fetchHistorical(activeSymbols, from, to);
+      fetchHistorical(allSymbols, from, to);
     }
-  }, [JSON.stringify(activeSymbols), fetchPrices, fetchHistorical]);
+  }, [JSON.stringify(allSymbols), fetchPrices, fetchHistorical]);
 
   // Calculate Net Worth and Today's Profit
   let totalStockValue = 0;
@@ -106,35 +107,66 @@ export const Dashboard = () => {
 
   // Chart Data
   const chartData = useMemo(() => {
-    if (activeSymbols.length === 0) return [];
+    if (allSymbols.length === 0) return [];
     
     const dateSet = new Set<string>();
-    activeSymbols.forEach(s => {
+    allSymbols.forEach(s => {
       if (historical[s]) historical[s].forEach(d => dateSet.add(d.date));
     });
     
     const sortedDates = Array.from(dateSet).sort();
     let lastKnownPrices: Record<string, number> = {};
 
+    // Sort transactions once for time-travel calculation
+    const chronologicalTxs = [...transactions]
+      .filter(t => t.status === 'CONFIRMED')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
     return sortedDates.map(date => {
+      const targetTime = new Date(date).getTime();
+      
+      // Calculate holdings and cash EXACTLY on this date
+      let dailyCash = activePortfolio?.initial_cash || 0;
+      let dailyHolds: Record<string, number> = {};
+
+      for (const tx of chronologicalTxs) {
+        // If the transaction happened after this historical date, we stop applying.
+        // We use end-of-day for the historical date to include all txs on that day.
+        const eodTarget = new Date(date);
+        eodTarget.setHours(23, 59, 59, 999);
+        if (new Date(tx.date).getTime() > eodTarget.getTime()) break;
+
+        if (tx.type === 'BUY') {
+          dailyCash -= (tx.amount * tx.price) + (tx.fee || 0);
+          dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) + tx.amount;
+        } else if (tx.type === 'SELL') {
+          dailyCash += (tx.amount * tx.price) - (tx.fee || 0);
+          dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) - tx.amount;
+        } else if (tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
+          dailyCash += tx.amount;
+        } else if (tx.type === 'WITHDRAW') {
+          dailyCash -= tx.amount;
+        }
+      }
+
       let dailyStockValue = 0;
-      activeSymbols.forEach(symbol => {
+      allSymbols.forEach(symbol => {
         if (historical[symbol]) {
           const point = historical[symbol].find(d => d.date === date);
           if (point) {
             lastKnownPrices[symbol] = point.price;
           }
         }
-        if (lastKnownPrices[symbol]) {
-          dailyStockValue += holdings[symbol] * lastKnownPrices[symbol];
+        if (lastKnownPrices[symbol] && dailyHolds[symbol]) {
+          dailyStockValue += dailyHolds[symbol] * lastKnownPrices[symbol];
         }
       });
       return {
         name: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        value: cashBalance + dailyStockValue
+        value: dailyCash + dailyStockValue
       };
     });
-  }, [historical, holdings, cashBalance, activeSymbols]);
+  }, [historical, transactions, activePortfolio, allSymbols]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(val);
 
