@@ -3,3 +3,68 @@
 @theme {
   --color-primary: #3b82f6;
 }
+
+/* ==========================================================================
+   Global Typography & Contrast Enhancements
+   +4 Brightness levels for all secondary/muted text (#9898C8 -> #CBD5E1)
+   +2 Font size levels for all labels, tables, subtitles, and captions
+   ========================================================================== */
+
+/* 1. Global Contrast: Brighten dim/grayish text by 4 levels to crisp light silver/slate */
+.text-\[\#9898C8\],
+[class*="text-[#9898C8]"] {
+  color: #CBD5E1 !important; /* Crisp Slate-300 (4 levels brighter than #9898C8) */
+}
+
+.placeholder-\[\#9898C8\]::placeholder {
+  color: #94A3B8 !important;
+}
+
+.text-gray-400 {
+  color: #E2E8F0 !important;
+}
+
+.text-gray-500 {
+  color: #CBD5E1 !important;
+}
+
+.text-gray-600 {
+  color: #94A3B8 !important;
+}
+
+/* 2. Global Font Scale: Step up text sizes by 2 levels across all pages */
+.text-xs {
+  font-size: 0.875rem !important; /* 14px (stepped up 2 levels from 12px) */
+  line-height: 1.35rem !important;
+}
+
+.text-sm {
+  font-size: 1rem !important; /* 16px (stepped up 2 levels from 14px) */
+  line-height: 1.5rem !important;
+}
+
+/* Ensure table headers and subtext have high contrast and readability */
+th {
+  color: #CBD5E1 !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #111418;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #2A2E45;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #823AFD;
+}

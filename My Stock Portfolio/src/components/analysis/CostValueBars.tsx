@@ -92,8 +92,8 @@ export const CostValueBars: React.FC<Props> = ({ holdings }) => {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2A2E45" vertical={false} />
-              <XAxis dataKey="name" stroke="#9898C8" axisLine={false} tickLine={false} />
-              <YAxis stroke="#9898C8" axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+              <XAxis dataKey="name" stroke="#CBD5E1" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#CBD5E1' }} />
+              <YAxis stroke="#CBD5E1" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#CBD5E1' }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#1A1D2D', opacity: 0.4 }} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
               <Bar dataKey="cost" name="Cost Basis" fill="#FD5514" radius={[4, 4, 0, 0]} />

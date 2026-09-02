@@ -59,12 +59,12 @@ const StatCard = ({ title, value, change, isPositive, subValue, icon: Icon, grad
       )}
     </div>
     <div className="relative z-10">
-      <h3 className="text-[#9898C8] font-medium mb-1">{title}</h3>
+      <h3 className="text-[#CBD5E1] font-semibold text-base mb-1">{title}</h3>
       <div className="text-3xl font-bold text-white tabular-nums tracking-tight">
         {value}
       </div>
       {subValue && (
-        <div className="text-[#9898C8] text-sm mt-1">
+        <div className="text-[#CBD5E1] text-base mt-1 font-medium">
           {subValue}
         </div>
       )}
@@ -431,8 +431,8 @@ export const Dashboard = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2A2E45" vertical={false} />
-                  <XAxis dataKey="name" stroke="#9898C8" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} minTickGap={30} />
-                  <YAxis stroke="#9898C8" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
+                  <XAxis dataKey="name" stroke="#CBD5E1" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#CBD5E1' }} dy={10} minTickGap={30} />
+                  <YAxis stroke="#CBD5E1" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#CBD5E1' }} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#111418', borderColor: '#2A2E45', borderRadius: '12px', color: '#fff' }}
                     itemStyle={{ color: '#823AFD', fontWeight: 'bold' }}
