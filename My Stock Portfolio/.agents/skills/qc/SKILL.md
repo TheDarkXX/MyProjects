@@ -1,4 +1,4 @@
-﻿---
+---
 name: qc
 description: "Migrated qc skill"
 ---
@@ -17,16 +17,14 @@ To actively scan the `Quick Save/` directory and auto-clean workspace clutter wh
 ## Execution Steps
 
 0. **Root Folder Health Check (Run First):**
-   - Run: `Get-ChildItem -Path "c:\My Claw\Openclaw-VPS" -File | Where-Object { $_.Extension -match '\.(js|cjs|mjs|py|sql|bat|sh)$' } | Measure-Object`
+   - Run: `Get-ChildItem -Path "C:\My Claw\MyProjects\My Stock Portfolio" -File | Where-Object { $_.Extension -match '\.(ts|tsx|js|cjs|mjs|py|sql|bat|sh)$' } | Measure-Object`
    - Count all files at root level (excluding directories).
    - **If count > 20:** Flag to user: โ ๏ธ Root has X files โ€” recommend organizing loose scripts.
    - **Identify moveable files** โ€” compare against the locked list below and flag anything NOT in it:
    ```
    LOCKED (must stay at root):
-   server.js, ai-gateway.js, generate_cloud_images.cjs, higgsfield-auth-watchdog-vps.cjs,
-   bump-cache.js, deploy.js, start.sh, openclaw.json, package.json, package-lock.json,
-   search-manifest.md, search-manifest.json, search-manifest.jsonl, brain.db, database.sqlite,
-   AGENTS.md, SOUL.md, USER.md, TOOLS.md, CHANGELOG.md, .gitignore, .env, ecosystem.config.js
+   package.json, package-lock.json, tsconfig.json, vite.config.ts, index.html,
+   AGENT_CONTEXT.md, DESIGN.md, README.md, changelog.md, .gitignore
    ```
    - Any `.js/.cjs/.mjs/.py/.sql/.bat/.sh` NOT in the locked list โ’ propose moving to correct subfolder (`tools/`, `services/`, `data/`, `scratch/`).
    - Present findings in a concise table before proceeding.
@@ -60,11 +58,11 @@ To actively scan the `Quick Save/` directory and auto-clean workspace clutter wh
 
 6. **Post-Recheck Verification (MANDATORY):**
    - After ALL move operations are complete, run `list_dir` on **both** the source and destination directories.
-   - **Source check:** Confirm moved files are **gone** from `Active/` and `Complete/` root. If any file you attempted to move still exists at its source โ’ the move silently failed. Re-run with `-LiteralPath` or Python.
+   - **Source check:** Confirm moved files are **gone** from `Active/` and `Complete/` root. If any file you attempted to move still exists at its source โ†’ the move silently failed. Re-run with `-LiteralPath` or Python.
    - **Destination check:** Confirm moved files **exist** in their target `Complete/Complete/Vxx/` folder. Count must match the number of files you attempted to move.
-   - **Fail-safe:** If source count didn't decrease or destination count didn't increase โ’ **STOP and report failure** to the user. Do NOT claim success.
+   - **Fail-safe:** If source count didn't decrease or destination count didn't increase โ†’ **STOP and report failure** to the user. Do NOT claim success.
 
 ---
 
-## ๐”— GBRAIN Backlinks
-- **2026-06-14 12:55** | [Root Folder Hygiene & Systemic Rules](file:///c:/My%20Claw/Openclaw-VPS/Quick%20Save/Complete/Core-VPS/V12.20.0_[infra]_ag-skills_root-folder-hygiene-and-reviewchat.md) -- Auto-added from /save session
+## 🔗 GBRAIN Backlinks
+-

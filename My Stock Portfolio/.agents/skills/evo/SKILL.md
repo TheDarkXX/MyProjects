@@ -1,4 +1,4 @@
-﻿---
+---
 name: evo
 description: "Migrated evo skill"
 ---
@@ -117,14 +117,12 @@ To autonomously review incoming High-Risk proposals from Hydra's Evolver/Ideator
      1. Append to `data/hydra-memory/feedback-log.jsonl`:
         `{"ts":"ISO","agent":"evo","proposal_id":"EVO-XXX","verdict":"rejected","reason":"documentation-only, no behavioral change","category":"skill_gap","scores":{"impact":1,"feasibility":5,"urgency":1,"alignment":1}}`
      2. If REJECT โ’ also append to `data/hydra-memory/ideator/rejection-patterns.jsonl`:
+     2. If REJECT โ†’ also append to `data/hydra-memory/ideator/rejection-patterns.jsonl`:
         `{"ts":"ISO","category":"skill_gap","pattern":"documentation/comments only","reason":"zero behavioral change","rejectRate":1.0}`
-     3. If APPROVE โ’ append to feedback-log only (Weekly Reflection will learn preference patterns automatically).
+     3. If APPROVE โ†’ append to feedback-log only (Weekly Reflection will learn preference patterns automatically).
    - **WHY THIS MATTERS:** This feedback is consumed by Ideator to avoid proposing rejected categories, and by Weekly Reflection to build compounding wisdom.
 
 8. **Database Sync (Auto-Update Web UI):**
-   - AG MUST automatically sync the decision back to the VPS database so the Web UI tracking is closed out.
-   - **CRITICAL POWERSHELL RULE:** Nested quotes in `run_command` across SSH always break on Windows. You MUST:
-     1. Use `write_to_file` to create a local `c:\My Claw\Openclaw-VPS\scratch\update_evo.sql` containing: `UPDATE evolution_log SET status='approved' WHERE proposal_id='EVO-XXX';`
-     2. Upload it: `scp "c:\My Claw\Openclaw-VPS\scratch\update_evo.sql" root@185.250.38.247:/root/update_evo.sql`
-     3. Apply it: `ssh root@185.250.38.247 "sqlite3 /root/brain-app/db/brain.db < /root/update_evo.sql"`
-     *(Change 'approved' to 'rejected' depending on the verdict, and replace 'EVO-XXX' with the actual ID).*
+   - AG MUST automatically sync the decision back to the system memory.
+   - Log the approved evolution by updating `self-improving/memory.md` with the new approved architecture or component setup.
+   - After updating the memory file, proceed to Phase 2.

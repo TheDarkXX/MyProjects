@@ -1,4 +1,4 @@
-﻿---
+---
 name: design
 description: "Migrated design skill"
 ---
@@ -11,7 +11,7 @@ To strictly enforce the **BillPay Dark Dashboard Design System** on any given fr
 
 1. **Information Ingestion (Mandatory):**
    - The AI MUST read the `Target File` provided by the user.
-   - The AI MUST instantly execute `view_file` on `C:\My Claw\Openclaw-VPS\MyDesign\Design System Brain APP Dark Dashboard.md` to load the exact color hexes, typography rules, and gradient specifications. Do not rely on memory for hex codes.
+   - The AI MUST instantly execute `view_file` on `C:\My Claw\MyProjects\My Stock Portfolio\DESIGN.md` to load the exact color hexes, typography rules, and gradient specifications. Do not rely on memory for hex codes.
 
 2. **Compliance Audit:**
    - **Colors:** Scan for forbidden default colors (red, green, blue). Replace with the Primary Scale (Electric Violet `#823AFD`, Hot Pink `#FC2D79`, Burnt Orange `#FD5514`).
