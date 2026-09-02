@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../db/init.js';
-import { fetchPolygonHistorical } from '../services/polygon.js';
+import { fetchYahooHistorical } from '../services/yahoo.js';
 import { authMiddleware } from './auth.js';
 
 const historicalRoutes = new Hono();
@@ -30,23 +30,18 @@ historicalRoutes.post('/', async (c) => {
       if (cached.length > 0) {
         results[symbol] = cached;
       } else {
-        // Fetch from polygon
-        const data = await fetchPolygonHistorical(symbol, 1, 'day', from, to);
-        if (data && data.results) {
-          const transformed = data.results.map(r => {
-            const date = new Date(r.t).toISOString().split('T')[0];
-            return { symbol, date, price: r.c };
-          });
-          
+        // Fetch from Yahoo
+        const data = await fetchYahooHistorical(symbol, from, to);
+        if (data && data.length > 0) {
           // Cache it
           const insertTx = db.transaction((rows) => {
             for (const r of rows) {
               insertCache.run(r.symbol, r.date, r.price);
             }
           });
-          insertTx(transformed);
+          insertTx(data);
           
-          results[symbol] = transformed;
+          results[symbol] = data;
         } else {
           results[symbol] = [];
         }

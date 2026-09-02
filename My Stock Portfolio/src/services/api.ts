@@ -55,7 +55,7 @@ export const api = {
   },
   prices: {
     latest: (symbols: string[]) => authFetch('/prices/latest', { method: 'POST', body: JSON.stringify({ symbols }) }),
-    historical: (symbols: string[], from: string, to: string) => authFetch('/prices/historical', { method: 'POST', body: JSON.stringify({ symbols, from, to }) }),
+    historical: (symbols: string[], from: string, to: string) => authFetch('/historical', { method: 'POST', body: JSON.stringify({ symbols, from, to }) }),
     exchangeRate: (from = 'USD', to = 'THB') => authFetch(`/exchange-rate?from=${from}&to=${to}`),
   },
   metadata: {
