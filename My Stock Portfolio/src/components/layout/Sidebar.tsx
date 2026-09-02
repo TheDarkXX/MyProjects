@@ -3,11 +3,12 @@ import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useHoldings } from '../../hooks/useHoldings';
-import { LayoutDashboard, ReceiptText, Settings, LogOut, Briefcase, ChevronDown, Check, TrendingUp, TrendingDown } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Settings, LogOut, Briefcase, ChevronDown, Check, TrendingUp, TrendingDown, PieChart } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'analysis', label: 'Analysis', icon: PieChart },
   { id: 'transactions', label: 'Transactions', icon: ReceiptText },
   { id: 'portfolios', label: 'Portfolios', icon: Briefcase },
   { id: 'settings', label: 'Settings', icon: Settings },
