@@ -78,25 +78,11 @@ const ApiStatusIndicator: React.FC<{ status: ChartApiStatus['status']; error: st
     );
 };
 
-interface PerformanceChartPageProps {
-    portfolios: Portfolio[];
-    transactions: Transaction[];
-    historicalDataCache: Record<string, HistoricalDataPoint[]>;
-    setHistoricalDataCache: React.Dispatch<React.SetStateAction<Record<string, HistoricalDataPoint[]>>>;
-    rawPriceDataCache: Record<string, Record<string, Record<string, number>>>;
-    setRawPriceDataCache: React.Dispatch<React.SetStateAction<Record<string, Record<string, Record<string, number>>>>>;
-    chartApiStatus: Record<string, ChartApiStatus>;
-    setChartApiStatus: React.Dispatch<React.SetStateAction<Record<string, ChartApiStatus>>>;
-    fetchProgress: Record<string, FetchProgress>;
-    setFetchProgress: React.Dispatch<React.SetStateAction<Record<string, FetchProgress>>>;
-    isApiPaused: boolean;
-    setIsApiPaused: React.Dispatch<React.SetStateAction<boolean>>;
-    onForceRefresh: (portfolioId: string | null) => void;
-    selectedPortfolioId: string | null;
-    setSelectedPortfolioId: (id: string | null) => void;
-    displayMethod: DisplayMethod;
-    onDisplayMethodChange: (method: DisplayMethod) => void;
-}
+import { usePortfolioStore } from '../stores/portfolioStore';
+import { useTransactionStore } from '../stores/transactionStore';
+import { usePriceStore } from '../stores/priceStore';
+
+interface PerformanceChartPageProps {}
 
 type TimeRange = '7D' | '14D' | '1M' | '3M' | '6M' | '1Y' | 'ALL';
 
@@ -122,12 +108,28 @@ const getStartDateForRange = (range: TimeRange, allData: HistoricalDataPoint[]):
     return today.toISOString().split('T')[0];
 };
 
-const PerformanceChartPage: React.FC<PerformanceChartPageProps> = ({ 
-    portfolios, transactions, historicalDataCache, setHistoricalDataCache, 
-    rawPriceDataCache, setRawPriceDataCache, chartApiStatus, setChartApiStatus, 
-    fetchProgress, setFetchProgress, isApiPaused, setIsApiPaused, onForceRefresh,
-    selectedPortfolioId, setSelectedPortfolioId, displayMethod, onDisplayMethodChange
-}) => {
+const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
+    const portfolios = usePortfolioStore(s => s.portfolios);
+    const transactions = useTransactionStore(s => s.transactions);
+    
+    // Local state for API tracking and caching that was previously in App.tsx
+    const [historicalDataCache, setHistoricalDataCache] = useState<Record<string, HistoricalDataPoint[]>>({});
+    const [rawPriceDataCache, setRawPriceDataCache] = useState<Record<string, Record<string, Record<string, number>>>>({});
+    const [chartApiStatus, setChartApiStatus] = useState<Record<string, ChartApiStatus>>({});
+    const [fetchProgress, setFetchProgress] = useState<Record<string, FetchProgress>>({});
+    const [isApiPaused, setIsApiPaused] = useState(false);
+    
+    // UI state
+    const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(portfolios.length > 0 ? portfolios[0].id : null);
+    const [displayMethod, onDisplayMethodChange] = useState<DisplayMethod>('TWR');
+    
+    const onForceRefresh = useCallback((portfolioId: string | null) => {
+        if (!portfolioId) return;
+        setHistoricalDataCache(prev => ({ ...prev, [portfolioId]: [] }));
+        setRawPriceDataCache(prev => { const n = {...prev}; delete n[portfolioId]; return n; });
+        setChartApiStatus(prev => ({ ...prev, [portfolioId]: { status: 'loading', error: null } }));
+        // Logic to trigger re-fetch would go here if we ported the fetcher
+    }, []);
     const [timeRange, setTimeRange] = useState<TimeRange>('3M');
     const [visibleLines, setVisibleLines] = useState({ 'My Portfolio': true, 'S&P 500': true, 'SCHG': true });
     

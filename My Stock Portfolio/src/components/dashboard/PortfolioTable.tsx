@@ -55,7 +55,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
 
   const renderTH = (label: string, key: keyof Holding, align: 'left' | 'right' = 'right') => (
     <th 
-      className={clsx("px-4 py-3 text-xs font-medium text-[#9898C8] uppercase tracking-wider cursor-pointer group hover:text-white transition-colors", align === 'right' ? 'text-right' : 'text-left')}
+      className={clsx("px-4 py-3 text-[15px] font-medium text-[#9AA4B2] uppercase tracking-wider cursor-pointer group hover:text-white transition-colors", align === 'right' ? 'text-right' : 'text-left')}
       onClick={() => requestSort(key)}
     >
       <div className={clsx("flex items-center gap-1", align === 'right' && "justify-end")}>
@@ -87,49 +87,52 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               {renderTH('Weight', 'weightPercent')}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#2A2E45]">
+          <tbody className="text-base text-[#E5E7EB] divide-y divide-[#2A2E45]">
             {sortedHoldings.map((h) => (
               <tr key={h.symbol} className="hover:bg-[#1A1D2D]/50 transition-colors">
-                <td className="px-4 py-3 text-sm font-bold text-white whitespace-nowrap">{h.symbol}</td>
-                <td className="px-4 py-3 text-sm text-right text-gray-300 whitespace-nowrap">{formatCurrency(h.lastPrice, true)}</td>
-                <td className={clsx("px-4 py-3 text-sm text-right whitespace-nowrap", h.dayChangePercent >= 0 ? 'text-[#FC2D79]' : 'text-[#823AFD]')}>
+                <td className="px-4 py-3 text-left whitespace-nowrap">
+                  <div className="font-semibold text-white">{h.symbol}</div>
+                  <div className="text-xs text-[#9AA4B2] opacity-70">Holding</div>
+                </td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">{formatCurrency(h.lastPrice, true)}</td>
+                <td className={clsx("px-4 py-3 text-right whitespace-nowrap", h.dayChangePercent >= 0 ? 'text-green-400' : 'text-red-500')}>
                   {h.dayChangePercent >= 0 ? '+' : ''}{h.dayChangePercent.toFixed(2)}%
                 </td>
-                <td className={clsx("px-4 py-3 text-sm text-right whitespace-nowrap", h.dayReturn >= 0 ? 'text-[#FC2D79]' : 'text-[#823AFD]')}>
+                <td className={clsx("px-4 py-3 text-right whitespace-nowrap", h.dayReturn >= 0 ? 'text-green-400' : 'text-red-500')}>
                   {h.dayReturn >= 0 ? '+' : ''}{formatCurrency(h.dayReturn, true)}
                 </td>
-                <td className={clsx("px-4 py-3 text-sm text-right whitespace-nowrap", h.totalReturnPercent >= 0 ? 'text-[#FC2D79]' : 'text-[#823AFD]')}>
+                <td className={clsx("px-4 py-3 text-right whitespace-nowrap", h.totalReturnPercent >= 0 ? 'text-green-400' : 'text-red-500')}>
                   {h.totalReturnPercent >= 0 ? '+' : ''}{h.totalReturnPercent.toFixed(2)}%
                 </td>
-                <td className={clsx("px-4 py-3 text-sm text-right whitespace-nowrap", h.totalReturn >= 0 ? 'text-[#FC2D79]' : 'text-[#823AFD]')}>
+                <td className={clsx("px-4 py-3 text-right whitespace-nowrap", h.totalReturn >= 0 ? 'text-green-400' : 'text-red-500')}>
                   {h.totalReturn >= 0 ? '+' : ''}{formatCurrency(h.totalReturn, true)}
                 </td>
-                <td className="px-4 py-3 text-sm text-right text-white whitespace-nowrap">{h.quantity}</td>
-                <td className="px-4 py-3 text-sm text-right text-gray-400 whitespace-nowrap">{formatCurrency(h.avgCost, true)}</td>
-                <td className="px-4 py-3 text-sm text-right text-gray-400 whitespace-nowrap">{formatCurrency(h.totalCost, true)}</td>
-                <td className="px-4 py-3 text-sm text-right font-medium text-white whitespace-nowrap">{formatCurrency(h.currentValue, true)}</td>
-                <td className="px-4 py-3 text-sm text-right text-white whitespace-nowrap">{h.weightPercent.toFixed(2)}%</td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">{h.quantity}</td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">{formatCurrency(h.avgCost, true)}</td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">{formatCurrency(h.totalCost, true)}</td>
+                <td className="px-4 py-3 text-right font-medium whitespace-nowrap">{formatCurrency(h.currentValue, true)}</td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">{h.weightPercent.toFixed(2)}%</td>
               </tr>
             ))}
             
             {/* Summary Rows */}
-            <tr className="bg-[#1A1D2D]/30 border-t-2 border-[#2A2E45]">
-              <td colSpan={8} className="px-4 py-3 text-sm font-medium text-[#9898C8] text-right">Stocks Total</td>
-              <td className="px-4 py-3 text-sm font-bold text-white text-right">{formatCurrency(holdings.reduce((sum, h) => sum + h.totalCost, 0), true)}</td>
-              <td className="px-4 py-3 text-sm font-bold text-white text-right">{formatCurrency(totalSecuritiesValue, true)}</td>
-              <td className="px-4 py-3 text-sm font-medium text-white text-right">{(totalSecuritiesValue / totalNetWorth * 100).toFixed(2)}%</td>
+            <tr className="bg-black/20 border-t-2 border-[#2A2E45]">
+              <td colSpan={8} className="px-4 py-3 text-[15px] font-semibold text-[#F1F5F9] text-right">Stocks Total</td>
+              <td className="px-4 py-3 text-[15px] font-bold text-white text-right">{formatCurrency(holdings.reduce((sum, h) => sum + h.totalCost, 0), true)}</td>
+              <td className="px-4 py-3 text-[15px] font-bold text-white text-right">{formatCurrency(totalSecuritiesValue, true)}</td>
+              <td className="px-4 py-3 text-[15px] font-medium text-white text-right">{(totalSecuritiesValue / totalNetWorth * 100).toFixed(2)}%</td>
             </tr>
-            <tr className="bg-[#1A1D2D]/30">
-              <td colSpan={8} className="px-4 py-3 text-sm font-medium text-[#9898C8] text-right">Cash Balance</td>
-              <td className="px-4 py-3 text-sm font-bold text-white text-right">-</td>
-              <td className="px-4 py-3 text-sm font-bold text-white text-right">{formatCurrency(cashBalance, true)}</td>
-              <td className="px-4 py-3 text-sm font-medium text-white text-right">{(cashBalance / totalNetWorth * 100).toFixed(2)}%</td>
+            <tr className="bg-black/20">
+              <td colSpan={8} className="px-4 py-3 text-[14.5px] font-medium text-[#F1F5F9] text-right">Cash Balance</td>
+              <td className="px-4 py-3 text-[14.5px] font-bold text-white text-right">-</td>
+              <td className="px-4 py-3 text-[14.5px] font-bold text-white text-right">{formatCurrency(cashBalance, true)}</td>
+              <td className="px-4 py-3 text-[14.5px] font-medium text-white text-right">{(cashBalance / totalNetWorth * 100).toFixed(2)}%</td>
             </tr>
-            <tr className="bg-[#823AFD]/20 border-t-2 border-[#823AFD]">
-              <td colSpan={8} className="px-4 py-3 text-base font-bold text-white text-right">Total Portfolio Value</td>
-              <td className="px-4 py-3 text-base font-bold text-white text-right">-</td>
-              <td className="px-4 py-3 text-base font-bold text-white text-right">{formatCurrency(totalNetWorth, true)}</td>
-              <td className="px-4 py-3 text-base font-bold text-white text-right">100.00%</td>
+            <tr className="bg-gradient-to-r from-transparent to-white/5 border-t-2 border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+              <td colSpan={8} className="px-4 py-3 text-[17px] font-bold text-white text-right">Total Portfolio Value</td>
+              <td className="px-4 py-3 text-[17px] font-bold text-white text-right">-</td>
+              <td className="px-4 py-3 text-[17px] font-bold text-white text-right">{formatCurrency(totalNetWorth, true)}</td>
+              <td className="px-4 py-3 text-[17px] font-bold text-white text-right">100.00%</td>
             </tr>
           </tbody>
         </table>

@@ -8,7 +8,7 @@ interface Props {
   holdings: Holding[];
 }
 
-const COLORS = ['#FC2D79', '#823AFD', '#FD5514', '#00C49F', '#FFBB28', '#FF8042', '#0088FE'];
+const COLORS = ['#3B82F6', '#14B8A6', '#F97316', '#8B5CF6', '#EC4899', '#F43F5E', '#EAB308', '#22C55E', '#6366F1', '#D946EF'];
 
 export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
   const [mode, setMode] = useState<'Asset' | 'Stock Type'>('Asset');

@@ -59,13 +59,10 @@ export const Heatmap: React.FC<Props> = ({ holdings }) => {
       }))
     };
 
-    // Domain for color scale: typically -5% to +5% for 1D, or -20% to +20% for Total
-    const maxVal = timeRange === '1D' ? 5 : 30;
-    
-    // Create a color scale (Red -> Gray -> Green)
+    // Domain for color scale: typically -3% to +3%
     const color = d3.scaleLinear<string>()
-      .domain([-maxVal, 0, maxVal])
-      .range(['#823AFD', '#2A2E45', '#FC2D79'])
+      .domain([-3, -0.5, 0, 0.5, 3])
+      .range(['#7F1B23', '#b91c1c', '#4B5563', '#15803d', '#0B6639'])
       .clamp(true);
 
     return { data: rootData, colorScale: color };
