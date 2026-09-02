@@ -1,7 +1,9 @@
 import React from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
-import { LayoutDashboard, ReceiptText, Settings, LogOut, Briefcase } from 'lucide-react';
+import { usePortfolioStore } from '../../stores/portfolioStore';
+import { useHoldings } from '../../hooks/useHoldings';
+import { LayoutDashboard, ReceiptText, Settings, LogOut, Briefcase, ChevronDown, Check, TrendingUp, TrendingDown } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAV_ITEMS = [
@@ -14,9 +16,16 @@ const NAV_ITEMS = [
 export const Sidebar = () => {
   const { activeTab, setActiveTab } = useUiStore();
   const logout = useAuthStore((s) => s.logout);
+  const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
+  const [isPortfoliosOpen, setIsPortfoliosOpen] = React.useState(false);
+  const { holdings } = useHoldings();
+
+  const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
+  const topWinners = [...holdings].filter(h => h.dayChangePercent > 0).sort((a, b) => b.dayChangePercent - a.dayChangePercent).slice(0, 3);
+  const topLosers = [...holdings].filter(h => h.dayChangePercent < 0).sort((a, b) => a.dayChangePercent - b.dayChangePercent).slice(0, 3);
 
   return (
-    <aside className="w-64 bg-[#0F111A] border-r border-[#1F2233] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.2)]">
+    <aside className="w-72 bg-[#0F111A] border-r border-[#1F2233] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.2)] h-screen overflow-y-auto custom-scrollbar">
       {/* Brand */}
       <div className="p-6 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#823AFD] via-[#FC2D79] to-[#FD5514] flex items-center justify-center shadow-[0_4px_12px_rgba(130,58,253,0.28)]">
@@ -27,8 +36,47 @@ export const Sidebar = () => {
         </h2>
       </div>
 
+      {/* Portfolio Switcher */}
+      <div className="px-4 mb-4">
+        <div className="relative">
+          <button 
+            onClick={() => setIsPortfoliosOpen(!isPortfoliosOpen)}
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] transition-colors"
+          >
+            <div className="flex items-center gap-3 truncate">
+              <div className="w-6 h-6 rounded-md bg-[#2A2E45] flex items-center justify-center shrink-0">
+                <span className="text-xs">{activePortfolio?.icon || '📈'}</span>
+              </div>
+              <span className="text-white font-medium truncate">{activePortfolio?.name || 'Select Portfolio'}</span>
+            </div>
+            <ChevronDown className="w-4 h-4 text-[#9898C8]" />
+          </button>
+          
+          {isPortfoliosOpen && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl shadow-xl overflow-hidden z-50">
+              {portfolios.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setActivePortfolio(p.id);
+                    setIsPortfoliosOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between p-3 hover:bg-[#2A2E45] transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3 truncate">
+                    <span className="text-sm">{p.icon}</span>
+                    <span className="text-white text-sm font-medium truncate">{p.name}</span>
+                  </div>
+                  {p.id === activePortfolioId && <Check className="w-4 h-4 text-[#823AFD]" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Nav */}
-      <nav className="flex-1 px-4 py-4 space-y-2">
+      <nav className="px-4 py-2 space-y-2">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -50,6 +98,49 @@ export const Sidebar = () => {
           );
         })}
       </nav>
+
+      {/* Top Movers */}
+      {(topWinners.length > 0 || topLosers.length > 0) && (
+        <div className="px-4 py-6 mt-4 border-t border-[#1F2233]">
+          <h3 className="text-xs font-bold text-[#9898C8] uppercase tracking-wider mb-4 px-2">Top Movers Today</h3>
+          
+          {topWinners.length > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2 px-2">
+                <TrendingUp className="w-4 h-4 text-[#FC2D79]" />
+                <span className="text-sm font-medium text-white">Winners</span>
+              </div>
+              <div className="space-y-2">
+                {topWinners.map(h => (
+                  <div key={h.symbol} className="flex justify-between items-center p-2 rounded-lg hover:bg-[#1A1D2D] transition-colors">
+                    <span className="text-white text-sm font-bold">{h.symbol}</span>
+                    <span className="text-[#FC2D79] text-sm font-medium">+{h.dayChangePercent.toFixed(2)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {topLosers.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2 px-2">
+                <TrendingDown className="w-4 h-4 text-[#823AFD]" />
+                <span className="text-sm font-medium text-white">Losers</span>
+              </div>
+              <div className="space-y-2">
+                {topLosers.map(h => (
+                  <div key={h.symbol} className="flex justify-between items-center p-2 rounded-lg hover:bg-[#1A1D2D] transition-colors">
+                    <span className="text-white text-sm font-bold">{h.symbol}</span>
+                    <span className="text-[#823AFD] text-sm font-medium">{h.dayChangePercent.toFixed(2)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex-1"></div>
 
       {/* Footer */}
       <div className="p-4 border-t border-[#1F2233]">
