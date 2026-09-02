@@ -19,7 +19,7 @@ export interface HoldingWithPeriod extends Holding {
   periodReturnPercent: number;
 }
 
-type SortKey = keyof HoldingWithPeriod;
+type SortKey = 'symbol' | 'lastPrice' | 'currentValue' | 'totalReturn' | 'periodReturn' | 'weightPercent';
 type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
 
 const getStartDateForRange = (range: HoldingTimeRange, customStartDate?: string): string => {
@@ -102,22 +102,18 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
         };
       }
 
-      // Look up historical price at targetStartDate
       const symHistory = historical[h.symbol] || [];
       let basePrice = 0;
 
       if (symHistory.length > 0) {
-        // Find closest date on or before targetStartDate
         const filtered = symHistory.filter(pt => pt.date <= targetStartDate);
         if (filtered.length > 0) {
           basePrice = filtered[filtered.length - 1].price;
         } else {
-          // If all historical points are after targetStartDate, use earliest available point
           basePrice = symHistory[0].price;
         }
       }
 
-      // If no valid historical price, fallback to average cost basis
       if (!basePrice || basePrice <= 0) {
         basePrice = h.avgCost;
       }
@@ -146,19 +142,32 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
     let sortableItems = [...processedHoldings];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        const aVal = a[sortConfig.key] ?? 0;
-        const bVal = b[sortConfig.key] ?? 0;
-        if (aVal < bVal) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
+        let aVal = a[sortConfig.key] ?? 0;
+        let bVal = b[sortConfig.key] ?? 0;
+        if (typeof aVal === 'string') {
+          return sortConfig.direction === 'asc' 
+            ? (aVal as string).localeCompare(bVal as string) 
+            : (bVal as string).localeCompare(aVal as string);
         }
-        if (aVal > bVal) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
     return sortableItems;
   }, [processedHoldings, sortConfig]);
+
+  const totalCostBasis = useMemo(() => {
+    return holdings.reduce((sum, h) => sum + h.totalCost, 0);
+  }, [holdings]);
+
+  const totalTotalPnl = useMemo(() => {
+    return totalSecuritiesValue - totalCostBasis;
+  }, [totalSecuritiesValue, totalCostBasis]);
+
+  const totalTotalPnlPercent = useMemo(() => {
+    return totalCostBasis > 0 ? (totalTotalPnl / totalCostBasis) * 100 : 0;
+  }, [totalTotalPnl, totalCostBasis]);
 
   const totalPeriodReturn = useMemo(() => {
     return processedHoldings.reduce((sum, h) => sum + h.periodReturn, 0);
@@ -178,24 +187,27 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
     return <ArrowUpDown className="w-3 h-3 inline opacity-30 group-hover:opacity-100 text-[#CBD5E1]" />;
   };
 
-  const renderTH = (label: string, key: SortKey, align: 'left' | 'right' = 'right') => (
+  const renderTH = (label: string, sublabel: string, key: SortKey, align: 'left' | 'right' = 'right') => (
     <th 
       className={clsx(
-        "px-4 py-3.5 text-sm font-semibold text-[#CBD5E1] uppercase tracking-wider cursor-pointer group hover:text-white transition-colors select-none", 
+        "px-5 py-4 text-sm font-semibold uppercase tracking-wider cursor-pointer group hover:text-white transition-colors select-none", 
         align === 'right' ? 'text-right' : 'text-left'
       )}
       onClick={() => requestSort(key)}
     >
-      <div className={clsx("flex items-center gap-1", align === 'right' && "justify-end")}>
-        <span>{label}</span>
-        <SortIcon columnKey={key} />
+      <div className={clsx("flex flex-col", align === 'right' ? "items-end" : "items-start")}>
+        <div className="flex items-center gap-1 text-white font-bold">
+          <span>{label}</span>
+          <SortIcon columnKey={key} />
+        </div>
+        <span className="text-[11px] font-normal text-[#94A3B8] normal-case tracking-normal">{sublabel}</span>
       </div>
     </th>
   );
 
   return (
     <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl overflow-hidden mt-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-      {/* Holdings Header with Dedicated Pill Buttons */}
+      {/* Holdings Header with Pill Buttons */}
       <div className="p-6 border-b border-[#2A2E45] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -209,11 +221,13 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               {rangeLabel}: {totalPeriodReturn >= 0 ? '+' : ''}{formatCurrency(totalPeriodReturn, true)} ({totalPeriodReturn >= 0 ? '+' : ''}{totalPeriodReturnPercent.toFixed(2)}%)
             </span>
           </div>
-          <p className="text-sm text-[#CBD5E1] mt-1">Individual asset allocation & performance breakdown</p>
+          <p className="text-sm text-[#CBD5E1] mt-1">
+            คลิกดู <span className="font-semibold text-white">ต้นทุนจริง</span> เทียบ <span className="font-semibold text-white">มูลค่าปัจจุบัน</span> และ <span className="font-semibold text-emerald-400">กำไรสุทธิ</span> แว้บเดียวจบ
+          </p>
         </div>
 
         {/* Dedicated Pill Buttons */}
-        <div className="flex items-center gap-1.5 bg-[#1A1D2D] p-1.5 rounded-2xl border border-[#2A2E45] self-start md:self-auto">
+        <div className="flex items-center gap-1.5 bg-[#1A1D2D] p-1.5 rounded-2xl border border-[#2A2E45] self-start md:self-auto shadow-inner">
           {(['1D', '1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as HoldingTimeRange[]).map((range) => (
             <button
               key={range}
@@ -221,7 +235,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               className={clsx(
                 "px-3 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 select-none",
                 timeRange === range
-                  ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_2px_12px_rgba(130,58,253,0.35)] scale-[1.02]"
+                  ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_2px_12px_rgba(130,58,253,0.4)] scale-[1.02]"
                   : "text-[#CBD5E1] hover:text-white hover:bg-white/5"
               )}
             >
@@ -233,7 +247,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
             className={clsx(
               "px-3 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 flex items-center gap-1.5 select-none",
               timeRange === 'CUSTOM'
-                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_2px_12px_rgba(130,58,253,0.35)] scale-[1.02]"
+                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_2px_12px_rgba(130,58,253,0.4)] scale-[1.02]"
                 : "text-[#CBD5E1] hover:text-white hover:bg-white/5"
             )}
           >
@@ -283,123 +297,216 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
         </div>
       )}
 
-      {/* Holdings Table */}
+      {/* 6-Column Streamlined Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-[#1A1D2D]">
+          <thead className="bg-[#161926] border-b border-[#2A2E45]">
             <tr>
-              {renderTH('Symbol', 'symbol', 'left')}
-              {renderTH('Price', 'lastPrice')}
-              {renderTH(`${rangeLabel} %`, 'periodReturnPercent')}
-              {renderTH(`${rangeLabel} $`, 'periodReturn')}
-              {timeRange !== 'ALL' && renderTH('Total %', 'totalReturnPercent')}
-              {timeRange !== 'ALL' && renderTH('Total $', 'totalReturn')}
-              {renderTH('Qty', 'quantity')}
-              {renderTH('Avg Cost', 'avgCost')}
-              {renderTH('Total Cost', 'totalCost')}
-              {renderTH('Value', 'currentValue')}
-              {renderTH('Weight', 'weightPercent')}
+              {renderTH('Asset', 'Symbol & Shares', 'symbol', 'left')}
+              {renderTH('Market Price', 'Current / Avg Cost', 'lastPrice')}
+              {renderTH('Portfolio Value', 'Current Value / Total Cost', 'currentValue')}
+              {renderTH('Total Profit / Loss', 'Overall P/L ($ / %)', 'totalReturn')}
+              {renderTH(`${rangeLabel} Return`, `Period Return ($ / %)`, 'periodReturn')}
+              {renderTH('Portfolio Weight', 'Asset Allocation %', 'weightPercent')}
             </tr>
           </thead>
-          <tbody className="text-base text-[#F1F5F9] divide-y divide-[#2A2E45]">
-            {sortedHoldings.map((h) => (
-              <tr key={h.symbol} className="hover:bg-[#1A1D2D]/50 transition-colors">
-                <td className="px-4 py-3.5 text-left whitespace-nowrap">
-                  <div className="font-bold text-white text-base">{h.symbol}</div>
-                  <div className="text-xs text-[#CBD5E1] opacity-80">Holding</div>
-                </td>
-                <td className="px-4 py-3.5 text-right whitespace-nowrap font-medium text-white">
-                  {formatCurrency(h.lastPrice, true)}
-                </td>
-                
-                {/* Dynamic Period Return % */}
-                <td className={clsx(
-                  "px-4 py-3.5 text-right whitespace-nowrap font-bold tabular-nums", 
-                  h.periodReturnPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                )}>
-                  {h.periodReturnPercent >= 0 ? '+' : ''}{h.periodReturnPercent.toFixed(2)}%
-                </td>
+          <tbody className="text-base divide-y divide-[#2A2E45]/80">
+            {sortedHoldings.map((h) => {
+              const isProfit = h.totalReturn >= 0;
+              const isPeriodProfit = h.periodReturn >= 0;
 
-                {/* Dynamic Period Return $ */}
-                <td className={clsx(
-                  "px-4 py-3.5 text-right whitespace-nowrap font-bold tabular-nums", 
-                  h.periodReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                )}>
-                  {h.periodReturn >= 0 ? '+' : ''}{formatCurrency(h.periodReturn, true)}
-                </td>
-
-                {/* Total Cost-Basis Return (When timeRange is not ALL) */}
-                {timeRange !== 'ALL' && (
-                  <td className={clsx(
-                    "px-4 py-3.5 text-right whitespace-nowrap font-semibold tabular-nums", 
-                    h.totalReturnPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                  )}>
-                    {h.totalReturnPercent >= 0 ? '+' : ''}{h.totalReturnPercent.toFixed(2)}%
+              return (
+                <tr key={h.symbol} className="hover:bg-[#1A1D2D]/60 transition-colors group">
+                  {/* Column 1: Asset (Symbol + Shares) */}
+                  <td className="px-5 py-4 text-left whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1E2235] to-[#121420] border border-[#2A2E45] flex items-center justify-center font-black text-white text-sm shadow-sm group-hover:border-[#823AFD]/50 transition-colors">
+                        {h.symbol.slice(0, 3)}
+                      </div>
+                      <div>
+                        <div className="font-extrabold text-white text-base tracking-tight">{h.symbol}</div>
+                        <div className="text-xs font-medium text-[#94A3B8]">
+                          <span className="text-white font-semibold">{h.quantity}</span> shares
+                        </div>
+                      </div>
+                    </div>
                   </td>
-                )}
-                {timeRange !== 'ALL' && (
-                  <td className={clsx(
-                    "px-4 py-3.5 text-right whitespace-nowrap font-semibold tabular-nums", 
-                    h.totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                  )}>
-                    {h.totalReturn >= 0 ? '+' : ''}{formatCurrency(h.totalReturn, true)}
-                  </td>
-                )}
 
-                <td className="px-4 py-3.5 text-right whitespace-nowrap tabular-nums text-[#CBD5E1]">{h.quantity}</td>
-                <td className="px-4 py-3.5 text-right whitespace-nowrap tabular-nums text-[#CBD5E1]">{formatCurrency(h.avgCost, true)}</td>
-                <td className="px-4 py-3.5 text-right whitespace-nowrap tabular-nums text-[#CBD5E1]">{formatCurrency(h.totalCost, true)}</td>
-                <td className="px-4 py-3.5 text-right font-bold text-white whitespace-nowrap tabular-nums">{formatCurrency(h.currentValue, true)}</td>
-                <td className="px-4 py-3.5 text-right whitespace-nowrap tabular-nums font-semibold text-[#CBD5E1]">{h.weightPercent.toFixed(2)}%</td>
-              </tr>
-            ))}
+                  {/* Column 2: Current Price vs Avg Cost */}
+                  <td className="px-5 py-4 text-right whitespace-nowrap">
+                    <div className="font-bold text-white text-base tabular-nums">
+                      {formatCurrency(h.lastPrice, true)}
+                    </div>
+                    <div className="text-xs font-medium text-[#94A3B8] tabular-nums mt-0.5">
+                      Avg: <span className="text-[#CBD5E1] font-semibold">{formatCurrency(h.avgCost, true)}</span>
+                    </div>
+                  </td>
+
+                  {/* Column 3: Current Value vs Total Cost */}
+                  <td className="px-5 py-4 text-right whitespace-nowrap">
+                    <div className="font-black text-white text-base tabular-nums">
+                      {formatCurrency(h.currentValue, true)}
+                    </div>
+                    <div className="text-xs font-medium text-[#94A3B8] tabular-nums mt-0.5">
+                      Cost: <span className="text-[#CBD5E1] font-semibold">{formatCurrency(h.totalCost, true)}</span>
+                    </div>
+                  </td>
+
+                  {/* Column 4: Total P/L (HERO METRIC - HIGHLIGHTED) */}
+                  <td className="px-5 py-4 text-right whitespace-nowrap">
+                    <div className={clsx(
+                      "inline-flex flex-col items-end px-3 py-1.5 rounded-xl border tabular-nums transition-all",
+                      isProfit 
+                        ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" 
+                        : "bg-rose-500/10 border-rose-500/25 text-rose-400"
+                    )}>
+                      <div className="text-base font-black flex items-center gap-1">
+                        {isProfit ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                        <span>{isProfit ? '+' : ''}{formatCurrency(h.totalReturn, true)}</span>
+                      </div>
+                      <div className="text-xs font-bold opacity-90">
+                        {isProfit ? '+' : ''}{h.totalReturnPercent.toFixed(2)}%
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Column 5: Dynamic Period Return ({rangeLabel}) */}
+                  <td className="px-5 py-4 text-right whitespace-nowrap">
+                    <div className={clsx(
+                      "font-bold text-base tabular-nums flex items-center justify-end gap-1",
+                      isPeriodProfit ? "text-emerald-400" : "text-rose-400"
+                    )}>
+                      <span>{isPeriodProfit ? '+' : ''}{formatCurrency(h.periodReturn, true)}</span>
+                    </div>
+                    <div className={clsx(
+                      "text-xs font-semibold tabular-nums mt-0.5",
+                      isPeriodProfit ? "text-emerald-400/90" : "text-rose-400/90"
+                    )}>
+                      {isPeriodProfit ? '+' : ''}{h.periodReturnPercent.toFixed(2)}%
+                    </div>
+                  </td>
+
+                  {/* Column 6: Weight % with mini progress bar */}
+                  <td className="px-5 py-4 text-right whitespace-nowrap">
+                    <div className="font-extrabold text-white text-base tabular-nums">
+                      {h.weightPercent.toFixed(2)}%
+                    </div>
+                    <div className="w-24 ml-auto mt-1.5 bg-[#1A1D2D] rounded-full h-1.5 overflow-hidden border border-[#2A2E45]">
+                      <div 
+                        className="bg-gradient-to-r from-[#823AFD] to-[#FC2D79] h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(h.weightPercent * 2, 100)}%` }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             
-            {/* Summary Rows */}
-            <tr className="bg-black/25 border-t-2 border-[#2A2E45]">
-              <td colSpan={2} className="px-4 py-3.5 text-base font-bold text-white text-left">Stocks Total</td>
-              <td className={clsx("px-4 py-3.5 text-base font-bold text-right tabular-nums", totalPeriodReturnPercent >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
-                {totalPeriodReturnPercent >= 0 ? '+' : ''}{totalPeriodReturnPercent.toFixed(2)}%
+            {/* Summary Row 1: Stocks Total */}
+            <tr className="bg-[#141724] border-t-2 border-[#2A2E45]">
+              <td className="px-5 py-4 text-left">
+                <div className="text-base font-black text-white">Stocks Total</div>
+                <div className="text-xs font-semibold text-[#94A3B8]">{holdings.length} Active Positions</div>
               </td>
-              <td className={clsx("px-4 py-3.5 text-base font-bold text-right tabular-nums", totalPeriodReturn >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
-                {totalPeriodReturn >= 0 ? '+' : ''}{formatCurrency(totalPeriodReturn, true)}
+              <td className="px-5 py-4 text-right text-sm font-medium text-[#94A3B8]">-</td>
+              <td className="px-5 py-4 text-right whitespace-nowrap">
+                <div className="text-base font-black text-white tabular-nums">
+                  {formatCurrency(totalSecuritiesValue, true)}
+                </div>
+                <div className="text-xs font-medium text-[#94A3B8] tabular-nums mt-0.5">
+                  Cost: <span className="text-[#CBD5E1] font-semibold">{formatCurrency(totalCostBasis, true)}</span>
+                </div>
               </td>
-              {timeRange !== 'ALL' && (
-                <>
-                  <td className={clsx(
-                    "px-4 py-3.5 text-base font-bold text-right tabular-nums",
-                    (totalSecuritiesValue - holdings.reduce((sum, h) => sum + h.totalCost, 0)) >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                  )}>
-                    {(((totalSecuritiesValue - holdings.reduce((sum, h) => sum + h.totalCost, 0)) / holdings.reduce((sum, h) => sum + h.totalCost, 0)) * 100).toFixed(2)}%
-                  </td>
-                  <td className={clsx(
-                    "px-4 py-3.5 text-base font-bold text-right tabular-nums",
-                    (totalSecuritiesValue - holdings.reduce((sum, h) => sum + h.totalCost, 0)) >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                  )}>
-                    {formatCurrency(totalSecuritiesValue - holdings.reduce((sum, h) => sum + h.totalCost, 0), true)}
-                  </td>
-                </>
-              )}
-              <td className="px-4 py-3.5 text-base font-bold text-white text-right tabular-nums">-</td>
-              <td className="px-4 py-3.5 text-base font-bold text-white text-right tabular-nums">-</td>
-              <td className="px-4 py-3.5 text-base font-bold text-white text-right tabular-nums">{formatCurrency(holdings.reduce((sum, h) => sum + h.totalCost, 0), true)}</td>
-              <td className="px-4 py-3.5 text-base font-bold text-white text-right tabular-nums">{formatCurrency(totalSecuritiesValue, true)}</td>
-              <td className="px-4 py-3.5 text-base font-bold text-white text-right tabular-nums">{(totalSecuritiesValue / totalNetWorth * 100).toFixed(2)}%</td>
+              {/* Total P/L Summary */}
+              <td className="px-5 py-4 text-right whitespace-nowrap">
+                <div className={clsx(
+                  "inline-flex flex-col items-end px-3 py-1 rounded-xl border tabular-nums",
+                  totalTotalPnl >= 0 ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" : "bg-rose-500/10 border-rose-500/25 text-rose-400"
+                )}>
+                  <div className="text-base font-black">
+                    {totalTotalPnl >= 0 ? '+' : ''}{formatCurrency(totalTotalPnl, true)}
+                  </div>
+                  <div className="text-xs font-bold">
+                    {totalTotalPnl >= 0 ? '+' : ''}{totalTotalPnlPercent.toFixed(2)}%
+                  </div>
+                </div>
+              </td>
+              {/* Period Return Summary */}
+              <td className="px-5 py-4 text-right whitespace-nowrap">
+                <div className={clsx("text-base font-black tabular-nums", totalPeriodReturn >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                  {totalPeriodReturn >= 0 ? '+' : ''}{formatCurrency(totalPeriodReturn, true)}
+                </div>
+                <div className={clsx("text-xs font-bold tabular-nums mt-0.5", totalPeriodReturn >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                  {totalPeriodReturn >= 0 ? '+' : ''}{totalPeriodReturnPercent.toFixed(2)}%
+                </div>
+              </td>
+              {/* Weight Summary */}
+              <td className="px-5 py-4 text-right whitespace-nowrap">
+                <div className="text-base font-black text-white tabular-nums">
+                  {(totalSecuritiesValue / totalNetWorth * 100).toFixed(2)}%
+                </div>
+                <div className="text-xs font-medium text-[#94A3B8]">of Portfolio</div>
+              </td>
             </tr>
 
-            <tr className="bg-black/25">
-              <td colSpan={timeRange !== 'ALL' ? 9 : 7} className="px-4 py-3.5 text-base font-semibold text-[#CBD5E1] text-right">Cash Balance</td>
-              <td className="px-4 py-3.5 text-base font-bold text-white text-right tabular-nums">-</td>
-              <td className="px-4 py-3.5 text-base font-bold text-white text-right tabular-nums">{formatCurrency(cashBalance, true)}</td>
-              <td className="px-4 py-3.5 text-base font-semibold text-[#CBD5E1] text-right tabular-nums">{(cashBalance / totalNetWorth * 100).toFixed(2)}%</td>
+            {/* Summary Row 2: Cash Balance */}
+            <tr className="bg-[#121420]">
+              <td className="px-5 py-3.5 text-left">
+                <div className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>💵 Cash Balance</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[#CBD5E1]">Dime! USD + FCD</span>
+                </div>
+              </td>
+              <td className="px-5 py-3.5 text-right text-sm text-[#94A3B8]">-</td>
+              <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                <div className="text-sm font-extrabold text-white tabular-nums">
+                  {formatCurrency(cashBalance, true)}
+                </div>
+              </td>
+              <td className="px-5 py-3.5 text-right text-sm text-[#94A3B8]">-</td>
+              <td className="px-5 py-3.5 text-right text-sm text-[#94A3B8]">-</td>
+              <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                <div className="text-sm font-bold text-[#CBD5E1] tabular-nums">
+                  {(cashBalance / totalNetWorth * 100).toFixed(2)}%
+                </div>
+              </td>
             </tr>
 
-            <tr className="bg-gradient-to-r from-[#823AFD]/10 to-[#FC2D79]/10 border-t-2 border-[#823AFD]/30 shadow-[0_2px_8px_rgba(130,58,253,0.15)]">
-              <td colSpan={timeRange !== 'ALL' ? 9 : 7} className="px-4 py-4 text-lg font-bold text-white text-right">Total Net Worth</td>
-              <td className="px-4 py-4 text-lg font-bold text-white text-right tabular-nums">-</td>
-              <td className="px-4 py-4 text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-[#FC2D79] text-right tabular-nums">
-                {formatCurrency(totalNetWorth, true)}
+            {/* Summary Row 3: Total Net Worth Banner */}
+            <tr className="bg-gradient-to-r from-[#823AFD]/20 via-[#161926] to-[#FC2D79]/20 border-t-2 border-[#823AFD]/40 shadow-[0_4px_16px_rgba(130,58,253,0.15)]">
+              <td className="px-5 py-4 text-left">
+                <div className="text-lg font-black text-white tracking-tight">Total Net Worth</div>
+                <div className="text-xs font-semibold text-[#CBD5E1]">Securities + Cash</div>
               </td>
-              <td className="px-4 py-4 text-lg font-bold text-white text-right tabular-nums">100.00%</td>
+              <td className="px-5 py-4 text-right text-sm font-medium text-[#94A3B8]">-</td>
+              <td className="px-5 py-4 text-right whitespace-nowrap">
+                <div className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-[#FC2D79] tabular-nums">
+                  {formatCurrency(totalNetWorth, true)}
+                </div>
+              </td>
+              <td className="px-5 py-4 text-right whitespace-nowrap">
+                <div className={clsx(
+                  "inline-flex flex-col items-end px-3 py-1 rounded-xl border tabular-nums",
+                  totalTotalPnl >= 0 ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" : "bg-rose-500/15 border-rose-500/30 text-rose-400"
+                )}>
+                  <div className="text-base font-black">
+                    {totalTotalPnl >= 0 ? '+' : ''}{formatCurrency(totalTotalPnl, true)}
+                  </div>
+                  <div className="text-xs font-bold">
+                    {totalTotalPnl >= 0 ? '+' : ''}{totalTotalPnlPercent.toFixed(2)}%
+                  </div>
+                </div>
+              </td>
+              <td className="px-5 py-4 text-right whitespace-nowrap">
+                <div className={clsx("text-base font-black tabular-nums", totalPeriodReturn >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                  {totalPeriodReturn >= 0 ? '+' : ''}{formatCurrency(totalPeriodReturn, true)}
+                </div>
+              </td>
+              <td className="px-5 py-4 text-right whitespace-nowrap">
+                <div className="text-lg font-black text-white tabular-nums">
+                  100.00%
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
