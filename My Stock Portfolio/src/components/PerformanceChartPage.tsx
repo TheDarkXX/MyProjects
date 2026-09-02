@@ -163,7 +163,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
     useEffect(() => {
         if (!selectedPortfolioId) return;
         const portfolioId = selectedPortfolioId;
-        const portfolioTxs = transactions.filter(t => (t.portfolio_id === portfolioId || (t as any).portfolioId === portfolioId) && t.status === 'CONFIRMED');
+        const portfolioTxs = transactions.filter(t => (t.portfolio_id === portfolioId || (t as any).portfolioId === portfolioId) && t.status !== 'CANCELLED');
         
         if (portfolioTxs.length === 0) {
             setChartApiStatus(prev => ({ ...prev, [portfolioId]: { status: 'idle', error: null } }));
@@ -218,7 +218,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
     // --- Calculate TWR and update historicalDataCache ---
     const calculateTwr = useCallback((portfolioId: string) => {
         const portfolio = portfolios.find(p => p.id === portfolioId);
-        const portfolioTxs = transactions.filter(t => (t.portfolio_id === portfolioId || (t as any).portfolioId === portfolioId));
+        const portfolioTxs = transactions.filter(t => (t.portfolio_id === portfolioId || (t as any).portfolioId === portfolioId) && t.status !== 'CANCELLED');
         const priceData = rawPriceDataCache[portfolioId];
 
         if (!portfolio || portfolioTxs.length === 0 || !priceData) {
@@ -323,7 +323,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
     // --- Calculate MWR (Modified Dietz) chart data ---
     const calculateMwr = useCallback((portfolioId: string) => {
         const portfolio = portfolios.find(p => p.id === portfolioId);
-        const portfolioTxs = transactions.filter(t => (t.portfolio_id === portfolioId || (t as any).portfolioId === portfolioId));
+        const portfolioTxs = transactions.filter(t => (t.portfolio_id === portfolioId || (t as any).portfolioId === portfolioId) && t.status !== 'CANCELLED');
         const priceData = rawPriceDataCache[portfolioId];
 
         if (!portfolio || portfolioTxs.length === 0 || !priceData) {

@@ -190,8 +190,6 @@ const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
     e.preventDefault();
 
     const getPayloadType = (): Transaction['type'] => {
-        if (formData.type === 'DEPOSIT') return 'BUY';
-        if (formData.type === 'WITHDRAW') return 'SELL';
         return formData.type;
     };
 

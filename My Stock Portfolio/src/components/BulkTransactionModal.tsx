@@ -182,8 +182,6 @@ const BulkTransactionModal: React.FC<BulkTransactionModalProps> = ({ isOpen, onC
         }
         
         const getPayloadType = (): Transaction['type'] => {
-            if (row.type === 'DEPOSIT') return 'BUY';
-            if (row.type === 'WITHDRAW') return 'SELL';
             return row.type || 'BUY'; 
         };
         

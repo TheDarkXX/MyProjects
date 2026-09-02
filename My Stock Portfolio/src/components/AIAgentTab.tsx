@@ -336,8 +336,6 @@ const AIAgentTab: React.FC<AIAgentTabProps> = ({ selectedPortfolioId, onSaveTran
     
         const transactionsToSave = parsedTransactions.map(tx => {
             const getPayloadType = (): Transaction['type'] => {
-                if (tx.type === 'DEPOSIT') return 'BUY';
-                if (tx.type === 'WITHDRAW') return 'SELL';
                 return tx.type || 'BUY';
             };
     

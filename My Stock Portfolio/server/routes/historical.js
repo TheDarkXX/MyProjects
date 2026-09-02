@@ -25,10 +25,11 @@ historicalRoutes.post('/', async (c) => {
     for (const symbol of symbols) {
       const cached = getCached.all(symbol, from, to);
       
-      // Check if cache exists and starts near the requested 'from' date (within 7 days)
+      // Check if cache exists, starts near requested 'from' (within 7 days) AND ends near requested 'to' (within 4 days for weekends/holidays)
       const coversFrom = cached.length > 0 && new Date(cached[0].date).getTime() <= (new Date(from).getTime() + 7 * 24 * 60 * 60 * 1000);
+      const coversTo = cached.length > 0 && new Date(cached[cached.length - 1].date).getTime() >= (new Date(to).getTime() - 4 * 24 * 60 * 60 * 1000);
       
-      if (coversFrom) {
+      if (coversFrom && coversTo) {
         results[symbol] = cached;
       } else {
         // Fetch from Yahoo
