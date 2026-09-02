@@ -123,7 +123,7 @@ export const Heatmap: React.FC<Props> = ({ holdings }) => {
               if (node.depth === 1) {
                 // Sector headers
                 return (
-                  <g key={`group-${i}`} transform={`translate(${node.x0},${node.x0})`}>
+                  <g key={`group-${i}`}>
                     <rect
                       x={node.x0}
                       y={node.y0}
