@@ -206,6 +206,46 @@ export const Dashboard = () => {
   const periodPnl = periodEndValue - periodStartValue;
   const periodPnlPercent = periodStartValue > 0 ? (periodPnl / periodStartValue) * 100 : 0;
 
+  const getRangeLabel = (range: DashboardTimeRange) => {
+    switch (range) {
+      case '1D': return 'Today';
+      case '1W': return 'Past 7 Days';
+      case '1M': return 'Past 30 Days';
+      case '3M': return 'Past 3 Months';
+      case 'YTD': return 'Year to Date';
+      case '1Y': return 'Past Year';
+      case 'ALL': return 'All Time';
+      case 'CUSTOM': return 'Custom Range';
+      default: return range;
+    }
+  };
+
+  const displayPnl = useMemo(() => {
+    if (timeRange === 'ALL') return totalPnl;
+    if (timeRange === '1D') return todaysProfit;
+    return periodPnl;
+  }, [timeRange, totalPnl, todaysProfit, periodPnl]);
+
+  const displayPnlPercent = useMemo(() => {
+    if (timeRange === 'ALL') return totalPnlPercent;
+    if (timeRange === '1D') return todaysProfitPercent;
+    return periodPnlPercent;
+  }, [timeRange, totalPnlPercent, todaysProfitPercent, periodPnlPercent]);
+
+  const filteredTxs = useMemo(() => {
+    const startDate = getStartDateForRange(timeRange, earliestTxDate, customFrom);
+    const endDate = customTo || new Date().toISOString().split('T')[0];
+
+    return transactions
+      .filter(t => {
+        if (t.status === 'CANCELLED') return false;
+        if (!t.date) return false;
+        const txDate = t.date.split('T')[0];
+        return txDate >= startDate && txDate <= endDate;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, timeRange, earliestTxDate, customFrom, customTo]);
+
   const applyCustomRange = () => {
     if (tempCustomFrom && tempCustomTo) {
       setCustomFrom(tempCustomFrom);
@@ -224,14 +264,100 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-fade-in-up pb-12">
+      {/* Global Time Range Selector Bar */}
+      <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-4 px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-[#9898C8] text-sm font-medium">Timeframe:</span>
+          <span className="text-white text-sm font-bold">
+            {timeRange === 'CUSTOM' && customFrom && customTo ? `${customFrom} to ${customTo}` : getRangeLabel(timeRange)}
+          </span>
+          <span className={clsx(
+            "text-xs font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1",
+            displayPnl >= 0 
+              ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
+              : "text-rose-400 bg-rose-400/10 border-rose-500/20"
+          )}>
+            {displayPnl >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+            <span>{displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl, true)} ({displayPnl >= 0 ? '+' : ''}{displayPnlPercent.toFixed(2)}%)</span>
+          </span>
+        </div>
+
+        {/* Time Range Pills */}
+        <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-2xl text-xs gap-1 overflow-x-auto custom-scrollbar">
+          {(['1D', '1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as DashboardTimeRange[]).map(range => (
+            <button
+              key={range}
+              onClick={() => {
+                setTimeRange(range);
+                setShowCustomModal(false);
+              }}
+              className={clsx(
+                "px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer whitespace-nowrap",
+                timeRange === range
+                  ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_12px_rgba(252,45,121,0.45)] font-bold"
+                  : "text-[#9898C8] hover:text-white hover:bg-[#2A2E45]/50"
+              )}
+            >
+              {range}
+            </button>
+          ))}
+          <button
+            onClick={() => setShowCustomModal(!showCustomModal)}
+            className={clsx(
+              "px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+              timeRange === 'CUSTOM'
+                ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_12px_rgba(252,45,121,0.45)] font-bold"
+                : "text-[#9898C8] hover:text-white hover:bg-[#2A2E45]/50"
+            )}
+            title="Custom date range"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Custom</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Custom Date Picker Inline Form */}
+      {showCustomModal && (
+        <div className="p-4 bg-[#111418] border border-[#2A2E45] rounded-2xl flex flex-wrap items-center gap-3 animate-fade-in text-xs shadow-md">
+          <span className="text-[#9898C8] font-medium">From:</span>
+          <input
+            type="date"
+            value={tempCustomFrom}
+            onChange={e => setTempCustomFrom(e.target.value)}
+            className="bg-[#1A1D2D] border border-[#2A2E45] text-white px-3 py-1.5 rounded-xl focus:outline-none focus:border-[#823AFD]"
+          />
+          <span className="text-[#9898C8] font-medium">To:</span>
+          <input
+            type="date"
+            value={tempCustomTo}
+            onChange={e => setTempCustomTo(e.target.value)}
+            className="bg-[#1A1D2D] border border-[#2A2E45] text-white px-3 py-1.5 rounded-xl focus:outline-none focus:border-[#823AFD]"
+          />
+          <button
+            onClick={applyCustomRange}
+            disabled={!tempCustomFrom || !tempCustomTo}
+            className="px-4 py-1.5 bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white rounded-xl font-semibold cursor-pointer disabled:opacity-50 transition-all hover:opacity-90 shadow-sm"
+          >
+            Apply
+          </button>
+          <button
+            onClick={() => setShowCustomModal(false)}
+            className="px-4 py-1.5 bg-[#2A2E45] text-[#9898C8] hover:text-white rounded-xl cursor-pointer transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Total Net Worth" 
           value={new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(totalNetWorth)} 
           subValue={exchangeRate ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalNetWorth * exchangeRate) : ''}
-          change={todaysProfitPercent} 
-          isPositive={todaysProfit >= 0}
+          change={displayPnlPercent} 
+          isPositive={displayPnl >= 0}
           icon={TrendingUp}
           gradient="bg-[#FC2D79]"
         />
@@ -253,11 +379,11 @@ export const Dashboard = () => {
           gradient="bg-[#FC2D79]"
         />
         <StatCard 
-          title="Total P/L" 
-          value={`${totalPnl >= 0 ? '+' : ''}${new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(totalPnl)}`} 
-          subValue={exchangeRate ? `${totalPnl >= 0 ? '+' : ''}${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalPnl * exchangeRate)}` : ''}
-          change={totalPnlPercent}
-          isPositive={totalPnl >= 0}
+          title={timeRange === 'ALL' ? 'Total P/L' : `${timeRange} P/L`} 
+          value={`${displayPnl >= 0 ? '+' : ''}${new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(displayPnl)}`} 
+          subValue={exchangeRate ? `${displayPnl >= 0 ? '+' : ''}${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(displayPnl * exchangeRate)}` : ''}
+          change={displayPnlPercent}
+          isPositive={displayPnl >= 0}
           icon={DollarSign}
           gradient="bg-[#823AFD]"
         />
@@ -278,90 +404,22 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Performance Chart */}
         <div className="lg:col-span-2 bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 min-h-[400px]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="text-xl font-bold text-white flex flex-wrap items-center gap-2.5">
-                <span>Performance Overview</span>
-                {chartData.length > 1 && (
-                  <span className={clsx(
-                    "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
-                    periodPnl >= 0 
-                      ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
-                      : "text-rose-400 bg-rose-400/10 border-rose-500/20"
-                  )}>
-                    {periodPnl >= 0 ? '+' : ''}{formatCurrency(periodPnl, true)} ({periodPnl >= 0 ? '+' : ''}{periodPnlPercent.toFixed(2)}%)
-                  </span>
-                )}
-              </h3>
+              <h3 className="text-xl font-bold text-white">Performance Overview</h3>
+              <p className="text-xs text-[#9898C8] mt-0.5">{getRangeLabel(timeRange)}</p>
             </div>
-
-            {/* Time Range Pills */}
-            <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-xl text-xs gap-1 overflow-x-auto custom-scrollbar">
-              {(['1D', '1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as DashboardTimeRange[]).map(range => (
-                <button
-                  key={range}
-                  onClick={() => {
-                    setTimeRange(range);
-                    setShowCustomModal(false);
-                  }}
-                  className={clsx(
-                    "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap",
-                    timeRange === range
-                      ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_10px_rgba(252,45,121,0.4)]"
-                      : "text-[#9898C8] hover:text-white hover:bg-[#2A2E45]/50"
-                  )}
-                >
-                  {range}
-                </button>
-              ))}
-              <button
-                onClick={() => setShowCustomModal(!showCustomModal)}
-                className={clsx(
-                  "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap",
-                  timeRange === 'CUSTOM'
-                    ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_10px_rgba(252,45,121,0.4)]"
-                    : "text-[#9898C8] hover:text-white hover:bg-[#2A2E45]/50"
-                )}
-                title="Custom date range"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Custom</span>
-              </button>
-            </div>
+            {chartData.length > 1 && (
+              <span className={clsx(
+                "text-xs font-semibold px-2.5 py-1 rounded-full border",
+                displayPnl >= 0 
+                  ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
+                  : "text-rose-400 bg-rose-400/10 border-rose-500/20"
+              )}>
+                {displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl, true)} ({displayPnl >= 0 ? '+' : ''}{displayPnlPercent.toFixed(2)}%)
+              </span>
+            )}
           </div>
-
-          {/* Custom Date Picker Inline Form */}
-          {showCustomModal && (
-            <div className="mb-4 p-3.5 bg-[#1A1D2D] border border-[#2A2E45] rounded-2xl flex flex-wrap items-center gap-3 animate-fade-in text-xs">
-              <span className="text-[#9898C8] font-medium">From:</span>
-              <input
-                type="date"
-                value={tempCustomFrom}
-                onChange={e => setTempCustomFrom(e.target.value)}
-                className="bg-[#111418] border border-[#2A2E45] text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-[#823AFD]"
-              />
-              <span className="text-[#9898C8] font-medium">To:</span>
-              <input
-                type="date"
-                value={tempCustomTo}
-                onChange={e => setTempCustomTo(e.target.value)}
-                className="bg-[#111418] border border-[#2A2E45] text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-[#823AFD]"
-              />
-              <button
-                onClick={applyCustomRange}
-                disabled={!tempCustomFrom || !tempCustomTo}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white rounded-lg font-semibold cursor-pointer disabled:opacity-50 transition-all hover:opacity-90 shadow-sm"
-              >
-                Apply
-              </button>
-              <button
-                onClick={() => setShowCustomModal(false)}
-                className="px-3.5 py-1.5 bg-[#2A2E45] text-[#9898C8] hover:text-white rounded-lg cursor-pointer transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
           <div className="w-full h-72 mt-4">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -386,8 +444,8 @@ export const Dashboard = () => {
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-[#9898C8]">
                 <Activity className="w-12 h-12 mb-4 opacity-50" />
-                <p>No historical data available.</p>
-                <p className="text-sm">Add stock transactions to see performance.</p>
+                <p>No historical data available for this timeframe.</p>
+                <p className="text-sm">Try selecting a wider timeframe.</p>
               </div>
             )}
           </div>
@@ -395,9 +453,14 @@ export const Dashboard = () => {
 
         {/* Recent Activity */}
         <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6">
-          <h3 className="text-xl font-bold text-white mb-6">Recent Activity</h3>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-white">Activity</h3>
+            <span className="text-xs text-[#9898C8] px-2 py-0.5 rounded-full bg-[#1A1D2D] border border-[#2A2E45]">
+              {filteredTxs.length} {filteredTxs.length === 1 ? 'tx' : 'txs'}
+            </span>
+          </div>
           <div className="space-y-4 overflow-y-auto max-h-[320px] pr-2 custom-scrollbar">
-            {recentTxs.length > 0 ? recentTxs.map(tx => (
+            {filteredTxs.length > 0 ? filteredTxs.slice(0, 10).map(tx => (
               <div key={tx.id} className="flex items-center justify-between p-4 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] transition-colors cursor-pointer group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[#0F111A] flex items-center justify-center border border-[#2A2E45]">
@@ -411,14 +474,22 @@ export const Dashboard = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={clsx("font-bold tabular-nums", tx.type === 'SELL' || tx.type === 'DEPOSIT' ? "text-green-400" : "text-white")}>
-                    {tx.type === 'SELL' || tx.type === 'DEPOSIT' ? '+' : '-'}{formatCurrency(tx.amount * (tx.price || 1), true)}
+                  <p className={clsx("font-bold tabular-nums", tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? "text-green-400" : "text-white")}>
+                    {tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? '+' : '-'}{formatCurrency(tx.amount * (tx.price || 1), true)}
                   </p>
                   {tx.symbol && <p className="text-[#823AFD] text-xs font-medium">{tx.amount} Shares</p>}
                 </div>
               </div>
             )) : (
-              <p className="text-center text-[#9898C8] mt-10">No recent activity.</p>
+              <div className="py-12 text-center text-[#9898C8]">
+                <p className="text-sm">No transactions during {getRangeLabel(timeRange).toLowerCase()}.</p>
+                <button
+                  onClick={() => setTimeRange('ALL')}
+                  className="mt-3 text-xs text-[#823AFD] hover:underline cursor-pointer font-medium"
+                >
+                  View all transactions
+                </button>
+              </div>
             )}
           </div>
         </div>
