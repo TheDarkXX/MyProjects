@@ -81,6 +81,7 @@ const ApiStatusIndicator: React.FC<{ status: ChartApiStatus['status']; error: st
 import { usePortfolioStore } from '../stores/portfolioStore';
 import { useTransactionStore } from '../stores/transactionStore';
 import { usePriceStore } from '../stores/priceStore';
+import { api } from '../services/api';
 
 interface PerformanceChartPageProps {}
 
@@ -109,8 +110,8 @@ const getStartDateForRange = (range: TimeRange, allData: HistoricalDataPoint[]):
 };
 
 const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
-    const portfolios = usePortfolioStore(s => s.portfolios);
-    const transactions = useTransactionStore(s => s.transactions);
+    const { activePortfolioId, portfolios } = usePortfolioStore();
+    const { transactions, fetchTransactions } = useTransactionStore();
     
     // Local state for API tracking and caching that was previously in App.tsx
     const [historicalDataCache, setHistoricalDataCache] = useState<Record<string, HistoricalDataPoint[]>>({});
@@ -120,16 +121,30 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
     const [isApiPaused, setIsApiPaused] = useState(false);
     
     // UI state
-    const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(portfolios.length > 0 ? portfolios[0].id : null);
+    const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(activePortfolioId || (portfolios.length > 0 ? portfolios[0].id : null));
     const [displayMethod, onDisplayMethodChange] = useState<DisplayMethod>('TWR');
+
+    useEffect(() => {
+        if (!selectedPortfolioId && activePortfolioId) {
+            setSelectedPortfolioId(activePortfolioId);
+        } else if (!selectedPortfolioId && portfolios.length > 0) {
+            setSelectedPortfolioId(portfolios[0].id);
+        }
+    }, [activePortfolioId, portfolios, selectedPortfolioId]);
+
+    useEffect(() => {
+        if (selectedPortfolioId) {
+            fetchTransactions(selectedPortfolioId);
+        }
+    }, [selectedPortfolioId, fetchTransactions]);
     
     const onForceRefresh = useCallback((portfolioId: string | null) => {
         if (!portfolioId) return;
         setHistoricalDataCache(prev => ({ ...prev, [portfolioId]: [] }));
         setRawPriceDataCache(prev => { const n = {...prev}; delete n[portfolioId]; return n; });
         setChartApiStatus(prev => ({ ...prev, [portfolioId]: { status: 'loading', error: null } }));
-        // Logic to trigger re-fetch would go here if we ported the fetcher
-    }, []);
+        if (portfolioId) fetchTransactions(portfolioId);
+    }, [fetchTransactions]);
     const [timeRange, setTimeRange] = useState<TimeRange>('3M');
     const [visibleLines, setVisibleLines] = useState({ 'My Portfolio': true, 'S&P 500': true, 'SCHG': true });
     
@@ -144,10 +159,66 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
     const isLoading = selectedApiState.status === 'loading';
     const error = selectedApiState.error;
 
+    // Fetch historical prices on mount or when portfolio changes
+    useEffect(() => {
+        if (!selectedPortfolioId) return;
+        const portfolioId = selectedPortfolioId;
+        const portfolioTxs = transactions.filter(t => (t.portfolio_id === portfolioId || (t as any).portfolioId === portfolioId) && t.status === 'CONFIRMED');
+        
+        if (portfolioTxs.length === 0) {
+            setChartApiStatus(prev => ({ ...prev, [portfolioId]: { status: 'idle', error: null } }));
+            return;
+        }
+
+        const fetchPricesForChart = async () => {
+            setChartApiStatus(prev => ({ ...prev, [portfolioId]: { status: 'loading', error: null } }));
+            setFetchProgress(prev => ({ ...prev, [portfolioId]: { phase: 'fetching_api', progress: 0, details: { current: 0, total: 1 } } }));
+
+            try {
+                const sortedTxs = [...portfolioTxs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                const firstTxDate = new Date(sortedTxs[0].date);
+                // Go back a few extra days to ensure we have a starting price
+                firstTxDate.setDate(firstTxDate.getDate() - 7);
+                const fromDate = firstTxDate.toISOString().split('T')[0];
+                const toDate = new Date().toISOString().split('T')[0];
+                
+                const uniqueSymbols = Array.from(new Set([
+                    ...portfolioTxs.filter(t => t.asset !== 'Cash' && t.symbol && t.symbol !== 'CASH').map(t => t.symbol),
+                    'SPY', 'SCHG'
+                ]));
+
+                setFetchProgress(prev => ({ ...prev, [portfolioId]: { phase: 'fetching_api', progress: 50, details: { current: 1, total: 1 }, currentSymbol: 'All Symbols' } }));
+
+                const data = await api.prices.historical(uniqueSymbols, fromDate, toDate);
+                
+                const formattedPriceData: Record<string, Record<string, number>> = {};
+                for (const symbol of uniqueSymbols) {
+                    formattedPriceData[symbol] = {};
+                    if (data[symbol]) {
+                        data[symbol].forEach((point: any) => {
+                            formattedPriceData[symbol][point.date] = point.price;
+                        });
+                    }
+                }
+
+                setRawPriceDataCache(prev => ({ ...prev, [portfolioId]: formattedPriceData }));
+                setChartApiStatus(prev => ({ ...prev, [portfolioId]: { status: 'success', error: null } }));
+                setFetchProgress(prev => ({ ...prev, [portfolioId]: { phase: 'idle', progress: 100, details: { current: 1, total: 1 } } }));
+            } catch (err: any) {
+                console.error('Failed to fetch historical data for chart', err);
+                setChartApiStatus(prev => ({ ...prev, [portfolioId]: { status: 'error', error: err.message || 'Failed to fetch prices' } }));
+            }
+        };
+
+        if (!rawPriceDataCache[portfolioId] || Object.keys(rawPriceDataCache[portfolioId]).length === 0) {
+            fetchPricesForChart();
+        }
+    }, [selectedPortfolioId, transactions, rawPriceDataCache]);
+
     // --- Calculate TWR and update historicalDataCache ---
     const calculateTwr = useCallback((portfolioId: string) => {
         const portfolio = portfolios.find(p => p.id === portfolioId);
-        const portfolioTxs = transactions.filter(t => t.portfolioId === portfolioId);
+        const portfolioTxs = transactions.filter(t => (t.portfolio_id === portfolioId || (t as any).portfolioId === portfolioId));
         const priceData = rawPriceDataCache[portfolioId];
 
         if (!portfolio || portfolioTxs.length === 0 || !priceData) {
@@ -177,45 +248,65 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         const allSymbols = Array.from(new Set(Object.keys(priceData)));
         allSymbols.forEach(s => { lastKnownPrices[s] = { price: 0 } });
         
-        let navAfterFlows = portfolio.initial_cash;
+        let navYesterday = portfolio.initial_cash;
         const performanceData: HistoricalDataPoint[] = [];
         
         for (let d = new Date(firstTxDate); d <= lastPriceDate; d.setDate(d.getDate() + 1)) {
             const dateStr = d.toISOString().split('T')[0];
-            const navAtStart = navAfterFlows;
-            
-            let navBeforeFlows = cash;
-            for (const symbol in holdings) {
-                const price = findPrice(dateStr, symbol, lastKnownPrices[symbol]);
-                navBeforeFlows += (holdings[symbol] || 0) * price;
-            }
-
-            if (navAtStart > 1e-9) { // Avoid division by zero
-                const dailyReturnFactor = navBeforeFlows / navAtStart;
-                cumulativeTwrFactor *= dailyReturnFactor;
-            }
+            let dailyExternalFlows = 0;
 
             const txsOnDay = sortedTxs.filter(tx => new Date(tx.date).toISOString().split('T')[0] === dateStr);
             txsOnDay.forEach(tx => {
-                if (tx.asset === 'Cash' || tx.symbol === 'CASH') {
-                    cash += tx.type === 'BUY' ? tx.amount : -tx.amount;
-                } else {
-                    const cost = tx.amount * tx.price + (tx.fee || 0);
-                    if (tx.type === 'BUY') {
-                        holdings[tx.symbol] = (holdings[tx.symbol] || 0) + tx.amount;
-                        cash -= cost;
-                    } else {
-                        holdings[tx.symbol] -= tx.amount;
-                        cash += tx.amount * tx.price - (tx.fee || 0);
-                    }
+                const amount = tx.amount || 0;
+                const price = tx.price || 1;
+                const fee = tx.fee || 0;
+
+                switch (tx.type) {
+                    case 'BUY':
+                        if (tx.asset === 'Cash' || tx.symbol === 'CASH') {
+                            cash += amount;
+                            dailyExternalFlows += amount;
+                        } else {
+                            holdings[tx.symbol] = (holdings[tx.symbol] || 0) + amount;
+                            cash -= (amount * price) + fee;
+                        }
+                        break;
+                    case 'SELL':
+                        if (tx.asset === 'Cash' || tx.symbol === 'CASH') {
+                            cash -= amount;
+                            dailyExternalFlows -= amount;
+                        } else {
+                            holdings[tx.symbol] = (holdings[tx.symbol] || 0) - amount;
+                            cash += (amount * price) - fee;
+                        }
+                        break;
+                    case 'DEPOSIT':
+                        cash += amount;
+                        dailyExternalFlows += amount;
+                        break;
+                    case 'WITHDRAW':
+                        cash -= amount;
+                        dailyExternalFlows -= amount;
+                        break;
+                    case 'DIVIDEND':
+                    case 'INTEREST':
+                        cash += amount;
+                        break;
                 }
             });
-            
-            navAfterFlows = cash;
+
+            let navToday = cash;
             for (const symbol in holdings) {
                  const price = findPrice(dateStr, symbol, lastKnownPrices[symbol]);
-                 navAfterFlows += (holdings[symbol] || 0) * price;
+                 navToday += (holdings[symbol] || 0) * price;
             }
+
+            if (navYesterday > 1e-9) {
+                const dailyReturnFactor = (navToday - dailyExternalFlows) / navYesterday;
+                cumulativeTwrFactor *= dailyReturnFactor;
+            }
+
+            navYesterday = navToday;
 
             performanceData.push({
                 date: dateStr,
@@ -229,10 +320,10 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         setChartApiStatus(prev => ({...prev, [portfolioId]: { status: 'success', error: null }}));
     }, [portfolios, transactions, rawPriceDataCache, setHistoricalDataCache, setChartApiStatus]);
 
-    // --- Calculate Simple Return chart data ---
-    const calculateSimpleReturnChartData = useCallback((portfolioId: string) => {
+    // --- Calculate MWR (Modified Dietz) chart data ---
+    const calculateMwr = useCallback((portfolioId: string) => {
         const portfolio = portfolios.find(p => p.id === portfolioId);
-        const portfolioTxs = transactions.filter(t => t.portfolioId === portfolioId);
+        const portfolioTxs = transactions.filter(t => (t.portfolio_id === portfolioId || (t as any).portfolioId === portfolioId));
         const priceData = rawPriceDataCache[portfolioId];
 
         if (!portfolio || portfolioTxs.length === 0 || !priceData) {
@@ -243,7 +334,6 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
 
         const sortedTxs = portfolioTxs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         const firstTxDate = new Date(new Date(sortedTxs[0].date).toISOString().split('T')[0]);
-
         const allPriceDates = Object.values(priceData).flatMap((p: Record<string, number>) => Object.keys(p)).filter(Boolean);
         const lastPriceDate = new Date(Math.max(...allPriceDates.map(d => new Date(d).getTime())));
 
@@ -256,54 +346,84 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
 
         let holdings: Record<string, number> = {};
         let cash = portfolio.initial_cash;
-        let cumulativeBuyCost = 0;
-        let cumulativeSellProceeds = 0;
         const lastKnownPrices: Record<string, { price: number }> = {};
         const allSymbols = Array.from(new Set(Object.keys(priceData)));
         allSymbols.forEach(s => { lastKnownPrices[s] = { price: 0 } });
 
         const performanceData: HistoricalDataPoint[] = [];
+        const BMV = portfolio.initial_cash;
+        const cashFlows: { date: Date, amount: number }[] = [];
 
         for (let d = new Date(firstTxDate); d <= lastPriceDate; d.setDate(d.getDate() + 1)) {
             const dateStr = d.toISOString().split('T')[0];
+            const currentDate = new Date(dateStr);
 
             const txsOnDay = sortedTxs.filter(tx => new Date(tx.date).toISOString().split('T')[0] === dateStr);
             txsOnDay.forEach(tx => {
-                const isCashTx = tx.asset === 'Cash' || tx.symbol === 'CASH';
-                if (isCashTx) {
-                    cash += (tx.type === 'BUY') ? tx.amount : -tx.amount;
-                } else {
-                    if (tx.type === 'BUY') {
-                        holdings[tx.symbol] = (holdings[tx.symbol] || 0) + tx.amount;
-                        cash -= tx.amount * tx.price + (tx.fee || 0);
-                        cumulativeBuyCost += tx.amount * tx.price;
-                    } else if (tx.type === 'SELL') {
-                        holdings[tx.symbol] -= tx.amount;
-                        cash += tx.amount * tx.price - (tx.fee || 0);
-                        cumulativeSellProceeds += tx.amount * tx.price;
-                    } else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
-                        cash += tx.amount;
-                    }
+                const amount = tx.amount || 0;
+                const price = tx.price || 1;
+                const fee = tx.fee || 0;
+                
+                switch (tx.type) {
+                    case 'BUY':
+                        if (tx.asset === 'Cash' || tx.symbol === 'CASH') {
+                            cash += amount;
+                            cashFlows.push({ date: currentDate, amount });
+                        } else {
+                            holdings[tx.symbol] = (holdings[tx.symbol] || 0) + amount;
+                            cash -= (amount * price) + fee;
+                        }
+                        break;
+                    case 'SELL':
+                        if (tx.asset === 'Cash' || tx.symbol === 'CASH') {
+                            cash -= amount;
+                            cashFlows.push({ date: currentDate, amount: -amount });
+                        } else {
+                            holdings[tx.symbol] = (holdings[tx.symbol] || 0) - amount;
+                            cash += (amount * price) - fee;
+                        }
+                        break;
+                    case 'DEPOSIT':
+                        cash += amount;
+                        cashFlows.push({ date: currentDate, amount });
+                        break;
+                    case 'WITHDRAW':
+                        cash -= amount;
+                        cashFlows.push({ date: currentDate, amount: -amount });
+                        break;
+                    case 'DIVIDEND':
+                    case 'INTEREST':
+                        cash += amount;
+                        break;
                 }
             });
 
-            let stocksValue = 0;
+            let EMV = cash;
             for (const symbol in holdings) {
-                const price = findPrice(dateStr, symbol, lastKnownPrices[symbol]);
-                stocksValue += (holdings[symbol] || 0) * price;
+                EMV += (holdings[symbol] || 0) * findPrice(dateStr, symbol, lastKnownPrices[symbol]);
             }
 
-            const portfolioValue = stocksValue + cash;
-            const netCapitalInvested = cumulativeBuyCost - cumulativeSellProceeds;
+            const CD = Math.max(1, (currentDate.getTime() - firstTxDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            let sumCF = 0;
+            let sumWCF = 0;
 
-            let simpleReturnPercent = 0;
-            if (Math.abs(netCapitalInvested) > 0.01) {
-                simpleReturnPercent = ((portfolioValue - netCapitalInvested) / netCapitalInvested) * 100;
+            cashFlows.forEach(cf => {
+                const Di = (cf.date.getTime() - firstTxDate.getTime()) / (1000 * 60 * 60 * 24);
+                const Wi = (CD - Di) / CD;
+                sumCF += cf.amount;
+                sumWCF += (Wi * cf.amount);
+            });
+
+            let mwrPercent = 0;
+            const denominator = BMV + sumWCF;
+            if (Math.abs(denominator) > 0.01) {
+                mwrPercent = ((EMV - BMV - sumCF) / denominator) * 100;
             }
 
             performanceData.push({
                 date: dateStr,
-                portfolioValue: simpleReturnPercent,
+                portfolioValue: mwrPercent,
                 spyPrice: findPrice(dateStr, 'SPY', lastKnownPrices['SPY']),
                 schgPrice: findPrice(dateStr, 'SCHG', lastKnownPrices['SCHG']),
             });
@@ -325,10 +445,10 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
             if (displayMethod === 'TWR') {
                 calculateTwr(portfolioId);
             } else {
-                calculateSimpleReturnChartData(portfolioId);
+                calculateMwr(portfolioId);
             }
         }
-    }, [selectedPortfolioId, rawPriceDataCache, displayMethod, calculateTwr, calculateSimpleReturnChartData]);
+    }, [selectedPortfolioId, rawPriceDataCache, displayMethod, calculateTwr, calculateMwr]);
 
 
     // Effect to calculate base performance for the selected TimeRange
@@ -487,7 +607,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
     };
     
     const chartTitle = selectedPortfolio 
-        ? `Performance - ${selectedPortfolio.name} (${displayMethod === 'TWR' ? 'Time-Weighted' : 'Simple Return'})`
+        ? `Performance - ${selectedPortfolio.name} (${displayMethod === 'TWR' ? 'Investment Return (TWR)' : 'Personal Return (MWR)'})`
         : 'Performance';
 
     return (
@@ -555,8 +675,8 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                     </div>
                     <div className="flex justify-end mb-4">
                         <div className="flex items-center bg-gray-800/60 border border-gray-700 p-0.5 rounded-md text-sm">
-                            <button onClick={() => onDisplayMethodChange('TWR')} className={`px-2 py-0.5 rounded-md text-xs transition-colors ${displayMethod === 'TWR' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700'}`}>Time-Weighted</button>
-                            <button onClick={() => onDisplayMethodChange('SIMPLE')} className={`px-2 py-0.5 rounded-md text-xs transition-colors ${displayMethod === 'SIMPLE' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700'}`}>Simple Return</button>
+                            <button onClick={() => onDisplayMethodChange('TWR')} className={`px-2 py-0.5 rounded-md text-xs transition-colors ${displayMethod === 'TWR' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700'}`} title="Measures investment strategy performance. Ignores deposits/withdrawals. GIPS standard. Best for comparing vs S&P 500.">Investment Return (TWR)</button>
+                            <button onClick={() => onDisplayMethodChange('MWR')} className={`px-2 py-0.5 rounded-md text-xs transition-colors ${displayMethod === 'MWR' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700'}`} title="Measures your actual return including timing of deposits/withdrawals. Shows what you personally earned.">Personal Return (MWR)</button>
                         </div>
                     </div>
 

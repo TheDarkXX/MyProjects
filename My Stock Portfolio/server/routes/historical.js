@@ -19,15 +19,16 @@ historicalRoutes.post('/', async (c) => {
     const results = {};
     
     // For local MVP, we check cache first or fetch.
-    const getCached = db.prepare(`SELECT * FROM historical_prices WHERE symbol = ? AND date >= ? AND date <= ?`);
+    const getCached = db.prepare(`SELECT * FROM historical_prices WHERE symbol = ? AND date >= ? AND date <= ? ORDER BY date ASC`);
     const insertCache = db.prepare(`INSERT OR REPLACE INTO historical_prices (symbol, date, price) VALUES (?, ?, ?)`);
     
     for (const symbol of symbols) {
       const cached = getCached.all(symbol, from, to);
       
-      // If we have enough cached data, return it
-      // In a real app we'd verify gapless coverage, but for this MVP:
-      if (cached.length > 0) {
+      // Check if cache exists and starts near the requested 'from' date (within 7 days)
+      const coversFrom = cached.length > 0 && new Date(cached[0].date).getTime() <= (new Date(from).getTime() + 7 * 24 * 60 * 60 * 1000);
+      
+      if (coversFrom) {
         results[symbol] = cached;
       } else {
         // Fetch from Yahoo
@@ -43,7 +44,7 @@ historicalRoutes.post('/', async (c) => {
           
           results[symbol] = data;
         } else {
-          results[symbol] = [];
+          results[symbol] = cached;
         }
       }
     }

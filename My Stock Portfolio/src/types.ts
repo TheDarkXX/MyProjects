@@ -4,7 +4,7 @@
 
 export type TransactionAsset = 'Stock' | 'ETF' | 'Crypto' | 'Cash' | 'Gold' | 'Forex' | 'Other';
 export type TransactionStockType = 'Compound' | 'Winner' | 'Small Cap' | 'Cash';
-export type DisplayMethod = 'TWR' | 'SIMPLE';
+export type DisplayMethod = 'TWR' | 'MWR';
 
 export interface Transaction {
   id: string;
