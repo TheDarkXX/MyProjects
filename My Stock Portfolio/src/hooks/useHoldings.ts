@@ -25,6 +25,7 @@ export function useHoldings() {
 
   return useMemo(() => {
     let cash = activePortfolio?.initial_cash || 0;
+    let netInvested = activePortfolio?.initial_cash || 0;
     const holds: Record<string, { quantity: number; totalCost: number }> = {};
     
     // Process transactions chronologically
@@ -36,38 +37,54 @@ export function useHoldings() {
       const amount = tx.amount || 0;
       const price = tx.price || 0;
       const fee = tx.fee || 0;
+      const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
       
       if (!holds[tx.symbol]) {
         holds[tx.symbol] = { quantity: 0, totalCost: 0 };
       }
 
       if (tx.type === 'BUY') {
-        cash -= (amount * price) + fee;
-        holds[tx.symbol].quantity += amount;
-        holds[tx.symbol].totalCost += (amount * price) + fee;
-      } else if (tx.type === 'SELL') {
-        cash += (amount * price) - fee;
-        // Reduce cost basis proportionally
-        if (holds[tx.symbol].quantity > 0) {
-          const avgCost = holds[tx.symbol].totalCost / holds[tx.symbol].quantity;
-          holds[tx.symbol].quantity -= amount;
-          holds[tx.symbol].totalCost = holds[tx.symbol].quantity * avgCost;
+        if (isCash) {
+          cash += amount;
+          netInvested += amount;
+        } else {
+          cash -= (amount * price) + fee;
+          holds[tx.symbol].quantity += amount;
+          holds[tx.symbol].totalCost += (amount * price) + fee;
         }
-      } else if (tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
+      } else if (tx.type === 'SELL') {
+        if (isCash) {
+          cash -= amount;
+          netInvested -= amount;
+        } else {
+          cash += (amount * price) - fee;
+          // Reduce cost basis proportionally
+          if (holds[tx.symbol].quantity > 0) {
+            const avgCost = holds[tx.symbol].totalCost / holds[tx.symbol].quantity;
+            holds[tx.symbol].quantity -= amount;
+            holds[tx.symbol].totalCost = holds[tx.symbol].quantity * avgCost;
+          }
+        }
+      } else if (tx.type === 'DEPOSIT') {
         cash += amount;
+        netInvested += amount;
       } else if (tx.type === 'WITHDRAW') {
         cash -= amount;
+        netInvested -= amount;
+      } else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
+        cash += (amount - fee);
       }
     });
 
     let totalSecuritiesValue = 0;
+    let totalSecuritiesCost = 0;
     let todaysProfit = 0;
     const holdingsArray: Holding[] = [];
 
     // Calculate current values
     Object.keys(holds).forEach(symbol => {
       const quantity = holds[symbol].quantity;
-      if (quantity <= 0) return; // Skip zero/negative holdings
+      if (quantity <= 0.000001) return; // Skip zero/negative holdings
 
       const totalCost = holds[symbol].totalCost;
       const avgCost = totalCost / quantity;
@@ -82,6 +99,7 @@ export function useHoldings() {
       const totalReturnPercent = totalCost > 0 ? (totalReturn / totalCost) * 100 : 0;
       
       totalSecuritiesValue += currentValue;
+      totalSecuritiesCost += totalCost;
       todaysProfit += dayReturn;
 
       if (symbol !== 'CASH' && symbol !== '') {
@@ -102,6 +120,14 @@ export function useHoldings() {
     });
 
     const totalNetWorth = cash + totalSecuritiesValue;
+    const totalPnl = totalNetWorth - netInvested;
+    const totalPnlPercent = netInvested > 0 ? (totalPnl / netInvested) * 100 : 0;
+
+    const previousNetWorth = totalNetWorth - todaysProfit;
+    const todaysProfitPercent = previousNetWorth > 0 ? (todaysProfit / previousNetWorth) * 100 : 0;
+
+    const securitiesReturn = totalSecuritiesValue - totalSecuritiesCost;
+    const securitiesReturnPercent = totalSecuritiesCost > 0 ? (securitiesReturn / totalSecuritiesCost) * 100 : 0;
 
     // Calculate weights
     holdingsArray.forEach(h => {
@@ -118,10 +144,17 @@ export function useHoldings() {
       holdings: holdingsArray,
       cashBalance: cash,
       totalSecuritiesValue,
+      totalSecuritiesCost,
+      securitiesReturn,
+      securitiesReturnPercent,
       totalNetWorth,
+      netInvested,
+      totalPnl,
+      totalPnlPercent,
       cashWeight,
       securitiesWeight,
-      todaysProfit
+      todaysProfit,
+      todaysProfitPercent
     };
   }, [transactions, activePortfolio, prices]);
 }

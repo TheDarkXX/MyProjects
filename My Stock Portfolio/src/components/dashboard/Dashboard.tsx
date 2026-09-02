@@ -53,7 +53,19 @@ export const Dashboard = () => {
     fetchExchangeRate('USD', 'THB');
   }, [activePortfolioId, fetchTransactions, fetchExchangeRate]);
 
-  const { holdings, cashBalance, totalSecuritiesValue, totalNetWorth, cashWeight, securitiesWeight, todaysProfit } = useHoldings();
+  const { 
+    holdings, 
+    cashBalance, 
+    totalSecuritiesValue, 
+    securitiesReturnPercent,
+    totalNetWorth, 
+    totalPnl, 
+    totalPnlPercent, 
+    cashWeight, 
+    securitiesWeight, 
+    todaysProfit,
+    todaysProfitPercent 
+  } = useHoldings();
 
   const activeSymbols = holdings.map(h => h.symbol);
   
@@ -67,10 +79,6 @@ export const Dashboard = () => {
       fetchHistorical(activeSymbols, from, to);
     }
   }, [JSON.stringify(activeSymbols), fetchPrices, fetchHistorical]);
-
-  // Fake overall change based on initial cash for MVP
-  const totalPnl = activePortfolio?.initial_cash ? totalNetWorth - activePortfolio.initial_cash : 0;
-  const overallChangePercent = activePortfolio?.initial_cash ? (totalPnl / activePortfolio.initial_cash) * 100 : 0;
 
   // Recent Txs (new to old)
   const recentTxs = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4);
@@ -147,8 +155,8 @@ export const Dashboard = () => {
           title="Total Net Worth" 
           value={new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(totalNetWorth)} 
           subValue={exchangeRate ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalNetWorth * exchangeRate) : ''}
-          change={overallChangePercent} 
-          isPositive={overallChangePercent >= 0}
+          change={todaysProfitPercent} 
+          isPositive={todaysProfit >= 0}
           icon={TrendingUp}
           gradient="bg-[#FC2D79]"
         />
@@ -156,7 +164,8 @@ export const Dashboard = () => {
           title="Securities Value" 
           value={new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(totalSecuritiesValue)} 
           subValue={exchangeRate ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalSecuritiesValue * exchangeRate) : ''}
-          isPositive={true}
+          change={securitiesReturnPercent}
+          isPositive={securitiesReturnPercent >= 0}
           icon={PieChart}
           gradient="bg-[#823AFD]"
         />
@@ -170,9 +179,9 @@ export const Dashboard = () => {
         />
         <StatCard 
           title="Total P/L" 
-          value={new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(totalPnl)} 
-          subValue={exchangeRate ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalPnl * exchangeRate) : ''}
-          change={overallChangePercent}
+          value={`${totalPnl >= 0 ? '+' : ''}${new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(totalPnl)}`} 
+          subValue={exchangeRate ? `${totalPnl >= 0 ? '+' : ''}${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalPnl * exchangeRate)}` : ''}
+          change={totalPnlPercent}
           isPositive={totalPnl >= 0}
           icon={DollarSign}
           gradient="bg-[#823AFD]"
