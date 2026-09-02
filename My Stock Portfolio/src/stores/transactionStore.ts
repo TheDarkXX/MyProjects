@@ -24,6 +24,8 @@ interface TransactionState {
   addTransaction: (data: Partial<Transaction>) => Promise<void>;
   updateTransaction: (id: string, data: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  bulkCreateTransaction: (transactions: Partial<Transaction>[]) => Promise<void>;
+  bulkDeleteTransaction: (ids: string[]) => Promise<void>;
 }
 
 export const useTransactionStore = create<TransactionState>((set, get) => ({
@@ -57,6 +59,28 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     await api.transactions.delete(id);
     set((state) => ({
       transactions: state.transactions.filter((t) => t.id !== id)
+    }));
+  },
+
+  bulkCreateTransaction: async (transactions) => {
+    const { created } = await api.transactions.bulk('create', { transactions });
+    if (created && Array.isArray(created)) {
+      set((state) => ({ 
+        transactions: [...created, ...state.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) 
+      }));
+    } else {
+      // Fallback: re-fetch if response is just a success message
+      const activePortfolioId = transactions[0]?.portfolio_id;
+      if (activePortfolioId) {
+        get().fetchTransactions(activePortfolioId);
+      }
+    }
+  },
+
+  bulkDeleteTransaction: async (ids) => {
+    await api.transactions.bulk('delete', { ids });
+    set((state) => ({
+      transactions: state.transactions.filter((t) => !ids.includes(t.id))
     }));
   }
 }));
