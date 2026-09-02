@@ -27,19 +27,29 @@ export const PerformersTable: React.FC<PerformersTableProps> = ({ holdings, form
         <table className="w-full">
           <thead className="bg-[#1A1D2D]">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#9898C8] uppercase">Symbol</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-[#9898C8] uppercase">Return %</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-[#9898C8] uppercase">Value</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-[#CBD5E1] uppercase">Asset</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-[#CBD5E1] uppercase">Total Return</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-[#CBD5E1] uppercase">Market Value</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2A2E45]">
             {data.length > 0 ? data.map(h => (
               <tr key={h.symbol} className="hover:bg-[#1A1D2D]/50 transition-colors">
-                <td className="px-4 py-3 text-sm font-bold text-white">{h.symbol}</td>
-                <td className={clsx("px-4 py-3 text-sm text-right font-medium", h.totalReturnPercent >= 0 ? "text-[#FC2D79]" : "text-[#823AFD]")}>
-                  {h.totalReturnPercent >= 0 ? '+' : ''}{h.totalReturnPercent.toFixed(2)}%
+                <td className="px-4 py-3 text-sm font-bold text-white">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#823AFD]"></span>
+                    <span>{h.symbol}</span>
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-right text-gray-300">
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <div className={clsx("text-sm font-bold tabular-nums", h.totalReturn >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                    {h.totalReturn >= 0 ? '+' : ''}{formatCurrency(h.totalReturn)}
+                  </div>
+                  <div className={clsx("text-xs font-semibold tabular-nums mt-0.5", h.totalReturnPercent >= 0 ? "text-emerald-400/90" : "text-rose-400/90")}>
+                    {h.totalReturnPercent >= 0 ? '+' : ''}{h.totalReturnPercent.toFixed(2)}%
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm text-right font-black text-white tabular-nums whitespace-nowrap">
                   {formatCurrency(h.currentValue)}
                 </td>
               </tr>

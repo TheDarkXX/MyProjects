@@ -524,7 +524,7 @@ export const Dashboard = () => {
                 </div>
                 <div className="text-right">
                   <p className={clsx("font-bold tabular-nums", tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? "text-green-400" : "text-white")}>
-                    {tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? '+' : '-'}{formatCurrency(tx.amount * (tx.price || 1), true)}
+                    {tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? '+' : '-'}{formatCurrency(tx.amount * (tx.price || 1))}
                   </p>
                   {tx.symbol && <p className="text-[#823AFD] text-xs font-medium">{tx.amount} Shares</p>}
                 </div>
