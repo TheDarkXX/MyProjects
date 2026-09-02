@@ -1,10 +1,18 @@
 import React from 'react';
 import { useTransactionStore } from '../../stores/transactionStore';
+import { usePortfolioStore } from '../../stores/portfolioStore';
 import { ArrowDownRight, ArrowUpRight, Search, Plus } from 'lucide-react';
 import clsx from 'clsx';
 
 export const TransactionTable = () => {
-  const { transactions } = useTransactionStore();
+  const { transactions, fetchTransactions } = useTransactionStore();
+  const { activePortfolioId } = usePortfolioStore();
+
+  React.useEffect(() => {
+    if (activePortfolioId) {
+      fetchTransactions(activePortfolioId);
+    }
+  }, [activePortfolioId, fetchTransactions]);
   
   return (
     <div className="space-y-6 animate-fade-in-up">

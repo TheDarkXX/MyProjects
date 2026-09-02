@@ -1,9 +1,11 @@
 import React from 'react';
 import { useUiStore } from '../../stores/uiStore';
-import { Bell, Search } from 'lucide-react';
+import { usePortfolioStore } from '../../stores/portfolioStore';
+import { Bell, Search, Briefcase } from 'lucide-react';
 
 export const Header = () => {
   const { activeTab } = useUiStore();
+  const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
 
   return (
     <header className="h-20 bg-[#0F111A]/80 backdrop-blur-xl border-b border-[#1F2233] px-8 flex items-center justify-between sticky top-0 z-50">
@@ -16,14 +18,32 @@ export const Header = () => {
         </p>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4">
+        {/* Portfolio Selector */}
+        {portfolios.length > 0 && (
+          <div className="flex items-center gap-2 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-white">
+            <Briefcase className="w-4 h-4 text-[#823AFD]" />
+            <select
+              value={activePortfolioId || ''}
+              onChange={(e) => setActivePortfolio(e.target.value)}
+              className="bg-transparent text-white font-medium text-sm focus:outline-none cursor-pointer"
+            >
+              {portfolios.map((p) => (
+                <option key={p.id} value={p.id} className="bg-[#111418] text-white">
+                  {p.icon || '💼'} {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Search */}
         <div className="relative group">
           <Search className="w-5 h-5 text-[#9898C8] absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-[#823AFD] transition-colors" />
           <input 
             type="text" 
             placeholder="Search assets..." 
-            className="bg-[#1A1D2D] border border-[#2A2E45] rounded-full pl-10 pr-4 py-2 text-white placeholder-[#9898C8] focus:outline-none focus:border-[#823AFD] focus:ring-1 focus:ring-[#823AFD] transition-all w-64"
+            className="bg-[#1A1D2D] border border-[#2A2E45] rounded-full pl-10 pr-4 py-2 text-white placeholder-[#9898C8] focus:outline-none focus:border-[#823AFD] focus:ring-1 focus:ring-[#823AFD] transition-all w-52"
           />
         </div>
 
