@@ -335,47 +335,6 @@ export const Dashboard = () => {
               <span>Custom</span>
             </button>
           </div>
-
-          {/* Currency Toggle (USD / THB) */}
-          <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-2xl text-xs gap-1 shadow-inner">
-            <button
-              onClick={() => setCurrency('USD')}
-              className={clsx(
-                "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
-                currency === 'USD'
-                  ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_0_12px_rgba(130,58,253,0.45)]"
-                  : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
-              )}
-              title="Display all portfolio numbers in US Dollars"
-            >
-              <span>🇺🇸</span>
-              <span>USD</span>
-            </button>
-            <button
-              onClick={() => setCurrency('THB')}
-              className={clsx(
-                "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
-                currency === 'THB'
-                  ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_0_12px_rgba(130,58,253,0.45)]"
-                  : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
-              )}
-              title="Display all portfolio numbers in Thai Baht"
-            >
-              <span>🇹🇭</span>
-              <span>THB</span>
-            </button>
-          </div>
-
-          {/* Live Yahoo FX Rate Badge */}
-          {exchangeRate > 0 && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-[#1A1D2D]/80 border border-[#2A2E45] text-xs font-semibold tabular-nums text-[#CBD5E1] shadow-inner" title="Real-time Exchange Rate from Yahoo Finance (THB=X)">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-white font-bold">$1</span>
-              <span>=</span>
-              <span className="text-emerald-400 font-extrabold">฿{exchangeRate.toFixed(2)}</span>
-              <span className="text-[10px] text-[#94A3B8] font-normal uppercase tracking-wider">Yahoo</span>
-            </div>
-          )}
         </div>
       </div>
 
