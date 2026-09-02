@@ -476,7 +476,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
             <tr className="bg-gradient-to-r from-[#823AFD]/20 via-[#161926] to-[#FC2D79]/20 border-t-2 border-[#823AFD]/40 shadow-[0_4px_16px_rgba(130,58,253,0.15)]">
               <td className="px-5 py-4 text-left">
                 <div className="text-lg font-black text-white tracking-tight">Total Net Worth</div>
-                <div className="text-xs font-semibold text-[#CBD5E1]">Securities + Cash</div>
+                <div className="text-xs font-semibold text-[#CBD5E1]">Stocks + Cash</div>
               </td>
               <td className="px-5 py-4 text-right text-sm font-medium text-[#94A3B8]">-</td>
               <td className="px-5 py-4 text-right whitespace-nowrap">

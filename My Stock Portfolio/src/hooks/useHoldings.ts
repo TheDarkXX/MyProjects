@@ -26,6 +26,7 @@ export function useHoldings() {
   return useMemo(() => {
     let cash = activePortfolio?.initial_cash || 0;
     let netInvested = activePortfolio?.initial_cash || 0;
+    let totalDividends = 0;
     const holds: Record<string, { quantity: number; totalCost: number }> = {};
     
     // Process transactions chronologically
@@ -73,6 +74,7 @@ export function useHoldings() {
         netInvested -= amount;
       } else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
         cash += (amount - fee);
+        totalDividends += (amount - fee);
       }
     });
 
@@ -149,6 +151,7 @@ export function useHoldings() {
       securitiesReturnPercent,
       totalNetWorth,
       netInvested,
+      totalDividends,
       totalPnl,
       totalPnlPercent,
       cashWeight,

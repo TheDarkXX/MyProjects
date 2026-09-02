@@ -4,7 +4,7 @@ import { useTransactionStore } from '../../stores/transactionStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useHoldings } from '../../hooks/useHoldings';
-import { TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Activity, DollarSign, PieChart, Calendar } from 'lucide-react';
+import { TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Activity, DollarSign, PieChart, Calendar, Landmark, Coins } from 'lucide-react';
 import clsx from 'clsx';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PortfolioTable } from './PortfolioTable';
@@ -99,7 +99,9 @@ export const Dashboard = () => {
     cashWeight, 
     securitiesWeight, 
     todaysProfit,
-    todaysProfitPercent 
+    todaysProfitPercent,
+    netInvested,
+    totalDividends
   } = useHoldings();
 
   const [timeRange, setTimeRange] = useState<DashboardTimeRange>('1M');
@@ -389,7 +391,7 @@ export const Dashboard = () => {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 xl:gap-6">
         <StatCard 
           title="Total Net Worth" 
           value={formatPrimary(totalNetWorth)} 
@@ -400,7 +402,32 @@ export const Dashboard = () => {
           gradient="bg-[#FC2D79]"
         />
         <StatCard 
-          title="Securities Value" 
+          title="Net Invested" 
+          value={formatPrimary(netInvested)} 
+          subValue={formatSecondary(netInvested)}
+          isPositive={true}
+          icon={Landmark}
+          gradient="bg-[#00E5FF]"
+        />
+        <StatCard 
+          title={displayPnl >= 0 ? (timeRange === 'ALL' ? 'Total Profit' : `${timeRange} Profit`) : (timeRange === 'ALL' ? 'Total Loss' : `${timeRange} Loss`)} 
+          value={formatPrimary(displayPnl, true)} 
+          subValue={formatSecondary(displayPnl, true)}
+          change={displayPnlPercent}
+          isPositive={displayPnl >= 0}
+          icon={DollarSign}
+          gradient={displayPnl >= 0 ? "bg-[#10B981]" : "bg-[#EF4444]"}
+        />
+        <StatCard 
+          title="Total Dividends" 
+          value={formatPrimary(totalDividends)} 
+          subValue={formatSecondary(totalDividends)}
+          isPositive={true}
+          icon={Coins}
+          gradient="bg-[#F5A623]"
+        />
+        <StatCard 
+          title="Stocks Value" 
           value={formatPrimary(totalSecuritiesValue)} 
           subValue={formatSecondary(totalSecuritiesValue)}
           change={securitiesReturnPercent}
@@ -409,28 +436,19 @@ export const Dashboard = () => {
           gradient="bg-[#823AFD]"
         />
         <StatCard 
-          title="Cash Balance" 
+          title="Cash" 
           value={formatPrimary(cashBalance)} 
           subValue={formatSecondary(cashBalance)}
           isPositive={true}
           icon={Wallet}
           gradient="bg-[#FC2D79]"
         />
-        <StatCard 
-          title={timeRange === 'ALL' ? 'Total P/L' : `${timeRange} P/L`} 
-          value={formatPrimary(displayPnl, true)} 
-          subValue={formatSecondary(displayPnl, true)}
-          change={displayPnlPercent}
-          isPositive={displayPnl >= 0}
-          icon={DollarSign}
-          gradient="bg-[#823AFD]"
-        />
       </div>
 
       {/* Ratio Bar */}
       <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6">
         <div className="flex justify-between items-center mb-2 text-sm font-medium">
-          <span className="text-[#823AFD]">Securities {securitiesWeight.toFixed(1)}%</span>
+          <span className="text-[#823AFD]">Stocks {securitiesWeight.toFixed(1)}%</span>
           <span className="text-[#FC2D79]">Cash {cashWeight.toFixed(1)}%</span>
         </div>
         <div className="w-full h-3 bg-[#1A1D2D] rounded-full overflow-hidden flex">
