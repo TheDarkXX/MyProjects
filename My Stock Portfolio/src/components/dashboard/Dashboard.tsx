@@ -1,13 +1,46 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { useHoldings } from '../../hooks/useHoldings';
-import { TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Activity, DollarSign, PieChart } from 'lucide-react';
+import { TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Activity, DollarSign, PieChart, Calendar } from 'lucide-react';
 import clsx from 'clsx';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PortfolioTable } from './PortfolioTable';
 import { PerformersTable } from './PerformersTable';
+
+export type DashboardTimeRange = '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL' | 'CUSTOM';
+
+const getStartDateForRange = (range: DashboardTimeRange, earliestDate: string, customStartDate?: string): string => {
+  const today = new Date();
+  switch (range) {
+    case '1D':
+      today.setDate(today.getDate() - 1);
+      break;
+    case '1W':
+      today.setDate(today.getDate() - 7);
+      break;
+    case '1M':
+      today.setDate(today.getDate() - 30);
+      break;
+    case '3M':
+      today.setDate(today.getDate() - 90);
+      break;
+    case 'YTD':
+      return `${today.getFullYear()}-01-01`;
+    case '1Y':
+      today.setFullYear(today.getFullYear() - 1);
+      break;
+    case 'CUSTOM':
+      if (customStartDate) return customStartDate;
+      today.setDate(today.getDate() - 30);
+      break;
+    case 'ALL':
+    default:
+      return earliestDate || '2024-01-01';
+  }
+  return today.toISOString().split('T')[0];
+};
 
 const StatCard = ({ title, value, change, isPositive, subValue, icon: Icon, gradient }: any) => (
   <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 relative overflow-hidden group">
@@ -67,18 +100,29 @@ export const Dashboard = () => {
     todaysProfitPercent 
   } = useHoldings();
 
+  const [timeRange, setTimeRange] = useState<DashboardTimeRange>('1M');
+  const [customFrom, setCustomFrom] = useState<string>('');
+  const [customTo, setCustomTo] = useState<string>('');
+  const [tempCustomFrom, setTempCustomFrom] = useState<string>('');
+  const [tempCustomTo, setTempCustomTo] = useState<string>('');
+  const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
+
+  const earliestTxDate = useMemo(() => {
+    const validTxs = transactions.filter(t => t.status === 'CONFIRMED' && t.date);
+    if (validTxs.length === 0) return '2024-01-01';
+    return validTxs.reduce((min, t) => (t.date < min ? t.date : min), validTxs[0].date).split('T')[0];
+  }, [transactions]);
+
   const activeSymbols = holdings.map(h => h.symbol);
   
   useEffect(() => {
     if (activeSymbols.length > 0) {
       fetchPrices(activeSymbols);
       const to = new Date().toISOString().split('T')[0];
-      const fromDate = new Date();
-      fromDate.setMonth(fromDate.getMonth() - 6);
-      const from = fromDate.toISOString().split('T')[0];
+      const from = earliestTxDate || '2024-01-01';
       fetchHistorical(activeSymbols, from, to);
     }
-  }, [JSON.stringify(activeSymbols), fetchPrices, fetchHistorical]);
+  }, [JSON.stringify(activeSymbols), earliestTxDate, fetchPrices, fetchHistorical]);
 
   // Recent Txs (new to old)
   const recentTxs = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4);
@@ -99,7 +143,7 @@ export const Dashboard = () => {
       .filter(t => t.status === 'CONFIRMED')
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    return sortedDates.map(date => {
+    const allDailyPoints = sortedDates.map(date => {
       let dailyCash = activePortfolio?.initial_cash || 0;
       let dailyHolds: Record<string, number> = {};
 
@@ -108,16 +152,27 @@ export const Dashboard = () => {
         eodTarget.setHours(23, 59, 59, 999);
         if (new Date(tx.date).getTime() > eodTarget.getTime()) break;
 
+        const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
         if (tx.type === 'BUY') {
-          dailyCash -= (tx.amount * tx.price) + (tx.fee || 0);
-          dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) + tx.amount;
+          if (isCash) {
+            dailyCash += tx.amount;
+          } else {
+            dailyCash -= (tx.amount * tx.price) + (tx.fee || 0);
+            dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) + tx.amount;
+          }
         } else if (tx.type === 'SELL') {
-          dailyCash += (tx.amount * tx.price) - (tx.fee || 0);
-          dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) - tx.amount;
-        } else if (tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
+          if (isCash) {
+            dailyCash -= tx.amount;
+          } else {
+            dailyCash += (tx.amount * tx.price) - (tx.fee || 0);
+            dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) - tx.amount;
+          }
+        } else if (tx.type === 'DEPOSIT') {
           dailyCash += tx.amount;
         } else if (tx.type === 'WITHDRAW') {
           dailyCash -= tx.amount;
+        } else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
+          dailyCash += (tx.amount - (tx.fee || 0));
         }
       }
 
@@ -134,11 +189,31 @@ export const Dashboard = () => {
         }
       });
       return {
+        date,
         name: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         value: dailyCash + dailyStockValue
       };
     });
-  }, [historical, transactions, activePortfolio, activeSymbols]);
+
+    const startDate = getStartDateForRange(timeRange, earliestTxDate, customFrom);
+    const endDate = customTo || new Date().toISOString().split('T')[0];
+
+    return allDailyPoints.filter(p => p.date >= startDate && p.date <= endDate);
+  }, [historical, transactions, activePortfolio, activeSymbols, timeRange, earliestTxDate, customFrom, customTo]);
+
+  const periodStartValue = chartData.length > 0 ? chartData[0].value : totalNetWorth;
+  const periodEndValue = chartData.length > 0 ? chartData[chartData.length - 1].value : totalNetWorth;
+  const periodPnl = periodEndValue - periodStartValue;
+  const periodPnlPercent = periodStartValue > 0 ? (periodPnl / periodStartValue) * 100 : 0;
+
+  const applyCustomRange = () => {
+    if (tempCustomFrom && tempCustomTo) {
+      setCustomFrom(tempCustomFrom);
+      setCustomTo(tempCustomTo);
+      setTimeRange('CUSTOM');
+      setShowCustomModal(false);
+    }
+  };
 
   const formatCurrency = (val: number, usdOnly = false) => {
     const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: activePortfolio?.base_currency || 'USD' }).format(val);
@@ -203,9 +278,90 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Performance Chart */}
         <div className="lg:col-span-2 bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 min-h-[400px]">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-white">Performance Overview (6M)</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 className="text-xl font-bold text-white flex flex-wrap items-center gap-2.5">
+                <span>Performance Overview</span>
+                {chartData.length > 1 && (
+                  <span className={clsx(
+                    "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
+                    periodPnl >= 0 
+                      ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
+                      : "text-rose-400 bg-rose-400/10 border-rose-500/20"
+                  )}>
+                    {periodPnl >= 0 ? '+' : ''}{formatCurrency(periodPnl, true)} ({periodPnl >= 0 ? '+' : ''}{periodPnlPercent.toFixed(2)}%)
+                  </span>
+                )}
+              </h3>
+            </div>
+
+            {/* Time Range Pills */}
+            <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-xl text-xs gap-1 overflow-x-auto custom-scrollbar">
+              {(['1D', '1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as DashboardTimeRange[]).map(range => (
+                <button
+                  key={range}
+                  onClick={() => {
+                    setTimeRange(range);
+                    setShowCustomModal(false);
+                  }}
+                  className={clsx(
+                    "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap",
+                    timeRange === range
+                      ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_10px_rgba(252,45,121,0.4)]"
+                      : "text-[#9898C8] hover:text-white hover:bg-[#2A2E45]/50"
+                  )}
+                >
+                  {range}
+                </button>
+              ))}
+              <button
+                onClick={() => setShowCustomModal(!showCustomModal)}
+                className={clsx(
+                  "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap",
+                  timeRange === 'CUSTOM'
+                    ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_10px_rgba(252,45,121,0.4)]"
+                    : "text-[#9898C8] hover:text-white hover:bg-[#2A2E45]/50"
+                )}
+                title="Custom date range"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Custom</span>
+              </button>
+            </div>
           </div>
+
+          {/* Custom Date Picker Inline Form */}
+          {showCustomModal && (
+            <div className="mb-4 p-3.5 bg-[#1A1D2D] border border-[#2A2E45] rounded-2xl flex flex-wrap items-center gap-3 animate-fade-in text-xs">
+              <span className="text-[#9898C8] font-medium">From:</span>
+              <input
+                type="date"
+                value={tempCustomFrom}
+                onChange={e => setTempCustomFrom(e.target.value)}
+                className="bg-[#111418] border border-[#2A2E45] text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-[#823AFD]"
+              />
+              <span className="text-[#9898C8] font-medium">To:</span>
+              <input
+                type="date"
+                value={tempCustomTo}
+                onChange={e => setTempCustomTo(e.target.value)}
+                className="bg-[#111418] border border-[#2A2E45] text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-[#823AFD]"
+              />
+              <button
+                onClick={applyCustomRange}
+                disabled={!tempCustomFrom || !tempCustomTo}
+                className="px-3.5 py-1.5 bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white rounded-lg font-semibold cursor-pointer disabled:opacity-50 transition-all hover:opacity-90 shadow-sm"
+              >
+                Apply
+              </button>
+              <button
+                onClick={() => setShowCustomModal(false)}
+                className="px-3.5 py-1.5 bg-[#2A2E45] text-[#9898C8] hover:text-white rounded-lg cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           <div className="w-full h-72 mt-4">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
