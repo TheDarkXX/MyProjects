@@ -67,6 +67,14 @@ th,
   font-family: 'Sarabun', sans-serif !important;
 }
 
+.font-mono,
+[class*="font-mono"],
+code,
+pre,
+kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
+}
+
 /* 1. Global Contrast: Brighten dim/grayish text by 4 levels to crisp light silver/slate (>= 70% contrast) */
 .text-\[\#9898C8\],
 [class*="text-[#9898C8]"] {
