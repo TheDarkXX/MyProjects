@@ -129,7 +129,30 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
     return items.slice(0, 16);
   }, [holdings, sortBy, timeRange, historical]);
 
-  // Rich Glassmorphic Custom Tooltip
+  // Top App Design Pattern: Floating Return Badge above Market Value Bar
+  const renderValueBadge = (props: any) => {
+    const { x, y, width, index } = props;
+    const item = data[index];
+    if (!item) return null;
+    const isPositive = item.profit >= 0;
+    const pctStr = `${isPositive ? '+' : ''}${item.profitPercent.toFixed(1)}%`;
+
+    return (
+      <text
+        x={x + width / 2}
+        y={y - 8}
+        fill={isPositive ? '#34D399' : '#FB7185'}
+        textAnchor="middle"
+        fontSize="11"
+        fontWeight="900"
+        className="select-none pointer-events-none font-black"
+        style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))' }}
+      >
+        {pctStr}
+      </text>
+    );
+  };
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const item = payload[0].payload;
@@ -140,31 +163,31 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
         <div className="bg-[#0F111A]/95 backdrop-blur-xl border border-[#2A2E45] p-4 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-xs text-white min-w-[240px] z-50">
           <div className="flex justify-between items-center pb-2.5 border-b border-[#2A2E45] mb-2.5">
             <span className="font-black text-white text-base tracking-tight">{item.name}</span>
-            <span className="text-[11px] text-[#9898C8]">
+            <span className="text-[11px] text-[#CBD5E1]">
               {item.shares?.toFixed(4)} shares @ {formatCurrency(item.avgCost || 0)}
             </span>
           </div>
 
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <span className="text-[#9898C8]">Cost Basis:</span>
+              <span className="text-[#CBD5E1]">Cost Basis:</span>
               <span className="font-semibold text-white tabular-nums">{formatCurrency(item.rawCost)}</span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-[#9898C8]">Current Value:</span>
+              <span className="text-[#CBD5E1]">Current Value:</span>
               <span className="font-bold text-white tabular-nums">{formatCurrency(item.rawValue)}</span>
             </div>
 
             <div className="pt-2 border-t border-[#2A2E45]/60 flex justify-between items-center">
-              <span className="text-[#9898C8]">{timeRange} Return:</span>
+              <span className="text-[#CBD5E1]">{timeRange} Return:</span>
               <span className={clsx("font-bold tabular-nums", isPeriodPositive ? "text-emerald-400" : "text-rose-400")}>
                 {isPeriodPositive ? '+' : ''}{formatCurrency(item.profit)} ({isPeriodPositive ? '+' : ''}{item.profitPercent.toFixed(1)}%)
               </span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-[#9898C8]">Total Return:</span>
+              <span className="text-[#CBD5E1]">Total Return:</span>
               <span className={clsx("font-bold tabular-nums", isTotalPositive ? "text-emerald-400" : "text-rose-400")}>
                 {isTotalPositive ? '+' : ''}{formatCurrency(item.totalProfit)} ({isTotalPositive ? '+' : ''}{item.totalProfitPercent.toFixed(1)}%)
               </span>
@@ -178,7 +201,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
 
   return (
     <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col">
-      {/* Header Bar: Title + Sort Pills */}
+      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#10B981]/20 to-[#38BDF8]/20 border border-[#10B981]/30 flex items-center justify-center">
@@ -186,7 +209,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
           </div>
           <div>
             <h3 className="text-lg font-bold text-white tracking-tight">Cost vs Market Value</h3>
-            <p className="text-xs text-[#9898C8]">Compare invested capital against current holding worth</p>
+            <p className="text-xs text-[#9898C8]">Paired capital comparison with {timeRange} return badges</p>
           </div>
         </div>
 
@@ -211,19 +234,25 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
       </div>
 
       {data.length === 0 ? (
-        <div className="h-[340px] flex items-center justify-center text-[#9898C8] text-sm">
+        <div className="h-[350px] flex items-center justify-center text-[#9898C8] text-sm">
           No active securities to compare
         </div>
       ) : (
-        /* Explicit Height Container guarantees Recharts never renders with 0 height */
-        <div className="w-full" style={{ height: 350, minHeight: 350 }}>
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+        /* Tight Paired Bar Chart: barGap={4} & barSize={26} matches top institutional apps */
+        <div className="w-full" style={{ height: 360, minHeight: 360 }}>
+          <ResponsiveContainer width="100%" height={360}>
+            <BarChart 
+              data={data} 
+              barGap={5} 
+              barSize={26}
+              barCategoryGap="25%"
+              margin={{ top: 25, right: 15, left: 0, bottom: 20 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#1F2233" vertical={false} />
               <XAxis 
                 dataKey="name" 
                 stroke="#9898C8" 
-                tick={{ fill: '#E2E8F0', fontSize: 11, fontWeight: 700 }}
+                tick={{ fill: '#E2E8F0', fontSize: 12, fontWeight: 800 }}
                 tickLine={false}
                 axisLine={{ stroke: '#2A2E45' }}
               />
@@ -249,15 +278,14 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 name="Cost Basis" 
                 fill="#6366F1"
                 radius={[5, 5, 0, 0]} 
-                maxBarSize={32}
               />
 
-              {/* Market Value Bar (Emerald-500 if profit >= 0, Rose-500 if loss) */}
+              {/* Market Value Bar (Emerald-500 if profit >= 0, Rose-500 if loss) + Floating Return Badge */}
               <Bar 
                 dataKey="value" 
                 name="Current Value" 
                 radius={[5, 5, 0, 0]} 
-                maxBarSize={32}
+                label={renderValueBadge}
               >
                 {data.map((entry, index) => (
                   <Cell 

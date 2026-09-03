@@ -22,7 +22,6 @@ interface TooltipState {
   y: number;
 }
 
-// Built-in Comprehensive Sector Dictionary for standard US Stocks & Dime holdings
 const SECTOR_MAP: Record<string, string> = {
   META: 'Communication Services',
   GOOGL: 'Communication Services',
@@ -180,7 +179,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, item: null, x: 0, y: 0 });
 
-  // Measure exact pixel dimensions of container before paint (Fixes non-uniform stretching)
   useLayoutEffect(() => {
     if (!containerRef.current) return;
 
@@ -189,7 +187,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         const rect = containerRef.current.getBoundingClientRect();
         const w = Math.round(rect.width);
         if (w > 0) {
-          // Balanced height: min 480px, max 580px, scaling gracefully with width
           const h = Math.max(480, Math.min(580, Math.round(w * 0.35)));
           setDimensions({ width: w, height: h });
         }
@@ -203,7 +200,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // Currency Formatter adhering to project rules (USD 2 decimals, THB 0 decimals)
   const formatCurrency = (value: number) => {
     if (currency === 'THB' && exchangeRate) {
       const converted = Math.round(value * exchangeRate);
@@ -291,23 +287,21 @@ export const Heatmap: React.FC<HeatmapProps> = ({
     });
   }, [holdings, activeTimeRange, historical, txSectorMap]);
 
-  // Finviz Dynamic Color Palette with Timeframe-adaptive Clamping
   const colorScale = useMemo(() => {
     const limit = (activeTimeRange === '1D' || activeTimeRange === '1W') ? 3 : (activeTimeRange === '1M' || activeTimeRange === '3M') ? 10 : 25;
 
     return d3.scaleLinear<string>()
       .domain([-limit, -limit * 0.35, 0, limit * 0.35, limit])
       .range([
-        '#dc2626', // Vibrant Red (Loss)
-        '#991b1b', // Dark Red
-        '#334155', // Slate-700 (0.00%)
-        '#15803d', // Dark Green
-        '#16a34a'  // Vibrant Green (Gain)
+        '#dc2626',
+        '#991b1b',
+        '#334155',
+        '#15803d',
+        '#16a34a'
       ])
       .clamp(true);
   }, [activeTimeRange]);
 
-  // Build Treemap Hierarchy using Golden Ratio squarify
   const treemapData = useMemo(() => {
     if (processedHoldings.length === 0 || dimensions.width === 0) return null;
 
@@ -328,7 +322,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
       .sum((d: any) => d.currentValue || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
-    // Golden ratio (1.618) squarify for harmonious, boxy rectangles without horizontal squashing
     const treemapLayout = d3.treemap<any>()
       .tile(d3.treemapSquarify.ratio(1.618))
       .size([dimensions.width, dimensions.height])
@@ -391,7 +384,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
 
   return (
     <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex flex-col gap-5">
-      {/* Header Bar: Title + Controls */}
+      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#823AFD]/20 to-[#FC2D79]/20 border border-[#823AFD]/30 flex items-center justify-center shadow-inner">
@@ -429,7 +422,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         </div>
       </div>
 
-      {/* Full-Width SVG Container with Native Pixel Coordinate System (Zero font distortion) */}
+      {/* Full-Width SVG Container with Native 1:1 Pixel Coordinates */}
       <div 
         ref={containerRef} 
         className="w-full relative select-none rounded-2xl overflow-hidden border border-[#2A2E45]/60 bg-[#0B0F17]"
@@ -504,7 +497,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
             const fillColor = colorScale(returnPct);
             const isHovered = item.symbol === hoveredSymbol;
 
-            // Adaptive sizing for inner text elements
             const showFull = width >= 70 && height >= 48;
             const showMedium = width >= 42 && height >= 30;
             const showMini = width >= 26 && height >= 16;
@@ -516,24 +508,23 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                 onMouseEnter={(e) => handleMouseEnter(e, d)}
                 className="cursor-pointer"
               >
-                {/* Stock Cell Rectangle */}
+                {/* Stock Cell Rectangle: Elegant Pure White Glow Hover (Controlled Theme Palette, No Jarring Cyan!) */}
                 <rect
                   width={width}
                   height={height}
                   fill={fillColor}
                   rx="4"
-                  stroke={isHovered ? '#38BDF8' : '#0B0F17'}
-                  strokeWidth={isHovered ? 2.5 : 1}
+                  stroke={isHovered ? '#FFFFFF' : '#0B0F17'}
+                  strokeWidth={isHovered ? 2 : 1}
                   className="transition-all duration-150"
                   style={{
-                    filter: isHovered ? 'brightness(1.18) drop-shadow(0 0 8px rgba(56,189,248,0.4))' : 'none'
+                    filter: isHovered ? 'brightness(1.15) drop-shadow(0 0 6px rgba(255,255,255,0.7))' : 'none'
                   }}
                 />
 
                 {/* Typography: Symbol, Return %, Value / Weight */}
                 {showFull ? (
                   <g className="pointer-events-none">
-                    {/* Symbol */}
                     <text
                       x={width / 2}
                       y={height / 2 - 10}
@@ -546,7 +537,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                       {item.symbol}
                     </text>
 
-                    {/* Return % */}
                     <text
                       x={width / 2}
                       y={height / 2 + 6}
@@ -559,7 +549,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                       {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
                     </text>
 
-                    {/* Value & Weight */}
                     <text
                       x={width / 2}
                       y={height / 2 + 20}
@@ -617,7 +606,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
           })}
         </svg>
 
-        {/* 3. Rich Glassmorphic Hover Tooltip */}
+        {/* 3. Rich Glassmorphic Hover Tooltip — Strictly in Theme Palette */}
         {tooltip.visible && tooltip.item && (
           <div
             style={{
@@ -631,7 +620,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-[#2A2E45] mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black text-white tracking-tight">{tooltip.item.symbol}</span>
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-[#823AFD]/20 text-[#823AFD] border border-[#823AFD]/30">
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-[#823AFD]/20 text-[#A78BFA] border border-[#823AFD]/30">
                   {tooltip.item.sector}
                 </span>
               </div>
@@ -647,22 +636,22 @@ export const Heatmap: React.FC<HeatmapProps> = ({
             {/* Tooltip Metrics Grid */}
             <div className="space-y-2 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-[#94A3B8]">Market Value:</span>
+                <span className="text-[#CBD5E1]">Market Value:</span>
                 <span className="font-bold text-white text-sm">
                   {formatCurrency(tooltip.item.currentValue)}
                   {currency === 'THB' && (
-                    <span className="text-[11px] text-[#94A3B8] font-normal ml-1">({formatUsd(tooltip.item.currentValue)})</span>
+                    <span className="text-[11px] text-[#9898C8] font-normal ml-1">({formatUsd(tooltip.item.currentValue)})</span>
                   )}
                 </span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-[#94A3B8]">Portfolio Weight:</span>
-                <span className="font-bold text-[#38BDF8]">{tooltip.item.weightPercent.toFixed(2)}%</span>
+                <span className="text-[#CBD5E1]">Portfolio Weight:</span>
+                <span className="font-bold text-[#A78BFA]">{tooltip.item.weightPercent.toFixed(2)}%</span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-[#94A3B8]">Last Price:</span>
+                <span className="text-[#CBD5E1]">Last Price:</span>
                 <span className="font-semibold text-white">
                   ${tooltip.item.lastPrice?.toFixed(2)}
                   <span className={clsx("ml-1 text-[11px]", tooltip.item.dayChangePercent >= 0 ? "text-emerald-400" : "text-rose-400")}>
@@ -672,21 +661,21 @@ export const Heatmap: React.FC<HeatmapProps> = ({
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-[#94A3B8]">Shares Held:</span>
+                <span className="text-[#CBD5E1]">Shares Held:</span>
                 <span className="font-semibold text-white">
-                  {tooltip.item.quantity?.toFixed(4)} <span className="text-[#94A3B8] font-normal">@ avg ${tooltip.item.avgCost?.toFixed(2)}</span>
+                  {tooltip.item.quantity?.toFixed(4)} <span className="text-[#9898C8] font-normal">@ avg ${tooltip.item.avgCost?.toFixed(2)}</span>
                 </span>
               </div>
 
               <div className="pt-2 border-t border-[#2A2E45]/60 flex justify-between items-center">
-                <span className="text-[#94A3B8]">{activeTimeRange} Return:</span>
+                <span className="text-[#CBD5E1]">{activeTimeRange} Return:</span>
                 <span className={clsx("font-bold", tooltip.item.periodReturnAmount >= 0 ? "text-emerald-400" : "text-rose-400")}>
                   {tooltip.item.periodReturnAmount >= 0 ? '+' : ''}{formatCurrency(tooltip.item.periodReturnAmount)} ({tooltip.item.periodReturnPercent >= 0 ? '+' : ''}{tooltip.item.periodReturnPercent.toFixed(2)}%)
                 </span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-[#94A3B8]">Total Return:</span>
+                <span className="text-[#CBD5E1]">Total Return:</span>
                 <span className={clsx("font-bold", tooltip.item.totalReturn >= 0 ? "text-emerald-400" : "text-rose-400")}>
                   {tooltip.item.totalReturn >= 0 ? '+' : ''}{formatCurrency(tooltip.item.totalReturn)} ({tooltip.item.totalReturnPercent >= 0 ? '+' : ''}{tooltip.item.totalReturnPercent.toFixed(2)}%)
                 </span>
@@ -709,7 +698,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-[#94A3B8]">
+        <div className="flex items-center gap-4 text-[#9898C8]">
           <span>Holdings: <strong className="text-white">{processedHoldings.length} stocks</strong></span>
           <span>Currency: <strong className="text-[#823AFD]">{currency}</strong></span>
           {currency === 'THB' && exchangeRate && (

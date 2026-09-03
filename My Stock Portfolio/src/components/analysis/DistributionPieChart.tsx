@@ -127,18 +127,17 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
   const totalPortfolioValue = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
   const activeItem = data[activeIndex] || data[0] || null;
 
-  // Render Category Name & % directly on Donut Slices (No hover needed!)
+  // Render Category Name & % directly on Donut Slices (+4 font levels, bold high contrast)
   const renderCustomSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
-    if (percent < 0.05) return null; // Skip tiny slices to prevent overlapping
+    if (percent < 0.04) return null;
     const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.52;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     const item = data[index];
     if (!item) return null;
 
-    // Short label for sector names if needed
     let shortName = item.name;
     if (shortName === 'Communication Services') shortName = 'Comm';
     if (shortName === 'Consumer Cyclical') shortName = 'Cyclical';
@@ -148,16 +147,15 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
       <text
         x={x}
         y={y}
-        fill="#FFFFFF"
         textAnchor="middle"
         dominantBaseline="central"
-        className="pointer-events-none select-none"
-        style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}
+        className="pointer-events-none select-none font-black"
+        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95))' }}
       >
-        <tspan x={x} dy="-0.45em" fontSize="11" fontWeight="900" fill="#FFFFFF">
+        <tspan x={x} dy="-0.5em" fontSize="15" fontWeight="900" fill="#FFFFFF">
           {shortName}
         </tspan>
-        <tspan x={x} dy="1.2em" fontSize="10" fontWeight="800" fill="#38BDF8">
+        <tspan x={x} dy="1.25em" fontSize="13" fontWeight="900" fill="#F8FAFC">
           {(percent * 100).toFixed(1)}%
         </tspan>
       </text>
@@ -239,8 +237,8 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                   data={data}
                   cx="50%"
                   cy="50%"
-                  innerRadius="58%"
-                  outerRadius="90%"
+                  innerRadius="50%"
+                  outerRadius="88%"
                   dataKey="value"
                   onMouseEnter={(_, index) => setActiveIndex(index)}
                   paddingAngle={2}
@@ -267,7 +265,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                   <span className="text-sm font-bold text-white tracking-tight truncate max-w-[120px]">
                     {activeItem.name}
                   </span>
-                  <span className="text-xl font-black text-[#38BDF8] mt-0.5">
+                  <span className="text-xl font-black text-[#A78BFA] mt-0.5">
                     {activeItem.percent.toFixed(1)}%
                   </span>
                   <span className="text-[11px] text-[#CBD5E1] font-semibold tabular-nums mt-0.5">
@@ -304,11 +302,10 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                     className={clsx(
                       "grid grid-cols-12 items-center px-3 py-2.5 rounded-xl transition-all cursor-pointer group select-none relative overflow-hidden",
                       isSelected 
-                        ? "bg-[#1A1D2D] border border-[#38BDF8]/40 shadow-[0_2px_12px_rgba(56,189,248,0.15)]" 
+                        ? "bg-[#1A1D2D] border border-[#823AFD]/50 shadow-[0_2px_12px_rgba(130,58,253,0.2)]" 
                         : "hover:bg-[#1A1D2D]/60 border border-transparent"
                     )}
                   >
-                    {/* Subtle Progress Bar in Background */}
                     <div 
                       className="absolute left-0 bottom-0 top-0 opacity-10 pointer-events-none rounded-xl transition-all"
                       style={{ width: `${item.percent}%`, backgroundColor: item.color }}
@@ -329,7 +326,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                     </div>
 
                     {/* % Share (2 cols) */}
-                    <div className="col-span-2 text-right font-black text-xs text-[#38BDF8] tabular-nums relative z-10">
+                    <div className="col-span-2 text-right font-black text-xs text-[#A78BFA] tabular-nums relative z-10">
                       {item.percent.toFixed(1)}%
                     </div>
                   </div>
