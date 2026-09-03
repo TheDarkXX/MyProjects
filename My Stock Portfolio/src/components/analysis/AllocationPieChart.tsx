@@ -149,6 +149,7 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
     );
   };
 
+  // Clean active shape: Only expands slice slightly (outerRadius + 8) without any distracting outer border ring
   const renderActiveShape = (props: any) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
     return (
@@ -156,22 +157,14 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
         <Sector
           cx={cx}
           cy={cy}
-          innerRadius={innerRadius}
+          innerRadius={innerRadius - 2}
           outerRadius={outerRadius + 8}
           startAngle={startAngle}
           endAngle={endAngle}
           fill={fill}
-          style={{ filter: `drop-shadow(0 0 10px ${fill}99)` }}
-        />
-        <Sector
-          cx={cx}
-          cy={cy}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          innerRadius={outerRadius + 11}
-          outerRadius={outerRadius + 14}
-          fill={fill}
-          opacity={0.8}
+          stroke="#0F111A"
+          strokeWidth={2}
+          style={{ filter: 'brightness(1.15) drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }}
         />
       </g>
     );

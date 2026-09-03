@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { Holding } from '../../hooks/useHoldings';
 import { useUiStore } from '../../stores/uiStore';
@@ -17,7 +17,22 @@ type SortType = 'Value' | 'Cost' | 'Profit $' | 'Profit %' | 'A-Z';
 export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D' }) => {
   const [sortBy, setSortBy] = useState<SortType>('Value');
   const [activeHoverIndex, setActiveHoverIndex] = useState<number | null>(null);
-  const [hoverCoord, setHoverCoord] = useState<{ x: number; y: number } | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(1000);
+
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    const update = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   const { currency } = useUiStore();
   const { exchangeRate, historical } = usePriceStore();
@@ -161,16 +176,13 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
     );
   };
 
-  // Top-App Smart Non-Blocking Placement: Offsets card away from the bar so it NEVER obscures bars or badges
-  const getSmartTooltipPos = () => {
-    if (!hoverCoord) return undefined;
-    const cardWidth = 245;
-    // If hovering on right half, shift card to the left; if on left half, shift to the right
-    const posX = hoverCoord.x > 380 
-      ? Math.max(10, hoverCoord.x - cardWidth - 50) 
-      : hoverCoord.x + 55;
-    // Lock to top headroom (y: 8) so the card hovers cleanly above without touching bars
-    return { x: posX, y: 8 };
+  // Top-App Right-Side Floating HUD: Always floats on the right side in the headroom, never covering bars
+  const getRightFloatingTooltipPos = () => {
+    if (activeHoverIndex === null) return undefined;
+    const cardWidth = 250;
+    const rightMargin = 25;
+    const x = Math.max(10, containerWidth - cardWidth - rightMargin);
+    return { x, y: 8 };
   };
 
   const CustomTooltip = ({ active, payload }: any) => {
@@ -180,7 +192,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
       const isTotalPositive = item.totalProfit >= 0;
 
       return (
-        <div className="bg-[#0F111A]/95 backdrop-blur-2xl border border-[#2A2E45] p-3.5 rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.75)] text-xs text-white min-w-[240px] pointer-events-none z-50 animate-fade-in">
+        <div className="bg-[#0F111A]/95 backdrop-blur-2xl border border-[#2A2E45] p-3.5 rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.75)] text-xs text-white min-w-[245px] pointer-events-none z-50 animate-fade-in">
           <div className="flex justify-between items-center pb-2 border-b border-[#2A2E45] mb-2">
             <span className="font-black text-white text-base tracking-tight">{item.name}</span>
             <span className="text-[11px] text-[#CBD5E1]">
@@ -260,8 +272,8 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
           No active securities to compare
         </div>
       ) : (
-        /* Interactive Bar Chart with Top-App Institutional Polish */
-        <div className="w-full" style={{ height: 390, minHeight: 390 }}>
+        /* Interactive Bar Chart with Top-App Right-Side Floating HUD */
+        <div ref={containerRef} className="w-full relative" style={{ height: 390, minHeight: 390 }}>
           <ResponsiveContainer width="100%" height={390}>
             <BarChart 
               data={data} 
@@ -272,14 +284,10 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
               onMouseMove={(state: any) => {
                 if (state && state.activeTooltipIndex !== undefined) {
                   setActiveHoverIndex(state.activeTooltipIndex);
-                  if (state.activeCoordinate) {
-                    setHoverCoord(state.activeCoordinate);
-                  }
                 }
               }}
               onMouseLeave={() => {
                 setActiveHoverIndex(null);
-                setHoverCoord(null);
               }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#1F2233" vertical={false} />
@@ -303,10 +311,10 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 domain={[0, (dataMax: number) => Math.ceil((dataMax * 1.25) / 100) * 100]}
               />
 
-              {/* Smart Non-Blocking Tooltip: Positioned in top headroom, offset away from active bars */}
+              {/* Top-App Right-Side Tooltip: Anchored gracefully to the right side in the headroom */}
               <Tooltip 
                 content={<CustomTooltip />} 
-                position={getSmartTooltipPos()}
+                position={getRightFloatingTooltipPos()}
                 isAnimationActive={false}
                 cursor={{ 
                   fill: 'rgba(255, 255, 255, 0.03)', 
