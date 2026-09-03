@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { usePortfolioStore } from '../../stores/portfolioStore';
+import { useTransactionStore } from '../../stores/transactionStore';
 import { useHoldings, Holding } from '../../hooks/useHoldings';
 import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
@@ -10,19 +11,36 @@ type RebalanceMode = 'cashflow' | 'matrix' | 'trim';
 
 export const SmartRebalancePage: React.FC = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
+  const { fetchTransactions } = useTransactionStore();
   const { holdings, cashBalance, totalNetWorth } = useHoldings();
-  const { currency, exchangeRate } = useUiStore();
-  const { prices } = usePriceStore();
+  const { currency } = useUiStore();
+  const { prices, exchangeRate, fetchExchangeRate, fetchPrices } = usePriceStore();
 
   const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
 
   // Rebalance Mode
   const [mode, setMode] = useState<RebalanceMode>('cashflow');
 
-  // Mode 1: Cash flow deposit input (in USD)
+  // Mode 1: Cash flow deposit input (in USD internally)
   const [depositAmountUsd, setDepositAmountUsd] = useState<number>(1000);
   const [selectedStrategy, setSelectedStrategy] = useState<'alpha' | 'lifecycle' | 'equal'>('alpha');
   const [copied, setCopied] = useState<boolean>(false);
+
+  // Sync data on load and when active portfolio changes
+  useEffect(() => {
+    if (activePortfolioId) {
+      fetchTransactions(activePortfolioId);
+    }
+    fetchExchangeRate('USD', 'THB');
+  }, [activePortfolioId, fetchTransactions, fetchExchangeRate]);
+
+  const activeSymbols = useMemo(() => holdings.map(h => h.symbol).filter(Boolean), [holdings]);
+
+  useEffect(() => {
+    if (activeSymbols.length > 0) {
+      fetchPrices(activeSymbols);
+    }
+  }, [activeSymbols.join(','), fetchPrices]);
 
   // Mode 2: Custom Target Weights (% per symbol)
   const [customTargets, setCustomTargets] = useState<Record<string, number>>(() => {
@@ -42,8 +60,10 @@ export const SmartRebalancePage: React.FC = () => {
   const [targetFundSymbol, setTargetFundSymbol] = useState<string>(() => holdings[1]?.symbol || '');
 
   const currSymbol = currency === 'THB' ? '฿' : '$';
+  const effectiveRate = exchangeRate > 0 ? exchangeRate : 35.0;
+
   const formatMoney = (usd: number) => {
-    const val = currency === 'THB' ? usd * exchangeRate : usd;
+    const val = currency === 'THB' ? usd * effectiveRate : usd;
     return `${currSymbol}${val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
@@ -206,9 +226,9 @@ export const SmartRebalancePage: React.FC = () => {
 
   const copyBuyingPlan = () => {
     const text = cashflowRecommendations
-      .map(r => `• BUY ${r.symbol}: +${r.buyShares} shares (~$${r.allocatedUsd.toFixed(0)})`)
+      .map(r => `• BUY ${r.symbol}: +${r.buyShares} shares (~${formatMoney(r.allocatedUsd)})`)
       .join('\n');
-    const header = `📋 Cash-Flow Buying Plan (Deposit: $${depositAmountUsd}):\n` + text;
+    const header = `📋 Cash-Flow Buying Plan (Deposit: ${formatMoney(depositAmountUsd)}):\n` + text;
     navigator.clipboard.writeText(header);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -288,50 +308,71 @@ export const SmartRebalancePage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
               {/* Deposit Input */}
               <div className="lg:col-span-6 space-y-3">
-                <label className="text-xs font-bold text-[#9898C8] uppercase tracking-wider block">
+                <label className="text-xs font-bold text-[#CBD5E1] uppercase tracking-wider block font-heading">
                   จำนวนเงินที่จะเติมเข้าพอร์ต (New Cash Injection)
                 </label>
                 <div className="flex items-center gap-3">
                   <div className="relative flex-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white font-bold text-lg">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white font-bold text-lg font-heading">
+                      {currSymbol}
+                    </span>
                     <input
                       type="number"
-                      value={depositAmountUsd}
-                      onChange={(e) => setDepositAmountUsd(Math.max(0, Number(e.target.value)))}
-                      className="w-full bg-[#161926] border border-[#2A2E45] focus:border-[#10B981] rounded-2xl py-3 pl-10 pr-4 text-2xl font-black text-white tabular-nums outline-none transition-all"
+                      value={currency === 'THB' ? Math.round(depositAmountUsd * effectiveRate) : depositAmountUsd}
+                      onChange={(e) => {
+                        const val = Math.max(0, Number(e.target.value));
+                        setDepositAmountUsd(currency === 'THB' ? val / effectiveRate : val);
+                      }}
+                      className="w-full bg-[#161926] border border-[#2A2E45] focus:border-[#10B981] rounded-2xl py-3 pl-10 pr-4 text-2xl font-black text-white tabular-nums outline-none transition-all font-heading"
                       placeholder="1000"
                     />
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-xs text-[#9898C8] block">เทียบเท่าเงินบาท</span>
-                    <span className="text-base font-bold text-emerald-400 tabular-nums">
-                      ~฿{(depositAmountUsd * exchangeRate).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    <span className="text-xs text-[#CBD5E1] block font-body">
+                      {currency === 'THB' ? 'เทียบเท่าดอลลาร์' : 'เทียบเท่าเงินบาท'}
+                    </span>
+                    <span className="text-base font-bold text-emerald-400 tabular-nums font-heading">
+                      {currency === 'THB' 
+                        ? `~$${depositAmountUsd.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                        : `~฿${(depositAmountUsd * effectiveRate).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                      }
                     </span>
                   </div>
                 </div>
 
                 {/* Quick amount chips */}
                 <div className="flex flex-wrap gap-2 pt-1">
-                  {[500, 1000, 2000, 5000].map(amt => (
-                    <button
-                      key={amt}
-                      onClick={() => setDepositAmountUsd(amt)}
-                      className={clsx(
-                        "px-3 py-1 rounded-xl text-xs font-bold border transition-all",
-                        depositAmountUsd === amt
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                          : "bg-[#161926] text-[#9898C8] border-[#2A2E45] hover:text-white"
-                      )}
-                    >
-                      +${amt.toLocaleString()}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setDepositAmountUsd(Math.round(50000 / exchangeRate))}
-                    className="px-3 py-1 rounded-xl text-xs font-bold bg-[#161926] text-[#9898C8] border border-[#2A2E45] hover:text-white"
-                  >
-                    +50,000 บาท
-                  </button>
+                  {currency === 'THB' ? (
+                    [10000, 30000, 50000, 100000].map(amtThb => (
+                      <button
+                        key={amtThb}
+                        onClick={() => setDepositAmountUsd(amtThb / effectiveRate)}
+                        className={clsx(
+                          "px-3 py-1 rounded-xl text-xs font-bold border transition-all font-heading",
+                          Math.round(depositAmountUsd * effectiveRate) === amtThb
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                            : "bg-[#161926] text-[#CBD5E1] border-[#2A2E45] hover:text-white"
+                        )}
+                      >
+                        +฿{amtThb.toLocaleString()}
+                      </button>
+                    ))
+                  ) : (
+                    [500, 1000, 2000, 5000].map(amt => (
+                      <button
+                        key={amt}
+                        onClick={() => setDepositAmountUsd(amt)}
+                        className={clsx(
+                          "px-3 py-1 rounded-xl text-xs font-bold border transition-all font-heading",
+                          depositAmountUsd === amt
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                            : "bg-[#161926] text-[#CBD5E1] border-[#2A2E45] hover:text-white"
+                        )}
+                      >
+                        +${amt.toLocaleString()}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -441,23 +482,23 @@ export const SmartRebalancePage: React.FC = () => {
                     </div>
 
                     <div className="text-right">
-                      <span className="text-[10px] text-[#9898C8] block">ราคาตลาด</span>
-                      <span className="text-sm font-bold text-white tabular-nums">${rec.price.toFixed(2)}</span>
+                      <span className="text-xs text-[#CBD5E1] block font-body">ราคาตลาด</span>
+                      <span className="text-sm font-bold text-white tabular-nums font-heading">{formatMoney(rec.price)}</span>
                     </div>
                   </div>
 
                   {/* Buying Callout */}
                   <div className="bg-[#1A1D2D] p-3.5 rounded-xl border border-emerald-500/30 flex items-center justify-between">
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold block">คำแนะนำ</span>
-                      <div className="text-lg font-black text-white tabular-nums">
+                      <span className="text-xs uppercase tracking-wider text-emerald-400 font-bold block font-heading">คำแนะนำ</span>
+                      <div className="text-lg font-black text-white tabular-nums font-heading">
                         BUY +{rec.buyShares} หุ้น
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] text-[#9898C8] block">งบที่ใช้</span>
-                      <div className="text-lg font-black text-emerald-400 tabular-nums">
-                        ${rec.allocatedUsd.toFixed(0)}
+                      <span className="text-xs text-[#CBD5E1] block font-body">งบที่ใช้</span>
+                      <div className="text-lg font-black text-emerald-400 tabular-nums font-heading">
+                        {formatMoney(rec.allocatedUsd)}
                       </div>
                     </div>
                   </div>
