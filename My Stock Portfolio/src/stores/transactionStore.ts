@@ -12,6 +12,7 @@ export interface Transaction {
   price: number;
   fee: number;
   stock_type?: string;
+  sector?: string;
   note?: string;
   status: string;
 }

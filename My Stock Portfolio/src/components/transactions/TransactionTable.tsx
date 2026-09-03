@@ -1,16 +1,44 @@
 import React, { useState, useMemo } from 'react';
 import { useTransactionStore, Transaction } from '../../stores/transactionStore';
 import { usePortfolioStore } from '../../stores/portfolioStore';
-import { Search, Plus, Trash2, Edit2, Upload } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Upload, Filter, X } from 'lucide-react';
 import { TransactionFormModal } from './TransactionFormModal';
 import { BulkTransactionModal } from './BulkTransactionModal';
 import clsx from 'clsx';
+
+export const resolveSector = (tx: Transaction): string => {
+  if (tx.sector) return tx.sector;
+  const sym = (tx.symbol || '').toUpperCase();
+  if (sym === 'NVDA') return 'Technology';
+  if (sym === 'SCHG') return 'Large Cap Growth';
+  if (sym === 'SPY') return 'Blend / S&P 500';
+  if (sym === 'GLD') return 'Precious Metals';
+  if (sym === 'BTC-USD' || sym === 'BTC') return 'Cryptocurrency';
+  if (sym === 'CASH' || tx.type === 'DEPOSIT' || tx.type === 'INTEREST') return 'Cash / Currency';
+  return tx.asset || 'General';
+};
+
+export const resolveStockType = (tx: Transaction): string => {
+  if (tx.stock_type) return tx.stock_type;
+  const sym = (tx.symbol || '').toUpperCase();
+  if (sym === 'NVDA') return 'Growth';
+  if (sym === 'SCHG') return 'Index / ETF';
+  if (sym === 'SPY') return 'Index / ETF';
+  if (sym === 'GLD') return 'Commodity';
+  if (sym === 'BTC-USD' || sym === 'BTC') return 'Crypto';
+  if (sym === 'CASH' || tx.type === 'DEPOSIT' || tx.type === 'INTEREST') return 'Cash';
+  return 'General';
+};
 
 export const TransactionTable = () => {
   const { transactions, fetchTransactions, deleteTransaction, bulkDeleteTransaction } = useTransactionStore();
   const { activePortfolioId } = usePortfolioStore();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedType, setSelectedType] = useState('ALL');
+  const [selectedAsset, setSelectedAsset] = useState('ALL');
+  const [selectedSector, setSelectedSector] = useState('ALL');
+  const [selectedStockType, setSelectedStockType] = useState('ALL');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -23,13 +51,70 @@ export const TransactionTable = () => {
     }
   }, [activePortfolioId, fetchTransactions]);
 
+  // Extract unique filter options from data
+  const filterOptions = useMemo(() => {
+    const types = new Set<string>();
+    const assets = new Set<string>();
+    const sectors = new Set<string>();
+    const stockTypes = new Set<string>();
+
+    transactions.forEach(tx => {
+      if (tx.type) types.add(tx.type);
+      if (tx.asset) assets.add(tx.asset);
+      const s = resolveSector(tx);
+      if (s) sectors.add(s);
+      const st = resolveStockType(tx);
+      if (st) stockTypes.add(st);
+    });
+
+    return {
+      types: Array.from(types).sort(),
+      assets: Array.from(assets).sort(),
+      sectors: Array.from(sectors).sort(),
+      stockTypes: Array.from(stockTypes).sort()
+    };
+  }, [transactions]);
+
+  const hasActiveFilters = searchTerm !== '' || selectedType !== 'ALL' || selectedAsset !== 'ALL' || selectedSector !== 'ALL' || selectedStockType !== 'ALL';
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedType('ALL');
+    setSelectedAsset('ALL');
+    setSelectedSector('ALL');
+    setSelectedStockType('ALL');
+  };
+
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(tx => 
-      tx.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      tx.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tx.asset?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [transactions, searchTerm]);
+    return transactions.filter(tx => {
+      // 1. Text search
+      const q = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm || (
+        tx.symbol?.toLowerCase().includes(q) || 
+        tx.type.toLowerCase().includes(q) ||
+        tx.asset?.toLowerCase().includes(q) ||
+        resolveSector(tx).toLowerCase().includes(q) ||
+        resolveStockType(tx).toLowerCase().includes(q) ||
+        tx.note?.toLowerCase().includes(q)
+      );
+
+      if (!matchesSearch) return false;
+
+      // 2. Type filter
+      if (selectedType !== 'ALL' && tx.type !== selectedType) return false;
+
+      // 3. Asset Class filter
+      if (selectedAsset !== 'ALL' && tx.asset !== selectedAsset) return false;
+
+      // 4. Sector filter
+      if (selectedSector !== 'ALL' && resolveSector(tx) !== selectedSector) return false;
+
+      // 5. Stock Type / Strategy filter
+      if (selectedStockType !== 'ALL' && resolveStockType(tx) !== selectedStockType) return false;
+
+      return true;
+    });
+  }, [transactions, searchTerm, selectedType, selectedAsset, selectedSector, selectedStockType]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -62,49 +147,135 @@ export const TransactionTable = () => {
       <div className="flex items-center justify-between mb-2">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Transactions</h2>
-          <p className="text-[#9898C8] mt-2">Manage your trading history and bulk operations.</p>
+          <p className="text-[#9898C8] mt-2">Manage trading records, asset allocation, and granular filters.</p>
+        </div>
+        <div className="text-right">
+          <span className="text-xs font-mono px-3 py-1.5 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] text-[#9898C8]">
+            Showing <strong className="text-white">{filteredTransactions.length}</strong> of {transactions.length}
+          </span>
         </div>
       </div>
 
-      {/* Header Actions */}
-      <div className="flex justify-between items-center bg-[#111418] p-6 rounded-3xl border border-[#2A2E45] flex-wrap gap-4">
-        <div className="relative group w-full md:w-72">
-          <Search className="w-5 h-5 text-[#9898C8] absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#FC2D79] transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search symbol, type or asset..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl pl-12 pr-4 py-3 text-white placeholder-[#9898C8] focus:outline-none focus:border-[#FC2D79] focus:ring-1 focus:ring-[#FC2D79] transition-all"
-          />
-        </div>
-        
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          {selectedIds.size > 0 && (
+      {/* Header Actions & Search */}
+      <div className="bg-[#111418] p-6 rounded-3xl border border-[#2A2E45] space-y-4 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <div className="relative group w-full md:w-80">
+            <Search className="w-5 h-5 text-[#9898C8] absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#FC2D79] transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Search symbol, sector, note..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl pl-12 pr-4 py-3 text-white placeholder-[#9898C8] focus:outline-none focus:border-[#FC2D79] focus:ring-1 focus:ring-[#FC2D79] transition-all text-sm"
+            />
+          </div>
+          
+          <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+            {selectedIds.size > 0 && (
+              <button 
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 bg-[#FD5514]/10 text-[#FD5514] border border-[#FD5514]/30 px-4 py-3 rounded-xl font-medium hover:bg-[#FD5514]/20 transition-colors text-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete ({selectedIds.size})
+              </button>
+            )}
+            
             <button 
-              onClick={handleBulkDelete}
-              className="flex items-center gap-2 bg-[#FD5514]/10 text-[#FD5514] border border-[#FD5514]/30 px-4 py-3 rounded-xl font-medium hover:bg-[#FD5514]/20 transition-colors"
+              onClick={() => setIsBulkOpen(true)}
+              className="flex items-center gap-2 bg-[#1A1D2D] text-white border border-[#2A2E45] px-4 py-3 rounded-xl font-medium hover:border-[#823AFD] transition-colors text-sm"
             >
-              <Trash2 className="w-5 h-5" />
-              Delete ({selectedIds.size})
+              <Upload className="w-4 h-4 text-[#823AFD]" />
+              Bulk Add
+            </button>
+            
+            <button 
+              onClick={() => { setEditingTx(null); setIsFormOpen(true); }}
+              className="flex items-center gap-2 bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white px-6 py-3 rounded-xl font-bold shadow-[0_4px_16px_rgba(252,45,121,0.3)] hover:opacity-90 transition-opacity text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add Transaction
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Toolbar */}
+        <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-[#2A2E45]/60">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#9898C8] mr-1">
+            <Filter className="w-3.5 h-3.5 text-[#823AFD]" />
+            <span>Filters:</span>
+          </div>
+
+          {/* Trade Type Filter */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-[#9898C8]">Type:</label>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="bg-[#1A1D2D] border border-[#2A2E45] text-xs text-white rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#823AFD]"
+            >
+              <option value="ALL">All Types</option>
+              {filterOptions.types.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Asset Class Filter */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-[#9898C8]">Asset Class:</label>
+            <select
+              value={selectedAsset}
+              onChange={(e) => setSelectedAsset(e.target.value)}
+              className="bg-[#1A1D2D] border border-[#2A2E45] text-xs text-white rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#823AFD]"
+            >
+              <option value="ALL">All Assets</option>
+              {filterOptions.assets.map(a => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sector Filter */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-[#9898C8]">Sector:</label>
+            <select
+              value={selectedSector}
+              onChange={(e) => setSelectedSector(e.target.value)}
+              className="bg-[#1A1D2D] border border-[#2A2E45] text-xs text-white rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#823AFD]"
+            >
+              <option value="ALL">All Sectors</option>
+              {filterOptions.sectors.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Stock Strategy / Type Filter */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-[#9898C8]">Strategy:</label>
+            <select
+              value={selectedStockType}
+              onChange={(e) => setSelectedStockType(e.target.value)}
+              className="bg-[#1A1D2D] border border-[#2A2E45] text-xs text-white rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#823AFD]"
+            >
+              <option value="ALL">All Strategies</option>
+              {filterOptions.stockTypes.map(st => (
+                <option key={st} value={st}>{st}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              className="flex items-center gap-1 text-xs text-[#FC2D79] hover:text-[#FD5514] bg-[#FC2D79]/10 px-2.5 py-1.5 rounded-lg border border-[#FC2D79]/20 transition-colors ml-auto"
+            >
+              <X className="w-3.5 h-3.5" />
+              Reset Filters
             </button>
           )}
-          
-          <button 
-            onClick={() => setIsBulkOpen(true)}
-            className="flex items-center gap-2 bg-[#1A1D2D] text-white border border-[#2A2E45] px-4 py-3 rounded-xl font-medium hover:border-[#823AFD] transition-colors"
-          >
-            <Upload className="w-5 h-5 text-[#823AFD]" />
-            Bulk Add
-          </button>
-          
-          <button 
-            onClick={() => { setEditingTx(null); setIsFormOpen(true); }}
-            className="flex items-center gap-2 bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white px-6 py-3 rounded-xl font-bold shadow-[0_4px_16px_rgba(252,45,121,0.3)] hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-5 h-5" />
-            Add
-          </button>
         </div>
       </div>
 
@@ -114,7 +285,7 @@ export const TransactionTable = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#1A1D2D] border-b border-[#2A2E45]">
-                <th className="py-5 px-6 w-12">
+                <th className="py-5 px-4 w-10">
                   <input 
                     type="checkbox" 
                     className="w-4 h-4 rounded border-[#2A2E45] bg-[#0F111A] text-[#823AFD] focus:ring-[#823AFD]"
@@ -122,20 +293,23 @@ export const TransactionTable = () => {
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th className="py-5 px-4 text-[#9898C8] font-medium text-sm w-32">Date</th>
-                <th className="py-5 px-4 text-[#9898C8] font-medium text-sm">Asset</th>
-                <th className="py-5 px-4 text-[#9898C8] font-medium text-sm">Type</th>
-                <th className="py-5 px-4 text-[#9898C8] font-medium text-sm text-right">Price</th>
-                <th className="py-5 px-4 text-[#9898C8] font-medium text-sm text-right">Amount</th>
-                <th className="py-5 px-4 text-[#9898C8] font-medium text-sm text-right">Total</th>
-                <th className="py-5 px-6 text-[#9898C8] font-medium text-sm text-right">Actions</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider w-28">Date</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider">Symbol</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider">Type</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider">Asset Class</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider">Sector</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider">Strategy</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider text-right">Price</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider text-right">Amount (4 Dec)</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider text-right">Total ($)</th>
+                <th className="py-5 px-4 text-[#9898C8] font-medium text-xs uppercase tracking-wider text-right w-20">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#2A2E45]">
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-[#9898C8]">
-                    No transactions found.
+                  <td colSpan={11} className="py-12 text-center text-[#9898C8]">
+                    No transactions found matching your filters.
                   </td>
                 </tr>
               ) : (
@@ -144,6 +318,8 @@ export const TransactionTable = () => {
                   const total = tx.amount * (tx.price || 1) + (tx.fee || 0);
                   const displaySymbol = tx.symbol || tx.type.slice(0, 3);
                   const isSelected = selectedIds.has(tx.id);
+                  const sector = resolveSector(tx);
+                  const stockType = resolveStockType(tx);
 
                   return (
                     <tr 
@@ -153,7 +329,7 @@ export const TransactionTable = () => {
                         isSelected && "bg-[#1A1D2D]"
                       )}
                     >
-                      <td className="py-4 px-6">
+                      <td className="py-3.5 px-4">
                         <input 
                           type="checkbox" 
                           className="w-4 h-4 rounded border-[#2A2E45] bg-[#0F111A] text-[#823AFD] focus:ring-[#823AFD]"
@@ -161,46 +337,65 @@ export const TransactionTable = () => {
                           onChange={() => handleSelectOne(tx.id)}
                         />
                       </td>
-                      <td className="py-4 px-4 text-[#9898C8] text-sm">{dateStr}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[#0F111A] border border-[#2A2E45] flex items-center justify-center shrink-0">
-                            <span className="text-white font-bold text-xs">{displaySymbol}</span>
+                      <td className="py-3.5 px-3 text-[#9898C8] text-xs font-mono">{dateStr}</td>
+                      <td className="py-3.5 px-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-[#0F111A] border border-[#2A2E45] flex items-center justify-center shrink-0">
+                            <span className="text-white font-bold text-[10px]">{displaySymbol.slice(0, 4)}</span>
                           </div>
-                          <div className="flex flex-col">
-                            <span className="text-white font-bold">{displaySymbol}</span>
-                            <span className="text-[#9898C8] text-xs">{tx.asset}</span>
-                          </div>
+                          <span className="text-white font-bold text-sm tracking-wide">{displaySymbol}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-3">
                         <span className={clsx(
-                          "px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider",
-                          tx.type === 'BUY' || tx.type === 'DEPOSIT' ? "bg-[#823AFD]/10 text-[#823AFD]" : 
-                          tx.type === 'SELL' || tx.type === 'WITHDRAW' ? "bg-[#FC2D79]/10 text-[#FC2D79]" :
-                          "bg-[#00C49F]/10 text-[#00C49F]"
+                          "px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider border",
+                          tx.type === 'BUY' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                          tx.type === 'DEPOSIT' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                          tx.type === 'DIVIDEND' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                          tx.type === 'INTEREST' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" :
+                          tx.type === 'SELL' || tx.type === 'WITHDRAW' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
+                          "bg-gray-500/10 text-gray-400 border-gray-500/20"
                         )}>
                           {tx.type}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-right text-white tabular-nums">${(tx.price || 0).toFixed(2)}</td>
-                      <td className="py-4 px-4 text-right text-white tabular-nums">{tx.amount}</td>
-                      <td className="py-4 px-4 text-right text-white font-bold tabular-nums">
+                      <td className="py-3.5 px-3">
+                        <span className="px-2 py-0.5 rounded text-xs bg-[#1A1D2D] border border-[#2A2E45] text-[#9898C8]">
+                          {tx.asset || 'Stock'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="text-xs text-gray-300 font-medium">
+                          {sector}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="text-xs text-[#823AFD] font-medium bg-[#823AFD]/10 px-2 py-0.5 rounded border border-[#823AFD]/20">
+                          {stockType}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-white font-mono text-xs">${(tx.price || 0).toFixed(2)}</td>
+                      <td className="py-3.5 px-3 text-right text-white font-mono text-xs font-semibold">
+                        {typeof tx.amount === 'number' ? Number(tx.amount).toFixed(4) : tx.amount}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-white font-bold font-mono text-xs">
                         ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
                             onClick={() => { setEditingTx(tx); setIsFormOpen(true); }}
-                            className="p-2 rounded-lg bg-[#1A1D2D] text-[#9898C8] hover:text-[#823AFD] hover:bg-[#823AFD]/10 transition-colors"
+                            className="p-1.5 rounded-lg bg-[#1A1D2D] text-[#9898C8] hover:text-[#823AFD] hover:bg-[#823AFD]/10 transition-colors"
+                            title="Edit"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button 
                             onClick={() => { if(confirm('Delete?')) deleteTransaction(tx.id); }}
-                            className="p-2 rounded-lg bg-[#1A1D2D] text-[#9898C8] hover:text-[#FC2D79] hover:bg-[#FC2D79]/10 transition-colors"
+                            className="p-1.5 rounded-lg bg-[#1A1D2D] text-[#9898C8] hover:text-[#FC2D79] hover:bg-[#FC2D79]/10 transition-colors"
+                            title="Delete"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>

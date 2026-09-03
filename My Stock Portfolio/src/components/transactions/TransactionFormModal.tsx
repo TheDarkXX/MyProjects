@@ -105,7 +105,30 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
                 value={formData.asset || ''}
                 onChange={(e) => setFormData({ ...formData, asset: e.target.value })}
                 className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
-                placeholder="e.g. Stock, Crypto"
+                placeholder="e.g. Stock, ETF, Cash"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#9898C8] mb-1">Sector</label>
+              <input
+                type="text"
+                value={formData.sector || ''}
+                onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
+                placeholder="e.g. Technology, Healthcare"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#9898C8] mb-1">Stock Type / Strategy</label>
+              <input
+                type="text"
+                value={formData.stock_type || ''}
+                onChange={(e) => setFormData({ ...formData, stock_type: e.target.value })}
+                className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
+                placeholder="e.g. Growth, Compounder, Dividend"
               />
             </div>
           </div>

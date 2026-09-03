@@ -529,6 +529,17 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         onForceRefresh(selectedPortfolioId);
     }, [onForceRefresh, selectedPortfolioId]);
 
+    const resetZoom = () => setZoomDomain(null);
+    const handleVisibilityChange = (line: keyof typeof visibleLines) => { setVisibleLines(prev => ({ ...prev, [line]: !prev[line] })); };
+    const lineColors = { 
+        'My Portfolio': '#FFC300', 
+        'S&P 500': '#9013FE', 
+        'SCHG': '#F5A623',
+        'Gold': '#FDE047',    // Soft light yellow
+        'Bitcoin': '#38BDF8' // Soft light sky blue
+    };
+    const lastDataPoint = displayData.length > 0 ? displayData[displayData.length - 1] : null;
+
     // --- Calculate dynamic anti-collision offsets for end labels ---
     const lineOffsets = useMemo(() => {
         if (!lastDataPoint) return {};
@@ -618,17 +629,6 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
             </g>
         );
     };
-
-    const resetZoom = () => setZoomDomain(null);
-    const handleVisibilityChange = (line: keyof typeof visibleLines) => { setVisibleLines(prev => ({ ...prev, [line]: !prev[line] })); };
-    const lineColors = { 
-        'My Portfolio': '#FFC300', 
-        'S&P 500': '#9013FE', 
-        'SCHG': '#F5A623',
-        'Gold': '#FDE047',    // Soft light yellow
-        'Bitcoin': '#38BDF8' // Soft light sky blue
-    };
-    const lastDataPoint = displayData.length > 0 ? displayData[displayData.length - 1] : null;
 
     const handleExportExcel = () => {
         const dataToExport = displayData.map(d => ({

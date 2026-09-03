@@ -26,19 +26,19 @@ transactionsRoutes.get('/', (c) => {
 transactionsRoutes.post('/', async (c) => {
   try {
     const body = await c.req.json();
-    const { portfolio_id, date, symbol, type, asset, amount, price, fee, stock_type, note, status } = body;
+    const { portfolio_id, date, symbol, type, asset, amount, price, fee, stock_type, sector, note, status } = body;
     
     if (!portfolio_id || !date || !symbol || !type || amount === undefined || price === undefined) {
       return c.json({ error: 'Missing required fields' }, 400);
     }
 
     const insert = db.prepare(`
-      INSERT INTO transactions (portfolio_id, date, symbol, type, asset, amount, price, fee, stock_type, note, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO transactions (portfolio_id, date, symbol, type, asset, amount, price, fee, stock_type, sector, note, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const info = insert.run(
-      portfolio_id, date, symbol, type, asset || 'Stock', amount, price, fee || 0, stock_type || null, note || '', status || 'CONFIRMED'
+      portfolio_id, date, symbol, type, asset || 'Stock', amount, price, fee || 0, stock_type || null, sector || null, note || '', status || 'CONFIRMED'
     );
     
     const newTx = db.prepare(`SELECT * FROM transactions WHERE rowid = ?`).get(info.lastInsertRowid);
@@ -59,7 +59,7 @@ transactionsRoutes.put('/:id', async (c) => {
 
     const update = db.prepare(`
       UPDATE transactions 
-      SET date = ?, symbol = ?, type = ?, asset = ?, amount = ?, price = ?, fee = ?, stock_type = ?, note = ?, status = ?
+      SET date = ?, symbol = ?, type = ?, asset = ?, amount = ?, price = ?, fee = ?, stock_type = ?, sector = ?, note = ?, status = ?
       WHERE id = ?
     `);
     
@@ -72,6 +72,7 @@ transactionsRoutes.put('/:id', async (c) => {
       body.price !== undefined ? body.price : existing.price,
       body.fee !== undefined ? body.fee : existing.fee,
       body.stock_type !== undefined ? body.stock_type : existing.stock_type,
+      body.sector !== undefined ? body.sector : existing.sector,
       body.note !== undefined ? body.note : existing.note,
       body.status !== undefined ? body.status : existing.status,
       id
@@ -119,13 +120,13 @@ transactionsRoutes.post('/bulk', async (c) => {
       
       const insertTx = db.transaction((txs) => {
         const stmt = db.prepare(`
-          INSERT INTO transactions (portfolio_id, date, symbol, type, asset, amount, price, fee, stock_type, note, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO transactions (portfolio_id, date, symbol, type, asset, amount, price, fee, stock_type, sector, note, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         for (const tx of txs) {
           stmt.run(
             tx.portfolio_id, tx.date, tx.symbol, tx.type, tx.asset || 'Stock', 
-            tx.amount, tx.price, tx.fee || 0, tx.stock_type || null, tx.note || '', tx.status || 'CONFIRMED'
+            tx.amount, tx.price, tx.fee || 0, tx.stock_type || null, tx.sector || null, tx.note || '', tx.status || 'CONFIRMED'
           );
         }
       });
