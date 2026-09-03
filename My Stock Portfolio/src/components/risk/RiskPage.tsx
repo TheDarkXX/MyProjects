@@ -49,10 +49,15 @@ export const RiskPage: React.FC = () => {
     const runningHoldings: Record<string, number> = {};
     const lastKnownPrices: Record<string, number> = {};
 
-    const points: { date: string; value: number; portfolioValue: number; spyPrice?: number }[] = [];
+    let twrIndex = 100;
+    let previousTotalVal = activePortfolio?.initial_cash || 0;
+
+    const points: { date: string; value: number; portfolioValue: number; spyPrice?: number; twrIndex: number }[] = [];
 
     for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
+
+      let dailyNetCashFlow = 0;
 
       const daysTxs = confirmedTxs.filter(t => new Date(t.date).toISOString().split('T')[0] === dateStr);
       daysTxs.forEach(t => {
@@ -61,17 +66,29 @@ export const RiskPage: React.FC = () => {
         const fee = t.fee || 0;
         const isCash = t.asset === 'Cash' || t.symbol === 'CASH';
 
-        if (t.type === 'DEPOSIT') runningCash += amount;
-        else if (t.type === 'WITHDRAW') runningCash -= amount;
+        if (t.type === 'DEPOSIT') {
+          runningCash += amount;
+          dailyNetCashFlow += amount;
+        }
+        else if (t.type === 'WITHDRAW') {
+          runningCash -= amount;
+          dailyNetCashFlow -= amount;
+        }
         else if (t.type === 'BUY') {
-          if (isCash) runningCash += amount;
+          if (isCash) {
+            runningCash += amount;
+            dailyNetCashFlow += amount;
+          }
           else {
             runningCash -= (amount * price + fee);
             runningHoldings[t.symbol] = (runningHoldings[t.symbol] || 0) + amount;
             if (price > 0 && !lastKnownPrices[t.symbol]) lastKnownPrices[t.symbol] = price;
           }
         } else if (t.type === 'SELL') {
-          if (isCash) runningCash -= amount;
+          if (isCash) {
+            runningCash -= amount;
+            dailyNetCashFlow -= amount;
+          }
           else {
             runningCash += (amount * price - fee);
             runningHoldings[t.symbol] = (runningHoldings[t.symbol] || 0) - amount;
@@ -102,12 +119,24 @@ export const RiskPage: React.FC = () => {
       });
 
       const totalVal = runningCash + securitiesVal;
+      
+      // Calculate TWR (Time-Weighted Return)
+      if (previousTotalVal > 0) {
+        const dailyReturn = (totalVal - dailyNetCashFlow) / previousTotalVal - 1;
+        twrIndex = twrIndex * (1 + dailyReturn);
+      } else if (previousTotalVal === 0 && totalVal > 0 && dailyNetCashFlow > 0) {
+        twrIndex = 100;
+      }
+
       points.push({
         date: dateStr,
-        value: totalVal,
+        value: twrIndex, // Core change: use TWR for performance charting instead of absolute value
         portfolioValue: totalVal,
         spyPrice,
+        twrIndex,
       });
+
+      previousTotalVal = totalVal;
     }
 
     return points;
@@ -119,9 +148,9 @@ export const RiskPage: React.FC = () => {
   }, [holdings]);
 
   const top1Holding = sortedHoldings[0];
-  const top1Weight = top1Holding?.portfolioPercent || 0;
-  const top3Weight = sortedHoldings.slice(0, 3).reduce((s, h) => s + (h.portfolioPercent || 0), 0);
-  const top5Weight = sortedHoldings.slice(0, 5).reduce((s, h) => s + (h.portfolioPercent || 0), 0);
+  const top1Weight = top1Holding?.weightPercent || 0;
+  const top3Weight = sortedHoldings.slice(0, 3).reduce((s, h) => s + (h.weightPercent || 0), 0);
+  const top5Weight = sortedHoldings.slice(0, 5).reduce((s, h) => s + (h.weightPercent || 0), 0);
 
   const isTop1Risk = top1Weight > 35;
   const isTop3SweetSpot = top3Weight >= 45 && top3Weight <= 65;
