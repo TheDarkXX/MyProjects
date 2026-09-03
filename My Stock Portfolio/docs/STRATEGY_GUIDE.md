@@ -14,14 +14,14 @@
 
 | กลยุทธ์ (Strategy) | สัญลักษณ์ / โทนสี | วัตถุประสงค์หลัก | ผลตอบแทนที่คาดหวัง | ระดับความเสี่ยง | ตัวอย่างหุ้น / สินทรัพย์ |
 |:---|:---:|:---|:---:|:---:|:---|
-| **1. Core Compounder** | 🌟 Deep Blue | เติบโตทบต้นระยะยาว มั่นคงสูง | 10% - 15% ต่อปี | ต่ำ - ปานกลาง | `MSFT`, `GOOGL`, `COST`, `AMZN`, `V` |
-| **2. Hyper Growth** | 🚀 Deep Purple | โตแรง ก้าวกระโดด ล้ำเทรนด์โลก | 20% - 35%+ ต่อปี | สูง | `NVDA`, `PLTR`, `CRWD`, `MELI`, `HIMS` |
-| **3. Dividend Growth** | 📈 Deep Emerald | ปันผลเติบโตต่อเนื่องสม่ำเสมอ | 8% - 12% + เงินปันผล | ต่ำ - ปานกลาง | `AVGO`, `TXRH`, `SPGI`, `AAPL` |
-| **4. High Yield** | 💰 Deep Amber | รีดกระแสเงินสด ปันผลสูง | 6% - 9% (เน้น Yield) | ปานกลาง | `SCHD`, `VICI`, `O`, `JEPI` |
-| **5. Index / ETF** | 🏛️ Deep Cyan | ตัวแทนตลาด กระจายความเสี่ยงสูงสุด | 8% - 12% (ตามดัชนี) | ต่ำ | `SCHG`, `SPY`, `VOO`, `QQQ` |
-| **6. Defensive / Value** | 🛡️ Deep Slate | ปลอดภัย ทนทานวิกฤต ป้องกันเงินต้น | 6% - 10% | ต่ำมาก | `BRK.B`, `JNJ`, `PG`, `GLD` |
-| **7. Small Cap** | 🎯 Deep Rose | หุ้นขนาดเล็ก โอกาสโตหลายเท่าตัว | Asymmetric (> 50%+) | สูงมาก | `ASTS`, `RKLB`, `IREN`, `EOSE` |
-| **8. Cash** | 💵 Deep Zinc | สภาพคล่อง พักเงิน รอจังหวะช้อน | 4% - 5% (Interest) | ต่ำสุด | `USD`, `MMF`, `Treasury Bills` |
+| **1. Hyper Growth** | 🚀 Bold Crimson Red (แดงจัดจ้าน) | โตแรง ก้าวกระโดด ล้ำเทรนด์โลก | 20% - 35%+ ต่อปี | สูง | `NVDA`, `PLTR`, `CRWD`, `MELI`, `HIMS` |
+| **2. Core Compounder** | 🌟 Deep Emerald Green (เขียวทึบเข้ม) | เติบโตทบต้นระยะยาว มั่นคงสูง | 10% - 15% ต่อปี | ต่ำ - ปานกลาง | `MSFT`, `GOOGL`, `COST`, `AMZN`, `V` |
+| **3. Small Cap** | 🎯 Deep Amber Gold (เหลืองทองลึก) | หุ้นขนาดเล็ก โอกาสโตหลายเท่าตัว | Asymmetric (> 50%+) | สูงมาก | `ASTS`, `RKLB`, `IREN`, `EOSE` |
+| **4. Dividend Growth** | 📈 Deep Ocean Cyan (ฟ้าครามลึก) | ปันผลเติบโตต่อเนื่องสม่ำเสมอ | 8% - 12% + เงินปันผล | ต่ำ - ปานกลาง | `AVGO`, `TXRH`, `SPGI`, `AAPL` |
+| **5. High Yield** | 💰 Deep Royal Purple (ม่วงลึก) | รีดกระแสเงินสด ปันผลสูง | 6% - 9% (เน้น Yield) | ปานกลาง | `SCHD`, `VICI`, `O`, `JEPI` |
+| **6. Index / ETF** | 🏛️ Deep Cobalt Blue (น้ำเงินโคบอลต์) | ตัวแทนตลาด กระจายความเสี่ยงสูงสุด | 8% - 12% (ตามดัชนี) | ต่ำ | `SCHG`, `SPY`, `VOO`, `QQQ` |
+| **7. Defensive / Value** | 🛡️ Deep Slate Gray (เทาสเลท) | ปลอดภัย ทนทานวิกฤต ป้องกันเงินต้น | 6% - 10% | ต่ำมาก | `BRK.B`, `JNJ`, `PG`, `GLD` |
+| **8. Cash** | 💵 Deep Dark Zinc (ดำชาโคล) | สภาพคล่อง พักเงิน รอจังหวะช้อน | 4% - 5% (Interest) | ต่ำสุด | `USD`, `MMF`, `Treasury Bills` |
 
 ---
 

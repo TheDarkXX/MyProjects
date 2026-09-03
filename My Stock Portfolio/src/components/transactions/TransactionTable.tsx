@@ -38,32 +38,32 @@ export const resolveStockType = (tx: Transaction): string => {
 export const getStrategyBadgeStyle = (strategy: string): string => {
   const norm = strategy === 'Speculative' ? 'Small Cap' : strategy;
   switch (norm) {
-    case 'Core Compounder':
-      // Solid Deep Royal Blue
-      return 'bg-[#1d4ed8] text-white shadow-[0_2px_6px_rgba(29,78,216,0.4)]';
     case 'Hyper Growth':
-      // Solid Rich Violet / Purple
-      return 'bg-[#7c3aed] text-white shadow-[0_2px_6px_rgba(124,58,237,0.4)]';
-    case 'Dividend Growth':
-      // Solid Emerald Green
-      return 'bg-[#16a34a] text-white shadow-[0_2px_6px_rgba(22,163,74,0.4)]';
-    case 'High Yield':
-      // Solid Warm Amber / Orange
-      return 'bg-[#d97706] text-white shadow-[0_2px_6px_rgba(217,119,6,0.4)]';
-    case 'Index / ETF':
-      // Solid Deep Cyan / Teal
-      return 'bg-[#0284c7] text-white shadow-[0_2px_6px_rgba(2,132,199,0.4)]';
-    case 'Defensive / Value':
-      // Solid Slate Blue / Steel
-      return 'bg-[#475569] text-white shadow-[0_2px_6px_rgba(71,85,105,0.4)]';
+      // จัดจ้าน แดงลึก (Bold Crimson Red)
+      return 'bg-[#dc2626] text-white shadow-[0_2px_8px_rgba(220,38,38,0.45)]';
+    case 'Core Compounder':
+      // เขียวทึบเข้ม (Deep Emerald Green)
+      return 'bg-[#15803d] text-white shadow-[0_2px_8px_rgba(21,128,61,0.45)]';
     case 'Small Cap':
-      // Solid Crimson / Red
-      return 'bg-[#e11d48] text-white shadow-[0_2px_6px_rgba(225,29,72,0.4)]';
+      // เหลืองทองลึก (Deep Amber / Golden Yellow)
+      return 'bg-[#b45309] text-white shadow-[0_2px_8px_rgba(180,83,9,0.45)]';
+    case 'Dividend Growth':
+      // ฟ้าคราม/ทีลลึก (Deep Ocean Cyan/Teal)
+      return 'bg-[#0e7490] text-white shadow-[0_2px_8px_rgba(14,116,144,0.45)]';
+    case 'High Yield':
+      // ม่วงลึก (Deep Royal Purple)
+      return 'bg-[#7c3aed] text-white shadow-[0_2px_8px_rgba(124,58,237,0.45)]';
+    case 'Index / ETF':
+      // น้ำเงินโคบอลต์ลึก (Deep Cobalt Blue)
+      return 'bg-[#1d4ed8] text-white shadow-[0_2px_8px_rgba(29,78,216,0.45)]';
+    case 'Defensive / Value':
+      // เทาสเลทลึก (Deep Slate Blue)
+      return 'bg-[#475569] text-white shadow-[0_2px_8px_rgba(71,85,105,0.45)]';
     case 'Cash':
-      // Solid Charcoal / Black
-      return 'bg-[#27272a] text-white shadow-[0_2px_6px_rgba(39,39,42,0.4)]';
+      // ดำชาโคลลึก (Deep Dark Zinc)
+      return 'bg-[#27272a] text-white shadow-[0_2px_8px_rgba(39,39,42,0.45)]';
     default:
-      return 'bg-[#374151] text-white shadow-[0_2px_6px_rgba(55,65,81,0.4)]';
+      return 'bg-[#374151] text-white shadow-[0_2px_8px_rgba(55,65,81,0.45)]';
   }
 };
 
