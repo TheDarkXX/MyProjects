@@ -48,11 +48,11 @@ export const getStrategyBadgeStyle = (strategy: string): string => {
       // เหลืองทองลึก (Deep Amber / Golden Yellow)
       return 'bg-[#b45309] text-white shadow-[0_2px_8px_rgba(180,83,9,0.45)]';
     case 'Dividend Growth':
-      // ฟ้าอมเขียวเทอร์ควอยซ์สด (Vivid Teal / Sea Cyan)
-      return 'bg-[#0d9488] text-white shadow-[0_2px_8px_rgba(13,148,136,0.45)]';
+      // น้ำตาลเข้ม / บรอนซ์ (Deep Brown / Bronze)
+      return 'bg-[#854d0e] text-white shadow-[0_2px_8px_rgba(133,77,14,0.45)]';
     case 'High Yield':
-      // ม่วงบานเย็น / มาเจนต้าจัดจ้าน (Vivid Magenta / Fuchsia)
-      return 'bg-[#c026d3] text-white shadow-[0_2px_8px_rgba(192,38,211,0.45)]';
+      // ชมพูเข้ม (Deep Pink / Hot Pink)
+      return 'bg-[#db2777] text-white shadow-[0_2px_8px_rgba(219,39,119,0.45)]';
     case 'Index / ETF':
       // น้ำเงินโคบอลต์เข้มแท้ (Deep Cobalt / Royal Blue)
       return 'bg-[#1d4ed8] text-white shadow-[0_2px_8px_rgba(29,78,216,0.45)]';
