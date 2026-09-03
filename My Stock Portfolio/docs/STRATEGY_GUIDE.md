@@ -17,9 +17,9 @@
 | **1. Hyper Growth** | 🚀 Bold Crimson Red (แดงจัดจ้าน) | โตแรง ก้าวกระโดด ล้ำเทรนด์โลก | 20% - 35%+ ต่อปี | สูง | `NVDA`, `PLTR`, `CRWD`, `MELI`, `HIMS` |
 | **2. Core Compounder** | 🌟 Deep Emerald Green (เขียวทึบเข้ม) | เติบโตทบต้นระยะยาว มั่นคงสูง | 10% - 15% ต่อปี | ต่ำ - ปานกลาง | `MSFT`, `GOOGL`, `COST`, `AMZN`, `V` |
 | **3. Small Cap** | 🎯 Deep Amber Gold (เหลืองทองลึก) | หุ้นขนาดเล็ก โอกาสโตหลายเท่าตัว | Asymmetric (> 50%+) | สูงมาก | `ASTS`, `RKLB`, `IREN`, `EOSE` |
-| **4. Dividend Growth** | 📈 Deep Ocean Cyan (ฟ้าครามลึก) | ปันผลเติบโตต่อเนื่องสม่ำเสมอ | 8% - 12% + เงินปันผล | ต่ำ - ปานกลาง | `AVGO`, `TXRH`, `SPGI`, `AAPL` |
-| **5. High Yield** | 💰 Deep Royal Purple (ม่วงลึก) | รีดกระแสเงินสด ปันผลสูง | 6% - 9% (เน้น Yield) | ปานกลาง | `SCHD`, `VICI`, `O`, `JEPI` |
-| **6. Index / ETF** | 🏛️ Deep Cobalt Blue (น้ำเงินโคบอลต์) | ตัวแทนตลาด กระจายความเสี่ยงสูงสุด | 8% - 12% (ตามดัชนี) | ต่ำ | `SCHG`, `SPY`, `VOO`, `QQQ` |
+| **4. Dividend Growth** | 📈 Vivid Teal (ฟ้าอมเขียวเทอร์ควอยซ์สด `#0d9488`) | ปันผลเติบโตต่อเนื่องสม่ำเสมอ | 8% - 12% + เงินปันผล | ต่ำ - ปานกลาง | `AVGO`, `TXRH`, `SPGI`, `AAPL` |
+| **5. High Yield** | 💰 Vivid Magenta (ม่วงบานเย็นจัดจ้าน `#c026d3`) | รีดกระแสเงินสด ปันผลสูง | 6% - 9% (เน้น Yield) | ปานกลาง | `SCHD`, `VICI`, `O`, `JEPI` |
+| **6. Index / ETF** | 🏛️ Deep Cobalt Blue (น้ำเงินโคบอลต์เข้มแท้ `#1d4ed8`) | ตัวแทนตลาด กระจายความเสี่ยงสูงสุด | 8% - 12% (ตามดัชนี) | ต่ำ | `SCHG`, `SPY`, `VOO`, `QQQ` |
 | **7. Defensive / Value** | 🛡️ Deep Slate Gray (เทาสเลท) | ปลอดภัย ทนทานวิกฤต ป้องกันเงินต้น | 6% - 10% | ต่ำมาก | `BRK.B`, `JNJ`, `PG`, `GLD` |
 | **8. Cash** | 💵 Deep Dark Zinc (ดำชาโคล) | สภาพคล่อง พักเงิน รอจังหวะช้อน | 4% - 5% (Interest) | ต่ำสุด | `USD`, `MMF`, `Treasury Bills` |
 
