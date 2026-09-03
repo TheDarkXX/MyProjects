@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Portfolio, HistoricalDataPoint, ChartApiStatus, FetchProgress, Transaction, DisplayMethod } from '../types';
-import Sidebar from './Sidebar';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Brush } from 'recharts';
 import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabaseClient';
@@ -125,12 +124,12 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
     const [displayMethod, onDisplayMethodChange] = useState<DisplayMethod>('TWR');
 
     useEffect(() => {
-        if (!selectedPortfolioId && activePortfolioId) {
+        if (activePortfolioId) {
             setSelectedPortfolioId(activePortfolioId);
-        } else if (!selectedPortfolioId && portfolios.length > 0) {
+        } else if (portfolios.length > 0 && !selectedPortfolioId) {
             setSelectedPortfolioId(portfolios[0].id);
         }
-    }, [activePortfolioId, portfolios, selectedPortfolioId]);
+    }, [activePortfolioId, portfolios]);
 
     useEffect(() => {
         if (selectedPortfolioId) {
@@ -611,15 +610,8 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         : 'Performance';
 
     return (
-        <div className="flex flex-col md:flex-row h-full min-h-[calc(100vh-80px)]">
-            <Sidebar 
-                portfolios={portfolios} 
-                selectedPortfolioId={selectedPortfolioId || ''} 
-                setSelectedPortfolioId={setSelectedPortfolioId} 
-                showAllOption={false}
-                showTopMovers={false} 
-            />
-            <main className="flex-1 md:p-6 bg-gradient-to-br from-[#0F172A] to-[#1E293B] rounded-lg shadow-inner shadow-black/30 overflow-y-auto">
+        <div className="w-full h-full min-h-[calc(100vh-80px)]">
+            <main className="w-full md:p-6 bg-gradient-to-br from-[#0F172A] to-[#1E293B] rounded-3xl shadow-inner shadow-black/30 overflow-y-auto">
                 <div className="p-4">
                     <div className="flex flex-wrap justify-between items-start mb-4 gap-4">
                         <div>
