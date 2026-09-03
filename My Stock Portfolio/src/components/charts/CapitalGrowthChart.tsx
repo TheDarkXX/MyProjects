@@ -249,31 +249,53 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
         </div>
       </div>
 
+      {/* Chart Header & Mini Legend */}
+      <div className="flex items-center justify-between pt-2 px-1">
+        <div className="flex items-center gap-5 text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <span className="w-3.5 h-1.5 rounded-full bg-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.8)]"></span>
+            <span className="text-amber-300 font-bold">Portfolio Value (มูลค่าพอร์ต)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3.5 h-0.5 border-b-2 border-dashed border-[#FF4D6D]"></span>
+            <span className="text-rose-400 font-bold">Net Invested (เงินต้นสุทธิ)</span>
+          </div>
+        </div>
+        <span className="text-[11px] text-[#9898C8] hidden sm:inline-block">
+          ✨ พื้นที่ต่างระดับสีทอง = Organic Wealth (กำไรทบต้นเพียวๆ)
+        </span>
+      </div>
+
       {/* Chart */}
-      <div className="h-64 sm:h-80 w-full pt-2">
+      <div className="h-64 sm:h-80 w-full pt-1">
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 15, left: 5, bottom: 0 }}>
               <defs>
                 <linearGradient id="growthValueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FBBF24" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#FBBF24" stopOpacity={0.0} />
+                  <stop offset="0%" stopColor="#FACC15" stopOpacity={0.22} />
+                  <stop offset="60%" stopColor="#FACC15" stopOpacity={0.06} />
+                  <stop offset="100%" stopColor="#FACC15" stopOpacity={0.0} />
                 </linearGradient>
-                <linearGradient id="investedGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.0} />
-                </linearGradient>
+                <filter id="goldenGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#FACC15" floodOpacity="0.4" />
+                </filter>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.07)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
               <XAxis 
                 dataKey="date" 
-                stroke="#94A3B8" 
-                tick={{ fontSize: 11 }}
+                stroke="#64748B" 
+                tickLine={false}
+                axisLine={{ stroke: '#2A2E45' }}
+                tick={{ fontSize: 11, fill: '#94A3B8' }}
                 tickFormatter={(val) => new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               />
               <YAxis 
-                stroke="#94A3B8" 
-                tick={{ fontSize: 11 }}
+                stroke="#64748B" 
+                width={65}
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: '#94A3B8', fontFamily: 'monospace' }}
                 tickFormatter={(val) => {
                   const rate = currency === 'THB' ? (exchangeRate > 0 ? exchangeRate : 35) : 1;
                   const v = val * rate;
@@ -282,27 +304,35 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
                 domain={['auto', 'auto']}
               />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#161926', borderColor: '#2A2E45', borderRadius: '16px', color: '#fff', fontSize: '12px' }}
+                contentStyle={{ 
+                  backgroundColor: '#0F111A', 
+                  borderColor: '#2A2E45', 
+                  borderRadius: '16px', 
+                  color: '#fff', 
+                  fontSize: '12px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                }}
                 formatter={(val: any, name: string) => [
                   formatMoney(Number(val)),
-                  name === 'value' ? 'Portfolio Value (มูลค่ารวม - สีทอง)' : 'Net Invested (เงินต้น - สีแดง)'
+                  name === 'value' ? 'Portfolio Value (มูลค่ารวม)' : 'Net Invested (เงินต้น)'
                 ]}
                 labelFormatter={(label) => `วันที่: ${new Date(label).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
               />
+              {/* Baseline Invested Line: Clean Crisp Laser Dotted Line without muddy fill */}
               <Area 
                 type="monotone" 
                 dataKey="invested" 
-                stroke="#F43F5E" 
+                stroke="#FF4D6D" 
                 strokeWidth={2} 
-                strokeDasharray="4 4"
-                fillOpacity={1} 
-                fill="url(#investedGradient)" 
+                strokeDasharray="5 5"
+                fillOpacity={0} 
                 name="invested"
               />
+              {/* Value Area: Golden Glowing Line with translucent luminous gradient */}
               <Area 
                 type="monotone" 
                 dataKey="value" 
-                stroke="#FBBF24" 
+                stroke="#FACC15" 
                 strokeWidth={3} 
                 fillOpacity={1} 
                 fill="url(#growthValueGradient)" 
