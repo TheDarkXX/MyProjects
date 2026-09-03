@@ -4,7 +4,7 @@ import { Holding } from '../../hooks/useHoldings';
 import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { useTransactionStore } from '../../stores/transactionStore';
-import { LayoutGrid, TrendingUp, TrendingDown, Maximize2 } from 'lucide-react';
+import { LayoutGrid, TrendingUp, TrendingDown } from 'lucide-react';
 import clsx from 'clsx';
 
 export type HeatmapTimeRange = '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'Total';
@@ -43,6 +43,8 @@ const SECTOR_MAP: Record<string, string> = {
   NVDA: 'Technology',
   CRWD: 'Technology',
   RBRK: 'Technology',
+  CRWV: 'Technology',
+  ASTS: 'Technology',
   AMD: 'Technology',
   INTC: 'Technology',
   QCOM: 'Technology',
@@ -61,6 +63,7 @@ const SECTOR_MAP: Record<string, string> = {
 
   // Healthcare
   ISRG: 'Healthcare',
+  HIMS: 'Healthcare',
   LLY: 'Healthcare',
   UNH: 'Healthcare',
   JNJ: 'Healthcare',
@@ -77,6 +80,7 @@ const SECTOR_MAP: Record<string, string> = {
   REGN: 'Healthcare',
 
   // Consumer Cyclical / Discretionary
+  MELI: 'Consumer Cyclical',
   AMZN: 'Consumer Cyclical',
   TSLA: 'Consumer Cyclical',
   HD: 'Consumer Cyclical',
@@ -122,6 +126,7 @@ const SECTOR_MAP: Record<string, string> = {
   MFC: 'Financials',
 
   // Industrials
+  RKLB: 'Industrials',
   CAT: 'Industrials',
   DE: 'Industrials',
   UNP: 'Industrials',
@@ -148,7 +153,8 @@ const SECTOR_MAP: Record<string, string> = {
   EOG: 'Energy',
   OXY: 'Energy',
 
-  // Utilities & Real Estate
+  // Utilities & Real Estate & ETF
+  SCHG: 'Index & ETF',
   NEE: 'Utilities',
   DUK: 'Utilities',
   SO: 'Utilities',
@@ -179,27 +185,40 @@ export const Heatmap: React.FC<HeatmapProps> = ({
   const { transactions } = useTransactionStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 1000, height: 540 });
+  const [dimensions, setDimensions] = useState({ width: 1200, height: 520 });
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, item: null, x: 0, y: 0 });
 
-  // 100% Full-Width Responsive ResizeObserver
+  // 100% Full-Width Responsive ResizeObserver (Measuring exact container width)
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const handleResize = () => {
-      if (containerRef.current) {
-        const width = containerRef.current.clientWidth;
-        // Dynamically compute height for golden aspect ratio (min 480px, max 620px)
-        const height = Math.max(480, Math.min(620, Math.round(width * 0.44)));
-        setDimensions({ width, height });
-      }
+    const updateDimensions = (width: number) => {
+      if (width <= 0) return;
+      // Compute height for balanced aspect ratio (min 480px, max 600px)
+      const height = Math.max(480, Math.min(600, Math.round(width * 0.40)));
+      setDimensions(prev => {
+        if (prev.width === width && prev.height === height) return prev;
+        return { width, height };
+      });
     };
 
-    handleResize();
-    const observer = new ResizeObserver(handleResize);
-    observer.observe(containerRef.current);
+    // Immediate initial measurement
+    const initialWidth = containerRef.current.clientWidth || containerRef.current.getBoundingClientRect().width;
+    if (initialWidth > 0) {
+      updateDimensions(Math.round(initialWidth));
+    }
 
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = Math.round(entry.contentRect.width);
+        if (w > 0) {
+          updateDimensions(w);
+        }
+      }
+    });
+
+    observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
 
@@ -214,12 +233,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
 
   const formatUsd = (value: number) => {
     return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const formatThb = (value: number) => {
-    if (!exchangeRate) return '';
-    const converted = Math.round(value * exchangeRate);
-    return `฿${converted.toLocaleString('th-TH')}`;
   };
 
   // Helper to resolve start date for historical price comparison
@@ -319,7 +332,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
 
   // Finviz Dynamic Color Palette with Timeframe-adaptive Clamping
   const colorScale = useMemo(() => {
-    // 1D: tighter bounds (+/- 3%); 1M/YTD/Total: wider bounds (+/- 12% to +/- 25%)
     const limit = (activeTimeRange === '1D' || activeTimeRange === '1W') ? 3 : (activeTimeRange === '1M' || activeTimeRange === '3M') ? 10 : 25;
 
     return d3.scaleLinear<string>()
@@ -356,12 +368,13 @@ export const Heatmap: React.FC<HeatmapProps> = ({
       .sum((d: any) => d.currentValue || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
+    // Notice: paddingOuter must come first, then paddingTop overrides the top for depth 1!
     const treemapLayout = d3.treemap<any>()
       .tile(d3.treemapSquarify.ratio(1.3))
       .size([dimensions.width, dimensions.height])
-      .paddingTop(28)     // Space for sector header banner
-      .paddingInner(3)    // Gap between stock cells
-      .paddingOuter(4)    // Gap between sector containers
+      .paddingOuter(4)
+      .paddingInner(3)
+      .paddingTop((d: any) => d.depth === 1 ? 26 : 4)
       .round(true);
 
     treemapLayout(root);
@@ -458,7 +471,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         </div>
       </div>
 
-      {/* Full-Width SVG Container (100% responsive, no empty borders) */}
+      {/* Full-Width SVG Container with viewBox (Guarantees 100% full width scaling, eliminating blank margins) */}
       <div 
         ref={containerRef} 
         className="w-full relative select-none rounded-2xl overflow-hidden border border-[#2A2E45]/60 bg-[#0B0F17]"
@@ -466,9 +479,11 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         onMouseLeave={handleMouseLeave}
       >
         <svg 
-          width={dimensions.width} 
+          width="100%" 
           height={dimensions.height}
-          className="w-full block overflow-visible"
+          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+          preserveAspectRatio="none"
+          className="w-full block"
         >
           {/* 1. Sector Containers & Header Labels */}
           {treemapData?.children?.map((sectorNode: any) => {
@@ -485,7 +500,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                   width={sectorWidth}
                   height={sectorHeight}
                   fill="rgba(17, 24, 39, 0.4)"
-                  stroke="rgba(71, 85, 105, 0.45)"
+                  stroke="rgba(71, 85, 105, 0.5)"
                   strokeWidth="1.5"
                   rx="6"
                 />
@@ -495,8 +510,8 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                   x={sectorNode.x0 + 2}
                   y={sectorNode.y0 + 2}
                   width={Math.max(0, sectorWidth - 4)}
-                  height={24}
-                  fill="rgba(15, 23, 42, 0.85)"
+                  height={22}
+                  fill="rgba(15, 23, 42, 0.9)"
                   rx="4"
                 />
 
@@ -504,7 +519,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                 {sectorWidth > 60 && (
                   <text
                     x={sectorNode.x0 + 8}
-                    y={sectorNode.y0 + 17}
+                    y={sectorNode.y0 + 16}
                     fill="#E2E8F0"
                     fontSize="11"
                     fontWeight="700"
