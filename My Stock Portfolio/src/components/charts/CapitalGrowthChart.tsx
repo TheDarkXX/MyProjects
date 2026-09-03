@@ -185,7 +185,7 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
                   Net Invested vs Equity
                 </span>
               </h3>
-              <p className="text-xs text-[#9898C8]">
+              <p className="text-sm text-[#CBD5E1] font-['Sarabun',_sans-serif] font-normal tracking-wide">
                 เปรียบเทียบเงินต้นจริงที่เติมเข้าพอร์ต vs มูลค่าสินทรัพย์รวม (ส่วนต่างคือกำไรทบต้นที่แท้จริง)
               </p>
             </div>
@@ -221,7 +221,7 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
           <span className="text-2xl font-black text-white tabular-nums tracking-tight mt-1 block">
             {formatMoney(latestInvested)}
           </span>
-          <span className="text-sm text-rose-300 font-medium block mt-1">รวมเงินเติมทั้งหมด หักเงินถอน (เส้นประแดง)</span>
+          <span className="text-sm text-rose-300 font-medium block mt-1 font-['Sarabun',_sans-serif]">รวมเงินเติมทั้งหมด หักเงินถอน (เส้นประแดง)</span>
         </div>
 
         <div className="bg-[#161926] p-4 rounded-2xl border border-[#2A2E45]">
@@ -232,7 +232,7 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
           <span className="text-2xl font-black text-amber-400 tabular-nums tracking-tight mt-1 block">
             {formatMoney(latestValue)}
           </span>
-          <span className="text-sm text-amber-300 font-medium block mt-1">สินทรัพย์ + เงินสดคงเหลือ (เส้นสีทอง)</span>
+          <span className="text-sm text-amber-300 font-medium block mt-1 font-['Sarabun',_sans-serif]">สินทรัพย์ + เงินสดคงเหลือ (เส้นสีทอง)</span>
         </div>
 
         <div className="bg-[#161926] p-4 rounded-2xl border border-[#2A2E45]">
@@ -245,7 +245,7 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
               {organicGain >= 0 ? '+' : ''}{organicGainPct.toFixed(1)}%
             </span>
           </div>
-          <span className="text-sm text-slate-300 font-medium block mt-1">ส่วนต่างความมั่งคั่งจากพลังตลาด</span>
+          <span className="text-sm text-slate-300 font-medium block mt-1 font-['Sarabun',_sans-serif]">ส่วนต่างความมั่งคั่งจากพลังตลาด</span>
         </div>
       </div>
 
@@ -261,7 +261,7 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
             <span className="text-rose-400 font-bold">Net Invested (เงินต้นสุทธิ)</span>
           </div>
         </div>
-        <span className="text-sm text-slate-300 font-medium hidden sm:inline-block">
+        <span className="text-sm text-slate-300 font-medium hidden sm:inline-block font-['Sarabun',_sans-serif]">
           ✨ พื้นที่ต่างระดับสีทอง = Organic Wealth (กำไรทบต้นเพียวๆ)
         </span>
       </div>
