@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { db } from '../db/init.js';
 import { authMiddleware } from './auth.js';
+import { fetchYahooProfile } from '../services/yahoo.js';
 
 const transactionsRoutes = new Hono();
 
@@ -26,10 +27,20 @@ transactionsRoutes.get('/', (c) => {
 transactionsRoutes.post('/', async (c) => {
   try {
     const body = await c.req.json();
-    const { portfolio_id, date, symbol, type, asset, amount, price, fee, stock_type, sector, note, status } = body;
+    let { portfolio_id, date, symbol, type, asset, amount, price, fee, stock_type, sector, note, status } = body;
     
     if (!portfolio_id || !date || !symbol || !type || amount === undefined || price === undefined) {
       return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    // Auto-resolve sector from Yahoo Finance if missing
+    if (!sector && symbol) {
+      try {
+        const profile = await fetchYahooProfile(symbol);
+        sector = profile.sector;
+      } catch (err) {
+        console.warn(`[Transactions] Could not fetch Yahoo sector for ${symbol}:`, err.message);
+      }
     }
 
     const insert = db.prepare(`
@@ -131,15 +142,42 @@ transactionsRoutes.post('/bulk', async (c) => {
         }
       });
       
-      insertTx(transactions);
-      return c.json({ success: true, count: transactions.length });
-    }
+// Auto-sync sectors for all transactions using Yahoo Finance
+transactionsRoutes.post('/sync-sectors', async (c) => {
+  try {
+    const portfolioId = c.req.query('portfolio_id');
+    const query = portfolioId 
+      ? `SELECT DISTINCT symbol FROM transactions WHERE portfolio_id = ? AND symbol != 'CASH'`
+      : `SELECT DISTINCT symbol FROM transactions WHERE symbol != 'CASH'`;
     
-    return c.json({ error: 'Invalid action' }, 400);
+    const symbols = portfolioId 
+      ? db.prepare(query).all(portfolioId).map(r => r.symbol)
+      : db.prepare(query).all().map(r => r.symbol);
+
+    const results = [];
+    const updateStmt = db.prepare(`UPDATE transactions SET sector = ? WHERE symbol = ? AND (sector IS NULL OR sector = '' OR sector = 'Other' OR sector = 'Stock')`);
+
+    for (const sym of symbols) {
+      try {
+        const profile = await fetchYahooProfile(sym);
+        if (profile && profile.sector) {
+          const info = updateStmt.run(profile.sector, sym);
+          results.push({ symbol: sym, sector: profile.sector, updatedRows: info.changes });
+        }
+      } catch (err) {
+        console.error(`Failed to sync sector for ${sym}:`, err.message);
+      }
+    }
+
+    // Also update CASH
+    db.prepare(`UPDATE transactions SET sector = 'Cash / Currency' WHERE symbol = 'CASH' AND (sector IS NULL OR sector = '')`).run();
+
+    return c.json({ success: true, synced: results });
   } catch (error) {
     console.error(error);
-    return c.json({ error: 'Bulk operation failed' }, 500);
+    return c.json({ error: 'Failed to sync sectors' }, 500);
   }
 });
 
 export { transactionsRoutes };
+

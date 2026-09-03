@@ -112,24 +112,33 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#9898C8] mb-1">Sector</label>
+              <label className="block text-sm font-medium text-[#9898C8] mb-1">
+                Sector <span className="text-xs text-[#823AFD] font-normal">(Auto-fetches from Yahoo if blank)</span>
+              </label>
               <input
                 type="text"
                 value={formData.sector || ''}
                 onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
                 className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
-                placeholder="e.g. Technology, Healthcare"
+                placeholder="Leave blank for Yahoo Finance auto-detect"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#9898C8] mb-1">Stock Type / Strategy</label>
-              <input
-                type="text"
-                value={formData.stock_type || ''}
+              <label className="block text-sm font-medium text-[#9898C8] mb-1">Strategy (Role)</label>
+              <select
+                value={formData.stock_type || 'Core Compounder'}
                 onChange={(e) => setFormData({ ...formData, stock_type: e.target.value })}
                 className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
-                placeholder="e.g. Growth, Compounder, Dividend"
-              />
+              >
+                <option value="Core Compounder">🌟 Core Compounder</option>
+                <option value="Hyper Growth">🚀 Hyper Growth</option>
+                <option value="Dividend Growth">📈 Dividend Growth</option>
+                <option value="High Yield">💰 High Yield / Income</option>
+                <option value="Index / ETF">🏛️ Index / ETF</option>
+                <option value="Defensive / Value">🛡️ Defensive / Value</option>
+                <option value="Speculative">🎯 Speculative / Moonshot</option>
+                <option value="Cash">💵 Cash / Money Market</option>
+              </select>
             </div>
           </div>
 

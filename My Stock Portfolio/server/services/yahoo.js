@@ -81,6 +81,24 @@ export async function fetchYahooExchangeRate(from = 'USD', to = 'THB') {
   } catch (error) {
     console.error(`[Yahoo] Error fetching exchange rate ${from}->${to}:`, error.message);
   }
-  return null;
+/**
+ * Fetch sector / category and industry profile for a symbol from Yahoo Finance.
+ * Supports both Stocks (assetProfile) and ETFs (fundProfile).
+ * @param {string} symbol 
+ */
+export async function fetchYahooProfile(symbol) {
+  if (!symbol || symbol === 'CASH') return { sector: 'Cash / Currency', industry: 'Cash' };
+  const upper = symbol.toUpperCase();
+  if (upper.includes('BTC') || upper.includes('ETH')) return { sector: 'Cryptocurrency', industry: 'Digital Assets' };
+  try {
+    const res = await yahooFinance.quoteSummary(upper, { modules: ['assetProfile', 'fundProfile'] });
+    const sector = res?.assetProfile?.sector || res?.fundProfile?.categoryName || 'Other';
+    const industry = res?.assetProfile?.industry || '';
+    return { sector, industry, isFund: !!res?.fundProfile };
+  } catch (error) {
+    console.error(`[Yahoo] Error fetching profile for ${symbol}:`, error.message);
+    return { sector: 'Other', industry: '' };
+  }
 }
+
 

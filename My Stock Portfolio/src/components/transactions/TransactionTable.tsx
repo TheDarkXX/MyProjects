@@ -21,13 +21,16 @@ export const resolveSector = (tx: Transaction): string => {
 export const resolveStockType = (tx: Transaction): string => {
   if (tx.stock_type) return tx.stock_type;
   const sym = (tx.symbol || '').toUpperCase();
-  if (sym === 'NVDA') return 'Growth';
-  if (sym === 'SCHG') return 'Index / ETF';
-  if (sym === 'SPY') return 'Index / ETF';
-  if (sym === 'GLD') return 'Commodity';
-  if (sym === 'BTC-USD' || sym === 'BTC') return 'Crypto';
+  if (sym === 'NVDA' || sym === 'PLTR' || sym === 'RKLB' || sym === 'CRWD' || sym === 'HIMS' || sym === 'MELI' || sym === 'RBRK' || sym === 'CRWV') return 'Hyper Growth';
+  if (sym === 'COST' || sym === 'AMZN' || sym === 'META' || sym === 'MSFT' || sym === 'GOOGL' || sym === 'AAPL' || sym === 'ISRG' || sym === 'V' || sym === 'MA') return 'Core Compounder';
+  if (sym === 'SCHG' || sym === 'SPY' || sym === 'VOO' || sym === 'QQQ' || sym === 'IVV') return 'Index / ETF';
+  if (sym === 'SCHD' || sym === 'VICI' || sym === 'O' || sym === 'JEPI') return 'High Yield';
+  if (sym === 'AVGO' || sym === 'TXRH' || sym === 'SPGI') return 'Dividend Growth';
+  if (sym === 'ASTS') return 'Speculative';
+  if (sym === 'GLD') return 'Defensive / Value';
+  if (sym === 'BTC-USD' || sym === 'BTC') return 'Speculative';
   if (sym === 'CASH' || tx.type === 'DEPOSIT' || tx.type === 'INTEREST') return 'Cash';
-  return 'General';
+  return 'Core Compounder';
 };
 
 export const TransactionTable = () => {
