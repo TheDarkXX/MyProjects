@@ -147,7 +147,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         if (portfolioId) fetchTransactions(portfolioId);
     }, [fetchTransactions]);
     const [timeRange, setTimeRange] = useState<TimeRange>('3M');
-    const [visibleLines, setVisibleLines] = useState({ 'My Portfolio': true, 'S&P 500': true, 'SCHG': true, 'Gold': true, 'Bitcoin': true });
+    const [visibleLines, setVisibleLines] = useState({ 'My Portfolio': true, 'S&P 500': true, 'SCHG': false, 'Gold': true, 'Bitcoin': false });
     
     const [fullPeriodData, setFullPeriodData] = useState<ChartDataPoint[]>([]);
     const [displayData, setDisplayData] = useState<ChartDataPoint[]>([]);
