@@ -529,15 +529,50 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         onForceRefresh(selectedPortfolioId);
     }, [onForceRefresh, selectedPortfolioId]);
 
-    const activeLineNames = useMemo(() => {
-        return Object.keys(visibleLines).filter(k => visibleLines[k as keyof typeof visibleLines]);
-    }, [visibleLines]);
-    const lastActiveLineName = activeLineNames[activeLineNames.length - 1];
-    const labelCollector = useRef<Map<string, { x: number; y: number; value: number; stroke: string }>>(new Map());
+    // --- Calculate dynamic anti-collision offsets for end labels ---
+    const lineOffsets = useMemo(() => {
+        if (!lastDataPoint) return {};
+        const active = Object.entries(visibleLines)
+            .filter(([name, isVisible]) => isVisible && typeof lastDataPoint[name as keyof ChartDataPoint] === 'number')
+            .map(([name]) => ({
+                name,
+                val: lastDataPoint[name as keyof ChartDataPoint] as number
+            }))
+            .sort((a, b) => b.val - a.val); // descending (highest return first)
 
-    // --- Custom label component with Dynamic Anti-Collision Relaxation ---
+        const rawOffsets: Record<string, number> = {};
+        if (active.length <= 1) {
+            if (active.length === 1) rawOffsets[active[0].name] = 0;
+            return rawOffsets;
+        }
+
+        // Detect overlapping values (< 2.8% return difference) and distribute spacing
+        let currentShift = 0;
+        for (let i = 0; i < active.length; i++) {
+            const item = active[i];
+            if (i > 0) {
+                const prev = active[i - 1];
+                const diff = prev.val - item.val;
+                if (diff < 2.5) {
+                    currentShift += Math.max(16, Math.round((2.5 - diff) * 8 + 14));
+                }
+            }
+            rawOffsets[item.name] = currentShift;
+        }
+
+        // Center offsets so badges stay close to their true line endpoints
+        const total = Object.values(rawOffsets).reduce((a, b) => a + b, 0);
+        const avgShift = total / active.length;
+        const centered: Record<string, number> = {};
+        for (const [k, v] of Object.entries(rawOffsets)) {
+            centered[k] = Math.round(v - avgShift);
+        }
+        return centered;
+    }, [lastDataPoint, visibleLines]);
+
+    // --- Safe, stable custom label component for line endpoints ---
     const EndOfLineLabel = (props: any) => {
-        const { index, value, x, y, stroke, dataKey } = props;
+        const { index, value, x, y, stroke, yOffset = 0 } = props;
     
         if (index !== displayData.length - 1) {
             return null;
@@ -546,115 +581,40 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         if (value === undefined || value === null || !isFinite(value) || typeof y !== 'number') {
             return null;
         }
-
-        // 1. Register this line's raw coordinates
-        labelCollector.current.set(dataKey, { x, y, value, stroke });
-
-        // 2. Only the last active line draws ALL badges together in one coordinated, collision-free pass
-        if (dataKey !== lastActiveLineName) {
-            return null;
-        }
-
-        // Gather all collected active items
-        const rawItems = Array.from(labelCollector.current.entries())
-            .filter(([key]) => visibleLines[key as keyof typeof visibleLines])
-            .map(([key, item]) => ({
-                key,
-                value: item.value,
-                rawY: item.y,
-                targetY: item.y,
-                stroke: item.stroke,
-                x: item.x
-            }));
-
-        if (rawItems.length === 0) return null;
-
-        // 3. Multi-Pass Anti-Collision Relaxation Algorithm (25px vertical clearance)
-        const MIN_GAP = 25;
-        const sorted = [...rawItems].sort((a, b) => a.rawY - b.rawY);
-
-        // Forward downward pass: push overlapping labels downward
-        for (let i = 1; i < sorted.length; i++) {
-            if (sorted[i].targetY < sorted[i - 1].targetY + MIN_GAP) {
-                sorted[i].targetY = sorted[i - 1].targetY + MIN_GAP;
-            }
-        }
-
-        // Backward upward pass: balance labels upward
-        for (let i = sorted.length - 2; i >= 0; i--) {
-            if (sorted[i].targetY > sorted[i + 1].targetY - MIN_GAP) {
-                sorted[i].targetY = sorted[i + 1].targetY - MIN_GAP;
-            }
-        }
-
-        // Iterative spring relaxation: pull each label toward its true rawY within allowed gap bounds
-        for (let iter = 0; iter < 6; iter++) {
-            for (let i = 0; i < sorted.length; i++) {
-                const prevLimit = i > 0 ? sorted[i - 1].targetY + MIN_GAP : -Infinity;
-                const nextLimit = i < sorted.length - 1 ? sorted[i + 1].targetY - MIN_GAP : Infinity;
-                const ideal = sorted[i].rawY;
-                sorted[i].targetY = Math.max(prevLimit, Math.min(nextLimit, ideal));
-            }
-        }
-
+    
+        const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+        const textWidth = Math.max(54, formattedValue.length * 7 + 14);
+    
         return (
-            <g className="end-of-line-labels-layer pointer-events-none">
-                {sorted.map(item => {
-                    const formattedValue = `${item.value >= 0 ? '+' : ''}${item.value.toFixed(2)}%`;
-                    const textWidth = Math.max(54, formattedValue.length * 7 + 14);
-                    const isShifted = Math.abs(item.targetY - item.rawY) > 4;
-
-                    return (
-                        <g key={item.key}>
-                            {/* Sleek dotted connector line when badge is shifted to avoid collision */}
-                            {isShifted && (
-                                <path 
-                                    d={`M ${item.x} ${item.rawY} C ${item.x + 4} ${item.rawY}, ${item.x + 4} ${item.targetY}, ${item.x + 8} ${item.targetY}`}
-                                    fill="none"
-                                    stroke={item.stroke}
-                                    strokeWidth="1.2"
-                                    strokeDasharray="2 2"
-                                    opacity="0.8"
-                                />
-                            )}
-
-                            {/* Crisp anchor dot at the true end of the line */}
-                            <circle cx={item.x} cy={item.rawY} r="2.5" fill={item.stroke} />
-
-                            {/* Badge box */}
-                            <rect 
-                                x={item.x + 8} 
-                                y={item.targetY - 11} 
-                                width={textWidth} 
-                                height={22} 
-                                fill="#0F111A" 
-                                stroke={item.stroke} 
-                                strokeWidth="1.5"
-                                rx="5" 
-                                style={{
-                                    filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))'
-                                }}
-                            />
-
-                            {/* Value text */}
-                            <text 
-                                x={item.x + 8 + (textWidth / 2)} 
-                                y={item.targetY + 4} 
-                                fill="#FFFFFF" 
-                                fontSize="11px" 
-                                fontWeight="700"
-                                fontFamily="'Roboto Flex', sans-serif"
-                                textAnchor="middle"
-                                style={{ 
-                                    fontFeatureSettings: "'tnum'",
-                                    textShadow: '0 1px 2px rgba(0,0,0,0.9)'
-                                }}
-                            >
-                                {formattedValue}
-                            </text>
-                        </g>
-                    );
-                })}
+            <g transform={`translate(0, ${yOffset})`}>
+                <rect 
+                    x={x + 8} 
+                    y={y - 11} 
+                    width={textWidth} 
+                    height={22} 
+                    fill="#111827" 
+                    stroke={stroke} 
+                    strokeWidth="1.5"
+                    rx="4" 
+                    style={{
+                        filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.85))'
+                    }}
+                />
+                <text 
+                    x={x + 8 + (textWidth / 2)} 
+                    y={y + 4} 
+                    fill="#FFFFFF" 
+                    fontSize="11.5px" 
+                    fontWeight="bold"
+                    fontFamily="'Roboto Flex', sans-serif"
+                    textAnchor="middle"
+                    style={{ 
+                        fontFeatureSettings: "'tnum'",
+                        textShadow: '0 1px 2px rgba(0,0,0,0.9)'
+                    }}
+                >
+                    {formattedValue}
+                </text>
             </g>
         );
     };
@@ -812,7 +772,19 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                                     <Tooltip content={<CustomTooltip />} />
                                     <Legend content={() => null} />
                                     {Object.entries(visibleLines).map(([name, isVisible]) => (
-                                        isVisible && <Line key={name} type="monotone" dataKey={name} stroke={lineColors[name as keyof typeof lineColors]} dot={false} strokeWidth={name === 'My Portfolio' ? 4 : 2} name={name} connectNulls={true} label={<EndOfLineLabel />} />
+                                        isVisible && (
+                                            <Line 
+                                                key={name} 
+                                                type="monotone" 
+                                                dataKey={name} 
+                                                stroke={lineColors[name as keyof typeof lineColors]} 
+                                                dot={false} 
+                                                strokeWidth={name === 'My Portfolio' ? 4 : 2} 
+                                                name={name} 
+                                                connectNulls={true} 
+                                                label={<EndOfLineLabel yOffset={lineOffsets[name] || 0} />} 
+                                            />
+                                        )
                                     ))}
                                     <Brush dataKey="date" data={fullPeriodData} height={40} stroke="#4A90E2" travellerWidth={20} fill="rgba(255,255,255,0.05)" onChange={handleBrushChange}>
                                         <LineChart>
