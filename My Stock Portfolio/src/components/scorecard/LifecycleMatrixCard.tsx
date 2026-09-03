@@ -7,6 +7,7 @@ import clsx from 'clsx';
 interface LifecycleMatrixCardProps {
   holdings: Holding[];
   exchangeRate: number;
+  isCompact?: boolean;
 }
 
 interface StageInfo {
@@ -73,7 +74,7 @@ const STAGES: StageInfo[] = [
   },
 ];
 
-export const LifecycleMatrixCard: React.FC<LifecycleMatrixCardProps> = ({ holdings, exchangeRate }) => {
+export const LifecycleMatrixCard: React.FC<LifecycleMatrixCardProps> = ({ holdings, exchangeRate, isCompact }) => {
   const { currency } = useUiStore();
 
   const totalPortfolioValue = useMemo(() => {
@@ -182,7 +183,12 @@ export const LifecycleMatrixCard: React.FC<LifecycleMatrixCardProps> = ({ holdin
       </div>
 
       {/* 4 Stage Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={clsx(
+        "grid gap-4",
+        isCompact 
+          ? "grid-cols-1 sm:grid-cols-2" 
+          : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+      )}>
         {STAGES.map(stage => {
           const data = stageData[stage.id] || { totalValue: 0, holdings: [], percent: 0 };
           const Icon = stage.icon;

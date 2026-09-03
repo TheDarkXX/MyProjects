@@ -7,9 +7,10 @@ import clsx from 'clsx';
 interface ConvictionGaugeCardProps {
   holdings: Holding[];
   exchangeRate: number;
+  isCompact?: boolean;
 }
 
-export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdings, exchangeRate }) => {
+export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdings, exchangeRate, isCompact }) => {
   const { currency } = useUiStore();
 
   const totalValue = useMemo(() => {
@@ -119,7 +120,10 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
       </div>
 
       {/* 3 Concentration Gauges Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+      <div className={clsx(
+        "grid gap-4 mb-6",
+        isCompact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-3"
+      )}>
         {/* Top 1 */}
         <div className="bg-[#1A1D2D]/70 border border-[#2A2E45] rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2">
