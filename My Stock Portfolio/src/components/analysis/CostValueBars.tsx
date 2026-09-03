@@ -16,6 +16,7 @@ type SortType = 'Value' | 'Cost' | 'Profit $' | 'Profit %' | 'A-Z';
 
 export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D' }) => {
   const [sortBy, setSortBy] = useState<SortType>('Value');
+  const [activeHoverIndex, setActiveHoverIndex] = useState<number | null>(null);
 
   const { currency } = useUiStore();
   const { exchangeRate, historical } = usePriceStore();
@@ -129,27 +130,46 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
     return items.slice(0, 16);
   }, [holdings, sortBy, timeRange, historical]);
 
-  // Floating Return Badge above Market Value Bar: Enlarged +4 levels (fontSize: 15px, Font-Black)
+  // Dynamic Floating Return Badge: Lifts up, illuminates with a glowing badge pill on hover
   const renderValueBadge = (props: any) => {
     const { x, y, width, index } = props;
     const item = data[index];
     if (!item) return null;
     const isPositive = item.profit >= 0;
+    const isHovered = activeHoverIndex === index;
     const pctStr = `${isPositive ? '+' : ''}${item.profitPercent.toFixed(1)}%`;
 
     return (
-      <text
-        x={x + width / 2}
-        y={y - 10}
-        fill={isPositive ? '#34D399' : '#FB7185'}
-        textAnchor="middle"
-        fontSize="15"
-        fontWeight="900"
-        className="select-none pointer-events-none font-black"
-        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95))' }}
-      >
-        {pctStr}
-      </text>
+      <g className="select-none pointer-events-none">
+        {isHovered && (
+          <rect
+            x={x + width / 2 - 34}
+            y={y - 32}
+            width={68}
+            height={24}
+            rx={8}
+            fill={isPositive ? "rgba(16, 185, 129, 0.25)" : "rgba(244, 63, 94, 0.25)"}
+            stroke={isPositive ? "#10B981" : "#F43F5E"}
+            strokeWidth={1.5}
+          />
+        )}
+        <text
+          x={x + width / 2}
+          y={isHovered ? y - 16 : y - 10}
+          fill={isPositive ? '#34D399' : '#FB7185'}
+          textAnchor="middle"
+          fontSize={isHovered ? "16" : "15"}
+          fontWeight="900"
+          style={{
+            filter: isHovered 
+              ? `drop-shadow(0 0 10px ${isPositive ? 'rgba(52,211,153,0.9)' : 'rgba(251,113,133,0.9)'})` 
+              : 'drop-shadow(0 2px 4px rgba(0,0,0,0.95))',
+            transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}
+        >
+          {pctStr}
+        </text>
+      </g>
     );
   };
 
@@ -160,7 +180,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
       const isTotalPositive = item.totalProfit >= 0;
 
       return (
-        <div className="bg-[#0F111A]/95 backdrop-blur-xl border border-[#2A2E45] p-4 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-xs text-white min-w-[240px] z-50">
+        <div className="bg-[#0F111A]/95 backdrop-blur-xl border border-[#2A2E45] p-4 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-xs text-white min-w-[240px] z-50 animate-fade-in">
           <div className="flex justify-between items-center pb-2.5 border-b border-[#2A2E45] mb-2.5">
             <span className="font-black text-white text-base tracking-tight">{item.name}</span>
             <span className="text-[11px] text-[#CBD5E1]">
@@ -201,7 +221,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
 
   return (
     <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col">
-      {/* Header Bar: Enlarged Title & Subtitle (+4 font levels) */}
+      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#10B981]/20 to-[#38BDF8]/20 border border-[#10B981]/30 flex items-center justify-center shadow-inner">
@@ -215,7 +235,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
           </div>
         </div>
 
-        {/* Sort Controls (Size Preserved as requested) */}
+        {/* Sort Controls */}
         <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-xl gap-1 overflow-x-auto custom-scrollbar">
           <span className="text-[11px] font-bold text-[#9898C8] px-2 uppercase">Sort By:</span>
           {(['Value', 'Cost', 'Profit $', 'Profit %', 'A-Z'] as SortType[]).map((type) => (
@@ -236,11 +256,11 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
       </div>
 
       {data.length === 0 ? (
-        <div className="h-[380px] flex items-center justify-center text-[#9898C8] text-sm">
+        <div className="h-[390px] flex items-center justify-center text-[#9898C8] text-sm">
           No active securities to compare
         </div>
       ) : (
-        /* Height increased to 390px for comfortable breathing room with +4 larger fonts */
+        /* Interactive Bar Chart with Spotlight Cursor & Neon Hover Effects */
         <div className="w-full" style={{ height: 390, minHeight: 390 }}>
           <ResponsiveContainer width="100%" height={390}>
             <BarChart 
@@ -248,11 +268,16 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
               barGap={5} 
               barSize={28}
               barCategoryGap="25%"
-              margin={{ top: 32, right: 15, left: 5, bottom: 25 }}
+              margin={{ top: 35, right: 15, left: 5, bottom: 25 }}
+              onMouseMove={(state: any) => {
+                if (state && state.activeTooltipIndex !== undefined) {
+                  setActiveHoverIndex(state.activeTooltipIndex);
+                }
+              }}
+              onMouseLeave={() => setActiveHoverIndex(null)}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#1F2233" vertical={false} />
               
-              {/* X-Axis Ticker Labels: Enlarged +4 levels (fontSize: 15, fontWeight: 900) */}
               <XAxis 
                 dataKey="name" 
                 stroke="#9898C8" 
@@ -261,7 +286,6 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 axisLine={{ stroke: '#2A2E45' }}
               />
 
-              {/* Y-Axis Value Labels: Enlarged +4 levels (fontSize: 14, fontWeight: 700) */}
               <YAxis 
                 stroke="#9898C8" 
                 tickFormatter={formatShortAxis}
@@ -270,9 +294,19 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 axisLine={{ stroke: '#2A2E45' }}
                 width={65}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.04)' }} />
+
+              {/* Animated Spotlight Column Cursor */}
+              <Tooltip 
+                content={<CustomTooltip />} 
+                cursor={{ 
+                  fill: 'rgba(130, 58, 253, 0.08)', 
+                  stroke: 'rgba(130, 58, 253, 0.25)',
+                  strokeWidth: 1.5,
+                  strokeDasharray: '4 4',
+                  radius: 12 
+                }} 
+              />
               
-              {/* Legend: Enlarged +4 levels (fontSize: 14px, Font-Bold) */}
               <Legend 
                 verticalAlign="top" 
                 align="right" 
@@ -280,27 +314,68 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 formatter={(val) => <span className="text-[#F8FAFC] font-bold text-sm ml-1">{val}</span>}
               />
 
-              {/* Cost Basis Bar (Indigo-500) */}
+              {/* Cost Basis Bar with Spotlight Elevation & Neon Glow */}
               <Bar 
                 dataKey="cost" 
                 name="Cost Basis" 
-                fill="#6366F1"
                 radius={[6, 6, 0, 0]} 
-              />
+                isAnimationActive={true}
+                animationDuration={900}
+                animationEasing="ease-out"
+              >
+                {data.map((entry, index) => {
+                  const isHovered = activeHoverIndex === index;
+                  const isDimmed = activeHoverIndex !== null && !isHovered;
 
-              {/* Market Value Bar (Emerald-500 if profit >= 0, Rose-500 if loss) + Floating Return Badge */}
+                  return (
+                    <Cell 
+                      key={`cell-cost-${index}`} 
+                      fill="#6366F1"
+                      opacity={isDimmed ? 0.35 : 1}
+                      style={{
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        filter: isHovered 
+                          ? 'brightness(1.22) drop-shadow(0 0 12px rgba(99, 102, 241, 0.8))' 
+                          : 'none',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  );
+                })}
+              </Bar>
+
+              {/* Market Value Bar with Return Badge, Glow and Smooth Focus Transition */}
               <Bar 
                 dataKey="value" 
                 name="Current Value" 
                 radius={[6, 6, 0, 0]} 
                 label={renderValueBadge}
+                isAnimationActive={true}
+                animationDuration={900}
+                animationEasing="ease-out"
               >
-                {data.map((entry, index) => (
-                  <Cell 
-                    key={`cell-bar-${index}`} 
-                    fill={entry.profit >= 0 ? "#10B981" : "#F43F5E"} 
-                  />
-                ))}
+                {data.map((entry, index) => {
+                  const isHovered = activeHoverIndex === index;
+                  const isDimmed = activeHoverIndex !== null && !isHovered;
+                  const isPositive = entry.profit >= 0;
+                  const baseColor = isPositive ? "#10B981" : "#F43F5E";
+                  const glowColor = isPositive ? "rgba(16, 185, 129, 0.85)" : "rgba(244, 63, 94, 0.85)";
+
+                  return (
+                    <Cell 
+                      key={`cell-val-${index}`} 
+                      fill={baseColor} 
+                      opacity={isDimmed ? 0.35 : 1}
+                      style={{
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        filter: isHovered 
+                          ? `brightness(1.28) drop-shadow(0 0 16px ${glowColor})` 
+                          : 'none',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  );
+                })}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
