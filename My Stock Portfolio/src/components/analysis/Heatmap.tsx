@@ -160,6 +160,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
   timeRange: externalTimeRange, 
   onTimeRangeChange 
 }) => {
+  // Treemap Timeframe defaults to '1D' independently as requested
   const [internalTimeRange, setInternalTimeRange] = useState<HeatmapTimeRange>('1D');
   const activeTimeRange = externalTimeRange || internalTimeRange;
 
@@ -175,7 +176,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
   const { transactions } = useTransactionStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  // Enhanced baseline height (min 560px, up to 740px) to expand comfortably into available space
   const [dimensions, setDimensions] = useState({ width: 1200, height: 600 });
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, item: null, x: 0, y: 0 });
@@ -188,7 +188,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         const rect = containerRef.current.getBoundingClientRect();
         const w = Math.round(rect.width);
         if (w > 0) {
-          // Expanded height formula: min 560px, max 740px (golden aspect ratio for ultrawide)
+          // Expanded height formula (min 560px, max 740px)
           const h = Math.max(560, Math.min(740, Math.round(w * 0.42)));
           setDimensions({ width: w, height: h });
         }
@@ -289,7 +289,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
     });
   }, [holdings, activeTimeRange, historical, txSectorMap]);
 
-  // Enhanced Finviz dynamic color scale: lively contrast across all timeframes
   const colorScale = useMemo(() => {
     const limit = (activeTimeRange === '1D' || activeTimeRange === '1W') ? 3 : (activeTimeRange === '1M' || activeTimeRange === '3M') ? 8 : 20;
 
@@ -325,7 +324,6 @@ export const Heatmap: React.FC<HeatmapProps> = ({
       .sum((d: any) => d.currentValue || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
-    // Golden ratio (1.618) squarify keeps blocks beautifully boxy with the expanded height
     const treemapLayout = d3.treemap<any>()
       .tile(d3.treemapSquarify.ratio(1.618))
       .size([dimensions.width, dimensions.height])
@@ -501,8 +499,8 @@ export const Heatmap: React.FC<HeatmapProps> = ({
             const fillColor = colorScale(returnPct);
             const isHovered = item.symbol === hoveredSymbol;
 
-            const showFull = width >= 65 && height >= 45;
-            const showMedium = width >= 38 && height >= 28;
+            const showFull = width >= 65 && height >= 50;
+            const showMedium = width >= 38 && height >= 32;
             const showMini = width >= 24 && height >= 16;
 
             return (
@@ -526,41 +524,44 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                   }}
                 />
 
-                {/* Typography: Symbol, Return %, Value / Weight */}
+                {/* Typography: Symbol, Return %, Value / Weight (Enlarged Row 3 by +4 levels & golden vertical rhythm) */}
                 {showFull ? (
                   <g className="pointer-events-none">
+                    {/* Row 1: Symbol (20-26px Font-Black) */}
                     <text
                       x={width / 2}
-                      y={height / 2 - 12}
+                      y={height / 2 - 20}
                       textAnchor="middle"
                       fill="#FFFFFF"
-                      fontSize={Math.max(13, Math.min(22, Math.round(width / 6.5)))}
+                      fontSize={Math.max(16, Math.min(26, Math.round(width / 6)))}
                       fontWeight="900"
-                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
+                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
                     >
                       {item.symbol}
                     </text>
 
+                    {/* Row 2: Return % (16-20px Font-Black) */}
                     <text
                       x={width / 2}
-                      y={height / 2 + 7}
+                      y={height / 2 + 5}
                       textAnchor="middle"
                       fill="#FFFFFF"
-                      fontSize={Math.max(12, Math.min(18, Math.round(width / 7.5)))}
-                      fontWeight="800"
-                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
+                      fontSize={Math.max(14, Math.min(20, Math.round(width / 7.2)))}
+                      fontWeight="900"
+                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
                     >
                       {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
                     </text>
 
+                    {/* Row 3: Value & Weight — Enlarged +4 levels (15-18px Font-Bold, Crisp White) */}
                     <text
                       x={width / 2}
-                      y={height / 2 + 23}
+                      y={height / 2 + 30}
                       textAnchor="middle"
-                      fill="rgba(255, 255, 255, 0.9)"
-                      fontSize="11"
-                      fontWeight="700"
-                      style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
+                      fill="#FFFFFF"
+                      fontSize={Math.max(14, Math.min(18, Math.round(width / 8.5)))}
+                      fontWeight="800"
+                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
                     >
                       {formatCurrency(item.currentValue)} • {item.weightPercent.toFixed(1)}%
                     </text>
@@ -569,25 +570,36 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                   <g className="pointer-events-none">
                     <text
                       x={width / 2}
-                      y={height / 2 - 4}
+                      y={height / 2 - 14}
                       textAnchor="middle"
                       fill="#FFFFFF"
-                      fontSize={Math.max(11, Math.min(15, Math.round(width / 5)))}
-                      fontWeight="800"
-                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
+                      fontSize={Math.max(12, Math.min(16, Math.round(width / 5)))}
+                      fontWeight="900"
+                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
                     >
                       {item.symbol}
                     </text>
                     <text
                       x={width / 2}
-                      y={height / 2 + 11}
+                      y={height / 2 + 3}
                       textAnchor="middle"
                       fill="#FFFFFF"
-                      fontSize={Math.max(10, Math.min(13, Math.round(width / 6)))}
-                      fontWeight="700"
-                      style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
+                      fontSize={Math.max(11, Math.min(14, Math.round(width / 6)))}
+                      fontWeight="800"
+                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
                     >
                       {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%
+                    </text>
+                    <text
+                      x={width / 2}
+                      y={height / 2 + 18}
+                      textAnchor="middle"
+                      fill="#FFFFFF"
+                      fontSize={Math.max(10, Math.min(13, Math.round(width / 7)))}
+                      fontWeight="700"
+                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
+                    >
+                      {item.weightPercent.toFixed(1)}%
                     </text>
                   </g>
                 ) : showMini ? (

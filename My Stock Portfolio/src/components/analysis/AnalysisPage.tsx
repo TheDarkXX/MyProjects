@@ -19,7 +19,11 @@ export const AnalysisPage = () => {
   const { fetchPrices, fetchHistorical, fetchExchangeRate } = usePriceStore();
   const { currency } = useUiStore();
 
-  const [timeRange, setTimeRange] = useState<HeatmapTimeRange>('1D');
+  // 1. Global Page-Level Timeframe defaults to '1M' (Past 30 Days) as requested
+  const [globalTimeRange, setGlobalTimeRange] = useState<HeatmapTimeRange>('1M');
+
+  // 2. Market Treemap Timeframe defaults independently to '1D' (Today) as requested
+  const [treemapTimeRange, setTreemapTimeRange] = useState<HeatmapTimeRange>('1D');
 
   useEffect(() => {
     if (activePortfolioId) {
@@ -55,7 +59,7 @@ export const AnalysisPage = () => {
 
   return (
     <div className="space-y-8 animate-fade-in-up pb-12">
-      {/* 1. Header & Unified Timeframe Bar */}
+      {/* 1. Header & Unified Global Timeframe Bar (Defaults to 1M) */}
       <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-5 px-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
         <div>
           <div className="flex items-center gap-3">
@@ -70,20 +74,20 @@ export const AnalysisPage = () => {
           </p>
         </div>
 
-        {/* Global Page-Level Timeframe Selector Bar */}
+        {/* Global Page-Level Timeframe Selector Bar (Defaults to 1M) */}
         <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1.5 rounded-2xl gap-1.5 shadow-inner self-start xl:self-auto overflow-x-auto custom-scrollbar">
           <div className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-[#CBD5E1] border-r border-[#2A2E45]">
             <Calendar className="w-3.5 h-3.5 text-[#823AFD]" />
             <span>Timeframe:</span>
-            <span className="text-white font-bold ml-1">{getTimeRangeLabel(timeRange)}</span>
+            <span className="text-white font-bold ml-1">{getTimeRangeLabel(globalTimeRange)}</span>
           </div>
           {TIME_RANGES.map(range => (
             <button
               key={range}
-              onClick={() => setTimeRange(range)}
+              onClick={() => setGlobalTimeRange(range)}
               className={clsx(
                 "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none whitespace-nowrap",
-                timeRange === range
+                globalTimeRange === range
                   ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_0_12px_rgba(130,58,253,0.4)]"
                   : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
               )}
@@ -94,23 +98,23 @@ export const AnalysisPage = () => {
         </div>
       </div>
 
-      {/* Row 1: Allocation Pie Chart & Distribution Pie Chart (2 Columns Grid) */}
+      {/* Row 1: Allocation Pie Chart & Distribution Pie Chart (2 Columns Grid - Governed by 1M Default) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AllocationPieChart holdings={holdings} timeRange={timeRange} />
+        <AllocationPieChart holdings={holdings} timeRange={globalTimeRange} />
         <DistributionPieChart holdings={holdings} />
       </div>
 
-      {/* Row 2: Cost vs Market Value Bars (Full Width) */}
+      {/* Row 2: Cost vs Market Value Bars (Full Width - Governed by 1M Default) */}
       <div className="w-full">
-        <CostValueBars holdings={holdings} timeRange={timeRange} />
+        <CostValueBars holdings={holdings} timeRange={globalTimeRange} />
       </div>
 
-      {/* Row 3: Finviz Interactive Treemap / Heatmap (Full Width) */}
+      {/* Row 3: Finviz Interactive Treemap / Heatmap (Full Width - Defaults independently to 1D) */}
       <div className="w-full">
         <Heatmap 
           holdings={holdings} 
-          timeRange={timeRange} 
-          onTimeRangeChange={setTimeRange} 
+          timeRange={treemapTimeRange} 
+          onTimeRangeChange={setTreemapTimeRange} 
         />
       </div>
     </div>
