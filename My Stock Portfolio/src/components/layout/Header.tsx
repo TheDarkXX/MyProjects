@@ -9,6 +9,25 @@ export const Header = () => {
   const { activeTab, currency, setCurrency } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
   const { exchangeRate, lastUpdated, loading, fetchExchangeRate } = usePriceStore();
+  const [isMarketOpen, setIsMarketOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMarketStatus = () => {
+      const nyTime = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+      const nyDate = new Date(nyTime);
+      const day = nyDate.getDay();
+      const hours = nyDate.getHours();
+      const minutes = nyDate.getMinutes();
+      const isWeekday = day >= 1 && day <= 5;
+      const timeInMinutes = hours * 60 + minutes;
+      const marketOpenMinutes = 9 * 60 + 30; // 9:30 AM
+      const marketCloseMinutes = 16 * 60; // 4:00 PM
+      setIsMarketOpen(isWeekday && timeInMinutes >= marketOpenMinutes && timeInMinutes < marketCloseMinutes);
+    };
+    checkMarketStatus();
+    const interval = setInterval(checkMarketStatus, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   React.useEffect(() => {
     if (!lastUpdated) {
@@ -108,40 +127,52 @@ export const Header = () => {
           </div>
         )}
 
-        {/* Live Yahoo API Status & Last Update Time (Scaled +3 levels) */}
+        {/* Premium Market Status & API Indicator */}
         <button 
           onClick={() => fetchExchangeRate('USD', 'THB')}
-          className="flex items-center gap-3.5 px-4 py-2 rounded-2xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] shadow-lg text-sm cursor-pointer select-none transition-all hover:bg-[#1A1D2D]/90 hover:scale-105 active:scale-95 group"
-          title={lastUpdated ? `Last updated: ${lastUpdated.toLocaleString('th-TH')}. Click to refresh Yahoo data!` : 'Click to refresh Yahoo Finance data'}
+          className="flex items-center gap-3.5 px-3.5 py-2 rounded-2xl bg-[#151822]/80 border border-[#2A2E45]/80 hover:border-[#823AFD]/50 shadow-[0_4px_16px_rgba(0,0,0,0.2)] cursor-pointer transition-all hover:bg-[#1A1D2D] hover:-translate-y-0.5 group backdrop-blur-md"
+          title={lastUpdated ? `Last updated: ${lastUpdated.toLocaleString('th-TH')}. Click to refresh!` : 'Click to refresh data'}
         >
-          {/* LED Status Light (Enlarged + Bright Glow) */}
+          {/* Status Indicator Dot */}
           <div className="relative flex items-center justify-center shrink-0">
             <span className={clsx(
-              "w-3.5 h-3.5 rounded-full transition-all duration-300",
+              "w-2.5 h-2.5 rounded-full transition-all duration-300",
               loading 
-                ? "bg-amber-400 animate-spin" 
-                : "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.9)] ring-2 ring-emerald-400/30"
+                ? "bg-[#823AFD] animate-spin" 
+                : isMarketOpen 
+                  ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.8)]"
+                  : "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]"
             )} />
-            {!loading && (
-              <span className="absolute w-3.5 h-3.5 rounded-full bg-emerald-400 animate-ping opacity-60" />
+            {!loading && isMarketOpen && (
+              <span className="absolute w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping opacity-60" />
             )}
           </div>
 
-          {/* Status & Time (+3 Size Levels) */}
-          <div className="flex flex-col text-left leading-tight gap-0.5">
+          <div className="flex flex-col text-left leading-none gap-1.5">
             <div className="flex items-center gap-2">
-              <span className="text-white font-extrabold text-sm tracking-wide group-hover:text-[#823AFD] transition-colors">
-                {loading ? 'Syncing...' : 'Yahoo API'}
+              <span className="text-white font-extrabold text-[13px] tracking-wide group-hover:text-[#823AFD] transition-colors">
+                US Market
               </span>
-              <span className="text-[11px] font-black text-emerald-300 px-1.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 tracking-wider">
-                LIVE
+              <span className={clsx(
+                "text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest border",
+                isMarketOpen
+                  ? "text-amber-400 bg-amber-400/10 border-amber-400/30"
+                  : "text-rose-400 bg-rose-500/10 border-rose-500/30"
+              )}>
+                {isMarketOpen ? 'LIVE' : 'CLOSED'}
               </span>
             </div>
-            <span className="text-xs text-gray-200 font-mono font-semibold tabular-nums tracking-tight">
-              {lastUpdated 
-                ? `${lastUpdated.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} ${lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
-                : 'Auto-syncing'}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-[#94A3B8] font-medium tracking-wide">
+                Yahoo API
+              </span>
+              <span className="w-1 h-1 rounded-full bg-[#334155]"></span>
+              <span className="text-[10px] text-[#94A3B8] font-mono tracking-tight">
+                {lastUpdated 
+                  ? lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                  : 'Syncing...'}
+              </span>
+            </div>
           </div>
         </button>
       </div>
