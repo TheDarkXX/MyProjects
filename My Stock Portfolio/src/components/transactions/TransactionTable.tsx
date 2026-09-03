@@ -339,13 +339,14 @@ export const TransactionTable = () => {
                 <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider text-right">Price</th>
                 <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider text-right">Amount (4 Dec)</th>
                 <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider text-right">Total ($)</th>
+                <th className="py-5 px-3 text-[#9898C8] font-medium text-xs uppercase tracking-wider text-left min-w-[120px]">Note</th>
                 <th className="py-5 px-4 text-[#9898C8] font-medium text-xs uppercase tracking-wider text-right w-20">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#2A2E45]">
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-[#9898C8]">
+                  <td colSpan={12} className="py-12 text-center text-[#9898C8]">
                     No transactions found matching your filters.
                   </td>
                 </tr>
@@ -438,6 +439,18 @@ export const TransactionTable = () => {
                         {['DIVIDEND', 'INTEREST', 'DEPOSIT'].includes(tx.type) ? '+' : ''}
                         {['WITHDRAW', 'FEE'].includes(tx.type) ? '-' : ''}
                         ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3.5 px-3 text-left">
+                        {tx.note ? (
+                          <span 
+                            className="text-xs text-gray-300 font-normal bg-[#1A1D2D] px-2.5 py-1 rounded-lg border border-[#2A2E45] max-w-[180px] truncate inline-block"
+                            title={tx.note}
+                          >
+                            {tx.note}
+                          </span>
+                        ) : (
+                          <span className="text-[#9898C8]/40 text-xs">-</span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
