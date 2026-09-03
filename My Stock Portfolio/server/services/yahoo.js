@@ -81,6 +81,9 @@ export async function fetchYahooExchangeRate(from = 'USD', to = 'THB') {
   } catch (error) {
     console.error(`[Yahoo] Error fetching exchange rate ${from}->${to}:`, error.message);
   }
+  return null;
+}
+
 /**
  * Fetch sector / category and industry profile for a symbol from Yahoo Finance.
  * Supports both Stocks (assetProfile) and ETFs (fundProfile).

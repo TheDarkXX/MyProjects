@@ -142,6 +142,17 @@ transactionsRoutes.post('/bulk', async (c) => {
         }
       });
       
+      insertTx(transactions);
+      return c.json({ success: true, count: transactions.length });
+    }
+    
+    return c.json({ error: 'Invalid action' }, 400);
+  } catch (error) {
+    console.error(error);
+    return c.json({ error: 'Bulk operation failed' }, 500);
+  }
+});
+
 // Auto-sync sectors for all transactions using Yahoo Finance
 transactionsRoutes.post('/sync-sectors', async (c) => {
   try {
