@@ -23,12 +23,12 @@ export const resolveStockType = (tx: Transaction): string => {
     return tx.stock_type === 'Speculative' ? 'Small Cap' : tx.stock_type;
   }
   const sym = (tx.symbol || '').toUpperCase();
-  if (sym === 'NVDA' || sym === 'PLTR' || sym === 'RKLB' || sym === 'CRWD' || sym === 'HIMS' || sym === 'MELI' || sym === 'RBRK' || sym === 'CRWV') return 'Hyper Growth';
+  if (sym === 'ASTS' || sym === 'HIMS' || sym === 'RKLB') return 'Small Cap';
+  if (sym === 'NVDA' || sym === 'PLTR' || sym === 'CRWD' || sym === 'MELI' || sym === 'RBRK' || sym === 'CRWV') return 'Hyper Growth';
   if (sym === 'COST' || sym === 'AMZN' || sym === 'META' || sym === 'MSFT' || sym === 'GOOGL' || sym === 'AAPL' || sym === 'ISRG' || sym === 'V' || sym === 'MA') return 'Core Compounder';
   if (sym === 'SCHG' || sym === 'SPY' || sym === 'VOO' || sym === 'QQQ' || sym === 'IVV') return 'Index / ETF';
   if (sym === 'SCHD' || sym === 'VICI' || sym === 'O' || sym === 'JEPI') return 'High Yield';
   if (sym === 'AVGO' || sym === 'TXRH' || sym === 'SPGI') return 'Dividend Growth';
-  if (sym === 'ASTS') return 'Small Cap';
   if (sym === 'GLD') return 'Defensive / Value';
   if (sym === 'BTC-USD' || sym === 'BTC') return 'Small Cap';
   if (sym === 'CASH' || tx.type === 'DEPOSIT' || tx.type === 'INTEREST') return 'Cash';

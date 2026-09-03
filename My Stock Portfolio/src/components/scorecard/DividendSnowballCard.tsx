@@ -243,6 +243,7 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
                 tickFormatter={(v) => `${currSymbol}${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Math.round(v)}`} 
               />
               <Tooltip
+                cursor={{ fill: 'rgba(255, 255, 255, 0.04)', radius: 6 }}
                 content={({ active, payload, label }) => {
                   if (!active || !payload || !payload.length) return null;
                   return (
@@ -271,16 +272,19 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
                     name={`${prevYear}`} 
                     fill="#4B5563" 
                     radius={[4, 4, 0, 0]} 
-                    maxBarSize={24} 
+                    maxBarSize={28}
+                    minPointSize={6}
                   />
                   <Bar 
                     dataKey={`year_${currentYear}`} 
                     name={`${currentYear}`} 
                     fill="#10B981" 
                     radius={[4, 4, 0, 0]} 
-                    maxBarSize={24}
+                    maxBarSize={28}
+                    minPointSize={6}
                     label={({ x, y, width, value }) => {
                       if (!value || value <= 0) return null;
+                      const formatted = value < 10 ? value.toFixed(2) : Math.round(value).toString();
                       return (
                         <text 
                           x={x + width / 2} 
@@ -291,7 +295,7 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
                           fontWeight="bold"
                           fontFamily="monospace"
                         >
-                          {currSymbol}{Math.round(value)}
+                          {currSymbol}{formatted}
                         </text>
                       );
                     }}
@@ -310,8 +314,10 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
                   fill="#10B981" 
                   radius={[6, 6, 0, 0]} 
                   maxBarSize={36}
+                  minPointSize={6}
                   label={({ x, y, width, value }) => {
                     if (!value || value <= 0) return null;
+                    const formatted = value < 10 ? value.toFixed(2) : Math.round(value).toString();
                     return (
                       <text 
                         x={x + width / 2} 
@@ -322,7 +328,7 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
                         fontWeight="bold"
                         fontFamily="monospace"
                       >
-                        {currSymbol}{Math.round(value)}
+                        {currSymbol}{formatted}
                       </text>
                     );
                   }}
@@ -336,8 +342,10 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
                   fill="url(#snowballGradient)" 
                   radius={[6, 6, 0, 0]} 
                   maxBarSize={36}
+                  minPointSize={6}
                   label={({ x, y, width, value }) => {
                     if (!value || value <= 0) return null;
+                    const formatted = value < 10 ? value.toFixed(2) : Math.round(value).toString();
                     return (
                       <text 
                         x={x + width / 2} 
@@ -348,7 +356,7 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
                         fontWeight="bold"
                         fontFamily="monospace"
                       >
-                        {currSymbol}{Math.round(value)}
+                        {currSymbol}{formatted}
                       </text>
                     );
                   }}
@@ -363,6 +371,19 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
               </defs>
             </BarChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Status Explanation Note */}
+        <div className="bg-[#1A1D2D]/50 border border-[#2A2E45]/80 rounded-2xl px-3.5 py-2 -mt-2 mb-4 text-xs text-[#9898C8] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+            <span>
+              💡 <strong className="text-white">คำอธิบายกราฟ:</strong> ปี {currentYear} มีเงินปันผลเข้าพอร์ตจริง 4 เดือน (ก.พ., มี.ค., เม.ย., มิ.ย.) รวม {currSymbol}{stats.currTotal.toFixed(2)} — เดือนอื่นๆ ที่ว่างอยู่คือยังไม่ถึงรอบจ่ายเงินปันผลของบริษัท
+            </span>
+          </div>
+          <span className="text-emerald-400 font-mono font-bold text-[11px] shrink-0">
+            {stats.totalEvents} รอบจ่ายจริง
+          </span>
         </div>
       </div>
 
