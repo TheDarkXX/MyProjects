@@ -684,7 +684,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         : 'Performance';
 
     return (
-        <div className="w-full h-full min-h-[calc(100vh-80px)]" style={{ fontFamily: "'Outfit', 'Prompt', system-ui, sans-serif" }}>
+        <div className="w-full h-full min-h-[calc(100vh-80px)]" style={{ fontFamily: "'Prompt', system-ui, sans-serif" }}>
             <main className="w-full md:p-6 bg-gradient-to-br from-[#0F172A] to-[#1E293B] rounded-3xl shadow-inner shadow-black/30 overflow-y-auto">
                 <div className="p-4">
                     <div className="flex flex-wrap justify-between items-start mb-4 gap-4">
