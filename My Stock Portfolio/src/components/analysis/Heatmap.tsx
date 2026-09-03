@@ -324,13 +324,13 @@ export const Heatmap: React.FC<HeatmapProps> = ({
       .sum((d: any) => d.currentValue || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
-    // Balanced squarify ratio (1.15) fills area evenly without stretching into thin vertical/horizontal strips
+    // Golden Ratio (~1.618) Squarify creates balanced, elegant rectangular tiles without narrow strips
     const treemapLayout = d3.treemap<any>()
-      .tile(d3.treemapSquarify.ratio(1.15))
+      .tile(d3.treemapSquarify.ratio((1 + Math.sqrt(5)) / 2))
       .size([dimensions.width, dimensions.height])
-      .paddingOuter(4)
+      .paddingOuter(3)
       .paddingInner(3)
-      .paddingTop((d: any) => d.depth === 1 ? 26 : 3)
+      .paddingTop((d: any) => d.depth === 1 ? 22 : 2)
       .round(true);
 
     treemapLayout(root);
@@ -461,33 +461,33 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                 />
 
                 {/* Sector Header Pill */}
-                <rect
-                  x={sectorNode.x0 + 2}
-                  y={sectorNode.y0 + 2}
-                  width={Math.max(0, sectorWidth - 4)}
-                  height={22}
-                  fill="rgba(15, 23, 42, 0.9)"
-                  rx="4"
-                />
-
-                {/* Sector Name & Weight */}
-                {sectorWidth > 50 && (
-                  <text
-                    x={sectorNode.x0 + 8}
-                    y={sectorNode.y0 + 16}
-                    fill="#E2E8F0"
-                    fontSize="11"
-                    fontWeight="700"
-                    letterSpacing="0.5px"
-                    className="pointer-events-none uppercase tracking-wider"
-                  >
-                    {sectorNode.data.name}
-                    {sectorWidth > 110 && (
-                      <tspan fill="#94A3B8" fontWeight="500" dx="6">
-                        {sectorPercent.toFixed(1)}%
-                      </tspan>
-                    )}
-                  </text>
+                {sectorHeight >= 45 && sectorWidth >= 55 && (
+                  <>
+                    <rect
+                      x={sectorNode.x0 + 2}
+                      y={sectorNode.y0 + 2}
+                      width={Math.max(0, sectorWidth - 4)}
+                      height={18}
+                      fill="rgba(15, 23, 42, 0.85)"
+                      rx="3"
+                    />
+                    <text
+                      x={sectorNode.x0 + 6}
+                      y={sectorNode.y0 + 14}
+                      fill="#CBD5E1"
+                      fontSize="10.5"
+                      fontWeight="700"
+                      letterSpacing="0.4px"
+                      className="pointer-events-none uppercase font-heading"
+                    >
+                      {sectorNode.data.name}
+                      {sectorWidth > 110 && (
+                        <tspan fill="#94A3B8" fontWeight="500" dx="5">
+                          {sectorPercent.toFixed(1)}%
+                        </tspan>
+                      )}
+                    </text>
+                  </>
                 )}
               </g>
             );
@@ -502,9 +502,15 @@ export const Heatmap: React.FC<HeatmapProps> = ({
             const fillColor = colorScale(returnPct);
             const isHovered = item.symbol === hoveredSymbol;
 
-            const showFull = width >= 65 && height >= 50;
-            const showMedium = width >= 38 && height >= 32;
-            const showMini = width >= 24 && height >= 16;
+            // Proportional threshold tiers
+            const showThreeLines = width >= 80 && height >= 68;
+            const showTwoLines = width >= 46 && height >= 36;
+            const showSymbolOnly = width >= 26 && height >= 18;
+
+            // Refined elegant typography sizes (proportional, not oversized, sleek hierarchy)
+            const symbolFontSize = Math.max(12, Math.min(18, Math.round(Math.min(width / 4.8, height / 3.4))));
+            const returnFontSize = Math.max(11, Math.min(14, Math.round(symbolFontSize * 0.82)));
+            const subFontSize = Math.max(10, Math.min(12, Math.round(symbolFontSize * 0.7)));
 
             return (
               <g
@@ -513,108 +519,96 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                 onMouseEnter={(e) => handleMouseEnter(e, d)}
                 className="cursor-pointer"
               >
-                {/* Stock Cell Rectangle: Crisp White Glow Hover */}
+                {/* Stock Cell Rectangle: Crisp Glow Hover */}
                 <rect
                   width={width}
                   height={height}
                   fill={fillColor}
                   rx="4"
-                  stroke={isHovered ? '#FFFFFF' : '#0B0F17'}
+                  stroke={isHovered ? '#FFFFFF' : 'rgba(11, 15, 23, 0.9)'}
                   strokeWidth={isHovered ? 2 : 1}
                   className="transition-all duration-150"
                   style={{
-                    filter: isHovered ? 'brightness(1.15) drop-shadow(0 0 6px rgba(255,255,255,0.7))' : 'none'
+                    filter: isHovered ? 'brightness(1.18) drop-shadow(0 0 8px rgba(255,255,255,0.75))' : 'none'
                   }}
                 />
 
-                {/* Typography: Symbol, Return %, Value / Weight (Enlarged Row 3 by +4 levels & golden vertical rhythm) */}
-                {showFull ? (
-                  <g className="pointer-events-none">
-                    {/* Row 1: Symbol (20-26px Font-Black) */}
+                {/* Typography: Symbol, Return %, Weight / Value */}
+                {showThreeLines ? (
+                  <g className="pointer-events-none font-heading" textAnchor="middle">
+                    {/* Row 1: Symbol */}
                     <text
                       x={width / 2}
-                      y={height / 2 - 20}
-                      textAnchor="middle"
+                      y={height / 2 - (returnFontSize * 0.85)}
                       fill="#FFFFFF"
-                      fontSize={Math.max(16, Math.min(26, Math.round(width / 6)))}
-                      fontWeight="900"
-                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
+                      fontSize={symbolFontSize}
+                      fontWeight="800"
+                      letterSpacing="0.3px"
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                     >
                       {item.symbol}
                     </text>
 
-                    {/* Row 2: Return % (16-20px Font-Black) */}
+                    {/* Row 2: Return % */}
                     <text
                       x={width / 2}
-                      y={height / 2 + 5}
-                      textAnchor="middle"
+                      y={height / 2 + (returnFontSize * 0.5)}
                       fill="#FFFFFF"
-                      fontSize={Math.max(14, Math.min(20, Math.round(width / 7.2)))}
-                      fontWeight="900"
-                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
+                      fontSize={returnFontSize}
+                      fontWeight="700"
+                      className="tabular-nums"
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                     >
                       {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
                     </text>
 
-                    {/* Row 3: Value & Weight — Enlarged +4 levels (15-18px Font-Bold, Crisp White) */}
+                    {/* Row 3: Weight % and Sub-value (Subtle, crisp) */}
                     <text
                       x={width / 2}
-                      y={height / 2 + 30}
-                      textAnchor="middle"
-                      fill="#FFFFFF"
-                      fontSize={Math.max(14, Math.min(18, Math.round(width / 8.5)))}
-                      fontWeight="800"
-                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
+                      y={height / 2 + (returnFontSize * 0.5) + (subFontSize * 1.35)}
+                      fill="#E2E8F0"
+                      fontSize={subFontSize}
+                      fontWeight="600"
+                      className="tabular-nums opacity-90"
+                      style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
                     >
-                      {formatCurrency(item.currentValue)} • {item.weightPercent.toFixed(1)}%
+                      {width >= 120 ? `${formatCurrency(item.currentValue)} • ` : ''}{item.weightPercent.toFixed(1)}%
                     </text>
                   </g>
-                ) : showMedium ? (
-                  <g className="pointer-events-none">
+                ) : showTwoLines ? (
+                  <g className="pointer-events-none font-heading" textAnchor="middle">
                     <text
                       x={width / 2}
-                      y={height / 2 - 14}
-                      textAnchor="middle"
+                      y={height / 2 - 2}
                       fill="#FFFFFF"
-                      fontSize={Math.max(12, Math.min(16, Math.round(width / 5)))}
-                      fontWeight="900"
-                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
+                      fontSize={symbolFontSize}
+                      fontWeight="800"
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                     >
                       {item.symbol}
                     </text>
                     <text
                       x={width / 2}
-                      y={height / 2 + 3}
-                      textAnchor="middle"
+                      y={height / 2 + returnFontSize + 1}
                       fill="#FFFFFF"
-                      fontSize={Math.max(11, Math.min(14, Math.round(width / 6)))}
-                      fontWeight="800"
-                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
+                      fontSize={returnFontSize}
+                      fontWeight="700"
+                      className="tabular-nums"
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                     >
                       {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%
                     </text>
-                    <text
-                      x={width / 2}
-                      y={height / 2 + 18}
-                      textAnchor="middle"
-                      fill="#FFFFFF"
-                      fontSize={Math.max(10, Math.min(13, Math.round(width / 7)))}
-                      fontWeight="700"
-                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
-                    >
-                      {item.weightPercent.toFixed(1)}%
-                    </text>
                   </g>
-                ) : showMini ? (
+                ) : showSymbolOnly ? (
                   <text
                     x={width / 2}
                     y={height / 2}
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill="#FFFFFF"
-                    fontSize={Math.max(9, Math.min(12, Math.round(width / 4)))}
+                    fontSize={Math.max(10, Math.min(13, Math.round(width / 3.8)))}
                     fontWeight="800"
-                    className="pointer-events-none"
+                    className="pointer-events-none font-heading"
                     style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
                   >
                     {item.symbol}
