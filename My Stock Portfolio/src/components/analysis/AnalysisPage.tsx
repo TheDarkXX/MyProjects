@@ -76,7 +76,7 @@ export const AnalysisPage = () => {
             </span>
           </div>
           <p className="text-[#CBD5E1] text-sm mt-1">
-            Deep dive into your portfolio allocation, sector treemap, and performance metrics across timeframes.
+            Deep dive into your portfolio allocation, distribution, cost basis, and interactive treemap.
           </p>
         </div>
 
@@ -104,7 +104,18 @@ export const AnalysisPage = () => {
         </div>
       </div>
 
-      {/* 2. Full-Width Finviz Interactive Treemap / Heatmap (No 800px constraint, 100% container width) */}
+      {/* Row 1: Allocation Pie Chart & Distribution Pie Chart (2 Columns Grid) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AllocationPieChart holdings={holdings} timeRange={timeRange} />
+        <DistributionPieChart holdings={holdings} />
+      </div>
+
+      {/* Row 2: Cost vs Market Value Bars (Full Width) */}
+      <div className="w-full">
+        <CostValueBars holdings={holdings} timeRange={timeRange} />
+      </div>
+
+      {/* Row 3: Finviz Interactive Treemap / Heatmap (Full Width - Moved to Row 3) */}
       <div className="w-full">
         <Heatmap 
           holdings={holdings} 
@@ -113,18 +124,7 @@ export const AnalysisPage = () => {
         />
       </div>
 
-      {/* 3. Allocation & Distribution Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AllocationPieChart holdings={holdings} />
-        <DistributionPieChart holdings={holdings} />
-      </div>
-
-      {/* 4. Cost vs Market Value Bars */}
-      <div className="w-full">
-        <CostValueBars holdings={holdings} />
-      </div>
-
-      {/* 5. Top & Bottom Performers (Dynamically synchronized with the active Timeframe) */}
+      {/* Row 4: Top & Bottom Performers (Dynamically synchronized with the active Timeframe) */}
       <PerformersTable 
         holdings={holdings} 
         formatCurrency={formatCurrency} 

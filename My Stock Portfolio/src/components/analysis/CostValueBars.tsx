@@ -1,65 +1,175 @@
-import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import React, { useState, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { Holding } from '../../hooks/useHoldings';
+import { useUiStore } from '../../stores/uiStore';
+import { usePriceStore } from '../../stores/priceStore';
+import { HeatmapTimeRange } from './Heatmap';
+import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Props {
   holdings: Holding[];
+  timeRange?: HeatmapTimeRange;
 }
 
 type SortType = 'Value' | 'Cost' | 'Profit $' | 'Profit %' | 'A-Z';
 
-export const CostValueBars: React.FC<Props> = ({ holdings }) => {
+export const CostValueBars: React.FC<Props> = ({ holdings, timeRange = '1D' }) => {
   const [sortBy, setSortBy] = useState<SortType>('Value');
 
-  const data = React.useMemo(() => {
-    let result = holdings
+  const { currency } = useUiStore();
+  const { exchangeRate, historical } = usePriceStore();
+
+  const formatCurrency = (val: number) => {
+    if (currency === 'THB' && exchangeRate) {
+      const converted = Math.round(val * exchangeRate);
+      return `฿${converted.toLocaleString('th-TH')}`;
+    }
+    return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatShortAxis = (val: number) => {
+    const symbol = currency === 'THB' ? '฿' : '$';
+    const rate = currency === 'THB' && exchangeRate ? exchangeRate : 1;
+    const converted = val * rate;
+
+    if (Math.abs(converted) >= 1_000_000) {
+      return `${symbol}${(converted / 1_000_000).toFixed(1)}M`;
+    }
+    if (Math.abs(converted) >= 1_000) {
+      return `${symbol}${Math.round(converted / 1_000)}k`;
+    }
+    return `${symbol}${Math.round(converted)}`;
+  };
+
+  const getStartDateForRange = (range: HeatmapTimeRange): string => {
+    const today = new Date();
+    switch (range) {
+      case '1D': today.setDate(today.getDate() - 1); break;
+      case '1W': today.setDate(today.getDate() - 7); break;
+      case '1M': today.setDate(today.getDate() - 30); break;
+      case '3M': today.setDate(today.getDate() - 90); break;
+      case 'YTD': return `${today.getFullYear()}-01-01`;
+      case '1Y': today.setFullYear(today.getFullYear() - 1); break;
+      case 'Total': default: return '2020-01-01';
+    }
+    return today.toISOString().split('T')[0];
+  };
+
+  const data = useMemo(() => {
+    const rate = currency === 'THB' && exchangeRate ? exchangeRate : 1;
+
+    let items = holdings
       .filter(h => h.currentValue > 0 || h.totalCost > 0)
-      .map(h => ({
-        name: h.symbol,
-        cost: h.totalCost,
-        value: h.currentValue,
-        profit: h.totalReturn,
-        profitPercent: h.totalReturnPercent
-      }));
+      .map(h => {
+        let periodProfit = h.dayReturn;
+        let periodProfitPercent = h.dayChangePercent;
+
+        if (timeRange === '1D') {
+          periodProfit = h.dayReturn;
+          periodProfitPercent = h.dayChangePercent;
+        } else if (timeRange === 'Total') {
+          periodProfit = h.totalReturn;
+          periodProfitPercent = h.totalReturnPercent;
+        } else {
+          const symbolHistory = historical[h.symbol];
+          if (symbolHistory && symbolHistory.length > 0) {
+            const startDate = getStartDateForRange(timeRange);
+            const sorted = [...symbolHistory].sort((a, b) => a.date.localeCompare(b.date));
+            let startPrice = sorted[0].price;
+            for (let i = sorted.length - 1; i >= 0; i--) {
+              if (sorted[i].date <= startDate) {
+                startPrice = sorted[i].price;
+                break;
+              }
+            }
+            const endPrice = h.lastPrice || sorted[sorted.length - 1].price;
+            if (startPrice > 0 && endPrice > 0) {
+              periodProfitPercent = ((endPrice - startPrice) / startPrice) * 100;
+              periodProfit = (endPrice - startPrice) * h.quantity;
+            }
+          }
+        }
+
+        const convertedCost = currency === 'THB' ? Math.round(h.totalCost * rate) : h.totalCost;
+        const convertedValue = currency === 'THB' ? Math.round(h.currentValue * rate) : h.currentValue;
+
+        return {
+          name: h.symbol,
+          cost: convertedCost,
+          value: convertedValue,
+          rawCost: h.totalCost,
+          rawValue: h.currentValue,
+          profit: periodProfit,
+          profitPercent: periodProfitPercent,
+          totalProfit: h.totalReturn,
+          totalProfitPercent: h.totalReturnPercent,
+          shares: h.quantity,
+          avgCost: h.avgCost
+        };
+      });
 
     switch (sortBy) {
       case 'Value':
-        result.sort((a, b) => b.value - a.value);
+        items.sort((a, b) => b.rawValue - a.rawValue);
         break;
       case 'Cost':
-        result.sort((a, b) => b.cost - a.cost);
+        items.sort((a, b) => b.rawCost - a.rawCost);
         break;
       case 'Profit $':
-        result.sort((a, b) => b.profit - a.profit);
+        items.sort((a, b) => b.profit - a.profit);
         break;
       case 'Profit %':
-        result.sort((a, b) => b.profitPercent - a.profitPercent);
+        items.sort((a, b) => b.profitPercent - a.profitPercent);
         break;
       case 'A-Z':
-        result.sort((a, b) => a.name.localeCompare(b.name));
+        items.sort((a, b) => a.name.localeCompare(b.name));
         break;
     }
 
-    return result.slice(0, 15); // Show top 15 max to avoid crowding
-  }, [holdings, sortBy]);
+    return items.slice(0, 16);
+  }, [holdings, sortBy, timeRange, currency, exchangeRate, historical]);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  // Rich Glassmorphic Custom Tooltip
+  const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const cost = payload[0].value;
-      const value = payload[1].value;
-      const profit = value - cost;
-      const percent = cost > 0 ? (profit / cost) * 100 : 0;
-      
+      const item = payload[0].payload;
+      const isPeriodPositive = item.profit >= 0;
+      const isTotalPositive = item.totalProfit >= 0;
+
       return (
-        <div className="bg-[#111418] border border-[#2A2E45] p-3 rounded-xl shadow-xl">
-          <p className="font-bold text-white mb-2 text-lg">{label}</p>
-          <div className="space-y-1 text-sm">
-            <p className="text-[#9898C8]">Cost Basis: <span className="text-white">${cost.toFixed(2)}</span></p>
-            <p className="text-[#9898C8]">Current Value: <span className="text-white">${value.toFixed(2)}</span></p>
-            <p className="text-[#9898C8]">Profit: <span className={profit >= 0 ? "text-[#FC2D79]" : "text-[#823AFD]"}>
-              {profit >= 0 ? '+' : ''}${profit.toFixed(2)} ({percent.toFixed(2)}%)
-            </span></p>
+        <div className="bg-[#0F111A]/95 backdrop-blur-xl border border-[#2A2E45] p-4 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-xs text-white min-w-[240px]">
+          <div className="flex justify-between items-center pb-2.5 border-b border-[#2A2E45] mb-2.5">
+            <span className="font-black text-white text-base tracking-tight">{item.name}</span>
+            <span className="text-[11px] text-[#9898C8]">
+              {item.shares?.toFixed(4)} shares @ {formatCurrency(item.avgCost || 0)}
+            </span>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center">
+              <span className="text-[#9898C8]">Cost Basis:</span>
+              <span className="font-semibold text-white tabular-nums">{formatCurrency(item.rawCost)}</span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-[#9898C8]">Current Value:</span>
+              <span className="font-bold text-white tabular-nums">{formatCurrency(item.rawValue)}</span>
+            </div>
+
+            <div className="pt-2 border-t border-[#2A2E45]/60 flex justify-between items-center">
+              <span className="text-[#9898C8]">{timeRange} Return:</span>
+              <span className={clsx("font-bold tabular-nums", isPeriodPositive ? "text-emerald-400" : "text-rose-400")}>
+                {isPeriodPositive ? '+' : ''}{formatCurrency(item.profit)} ({isPeriodPositive ? '+' : ''}{item.profitPercent.toFixed(1)}%)
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-[#9898C8]">Total Return:</span>
+              <span className={clsx("font-bold tabular-nums", isTotalPositive ? "text-emerald-400" : "text-rose-400")}>
+                {isTotalPositive ? '+' : ''}{formatCurrency(item.totalProfit)} ({isTotalPositive ? '+' : ''}{item.totalProfitPercent.toFixed(1)}%)
+              </span>
+            </div>
           </div>
         </div>
       );
@@ -68,43 +178,112 @@ export const CostValueBars: React.FC<Props> = ({ holdings }) => {
   };
 
   return (
-    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 min-h-[450px] flex flex-col">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold text-white">Cost vs Value</h3>
-        <div className="flex gap-2 bg-[#1A1D2D] p-1 rounded-lg">
+    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col min-h-[460px]">
+      {/* Header Bar: Title + Sort Pills */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#10B981]/20 to-[#38BDF8]/20 border border-[#10B981]/30 flex items-center justify-center">
+            <BarChart3 className="w-4 h-4 text-[#10B981]" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white tracking-tight">Cost vs Market Value</h3>
+            <p className="text-xs text-[#9898C8]">Compare invested capital against current holding worth</p>
+          </div>
+        </div>
+
+        {/* Sort Controls */}
+        <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-xl gap-1 overflow-x-auto custom-scrollbar">
+          <span className="text-[11px] font-bold text-[#9898C8] px-2 uppercase">Sort By:</span>
           {(['Value', 'Cost', 'Profit $', 'Profit %', 'A-Z'] as SortType[]).map((type) => (
             <button
               key={type}
               onClick={() => setSortBy(type)}
               className={clsx(
-                "px-3 py-1 rounded-md text-xs font-medium transition-colors",
-                sortBy === type ? "bg-[#823AFD] text-white" : "text-[#9898C8] hover:text-white"
+                "px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap",
+                sortBy === type 
+                  ? "bg-gradient-to-r from-[#10B981] to-[#38BDF8] text-[#0F111A] font-black shadow-md" 
+                  : "text-[#CBD5E1] hover:text-white hover:bg-white/5"
               )}
             >
-              {type}
+              {type === 'Profit $' ? `Profit $ (${timeRange})` : type === 'Profit %' ? `Profit % (${timeRange})` : type}
             </button>
           ))}
         </div>
       </div>
-      
-      <div className="flex-1 w-full mt-4">
-        {data.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2A2E45" vertical={false} />
-              <XAxis dataKey="name" stroke="#CBD5E1" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#CBD5E1' }} />
-              <YAxis stroke="#CBD5E1" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#CBD5E1' }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#1A1D2D', opacity: 0.4 }} />
-              <Legend wrapperStyle={{ paddingTop: '20px' }} />
-              <Bar dataKey="cost" name="Cost Basis" fill="#FD5514" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="value" name="Current Value" fill="#823AFD" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-[#9898C8]">
-            No data available
-          </div>
-        )}
+
+      {/* SVG Dual Gradient Definitions */}
+      <div className="flex-1 w-full h-[340px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 25 }}>
+            <defs>
+              {/* Cost Basis Bar Gradient */}
+              <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#818CF8" stopOpacity={0.85} />
+                <stop offset="100%" stopColor="#4F46E5" stopOpacity={0.65} />
+              </linearGradient>
+
+              {/* Profit Gain Bar Gradient */}
+              <linearGradient id="gainGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#34D399" stopOpacity={0.95} />
+                <stop offset="100%" stopColor="#059669" stopOpacity={0.75} />
+              </linearGradient>
+
+              {/* Profit Loss Bar Gradient */}
+              <linearGradient id="lossGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FB7185" stopOpacity={0.95} />
+                <stop offset="100%" stopColor="#E11D48" stopOpacity={0.75} />
+              </linearGradient>
+            </defs>
+
+            <CartesianGrid strokeDasharray="3 3" stroke="#1F2233" vertical={false} />
+            <XAxis 
+              dataKey="name" 
+              stroke="#9898C8" 
+              tick={{ fill: '#E2E8F0', fontSize: 11, fontWeight: 700 }}
+              tickLine={false}
+              axisLine={{ stroke: '#2A2E45' }}
+            />
+            <YAxis 
+              stroke="#9898C8" 
+              tickFormatter={formatShortAxis}
+              tick={{ fill: '#9898C8', fontSize: 11 }}
+              tickLine={false}
+              axisLine={{ stroke: '#2A2E45' }}
+              width={55}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }} />
+            <Legend 
+              verticalAlign="top" 
+              align="right" 
+              wrapperStyle={{ paddingBottom: '16px', fontSize: '11px', fontWeight: 'bold' }}
+              formatter={(val) => <span className="text-[#E2E8F0] font-semibold">{val}</span>}
+            />
+
+            {/* Cost Basis Bar */}
+            <Bar 
+              dataKey="cost" 
+              name="Cost Basis" 
+              fill="url(#costGradient)" 
+              radius={[6, 6, 0, 0]} 
+              maxBarSize={32}
+            />
+
+            {/* Market Value Bar (Dynamic Color per holding) */}
+            <Bar 
+              dataKey="value" 
+              name="Current Value" 
+              radius={[6, 6, 0, 0]} 
+              maxBarSize={32}
+            >
+              {data.map((entry, index) => (
+                <Cell 
+                  key={`cell-val-${index}`} 
+                  fill={entry.profit >= 0 ? "url(#gainGradient)" : "url(#lossGradient)"} 
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

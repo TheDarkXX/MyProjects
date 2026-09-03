@@ -1,29 +1,90 @@
-import React, { useState } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import React, { useState, useMemo } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from 'recharts';
 import { Holding } from '../../hooks/useHoldings';
 import { useTransactionStore } from '../../stores/transactionStore';
+import { useUiStore } from '../../stores/uiStore';
+import { usePriceStore } from '../../stores/priceStore';
+import { Layers } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Props {
   holdings: Holding[];
 }
 
-const COLORS = ['#3B82F6', '#14B8A6', '#F97316', '#8B5CF6', '#EC4899', '#F43F5E', '#EAB308', '#22C55E', '#6366F1', '#D946EF'];
+// Built-in Comprehensive Sector Dictionary for standard US Stocks & Dime holdings
+const SECTOR_MAP: Record<string, string> = {
+  META: 'Communication Services',
+  GOOGL: 'Communication Services',
+  GOOG: 'Communication Services',
+  NFLX: 'Communication Services',
+  DIS: 'Communication Services',
+  TMUS: 'Communication Services',
+  AAPL: 'Technology',
+  MSFT: 'Technology',
+  NVDA: 'Technology',
+  CRWD: 'Technology',
+  RBRK: 'Technology',
+  CRWV: 'Technology',
+  ASTS: 'Technology',
+  AMD: 'Technology',
+  QCOM: 'Technology',
+  AVGO: 'Technology',
+  PLTR: 'Technology',
+  ISRG: 'Healthcare',
+  HIMS: 'Healthcare',
+  LLY: 'Healthcare',
+  UNH: 'Healthcare',
+  JNJ: 'Healthcare',
+  MELI: 'Consumer Cyclical',
+  AMZN: 'Consumer Cyclical',
+  TSLA: 'Consumer Cyclical',
+  HD: 'Consumer Cyclical',
+  RCL: 'Consumer Cyclical',
+  WMT: 'Consumer Defensive',
+  COST: 'Consumer Defensive',
+  PG: 'Consumer Defensive',
+  JPM: 'Financials',
+  BAC: 'Financials',
+  V: 'Financials',
+  MA: 'Financials',
+  BRK: 'Financials',
+  'BRK.B': 'Financials',
+  RKLB: 'Industrials',
+  CAT: 'Industrials',
+  UBER: 'Industrials',
+  XOM: 'Energy',
+  CVX: 'Energy',
+  SCHG: 'Index & ETF'
+};
+
+const PALETTE = [
+  '#38BDF8', '#823AFD', '#FC2D79', '#00C49F', '#F59E0B',
+  '#EC4899', '#6366F1', '#14B8A6', '#F43F5E', '#A78BFA'
+];
 
 export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
-  const [mode, setMode] = useState<'Asset' | 'Stock Type'>('Asset');
-  const { transactions } = useTransactionStore();
+  const [mode, setMode] = useState<'Sector' | 'Asset' | 'Type'>('Sector');
+  const [activeIndex, setActiveIndex] = useState<number>(0);
 
-  const data = React.useMemo(() => {
-    // Map each symbol to its latest asset/stock_type based on transactions
-    const metadataMap: Record<string, { asset: string; stock_type: string }> = {};
-    
-    [...transactions]
+  const { transactions } = useTransactionStore();
+  const { currency } = useUiStore();
+  const { exchangeRate } = usePriceStore();
+
+  const formatCurrency = (val: number) => {
+    if (currency === 'THB' && exchangeRate) {
+      const converted = Math.round(val * exchangeRate);
+      return `฿${converted.toLocaleString('th-TH')}`;
+    }
+    return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const data = useMemo(() => {
+    const txMetaMap: Record<string, { asset: string; stock_type: string }> = {};
+    transactions
       .filter(t => t.status === 'CONFIRMED' && t.type === 'BUY')
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .forEach(tx => {
         if (tx.symbol) {
-          metadataMap[tx.symbol] = {
+          txMetaMap[tx.symbol] = {
             asset: tx.asset || 'Stock',
             stock_type: tx.stock_type || 'Unknown'
           };
@@ -31,87 +92,215 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
       });
 
     const groups: Record<string, number> = {};
+    let totalPortfolioVal = 0;
 
     holdings.forEach(h => {
       if (h.currentValue <= 0) return;
-      const meta = metadataMap[h.symbol] || { asset: 'Stock', stock_type: 'Unknown' };
-      const key = mode === 'Asset' ? meta.asset : meta.stock_type;
+      totalPortfolioVal += h.currentValue;
+
+      let key = 'Other';
+      if (mode === 'Sector') {
+        key = SECTOR_MAP[h.symbol] || 'Other / Diversified';
+      } else if (mode === 'Asset') {
+        key = txMetaMap[h.symbol]?.asset || 'Stock';
+      } else {
+        key = txMetaMap[h.symbol]?.stock_type || 'Unknown';
+      }
+
       groups[key] = (groups[key] || 0) + h.currentValue;
     });
 
-    let result = Object.entries(groups).map(([name, value]) => ({ name, value }));
+    const result = Object.entries(groups).map(([name, value]) => ({
+      name,
+      value,
+      percent: totalPortfolioVal > 0 ? (value / totalPortfolioVal) * 100 : 0,
+      color: ''
+    }));
+
     result.sort((a, b) => b.value - a.value);
 
     return result.map((d, i) => ({
       ...d,
-      color: COLORS[i % COLORS.length]
+      color: PALETTE[i % PALETTE.length]
     }));
   }, [holdings, transactions, mode]);
 
+  const totalPortfolioValue = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
+  const activeItem = data[activeIndex] || data[0] || null;
+
+  const renderActiveShape = (props: any) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+    return (
+      <g>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 8}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          style={{ filter: `drop-shadow(0 0 10px ${fill}99)` }}
+        />
+        <Sector
+          cx={cx}
+          cy={cy}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          innerRadius={outerRadius + 11}
+          outerRadius={outerRadius + 14}
+          fill={fill}
+          opacity={0.8}
+        />
+      </g>
+    );
+  };
+
   return (
-    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 h-[400px] flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold text-white">Distribution</h3>
-        <div className="flex bg-[#1A1D2D] rounded-lg p-1">
-          <button
-            onClick={() => setMode('Asset')}
-            className={clsx("px-3 py-1 rounded-md text-sm font-medium transition-colors", mode === 'Asset' ? "bg-[#823AFD] text-white" : "text-[#9898C8] hover:text-white")}
-          >
-            Asset
-          </button>
-          <button
-            onClick={() => setMode('Stock Type')}
-            className={clsx("px-3 py-1 rounded-md text-sm font-medium transition-colors", mode === 'Stock Type' ? "bg-[#823AFD] text-white" : "text-[#9898C8] hover:text-white")}
-          >
-            Type
-          </button>
+    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col h-[460px]">
+      {/* Header: Title + Mode Toggle (Sector / Asset / Type) */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#38BDF8]/20 to-[#823AFD]/20 border border-[#38BDF8]/30 flex items-center justify-center">
+            <Layers className="w-4 h-4 text-[#38BDF8]" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white tracking-tight">Distribution</h3>
+            <p className="text-xs text-[#9898C8]">Portfolio Concentration by {mode}</p>
+          </div>
+        </div>
+
+        {/* Mode Selector */}
+        <div className="flex bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-xl gap-1">
+          {(['Sector', 'Asset', 'Type'] as const).map(m => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); setActiveIndex(0); }}
+              className={clsx(
+                "px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                mode === m ? "bg-[#38BDF8] text-[#0F111A] shadow-md font-black" : "text-[#CBD5E1] hover:text-white"
+              )}
+            >
+              {m}
+            </button>
+          ))}
         </div>
       </div>
-      
-      <div className="flex-1 flex items-center">
-        {data.length > 0 ? (
-          <>
-            <div className="w-1/2 h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    stroke="#111418"
-                    strokeWidth={2}
+
+      {data.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-[#9898C8] text-sm">
+          No distribution data available
+        </div>
+      ) : (
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-center min-h-0">
+          {/* Left: Glowing Doughnut with Total/Hover Center Stat (5 cols) */}
+          <div className="md:col-span-5 h-full relative flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  activeIndex={activeIndex}
+                  activeShape={renderActiveShape}
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="64%"
+                  outerRadius="88%"
+                  dataKey="value"
+                  onMouseEnter={(_, index) => setActiveIndex(index)}
+                  paddingAngle={2}
+                >
+                  {data.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.color} 
+                      stroke="#0F111A" 
+                      strokeWidth={2} 
+                      className="cursor-pointer transition-all duration-300"
+                    />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Center Stat Display */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
+              {activeItem ? (
+                <>
+                  <span className="text-sm font-bold text-white tracking-tight truncate max-w-[120px]">
+                    {activeItem.name}
+                  </span>
+                  <span className="text-xl font-black text-[#38BDF8] mt-0.5">
+                    {activeItem.percent.toFixed(1)}%
+                  </span>
+                  <span className="text-[11px] text-[#9898C8] font-semibold tabular-nums mt-0.5">
+                    {formatCurrency(activeItem.value)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs text-[#9898C8] font-semibold">Total</span>
+                  <span className="text-base font-black text-white tabular-nums">
+                    {formatCurrency(totalPortfolioValue)}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Interactive Legend Grid (7 cols) */}
+          <div className="md:col-span-7 h-full flex flex-col min-h-0">
+            <div className="grid grid-cols-12 text-[11px] font-bold text-[#9898C8] uppercase tracking-wider px-3 pb-2 border-b border-[#2A2E45]/60">
+              <span className="col-span-6">{mode}</span>
+              <span className="col-span-4 text-right">Value</span>
+              <span className="col-span-2 text-right">Share</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 pr-1 pt-1">
+              {data.map((item, idx) => {
+                const isSelected = activeIndex === idx;
+
+                return (
+                  <div
+                    key={item.name}
+                    onMouseEnter={() => setActiveIndex(idx)}
+                    className={clsx(
+                      "grid grid-cols-12 items-center px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer group select-none relative overflow-hidden",
+                      isSelected 
+                        ? "bg-[#1A1D2D] border border-[#38BDF8]/40 shadow-[0_2px_12px_rgba(56,189,248,0.15)]" 
+                        : "hover:bg-[#1A1D2D]/60 border border-transparent"
+                    )}
                   >
-                    {data.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#111418', borderColor: '#2A2E45', borderRadius: '12px' }}
-                    itemStyle={{ color: '#fff' }}
-                    formatter={(value: number) => `$${value.toFixed(2)}`}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                    {/* Subtle Progress Bar in Background */}
+                    <div 
+                      className="absolute left-0 bottom-0 top-0 opacity-10 pointer-events-none rounded-xl transition-all"
+                      style={{ width: `${item.percent}%`, backgroundColor: item.color }}
+                    />
+
+                    {/* Group Name + Indicator (6 cols) */}
+                    <div className="col-span-6 flex items-center gap-2 min-w-0 relative z-10">
+                      <span 
+                        className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125" 
+                        style={{ backgroundColor: item.color, boxShadow: isSelected ? `0 0 8px ${item.color}` : 'none' }}
+                      />
+                      <span className="font-bold text-white truncate">{item.name}</span>
+                    </div>
+
+                    {/* Total Value (4 cols) */}
+                    <div className="col-span-4 text-right font-semibold text-[#E2E8F0] tabular-nums relative z-10">
+                      {formatCurrency(item.value)}
+                    </div>
+
+                    {/* % Share (2 cols) */}
+                    <div className="col-span-2 text-right font-bold text-[#38BDF8] tabular-nums relative z-10">
+                      {item.percent.toFixed(1)}%
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            
-            <div className="w-1/2 h-full flex flex-col justify-center gap-3">
-              {data.map((entry) => (
-                <div key={entry.name} className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-md" style={{ backgroundColor: entry.color }}></div>
-                  <div className="flex-1 text-sm font-medium text-white">{entry.name}</div>
-                  <div className="text-sm text-[#9898C8]">${entry.value.toFixed(0)}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="w-full text-center text-[#9898C8]">No distribution data available</div>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
