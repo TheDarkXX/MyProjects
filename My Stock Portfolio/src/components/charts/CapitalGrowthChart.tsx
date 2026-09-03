@@ -221,22 +221,22 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
           <span className="text-2xl font-black text-white tabular-nums tracking-tight mt-1 block">
             {formatMoney(latestInvested)}
           </span>
-          <span className="text-[11px] text-rose-400/80 block mt-0.5">รวมเงินเติมทั้งหมด หักเงินถอน (เส้นประแดง)</span>
+          <span className="text-sm text-rose-300 font-medium block mt-1">รวมเงินเติมทั้งหมด หักเงินถอน (เส้นประแดง)</span>
         </div>
 
         <div className="bg-[#161926] p-4 rounded-2xl border border-[#2A2E45]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#9898C8]">Current Portfolio Value (มูลค่าปัจจุบัน)</span>
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"></span>
+            <span className="text-xs font-semibold text-[#CBD5E1]">Current Portfolio Value (มูลค่าปัจจุบัน)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"></span>
           </div>
           <span className="text-2xl font-black text-amber-400 tabular-nums tracking-tight mt-1 block">
             {formatMoney(latestValue)}
           </span>
-          <span className="text-[11px] text-amber-300/80 font-medium block mt-0.5">สินทรัพย์ + เงินสดคงเหลือ (เส้นสีทอง)</span>
+          <span className="text-sm text-amber-300 font-medium block mt-1">สินทรัพย์ + เงินสดคงเหลือ (เส้นสีทอง)</span>
         </div>
 
         <div className="bg-[#161926] p-4 rounded-2xl border border-[#2A2E45]">
-          <span className="text-xs font-semibold text-[#9898C8] block">Organic Wealth Created (กำไรทบต้นเพียวๆ)</span>
+          <span className="text-xs font-semibold text-[#CBD5E1] block">Organic Wealth Created (กำไรทบต้นเพียวๆ)</span>
           <div className="flex items-center gap-2 mt-1">
             <span className={clsx("text-2xl font-black tabular-nums tracking-tight", organicGain >= 0 ? "text-emerald-400" : "text-rose-400")}>
               {organicGain >= 0 ? '+' : ''}{formatMoney(organicGain)}
@@ -245,13 +245,13 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
               {organicGain >= 0 ? '+' : ''}{organicGainPct.toFixed(1)}%
             </span>
           </div>
-          <span className="text-[11px] text-[#9898C8] block mt-0.5">ส่วนต่างความมั่งคั่งจากพลังตลาด</span>
+          <span className="text-sm text-slate-300 font-medium block mt-1">ส่วนต่างความมั่งคั่งจากพลังตลาด</span>
         </div>
       </div>
 
       {/* Chart Header & Mini Legend */}
       <div className="flex items-center justify-between pt-2 px-1">
-        <div className="flex items-center gap-5 text-xs font-semibold">
+        <div className="flex items-center gap-5 text-sm font-semibold">
           <div className="flex items-center gap-2">
             <span className="w-3.5 h-1.5 rounded-full bg-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.8)]"></span>
             <span className="text-amber-300 font-bold">Portfolio Value (มูลค่าพอร์ต)</span>
@@ -261,7 +261,7 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
             <span className="text-rose-400 font-bold">Net Invested (เงินต้นสุทธิ)</span>
           </div>
         </div>
-        <span className="text-[11px] text-[#9898C8] hidden sm:inline-block">
+        <span className="text-sm text-slate-300 font-medium hidden sm:inline-block">
           ✨ พื้นที่ต่างระดับสีทอง = Organic Wealth (กำไรทบต้นเพียวๆ)
         </span>
       </div>
