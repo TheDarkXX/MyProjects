@@ -352,7 +352,12 @@ export const TransactionTable = () => {
               ) : (
                 filteredTransactions.map((tx) => {
                   const dateStr = new Date(tx.date).toLocaleDateString();
-                  const total = tx.amount * (tx.price || 1) + (tx.fee || 0);
+                  const isCashIn = tx.type === 'DIVIDEND' || tx.type === 'INTEREST' || tx.type === 'DEPOSIT';
+                  const total = isCashIn
+                    ? Math.max(0, (tx.amount || 0) - (tx.fee || 0))
+                    : tx.type === 'SELL'
+                    ? Math.max(0, (tx.amount * (tx.price || 0)) - (tx.fee || 0))
+                    : (tx.amount * (tx.price || 1)) + (tx.fee || 0);
                   const displaySymbol = tx.symbol || tx.type.slice(0, 3);
                   const isSelected = selectedIds.has(tx.id);
                   const sector = resolveSector(tx);

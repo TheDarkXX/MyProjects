@@ -33,10 +33,16 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload: Partial<Transaction> = {
+        ...formData,
+        price: isCashFlow ? 1 : Number(formData.price) || 0,
+        amount: Number(formData.amount) || 0,
+        fee: Number(formData.fee) || 0,
+      };
       if (transaction?.id) {
-        await updateTransaction(transaction.id, formData);
+        await updateTransaction(transaction.id, payload);
       } else {
-        await addTransaction(formData);
+        await addTransaction(payload);
       }
       onClose();
     } catch (error) {
