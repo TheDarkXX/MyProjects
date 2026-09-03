@@ -163,11 +163,11 @@ export const Header = () => {
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-[#94A3B8] font-medium tracking-wide">
+              <span className="text-xs text-[#CBD5E1] font-medium tracking-wide">
                 Yahoo API
               </span>
-              <span className="w-1 h-1 rounded-full bg-[#334155]"></span>
-              <span className="text-[10px] text-[#94A3B8] font-mono tracking-tight">
+              <span className="w-1 h-1 rounded-full bg-[#475569]"></span>
+              <span className="text-xs text-[#CBD5E1] font-mono tracking-tight font-semibold">
                 {lastUpdated 
                   ? lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
                   : 'Syncing...'}
