@@ -30,7 +30,7 @@ export const SmartRebalancePage: React.FC = () => {
     if (holdings.length > 0) {
       const equalShare = Number((100 / holdings.length).toFixed(1));
       holdings.forEach(h => {
-        init[h.symbol] = h.portfolioPercent || equalShare;
+        init[h.symbol] = h.weightPercent || equalShare;
       });
     }
     return init;
@@ -120,7 +120,7 @@ export const SmartRebalancePage: React.FC = () => {
         stockType: h.stockType || 'Core Compounder',
         price: h.lastPrice || h.avgCost || 1,
         currentQty: h.quantity,
-        currentWeight: h.portfolioPercent || 0,
+        currentWeight: h.weightPercent || 0,
         targetWeight: tgtPct,
         currentVal,
         targetVal: tgtVal,
@@ -166,7 +166,7 @@ export const SmartRebalancePage: React.FC = () => {
   // MODE 2: Target vs Actual Delta Matrix
   const matrixAnalysis = useMemo(() => {
     return sortedHoldings.map(h => {
-      const actualPct = h.portfolioPercent || 0;
+      const actualPct = h.weightPercent || 0;
       const targetPct = customTargets[h.symbol] ?? actualPct;
       const deltaPct = actualPct - targetPct; // Positive = Overweight, Negative = Underweight
       const targetVal = (targetPct / 100) * totalNetWorth;
@@ -618,7 +618,7 @@ export const SmartRebalancePage: React.FC = () => {
                 >
                   {sortedHoldings.map(h => (
                     <option key={h.symbol} value={h.symbol}>
-                      {h.symbol} (ถือ {h.quantity} หุ้น • {h.portfolioPercent.toFixed(1)}%)
+                      {h.symbol} (ถือ {h.quantity} หุ้น • {h.weightPercent?.toFixed(1) ?? '0.0'}%)
                     </option>
                   ))}
                 </select>
@@ -662,7 +662,7 @@ export const SmartRebalancePage: React.FC = () => {
                 >
                   {sortedHoldings.filter(h => h.symbol !== trimSymbol).map(h => (
                     <option key={h.symbol} value={h.symbol}>
-                      {h.symbol} ({h.stockType} • {h.portfolioPercent.toFixed(1)}%)
+                      {h.symbol} ({h.stockType} • {h.weightPercent?.toFixed(1) ?? '0.0'}%)
                     </option>
                   ))}
                 </select>
