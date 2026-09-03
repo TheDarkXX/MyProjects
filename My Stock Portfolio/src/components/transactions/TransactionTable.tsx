@@ -45,8 +45,8 @@ export const getStrategyBadgeStyle = (strategy: string): string => {
       // เขียวทึบเข้ม (Deep Emerald Green)
       return 'bg-[#15803d] text-white shadow-[0_2px_8px_rgba(21,128,61,0.45)]';
     case 'Small Cap':
-      // เหลืองทองลึก (Deep Amber / Golden Yellow)
-      return 'bg-[#b45309] text-white shadow-[0_2px_8px_rgba(180,83,9,0.45)]';
+      // เหลืองทองอำพันสว่างขึ้น (Bright Golden Yellow)
+      return 'bg-[#ca8a04] text-white shadow-[0_2px_8px_rgba(202,138,4,0.45)]';
     case 'Dividend Growth':
       // น้ำตาลเข้ม / บรอนซ์ (Deep Brown / Bronze)
       return 'bg-[#854d0e] text-white shadow-[0_2px_8px_rgba(133,77,14,0.45)]';
