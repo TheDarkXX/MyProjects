@@ -12,7 +12,7 @@ interface UiState {
   setCurrency: (c: 'USD' | 'THB') => void;
 }
 
-const VALID_TABS = ['dashboard', 'analysis', 'performance', 'transactions', 'snapshots', 'planner', 'settings'];
+const VALID_TABS = ['dashboard', 'scorecard', 'analysis', 'performance', 'transactions', 'snapshots', 'planner', 'settings'];
 
 const getInitialTab = (): string => {
   if (typeof window !== 'undefined') {

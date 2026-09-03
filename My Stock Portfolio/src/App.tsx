@@ -10,6 +10,7 @@ import { TransactionTable } from './components/transactions/TransactionTable';
 import { PortfolioList } from './components/portfolio/PortfolioList';
 import { SettingPage } from './components/settings/SettingPage';
 import PerformanceChartPage from './components/PerformanceChartPage';
+import { ScorecardPage } from './components/scorecard/ScorecardPage';
 
 // Temporary placeholder components until Phase 5 UI Revamp
 const Login = () => {
@@ -54,12 +55,13 @@ const MainLayout = () => {
         <Header />
         <main className="flex-1 overflow-y-auto p-8 scroll-smooth">
           {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'scorecard' && <ScorecardPage />}
           {activeTab === 'analysis' && <AnalysisPage />}
           {activeTab === 'performance' && <PerformanceChartPage />}
           {activeTab === 'transactions' && <TransactionTable />}
           {activeTab === 'portfolios' && <PortfolioList />}
           {activeTab === 'settings' && <SettingPage />}
-          {activeTab !== 'dashboard' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
+          {activeTab !== 'dashboard' && activeTab !== 'scorecard' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
             <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-8 min-h-[500px] flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
               <p className="text-[#9898C8] text-lg font-medium">
                 {activeTab} module is under construction.

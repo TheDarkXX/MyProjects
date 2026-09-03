@@ -91,6 +91,7 @@ export interface HistoricalDataPoint {
   date: string;
   portfolioValue: number;
   spyPrice: number;
+  qqqPrice?: number;
   schgPrice: number;
   goldPrice?: number;
   btcPrice?: number;
