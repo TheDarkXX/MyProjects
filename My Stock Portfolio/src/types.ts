@@ -92,6 +92,8 @@ export interface HistoricalDataPoint {
   portfolioValue: number;
   spyPrice: number;
   schgPrice: number;
+  goldPrice?: number;
+  btcPrice?: number;
 }
 
 export interface DailyPortfolioSnapshot {

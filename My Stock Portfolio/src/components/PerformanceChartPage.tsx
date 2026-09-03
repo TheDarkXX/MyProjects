@@ -91,6 +91,8 @@ interface ChartDataPoint {
     'My Portfolio'?: number;
     'S&P 500'?: number;
     'SCHG'?: number;
+    'Gold'?: number;
+    'Bitcoin'?: number;
 }
 
 const getStartDateForRange = (range: TimeRange, allData: HistoricalDataPoint[]): string => {
@@ -145,7 +147,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         if (portfolioId) fetchTransactions(portfolioId);
     }, [fetchTransactions]);
     const [timeRange, setTimeRange] = useState<TimeRange>('3M');
-    const [visibleLines, setVisibleLines] = useState({ 'My Portfolio': true, 'S&P 500': true, 'SCHG': true });
+    const [visibleLines, setVisibleLines] = useState({ 'My Portfolio': true, 'S&P 500': true, 'SCHG': true, 'Gold': true, 'Bitcoin': true });
     
     const [fullPeriodData, setFullPeriodData] = useState<ChartDataPoint[]>([]);
     const [displayData, setDisplayData] = useState<ChartDataPoint[]>([]);
@@ -183,7 +185,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                 
                 const uniqueSymbols = Array.from(new Set([
                     ...portfolioTxs.filter(t => t.asset !== 'Cash' && t.symbol && t.symbol !== 'CASH').map(t => t.symbol),
-                    'SPY', 'SCHG'
+                    'SPY', 'SCHG', 'GLD', 'BTC-USD'
                 ]));
 
                 setFetchProgress(prev => ({ ...prev, [portfolioId]: { phase: 'fetching_api', progress: 50, details: { current: 1, total: 1 }, currentSymbol: 'All Symbols' } }));
@@ -312,6 +314,8 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                 portfolioValue: (cumulativeTwrFactor - 1) * 100,
                 spyPrice: findPrice(dateStr, 'SPY', lastKnownPrices['SPY']),
                 schgPrice: findPrice(dateStr, 'SCHG', lastKnownPrices['SCHG']),
+                goldPrice: findPrice(dateStr, 'GLD', lastKnownPrices['GLD']),
+                btcPrice: findPrice(dateStr, 'BTC-USD', lastKnownPrices['BTC-USD']),
             });
         }
         
@@ -425,6 +429,8 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                 portfolioValue: mwrPercent,
                 spyPrice: findPrice(dateStr, 'SPY', lastKnownPrices['SPY']),
                 schgPrice: findPrice(dateStr, 'SCHG', lastKnownPrices['SCHG']),
+                goldPrice: findPrice(dateStr, 'GLD', lastKnownPrices['GLD']),
+                btcPrice: findPrice(dateStr, 'BTC-USD', lastKnownPrices['BTC-USD']),
             });
         }
 
@@ -467,13 +473,24 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         const basePortfolioTwr = baseDataPoint.portfolioValue;
         const baseSpy = baseDataPoint.spyPrice;
         const baseSchg = baseDataPoint.schgPrice;
+        const baseGold = baseDataPoint.goldPrice;
+        const baseBtc = baseDataPoint.btcPrice;
 
         const processedData = dataInRange.map(d => {
             const portfolioReturn = (basePortfolioTwr !== undefined && d.portfolioValue !== undefined) ? (((1 + d.portfolioValue / 100) / (1 + basePortfolioTwr / 100)) - 1) * 100 : undefined;
             const spyReturn = (baseSpy && d.spyPrice) ? ((d.spyPrice / baseSpy) - 1) * 100 : undefined;
             const schgReturn = (baseSchg && d.schgPrice) ? ((d.schgPrice / baseSchg) - 1) * 100 : undefined;
+            const goldReturn = (baseGold && d.goldPrice) ? ((d.goldPrice / baseGold) - 1) * 100 : undefined;
+            const btcReturn = (baseBtc && d.btcPrice) ? ((d.btcPrice / baseBtc) - 1) * 100 : undefined;
 
-            return { date: d.date, 'My Portfolio': portfolioReturn, 'S&P 500': spyReturn, 'SCHG': schgReturn };
+            return { 
+                date: d.date, 
+                'My Portfolio': portfolioReturn, 
+                'S&P 500': spyReturn, 
+                'SCHG': schgReturn,
+                'Gold': goldReturn,
+                'Bitcoin': btcReturn,
+            };
         });
         setFullPeriodData(processedData);
         setDisplayData(processedData);
@@ -493,6 +510,8 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                 'My Portfolio': d['My Portfolio'] !== undefined && baseline['My Portfolio'] !== undefined ? d['My Portfolio'] - baseline['My Portfolio'] : undefined,
                 'S&P 500': d['S&P 500'] !== undefined && baseline['S&P 500'] !== undefined ? d['S&P 500'] - baseline['S&P 500'] : undefined,
                 'SCHG': d['SCHG'] !== undefined && baseline['SCHG'] !== undefined ? d['SCHG'] - baseline['SCHG'] : undefined,
+                'Gold': d['Gold'] !== undefined && baseline['Gold'] !== undefined ? d['Gold'] - baseline['Gold'] : undefined,
+                'Bitcoin': d['Bitcoin'] !== undefined && baseline['Bitcoin'] !== undefined ? d['Bitcoin'] - baseline['Bitcoin'] : undefined,
             }));
             setDisplayData(rebasedData);
         } else {
@@ -566,7 +585,13 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
 
     const resetZoom = () => setZoomDomain(null);
     const handleVisibilityChange = (line: keyof typeof visibleLines) => { setVisibleLines(prev => ({ ...prev, [line]: !prev[line] })); };
-    const lineColors = { 'My Portfolio': '#FFC300', 'S&P 500': '#9013FE', 'SCHG': '#F5A623' };
+    const lineColors = { 
+        'My Portfolio': '#FFC300', 
+        'S&P 500': '#9013FE', 
+        'SCHG': '#F5A623',
+        'Gold': '#EAB308',
+        'Bitcoin': '#F97316'
+    };
     const lastDataPoint = displayData.length > 0 ? displayData[displayData.length - 1] : null;
 
     const handleExportExcel = () => {
@@ -575,6 +600,8 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
             'My Portfolio (%)': d['My Portfolio']?.toFixed(4),
             'S&P 500 (%)': d['S&P 500']?.toFixed(4),
             'SCHG (%)': d['SCHG']?.toFixed(4),
+            'Gold (%)': d['Gold']?.toFixed(4),
+            'Bitcoin (%)': d['Bitcoin']?.toFixed(4),
         }));
         
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
