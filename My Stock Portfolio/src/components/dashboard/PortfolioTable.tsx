@@ -3,6 +3,8 @@ import { ArrowDownRight, ArrowUpRight, ArrowUpDown, Calendar, X } from 'lucide-r
 import clsx from 'clsx';
 import { Holding } from '../../hooks/useHoldings';
 import { usePriceStore } from '../../stores/priceStore';
+import { useUiStore } from '../../stores/uiStore';
+import { StockDetailDrawer } from '../portfolio/StockDetailDrawer';
 
 export type HoldingTimeRange = '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL' | 'CUSTOM';
 
@@ -61,11 +63,13 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
   totalNetWorth
 }) => {
   const { historical } = usePriceStore();
+  const { currency, exchangeRate } = useUiStore();
   const [timeRange, setTimeRange] = useState<HoldingTimeRange>('1D');
   const [customFrom, setCustomFrom] = useState<string>('');
   const [customTo, setCustomTo] = useState<string>('');
   const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
+  const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
   const rangeLabel = useMemo(() => {
     switch (timeRange) {
@@ -316,7 +320,12 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               const isPeriodProfit = h.periodReturn >= 0;
 
               return (
-                <tr key={h.symbol} className="hover:bg-[#1A1D2D]/60 transition-colors group">
+                <tr 
+                  key={h.symbol} 
+                  onClick={() => setSelectedStock(h.symbol)}
+                  className="hover:bg-[#1A1D2D]/90 cursor-pointer transition-all duration-150 group"
+                  title={`Click to inspect ${h.symbol}`}
+                >
                   {/* Column 1: Asset (Symbol + Shares) */}
                   <td className="px-5 py-4 text-left whitespace-nowrap">
                     <div className="flex items-center gap-3">
@@ -367,6 +376,13 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                       <div className="text-xs font-bold opacity-90">
                         {isProfit ? '+' : ''}{h.totalReturnPercent.toFixed(2)}%
                       </div>
+                      {currency === 'THB' && (
+                        <div className="text-[10px] text-[#94A3B8] font-medium mt-0.5 tracking-tight flex items-center gap-1 opacity-80" title="แยกกำไรจากราคาหุ้น (USD) กับผลกระทบอัตราแลกเปลี่ยน (FX)">
+                          <span>Stock: {h.totalReturnPercent >= 0 ? '+' : ''}{h.totalReturnPercent.toFixed(1)}%</span>
+                          <span>•</span>
+                          <span>FX: {exchangeRate >= 35 ? '+' : ''}{(((exchangeRate - 35) / 35) * 100).toFixed(1)}%</span>
+                        </div>
+                      )}
                     </div>
                   </td>
 
@@ -511,6 +527,13 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Stock Detail Drawer */}
+      <StockDetailDrawer 
+        symbol={selectedStock} 
+        isOpen={!!selectedStock} 
+        onClose={() => setSelectedStock(null)} 
+      />
     </div>
   );
 };

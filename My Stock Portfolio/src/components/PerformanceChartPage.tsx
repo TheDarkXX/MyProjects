@@ -6,6 +6,8 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabaseClient';
 import 'chart.js/auto'; // Ensures all necessary components are registered
+import { MonthlyReturnHeatmap } from './charts/MonthlyReturnHeatmap';
+import { CapitalGrowthChart } from './charts/CapitalGrowthChart';
 
 const DEFAULT_POLYGON_KEY = 'nU1_qIjq8inMDa7CXUjPETsl6TY0OHQD';
 
@@ -804,6 +806,19 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                             </ResponsiveContainer>
                         )}
                     </div>
+                </div>
+
+                {/* Capital Growth & Organic Wealth Chart */}
+                <div className="mt-8">
+                    <CapitalGrowthChart 
+                        transactions={transactions.filter(t => (t.portfolio_id === selectedPortfolioId || (t as any).portfolioId === selectedPortfolioId))}
+                        initialCash={selectedPortfolio?.initial_cash || 0}
+                    />
+                </div>
+
+                {/* Monthly Return Heatmap (Calendar Matrix) */}
+                <div className="mt-8">
+                    <MonthlyReturnHeatmap historicalData={historicalDataCache[selectedPortfolioId] || []} />
                 </div>
             </main>
         </div>

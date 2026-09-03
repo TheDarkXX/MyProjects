@@ -7,6 +7,7 @@ import { useHoldings } from '../../hooks/useHoldings';
 import { DividendSnowballCard } from './DividendSnowballCard';
 import { LifecycleMatrixCard } from './LifecycleMatrixCard';
 import { ConvictionGaugeCard } from './ConvictionGaugeCard';
+import { UpcomingDividendStrip } from './UpcomingDividendStrip';
 import { Target, DollarSign, Activity, Award, ShieldCheck, Sparkles, LayoutGrid, Columns3, Rows2 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -247,6 +248,9 @@ export const ScorecardPage: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {/* Upcoming Dividend Strip (ปฏิทินปันผลระยะใกล้) */}
+      <UpcomingDividendStrip />
 
       {/* 3. Dynamic Section Layouts (3-Col vs Panoramic vs Stacked) */}
       {layoutMode === '3col' && (
