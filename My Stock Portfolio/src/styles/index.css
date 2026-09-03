@@ -2,18 +2,75 @@
 
 @theme {
   --color-primary: #3b82f6;
+  --font-prompt: 'Prompt', system-ui, sans-serif;
+  --font-sarabun: 'Sarabun', system-ui, sans-serif;
 }
 
 /* ==========================================================================
-   Global Typography & Contrast Enhancements
-   +4 Brightness levels for all secondary/muted text (#9898C8 -> #CBD5E1)
-   +2 Font size levels for all labels, tables, subtitles, and captions
+   Global Institutional Typography System:
+   1. Headings, Numbers, Buttons, Tables, Statuses -> 'Prompt' (Modern, Loopless)
+   2. Paragraphs, Descriptions, Captions, Explanations -> 'Sarabun' (Readable, Looped)
+   3. Minimum Font Floor: Never smaller than 13px (Iron Rule)
+   4. Minimum Contrast Floor: >= 70% brightness on dark background
    ========================================================================== */
 
-/* 1. Global Contrast: Brighten dim/grayish text by 4 levels to crisp light silver/slate */
+/* Base font for entire app: Prompt (Modern, Loopless, Clean) */
+body, 
+button, 
+input, 
+select, 
+textarea, 
+th, 
+.num, 
+.tabular-nums, 
+.font-heading,
+.font-prompt {
+  font-family: 'Prompt', system-ui, -apple-system, sans-serif;
+}
+
+/* Narrative, Description, Captions, Explanations: Sarabun (Readable, Looped) */
+p, 
+small, 
+caption,
+.font-body,
+.font-sarabun,
+.subtitle,
+.description,
+[class*="text-slate-300"],
+[class*="text-[#CBD5E1]"],
+[class*="text-[#9898C8]"],
+[class*="text-gray"] {
+  font-family: 'Sarabun', system-ui, -apple-system, sans-serif;
+}
+
+/* Headings & Bold Metric Elements always use Prompt */
+h1, h2, h3, h4, h5, h6,
+button,
+th,
+.font-bold,
+.font-black,
+.font-extrabold,
+.font-semibold,
+.tabular-nums,
+[class*="tracking-tight"] {
+  font-family: 'Prompt', system-ui, -apple-system, sans-serif !important;
+}
+
+/* Explicit Utility Classes */
+.font-heading,
+.font-prompt {
+  font-family: 'Prompt', sans-serif !important;
+}
+
+.font-body,
+.font-sarabun {
+  font-family: 'Sarabun', sans-serif !important;
+}
+
+/* 1. Global Contrast: Brighten dim/grayish text by 4 levels to crisp light silver/slate (>= 70% contrast) */
 .text-\[\#9898C8\],
 [class*="text-[#9898C8]"] {
-  color: #CBD5E1 !important; /* Crisp Slate-300 (4 levels brighter than #9898C8) */
+  color: #CBD5E1 !important; /* Crisp Slate-300 (~78% brightness) */
 }
 
 .placeholder-\[\#9898C8\]::placeholder {
@@ -32,14 +89,21 @@
   color: #94A3B8 !important;
 }
 
-/* 2. Global Font Scale: Step up text sizes by 2 levels across all pages */
+/* 2. Global Font Floor: Text must NEVER be smaller than 13px (Iron Rule) */
+.text-\[10px\],
+.text-\[11px\],
+.text-\[12px\] {
+  font-size: 0.8125rem !important; /* 13px minimum floor */
+  line-height: 1.25rem !important;
+}
+
 .text-xs {
-  font-size: 0.875rem !important; /* 14px (stepped up 2 levels from 12px) */
+  font-size: 0.875rem !important; /* 14px */
   line-height: 1.35rem !important;
 }
 
 .text-sm {
-  font-size: 1rem !important; /* 16px (stepped up 2 levels from 14px) */
+  font-size: 1rem !important; /* 16px */
   line-height: 1.5rem !important;
 }
 
