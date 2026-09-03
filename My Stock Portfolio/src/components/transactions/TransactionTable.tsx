@@ -35,54 +35,35 @@ export const resolveStockType = (tx: Transaction): string => {
   return 'Core Compounder';
 };
 
-export const getStrategyBadgeStyle = (strategy: string): { bgClass: string; dotColor: string } => {
+export const getStrategyBadgeStyle = (strategy: string): string => {
   const norm = strategy === 'Speculative' ? 'Small Cap' : strategy;
   switch (norm) {
     case 'Core Compounder':
-      return {
-        bgClass: 'bg-[#0f172a] text-white border-[#3b82f6]/50 shadow-[0_2px_8px_rgba(59,130,246,0.2)]',
-        dotColor: 'bg-[#60a5fa]'
-      };
+      // Solid Deep Royal Blue
+      return 'bg-[#1d4ed8] text-white shadow-[0_2px_6px_rgba(29,78,216,0.4)]';
     case 'Hyper Growth':
-      return {
-        bgClass: 'bg-[#1e082b] text-white border-[#a855f7]/50 shadow-[0_2px_8px_rgba(168,85,247,0.25)]',
-        dotColor: 'bg-[#c084fc]'
-      };
+      // Solid Rich Violet / Purple
+      return 'bg-[#7c3aed] text-white shadow-[0_2px_6px_rgba(124,58,237,0.4)]';
     case 'Dividend Growth':
-      return {
-        bgClass: 'bg-[#022c22] text-white border-[#10b981]/50 shadow-[0_2px_8px_rgba(16,185,129,0.2)]',
-        dotColor: 'bg-[#34d399]'
-      };
+      // Solid Emerald Green
+      return 'bg-[#16a34a] text-white shadow-[0_2px_6px_rgba(22,163,74,0.4)]';
     case 'High Yield':
-      return {
-        bgClass: 'bg-[#271004] text-white border-[#f59e0b]/50 shadow-[0_2px_8px_rgba(245,158,11,0.2)]',
-        dotColor: 'bg-[#fbbf24]'
-      };
+      // Solid Warm Amber / Orange
+      return 'bg-[#d97706] text-white shadow-[0_2px_6px_rgba(217,119,6,0.4)]';
     case 'Index / ETF':
-      return {
-        bgClass: 'bg-[#042f2e] text-white border-[#06b6d4]/50 shadow-[0_2px_8px_rgba(6,182,212,0.2)]',
-        dotColor: 'bg-[#38bdf8]'
-      };
+      // Solid Deep Cyan / Teal
+      return 'bg-[#0284c7] text-white shadow-[0_2px_6px_rgba(2,132,199,0.4)]';
     case 'Defensive / Value':
-      return {
-        bgClass: 'bg-[#18202f] text-white border-[#64748b]/50 shadow-[0_2px_8px_rgba(100,116,139,0.2)]',
-        dotColor: 'bg-[#94a3b8]'
-      };
+      // Solid Slate Blue / Steel
+      return 'bg-[#475569] text-white shadow-[0_2px_6px_rgba(71,85,105,0.4)]';
     case 'Small Cap':
-      return {
-        bgClass: 'bg-[#310413] text-white border-[#f43f5e]/50 shadow-[0_2px_8px_rgba(244,63,94,0.25)]',
-        dotColor: 'bg-[#fb7185]'
-      };
+      // Solid Crimson / Red
+      return 'bg-[#e11d48] text-white shadow-[0_2px_6px_rgba(225,29,72,0.4)]';
     case 'Cash':
-      return {
-        bgClass: 'bg-[#18181b] text-white border-[#52525b]/50 shadow-[0_2px_8px_rgba(82,82,91,0.2)]',
-        dotColor: 'bg-[#a1a1aa]'
-      };
+      // Solid Charcoal / Black
+      return 'bg-[#27272a] text-white shadow-[0_2px_6px_rgba(39,39,42,0.4)]';
     default:
-      return {
-        bgClass: 'bg-[#1f2937] text-white border-[#4b5563]/50',
-        dotColor: 'bg-[#9ca3af]'
-      };
+      return 'bg-[#374151] text-white shadow-[0_2px_6px_rgba(55,65,81,0.4)]';
   }
 };
 
@@ -426,18 +407,12 @@ export const TransactionTable = () => {
                         </span>
                       </td>
                       <td className="py-3.5 px-3">
-                        {(() => {
-                          const style = getStrategyBadgeStyle(stockType);
-                          return (
-                            <span className={clsx(
-                              "px-2.5 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1.5 w-fit",
-                              style.bgClass
-                            )}>
-                              <span className={clsx("w-1.5 h-1.5 rounded-full shrink-0", style.dotColor)} />
-                              <span className="text-white tracking-wide">{stockType}</span>
-                            </span>
-                          );
-                        })()}
+                        <span className={clsx(
+                          "px-3 py-1.5 rounded-lg text-xs font-bold tracking-wide inline-block whitespace-nowrap text-center transition-transform hover:scale-105",
+                          getStrategyBadgeStyle(stockType)
+                        )}>
+                          {stockType}
+                        </span>
                       </td>
                       <td className="py-3.5 px-3 text-right text-white font-mono text-xs">${(tx.price || 0).toFixed(2)}</td>
                       <td className="py-3.5 px-3 text-right text-white font-mono text-xs font-semibold">
