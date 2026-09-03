@@ -85,6 +85,19 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
     }
   }, [timeRange]);
 
+  // Clean numeric formatter without repeated currency symbols (Bloomberg/TradingView style)
+  const formatClean = (usdVal: number, decimals: number = 2) => {
+    if (usdVal === undefined || usdVal === null || isNaN(usdVal)) return '0.00';
+    const isThb = currency === 'THB';
+    const rate = isThb ? (exchangeRate || 35.0) : 1;
+    const finalVal = usdVal * rate;
+    const absVal = Math.abs(finalVal);
+    return absVal.toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  };
+
   // Compute period return for each holding based on selected timeRange
   const processedHoldings = useMemo<HoldingWithPeriod[]>(() => {
     const targetStartDate = getStartDateForRange(timeRange, customFrom);
@@ -216,6 +229,9 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
         <div>
           <div className="flex items-center gap-3">
             <h3 className="text-xl font-bold text-white tracking-tight">Holdings</h3>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] text-slate-300 font-heading">
+              Values in {currency}
+            </span>
             <span className={clsx(
               "text-xs font-semibold px-2.5 py-1 rounded-full border transition-all tabular-nums",
               totalPeriodReturn >= 0 
@@ -307,9 +323,9 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
           <thead className="bg-[#161926] border-b border-[#2A2E45]">
             <tr>
               {renderTH('Asset', 'Symbol & Shares', 'symbol', 'left')}
-              {renderTH('Portfolio Value', 'Value & Cost', 'currentValue')}
-              {renderTH('Total Profit / Loss', 'Overall Return', 'totalReturn')}
-              {renderTH(`${rangeLabel} Return`, 'Period Return', 'periodReturn')}
+              {renderTH(`Portfolio Value (${currency})`, 'Current & Total Cost', 'currentValue')}
+              {renderTH(`Total P/L (${currency})`, 'Overall Return & %', 'totalReturn')}
+              {renderTH(`${rangeLabel} Return (${currency})`, 'Period Return & %', 'periodReturn')}
               {renderTH('Portfolio Weight', 'Allocation %', 'weightPercent')}
             </tr>
           </thead>
@@ -343,7 +359,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                           <span className="text-[#94A3B8]">•</span>
                           {' '}
                           <span className="text-white font-semibold font-heading">
-                            {formatCurrency(h.lastPrice)}
+                            {formatClean(h.lastPrice)}
                           </span>
                         </div>
                       </div>
@@ -353,10 +369,10 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   {/* Column 2: Current Value vs Total Cost */}
                   <td className="px-6 py-4 text-right whitespace-nowrap">
                     <div className="font-black text-white text-base tabular-nums font-heading">
-                      {formatCurrency(h.currentValue)}
+                      {formatClean(h.currentValue)}
                     </div>
                     <div className="text-xs font-medium text-[#CBD5E1] tabular-nums mt-0.5 font-body">
-                      Cost: <span className="text-slate-300 font-semibold font-heading">{formatCurrency(h.totalCost)}</span>
+                      Cost: <span className="text-slate-300 font-semibold font-heading">{formatClean(h.totalCost)}</span>
                     </div>
                   </td>
 
@@ -367,7 +383,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                       isProfit ? "text-emerald-400" : "text-rose-400"
                     )}>
                       {isProfit ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                      <span>{isProfit ? '+' : ''}{formatCurrency(h.totalReturn)}</span>
+                      <span>{isProfit ? '+' : '-'}{formatClean(h.totalReturn)}</span>
                     </div>
                     <div className={clsx(
                       "text-xs font-bold tabular-nums mt-0.5 font-heading",
@@ -384,7 +400,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                       isPeriodProfit ? "text-emerald-400" : "text-rose-400"
                     )}>
                       {isPeriodProfit ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                      <span>{isPeriodProfit ? '+' : ''}{formatCurrency(h.periodReturn)}</span>
+                      <span>{isPeriodProfit ? '+' : '-'}{formatClean(h.periodReturn)}</span>
                     </div>
                     <div className={clsx(
                       "text-xs font-bold tabular-nums mt-0.5 font-heading",
@@ -418,10 +434,10 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               </td>
               <td className="px-6 py-4 text-right whitespace-nowrap">
                 <div className="text-base font-black text-white tabular-nums font-heading">
-                  {formatCurrency(totalSecuritiesValue)}
+                  {formatClean(totalSecuritiesValue)}
                 </div>
                 <div className="text-xs font-medium text-[#CBD5E1] tabular-nums mt-0.5 font-body">
-                  Cost: <span className="text-slate-300 font-semibold font-heading">{formatCurrency(totalCostBasis)}</span>
+                  Cost: <span className="text-slate-300 font-semibold font-heading">{formatClean(totalCostBasis)}</span>
                 </div>
               </td>
               {/* Total P/L Summary */}
@@ -431,7 +447,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   totalTotalPnl >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
                   {totalTotalPnl >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                  <span>{totalTotalPnl >= 0 ? '+' : ''}{formatCurrency(totalTotalPnl)}</span>
+                  <span>{totalTotalPnl >= 0 ? '+' : '-'}{formatClean(totalTotalPnl)}</span>
                 </div>
                 <div className={clsx(
                   "text-xs font-bold tabular-nums mt-0.5 font-heading",
@@ -447,7 +463,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   totalPeriodReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
                   {totalPeriodReturn >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                  <span>{totalPeriodReturn >= 0 ? '+' : ''}{formatCurrency(totalPeriodReturn)}</span>
+                  <span>{totalPeriodReturn >= 0 ? '+' : '-'}{formatClean(totalPeriodReturn)}</span>
                 </div>
                 <div className={clsx(
                   "text-xs font-bold tabular-nums mt-0.5 font-heading",
@@ -475,7 +491,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               </td>
               <td className="px-6 py-3.5 text-right whitespace-nowrap">
                 <div className="text-sm font-extrabold text-white tabular-nums font-heading">
-                  {formatCurrency(cashBalance)}
+                  {formatClean(cashBalance)}
                 </div>
               </td>
               <td className="px-6 py-3.5 text-right text-sm text-[#94A3B8] font-heading">-</td>
@@ -491,7 +507,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
             <tr className="bg-gradient-to-r from-[#823AFD]/20 via-[#161926] to-[#FC2D79]/20 border-t-2 border-[#823AFD]/40 shadow-[0_4px_16px_rgba(130,58,253,0.15)]">
               <td className="px-6 py-4 text-left">
                 <div className="text-lg font-black text-white tracking-tight font-heading">Total Net Worth</div>
-                <div className="text-xs font-semibold text-[#CBD5E1] font-body">Stocks + Cash</div>
+                <div className="text-xs font-semibold text-[#CBD5E1] font-body">Stocks + Cash ({currency})</div>
               </td>
               <td className="px-6 py-4 text-right whitespace-nowrap">
                 <div className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-[#FC2D79] tabular-nums font-heading">
@@ -504,7 +520,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   totalTotalPnl >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
                   {totalTotalPnl >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                  <span>{totalTotalPnl >= 0 ? '+' : ''}{formatCurrency(totalTotalPnl)}</span>
+                  <span>{totalTotalPnl >= 0 ? '+' : '-'}{formatClean(totalTotalPnl)}</span>
                 </div>
                 <div className={clsx(
                   "text-xs font-bold tabular-nums mt-0.5 font-heading",
@@ -519,7 +535,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   totalPeriodReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
                   {totalPeriodReturn >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                  <span>{totalPeriodReturn >= 0 ? '+' : ''}{formatCurrency(totalPeriodReturn)}</span>
+                  <span>{totalPeriodReturn >= 0 ? '+' : '-'}{formatClean(totalPeriodReturn)}</span>
                 </div>
                 <div className={clsx(
                   "text-xs font-bold tabular-nums mt-0.5 font-heading",
