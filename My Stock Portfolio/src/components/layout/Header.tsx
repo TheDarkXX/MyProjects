@@ -2,13 +2,19 @@ import React from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { usePriceStore } from '../../stores/priceStore';
-import { Bell, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import clsx from 'clsx';
 
 export const Header = () => {
   const { activeTab, currency, setCurrency } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
-  const { exchangeRate } = usePriceStore();
+  const { exchangeRate, lastUpdated, loading, fetchExchangeRate } = usePriceStore();
+
+  React.useEffect(() => {
+    if (!lastUpdated) {
+      fetchExchangeRate('USD', 'THB');
+    }
+  }, [fetchExchangeRate, lastUpdated]);
 
   return (
     <header className="h-20 bg-[#0F111A]/80 backdrop-blur-xl border-b border-[#1F2233] px-8 flex items-center justify-between sticky top-0 z-50 gap-4">
@@ -102,18 +108,42 @@ export const Header = () => {
           </div>
         )}
 
-        {/* Notifications */}
-        <button className="relative p-2 text-[#9898C8] hover:text-white transition-colors bg-[#1A1D2D] rounded-full border border-[#2A2E45] hover:border-[#823AFD]">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-0 right-0 w-2 h-2 bg-[#FC2D79] rounded-full border-2 border-[#0F111A]"></span>
-        </button>
-
-        {/* Profile */}
-        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#823AFD] to-[#FC2D79] p-0.5 shadow-[0_2px_10px_rgba(130,58,253,0.25)]">
-          <div className="w-full h-full bg-[#0F111A] rounded-full flex items-center justify-center">
-            <span className="text-white font-semibold text-xs">AD</span>
+        {/* Live Yahoo API Status & Last Update Time */}
+        <button 
+          onClick={() => fetchExchangeRate('USD', 'THB')}
+          className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] shadow-inner text-xs cursor-pointer select-none transition-all hover:bg-[#1A1D2D]/80 group"
+          title={lastUpdated ? `Last updated: ${lastUpdated.toLocaleString('th-TH')}. Click to refresh Yahoo data!` : 'Click to refresh Yahoo Finance data'}
+        >
+          {/* LED Status Light */}
+          <div className="relative flex items-center justify-center">
+            <span className={clsx(
+              "w-2.5 h-2.5 rounded-full transition-all duration-300",
+              loading 
+                ? "bg-amber-400 animate-spin" 
+                : "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
+            )} />
+            {!loading && (
+              <span className="absolute w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-75" />
+            )}
           </div>
-        </div>
+
+          {/* Status & Time */}
+          <div className="flex flex-col text-left leading-tight">
+            <div className="flex items-center gap-1.5">
+              <span className="text-white font-bold text-[11px] tracking-wide group-hover:text-[#823AFD] transition-colors">
+                {loading ? 'Syncing...' : 'Yahoo API'}
+              </span>
+              <span className="text-[10px] text-emerald-400 font-semibold px-1 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20">
+                LIVE
+              </span>
+            </div>
+            <span className="text-[10px] text-[#94A3B8] font-mono tabular-nums">
+              {lastUpdated 
+                ? `${lastUpdated.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} ${lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+                : 'Auto-syncing'}
+            </span>
+          </div>
+        </button>
       </div>
     </header>
   );

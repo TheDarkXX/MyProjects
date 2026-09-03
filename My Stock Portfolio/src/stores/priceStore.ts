@@ -7,6 +7,7 @@ interface PriceState {
   metadata: Record<string, any>;
   exchangeRate: number;
   loading: boolean;
+  lastUpdated: Date | null;
   
   fetchPrices: (symbols: string[]) => Promise<void>;
   fetchHistorical: (symbols: string[], from: string, to: string) => Promise<void>;
@@ -20,12 +21,13 @@ export const usePriceStore = create<PriceState>((set, get) => ({
   metadata: {},
   exchangeRate: 34.5, // Default fallback
   loading: false,
+  lastUpdated: null,
 
   fetchExchangeRate: async (from = 'USD', to = 'THB') => {
     try {
       const data = await api.prices.exchangeRate(from, to);
       if (data && data.rate) {
-        set({ exchangeRate: data.rate });
+        set({ exchangeRate: data.rate, lastUpdated: new Date() });
       }
     } catch (error) {
       console.error('Failed to fetch exchange rate', error);
@@ -35,10 +37,16 @@ export const usePriceStore = create<PriceState>((set, get) => ({
   fetchPrices: async (symbols) => {
     if (symbols.length === 0) return;
     try {
+      set({ loading: true });
       const data = await api.prices.latest(symbols);
-      set((state) => ({ prices: { ...state.prices, ...data } }));
+      set((state) => ({ 
+        prices: { ...state.prices, ...data },
+        lastUpdated: new Date(),
+        loading: false
+      }));
     } catch (error) {
       console.error(error);
+      set({ loading: false });
     }
   },
 
