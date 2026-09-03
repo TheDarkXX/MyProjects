@@ -108,7 +108,7 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
   const activeItem = data[activeIndex] || data[0] || null;
   const totalModeValue = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
 
-  // High-contrast, large, beautiful slice labels (+4 font levels, crisp white with strong contrast drop-shadow)
+  // Clean, non-bold, high-contrast pure white slice labels
   const renderCustomSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
     if (percent < 0.04) return null;
     const RADIAN = Math.PI / 180;
@@ -127,23 +127,23 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
         y={y}
         textAnchor="middle"
         dominantBaseline="central"
-        className="pointer-events-none select-none font-black"
-        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95))' }}
+        className="pointer-events-none select-none"
+        style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.95))' }}
       >
-        {/* Ticker Symbol (Enlarged +4 levels: 15px Bold White) */}
-        <tspan x={x} dy="-0.5em" fontSize="15" fontWeight="900" fill="#FFFFFF">
+        {/* Ticker Symbol: Clean, Not Heavy Bold */}
+        <tspan x={x} dy="-0.45em" fontSize="13" fontWeight="600" fill="#FFFFFF">
           {item.name}
         </tspan>
 
-        {/* Value / % (Enlarged +4 levels: 13px High-Contrast White / Golden-Amber) */}
+        {/* Value or Profit: Clean Pure White, Not Heavy Bold */}
         <tspan 
           x={x} 
           dy="1.25em" 
-          fontSize="13" 
-          fontWeight="900" 
-          fill={mode === 'weight' ? '#F8FAFC' : isPositive ? '#4ADE80' : '#FF6B81'}
+          fontSize="12" 
+          fontWeight="500" 
+          fill="#FFFFFF"
         >
-          {mode === 'weight' ? `${(percent * 100).toFixed(1)}%` : formatCurrency(item.profit)}
+          {mode === 'weight' ? `${(percent * 100).toFixed(1)}%` : `${isPositive ? '+' : ''}${formatCurrency(item.profit)}`}
         </tspan>
       </text>
     );
@@ -222,7 +222,7 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
         </div>
       ) : (
         <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-center min-h-0">
-          {/* Left: Glowing Doughnut Chart with Enhanced Slices Labels + Center Stat (5 cols) */}
+          {/* Left: Doughnut with Clean, Non-Bold Slices Labels + Center Stat (5 cols) */}
           <div className="md:col-span-5 h-full relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -271,7 +271,7 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
             </div>
           </div>
 
-          {/* Right: Beautiful Interactive Legend Grid with High-Contrast Typography (7 cols) */}
+          {/* Right: Interactive Legend Grid (7 cols) */}
           <div className="md:col-span-7 h-full flex flex-col min-h-0">
             <div className="grid grid-cols-12 text-[11px] font-bold text-[#9898C8] uppercase tracking-wider px-3 pb-2 border-b border-[#2A2E45]/60">
               <span className="col-span-4">Asset</span>
@@ -302,26 +302,26 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
                         className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125" 
                         style={{ backgroundColor: item.color, boxShadow: isSelected ? `0 0 8px ${item.color}` : 'none' }}
                       />
-                      <span className="font-bold text-white text-xs truncate">{item.name}</span>
+                      <span className="font-semibold text-white text-xs truncate">{item.name}</span>
                     </div>
 
                     {/* Col 2: Market Value (3 cols) */}
-                    <div className="col-span-3 text-right font-bold text-white text-xs tabular-nums">
+                    <div className="col-span-3 text-right font-semibold text-white text-xs tabular-nums">
                       {formatCurrency(item.currentValue)}
                     </div>
 
                     {/* Col 3: Profit / Loss ($ & %) (3 cols) */}
                     <div className="col-span-3 text-right">
-                      <div className={clsx("font-black text-xs tabular-nums", isPositive ? "text-emerald-400" : "text-rose-400")}>
+                      <div className={clsx("font-bold text-xs tabular-nums", isPositive ? "text-emerald-400" : "text-rose-400")}>
                         {isPositive ? '+' : ''}{formatCurrency(item.profit)}
                       </div>
-                      <div className={clsx("font-bold text-[11px] tabular-nums mt-0.5", isPositive ? "text-emerald-400/90" : "text-rose-400/90")}>
+                      <div className={clsx("font-normal text-[11px] tabular-nums mt-0.5", isPositive ? "text-emerald-400/90" : "text-rose-400/90")}>
                         {isPositive ? '+' : ''}{item.profitPercent.toFixed(1)}%
                       </div>
                     </div>
 
                     {/* Col 4: Weight % (2 cols) */}
-                    <div className="col-span-2 text-right font-black text-xs text-[#A78BFA] tabular-nums">
+                    <div className="col-span-2 text-right font-bold text-xs text-[#A78BFA] tabular-nums">
                       {item.weightPercent.toFixed(1)}%
                     </div>
                   </div>

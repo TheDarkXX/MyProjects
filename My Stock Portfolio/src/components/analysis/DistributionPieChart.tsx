@@ -112,7 +112,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
     const result = Object.entries(groups).map(([name, value]) => ({
       name,
       value,
-      percent: totalPortfolioVal > 0 ? (value / totalPortfolioVal) * 100 : 0,
+      sharePercent: totalPortfolioVal > 0 ? (value / totalPortfolioVal) * 100 : 0,
       color: ''
     }));
 
@@ -127,7 +127,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
   const totalPortfolioValue = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
   const activeItem = data[activeIndex] || data[0] || null;
 
-  // Render Category Name & % directly on Donut Slices (+4 font levels, bold high contrast)
+  // Clean, non-bold, accurately calculated slice labels (Fixed % bug & no heavy bold)
   const renderCustomSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
     if (percent < 0.04) return null;
     const RADIAN = Math.PI / 180;
@@ -149,14 +149,16 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
         y={y}
         textAnchor="middle"
         dominantBaseline="central"
-        className="pointer-events-none select-none font-black"
-        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95))' }}
+        className="pointer-events-none select-none"
+        style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))' }}
       >
-        <tspan x={x} dy="-0.5em" fontSize="15" fontWeight="900" fill="#FFFFFF">
+        {/* Category Name: Clean, Not Heavy Bold */}
+        <tspan x={x} dy="-0.45em" fontSize="13" fontWeight="600" fill="#FFFFFF">
           {shortName}
         </tspan>
-        <tspan x={x} dy="1.25em" fontSize="13" fontWeight="900" fill="#F8FAFC">
-          {(percent * 100).toFixed(1)}%
+        {/* Accurately displayed share % without artificial multiplication */}
+        <tspan x={x} dy="1.25em" fontSize="12" fontWeight="500" fill="#FFFFFF">
+          {item.sharePercent.toFixed(1)}%
         </tspan>
       </text>
     );
@@ -227,7 +229,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
         </div>
       ) : (
         <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-center min-h-0">
-          {/* Left: Glowing Doughnut with Direct Slices Labels + Center Stat (5 cols) */}
+          {/* Left: Doughnut with Clean Slices Labels + Center Stat (5 cols) */}
           <div className="md:col-span-5 h-full relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -265,8 +267,8 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                   <span className="text-sm font-bold text-white tracking-tight truncate max-w-[120px]">
                     {activeItem.name}
                   </span>
-                  <span className="text-xl font-black text-[#A78BFA] mt-0.5">
-                    {activeItem.percent.toFixed(1)}%
+                  <span className="text-xl font-bold text-[#A78BFA] mt-0.5">
+                    {activeItem.sharePercent.toFixed(1)}%
                   </span>
                   <span className="text-[11px] text-[#CBD5E1] font-semibold tabular-nums mt-0.5">
                     {formatCurrency(activeItem.value)}
@@ -275,7 +277,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
               ) : (
                 <>
                   <span className="text-xs text-[#9898C8] font-semibold">Total</span>
-                  <span className="text-base font-black text-white tabular-nums">
+                  <span className="text-base font-bold text-white tabular-nums">
                     {formatCurrency(totalPortfolioValue)}
                   </span>
                 </>
@@ -308,7 +310,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                   >
                     <div 
                       className="absolute left-0 bottom-0 top-0 opacity-10 pointer-events-none rounded-xl transition-all"
-                      style={{ width: `${item.percent}%`, backgroundColor: item.color }}
+                      style={{ width: `${item.sharePercent}%`, backgroundColor: item.color }}
                     />
 
                     {/* Group Name + Indicator (6 cols) */}
@@ -317,17 +319,17 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                         className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125" 
                         style={{ backgroundColor: item.color, boxShadow: isSelected ? `0 0 8px ${item.color}` : 'none' }}
                       />
-                      <span className="font-bold text-white text-xs truncate">{item.name}</span>
+                      <span className="font-semibold text-white text-xs truncate">{item.name}</span>
                     </div>
 
                     {/* Total Value (4 cols) */}
-                    <div className="col-span-4 text-right font-bold text-white text-xs tabular-nums relative z-10">
+                    <div className="col-span-4 text-right font-semibold text-white text-xs tabular-nums relative z-10">
                       {formatCurrency(item.value)}
                     </div>
 
                     {/* % Share (2 cols) */}
-                    <div className="col-span-2 text-right font-black text-xs text-[#A78BFA] tabular-nums relative z-10">
-                      {item.percent.toFixed(1)}%
+                    <div className="col-span-2 text-right font-bold text-xs text-[#A78BFA] tabular-nums relative z-10">
+                      {item.sharePercent.toFixed(1)}%
                     </div>
                   </div>
                 );

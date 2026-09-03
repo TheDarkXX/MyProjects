@@ -8,7 +8,6 @@ import { AllocationPieChart } from './AllocationPieChart';
 import { DistributionPieChart } from './DistributionPieChart';
 import { CostValueBars } from './CostValueBars';
 import { Heatmap, HeatmapTimeRange } from './Heatmap';
-import { PerformersTable } from '../dashboard/PerformersTable';
 import { Calendar, Layers } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -17,7 +16,7 @@ const TIME_RANGES: HeatmapTimeRange[] = ['1D', '1W', '1M', '3M', 'YTD', '1Y', 'T
 export const AnalysisPage = () => {
   const { activePortfolioId } = usePortfolioStore();
   const { fetchTransactions } = useTransactionStore();
-  const { fetchPrices, fetchHistorical, fetchExchangeRate, exchangeRate } = usePriceStore();
+  const { fetchPrices, fetchHistorical, fetchExchangeRate } = usePriceStore();
   const { currency } = useUiStore();
 
   const [timeRange, setTimeRange] = useState<HeatmapTimeRange>('1D');
@@ -40,15 +39,6 @@ export const AnalysisPage = () => {
       fetchHistorical(activeSymbols, from, to);
     }
   }, [JSON.stringify(activeSymbols), fetchPrices, fetchHistorical]);
-
-  // Unified Currency Formatter adhering to zero-decimal THB standard
-  const formatCurrency = (val: number, usdOnly = false) => {
-    if (!usdOnly && currency === 'THB' && exchangeRate) {
-      const converted = Math.round(val * exchangeRate);
-      return `฿${converted.toLocaleString('th-TH')}`;
-    }
-    return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   const getTimeRangeLabel = (range: HeatmapTimeRange) => {
     switch (range) {
@@ -115,7 +105,7 @@ export const AnalysisPage = () => {
         <CostValueBars holdings={holdings} timeRange={timeRange} />
       </div>
 
-      {/* Row 3: Finviz Interactive Treemap / Heatmap (Full Width - Moved to Row 3) */}
+      {/* Row 3: Finviz Interactive Treemap / Heatmap (Full Width) */}
       <div className="w-full">
         <Heatmap 
           holdings={holdings} 
@@ -123,13 +113,6 @@ export const AnalysisPage = () => {
           onTimeRangeChange={setTimeRange} 
         />
       </div>
-
-      {/* Row 4: Top & Bottom Performers (Dynamically synchronized with the active Timeframe) */}
-      <PerformersTable 
-        holdings={holdings} 
-        formatCurrency={formatCurrency} 
-        timeRange={timeRange}
-      />
     </div>
   );
 };
