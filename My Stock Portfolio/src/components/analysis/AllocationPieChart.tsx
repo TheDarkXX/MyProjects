@@ -4,7 +4,7 @@ import { Holding } from '../../hooks/useHoldings';
 import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { HeatmapTimeRange } from './Heatmap';
-import { PieChart as PieIcon, ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react';
+import { PieChart as PieIcon } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Props {
@@ -25,7 +25,6 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
   const { currency } = useUiStore();
   const { exchangeRate, historical } = usePriceStore();
 
-  // Unified Currency Formatter adhering to zero-decimal THB standard
   const formatCurrency = (val: number) => {
     if (currency === 'THB' && exchangeRate) {
       const converted = Math.round(val * exchangeRate);
@@ -48,21 +47,20 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
     return today.toISOString().split('T')[0];
   };
 
-  // Process data with currency & timeframe returns
   const data = useMemo(() => {
-    const active = holdings.filter(h => h.currentValue > 0 || h.totalCost > 0);
+    const active = holdings.filter(h => (h.currentValue > 0 || h.totalCost > 0) && h.symbol !== 'CASH');
     const totalVal = active.reduce((sum, h) => sum + h.currentValue, 0);
 
     const items = active.map(h => {
-      let periodProfit = h.dayReturn;
-      let periodProfitPercent = h.dayChangePercent;
+      let periodProfit = h.dayReturn || 0;
+      let periodProfitPercent = h.dayChangePercent || 0;
 
       if (timeRange === '1D') {
-        periodProfit = h.dayReturn;
-        periodProfitPercent = h.dayChangePercent;
+        periodProfit = h.dayReturn || 0;
+        periodProfitPercent = h.dayChangePercent || 0;
       } else if (timeRange === 'Total') {
-        periodProfit = h.totalReturn;
-        periodProfitPercent = h.totalReturnPercent;
+        periodProfit = h.totalReturn || 0;
+        periodProfitPercent = h.totalReturnPercent || 0;
       } else {
         const symbolHistory = historical[h.symbol];
         if (symbolHistory && symbolHistory.length > 0) {
@@ -78,7 +76,7 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
           const endPrice = h.lastPrice || sorted[sorted.length - 1].price;
           if (startPrice > 0 && endPrice > 0) {
             periodProfitPercent = ((endPrice - startPrice) / startPrice) * 100;
-            periodProfit = (endPrice - startPrice) * h.quantity;
+            periodProfit = (endPrice - startPrice) * (h.quantity || 0);
           }
         }
       }
@@ -93,13 +91,12 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
         weightPercent: weightPct,
         profit: periodProfit,
         profitPercent: periodProfitPercent,
-        totalProfit: h.totalReturn,
-        totalProfitPercent: h.totalReturnPercent,
+        totalProfit: h.totalReturn || 0,
+        totalProfitPercent: h.totalReturnPercent || 0,
         color: ''
       };
     });
 
-    // Sort descending
     const filtered = items.filter(d => d.value > 0).sort((a, b) => b.value - a.value);
 
     return filtered.map((d, i) => ({
@@ -111,7 +108,46 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
   const activeItem = data[activeIndex] || data[0] || null;
   const totalModeValue = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
 
-  // Render Custom Active Shape with Neon Glow Ring
+  // Render Custom Slice Labels directly on Donut (No hover required!)
+  const renderCustomSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+    if (percent < 0.045) return null; // Skip tiny slices to keep clean
+    const RADIAN = Math.PI / 180;
+    // Calculate radius point in the middle of doughnut slice
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    const item = data[index];
+    if (!item) return null;
+
+    const isPositive = item.profit >= 0;
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#FFFFFF"
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="pointer-events-none select-none"
+        style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}
+      >
+        <tspan x={x} dy="-0.45em" fontSize="11" fontWeight="900" fill="#FFFFFF">
+          {item.name}
+        </tspan>
+        <tspan 
+          x={x} 
+          dy="1.2em" 
+          fontSize="10" 
+          fontWeight="800" 
+          fill={mode === 'weight' ? '#38BDF8' : isPositive ? '#34D399' : '#FB7185'}
+        >
+          {mode === 'weight' ? `${(percent * 100).toFixed(1)}%` : formatCurrency(item.profit)}
+        </tspan>
+      </text>
+    );
+  };
+
   const renderActiveShape = (props: any) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
     return (
@@ -185,7 +221,7 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
         </div>
       ) : (
         <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-center min-h-0">
-          {/* Left: Glowing Doughnut Chart with Center Stat (5 cols) */}
+          {/* Left: Glowing Doughnut Chart with Direct Slices Labels + Center Stat (5 cols) */}
           <div className="md:col-span-5 h-full relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -195,11 +231,13 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
                   data={data}
                   cx="50%"
                   cy="50%"
-                  innerRadius="64%"
-                  outerRadius="88%"
+                  innerRadius="58%"
+                  outerRadius="90%"
                   dataKey="value"
                   onMouseEnter={(_, index) => setActiveIndex(index)}
                   paddingAngle={2}
+                  label={renderCustomSliceLabel}
+                  labelLine={false}
                 >
                   {data.map((entry, index) => (
                     <Cell 
@@ -222,7 +260,7 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
                   <span className="text-sm font-bold text-[#38BDF8] mt-0.5">
                     {totalModeValue > 0 ? ((activeItem.value / totalModeValue) * 100).toFixed(1) : '0.0'}%
                   </span>
-                  <span className="text-[11px] text-[#9898C8] font-semibold tabular-nums mt-0.5">
+                  <span className="text-[11px] text-[#CBD5E1] font-semibold tabular-nums mt-0.5">
                     {formatCurrency(activeItem.currentValue)}
                   </span>
                 </>
@@ -232,7 +270,7 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
             </div>
           </div>
 
-          {/* Right: Beautiful Interactive Legend Grid (7 cols) */}
+          {/* Right: Beautiful Interactive Legend Grid with Balanced Font Sizing (7 cols) */}
           <div className="md:col-span-7 h-full flex flex-col min-h-0">
             {/* Table Header */}
             <div className="grid grid-cols-12 text-[11px] font-bold text-[#9898C8] uppercase tracking-wider px-3 pb-2 border-b border-[#2A2E45]/60">
@@ -253,7 +291,7 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
                     key={item.name}
                     onMouseEnter={() => setActiveIndex(idx)}
                     className={clsx(
-                      "grid grid-cols-12 items-center px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group select-none",
+                      "grid grid-cols-12 items-center px-3 py-2 rounded-xl transition-all cursor-pointer group select-none",
                       isSelected 
                         ? "bg-[#1A1D2D] border border-[#38BDF8]/40 shadow-[0_2px_12px_rgba(56,189,248,0.15)]" 
                         : "hover:bg-[#1A1D2D]/60 border border-transparent"
@@ -265,26 +303,26 @@ export const AllocationPieChart: React.FC<Props> = ({ holdings, timeRange = '1D'
                         className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125" 
                         style={{ backgroundColor: item.color, boxShadow: isSelected ? `0 0 8px ${item.color}` : 'none' }}
                       />
-                      <span className="font-bold text-white truncate">{item.name}</span>
+                      <span className="font-bold text-white text-xs truncate">{item.name}</span>
                     </div>
 
                     {/* Col 2: Market Value (3 cols) */}
-                    <div className="col-span-3 text-right font-semibold text-[#E2E8F0] tabular-nums">
+                    <div className="col-span-3 text-right font-bold text-white text-xs tabular-nums">
                       {formatCurrency(item.currentValue)}
                     </div>
 
-                    {/* Col 3: Profit / Loss ($ & %) (3 cols) */}
+                    {/* Col 3: Profit / Loss ($ & %) (3 cols) — Boosted Font Size for perfect visual balance */}
                     <div className="col-span-3 text-right">
-                      <div className={clsx("font-bold tabular-nums text-[11px]", isPositive ? "text-emerald-400" : "text-rose-400")}>
+                      <div className={clsx("font-black text-xs tabular-nums", isPositive ? "text-emerald-400" : "text-rose-400")}>
                         {isPositive ? '+' : ''}{formatCurrency(item.profit)}
                       </div>
-                      <div className={clsx("text-[10px] tabular-nums", isPositive ? "text-emerald-400/80" : "text-rose-400/80")}>
+                      <div className={clsx("font-bold text-[11px] tabular-nums mt-0.5", isPositive ? "text-emerald-400/90" : "text-rose-400/90")}>
                         {isPositive ? '+' : ''}{item.profitPercent.toFixed(1)}%
                       </div>
                     </div>
 
                     {/* Col 4: Weight % (2 cols) */}
-                    <div className="col-span-2 text-right font-bold text-[#38BDF8] tabular-nums">
+                    <div className="col-span-2 text-right font-black text-xs text-[#38BDF8] tabular-nums">
                       {item.weightPercent.toFixed(1)}%
                     </div>
                   </div>

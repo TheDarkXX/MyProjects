@@ -11,7 +11,6 @@ interface Props {
   holdings: Holding[];
 }
 
-// Built-in Comprehensive Sector Dictionary for standard US Stocks & Dime holdings
 const SECTOR_MAP: Record<string, string> = {
   META: 'Communication Services',
   GOOGL: 'Communication Services',
@@ -95,7 +94,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
     let totalPortfolioVal = 0;
 
     holdings.forEach(h => {
-      if (h.currentValue <= 0) return;
+      if (h.currentValue <= 0 || h.symbol === 'CASH') return;
       totalPortfolioVal += h.currentValue;
 
       let key = 'Other';
@@ -127,6 +126,43 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
 
   const totalPortfolioValue = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
   const activeItem = data[activeIndex] || data[0] || null;
+
+  // Render Category Name & % directly on Donut Slices (No hover needed!)
+  const renderCustomSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+    if (percent < 0.05) return null; // Skip tiny slices to prevent overlapping
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    const item = data[index];
+    if (!item) return null;
+
+    // Short label for sector names if needed
+    let shortName = item.name;
+    if (shortName === 'Communication Services') shortName = 'Comm';
+    if (shortName === 'Consumer Cyclical') shortName = 'Cyclical';
+    if (shortName === 'Consumer Defensive') shortName = 'Defensive';
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#FFFFFF"
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="pointer-events-none select-none"
+        style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}
+      >
+        <tspan x={x} dy="-0.45em" fontSize="11" fontWeight="900" fill="#FFFFFF">
+          {shortName}
+        </tspan>
+        <tspan x={x} dy="1.2em" fontSize="10" fontWeight="800" fill="#38BDF8">
+          {(percent * 100).toFixed(1)}%
+        </tspan>
+      </text>
+    );
+  };
 
   const renderActiveShape = (props: any) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
@@ -193,7 +229,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
         </div>
       ) : (
         <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-center min-h-0">
-          {/* Left: Glowing Doughnut with Total/Hover Center Stat (5 cols) */}
+          {/* Left: Glowing Doughnut with Direct Slices Labels + Center Stat (5 cols) */}
           <div className="md:col-span-5 h-full relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -203,11 +239,13 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                   data={data}
                   cx="50%"
                   cy="50%"
-                  innerRadius="64%"
-                  outerRadius="88%"
+                  innerRadius="58%"
+                  outerRadius="90%"
                   dataKey="value"
                   onMouseEnter={(_, index) => setActiveIndex(index)}
                   paddingAngle={2}
+                  label={renderCustomSliceLabel}
+                  labelLine={false}
                 >
                   {data.map((entry, index) => (
                     <Cell 
@@ -232,7 +270,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                   <span className="text-xl font-black text-[#38BDF8] mt-0.5">
                     {activeItem.percent.toFixed(1)}%
                   </span>
-                  <span className="text-[11px] text-[#9898C8] font-semibold tabular-nums mt-0.5">
+                  <span className="text-[11px] text-[#CBD5E1] font-semibold tabular-nums mt-0.5">
                     {formatCurrency(activeItem.value)}
                   </span>
                 </>
@@ -264,7 +302,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                     key={item.name}
                     onMouseEnter={() => setActiveIndex(idx)}
                     className={clsx(
-                      "grid grid-cols-12 items-center px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer group select-none relative overflow-hidden",
+                      "grid grid-cols-12 items-center px-3 py-2.5 rounded-xl transition-all cursor-pointer group select-none relative overflow-hidden",
                       isSelected 
                         ? "bg-[#1A1D2D] border border-[#38BDF8]/40 shadow-[0_2px_12px_rgba(56,189,248,0.15)]" 
                         : "hover:bg-[#1A1D2D]/60 border border-transparent"
@@ -282,16 +320,16 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
                         className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125" 
                         style={{ backgroundColor: item.color, boxShadow: isSelected ? `0 0 8px ${item.color}` : 'none' }}
                       />
-                      <span className="font-bold text-white truncate">{item.name}</span>
+                      <span className="font-bold text-white text-xs truncate">{item.name}</span>
                     </div>
 
                     {/* Total Value (4 cols) */}
-                    <div className="col-span-4 text-right font-semibold text-[#E2E8F0] tabular-nums relative z-10">
+                    <div className="col-span-4 text-right font-bold text-white text-xs tabular-nums relative z-10">
                       {formatCurrency(item.value)}
                     </div>
 
                     {/* % Share (2 cols) */}
-                    <div className="col-span-2 text-right font-bold text-[#38BDF8] tabular-nums relative z-10">
+                    <div className="col-span-2 text-right font-black text-xs text-[#38BDF8] tabular-nums relative z-10">
                       {item.percent.toFixed(1)}%
                     </div>
                   </div>

@@ -4,7 +4,7 @@ import { Holding } from '../../hooks/useHoldings';
 import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { HeatmapTimeRange } from './Heatmap';
-import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Props {
@@ -14,13 +14,14 @@ interface Props {
 
 type SortType = 'Value' | 'Cost' | 'Profit $' | 'Profit %' | 'A-Z';
 
-export const CostValueBars: React.FC<Props> = ({ holdings, timeRange = '1D' }) => {
+export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D' }) => {
   const [sortBy, setSortBy] = useState<SortType>('Value');
 
   const { currency } = useUiStore();
   const { exchangeRate, historical } = usePriceStore();
 
   const formatCurrency = (val: number) => {
+    if (isNaN(val)) return '$0.00';
     if (currency === 'THB' && exchangeRate) {
       const converted = Math.round(val * exchangeRate);
       return `฿${converted.toLocaleString('th-TH')}`;
@@ -29,6 +30,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings, timeRange = '1D' }) =
   };
 
   const formatShortAxis = (val: number) => {
+    if (isNaN(val)) return '';
     const symbol = currency === 'THB' ? '฿' : '$';
     const rate = currency === 'THB' && exchangeRate ? exchangeRate : 1;
     const converted = val * rate;
@@ -57,20 +59,20 @@ export const CostValueBars: React.FC<Props> = ({ holdings, timeRange = '1D' }) =
   };
 
   const data = useMemo(() => {
-    const rate = currency === 'THB' && exchangeRate ? exchangeRate : 1;
+    if (!holdings || holdings.length === 0) return [];
 
     let items = holdings
-      .filter(h => h.currentValue > 0 || h.totalCost > 0)
+      .filter(h => (h.currentValue > 0 || h.totalCost > 0) && h.symbol !== 'CASH')
       .map(h => {
-        let periodProfit = h.dayReturn;
-        let periodProfitPercent = h.dayChangePercent;
+        let periodProfit = h.dayReturn || 0;
+        let periodProfitPercent = h.dayChangePercent || 0;
 
         if (timeRange === '1D') {
-          periodProfit = h.dayReturn;
-          periodProfitPercent = h.dayChangePercent;
+          periodProfit = h.dayReturn || 0;
+          periodProfitPercent = h.dayChangePercent || 0;
         } else if (timeRange === 'Total') {
-          periodProfit = h.totalReturn;
-          periodProfitPercent = h.totalReturnPercent;
+          periodProfit = h.totalReturn || 0;
+          periodProfitPercent = h.totalReturnPercent || 0;
         } else {
           const symbolHistory = historical[h.symbol];
           if (symbolHistory && symbolHistory.length > 0) {
@@ -86,26 +88,23 @@ export const CostValueBars: React.FC<Props> = ({ holdings, timeRange = '1D' }) =
             const endPrice = h.lastPrice || sorted[sorted.length - 1].price;
             if (startPrice > 0 && endPrice > 0) {
               periodProfitPercent = ((endPrice - startPrice) / startPrice) * 100;
-              periodProfit = (endPrice - startPrice) * h.quantity;
+              periodProfit = (endPrice - startPrice) * (h.quantity || 0);
             }
           }
         }
 
-        const convertedCost = currency === 'THB' ? Math.round(h.totalCost * rate) : h.totalCost;
-        const convertedValue = currency === 'THB' ? Math.round(h.currentValue * rate) : h.currentValue;
-
         return {
           name: h.symbol,
-          cost: convertedCost,
-          value: convertedValue,
-          rawCost: h.totalCost,
-          rawValue: h.currentValue,
+          cost: h.totalCost || 0,
+          value: h.currentValue || 0,
+          rawCost: h.totalCost || 0,
+          rawValue: h.currentValue || 0,
           profit: periodProfit,
           profitPercent: periodProfitPercent,
-          totalProfit: h.totalReturn,
-          totalProfitPercent: h.totalReturnPercent,
-          shares: h.quantity,
-          avgCost: h.avgCost
+          totalProfit: h.totalReturn || 0,
+          totalProfitPercent: h.totalReturnPercent || 0,
+          shares: h.quantity || 0,
+          avgCost: h.avgCost || 0
         };
       });
 
@@ -128,7 +127,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings, timeRange = '1D' }) =
     }
 
     return items.slice(0, 16);
-  }, [holdings, sortBy, timeRange, currency, exchangeRate, historical]);
+  }, [holdings, sortBy, timeRange, historical]);
 
   // Rich Glassmorphic Custom Tooltip
   const CustomTooltip = ({ active, payload }: any) => {
@@ -138,7 +137,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings, timeRange = '1D' }) =
       const isTotalPositive = item.totalProfit >= 0;
 
       return (
-        <div className="bg-[#0F111A]/95 backdrop-blur-xl border border-[#2A2E45] p-4 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-xs text-white min-w-[240px]">
+        <div className="bg-[#0F111A]/95 backdrop-blur-xl border border-[#2A2E45] p-4 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-xs text-white min-w-[240px] z-50">
           <div className="flex justify-between items-center pb-2.5 border-b border-[#2A2E45] mb-2.5">
             <span className="font-black text-white text-base tracking-tight">{item.name}</span>
             <span className="text-[11px] text-[#9898C8]">
@@ -178,9 +177,9 @@ export const CostValueBars: React.FC<Props> = ({ holdings, timeRange = '1D' }) =
   };
 
   return (
-    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col min-h-[460px]">
+    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col">
       {/* Header Bar: Title + Sort Pills */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#10B981]/20 to-[#38BDF8]/20 border border-[#10B981]/30 flex items-center justify-center">
             <BarChart3 className="w-4 h-4 text-[#10B981]" />
@@ -211,80 +210,66 @@ export const CostValueBars: React.FC<Props> = ({ holdings, timeRange = '1D' }) =
         </div>
       </div>
 
-      {/* SVG Dual Gradient Definitions */}
-      <div className="flex-1 w-full h-[340px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 25 }}>
-            <defs>
-              {/* Cost Basis Bar Gradient */}
-              <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#818CF8" stopOpacity={0.85} />
-                <stop offset="100%" stopColor="#4F46E5" stopOpacity={0.65} />
-              </linearGradient>
+      {data.length === 0 ? (
+        <div className="h-[340px] flex items-center justify-center text-[#9898C8] text-sm">
+          No active securities to compare
+        </div>
+      ) : (
+        /* Explicit Height Container guarantees Recharts never renders with 0 height */
+        <div className="w-full" style={{ height: 350, minHeight: 350 }}>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1F2233" vertical={false} />
+              <XAxis 
+                dataKey="name" 
+                stroke="#9898C8" 
+                tick={{ fill: '#E2E8F0', fontSize: 11, fontWeight: 700 }}
+                tickLine={false}
+                axisLine={{ stroke: '#2A2E45' }}
+              />
+              <YAxis 
+                stroke="#9898C8" 
+                tickFormatter={formatShortAxis}
+                tick={{ fill: '#9898C8', fontSize: 11 }}
+                tickLine={false}
+                axisLine={{ stroke: '#2A2E45' }}
+                width={55}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.04)' }} />
+              <Legend 
+                verticalAlign="top" 
+                align="right" 
+                wrapperStyle={{ paddingBottom: '14px', fontSize: '11px', fontWeight: 'bold' }}
+                formatter={(val) => <span className="text-[#E2E8F0] font-semibold">{val}</span>}
+              />
 
-              {/* Profit Gain Bar Gradient */}
-              <linearGradient id="gainGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#34D399" stopOpacity={0.95} />
-                <stop offset="100%" stopColor="#059669" stopOpacity={0.75} />
-              </linearGradient>
+              {/* Cost Basis Bar (Indigo-500) */}
+              <Bar 
+                dataKey="cost" 
+                name="Cost Basis" 
+                fill="#6366F1"
+                radius={[5, 5, 0, 0]} 
+                maxBarSize={32}
+              />
 
-              {/* Profit Loss Bar Gradient */}
-              <linearGradient id="lossGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FB7185" stopOpacity={0.95} />
-                <stop offset="100%" stopColor="#E11D48" stopOpacity={0.75} />
-              </linearGradient>
-            </defs>
-
-            <CartesianGrid strokeDasharray="3 3" stroke="#1F2233" vertical={false} />
-            <XAxis 
-              dataKey="name" 
-              stroke="#9898C8" 
-              tick={{ fill: '#E2E8F0', fontSize: 11, fontWeight: 700 }}
-              tickLine={false}
-              axisLine={{ stroke: '#2A2E45' }}
-            />
-            <YAxis 
-              stroke="#9898C8" 
-              tickFormatter={formatShortAxis}
-              tick={{ fill: '#9898C8', fontSize: 11 }}
-              tickLine={false}
-              axisLine={{ stroke: '#2A2E45' }}
-              width={55}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }} />
-            <Legend 
-              verticalAlign="top" 
-              align="right" 
-              wrapperStyle={{ paddingBottom: '16px', fontSize: '11px', fontWeight: 'bold' }}
-              formatter={(val) => <span className="text-[#E2E8F0] font-semibold">{val}</span>}
-            />
-
-            {/* Cost Basis Bar */}
-            <Bar 
-              dataKey="cost" 
-              name="Cost Basis" 
-              fill="url(#costGradient)" 
-              radius={[6, 6, 0, 0]} 
-              maxBarSize={32}
-            />
-
-            {/* Market Value Bar (Dynamic Color per holding) */}
-            <Bar 
-              dataKey="value" 
-              name="Current Value" 
-              radius={[6, 6, 0, 0]} 
-              maxBarSize={32}
-            >
-              {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-val-${index}`} 
-                  fill={entry.profit >= 0 ? "url(#gainGradient)" : "url(#lossGradient)"} 
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+              {/* Market Value Bar (Emerald-500 if profit >= 0, Rose-500 if loss) */}
+              <Bar 
+                dataKey="value" 
+                name="Current Value" 
+                radius={[5, 5, 0, 0]} 
+                maxBarSize={32}
+              >
+                {data.map((entry, index) => (
+                  <Cell 
+                    key={`cell-bar-${index}`} 
+                    fill={entry.profit >= 0 ? "#10B981" : "#F43F5E"} 
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 };
