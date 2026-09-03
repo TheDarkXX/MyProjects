@@ -108,36 +108,36 @@ export const Header = () => {
           </div>
         )}
 
-        {/* Live Yahoo API Status & Last Update Time */}
+        {/* Live Yahoo API Status & Last Update Time (Scaled +3 levels) */}
         <button 
           onClick={() => fetchExchangeRate('USD', 'THB')}
-          className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] shadow-inner text-xs cursor-pointer select-none transition-all hover:bg-[#1A1D2D]/80 group"
+          className="flex items-center gap-3.5 px-4 py-2 rounded-2xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] shadow-lg text-sm cursor-pointer select-none transition-all hover:bg-[#1A1D2D]/90 hover:scale-105 active:scale-95 group"
           title={lastUpdated ? `Last updated: ${lastUpdated.toLocaleString('th-TH')}. Click to refresh Yahoo data!` : 'Click to refresh Yahoo Finance data'}
         >
-          {/* LED Status Light */}
-          <div className="relative flex items-center justify-center">
+          {/* LED Status Light (Enlarged + Bright Glow) */}
+          <div className="relative flex items-center justify-center shrink-0">
             <span className={clsx(
-              "w-2.5 h-2.5 rounded-full transition-all duration-300",
+              "w-3.5 h-3.5 rounded-full transition-all duration-300",
               loading 
                 ? "bg-amber-400 animate-spin" 
-                : "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
+                : "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.9)] ring-2 ring-emerald-400/30"
             )} />
             {!loading && (
-              <span className="absolute w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-75" />
+              <span className="absolute w-3.5 h-3.5 rounded-full bg-emerald-400 animate-ping opacity-60" />
             )}
           </div>
 
-          {/* Status & Time */}
-          <div className="flex flex-col text-left leading-tight">
-            <div className="flex items-center gap-1.5">
-              <span className="text-white font-bold text-[11px] tracking-wide group-hover:text-[#823AFD] transition-colors">
+          {/* Status & Time (+3 Size Levels) */}
+          <div className="flex flex-col text-left leading-tight gap-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-white font-extrabold text-sm tracking-wide group-hover:text-[#823AFD] transition-colors">
                 {loading ? 'Syncing...' : 'Yahoo API'}
               </span>
-              <span className="text-[10px] text-emerald-400 font-semibold px-1 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20">
+              <span className="text-[11px] font-black text-emerald-300 px-1.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 tracking-wider">
                 LIVE
               </span>
             </div>
-            <span className="text-[10px] text-[#94A3B8] font-mono tabular-nums">
+            <span className="text-xs text-gray-200 font-mono font-semibold tabular-nums tracking-tight">
               {lastUpdated 
                 ? `${lastUpdated.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} ${lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
                 : 'Auto-syncing'}
