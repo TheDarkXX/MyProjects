@@ -589,8 +589,8 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         'My Portfolio': '#FFC300', 
         'S&P 500': '#9013FE', 
         'SCHG': '#F5A623',
-        'Gold': '#EAB308',
-        'Bitcoin': '#F97316'
+        'Gold': '#FDE047',    // Soft light yellow
+        'Bitcoin': '#38BDF8' // Soft light sky blue
     };
     const lastDataPoint = displayData.length > 0 ? displayData[displayData.length - 1] : null;
 
