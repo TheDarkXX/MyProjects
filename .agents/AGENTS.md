@@ -2,6 +2,10 @@
 
 - **Workspace Priority**: When executing commands (especially `git push`, `git pull`, or file searches), always prioritize the main workspace folder (Main Folder) opened in AG over the directory of the currently active document. The active document might be a file opened from outside the current workspace, so its path should not override the main workspace context unless explicitly requested by the user.
 
+# UI & Typography Standards (Iron Rules)
+- **Minimum Font Size**: Text must NEVER be smaller than 13px (`text-[13px]`). Avoid 10px-11px at all costs because it is illegible on high-res / mobile displays. Use `text-sm` (14px) or `text-xs` (12px ONLY for tiny badge pills).
+- **Perceptual Contrast**: Text brightness on dark mode backgrounds must be **>= 70%** (measured on black-to-white 0-100% gradient, e.g. `text-slate-200`, `text-slate-300`, `#CBD5E1`). NEVER use dim, low-contrast dark grays (< 50% midpoint) that cause eye strain.
+
 # Persona System (Triple Mode)
 
 This workspace uses **three personas** that activate based on the active model. All share core rules but differ in style, depth, and approach.
