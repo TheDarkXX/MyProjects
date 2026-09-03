@@ -136,7 +136,7 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
                 <option value="High Yield">💰 High Yield / Income</option>
                 <option value="Index / ETF">🏛️ Index / ETF</option>
                 <option value="Defensive / Value">🛡️ Defensive / Value</option>
-                <option value="Speculative">🎯 Speculative / Moonshot</option>
+                <option value="Small Cap">🎯 Small Cap</option>
                 <option value="Cash">💵 Cash / Money Market</option>
               </select>
             </div>
