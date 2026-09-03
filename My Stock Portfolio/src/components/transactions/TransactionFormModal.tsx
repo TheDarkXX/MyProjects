@@ -45,6 +45,8 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
     }
   };
 
+  const isCashFlow = ['DIVIDEND', 'INTEREST', 'DEPOSIT', 'WITHDRAW', 'FEE'].includes(formData.type || '');
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl w-full max-w-lg shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden">
@@ -63,7 +65,15 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
               <label className="block text-sm font-medium text-[#9898C8] mb-1">Type</label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                onChange={(e) => {
+                  const newType = e.target.value as any;
+                  const isNewCashFlow = ['DIVIDEND', 'INTEREST', 'DEPOSIT', 'WITHDRAW', 'FEE'].includes(newType);
+                  setFormData({ 
+                    ...formData, 
+                    type: newType,
+                    price: isNewCashFlow ? 1 : formData.price
+                  });
+                }}
                 className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
               >
                 <option value="BUY">Buy</option>
@@ -95,7 +105,7 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
                 value={formData.symbol || ''}
                 onChange={(e) => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
                 className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD] uppercase"
-                placeholder="e.g. AAPL"
+                placeholder={isCashFlow ? "e.g. CASH or AAPL" : "e.g. AAPL"}
               />
             </div>
             <div>
@@ -113,14 +123,14 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#9898C8] mb-1">
-                Sector <span className="text-xs text-[#823AFD] font-normal">(Auto-fetches from Yahoo if blank)</span>
+                Sector <span className="text-xs text-[#823AFD] font-normal">(Auto-fetches)</span>
               </label>
               <input
                 type="text"
                 value={formData.sector || ''}
                 onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
                 className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
-                placeholder="Leave blank for Yahoo Finance auto-detect"
+                placeholder="Leave blank for auto-detect"
               />
             </div>
             <div>
@@ -142,39 +152,69 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#9898C8] mb-1">Quantity</label>
-              <input
-                type="number"
-                step="any"
-                required
-                value={formData.amount || ''}
-                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-                className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
-              />
+          {isCashFlow ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#9898C8] mb-1">Total Value ($)</label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={formData.amount || ''}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    amount: parseFloat(e.target.value),
+                    price: 1 // Force price to 1 for cash flows
+                  })}
+                  className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#9898C8] mb-1">Fee</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.fee || 0}
+                  onChange={(e) => setFormData({ ...formData, fee: parseFloat(e.target.value) })}
+                  className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[#9898C8] mb-1">Price</label>
-              <input
-                type="number"
-                step="any"
-                value={formData.price || ''}
-                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
-                className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
-              />
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#9898C8] mb-1">Quantity</label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={formData.amount || ''}
+                  onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+                  className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#9898C8] mb-1">Price</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.price || ''}
+                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+                  className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#9898C8] mb-1">Fee</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.fee || 0}
+                  onChange={(e) => setFormData({ ...formData, fee: parseFloat(e.target.value) })}
+                  className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[#9898C8] mb-1">Fee</label>
-              <input
-                type="number"
-                step="any"
-                value={formData.fee || 0}
-                onChange={(e) => setFormData({ ...formData, fee: parseFloat(e.target.value) })}
-                className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
-              />
-            </div>
-          </div>
+          )}
 
           <div className="pt-4 flex justify-end gap-3">
             <button

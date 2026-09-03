@@ -45,8 +45,8 @@ export const getStrategyBadgeStyle = (strategy: string): string => {
       // เขียวทึบเข้ม (Deep Emerald Green)
       return 'bg-[#15803d] text-white shadow-[0_2px_8px_rgba(21,128,61,0.45)]';
     case 'Small Cap':
-      // เหลืองทองอำพันสว่างขึ้น (Bright Golden Yellow)
-      return 'bg-[#ca8a04] text-white shadow-[0_2px_8px_rgba(202,138,4,0.45)]';
+      // เหลืองสว่างสุด (Bright Yellow - Colorblind Safe)
+      return 'bg-[#facc15] text-black shadow-[0_2px_8px_rgba(250,204,21,0.5)]';
     case 'Dividend Growth':
       // น้ำตาลเข้ม / บรอนซ์ (Deep Brown / Bronze)
       return 'bg-[#854d0e] text-white shadow-[0_2px_8px_rgba(133,77,14,0.45)]';
@@ -414,11 +414,24 @@ export const TransactionTable = () => {
                           {stockType}
                         </span>
                       </td>
-                      <td className="py-3.5 px-3 text-right text-white font-mono text-xs">${(tx.price || 0).toFixed(2)}</td>
-                      <td className="py-3.5 px-3 text-right text-white font-mono text-xs font-semibold">
-                        {typeof tx.amount === 'number' ? Number(tx.amount).toFixed(4) : tx.amount}
+                      <td className="py-3.5 px-3 text-right text-white font-mono text-xs">
+                        {['DIVIDEND', 'INTEREST', 'DEPOSIT', 'WITHDRAW', 'FEE'].includes(tx.type) 
+                          ? <span className="text-[#9898C8]">-</span>
+                          : `$${(tx.price || 0).toFixed(2)}`}
                       </td>
-                      <td className="py-3.5 px-3 text-right text-white font-bold font-mono text-xs">
+                      <td className="py-3.5 px-3 text-right text-white font-mono text-xs font-semibold">
+                        {['DIVIDEND', 'INTEREST', 'DEPOSIT', 'WITHDRAW', 'FEE'].includes(tx.type)
+                          ? <span className="text-[#9898C8]">-</span>
+                          : (typeof tx.amount === 'number' ? Number(tx.amount).toFixed(4) : tx.amount)}
+                      </td>
+                      <td className={clsx(
+                        "py-3.5 px-3 text-right font-bold font-mono text-xs",
+                        ['DIVIDEND', 'INTEREST', 'DEPOSIT'].includes(tx.type) ? "text-emerald-400" :
+                        ['WITHDRAW', 'FEE'].includes(tx.type) ? "text-rose-400" :
+                        "text-white"
+                      )}>
+                        {['DIVIDEND', 'INTEREST', 'DEPOSIT'].includes(tx.type) ? '+' : ''}
+                        {['WITHDRAW', 'FEE'].includes(tx.type) ? '-' : ''}
                         ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="py-3.5 px-4 text-right">
