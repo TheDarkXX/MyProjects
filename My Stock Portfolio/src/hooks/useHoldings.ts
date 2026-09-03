@@ -15,6 +15,8 @@ export interface Holding {
   totalReturn: number;
   totalReturnPercent: number;
   weightPercent: number;
+  stockType?: string;
+  sector?: string;
 }
 
 export function useHoldings() {
@@ -34,12 +36,22 @@ export function useHoldings() {
       .filter(t => t.status === 'CONFIRMED')
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
+    const symbolMeta: Record<string, { stockType?: string; sector?: string }> = {};
+
     sortedTxs.forEach(tx => {
       const amount = tx.amount || 0;
       const price = tx.price || 0;
       const fee = tx.fee || 0;
       const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
       
+      if (tx.symbol) {
+        if (!symbolMeta[tx.symbol]) {
+          symbolMeta[tx.symbol] = {};
+        }
+        if (tx.stock_type) symbolMeta[tx.symbol].stockType = tx.stock_type;
+        if (tx.sector) symbolMeta[tx.symbol].sector = tx.sector;
+      }
+
       if (!holds[tx.symbol]) {
         holds[tx.symbol] = { quantity: 0, totalCost: 0 };
       }
@@ -92,11 +104,12 @@ export function useHoldings() {
       const avgCost = totalCost / quantity;
       
       const priceData = prices[symbol] || { price: 0, change: 0, percent_change: 0 };
-      const lastPrice = priceData.price;
-      const dayChangePercent = priceData.percent_change;
+      // Fallback to avgCost if price not yet loaded or offline
+      const lastPrice = (priceData.price && priceData.price > 0) ? priceData.price : (avgCost || 0);
+      const dayChangePercent = priceData.percent_change || 0;
       
       const currentValue = quantity * lastPrice;
-      const dayReturn = quantity * priceData.change;
+      const dayReturn = quantity * (priceData.change || 0);
       const totalReturn = currentValue - totalCost;
       const totalReturnPercent = totalCost > 0 ? (totalReturn / totalCost) * 100 : 0;
       
@@ -117,6 +130,8 @@ export function useHoldings() {
           totalReturn,
           totalReturnPercent,
           weightPercent: 0, // Will calculate below
+          stockType: symbolMeta[symbol]?.stockType || 'Core Compounder',
+          sector: symbolMeta[symbol]?.sector || 'Technology',
         });
       }
     });

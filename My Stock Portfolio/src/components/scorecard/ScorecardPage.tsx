@@ -15,7 +15,7 @@ type ScorecardLayoutMode = '3col' | 'panoramic' | 'stacked';
 export const ScorecardPage: React.FC = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
   const { transactions, fetchTransactions } = useTransactionStore();
-  const { exchangeRate, fetchExchangeRate } = usePriceStore();
+  const { exchangeRate, fetchExchangeRate, fetchPrices } = usePriceStore();
   const { currency } = useUiStore();
   const { holdings } = useHoldings();
 
@@ -33,6 +33,11 @@ export const ScorecardPage: React.FC = () => {
     return portfolios.find(p => p.id === activePortfolioId);
   }, [portfolios, activePortfolioId]);
 
+  // Extract active symbols from holdings to ensure prices are fetched
+  const activeSymbols = useMemo(() => {
+    return holdings.map(h => h.symbol).filter(Boolean);
+  }, [holdings]);
+
   useEffect(() => {
     if (activePortfolioId) {
       fetchTransactions(activePortfolioId);
@@ -40,9 +45,16 @@ export const ScorecardPage: React.FC = () => {
     fetchExchangeRate('USD', 'THB');
   }, [activePortfolioId, fetchTransactions, fetchExchangeRate]);
 
+  // Automatically fetch live prices for all holdings when visiting Scorecard
+  useEffect(() => {
+    if (activeSymbols.length > 0) {
+      fetchPrices(activeSymbols);
+    }
+  }, [activeSymbols.join(','), fetchPrices]);
+
   // Quick stats summary
   const summary = useMemo(() => {
-    const totalVal = holdings.reduce((sum, h) => sum + h.currentValue, 0);
+    const totalVal = holdings.reduce((sum, h) => sum + (h.currentValue || h.totalCost || 0), 0);
 
     // Filter dividend transactions
     const divTxs = transactions.filter(t => t.type === 'DIVIDEND' && t.status !== 'CANCELLED');
@@ -57,9 +69,14 @@ export const ScorecardPage: React.FC = () => {
     const monthlyPassiveUsd = padiUsd / 12;
 
     // Top holdings
-    const sorted = [...holdings].sort((a, b) => b.currentValue - a.currentValue);
+    const sorted = [...holdings].sort((a, b) => {
+      const valA = a.currentValue || a.totalCost || 0;
+      const valB = b.currentValue || b.totalCost || 0;
+      return valB - valA;
+    });
+
     const top3Share = totalVal > 0 
-      ? (sorted.slice(0, 3).reduce((s, h) => s + h.currentValue, 0) / totalVal) * 100 
+      ? (sorted.slice(0, 3).reduce((s, h) => s + (h.currentValue || h.totalCost || 0), 0) / totalVal) * 100 
       : 0;
 
     return {
@@ -95,7 +112,7 @@ export const ScorecardPage: React.FC = () => {
                 </span>
               </h1>
               <p className="text-xs lg:text-sm text-[#9898C8] mt-0.5">
-                Evaluation engine blending Joseph Carlson’s Cash Flow with Shay Boloor’s Conviction
+                ประเมินผลลัพธ์การลงทุน: พลังกระแสเงินสด (Joseph Carlson) และวินัยความเข้มข้น (Shay Boloor)
               </p>
             </div>
           </div>
@@ -105,7 +122,7 @@ export const ScorecardPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           {/* Active Portfolio Badge */}
           <div className="flex items-center gap-2 bg-[#111418] border border-[#2A2E45] px-3 py-1.5 rounded-2xl text-xs">
-            <span className="text-[#9898C8]">Portfolio:</span>
+            <span className="text-[#9898C8]">พอร์ตปัจจุบัน:</span>
             <span className="font-bold text-white">{activePortfolio?.name || 'Default Portfolio'}</span>
           </div>
 
@@ -119,10 +136,10 @@ export const ScorecardPage: React.FC = () => {
                   ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md"
                   : "text-[#9898C8] hover:text-white"
               )}
-              title="3 Columns (Optimized for 21:9 Ultra-Wide displays)"
+              title="3 Columns (เต็มตากว้างสะใจบนจอ Ultra-Wide 21:9)"
             >
               <Columns3 className="w-3.5 h-3.5" />
-              <span>3 Columns (Ultra-Wide)</span>
+              <span>3 คอลัมน์ (Ultra-Wide)</span>
             </button>
 
             <button
@@ -133,7 +150,7 @@ export const ScorecardPage: React.FC = () => {
                   ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md"
                   : "text-[#9898C8] hover:text-white"
               )}
-              title="Panoramic 2-Row Layout (Wide charts + Full-span Lifecycle)"
+              title="Panoramic (แถวบน 2 คอลัมน์ + แถวล่างไทม์ไลน์กว้าง)"
             >
               <Rows2 className="w-3.5 h-3.5" />
               <span>Panoramic (2:1)</span>
@@ -147,32 +164,32 @@ export const ScorecardPage: React.FC = () => {
                   ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md"
                   : "text-[#9898C8] hover:text-white"
               )}
-              title="1 Column (Deep vertical flow)"
+              title="1 Column (เรียงเดี่ยวยาวแนวดิ่ง)"
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              <span>1 Column</span>
+              <span>1 คอลัมน์</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* 2. Top Executive Summary Badges (Stretches across Ultra-Wide) */}
+      {/* 2. Top Executive Summary Badges (แปลผลง่าย ชัดเจน ทันที) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
         {/* PADI */}
-        <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#823AFD] transition-all">
+        <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-emerald-500/50 transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-[#9898C8] uppercase tracking-wider">
-              Est. Annual Passive Income
+              ปันผลคาดการณ์รายปี (PADI)
             </span>
             <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-white font-mono tracking-tight">
-            {formatMoney(summary.padiUsd)} <span className="text-xs font-normal text-[#9898C8]">/yr</span>
+            {formatMoney(summary.padiUsd)} <span className="text-xs font-normal text-[#9898C8]">/ปี</span>
           </div>
           <span className="text-xs text-emerald-400 font-semibold mt-1 block">
-            ~{formatMoney(summary.monthlyPassiveUsd)} /mo passive cash flow
+            ~{formatMoney(summary.monthlyPassiveUsd)} /เดือน กระแสเงินสดพาสซีฟ
           </span>
         </div>
 
@@ -180,7 +197,7 @@ export const ScorecardPage: React.FC = () => {
         <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#823AFD] transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-[#9898C8] uppercase tracking-wider">
-              {new Date().getFullYear()} Dividends Received
+              ปันผลรับสะสมปี {new Date().getFullYear()}
             </span>
             <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400">
               <Sparkles className="w-4 h-4" />
@@ -190,15 +207,15 @@ export const ScorecardPage: React.FC = () => {
             {formatMoney(summary.currYearDivs)}
           </div>
           <span className="text-xs text-[#823AFD] font-semibold mt-1 block">
-            Accumulating in cash reserve
+            รับเข้าพอร์ตจริงแล้ว สะสมเป็นเงินสด
           </span>
         </div>
 
         {/* Conviction */}
-        <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#823AFD] transition-all">
+        <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-amber-500/50 transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-[#9898C8] uppercase tracking-wider">
-              Top 3 Conviction Weight
+              สามทหารเสือกุมพอร์ต (Top 3 Weight)
             </span>
             <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
               <Award className="w-4 h-4" />
@@ -213,20 +230,20 @@ export const ScorecardPage: React.FC = () => {
         </div>
 
         {/* Posture */}
-        <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#823AFD] transition-all">
+        <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-blue-500/50 transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-[#9898C8] uppercase tracking-wider">
-              Strategic Posture
+              กระบวนทัพหลัก (Strategic Posture)
             </span>
             <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl font-black text-white tracking-tight">
-            {summary.top3Share >= 55 ? '🎯 Sniper' : summary.top3Share >= 35 ? '⚖️ Compounder' : '🏛️ Fortress'}
+            {summary.top3Share >= 50 ? '🎯 Sniper' : summary.top3Share >= 35 ? '⚖️ Compounder' : '🏛️ Fortress'}
           </div>
           <span className="text-xs text-[#9898C8] mt-1 block">
-            {summary.top3Share >= 55 ? 'High alpha potential' : 'Balanced risk spread'}
+            {summary.top3Share >= 50 ? 'เน้นสร้าง Alpha สูงสุด' : summary.top3Share >= 35 ? 'สมดุลการเติบโตและป้องกัน' : 'เน้นกระจายความเสี่ยง'}
           </span>
         </div>
       </div>
@@ -235,17 +252,17 @@ export const ScorecardPage: React.FC = () => {
       {layoutMode === '3col' && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
           {/* Column 1: Cash Flow & Dividend Snowball Engine */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 min-w-0">
             <DividendSnowballCard transactions={transactions} exchangeRate={exchangeRate} />
           </div>
 
           {/* Column 2: Company Lifecycle Progression Matrix */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 min-w-0">
             <LifecycleMatrixCard holdings={holdings} exchangeRate={exchangeRate} isCompact={true} />
           </div>
 
           {/* Column 3: Conviction & Concentration Gauge */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 min-w-0">
             <ConvictionGaugeCard holdings={holdings} exchangeRate={exchangeRate} isCompact={true} />
           </div>
         </div>
@@ -255,16 +272,16 @@ export const ScorecardPage: React.FC = () => {
         <div className="space-y-6">
           {/* Top Row: Dual Engines */}
           <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6 items-start">
-            <div className="2xl:col-span-7">
+            <div className="2xl:col-span-7 min-w-0">
               <DividendSnowballCard transactions={transactions} exchangeRate={exchangeRate} />
             </div>
-            <div className="2xl:col-span-5">
+            <div className="2xl:col-span-5 min-w-0">
               <ConvictionGaugeCard holdings={holdings} exchangeRate={exchangeRate} />
             </div>
           </div>
 
           {/* Bottom Row: Full Ultra-Wide Lifecycle Matrix */}
-          <div className="w-full">
+          <div className="w-full min-w-0">
             <LifecycleMatrixCard holdings={holdings} exchangeRate={exchangeRate} isCompact={false} />
           </div>
         </div>
@@ -272,9 +289,15 @@ export const ScorecardPage: React.FC = () => {
 
       {layoutMode === 'stacked' && (
         <div className="space-y-6">
-          <DividendSnowballCard transactions={transactions} exchangeRate={exchangeRate} />
-          <LifecycleMatrixCard holdings={holdings} exchangeRate={exchangeRate} isCompact={false} />
-          <ConvictionGaugeCard holdings={holdings} exchangeRate={exchangeRate} />
+          <div className="min-w-0">
+            <DividendSnowballCard transactions={transactions} exchangeRate={exchangeRate} />
+          </div>
+          <div className="min-w-0">
+            <LifecycleMatrixCard holdings={holdings} exchangeRate={exchangeRate} isCompact={false} />
+          </div>
+          <div className="min-w-0">
+            <ConvictionGaugeCard holdings={holdings} exchangeRate={exchangeRate} />
+          </div>
         </div>
       )}
     </div>
