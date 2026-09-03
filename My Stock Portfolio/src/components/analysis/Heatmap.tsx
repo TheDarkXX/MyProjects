@@ -188,8 +188,8 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         const rect = containerRef.current.getBoundingClientRect();
         const w = Math.round(rect.width);
         if (w > 0) {
-          // Expanded height formula (min 560px, max 740px)
-          const h = Math.max(560, Math.min(740, Math.round(w * 0.42)));
+          // Proportional full-width height formula (min 520px, max 680px, ratio ~0.44)
+          const h = Math.max(520, Math.min(680, Math.round(w * 0.44)));
           setDimensions({ width: w, height: h });
         }
       }
@@ -324,8 +324,9 @@ export const Heatmap: React.FC<HeatmapProps> = ({
       .sum((d: any) => d.currentValue || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
+    // Balanced squarify ratio (1.15) fills area evenly without stretching into thin vertical/horizontal strips
     const treemapLayout = d3.treemap<any>()
-      .tile(d3.treemapSquarify.ratio(1.618))
+      .tile(d3.treemapSquarify.ratio(1.15))
       .size([dimensions.width, dimensions.height])
       .paddingOuter(4)
       .paddingInner(3)
@@ -432,10 +433,12 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         onMouseLeave={handleMouseLeave}
       >
         <svg 
-          width={dimensions.width} 
+          width="100%" 
           height={dimensions.height}
+          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+          preserveAspectRatio="none"
           style={{ width: '100%', height: dimensions.height }}
-          className="block overflow-hidden"
+          className="w-full block overflow-hidden"
         >
           {/* 1. Sector Containers & Header Labels */}
           {treemapData?.children?.map((sectorNode: any) => {

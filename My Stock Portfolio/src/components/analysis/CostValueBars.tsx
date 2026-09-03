@@ -17,6 +17,7 @@ type SortType = 'Value' | 'Cost' | 'Profit $' | 'Profit %' | 'A-Z';
 export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D' }) => {
   const [sortBy, setSortBy] = useState<SortType>('Value');
   const [activeHoverIndex, setActiveHoverIndex] = useState<number | null>(null);
+  const [hoverCoord, setHoverCoord] = useState<{ x: number; y: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(1000);
@@ -176,12 +177,17 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
     );
   };
 
-  // Top-App Right-Side Floating HUD: Always floats on the right side in the headroom, never covering bars
-  const getRightFloatingTooltipPos = () => {
-    if (activeHoverIndex === null) return undefined;
-    const cardWidth = 250;
-    const rightMargin = 25;
-    const x = Math.max(10, containerWidth - cardWidth - rightMargin);
+  // Dynamic floating card: Placed immediately to the RIGHT of the hovered bar (follows bar, not static)
+  const getRightOfBarTooltipPos = () => {
+    if (!hoverCoord) return undefined;
+    const cardWidth = 245;
+    // Float immediately to the right of the hovered bar
+    let x = hoverCoord.x + 35;
+    // Only if it would overflow the right edge of the chart container, place to the left of the bar
+    if (x + cardWidth > containerWidth - 10) {
+      x = Math.max(10, hoverCoord.x - cardWidth - 35);
+    }
+    // Lock cleanly in upper headroom (y: 8) so it never touches or obscures bars/badges
     return { x, y: 8 };
   };
 
@@ -284,10 +290,14 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
               onMouseMove={(state: any) => {
                 if (state && state.activeTooltipIndex !== undefined) {
                   setActiveHoverIndex(state.activeTooltipIndex);
+                  if (state.activeCoordinate) {
+                    setHoverCoord(state.activeCoordinate);
+                  }
                 }
               }}
               onMouseLeave={() => {
                 setActiveHoverIndex(null);
+                setHoverCoord(null);
               }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#1F2233" vertical={false} />
@@ -311,10 +321,10 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 domain={[0, (dataMax: number) => Math.ceil((dataMax * 1.25) / 100) * 100]}
               />
 
-              {/* Top-App Right-Side Tooltip: Anchored gracefully to the right side in the headroom */}
+              {/* Dynamic Floating Tooltip: Positioned immediately to the right of the hovered bar */}
               <Tooltip 
                 content={<CustomTooltip />} 
-                position={getRightFloatingTooltipPos()}
+                position={getRightOfBarTooltipPos()}
                 isAnimationActive={false}
                 cursor={{ 
                   fill: 'rgba(255, 255, 255, 0.03)', 
