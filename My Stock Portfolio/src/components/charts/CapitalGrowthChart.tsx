@@ -15,13 +15,20 @@ interface CapitalGrowthChartProps {
 type TimeRange = '1M' | '3M' | '6M' | '1Y' | 'ALL';
 
 export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transactions, initialCash = 0 }) => {
-  const { historical } = usePriceStore();
-  const { currency, exchangeRate } = useUiStore();
+  const { historical, exchangeRate, fetchExchangeRate } = usePriceStore();
+  const { currency } = useUiStore();
   const [range, setRange] = useState<TimeRange>('ALL');
+
+  React.useEffect(() => {
+    if (!exchangeRate || exchangeRate === 0) {
+      fetchExchangeRate('USD', 'THB');
+    }
+  }, [exchangeRate, fetchExchangeRate]);
 
   const currSymbol = currency === 'THB' ? '฿' : '$';
   const formatMoney = (usd: number) => {
-    const val = currency === 'THB' ? usd * exchangeRate : usd;
+    const rate = currency === 'THB' ? (exchangeRate > 0 ? exchangeRate : 35) : 1;
+    const val = usd * rate;
     return `${currSymbol}${val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
@@ -168,13 +175,13 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#06B6D4] to-[#823AFD] flex items-center justify-center shadow-[0_4px_12px_rgba(6,182,212,0.3)]">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-rose-500 to-amber-600 flex items-center justify-center shadow-[0_4px_12px_rgba(245,158,11,0.3)]">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <div>
               <h3 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
                 Capital Growth & Organic Wealth
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#1A1D2D] border border-[#2A2E45] text-[#06B6D4] font-semibold">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-semibold">
                   Net Invested vs Equity
                 </span>
               </h3>
@@ -194,7 +201,7 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
               className={clsx(
                 "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
                 range === r
-                  ? "bg-gradient-to-r from-[#06B6D4] to-[#823AFD] text-white shadow-sm"
+                  ? "bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-sm"
                   : "text-[#9898C8] hover:text-white"
               )}
             >
@@ -207,19 +214,25 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
       {/* 3 Metric Pills */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-[#161926] p-4 rounded-2xl border border-[#2A2E45]">
-          <span className="text-xs font-semibold text-[#9898C8] block">Net Invested Capital (เงินต้นสุทธิ)</span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#9898C8]">Net Invested Capital (เงินต้นสุทธิ)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+          </div>
           <span className="text-2xl font-black text-white tabular-nums tracking-tight mt-1 block">
             {formatMoney(latestInvested)}
           </span>
-          <span className="text-[11px] text-[#9898C8] block mt-0.5">รวมเงินเติมทั้งหมด หักเงินถอน</span>
+          <span className="text-[11px] text-rose-400/80 block mt-0.5">รวมเงินเติมทั้งหมด หักเงินถอน (เส้นประแดง)</span>
         </div>
 
         <div className="bg-[#161926] p-4 rounded-2xl border border-[#2A2E45]">
-          <span className="text-xs font-semibold text-[#9898C8] block">Current Portfolio Value (มูลค่าปัจจุบัน)</span>
-          <span className="text-2xl font-black text-white tabular-nums tracking-tight mt-1 block">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#9898C8]">Current Portfolio Value (มูลค่าปัจจุบัน)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"></span>
+          </div>
+          <span className="text-2xl font-black text-amber-400 tabular-nums tracking-tight mt-1 block">
             {formatMoney(latestValue)}
           </span>
-          <span className="text-[11px] text-[#06B6D4] font-medium block mt-0.5">สินทรัพย์ + เงินสดคงเหลือ</span>
+          <span className="text-[11px] text-amber-300/80 font-medium block mt-0.5">สินทรัพย์ + เงินสดคงเหลือ (เส้นสีทอง)</span>
         </div>
 
         <div className="bg-[#161926] p-4 rounded-2xl border border-[#2A2E45]">
@@ -243,12 +256,12 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
             <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="growthValueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#06B6D4" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="#FBBF24" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#FBBF24" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="investedGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#823AFD" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#823AFD" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.07)" />
@@ -261,21 +274,25 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
               <YAxis 
                 stroke="#94A3B8" 
                 tick={{ fontSize: 11 }}
-                tickFormatter={(val) => `${currSymbol}${val >= 1000 ? `${(val/1000).toFixed(0)}k` : val}`}
+                tickFormatter={(val) => {
+                  const rate = currency === 'THB' ? (exchangeRate > 0 ? exchangeRate : 35) : 1;
+                  const v = val * rate;
+                  return `${currSymbol}${v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)}`;
+                }}
                 domain={['auto', 'auto']}
               />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#161926', borderColor: '#2A2E45', borderRadius: '16px', color: '#fff', fontSize: '12px' }}
                 formatter={(val: any, name: string) => [
                   formatMoney(Number(val)),
-                  name === 'value' ? 'Portfolio Value (มูลค่ารวม)' : 'Net Invested (เงินต้น)'
+                  name === 'value' ? 'Portfolio Value (มูลค่ารวม - สีทอง)' : 'Net Invested (เงินต้น - สีแดง)'
                 ]}
                 labelFormatter={(label) => `วันที่: ${new Date(label).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
               />
               <Area 
                 type="monotone" 
                 dataKey="invested" 
-                stroke="#823AFD" 
+                stroke="#F43F5E" 
                 strokeWidth={2} 
                 strokeDasharray="4 4"
                 fillOpacity={1} 
@@ -285,7 +302,7 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
               <Area 
                 type="monotone" 
                 dataKey="value" 
-                stroke="#06B6D4" 
+                stroke="#FBBF24" 
                 strokeWidth={3} 
                 fillOpacity={1} 
                 fill="url(#growthValueGradient)" 
