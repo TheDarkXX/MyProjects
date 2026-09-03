@@ -17,6 +17,7 @@ type SortType = 'Value' | 'Cost' | 'Profit $' | 'Profit %' | 'A-Z';
 export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D' }) => {
   const [sortBy, setSortBy] = useState<SortType>('Value');
   const [activeHoverIndex, setActiveHoverIndex] = useState<number | null>(null);
+  const [hoverCoord, setHoverCoord] = useState<{ x: number; y: number } | null>(null);
 
   const { currency } = useUiStore();
   const { exchangeRate, historical } = usePriceStore();
@@ -130,7 +131,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
     return items.slice(0, 16);
   }, [holdings, sortBy, timeRange, historical]);
 
-  // Dynamic Floating Return Badge: Lifts up, illuminates with a glowing badge pill on hover
+  // Clean, institutional floating return badge: Crisp typography without messy pulse boxes
   const renderValueBadge = (props: any) => {
     const { x, y, width, index } = props;
     const item = data[index];
@@ -140,37 +141,36 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
     const pctStr = `${isPositive ? '+' : ''}${item.profitPercent.toFixed(1)}%`;
 
     return (
-      <g className="select-none pointer-events-none">
-        {isHovered && (
-          <rect
-            x={x + width / 2 - 34}
-            y={y - 32}
-            width={68}
-            height={24}
-            rx={8}
-            fill={isPositive ? "rgba(16, 185, 129, 0.25)" : "rgba(244, 63, 94, 0.25)"}
-            stroke={isPositive ? "#10B981" : "#F43F5E"}
-            strokeWidth={1.5}
-          />
-        )}
-        <text
-          x={x + width / 2}
-          y={isHovered ? y - 16 : y - 10}
-          fill={isPositive ? '#34D399' : '#FB7185'}
-          textAnchor="middle"
-          fontSize={isHovered ? "16" : "15"}
-          fontWeight="900"
-          style={{
-            filter: isHovered 
-              ? `drop-shadow(0 0 10px ${isPositive ? 'rgba(52,211,153,0.9)' : 'rgba(251,113,133,0.9)'})` 
-              : 'drop-shadow(0 2px 4px rgba(0,0,0,0.95))',
-            transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
-          }}
-        >
-          {pctStr}
-        </text>
-      </g>
+      <text
+        x={x + width / 2}
+        y={isHovered ? y - 12 : y - 8}
+        fill={isPositive ? '#34D399' : '#FB7185'}
+        textAnchor="middle"
+        fontSize={isHovered ? "16" : "15"}
+        fontWeight="900"
+        className="select-none pointer-events-none"
+        style={{
+          filter: isHovered 
+            ? `drop-shadow(0 0 6px ${isPositive ? 'rgba(52,211,153,0.7)' : 'rgba(251,113,133,0.7)'})` 
+            : 'drop-shadow(0 2px 4px rgba(0,0,0,0.95))',
+          transition: 'all 0.15s ease-out'
+        }}
+      >
+        {pctStr}
+      </text>
     );
+  };
+
+  // Top-App Smart Non-Blocking Placement: Offsets card away from the bar so it NEVER obscures bars or badges
+  const getSmartTooltipPos = () => {
+    if (!hoverCoord) return undefined;
+    const cardWidth = 245;
+    // If hovering on right half, shift card to the left; if on left half, shift to the right
+    const posX = hoverCoord.x > 380 
+      ? Math.max(10, hoverCoord.x - cardWidth - 50) 
+      : hoverCoord.x + 55;
+    // Lock to top headroom (y: 8) so the card hovers cleanly above without touching bars
+    return { x: posX, y: 8 };
   };
 
   const CustomTooltip = ({ active, payload }: any) => {
@@ -180,34 +180,34 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
       const isTotalPositive = item.totalProfit >= 0;
 
       return (
-        <div className="bg-[#0F111A]/95 backdrop-blur-xl border border-[#2A2E45] p-4 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-xs text-white min-w-[240px] z-50 animate-fade-in">
-          <div className="flex justify-between items-center pb-2.5 border-b border-[#2A2E45] mb-2.5">
+        <div className="bg-[#0F111A]/95 backdrop-blur-2xl border border-[#2A2E45] p-3.5 rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.75)] text-xs text-white min-w-[240px] pointer-events-none z-50 animate-fade-in">
+          <div className="flex justify-between items-center pb-2 border-b border-[#2A2E45] mb-2">
             <span className="font-black text-white text-base tracking-tight">{item.name}</span>
             <span className="text-[11px] text-[#CBD5E1]">
-              {item.shares?.toFixed(4)} shares @ {formatCurrency(item.avgCost || 0)}
+              {item.shares?.toFixed(4)} shs @ {formatCurrency(item.avgCost || 0)}
             </span>
           </div>
 
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <span className="text-[#CBD5E1]">Cost Basis:</span>
+              <span className="text-[#94A3B8]">Cost Basis:</span>
               <span className="font-semibold text-white tabular-nums">{formatCurrency(item.rawCost)}</span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-[#CBD5E1]">Current Value:</span>
+              <span className="text-[#94A3B8]">Current Value:</span>
               <span className="font-bold text-white tabular-nums">{formatCurrency(item.rawValue)}</span>
             </div>
 
-            <div className="pt-2 border-t border-[#2A2E45]/60 flex justify-between items-center">
-              <span className="text-[#CBD5E1]">{timeRange} Return:</span>
+            <div className="pt-1.5 border-t border-[#2A2E45]/60 flex justify-between items-center">
+              <span className="text-[#94A3B8]">{timeRange} Return:</span>
               <span className={clsx("font-bold tabular-nums", isPeriodPositive ? "text-emerald-400" : "text-rose-400")}>
                 {isPeriodPositive ? '+' : ''}{formatCurrency(item.profit)} ({isPeriodPositive ? '+' : ''}{item.profitPercent.toFixed(1)}%)
               </span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-[#CBD5E1]">Total Return:</span>
+              <span className="text-[#94A3B8]">Total Return:</span>
               <span className={clsx("font-bold tabular-nums", isTotalPositive ? "text-emerald-400" : "text-rose-400")}>
                 {isTotalPositive ? '+' : ''}{formatCurrency(item.totalProfit)} ({isTotalPositive ? '+' : ''}{item.totalProfitPercent.toFixed(1)}%)
               </span>
@@ -260,7 +260,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
           No active securities to compare
         </div>
       ) : (
-        /* Interactive Bar Chart with Spotlight Cursor & Neon Hover Effects */
+        /* Interactive Bar Chart with Top-App Institutional Polish */
         <div className="w-full" style={{ height: 390, minHeight: 390 }}>
           <ResponsiveContainer width="100%" height={390}>
             <BarChart 
@@ -268,13 +268,19 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
               barGap={5} 
               barSize={28}
               barCategoryGap="25%"
-              margin={{ top: 35, right: 15, left: 5, bottom: 25 }}
+              margin={{ top: 38, right: 15, left: 5, bottom: 25 }}
               onMouseMove={(state: any) => {
                 if (state && state.activeTooltipIndex !== undefined) {
                   setActiveHoverIndex(state.activeTooltipIndex);
+                  if (state.activeCoordinate) {
+                    setHoverCoord(state.activeCoordinate);
+                  }
                 }
               }}
-              onMouseLeave={() => setActiveHoverIndex(null)}
+              onMouseLeave={() => {
+                setActiveHoverIndex(null);
+                setHoverCoord(null);
+              }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#1F2233" vertical={false} />
               
@@ -286,6 +292,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 axisLine={{ stroke: '#2A2E45' }}
               />
 
+              {/* Y-Axis with 25% Headroom for clean badge & card clearance */}
               <YAxis 
                 stroke="#9898C8" 
                 tickFormatter={formatShortAxis}
@@ -293,17 +300,17 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 tickLine={false}
                 axisLine={{ stroke: '#2A2E45' }}
                 width={65}
+                domain={[0, (dataMax: number) => Math.ceil((dataMax * 1.25) / 100) * 100]}
               />
 
-              {/* Animated Spotlight Column Cursor */}
+              {/* Smart Non-Blocking Tooltip: Positioned in top headroom, offset away from active bars */}
               <Tooltip 
                 content={<CustomTooltip />} 
+                position={getSmartTooltipPos()}
+                isAnimationActive={false}
                 cursor={{ 
-                  fill: 'rgba(130, 58, 253, 0.08)', 
-                  stroke: 'rgba(130, 58, 253, 0.25)',
-                  strokeWidth: 1.5,
-                  strokeDasharray: '4 4',
-                  radius: 12 
+                  fill: 'rgba(255, 255, 255, 0.03)', 
+                  radius: 8 
                 }} 
               />
               
@@ -314,14 +321,13 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 formatter={(val) => <span className="text-[#F8FAFC] font-bold text-sm ml-1">{val}</span>}
               />
 
-              {/* Cost Basis Bar with Spotlight Elevation & Neon Glow */}
+              {/* Cost Basis Bar: Crisp institutional highlight on hover */}
               <Bar 
                 dataKey="cost" 
                 name="Cost Basis" 
                 radius={[6, 6, 0, 0]} 
                 isAnimationActive={true}
-                animationDuration={900}
-                animationEasing="ease-out"
+                animationDuration={600}
               >
                 {data.map((entry, index) => {
                   const isHovered = activeHoverIndex === index;
@@ -330,13 +336,12 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                   return (
                     <Cell 
                       key={`cell-cost-${index}`} 
-                      fill="#6366F1"
-                      opacity={isDimmed ? 0.35 : 1}
+                      fill={isHovered ? "#818CF8" : "#6366F1"}
+                      stroke={isHovered ? "#FFFFFF" : "transparent"}
+                      strokeWidth={isHovered ? 1.5 : 0}
+                      opacity={isDimmed ? 0.65 : 1}
                       style={{
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        filter: isHovered 
-                          ? 'brightness(1.22) drop-shadow(0 0 12px rgba(99, 102, 241, 0.8))' 
-                          : 'none',
+                        transition: 'all 0.15s ease-out',
                         cursor: 'pointer'
                       }}
                     />
@@ -344,33 +349,31 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 })}
               </Bar>
 
-              {/* Market Value Bar with Return Badge, Glow and Smooth Focus Transition */}
+              {/* Market Value Bar: Crisp institutional highlight on hover */}
               <Bar 
                 dataKey="value" 
                 name="Current Value" 
                 radius={[6, 6, 0, 0]} 
                 label={renderValueBadge}
                 isAnimationActive={true}
-                animationDuration={900}
-                animationEasing="ease-out"
+                animationDuration={600}
               >
                 {data.map((entry, index) => {
                   const isHovered = activeHoverIndex === index;
                   const isDimmed = activeHoverIndex !== null && !isHovered;
                   const isPositive = entry.profit >= 0;
                   const baseColor = isPositive ? "#10B981" : "#F43F5E";
-                  const glowColor = isPositive ? "rgba(16, 185, 129, 0.85)" : "rgba(244, 63, 94, 0.85)";
+                  const hoverColor = isPositive ? "#34D399" : "#FB7185";
 
                   return (
                     <Cell 
                       key={`cell-val-${index}`} 
-                      fill={baseColor} 
-                      opacity={isDimmed ? 0.35 : 1}
+                      fill={isHovered ? hoverColor : baseColor} 
+                      stroke={isHovered ? "#FFFFFF" : "transparent"}
+                      strokeWidth={isHovered ? 1.5 : 0}
+                      opacity={isDimmed ? 0.65 : 1}
                       style={{
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        filter: isHovered 
-                          ? `brightness(1.28) drop-shadow(0 0 16px ${glowColor})` 
-                          : 'none',
+                        transition: 'all 0.15s ease-out',
                         cursor: 'pointer'
                       }}
                     />
