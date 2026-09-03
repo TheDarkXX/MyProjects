@@ -304,19 +304,72 @@ export const CapitalGrowthChart: React.FC<CapitalGrowthChartProps> = ({ transact
                 domain={['auto', 'auto']}
               />
               <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#0F111A', 
-                  borderColor: '#2A2E45', 
-                  borderRadius: '16px', 
-                  color: '#fff', 
-                  fontSize: '12px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                content={({ active, payload, label }) => {
+                  if (!active || !payload || !payload.length) return null;
+                  const data = payload[0]?.payload;
+                  if (!data) return null;
+
+                  const invested = data.invested || 0;
+                  const value = data.value || 0;
+                  const gain = data.gain !== undefined ? data.gain : value - invested;
+                  const gainPct = invested > 0 ? (gain / invested) * 100 : 0;
+                  const isProfit = gain >= 0;
+
+                  return (
+                    <div className="bg-[#0F111A]/95 backdrop-blur-md border border-[#2A2E45] p-3.5 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] min-w-[220px] space-y-2 text-[13px]">
+                      {/* Date */}
+                      <div className="text-[13px] font-bold text-slate-200 pb-1.5 border-b border-[#2A2E45]/80 flex items-center justify-between">
+                        <span>วันที่: {new Date(label).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                      </div>
+
+                      {/* 1. Net Invested */}
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-rose-300 font-medium">
+                          <span className="w-2.5 h-0.5 border-b-2 border-dashed border-[#FF4D6D]"></span>
+                          เงินต้นสุทธิ:
+                        </span>
+                        <span className="font-mono font-bold text-slate-200">
+                          {formatMoney(invested)}
+                        </span>
+                      </div>
+
+                      {/* 2. Portfolio Value */}
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-amber-300 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-[#FACC15] shadow-[0_0_6px_#FACC15]"></span>
+                          มูลค่ารวม:
+                        </span>
+                        <span className="font-mono font-bold text-amber-300">
+                          {formatMoney(value)}
+                        </span>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="border-t border-[#2A2E45]/80 pt-1.5 space-y-1.5">
+                        {/* 3. Profit / Loss Value */}
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-slate-300 font-medium">ส่วนต่างกำไร/ขาดทุน:</span>
+                          <span className={clsx("font-mono font-bold", isProfit ? "text-emerald-400" : "text-rose-400")}>
+                            {isProfit ? '+' : ''}{formatMoney(gain)}
+                          </span>
+                        </div>
+
+                        {/* 4. % Profit / Loss */}
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-slate-300 font-medium">อัตราผลตอบแทน (%):</span>
+                          <span className={clsx(
+                            "text-[12px] font-black px-2 py-0.5 rounded-md font-mono",
+                            isProfit 
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" 
+                              : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                          )}>
+                            {isProfit ? '+' : ''}{gainPct.toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
                 }}
-                formatter={(val: any, name: string) => [
-                  formatMoney(Number(val)),
-                  name === 'value' ? 'Portfolio Value (มูลค่ารวม)' : 'Net Invested (เงินต้น)'
-                ]}
-                labelFormatter={(label) => `วันที่: ${new Date(label).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
               />
               {/* Baseline Invested Line: Clean Crisp Laser Dotted Line without muddy fill */}
               <Area 
