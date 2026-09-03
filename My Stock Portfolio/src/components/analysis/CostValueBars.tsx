@@ -129,7 +129,7 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
     return items.slice(0, 16);
   }, [holdings, sortBy, timeRange, historical]);
 
-  // Top App Design Pattern: Floating Return Badge above Market Value Bar
+  // Floating Return Badge above Market Value Bar: Enlarged +4 levels (fontSize: 15px, Font-Black)
   const renderValueBadge = (props: any) => {
     const { x, y, width, index } = props;
     const item = data[index];
@@ -140,13 +140,13 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
     return (
       <text
         x={x + width / 2}
-        y={y - 8}
+        y={y - 10}
         fill={isPositive ? '#34D399' : '#FB7185'}
         textAnchor="middle"
-        fontSize="11"
+        fontSize="15"
         fontWeight="900"
         className="select-none pointer-events-none font-black"
-        style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))' }}
+        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95))' }}
       >
         {pctStr}
       </text>
@@ -201,19 +201,21 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
 
   return (
     <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#10B981]/20 to-[#38BDF8]/20 border border-[#10B981]/30 flex items-center justify-center">
-            <BarChart3 className="w-4 h-4 text-[#10B981]" />
+      {/* Header Bar: Enlarged Title & Subtitle (+4 font levels) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#10B981]/20 to-[#38BDF8]/20 border border-[#10B981]/30 flex items-center justify-center shadow-inner">
+            <BarChart3 className="w-5 h-5 text-[#10B981]" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white tracking-tight">Cost vs Market Value</h3>
-            <p className="text-xs text-[#9898C8]">Paired capital comparison with {timeRange} return badges</p>
+            <h3 className="text-2xl font-black text-white tracking-tight">Cost vs Market Value</h3>
+            <p className="text-sm font-medium text-[#CBD5E1] mt-0.5">
+              Paired capital comparison with {timeRange} return badges
+            </p>
           </div>
         </div>
 
-        {/* Sort Controls */}
+        {/* Sort Controls (Size Preserved as requested) */}
         <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-xl gap-1 overflow-x-auto custom-scrollbar">
           <span className="text-[11px] font-bold text-[#9898C8] px-2 uppercase">Sort By:</span>
           {(['Value', 'Cost', 'Profit $', 'Profit %', 'A-Z'] as SortType[]).map((type) => (
@@ -234,42 +236,48 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
       </div>
 
       {data.length === 0 ? (
-        <div className="h-[350px] flex items-center justify-center text-[#9898C8] text-sm">
+        <div className="h-[380px] flex items-center justify-center text-[#9898C8] text-sm">
           No active securities to compare
         </div>
       ) : (
-        /* Tight Paired Bar Chart: barGap={4} & barSize={26} matches top institutional apps */
-        <div className="w-full" style={{ height: 360, minHeight: 360 }}>
-          <ResponsiveContainer width="100%" height={360}>
+        /* Height increased to 390px for comfortable breathing room with +4 larger fonts */
+        <div className="w-full" style={{ height: 390, minHeight: 390 }}>
+          <ResponsiveContainer width="100%" height={390}>
             <BarChart 
               data={data} 
               barGap={5} 
-              barSize={26}
+              barSize={28}
               barCategoryGap="25%"
-              margin={{ top: 25, right: 15, left: 0, bottom: 20 }}
+              margin={{ top: 32, right: 15, left: 5, bottom: 25 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#1F2233" vertical={false} />
+              
+              {/* X-Axis Ticker Labels: Enlarged +4 levels (fontSize: 15, fontWeight: 900) */}
               <XAxis 
                 dataKey="name" 
                 stroke="#9898C8" 
-                tick={{ fill: '#E2E8F0', fontSize: 12, fontWeight: 800 }}
+                tick={{ fill: '#F8FAFC', fontSize: 15, fontWeight: 900 }}
                 tickLine={false}
                 axisLine={{ stroke: '#2A2E45' }}
               />
+
+              {/* Y-Axis Value Labels: Enlarged +4 levels (fontSize: 14, fontWeight: 700) */}
               <YAxis 
                 stroke="#9898C8" 
                 tickFormatter={formatShortAxis}
-                tick={{ fill: '#9898C8', fontSize: 11 }}
+                tick={{ fill: '#CBD5E1', fontSize: 14, fontWeight: 700 }}
                 tickLine={false}
                 axisLine={{ stroke: '#2A2E45' }}
-                width={55}
+                width={65}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.04)' }} />
+              
+              {/* Legend: Enlarged +4 levels (fontSize: 14px, Font-Bold) */}
               <Legend 
                 verticalAlign="top" 
                 align="right" 
-                wrapperStyle={{ paddingBottom: '14px', fontSize: '11px', fontWeight: 'bold' }}
-                formatter={(val) => <span className="text-[#E2E8F0] font-semibold">{val}</span>}
+                wrapperStyle={{ paddingBottom: '16px', fontSize: '14px', fontWeight: 'bold' }}
+                formatter={(val) => <span className="text-[#F8FAFC] font-bold text-sm ml-1">{val}</span>}
               />
 
               {/* Cost Basis Bar (Indigo-500) */}
@@ -277,14 +285,14 @@ export const CostValueBars: React.FC<Props> = ({ holdings = [], timeRange = '1D'
                 dataKey="cost" 
                 name="Cost Basis" 
                 fill="#6366F1"
-                radius={[5, 5, 0, 0]} 
+                radius={[6, 6, 0, 0]} 
               />
 
               {/* Market Value Bar (Emerald-500 if profit >= 0, Rose-500 if loss) + Floating Return Badge */}
               <Bar 
                 dataKey="value" 
                 name="Current Value" 
-                radius={[5, 5, 0, 0]} 
+                radius={[6, 6, 0, 0]} 
                 label={renderValueBadge}
               >
                 {data.map((entry, index) => (

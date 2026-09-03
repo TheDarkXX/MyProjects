@@ -175,7 +175,8 @@ export const Heatmap: React.FC<HeatmapProps> = ({
   const { transactions } = useTransactionStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 1200, height: 500 });
+  // Enhanced baseline height (min 560px, up to 740px) to expand comfortably into available space
+  const [dimensions, setDimensions] = useState({ width: 1200, height: 600 });
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, item: null, x: 0, y: 0 });
 
@@ -187,7 +188,8 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         const rect = containerRef.current.getBoundingClientRect();
         const w = Math.round(rect.width);
         if (w > 0) {
-          const h = Math.max(480, Math.min(580, Math.round(w * 0.35)));
+          // Expanded height formula: min 560px, max 740px (golden aspect ratio for ultrawide)
+          const h = Math.max(560, Math.min(740, Math.round(w * 0.42)));
           setDimensions({ width: w, height: h });
         }
       }
@@ -287,17 +289,18 @@ export const Heatmap: React.FC<HeatmapProps> = ({
     });
   }, [holdings, activeTimeRange, historical, txSectorMap]);
 
+  // Enhanced Finviz dynamic color scale: lively contrast across all timeframes
   const colorScale = useMemo(() => {
-    const limit = (activeTimeRange === '1D' || activeTimeRange === '1W') ? 3 : (activeTimeRange === '1M' || activeTimeRange === '3M') ? 10 : 25;
+    const limit = (activeTimeRange === '1D' || activeTimeRange === '1W') ? 3 : (activeTimeRange === '1M' || activeTimeRange === '3M') ? 8 : 20;
 
     return d3.scaleLinear<string>()
-      .domain([-limit, -limit * 0.35, 0, limit * 0.35, limit])
+      .domain([-limit, -limit * 0.25, 0, limit * 0.25, limit])
       .range([
-        '#dc2626',
-        '#991b1b',
-        '#334155',
-        '#15803d',
-        '#16a34a'
+        '#dc2626', // Vibrant Red
+        '#991b1b', // Mild Red
+        '#232838', // Neutral Slate
+        '#15803d', // Mild Green
+        '#16a34a'  // Vibrant Green
       ])
       .clamp(true);
   }, [activeTimeRange]);
@@ -322,6 +325,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
       .sum((d: any) => d.currentValue || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
+    // Golden ratio (1.618) squarify keeps blocks beautifully boxy with the expanded height
     const treemapLayout = d3.treemap<any>()
       .tile(d3.treemapSquarify.ratio(1.618))
       .size([dimensions.width, dimensions.height])
@@ -422,7 +426,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         </div>
       </div>
 
-      {/* Full-Width SVG Container with Native 1:1 Pixel Coordinates */}
+      {/* Expanded Height Full-Width SVG Container */}
       <div 
         ref={containerRef} 
         className="w-full relative select-none rounded-2xl overflow-hidden border border-[#2A2E45]/60 bg-[#0B0F17]"
@@ -497,9 +501,9 @@ export const Heatmap: React.FC<HeatmapProps> = ({
             const fillColor = colorScale(returnPct);
             const isHovered = item.symbol === hoveredSymbol;
 
-            const showFull = width >= 70 && height >= 48;
-            const showMedium = width >= 42 && height >= 30;
-            const showMini = width >= 26 && height >= 16;
+            const showFull = width >= 65 && height >= 45;
+            const showMedium = width >= 38 && height >= 28;
+            const showMini = width >= 24 && height >= 16;
 
             return (
               <g
@@ -508,7 +512,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                 onMouseEnter={(e) => handleMouseEnter(e, d)}
                 className="cursor-pointer"
               >
-                {/* Stock Cell Rectangle: Elegant Pure White Glow Hover (Controlled Theme Palette, No Jarring Cyan!) */}
+                {/* Stock Cell Rectangle: Crisp White Glow Hover */}
                 <rect
                   width={width}
                   height={height}
@@ -527,36 +531,36 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                   <g className="pointer-events-none">
                     <text
                       x={width / 2}
-                      y={height / 2 - 10}
+                      y={height / 2 - 12}
                       textAnchor="middle"
                       fill="#FFFFFF"
-                      fontSize={Math.max(12, Math.min(16, Math.round(width / 6)))}
+                      fontSize={Math.max(13, Math.min(22, Math.round(width / 6.5)))}
                       fontWeight="900"
-                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                     >
                       {item.symbol}
                     </text>
 
                     <text
                       x={width / 2}
-                      y={height / 2 + 6}
+                      y={height / 2 + 7}
                       textAnchor="middle"
                       fill="#FFFFFF"
-                      fontSize={Math.max(11, Math.min(14, Math.round(width / 7)))}
-                      fontWeight="700"
-                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+                      fontSize={Math.max(12, Math.min(18, Math.round(width / 7.5)))}
+                      fontWeight="800"
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                     >
                       {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
                     </text>
 
                     <text
                       x={width / 2}
-                      y={height / 2 + 20}
+                      y={height / 2 + 23}
                       textAnchor="middle"
-                      fill="rgba(255, 255, 255, 0.85)"
-                      fontSize="10"
-                      fontWeight="600"
-                      style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}
+                      fill="rgba(255, 255, 255, 0.9)"
+                      fontSize="11"
+                      fontWeight="700"
+                      style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
                     >
                       {formatCurrency(item.currentValue)} • {item.weightPercent.toFixed(1)}%
                     </text>
@@ -565,23 +569,23 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                   <g className="pointer-events-none">
                     <text
                       x={width / 2}
-                      y={height / 2 - 3}
+                      y={height / 2 - 4}
                       textAnchor="middle"
                       fill="#FFFFFF"
-                      fontSize={Math.max(10, Math.min(13, Math.round(width / 5)))}
+                      fontSize={Math.max(11, Math.min(15, Math.round(width / 5)))}
                       fontWeight="800"
-                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                     >
                       {item.symbol}
                     </text>
                     <text
                       x={width / 2}
-                      y={height / 2 + 10}
+                      y={height / 2 + 11}
                       textAnchor="middle"
                       fill="#FFFFFF"
-                      fontSize={Math.max(9, Math.min(11, Math.round(width / 6)))}
-                      fontWeight="600"
-                      style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}
+                      fontSize={Math.max(10, Math.min(13, Math.round(width / 6)))}
+                      fontWeight="700"
+                      style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
                     >
                       {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%
                     </text>
@@ -593,10 +597,10 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill="#FFFFFF"
-                    fontSize={Math.max(8, Math.min(10, Math.round(width / 4)))}
-                    fontWeight="700"
+                    fontSize={Math.max(9, Math.min(12, Math.round(width / 4)))}
+                    fontWeight="800"
                     className="pointer-events-none"
-                    style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}
+                    style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
                   >
                     {item.symbol}
                   </text>
@@ -606,7 +610,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
           })}
         </svg>
 
-        {/* 3. Rich Glassmorphic Hover Tooltip — Strictly in Theme Palette */}
+        {/* 3. Rich Glassmorphic Hover Tooltip */}
         {tooltip.visible && tooltip.item && (
           <div
             style={{
@@ -692,7 +696,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
           <div className="flex items-center gap-1">
             <span className="px-2 py-0.5 rounded bg-[#dc2626] text-white font-bold text-[10px]">-3%+</span>
             <span className="px-1.5 py-0.5 rounded bg-[#991b1b] text-white text-[10px]">-1%</span>
-            <span className="px-1.5 py-0.5 rounded bg-[#334155] text-white text-[10px]">0%</span>
+            <span className="px-1.5 py-0.5 rounded bg-[#232838] text-white text-[10px]">0%</span>
             <span className="px-1.5 py-0.5 rounded bg-[#15803d] text-white text-[10px]">+1%</span>
             <span className="px-2 py-0.5 rounded bg-[#16a34a] text-white font-bold text-[10px]">+3%+</span>
           </div>
