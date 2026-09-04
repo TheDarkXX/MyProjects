@@ -86,51 +86,57 @@ export const Header = () => {
           />
         </div>
 
-        {/* Global Currency Toggle (USD / THB) */}
-        <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-2xl text-xs gap-1 shadow-inner">
+        {/* Global Currency Toggle (USD / THB) - Premium Global Design */}
+        <div className="flex items-center bg-[#141724] border border-[#2A2E45] p-1 rounded-2xl gap-1 shadow-inner font-heading">
           <button
             onClick={() => setCurrency('USD')}
             className={clsx(
-              "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+              "px-3.5 py-1.5 rounded-xl text-[13px] font-bold transition-all cursor-pointer flex items-center gap-2 select-none font-heading tracking-wide",
               currency === 'USD'
-                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_0_12px_rgba(130,58,253,0.45)]"
+                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_2px_12px_rgba(130,58,253,0.45)]"
                 : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
             )}
-            title="Display all portfolio numbers in US Dollars"
+            title="Switch portfolio base currency to US Dollar ($ USD)"
           >
-            <span>🇺🇸</span>
-            <span>USD</span>
+            <span className={clsx(
+              "w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-colors font-heading",
+              currency === 'USD' ? "bg-white/20 text-white" : "bg-[#252A3D] text-amber-300"
+            )}>$</span>
+            <span className="font-heading">USD</span>
           </button>
           <button
             onClick={() => setCurrency('THB')}
             className={clsx(
-              "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+              "px-3.5 py-1.5 rounded-xl text-[13px] font-bold transition-all cursor-pointer flex items-center gap-2 select-none font-heading tracking-wide",
               currency === 'THB'
-                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_0_12px_rgba(130,58,253,0.45)]"
+                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_2px_12px_rgba(130,58,253,0.45)]"
                 : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
             )}
-            title="Display all portfolio numbers in Thai Baht (Yahoo Rate)"
+            title="Switch portfolio base currency to Thai Baht (฿ THB)"
           >
-            <span>🇹🇭</span>
-            <span>THB</span>
+            <span className={clsx(
+              "w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-colors font-heading",
+              currency === 'THB' ? "bg-white/20 text-white" : "bg-[#252A3D] text-emerald-300"
+            )}>฿</span>
+            <span className="font-heading">THB</span>
           </button>
         </div>
 
         {/* Live Yahoo FX Rate Badge */}
         {exchangeRate > 0 && (
-          <div className="hidden 2xl:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#1A1D2D]/80 border border-[#2A2E45] text-xs font-semibold tabular-nums text-[#CBD5E1] shadow-inner" title="Real-time Exchange Rate from Yahoo Finance (THB=X)">
+          <div className="hidden 2xl:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#1A1D2D]/80 border border-[#2A2E45] text-xs font-semibold tabular-nums text-[#CBD5E1] shadow-inner font-heading" title="Real-time Exchange Rate from Yahoo Finance (THB=X)">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-white font-bold">$1</span>
+            <span className="text-white font-bold font-heading">$1</span>
             <span>=</span>
-            <span className="text-emerald-400 font-extrabold">฿{exchangeRate.toFixed(2)}</span>
-            <span className="text-[10px] text-[#94A3B8] font-normal uppercase tracking-wider">Yahoo</span>
+            <span className="text-emerald-400 font-extrabold font-heading">฿{exchangeRate.toFixed(2)}</span>
+            <span className="text-[10px] text-[#94A3B8] font-normal uppercase tracking-wider font-heading">Yahoo</span>
           </div>
         )}
 
-        {/* Premium Market Status & API Indicator */}
+        {/* Premium Market Status & API Indicator - Full Prompt Font */}
         <button 
           onClick={() => fetchExchangeRate('USD', 'THB')}
-          className="flex items-center gap-3.5 px-3.5 py-2 rounded-2xl bg-[#151822]/80 border border-[#2A2E45]/80 hover:border-[#823AFD]/50 shadow-[0_4px_16px_rgba(0,0,0,0.2)] cursor-pointer transition-all hover:bg-[#1A1D2D] hover:-translate-y-0.5 group backdrop-blur-md"
+          className="flex items-center gap-3.5 px-3.5 py-2 rounded-2xl bg-[#151822]/80 border border-[#2A2E45]/80 hover:border-[#823AFD]/50 shadow-[0_4px_16px_rgba(0,0,0,0.2)] cursor-pointer transition-all hover:bg-[#1A1D2D] hover:-translate-y-0.5 group backdrop-blur-md font-heading"
           title={lastUpdated ? `Last updated: ${lastUpdated.toLocaleString('th-TH')}. Click to refresh!` : 'Click to refresh data'}
         >
           {/* Status Indicator Dot */}
@@ -148,13 +154,13 @@ export const Header = () => {
             )}
           </div>
 
-          <div className="flex flex-col text-left leading-none gap-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-white font-extrabold text-[13px] tracking-wide group-hover:text-[#823AFD] transition-colors">
+          <div className="flex flex-col text-left leading-tight gap-1 font-heading">
+            <div className="flex items-center gap-2 font-heading">
+              <span className="text-white font-extrabold text-[13px] tracking-wide group-hover:text-[#823AFD] transition-colors font-heading">
                 US Market
               </span>
               <span className={clsx(
-                "text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest border",
+                "text-[11px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border font-heading",
                 isMarketOpen
                   ? "text-amber-400 bg-amber-400/10 border-amber-400/30"
                   : "text-rose-400 bg-rose-500/10 border-rose-500/30"
@@ -162,12 +168,12 @@ export const Header = () => {
                 {isMarketOpen ? 'LIVE' : 'CLOSED'}
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-[#CBD5E1] font-medium tracking-wide">
+            <div className="flex items-center gap-1.5 font-heading">
+              <span className="text-xs text-[#CBD5E1] font-semibold tracking-wide font-heading">
                 Yahoo API
               </span>
               <span className="w-1 h-1 rounded-full bg-[#475569]"></span>
-              <span className="text-xs text-[#CBD5E1] font-mono tracking-tight font-semibold">
+              <span className="text-xs text-[#CBD5E1] tabular-nums tracking-tight font-bold font-heading">
                 {lastUpdated 
                   ? lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
                   : 'Syncing...'}

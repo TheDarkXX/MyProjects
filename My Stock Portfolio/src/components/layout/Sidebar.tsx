@@ -1,9 +1,8 @@
 import React from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
-import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useHoldings } from '../../hooks/useHoldings';
-import { LayoutDashboard, ReceiptText, Settings, LogOut, Briefcase, ChevronDown, Check, TrendingUp, TrendingDown, PieChart, LineChart, Target, ShieldCheck, Scale } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Settings, LogOut, Briefcase, TrendingUp, TrendingDown, PieChart, LineChart, Target, ShieldCheck, Scale } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAV_ITEMS = [
@@ -21,11 +20,8 @@ const NAV_ITEMS = [
 export const Sidebar = () => {
   const { activeTab, setActiveTab } = useUiStore();
   const logout = useAuthStore((s) => s.logout);
-  const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
-  const [isPortfoliosOpen, setIsPortfoliosOpen] = React.useState(false);
   const { holdings } = useHoldings();
 
-  const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
   const topWinners = [...holdings].filter(h => h.dayChangePercent > 0).sort((a, b) => b.dayChangePercent - a.dayChangePercent).slice(0, 3);
   const topLosers = [...holdings].filter(h => h.dayChangePercent < 0).sort((a, b) => a.dayChangePercent - b.dayChangePercent).slice(0, 3);
 
@@ -39,45 +35,6 @@ export const Sidebar = () => {
         <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-[#9898C8]">
           StockPro
         </h2>
-      </div>
-
-      {/* Portfolio Switcher */}
-      <div className="px-4 mb-4">
-        <div className="relative">
-          <button 
-            onClick={() => setIsPortfoliosOpen(!isPortfoliosOpen)}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] transition-colors"
-          >
-            <div className="flex items-center gap-3 truncate">
-              <div className="w-6 h-6 rounded-md bg-[#2A2E45] flex items-center justify-center shrink-0">
-                <span className="text-xs">{activePortfolio?.icon || '📈'}</span>
-              </div>
-              <span className="text-white font-medium truncate">{activePortfolio?.name || 'Select Portfolio'}</span>
-            </div>
-            <ChevronDown className="w-4 h-4 text-[#9898C8]" />
-          </button>
-          
-          {isPortfoliosOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl shadow-xl overflow-hidden z-50">
-              {portfolios.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setActivePortfolio(p.id);
-                    setIsPortfoliosOpen(false);
-                  }}
-                  className="w-full flex items-center justify-between p-3 hover:bg-[#2A2E45] transition-colors text-left"
-                >
-                  <div className="flex items-center gap-3 truncate">
-                    <span className="text-sm">{p.icon}</span>
-                    <span className="text-white text-sm font-medium truncate">{p.name}</span>
-                  </div>
-                  {p.id === activePortfolioId && <Check className="w-4 h-4 text-[#823AFD]" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Nav */}
