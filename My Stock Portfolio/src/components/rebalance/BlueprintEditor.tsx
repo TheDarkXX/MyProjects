@@ -4,7 +4,8 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { useHoldings } from '../../hooks/useHoldings';
 import { api } from '../../services/api';
-import { PRESET_TEMPLATES } from './StrategyConfigs';
+import { PRESET_TEMPLATES, STRATEGY_CATEGORIES, StrategyCategory, CATEGORY_CONFIG } from './StrategyConfigs';
+import { BlueprintPieChart } from './BlueprintPieChart';
 import { Search, Edit2, Trash2, Sparkles, TrendingUp, Shield, Target } from 'lucide-react';
 
 interface BlueprintEditorProps {
@@ -143,7 +144,7 @@ const SymbolSearchInput: React.FC<{
                 </div>
                 {item.sector && (
                   <div className="text-xs text-emerald-400 font-semibold mt-0.5">
-                    หมวด: {item.sector}
+                    Sector: {item.sector}
                   </div>
                 )}
               </div>
@@ -158,7 +159,7 @@ const SymbolSearchInput: React.FC<{
 export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId }) => {
   const { blueprints, isLoading, error, fetchBlueprints, upsertBlueprint, updateBlueprint, deleteBlueprint, autoGenerate, applyTemplate } = useBlueprintStore();
   const { currency } = useUiStore();
-  const { prices, fetchPrices, exchangeRate } = usePriceStore();
+  const { prices, fetchPrices, exchangeRate, metadata, fetchMetadata } = usePriceStore();
   const { holdings } = useHoldings();
 
   // Set of actively owned symbols in portfolio
@@ -171,7 +172,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
   const [newTargetPercent, setNewTargetPercent] = useState<number | ''>('');
   const [newStatus, setNewStatus] = useState<'OWNED' | 'WATCHLIST'>('WATCHLIST');
   const [newTargetPrice, setNewTargetPrice] = useState<number | ''>('');
-  const [newCategory, setNewCategory] = useState('Core');
+  const [newCategory, setNewCategory] = useState<string>('Compounders');
   const [techData, setTechData] = useState<TechnicalData | null>(null);
   const [techLoading, setTechLoading] = useState(false);
 
@@ -181,7 +182,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
   const [editPercent, setEditPercent] = useState<number | ''>('');
   const [editStatus, setEditStatus] = useState<'OWNED' | 'WATCHLIST'>('WATCHLIST');
   const [editPrice, setEditPrice] = useState<number | ''>('');
-  const [editCategory, setEditCategory] = useState('Core');
+  const [editCategory, setEditCategory] = useState<string>('Compounders');
   const [editTechData, setEditTechData] = useState<TechnicalData | null>(null);
 
   const currSymbol = currency === 'THB' ? '฿' : '$';
@@ -199,19 +200,30 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
     }
   }, [portfolioId, fetchBlueprints]);
 
-  // Fetch prices for all blueprint symbols
+  // Fetch prices and metadata for all blueprint symbols (skip CASH)
   useEffect(() => {
     if (blueprints.length > 0) {
-      const symbols = blueprints.map(b => b.symbol);
-      fetchPrices(symbols);
+      const symbols = blueprints.map(b => b.symbol).filter(s => s !== 'CASH');
+      if (symbols.length > 0) {
+        fetchPrices(symbols);
+        fetchMetadata(symbols);
+      }
     }
-  }, [blueprints, fetchPrices]);
+  }, [blueprints, fetchPrices, fetchMetadata]);
 
   // Auto-detect status & fetch technicals (EMA150, SMA200, SMA50) when newSymbol changes
   useEffect(() => {
     const sym = newSymbol.trim().toUpperCase();
     if (sym.length === 0) {
       setTechData(null);
+      return;
+    }
+
+    // CASH symbol handling
+    if (sym === 'CASH') {
+      setTechData(null);
+      setNewStatus('OWNED');
+      setNewCategory('Cash');
       return;
     }
 
@@ -228,9 +240,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
         const data = await api.prices.technicals(sym);
         if (data) {
           setTechData(data);
-          if (data.sector && data.sector !== 'Other') {
-            setNewCategory(data.sector);
-          }
+          // Do NOT override user-defined category from Yahoo sector
         }
       } catch (err) {
         console.warn('Error fetching technicals for', sym, err);
@@ -244,7 +254,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
 
   // Fetch technicals when editing an existing symbol
   useEffect(() => {
-    if (!editingSymbol) {
+    if (!editingSymbol || editingSymbol === 'CASH') {
       setEditTechData(null);
       return;
     }
@@ -260,13 +270,13 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
       target_percent: Number(newTargetPercent),
       target_price: newTargetPrice !== '' ? Number(newTargetPrice) : null,
       status: newStatus,
-      category: newCategory || 'Core'
+      category: newCategory || 'Compounders'
     });
     setNewSymbol('');
     setNewTargetPercent('');
     setNewTargetPrice('');
     setNewStatus('WATCHLIST');
-    setNewCategory('Core');
+    setNewCategory('Compounders');
     setTechData(null);
   };
 
@@ -278,7 +288,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
     const autoStatus = ownedSymbols.has(bp.symbol.toUpperCase()) ? 'OWNED' : bp.status;
     setEditStatus(autoStatus);
     setEditPrice(bp.target_price !== null ? bp.target_price : '');
-    setEditCategory(bp.category || 'Core');
+    setEditCategory(bp.category || 'Compounders');
   };
 
   const handleCancelEdit = () => {
@@ -292,7 +302,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
       target_percent: Number(editPercent),
       status: editStatus,
       target_price: editPrice !== '' ? Number(editPrice) : null,
-      category: editCategory || 'Core',
+      category: editCategory || 'Compounders',
     });
     setEditingSymbol(null);
   };
@@ -304,7 +314,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
     }
   };
 
-  const totalPercent = blueprints.reduce((acc, curr) => acc + curr.target_percent, 0);
+  const totalPercent = blueprints.reduce((acc, curr) => acc + (Number(curr.target_percent) || 0), 0);
   const isPercentValid = Math.abs(totalPercent - 100) < 0.01;
 
   if (isLoading && blueprints.length === 0) return <div className="p-8 text-center text-slate-300 font-semibold">กำลังโหลด Blueprint...</div>;
@@ -349,7 +359,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
               <th className="px-5 py-4 font-bold text-right">Target % (คลิกแก้ได้)</th>
               <th className="px-5 py-4 font-bold text-center">Status</th>
               <th className="px-5 py-4 font-bold text-right">Target Price ({currSymbol})</th>
-              <th className="px-5 py-4 font-bold">Category</th>
+              <th className="px-5 py-4 font-bold">Strategy Category</th>
               <th className="px-5 py-4 text-right font-bold">Actions</th>
             </tr>
           </thead>
@@ -359,6 +369,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
               const isActuallyOwned = ownedSymbols.has(bp.symbol.toUpperCase());
               const currentPriceUsd = prices[bp.symbol]?.price || holdings.find(h => h.symbol.toUpperCase() === bp.symbol.toUpperCase())?.lastPrice;
               const priceChange = prices[bp.symbol]?.percent_change;
+              const sectorInfo = holdings.find(h => h.symbol.toUpperCase() === bp.symbol.toUpperCase())?.sector || metadata[bp.symbol]?.sector || '';
 
               if (isEditingThis) {
                 return (
@@ -366,9 +377,8 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                     <td className="px-5 py-3">
                       <SymbolSearchInput
                         value={editSymbol}
-                        onChange={(val, item) => {
+                        onChange={(val) => {
                           setEditSymbol(val);
-                          if (item?.sector) setEditCategory(item.sector);
                         }}
                         inputClassName="w-32 bg-[#1A1D2D] border border-[#823AFD] rounded-xl px-3 py-1.5 text-sm text-white uppercase font-black outline-none"
                       />
@@ -389,7 +399,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                           onChange={(e) => setEditPercent(Number(e.target.value))}
                           className="w-20 bg-[#1A1D2D] border border-[#10B981] rounded-xl px-2.5 py-1.5 text-sm text-white text-right font-bold outline-none"
                         />
-                        <span className="text-white font-bold">%</span>
+                        <span className="text-emerald-400 font-bold">%</span>
                       </div>
                     </td>
                     <td className="px-5 py-3 text-center">
@@ -439,12 +449,17 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                       </div>
                     </td>
                     <td className="px-5 py-3">
-                      <input
-                        type="text"
+                      <select
                         value={editCategory}
                         onChange={(e) => setEditCategory(e.target.value)}
-                        className="w-28 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-2 py-1 text-xs text-white outline-none"
-                      />
+                        className="w-32 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-2.5 py-1.5 text-xs text-white font-bold outline-none focus:border-[#823AFD] cursor-pointer"
+                      >
+                        {STRATEGY_CATEGORIES.map(cat => (
+                          <option key={cat} value={cat} className="bg-[#181B2A] text-white">
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-5 py-3 text-right whitespace-nowrap">
                       <button
@@ -469,27 +484,37 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                 ? ((bp.target_price - currentPriceUsd) / currentPriceUsd) * 100 
                 : null;
 
+              const isStandardCategory = STRATEGY_CATEGORIES.includes(bp.category as StrategyCategory);
+              const catConfig = isStandardCategory ? CATEGORY_CONFIG[bp.category as StrategyCategory] : null;
+
               return (
                 <tr key={bp.symbol} className="hover:bg-white/[0.02] transition-colors group">
-                  {/* Symbol */}
+                  {/* Symbol & Sector Info */}
                   <td className="px-5 py-4">
                     <button
                       type="button"
                       onClick={() => handleStartEdit(bp)}
-                      className="flex items-center gap-2 text-left group-hover:text-[#823AFD] transition-colors"
+                      className="flex flex-col items-start group-hover:text-[#823AFD] transition-colors text-left"
                       title="คลิกเพื่อแก้ไขชื่อหรือเป้าหมาย"
                     >
-                      <span className="font-black text-white text-base group-hover:text-[#823AFD]">{bp.symbol}</span>
-                      <Edit2 className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-white text-base group-hover:text-[#823AFD]">{bp.symbol}</span>
+                        <Edit2 className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      {bp.symbol !== 'CASH' && sectorInfo && (
+                        <span className="text-xs text-slate-400 font-medium tracking-tight mt-0.5">
+                          {sectorInfo}
+                        </span>
+                      )}
                     </button>
                   </td>
 
                   {/* Current Market Price Column */}
                   <td className="px-5 py-4 text-right">
                     <div className="font-extrabold text-white text-sm">
-                      {currentPriceUsd ? formatPrice(currentPriceUsd) : '-'}
+                      {bp.symbol === 'CASH' ? formatPrice(1) : (currentPriceUsd ? formatPrice(currentPriceUsd) : '-')}
                     </div>
-                    {priceChange !== undefined && (
+                    {priceChange !== undefined && bp.symbol !== 'CASH' && (
                       <div className={`text-xs font-bold ${priceChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
                       </div>
@@ -551,11 +576,39 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                     )}
                   </td>
 
-                  {/* Category (Auto-generated sector) */}
+                  {/* Category (Interactive Select & Color Badge) */}
                   <td className="px-5 py-4">
-                    <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-200 border border-slate-700">
-                      {bp.category || 'Core'}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={bp.category || 'Compounders'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          updateBlueprint(portfolioId, bp.symbol, { category: val });
+                        }}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-lg border outline-none cursor-pointer transition-all ${
+                          catConfig 
+                            ? `${catConfig.bg} ${catConfig.text} ${catConfig.border}` 
+                            : 'bg-slate-800 text-slate-200 border-slate-700'
+                        }`}
+                        title="คลิกเพื่อเปลี่ยนหมวดกลยุทธ์ทันที"
+                      >
+                        {!isStandardCategory && bp.category && (
+                          <option value={bp.category} className="bg-[#181B2A] text-white">
+                            {bp.category} (Custom)
+                          </option>
+                        )}
+                        {STRATEGY_CATEGORIES.map(cat => (
+                          <option key={cat} value={cat} className="bg-[#181B2A] text-white">
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                      {!isStandardCategory && bp.category && (
+                        <span className="text-amber-400 text-xs" title="หมวดนี้ยังไม่ได้จัดตาม 8 กลยุทธ์มาตรฐาน แนะนำให้เลือกใหม่">
+                          ⚠️
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Actions */}
@@ -582,11 +635,10 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
               <td className="px-5 py-3">
                 <SymbolSearchInput
                   value={newSymbol}
-                  onChange={(val, item) => {
+                  onChange={(val) => {
                     setNewSymbol(val);
-                    if (item?.sector) setNewCategory(item.sector);
                   }}
-                  placeholder="เช่น NVDA, AAPL"
+                  placeholder="เช่น NVDA, AAPL, CASH"
                   inputClassName="w-36 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white uppercase font-bold outline-none focus:border-[#823AFD]"
                 />
               </td>
@@ -594,7 +646,9 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
               {/* Live Market Price for newly typed symbol */}
               <td className="px-5 py-3 text-right">
                 <div className="font-extrabold text-white text-sm">
-                  {techData?.currentPrice ? formatPrice(techData.currentPrice) : (techLoading ? '⏳...' : '-')}
+                  {newSymbol.trim().toUpperCase() === 'CASH' 
+                    ? formatPrice(1) 
+                    : (techData?.currentPrice ? formatPrice(techData.currentPrice) : (techLoading ? '⏳...' : '-'))}
                 </div>
               </td>
 
@@ -635,11 +689,12 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                     placeholder={`เป้าหมาย (${currSymbol})`} 
                     value={newTargetPrice}
                     onChange={e => setNewTargetPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-32 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white text-right outline-none focus:border-[#823AFD]"
+                    disabled={newSymbol.trim().toUpperCase() === 'CASH'}
+                    className="w-32 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white text-right outline-none focus:border-[#823AFD] disabled:opacity-40"
                   />
 
                   {/* 1-Click Technical Indicator Chips: EMA 150 / SMA 200 / SMA 50 */}
-                  {techData && (
+                  {techData && newSymbol.trim().toUpperCase() !== 'CASH' && (
                     <div className="flex flex-wrap items-center justify-end gap-1 mt-1 max-w-[280px]">
                       {techData.ema150 && (
                         <button
@@ -682,11 +737,19 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                 </div>
               </td>
 
-              {/* Auto-detected Category Badge */}
+              {/* Strategy Category Selection */}
               <td className="px-5 py-3">
-                <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-200 border border-slate-700">
-                  {newCategory || 'Core'}
-                </span>
+                <select
+                  value={newCategory}
+                  onChange={e => setNewCategory(e.target.value)}
+                  className="w-32 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-2.5 py-1.5 text-xs text-white font-bold outline-none focus:border-[#823AFD] cursor-pointer"
+                >
+                  {STRATEGY_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat} className="bg-[#181B2A] text-white">
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </td>
 
               <td className="px-5 py-3 text-right">
@@ -703,6 +766,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
         </table>
       </div>
 
+      {/* Target % Summary Bar */}
       <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${isPercentValid ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
         <div>
           <div className={`text-base font-black ${isPercentValid ? 'text-emerald-400' : 'text-amber-400'}`}>
@@ -721,6 +785,9 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
           </div>
         )}
       </div>
+
+      {/* Blueprint Health Diagnostic Section (Pie Chart + Metrics) */}
+      <BlueprintPieChart blueprints={blueprints} />
     </div>
   );
 };

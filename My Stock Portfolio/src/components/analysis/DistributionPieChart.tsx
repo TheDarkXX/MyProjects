@@ -6,6 +6,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { Layers } from 'lucide-react';
 import clsx from 'clsx';
+import { CATEGORY_CONFIG, STRATEGY_CATEGORIES, StrategyCategory } from '../rebalance/StrategyConfigs';
 
 interface Props {
   holdings: Holding[];
@@ -118,10 +119,16 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
 
     result.sort((a, b) => b.value - a.value);
 
-    return result.map((d, i) => ({
-      ...d,
-      color: PALETTE[i % PALETTE.length]
-    }));
+    return result.map((d, i) => {
+      let color = PALETTE[i % PALETTE.length];
+      if (mode === 'Strategy' && STRATEGY_CATEGORIES.includes(d.name as StrategyCategory)) {
+        color = CATEGORY_CONFIG[d.name as StrategyCategory].hex;
+      }
+      return {
+        ...d,
+        color
+      };
+    });
   }, [holdings, transactions, mode]);
 
   const totalPortfolioValue = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);

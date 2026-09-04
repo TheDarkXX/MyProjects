@@ -20,48 +20,46 @@ export const resolveSector = (tx: Transaction): string => {
 
 export const resolveStockType = (tx: Transaction): string => {
   if (tx.stock_type) {
-    return tx.stock_type === 'Speculative' ? 'Small Cap' : tx.stock_type;
+    if (tx.stock_type === 'Core Compounder') return 'Compounders';
+    if (tx.stock_type === 'Hyper Growth') return 'Growth';
+    if (tx.stock_type === 'Defensive / Value') return 'Defensive';
+    if (tx.stock_type === 'Index / ETF') return 'ETF';
+    return tx.stock_type;
   }
   const sym = (tx.symbol || '').toUpperCase();
-  if (sym === 'ASTS' || sym === 'HIMS' || sym === 'RKLB') return 'Small Cap';
-  if (sym === 'NVDA' || sym === 'PLTR' || sym === 'CRWD' || sym === 'MELI' || sym === 'RBRK' || sym === 'CRWV') return 'Hyper Growth';
-  if (sym === 'COST' || sym === 'AMZN' || sym === 'META' || sym === 'MSFT' || sym === 'GOOGL' || sym === 'AAPL' || sym === 'ISRG' || sym === 'V' || sym === 'MA') return 'Core Compounder';
-  if (sym === 'SCHG' || sym === 'SPY' || sym === 'VOO' || sym === 'QQQ' || sym === 'IVV') return 'Index / ETF';
-  if (sym === 'SCHD' || sym === 'VICI' || sym === 'O' || sym === 'JEPI') return 'High Yield';
-  if (sym === 'AVGO' || sym === 'TXRH' || sym === 'SPGI') return 'Dividend Growth';
-  if (sym === 'GLD') return 'Defensive / Value';
-  if (sym === 'BTC-USD' || sym === 'BTC') return 'Small Cap';
-  if (sym === 'CASH' || tx.type === 'DEPOSIT' || tx.type === 'INTEREST') return 'Cash';
-  return 'Core Compounder';
+  if (sym === 'COST' || sym === 'ISRG' || sym === 'AAPL' || sym === 'MSFT' || sym === 'GOOGL' || sym === 'V' || sym === 'MA') return 'Compounders';
+  if (sym === 'NVDA' || sym === 'CRWD' || sym === 'MELI' || sym === 'RBRK' || sym === 'PLTR' || sym === 'META') return 'Growth';
+  if (sym === 'AMZN' || sym === 'TSLA' || sym === 'AMD') return 'Mid-Tier';
+  if (sym === 'KO' || sym === 'JNJ' || sym === 'PG' || sym === 'O' || sym === 'TLT' || sym === 'GLD') return 'Defensive';
+  if (sym === 'HIMS' || sym === 'SQ' || sym === 'SOFI') return 'Small Cap';
+  if (sym === 'ASTS' || sym === 'RKLB' || sym === 'CRWV' || sym === 'CRSP' || sym === 'BTC-USD' || sym === 'BTC') return 'Bets';
+  if (sym === 'SCHG' || sym === 'VOO' || sym === 'QQQ' || sym === 'SPY' || sym === 'SCHD' || sym === 'VTI' || sym === 'IVV') return 'ETF';
+  if (sym === 'CASH' || tx.type === 'DEPOSIT' || tx.type === 'INTEREST' || tx.asset === 'Cash') return 'Cash';
+  return 'Compounders';
 };
 
 export const getStrategyBadgeStyle = (strategy: string): string => {
-  const norm = strategy === 'Speculative' ? 'Small Cap' : strategy;
-  switch (norm) {
-    case 'Hyper Growth':
-      // จัดจ้าน แดงลึก (Bold Crimson Red)
-      return 'bg-[#dc2626] text-white shadow-[0_2px_8px_rgba(220,38,38,0.45)]';
+  switch (strategy) {
+    case 'Compounders':
     case 'Core Compounder':
-      // เขียวทึบเข้ม (Deep Emerald Green)
-      return 'bg-[#15803d] text-white shadow-[0_2px_8px_rgba(21,128,61,0.45)]';
-    case 'Small Cap':
-      // เหลืองสว่างสุด (Bright Yellow - Colorblind Safe)
-      return 'bg-[#facc15] text-black shadow-[0_2px_8px_rgba(250,204,21,0.5)]';
-    case 'Dividend Growth':
-      // น้ำตาลเข้ม / บรอนซ์ (Deep Brown / Bronze)
-      return 'bg-[#854d0e] text-white shadow-[0_2px_8px_rgba(133,77,14,0.45)]';
-    case 'High Yield':
-      // ชมพูเข้ม (Deep Pink / Hot Pink)
-      return 'bg-[#db2777] text-white shadow-[0_2px_8px_rgba(219,39,119,0.45)]';
-    case 'Index / ETF':
-      // น้ำเงินโคบอลต์เข้มแท้ (Deep Cobalt / Royal Blue)
-      return 'bg-[#1d4ed8] text-white shadow-[0_2px_8px_rgba(29,78,216,0.45)]';
+      return 'bg-[#8b5cf6] text-white shadow-[0_2px_8px_rgba(139,92,246,0.45)]';
+    case 'Growth':
+    case 'Hyper Growth':
+      return 'bg-[#dc2626] text-white shadow-[0_2px_8px_rgba(220,38,38,0.45)]';
+    case 'Mid-Tier':
+      return 'bg-[#64748b] text-white shadow-[0_2px_8px_rgba(100,116,139,0.45)]';
+    case 'Defensive':
     case 'Defensive / Value':
-      // เทาสเลทลึก (Deep Slate Blue)
-      return 'bg-[#475569] text-white shadow-[0_2px_8px_rgba(71,85,105,0.45)]';
+      return 'bg-[#059669] text-white shadow-[0_2px_8px_rgba(5,150,105,0.45)]';
+    case 'Small Cap':
+      return 'bg-[#facc15] text-black shadow-[0_2px_8px_rgba(250,204,21,0.5)]';
+    case 'Bets':
+      return 'bg-[#b45309] text-white shadow-[0_2px_8px_rgba(180,83,9,0.45)]';
+    case 'ETF':
+    case 'Index / ETF':
+      return 'bg-[#1d4ed8] text-white shadow-[0_2px_8px_rgba(29,78,216,0.45)]';
     case 'Cash':
-      // ดำชาโคลลึก (Deep Dark Zinc)
-      return 'bg-[#27272a] text-white shadow-[0_2px_8px_rgba(39,39,42,0.45)]';
+      return 'bg-[#334155] text-white shadow-[0_2px_8px_rgba(51,65,85,0.45)]';
     default:
       return 'bg-[#374151] text-white shadow-[0_2px_8px_rgba(55,65,81,0.45)]';
   }

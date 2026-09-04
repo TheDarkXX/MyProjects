@@ -162,18 +162,18 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
             <div>
               <label className="block text-sm font-medium text-[#9898C8] mb-1">Strategy (Role)</label>
               <select
-                value={formData.stock_type || 'Core Compounder'}
+                value={formData.stock_type || 'Compounders'}
                 onChange={(e) => setFormData({ ...formData, stock_type: e.target.value })}
                 className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
               >
-                <option value="Core Compounder">🌟 Core Compounder</option>
-                <option value="Hyper Growth">🚀 Hyper Growth</option>
-                <option value="Dividend Growth">📈 Dividend Growth</option>
-                <option value="High Yield">💰 High Yield / Income</option>
-                <option value="Index / ETF">🏛️ Index / ETF</option>
-                <option value="Defensive / Value">🛡️ Defensive / Value</option>
-                <option value="Small Cap">🎯 Small Cap</option>
-                <option value="Cash">💵 Cash / Money Market</option>
+                <option value="Compounders">🟣 Compounders</option>
+                <option value="Growth">🔴 Growth</option>
+                <option value="Mid-Tier">⚪ Mid-Tier</option>
+                <option value="Defensive">🟢 Defensive</option>
+                <option value="Small Cap">🟡 Small Cap</option>
+                <option value="Bets">🟤 Bets</option>
+                <option value="Cash">⚫ Cash</option>
+                <option value="ETF">🔵 ETF</option>
               </select>
             </div>
           </div>

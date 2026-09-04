@@ -32,22 +32,7 @@ blueprintsRoutes.post('/:portfolioId', async (c) => {
 
         let finalCategory = category;
         if (!finalCategory || finalCategory === 'Custom') {
-            const meta = db.prepare('SELECT sector FROM stock_metadata WHERE symbol = ?').get(symbol);
-            if (meta?.sector && meta.sector.trim().length > 0) {
-                finalCategory = meta.sector;
-            } else {
-                try {
-                    const { fetchYahooProfile } = await import('../services/yahoo.js');
-                    const prof = await fetchYahooProfile(symbol);
-                    if (prof?.sector && prof.sector !== 'Other') {
-                        finalCategory = prof.sector;
-                    } else {
-                        finalCategory = 'Core';
-                    }
-                } catch (e) {
-                    finalCategory = 'Core';
-                }
-            }
+            finalCategory = symbol.toUpperCase() === 'CASH' ? 'Cash' : 'Compounders';
         }
 
         const stmt = db.prepare(`
@@ -184,8 +169,7 @@ blueprintsRoutes.post('/:portfolioId/auto-generate', async (c) => {
         db.transaction(() => {
             for (const holding of activeHoldings) {
                 const targetPercent = parseFloat(((holding.value / totalValue) * 100).toFixed(2));
-                const meta = db.prepare('SELECT sector FROM stock_metadata WHERE symbol = ?').get(holding.symbol);
-                const category = (meta?.sector && meta.sector.trim().length > 0) ? meta.sector : 'Core';
+                const category = holding.symbol.toUpperCase() === 'CASH' ? 'Cash' : 'Compounders';
                 upsertStmt.run(portfolioId, holding.symbol, targetPercent, category);
                 results.push({ symbol: holding.symbol, targetPercent, category });
             }
