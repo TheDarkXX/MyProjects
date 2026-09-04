@@ -7,11 +7,11 @@ import { Header } from './components/layout/Header';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { AppModal } from './components/common/AppModal';
 
-// Dynamic Lazy Imports for optimal performance and chunking
 const ScorecardPage = lazy(() => import('./components/scorecard/ScorecardPage').then(m => ({ default: m.ScorecardPage })));
 const AnalysisPage = lazy(() => import('./components/analysis/AnalysisPage').then(m => ({ default: m.AnalysisPage })));
 const PerformanceChartPage = lazy(() => import('./components/PerformanceChartPage'));
 const RiskPage = lazy(() => import('./components/risk/RiskPage').then(m => ({ default: m.RiskPage })));
+const HealthRiskPage = lazy(() => import('./components/health/HealthRiskPage').then(m => ({ default: m.HealthRiskPage })));
 const SmartRebalancePage = lazy(() => import('./components/rebalance/SmartRebalancePage').then(m => ({ default: m.SmartRebalancePage })));
 const TransactionTable = lazy(() => import('./components/transactions/TransactionTable').then(m => ({ default: m.TransactionTable })));
 const PortfolioList = lazy(() => import('./components/portfolio/PortfolioList').then(m => ({ default: m.PortfolioList })));
@@ -117,15 +117,16 @@ const MainLayout = () => {
               </div>
             }>
             {activeTab === 'dashboard' && <Dashboard />}
-            {activeTab === 'scorecard' && <ScorecardPage />}
-            {activeTab === 'risk' && <RiskPage />}
-            {activeTab === 'rebalance' && <SmartRebalancePage />}
             {activeTab === 'analysis' && <AnalysisPage />}
-            {activeTab === 'performance' && <PerformanceChartPage />}
+            {activeTab === 'performance' && <AnalysisPage defaultTab="performance" />}
+            {activeTab === 'health' && <HealthRiskPage />}
+            {activeTab === 'scorecard' && <HealthRiskPage defaultTab="scorecard" />}
+            {activeTab === 'risk' && <HealthRiskPage defaultTab="risk" />}
+            {activeTab === 'rebalance' && <SmartRebalancePage />}
             {activeTab === 'transactions' && <TransactionTable />}
             {activeTab === 'portfolios' && <PortfolioList />}
             {activeTab === 'settings' && <SettingPage />}
-            {activeTab !== 'dashboard' && activeTab !== 'scorecard' && activeTab !== 'risk' && activeTab !== 'rebalance' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
+            {activeTab !== 'dashboard' && activeTab !== 'scorecard' && activeTab !== 'risk' && activeTab !== 'health' && activeTab !== 'rebalance' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
               <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-8 min-h-[500px] flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
                 <p className="text-[#9898C8] text-lg font-medium">
                   {activeTab} module is under construction.

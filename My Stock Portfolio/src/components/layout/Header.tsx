@@ -5,6 +5,19 @@ import { usePriceStore } from '../../stores/priceStore';
 import { Search } from 'lucide-react';
 import clsx from 'clsx';
 
+const PAGE_TITLES: Record<string, string> = {
+  dashboard: 'Dashboard',
+  analysis: 'Analysis',
+  performance: 'Performance',
+  health: 'Health & Risk',
+  scorecard: 'Scorecard',
+  risk: 'Risk & Alpha',
+  rebalance: 'Smart Rebalance',
+  transactions: 'Transactions',
+  portfolios: 'Portfolios',
+  settings: 'Settings',
+};
+
 export const Header = () => {
   const { activeTab, currency, setCurrency } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
@@ -39,8 +52,8 @@ export const Header = () => {
     <header className="h-20 bg-[#0F111A]/80 backdrop-blur-xl border-b border-[#1F2233] px-8 flex items-center justify-between sticky top-0 z-50 gap-4">
       {/* 1. Left: Page Title & Greeting */}
       <div className="shrink-0 min-w-[180px]">
-        <h1 className="text-2xl font-bold text-white capitalize tracking-tight">
-          {activeTab}
+        <h1 className="text-2xl font-bold text-white tracking-tight">
+          {PAGE_TITLES[activeTab] || activeTab}
         </h1>
         <p className="text-xs text-[#CBD5E1] mt-0.5">
           Welcome back to your portfolio dashboard

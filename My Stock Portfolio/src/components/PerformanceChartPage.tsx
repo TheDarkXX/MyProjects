@@ -149,7 +149,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         setChartApiStatus(prev => ({ ...prev, [portfolioId]: { status: 'loading', error: null } }));
         if (portfolioId) fetchTransactions(portfolioId);
     }, [fetchTransactions]);
-    const [timeRange, setTimeRange] = useState<TimeRange>('3M');
+    const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
     const [visibleLines, setVisibleLines] = useState({ 'My Portfolio': true, 'S&P 500': true, 'Nasdaq 100': false, 'SCHG': false, 'Gold': true, 'Bitcoin': false });
     
     const [fullPeriodData, setFullPeriodData] = useState<ChartDataPoint[]>([]);

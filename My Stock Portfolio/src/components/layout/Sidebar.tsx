@@ -3,7 +3,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
   LayoutDashboard, ReceiptText, Settings, LogOut, 
-  PieChart, LineChart, Target, ShieldCheck, Scale 
+  PieChart, ShieldCheck, Scale 
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -20,19 +20,17 @@ interface NavSection {
 
 const NAV_SECTIONS: NavSection[] = [
   {
-    id: 'core',
+    id: 'insights',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'analysis', label: 'Analysis', icon: PieChart },
-      { id: 'performance', label: 'Performance', icon: LineChart },
-      { id: 'rebalance', label: 'Smart Rebalance', icon: Scale },
+      { id: 'health', label: 'Health & Risk', icon: ShieldCheck },
     ],
   },
   {
-    id: 'intelligence',
+    id: 'execution',
     items: [
-      { id: 'scorecard', label: 'Scorecard', icon: Target },
-      { id: 'risk', label: 'Risk & Alpha', icon: ShieldCheck },
+      { id: 'rebalance', label: 'Smart Rebalance', icon: Scale },
     ],
   },
   {
@@ -60,12 +58,12 @@ export const Sidebar = () => {
         </h2>
       </div>
 
-      {/* Nav with 3 Clear Sections and Sleek Dividers */}
-      <nav className="px-4 py-1 space-y-4">
+      {/* Nav with Exact 3 Groups Separated by Hairline Dividers */}
+      <nav className="px-4 py-1 space-y-3">
         {NAV_SECTIONS.map((section, sIdx) => (
           <div key={section.id} className="space-y-1.5">
             {sIdx > 0 && (
-              <div className="pt-2 pb-1.5 px-2">
+              <div className="pt-2 pb-2 px-2">
                 <div className="border-t border-[#1F2233]" />
               </div>
             )}
@@ -78,7 +76,7 @@ export const Sidebar = () => {
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
                   className={clsx(
-                    "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-semibold",
+                    "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-semibold cursor-pointer",
                     isActive 
                       ? "bg-[#1A1D2D] text-white shadow-[0_4px_16px_rgba(130,58,253,0.2)] border border-[#2A2E45]" 
                       : "text-slate-300 hover:bg-[#1A1D2D]/60 hover:text-white hover:translate-x-1"
@@ -99,7 +97,7 @@ export const Sidebar = () => {
       <div className="p-4 border-t border-[#1F2233]">
         <button 
           onClick={logout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#FC2D79] hover:bg-[#FC2D79]/10 transition-all font-medium text-sm"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#FC2D79] hover:bg-[#FC2D79]/10 transition-all font-medium text-sm cursor-pointer"
         >
           <LogOut className="w-5 h-5" />
           Logout
