@@ -22,11 +22,11 @@ export const CATEGORY_CONFIG: Record<StrategyCategory, {
   label: string;
 }> = {
   Compounders: {
-    hex: '#8B5CF6',
-    bg: 'bg-purple-500/20',
-    text: 'text-purple-300',
-    border: 'border-purple-500/40',
-    dot: 'bg-purple-400',
+    hex: '#1D4ED8',
+    bg: 'bg-blue-600/20',
+    text: 'text-blue-300',
+    border: 'border-blue-500/40',
+    dot: 'bg-blue-500',
     label: 'Compounders'
   },
   Growth: {
@@ -38,11 +38,11 @@ export const CATEGORY_CONFIG: Record<StrategyCategory, {
     label: 'Growth'
   },
   'Mid-Tier': {
-    hex: '#94A3B8',
-    bg: 'bg-slate-500/20',
+    hex: '#64748B',
+    bg: 'bg-slate-600/25',
     text: 'text-slate-200',
     border: 'border-slate-500/40',
-    dot: 'bg-slate-300',
+    dot: 'bg-slate-400',
     label: 'Mid-Tier'
   },
   Defensive: {
@@ -78,11 +78,11 @@ export const CATEGORY_CONFIG: Record<StrategyCategory, {
     label: 'Cash'
   },
   ETF: {
-    hex: '#1D4ED8',
-    bg: 'bg-blue-600/20',
-    text: 'text-blue-300',
-    border: 'border-blue-500/40',
-    dot: 'bg-blue-500',
+    hex: '#EC4899',
+    bg: 'bg-pink-500/20',
+    text: 'text-pink-300',
+    border: 'border-pink-500/40',
+    dot: 'bg-pink-400',
     label: 'ETF'
   },
 };

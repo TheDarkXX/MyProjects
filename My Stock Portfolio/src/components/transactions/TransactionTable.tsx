@@ -42,12 +42,12 @@ export const getStrategyBadgeStyle = (strategy: string): string => {
   switch (strategy) {
     case 'Compounders':
     case 'Core Compounder':
-      return 'bg-[#8b5cf6] text-white shadow-[0_2px_8px_rgba(139,92,246,0.45)]';
+      return 'bg-[#1d4ed8] text-white shadow-[0_2px_8px_rgba(29,78,216,0.45)]';
     case 'Growth':
     case 'Hyper Growth':
       return 'bg-[#dc2626] text-white shadow-[0_2px_8px_rgba(220,38,38,0.45)]';
     case 'Mid-Tier':
-      return 'bg-[#64748b] text-white shadow-[0_2px_8px_rgba(100,116,139,0.45)]';
+      return 'bg-[#475569] text-white shadow-[0_2px_8px_rgba(71,85,105,0.45)]';
     case 'Defensive':
     case 'Defensive / Value':
       return 'bg-[#059669] text-white shadow-[0_2px_8px_rgba(5,150,105,0.45)]';
@@ -57,7 +57,7 @@ export const getStrategyBadgeStyle = (strategy: string): string => {
       return 'bg-[#b45309] text-white shadow-[0_2px_8px_rgba(180,83,9,0.45)]';
     case 'ETF':
     case 'Index / ETF':
-      return 'bg-[#1d4ed8] text-white shadow-[0_2px_8px_rgba(29,78,216,0.45)]';
+      return 'bg-[#db2777] text-white shadow-[0_2px_8px_rgba(219,39,119,0.45)]';
     case 'Cash':
       return 'bg-[#334155] text-white shadow-[0_2px_8px_rgba(51,65,85,0.45)]';
     default:

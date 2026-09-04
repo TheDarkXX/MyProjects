@@ -166,14 +166,14 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
                 onChange={(e) => setFormData({ ...formData, stock_type: e.target.value })}
                 className="w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#823AFD]"
               >
-                <option value="Compounders">🟣 Compounders</option>
+                <option value="Compounders">🔵 Compounders (Deep Blue)</option>
                 <option value="Growth">🔴 Growth</option>
-                <option value="Mid-Tier">⚪ Mid-Tier</option>
+                <option value="Mid-Tier">🔘 Mid-Tier (Gray)</option>
                 <option value="Defensive">🟢 Defensive</option>
                 <option value="Small Cap">🟡 Small Cap</option>
                 <option value="Bets">🟤 Bets</option>
                 <option value="Cash">⚫ Cash</option>
-                <option value="ETF">🔵 ETF</option>
+                <option value="ETF">🌸 ETF (Pink)</option>
               </select>
             </div>
           </div>
