@@ -1,19 +1,47 @@
 import React from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
-import { LayoutDashboard, ReceiptText, Settings, LogOut, Briefcase, PieChart, LineChart, Target, ShieldCheck, Scale } from 'lucide-react';
+import { 
+  LayoutDashboard, ReceiptText, Settings, LogOut, 
+  PieChart, LineChart, Target, ShieldCheck, Scale 
+} from 'lucide-react';
 import clsx from 'clsx';
 
-const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'performance', label: 'Performance', icon: LineChart },
-  { id: 'risk', label: 'Risk & Alpha', icon: ShieldCheck },
-  { id: 'scorecard', label: 'Scorecard', icon: Target },
-  { id: 'rebalance', label: 'Smart Rebalance', icon: Scale },
-  { id: 'analysis', label: 'Analysis', icon: PieChart },
-  { id: 'transactions', label: 'Transactions', icon: ReceiptText },
-  { id: 'portfolios', label: 'Portfolios', icon: Briefcase },
-  { id: 'settings', label: 'Settings', icon: Settings },
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface NavSection {
+  id: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    id: 'core',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'analysis', label: 'Analysis', icon: PieChart },
+      { id: 'performance', label: 'Performance', icon: LineChart },
+      { id: 'rebalance', label: 'Smart Rebalance', icon: Scale },
+    ],
+  },
+  {
+    id: 'intelligence',
+    items: [
+      { id: 'scorecard', label: 'Scorecard', icon: Target },
+      { id: 'risk', label: 'Risk & Alpha', icon: ShieldCheck },
+    ],
+  },
+  {
+    id: 'operations',
+    items: [
+      { id: 'transactions', label: 'Transactions', icon: ReceiptText },
+      { id: 'settings', label: 'Settings', icon: Settings },
+    ],
+  },
 ];
 
 export const Sidebar = () => {
@@ -32,28 +60,37 @@ export const Sidebar = () => {
         </h2>
       </div>
 
-      {/* Nav */}
-      <nav className="px-4 py-2 space-y-2">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={clsx(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium",
-                isActive 
-                  ? "bg-[#1A1D2D] text-white shadow-[0_4px_12px_rgba(130,58,253,0.15)] border border-[#2A2E45]" 
-                  : "text-[#9898C8] hover:bg-[#1A1D2D]/50 hover:text-white hover:translate-x-1"
-              )}
-            >
-              <Icon className={clsx("w-5 h-5", isActive ? "text-[#823AFD]" : "text-[#9898C8]")} />
-              {item.label}
-            </button>
-          );
-        })}
+      {/* Nav with 3 Clear Sections and Sleek Dividers */}
+      <nav className="px-4 py-1 space-y-4">
+        {NAV_SECTIONS.map((section, sIdx) => (
+          <div key={section.id} className="space-y-1.5">
+            {sIdx > 0 && (
+              <div className="pt-2 pb-1.5 px-2">
+                <div className="border-t border-[#1F2233]" />
+              </div>
+            )}
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={clsx(
+                    "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-semibold",
+                    isActive 
+                      ? "bg-[#1A1D2D] text-white shadow-[0_4px_16px_rgba(130,58,253,0.2)] border border-[#2A2E45]" 
+                      : "text-slate-300 hover:bg-[#1A1D2D]/60 hover:text-white hover:translate-x-1"
+                  )}
+                >
+                  <Icon className={clsx("w-5 h-5 shrink-0", isActive ? "text-[#823AFD]" : "text-slate-400")} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       <div className="flex-1"></div>
@@ -62,7 +99,7 @@ export const Sidebar = () => {
       <div className="p-4 border-t border-[#1F2233]">
         <button 
           onClick={logout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#FC2D79] hover:bg-[#FC2D79]/10 transition-all font-medium"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#FC2D79] hover:bg-[#FC2D79]/10 transition-all font-medium text-sm"
         >
           <LogOut className="w-5 h-5" />
           Logout

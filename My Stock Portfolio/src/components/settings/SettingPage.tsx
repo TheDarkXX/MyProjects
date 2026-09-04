@@ -1,9 +1,12 @@
 import React from 'react';
-import { Database, Shield, Download, Upload, Moon } from 'lucide-react';
+import { Database, Shield, Download, Upload, Moon, Briefcase, Plus, Check } from 'lucide-react';
 import { useUiStore } from '../../stores/uiStore';
+import { usePortfolioStore } from '../../stores/portfolioStore';
+import clsx from 'clsx';
 
 export const SettingPage = () => {
   const addNotification = useUiStore((s) => s.addNotification);
+  const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
 
   const handleBackup = async () => {
     try {
@@ -20,6 +23,74 @@ export const SettingPage = () => {
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">System Settings</h1>
           <p className="text-[#9898C8] mt-2">Manage your portfolio configurations and system data</p>
+        </div>
+      </div>
+
+      {/* 1. Portfolio Management */}
+      <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-[#823AFD]/20 to-[#823AFD]/5 text-[#823AFD]">
+              <Briefcase className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Portfolio Management</h2>
+              <p className="text-slate-300 text-sm mt-0.5">จัดการและสลับพอร์ตการลงทุน หรือเพิ่มพอร์ตกลยุทธ์ใหม่</p>
+            </div>
+          </div>
+          <button className="flex items-center gap-2 bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-[0_4px_16px_rgba(252,45,121,0.3)] hover:opacity-90 transition-opacity self-start sm:self-auto">
+            <Plus className="w-4 h-4" />
+            New Portfolio
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {portfolios.map(port => {
+            const isActive = port.id === activePortfolioId;
+            return (
+              <div 
+                key={port.id} 
+                onClick={() => setActivePortfolio(port.id)}
+                className={clsx(
+                  "bg-[#0B1220] border rounded-2xl p-5 relative overflow-hidden group transition-all cursor-pointer",
+                  isActive ? "border-[#823AFD] ring-2 ring-[#823AFD]/30" : "border-[#2A2E45] hover:border-[#823AFD]"
+                )}
+              >
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg border border-white/10"
+                      style={{ backgroundColor: (port.color_hex || '#823AFD') + '20', color: port.color_hex || '#823AFD' }}
+                    >
+                      {port.icon || '💼'}
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold text-base">{port.name}</h3>
+                      <p className="text-slate-300 text-xs">{port.description || port.base_currency}</p>
+                    </div>
+                  </div>
+                  {isActive && (
+                    <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                      <Check className="w-3.5 h-3.5" /> Active
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1 relative z-10">
+                  <p className="text-slate-400 text-xs font-semibold">Base Currency</p>
+                  <span className="text-lg font-bold text-white tabular-nums tracking-tight">
+                    {port.base_currency}
+                  </span>
+                </div>
+                
+                {/* Background Glow */}
+                <div 
+                  className="absolute -bottom-24 -right-24 w-48 h-48 rounded-full blur-[64px] opacity-10 group-hover:opacity-20 transition-opacity"
+                  style={{ backgroundColor: port.color_hex || '#823AFD' }}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
 
