@@ -593,7 +593,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
 
     // --- Safe, stable custom label component for line endpoints ---
     const EndOfLineLabel = (props: any) => {
-        const { index, value, x, y, stroke, yOffset = 0 } = props;
+        const { index, value, x, y, stroke, yOffset = 0, name } = props;
     
         if (index !== displayData.length - 1) {
             return null;
@@ -603,6 +603,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
             return null;
         }
     
+        const isRef = name && name !== 'My Portfolio';
         const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
         const textWidth = Math.max(54, formattedValue.length * 7 + 14);
     
@@ -615,16 +616,18 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                     height={22} 
                     fill="#111827" 
                     stroke={stroke} 
-                    strokeWidth="1.5"
+                    strokeOpacity={isRef ? 0.4 : 1}
+                    strokeWidth={isRef ? "1.2" : "1.8"}
                     rx="4" 
                     style={{
-                        filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.85))'
+                        filter: isRef ? 'none' : 'drop-shadow(0 2px 5px rgba(0,0,0,0.85))'
                     }}
                 />
                 <text 
                     x={x + 8 + (textWidth / 2)} 
                     y={y + 4} 
                     fill="#FFFFFF" 
+                    fillOpacity={isRef ? 0.75 : 1}
                     fontSize="11.5px" 
                     fontWeight="bold"
                     fontFamily="'Roboto Flex', sans-serif"
@@ -714,8 +717,8 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                                         <div key={name} className="flex items-center">
                                             <input id={`checkbox-${name}`} type="checkbox" checked={isVisible} onChange={() => handleVisibilityChange(name as keyof typeof visibleLines)} className="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-500 focus:ring-blue-600 cursor-pointer" style={{accentColor: color}} />
                                             <label htmlFor={`checkbox-${name}`} className="ml-2 flex items-center text-sm text-gray-300 cursor-pointer">
-                                                <span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: color }}></span>
-                                                {name}
+                                                <span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: color, opacity: name === 'My Portfolio' ? 1 : 0.4 }}></span>
+                                                <span className={name === 'My Portfolio' ? 'text-white font-bold' : 'text-gray-400'}>{name}</span>
                                             </label>
                                         </div>
                                     )
@@ -789,11 +792,12 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                                                 type="monotone" 
                                                 dataKey={name} 
                                                 stroke={lineColors[name as keyof typeof lineColors]} 
+                                                strokeOpacity={name === 'My Portfolio' ? 1 : 0.4}
                                                 dot={false} 
-                                                strokeWidth={name === 'My Portfolio' ? 4 : 2} 
+                                                strokeWidth={name === 'My Portfolio' ? 3.5 : 1.75} 
                                                 name={name} 
                                                 connectNulls={true} 
-                                                label={<EndOfLineLabel yOffset={lineOffsets[name] || 0} />} 
+                                                label={<EndOfLineLabel yOffset={lineOffsets[name] || 0} name={name} />} 
                                             />
                                         )
                                     ))}
