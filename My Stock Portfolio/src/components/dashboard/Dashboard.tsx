@@ -43,33 +43,35 @@ const getStartDateForRange = (range: DashboardTimeRange, earliestDate: string, c
   return today.toISOString().split('T')[0];
 };
 
-const LongZigzagTrendUp = ({ className = "w-5 h-3.5 text-emerald-400" }: { className?: string }) => (
+const LongZigzagTrendUp = ({ className = "w-[22px] h-[15px] text-emerald-400" }: { className?: string }) => (
   <svg 
-    viewBox="0 0 24 14" 
+    viewBox="0 0 24 16" 
     fill="none" 
     stroke="currentColor" 
-    strokeWidth="2.4" 
+    strokeWidth="2.2" 
     strokeLinecap="round" 
     strokeLinejoin="round" 
+    style={{ overflow: 'visible' }}
     className={clsx("shrink-0", className)}
   >
-    <polyline points="1 12 6 6 11 10 16 4 23 2" />
-    <polyline points="16 2 23 2 23 8" />
+    <polyline points="2 13 7 7 12 11 21 3" />
+    <polyline points="15 3 21 3 21 9" />
   </svg>
 );
 
-const LongZigzagTrendDown = ({ className = "w-5 h-3.5 text-rose-400" }: { className?: string }) => (
+const LongZigzagTrendDown = ({ className = "w-[22px] h-[15px] text-rose-400" }: { className?: string }) => (
   <svg 
-    viewBox="0 0 24 14" 
+    viewBox="0 0 24 16" 
     fill="none" 
     stroke="currentColor" 
-    strokeWidth="2.4" 
+    strokeWidth="2.2" 
     strokeLinecap="round" 
     strokeLinejoin="round" 
+    style={{ overflow: 'visible' }}
     className={clsx("shrink-0", className)}
   >
-    <polyline points="1 2 6 8 11 4 16 10 23 12" />
-    <polyline points="16 12 23 12 23 6" />
+    <polyline points="2 3 7 9 12 5 21 13" />
+    <polyline points="15 13 21 13 21 7" />
   </svg>
 );
 
@@ -594,7 +596,7 @@ export const Dashboard = () => {
             {/* Winners */}
             <div className="mb-4">
               <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 mb-2 px-1">
-                <LongZigzagTrendUp className="w-4.5 h-3 text-emerald-400" />
+                <LongZigzagTrendUp className="w-[18px] h-[12px] text-emerald-400" />
                 <span>Top Gainers</span>
               </div>
               <div className="space-y-1.5">
@@ -605,7 +607,7 @@ export const Dashboard = () => {
                       <span className="text-white text-sm font-bold font-heading group-hover:text-emerald-300 transition-colors">{h.symbol}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <LongZigzagTrendUp className="w-5 h-3.5 text-emerald-400 shrink-0" />
+                      <LongZigzagTrendUp className="w-[22px] h-[15px] text-emerald-400 shrink-0" />
                       <span className="text-white text-sm font-black tabular-nums font-prompt">
                         {formatCurrency(h.lastPrice)}
                       </span>
@@ -623,7 +625,7 @@ export const Dashboard = () => {
             {/* Losers */}
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400 mb-2 px-1">
-                <LongZigzagTrendDown className="w-4.5 h-3 text-rose-400" />
+                <LongZigzagTrendDown className="w-[18px] h-[12px] text-rose-400" />
                 <span>Top Decliners</span>
               </div>
               <div className="space-y-1.5">
@@ -634,7 +636,7 @@ export const Dashboard = () => {
                       <span className="text-white text-sm font-bold font-heading group-hover:text-rose-300 transition-colors">{h.symbol}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <LongZigzagTrendDown className="w-5 h-3.5 text-rose-400 shrink-0" />
+                      <LongZigzagTrendDown className="w-[22px] h-[15px] text-rose-400 shrink-0" />
                       <span className="text-white text-sm font-black tabular-nums font-prompt">
                         {formatCurrency(h.lastPrice)}
                       </span>
