@@ -57,6 +57,7 @@ export const api = {
     latest: (symbols: string[]) => authFetch('/prices/latest', { method: 'POST', body: JSON.stringify({ symbols }) }),
     historical: (symbols: string[], from: string, to: string) => authFetch('/historical', { method: 'POST', body: JSON.stringify({ symbols, from, to }) }),
     exchangeRate: (from = 'USD', to = 'THB') => authFetch(`/exchange-rate?from=${from}&to=${to}`),
+    search: (query: string) => authFetch(`/prices/search?q=${encodeURIComponent(query)}`),
   },
   metadata: {
     list: (symbols: string[]) => authFetch(`/metadata?symbols=${symbols.join(',')}`),

@@ -35,10 +35,13 @@ export const SmartRebalancePage: React.FC = () => {
     fetchExchangeRate('USD', 'THB');
   }, [activePortfolioId, fetchTransactions, fetchExchangeRate, fetchBlueprints]);
 
-  // Switch to tools tab if blueprints exist
+  const hasInitializedTab = React.useRef(false);
+
+  // Default to tools tab on initial load ONLY if blueprints already exist
   useEffect(() => {
-    if (blueprints.length > 0 && mainTab === 'blueprint') {
+    if (!hasInitializedTab.current && blueprints.length > 0) {
       setMainTab('tools');
+      hasInitializedTab.current = true;
     }
   }, [blueprints.length]);
 

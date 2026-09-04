@@ -154,3 +154,28 @@ export async function fetchYahooDividend(symbol) {
   }
   return { dividendYield: 0, annualDividend: 0 };
 }
+
+/**
+ * Search for ticker symbols using Yahoo Finance.
+ * @param {string} query
+ */
+export async function fetchYahooSearch(query) {
+  if (!query || query.trim().length === 0) return [];
+  try {
+    const res = await yahooFinance.search(query.trim());
+    if (!res || !res.quotes) return [];
+    return res.quotes
+      .filter(q => q.symbol && (q.quoteType === 'EQUITY' || q.quoteType === 'ETF'))
+      .slice(0, 8)
+      .map(q => ({
+        symbol: q.symbol,
+        name: q.shortname || q.longname || q.symbol,
+        exchange: q.exchDisp || q.exchange || '',
+        type: q.quoteType || 'EQUITY',
+        sector: q.sector || q.sectorDisp || ''
+      }));
+  } catch (error) {
+    console.error(`[Yahoo] Error searching symbols for "${query}":`, error.message);
+    return [];
+  }
+}

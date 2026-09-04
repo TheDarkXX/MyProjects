@@ -23,6 +23,7 @@ interface BlueprintStore {
   fetchBlueprints: (portfolioId: string) => Promise<void>;
   upsertBlueprint: (portfolioId: string, entry: Partial<BlueprintEntry>) => Promise<void>;
   deleteBlueprint: (portfolioId: string, symbol: string) => Promise<void>;
+  updateBlueprint: (portfolioId: string, oldSymbol: string, entry: Partial<BlueprintEntry>) => Promise<void>;
   autoGenerate: (portfolioId: string) => Promise<void>;
   applyTemplate: (portfolioId: string, template: Partial<BlueprintEntry>[]) => Promise<void>;
 }
@@ -48,6 +49,16 @@ export const useBlueprintStore = create<BlueprintStore>((set, get) => ({
   upsertBlueprint: async (portfolioId: string, entry: Partial<BlueprintEntry>) => {
     try {
       await api.blueprints.upsert(portfolioId, entry);
+      await get().fetchBlueprints(portfolioId);
+    } catch (err: any) {
+      set({ error: err.message });
+      throw err;
+    }
+  },
+
+  updateBlueprint: async (portfolioId: string, oldSymbol: string, entry: Partial<BlueprintEntry>) => {
+    try {
+      await api.blueprints.update(portfolioId, oldSymbol, entry);
       await get().fetchBlueprints(portfolioId);
     } catch (err: any) {
       set({ error: err.message });

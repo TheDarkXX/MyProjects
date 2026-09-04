@@ -71,4 +71,18 @@ pricesRoutes.post('/latest', async (c) => {
   }
 });
 
+// Search ticker symbols using Yahoo Finance
+pricesRoutes.get('/search', async (c) => {
+  const q = c.req.query('q');
+  if (!q || q.trim().length === 0) return c.json([]);
+  try {
+    const { fetchYahooSearch } = await import('../services/yahoo.js');
+    const results = await fetchYahooSearch(q);
+    return c.json(results);
+  } catch (error) {
+    console.error('[Search] Error:', error);
+    return c.json([]);
+  }
+});
+
 export { pricesRoutes };

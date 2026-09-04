@@ -59,16 +59,18 @@ blueprintsRoutes.put('/:portfolioId/:symbol', async (c) => {
         const portfolioId = c.req.param('portfolioId');
         const symbol = c.req.param('symbol');
         const body = await c.req.json();
-        const { target_percent, target_price, status, category, notes } = body;
+        const { symbol: new_symbol, target_percent, target_price, status, category, notes } = body;
 
         const current = db.prepare('SELECT * FROM portfolio_blueprints WHERE portfolio_id = ? AND symbol = ?').get(portfolioId, symbol);
         if (!current) {
             return c.json({ error: 'Blueprint entry not found' }, 404);
         }
 
+        const nextSymbol = new_symbol ? new_symbol.toUpperCase() : symbol;
         const stmt = db.prepare(`
             UPDATE portfolio_blueprints 
-            SET target_percent = COALESCE(?, target_percent),
+            SET symbol = ?,
+                target_percent = COALESCE(?, target_percent),
                 target_price = COALESCE(?, target_price),
                 status = COALESCE(?, status),
                 category = COALESCE(?, category),
@@ -78,6 +80,7 @@ blueprintsRoutes.put('/:portfolioId/:symbol', async (c) => {
         `);
         
         stmt.run(
+            nextSymbol,
             target_percent !== undefined ? target_percent : null, 
             target_price !== undefined ? target_price : null, 
             status !== undefined ? status : null, 
@@ -86,7 +89,7 @@ blueprintsRoutes.put('/:portfolioId/:symbol', async (c) => {
             portfolioId, symbol
         );
 
-        const updated = db.prepare('SELECT * FROM portfolio_blueprints WHERE portfolio_id = ? AND symbol = ?').get(portfolioId, symbol);
+        const updated = db.prepare('SELECT * FROM portfolio_blueprints WHERE portfolio_id = ? AND symbol = ?').get(portfolioId, nextSymbol);
         return c.json(updated);
     } catch (err) {
         console.error('Error updating blueprint:', err);
