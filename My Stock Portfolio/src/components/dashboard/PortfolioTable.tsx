@@ -204,11 +204,12 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
     return <ArrowUpDown className="w-3 h-3 inline opacity-30 group-hover:opacity-100 text-[#CBD5E1]" />;
   };
 
-  const renderTH = (label: string, key: SortKey, align: 'left' | 'right' = 'right') => (
+  const renderTH = (label: string, key: SortKey, align: 'left' | 'right' = 'right', extraClass?: string) => (
     <th 
       className={clsx(
         "px-4 py-3 text-[13px] font-bold uppercase tracking-wider cursor-pointer group hover:text-white transition-colors select-none text-slate-300", 
-        align === 'right' ? 'text-right' : 'text-left'
+        align === 'right' ? 'text-right' : 'text-left',
+        extraClass
       )}
       onClick={() => requestSort(key)}
     >
@@ -314,19 +315,19 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
         </div>
       )}
 
-      {/* Flat Single-Line Professional Table */}
+      {/* Flat Single-Line Professional Table with Logical Cost/Performance Split */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-[#161926] border-b border-[#2A2E45]">
             <tr>
               {renderTH('Symbol', 'symbol', 'left')}
-              {renderTH('Shares', 'quantity')}
-              {renderTH('Price', 'lastPrice')}
-              {renderTH('Total Cost', 'totalCost')}
-              {renderTH('Value', 'currentValue')}
-              {renderTH('Total P/L', 'totalReturn')}
-              {renderTH(`${rangeLabel} Return`, 'periodReturn')}
-              {renderTH('Weight', 'weightPercent')}
+              {renderTH('Shares', 'quantity', 'left')}
+              {renderTH('Price', 'lastPrice', 'left')}
+              {renderTH('Total Cost', 'totalCost', 'left', 'border-r border-[#2A2E45]/60')}
+              {renderTH('Value', 'currentValue', 'right')}
+              {renderTH('Total P/L', 'totalReturn', 'right')}
+              {renderTH(`${rangeLabel} Return`, 'periodReturn', 'right')}
+              {renderTH('Weight', 'weightPercent', 'right')}
             </tr>
           </thead>
           <tbody className="text-sm divide-y divide-[#2A2E45]/80">
@@ -341,35 +342,35 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   className="hover:bg-[#1A1D2D]/90 cursor-pointer transition-all duration-150 group h-12"
                   title={`Click to inspect ${h.symbol}`}
                 >
-                  {/* Column 1: Symbol (Clean, High Contrast, Bold, No Box) */}
+                  {/* Column 1: Symbol (Clean, High Contrast, Bold, Left-Aligned) */}
                   <td className="px-4 py-3 text-left whitespace-nowrap">
                     <span className="font-black text-white text-base tracking-tight font-heading group-hover:text-[#823AFD] transition-colors">
                       {h.symbol}
                     </span>
                   </td>
 
-                  {/* Column 2: Shares */}
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                  {/* Column 2: Shares (Position Basis - Left Aligned) */}
+                  <td className="px-4 py-3 text-left whitespace-nowrap">
                     <span className="font-semibold text-slate-300 text-[14px] tabular-nums font-heading">
                       {Number(h.quantity).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </span>
                   </td>
 
-                  {/* Column 3: Price */}
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                  {/* Column 3: Price (Position Basis - Left Aligned) */}
+                  <td className="px-4 py-3 text-left whitespace-nowrap">
                     <span className="font-bold text-white text-[14px] tabular-nums font-heading">
                       {formatClean(h.lastPrice)}
                     </span>
                   </td>
 
-                  {/* Column 4: Total Cost */}
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                  {/* Column 4: Total Cost (Position Basis - Left Aligned + Subtle Border Divider) */}
+                  <td className="px-4 py-3 text-left whitespace-nowrap border-r border-[#2A2E45]/60">
                     <span className="font-semibold text-slate-300 text-[14px] tabular-nums font-heading">
                       {formatClean(h.totalCost)}
                     </span>
                   </td>
 
-                  {/* Column 5: Current Value */}
+                  {/* Column 5: Current Value (Performance & Valuation - Right Aligned) */}
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <span className="font-black text-white text-[14px] tabular-nums font-heading">
                       {formatClean(h.currentValue)}
@@ -402,7 +403,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                     </span>
                   </td>
 
-                  {/* Column 8: Portfolio Weight % (Clean, No Progress Bar) */}
+                  {/* Column 8: Portfolio Weight % */}
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <span className="font-bold text-slate-200 text-[14px] tabular-nums font-heading">
                       {h.weightPercent.toFixed(2)}%
@@ -418,9 +419,9 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                 <span className="text-sm font-black text-white font-heading">Stocks Total</span>
                 <span className="text-[13px] text-slate-400 font-body ml-2">({holdings.length})</span>
               </td>
-              <td className="px-4 py-3 text-right text-slate-400 font-heading">-</td>
-              <td className="px-4 py-3 text-right text-slate-400 font-heading">-</td>
-              <td className="px-4 py-3 text-right whitespace-nowrap">
+              <td className="px-4 py-3 text-left text-slate-400 font-heading">-</td>
+              <td className="px-4 py-3 text-left text-slate-400 font-heading">-</td>
+              <td className="px-4 py-3 text-left whitespace-nowrap border-r border-[#2A2E45]/60">
                 <span className="text-[14px] font-semibold text-slate-300 tabular-nums font-heading">
                   {formatClean(totalCostBasis)}
                 </span>
@@ -464,7 +465,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
 
             {/* Summary Row 2: Cash Balance */}
             <tr className="bg-[#121420] h-12">
-              <td className="px-4 py-3 text-left whitespace-nowrap" colSpan={4}>
+              <td className="px-4 py-3 text-left whitespace-nowrap border-r border-[#2A2E45]/60" colSpan={4}>
                 <div className="text-sm font-bold text-white flex items-center gap-2 font-heading">
                   <span>💵 Cash Balance</span>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[#CBD5E1] font-body">
@@ -488,7 +489,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
 
             {/* Summary Row 3: Total Net Worth Banner */}
             <tr className="bg-gradient-to-r from-[#823AFD]/20 via-[#161926] to-[#FC2D79]/20 border-t-2 border-[#823AFD]/40 shadow-[0_4px_16px_rgba(130,58,253,0.15)] h-14">
-              <td className="px-4 py-3 text-left whitespace-nowrap" colSpan={4}>
+              <td className="px-4 py-3 text-left whitespace-nowrap border-r border-[#823AFD]/30" colSpan={4}>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-black text-white tracking-tight font-heading">Total Net Worth</span>
                   <span className="text-xs font-semibold text-slate-300 font-body">(Stocks + Cash in {currency})</span>
