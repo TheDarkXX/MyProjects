@@ -19,8 +19,10 @@ interface PortfolioTableProps {
 export interface HoldingWithPeriod extends Holding {
   periodReturn: number;
   periodReturnPercent: number;
-  oneMonthReturn: number;
-  oneMonthReturnPercent: number;
+  activeReturn: number;
+  activeReturnPercent: number;
+  nextReturn: number;
+  nextReturnPercent: number;
 }
 
 type SortKey = 
@@ -31,10 +33,10 @@ type SortKey =
   | 'currentValue' 
   | 'totalReturn' 
   | 'totalReturnPercent' 
-  | 'dayReturn' 
-  | 'dayChangePercent' 
-  | 'oneMonthReturn' 
-  | 'oneMonthReturnPercent' 
+  | 'activeReturn' 
+  | 'activeReturnPercent' 
+  | 'nextReturn' 
+  | 'nextReturnPercent' 
   | 'weightPercent';
 type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
 
@@ -69,6 +71,35 @@ const getStartDateForRange = (range: HoldingTimeRange, customStartDate?: string)
   return today.toISOString().split('T')[0];
 };
 
+// Returns the timeframe that is exactly 1 step larger on the ladder
+const getNextStepRange = (range: HoldingTimeRange): HoldingTimeRange => {
+  switch (range) {
+    case '1D': return '1W';
+    case '1W': return '1M';
+    case '1M': return '3M';
+    case '3M': return 'YTD';
+    case 'YTD': return '1Y';
+    case '1Y': return 'ALL';
+    case 'ALL': return '1M';
+    case 'CUSTOM': return '1M';
+    default: return '1W';
+  }
+};
+
+const getRangeLabel = (range: HoldingTimeRange): string => {
+  switch (range) {
+    case '1D': return '1D';
+    case '1W': return '1W';
+    case '1M': return '1M';
+    case '3M': return '3M';
+    case 'YTD': return 'YTD';
+    case '1Y': return '1Y';
+    case 'ALL': return 'Total';
+    case 'CUSTOM': return 'Custom';
+    default: return '1D';
+  }
+};
+
 export const PortfolioTable: React.FC<PortfolioTableProps> = ({
   holdings,
   formatCurrency,
@@ -85,19 +116,9 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
-  const rangeLabel = useMemo(() => {
-    switch (timeRange) {
-      case '1D': return '1D';
-      case '1W': return '1W';
-      case '1M': return '1M';
-      case '3M': return '3M';
-      case 'YTD': return 'YTD';
-      case '1Y': return '1Y';
-      case 'ALL': return 'Total';
-      case 'CUSTOM': return 'Custom';
-      default: return '1D';
-    }
-  }, [timeRange]);
+  const activeRangeLabel = useMemo(() => getRangeLabel(timeRange), [timeRange]);
+  const nextRange = useMemo(() => getNextStepRange(timeRange), [timeRange]);
+  const nextRangeLabel = useMemo(() => getRangeLabel(nextRange), [nextRange]);
 
   // Clean numeric formatter without repeated currency symbols (Bloomberg/TradingView style)
   const formatClean = (usdVal: number, decimals: number = 2) => {
@@ -112,79 +133,65 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
     });
   };
 
-  // Compute period return & 1-Month (1M) return for each holding
+  // Helper to compute return and return percent for any specific range
+  const computeReturnForRange = (
+    h: Holding, 
+    range: HoldingTimeRange, 
+    customDate?: string
+  ): { returnVal: number; returnPercent: number } => {
+    if (range === '1D') {
+      return {
+        returnVal: h.dayReturn || 0,
+        returnPercent: h.dayChangePercent || 0,
+      };
+    }
+    if (range === 'ALL') {
+      return {
+        returnVal: h.totalReturn || 0,
+        returnPercent: h.totalReturnPercent || 0,
+      };
+    }
+
+    const symHistory = historical[h.symbol] || [];
+    const targetStartDate = getStartDateForRange(range, customDate);
+    let basePrice = 0;
+
+    if (symHistory.length > 0) {
+      const filtered = symHistory.filter(pt => pt.date <= targetStartDate);
+      if (filtered.length > 0) {
+        basePrice = filtered[filtered.length - 1].price;
+      } else {
+        basePrice = symHistory[0].price;
+      }
+    }
+
+    if (!basePrice || basePrice <= 0) {
+      basePrice = h.avgCost || h.lastPrice;
+    }
+
+    const diff = h.lastPrice - basePrice;
+    const returnVal = h.quantity * diff;
+    const returnPercent = basePrice > 0 ? (diff / basePrice) * 100 : 0;
+    return { returnVal, returnPercent };
+  };
+
+  // Compute active range return and next step comparison return for each holding
   const processedHoldings = useMemo<HoldingWithPeriod[]>(() => {
-    const targetStartDate = getStartDateForRange(timeRange, customFrom);
-    const targetStartDate1m = getStartDateForRange('1M'); // 30 days ago (1 step larger than 1W)
-
     return holdings.map(h => {
-      const symHistory = historical[h.symbol] || [];
-
-      // 1M (1-Month) return calculation
-      let basePrice1m = 0;
-      if (symHistory.length > 0) {
-        const filtered1m = symHistory.filter(pt => pt.date <= targetStartDate1m);
-        if (filtered1m.length > 0) {
-          basePrice1m = filtered1m[filtered1m.length - 1].price;
-        } else {
-          basePrice1m = symHistory[0].price;
-        }
-      }
-      if (!basePrice1m || basePrice1m <= 0) {
-        basePrice1m = h.avgCost || h.lastPrice;
-      }
-      const diff1m = h.lastPrice - basePrice1m;
-      const oneMonthReturn = h.quantity * diff1m;
-      const oneMonthReturnPercent = basePrice1m > 0 ? (diff1m / basePrice1m) * 100 : 0;
-
-      // Dynamic Range Period Return (for top badge summary)
-      if (timeRange === '1D') {
-        return {
-          ...h,
-          periodReturn: h.dayReturn,
-          periodReturnPercent: h.dayChangePercent,
-          oneMonthReturn,
-          oneMonthReturnPercent
-        };
-      }
-
-      if (timeRange === 'ALL') {
-        return {
-          ...h,
-          periodReturn: h.totalReturn,
-          periodReturnPercent: h.totalReturnPercent,
-          oneMonthReturn,
-          oneMonthReturnPercent
-        };
-      }
-
-      let basePrice = 0;
-      if (symHistory.length > 0) {
-        const filtered = symHistory.filter(pt => pt.date <= targetStartDate);
-        if (filtered.length > 0) {
-          basePrice = filtered[filtered.length - 1].price;
-        } else {
-          basePrice = symHistory[0].price;
-        }
-      }
-
-      if (!basePrice || basePrice <= 0) {
-        basePrice = h.avgCost;
-      }
-
-      const diff = h.lastPrice - basePrice;
-      const periodReturn = h.quantity * diff;
-      const periodReturnPercent = basePrice > 0 ? (diff / basePrice) * 100 : 0;
+      const activeData = computeReturnForRange(h, timeRange, customFrom);
+      const nextData = computeReturnForRange(h, nextRange);
 
       return {
         ...h,
-        periodReturn,
-        periodReturnPercent,
-        oneMonthReturn,
-        oneMonthReturnPercent
+        periodReturn: activeData.returnVal,
+        periodReturnPercent: activeData.returnPercent,
+        activeReturn: activeData.returnVal,
+        activeReturnPercent: activeData.returnPercent,
+        nextReturn: nextData.returnVal,
+        nextReturnPercent: nextData.returnPercent,
       };
     });
-  }, [holdings, historical, timeRange, customFrom]);
+  }, [holdings, historical, timeRange, nextRange, customFrom]);
 
   const requestSort = (key: SortKey) => {
     let direction: 'asc' | 'desc' = 'desc';
@@ -225,32 +232,23 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
     return totalCostBasis > 0 ? (totalTotalPnl / totalCostBasis) * 100 : 0;
   }, [totalTotalPnl, totalCostBasis]);
 
-  const totalDayReturn = useMemo(() => {
-    return holdings.reduce((sum, h) => sum + (h.dayReturn || 0), 0);
-  }, [holdings]);
-
-  const totalDayReturnPercent = useMemo(() => {
-    const baseVal = totalSecuritiesValue - totalDayReturn;
-    return baseVal > 0 ? (totalDayReturn / baseVal) * 100 : 0;
-  }, [totalSecuritiesValue, totalDayReturn]);
-
-  const total1mReturn = useMemo(() => {
-    return processedHoldings.reduce((sum, h) => sum + (h.oneMonthReturn || 0), 0);
+  const totalActiveReturn = useMemo(() => {
+    return processedHoldings.reduce((sum, h) => sum + (h.activeReturn || 0), 0);
   }, [processedHoldings]);
 
-  const total1mReturnPercent = useMemo(() => {
-    const baseVal = totalSecuritiesValue - total1mReturn;
-    return baseVal > 0 ? (total1mReturn / baseVal) * 100 : 0;
-  }, [totalSecuritiesValue, total1mReturn]);
+  const totalActiveReturnPercent = useMemo(() => {
+    const baseVal = totalSecuritiesValue - totalActiveReturn;
+    return baseVal > 0 ? (totalActiveReturn / baseVal) * 100 : 0;
+  }, [totalSecuritiesValue, totalActiveReturn]);
 
-  const totalPeriodReturn = useMemo(() => {
-    return processedHoldings.reduce((sum, h) => sum + h.periodReturn, 0);
+  const totalNextReturn = useMemo(() => {
+    return processedHoldings.reduce((sum, h) => sum + (h.nextReturn || 0), 0);
   }, [processedHoldings]);
 
-  const totalPeriodReturnPercent = useMemo(() => {
-    const baseValue = totalSecuritiesValue - totalPeriodReturn;
-    return baseValue > 0 ? (totalPeriodReturn / baseValue) * 100 : 0;
-  }, [totalSecuritiesValue, totalPeriodReturn]);
+  const totalNextReturnPercent = useMemo(() => {
+    const baseVal = totalSecuritiesValue - totalNextReturn;
+    return baseVal > 0 ? (totalNextReturn / baseVal) * 100 : 0;
+  }, [totalSecuritiesValue, totalNextReturn]);
 
   const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
     if (sortConfig?.key === columnKey) {
@@ -289,11 +287,11 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
             </span>
             <span className={clsx(
               "text-xs font-semibold px-2.5 py-1 rounded-full border transition-all tabular-nums",
-              totalPeriodReturn >= 0 
+              totalActiveReturn >= 0 
                 ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
                 : "text-rose-400 bg-rose-400/10 border-rose-500/20"
             )}>
-              {rangeLabel}: {totalPeriodReturn >= 0 ? '+' : ''}{formatCurrency(totalPeriodReturn, true)} ({totalPeriodReturn >= 0 ? '+' : ''}{totalPeriodReturnPercent.toFixed(2)}%)
+              {activeRangeLabel}: {totalActiveReturn >= 0 ? '+' : ''}{formatCurrency(totalActiveReturn, true)} ({totalActiveReturn >= 0 ? '+' : ''}{totalActiveReturnPercent.toFixed(2)}%)
             </span>
           </div>
           <p className="text-sm text-[#CBD5E1] mt-1">
@@ -372,30 +370,37 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
         </div>
       )}
 
-      {/* Flat Single-Line Professional Table with Discrete Columns */}
+      {/* Flat Single-Line 4-Section Professional Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-[#161926] border-b border-[#2A2E45]">
             <tr>
+              {/* Section 1 (Red Box): Investor's Cost Basis (Left Aligned) */}
               {renderTH('Symbol', 'symbol', 'left')}
               {renderTH('Shares', 'quantity', 'left')}
               {renderTH('Price', 'lastPrice', 'left')}
-              {renderTH('Total Cost', 'totalCost', 'left', 'border-r border-[#2A2E45]/60')}
+              {renderTH('Total Cost', 'totalCost', 'left', 'border-r border-[#2A2E45]/70')}
+
+              {/* Section 2 (Yellow Box): Current Valuation & Total P/L (Right Aligned) */}
               {renderTH('Value', 'currentValue', 'right')}
               {renderTH('Total P/L', 'totalReturn', 'right')}
-              {renderTH('Total %', 'totalReturnPercent', 'right')}
-              {renderTH('1D Return', 'dayReturn', 'right')}
-              {renderTH('1D %', 'dayChangePercent', 'right')}
-              {renderTH('1M Return', 'oneMonthReturn', 'right')}
-              {renderTH('1M %', 'oneMonthReturnPercent', 'right')}
+              {renderTH('Total %', 'totalReturnPercent', 'right', 'border-r border-[#2A2E45]/70')}
+
+              {/* Section 3 (Blue Box): Active Focus Dynamic Range (Highlighted Background) */}
+              {renderTH(`${activeRangeLabel} Return`, 'activeReturn', 'right', 'bg-[#181D33]/90 text-white font-black border-l border-[#823AFD]/30')}
+              {renderTH(`${activeRangeLabel} %`, 'activeReturnPercent', 'right', 'bg-[#181D33]/90 text-white font-black border-r border-[#2A2E45]/70')}
+
+              {/* Section 4 (Green Box): Next-Step Ladder Benchmark & Weight */}
+              {renderTH(`${nextRangeLabel} Return`, 'nextReturn', 'right')}
+              {renderTH(`${nextRangeLabel} %`, 'nextReturnPercent', 'right')}
               {renderTH('Weight', 'weightPercent', 'right')}
             </tr>
           </thead>
           <tbody className="text-sm divide-y divide-[#2A2E45]/80">
             {sortedHoldings.map((h) => {
               const isProfit = h.totalReturn >= 0;
-              const isDayProfit = (h.dayReturn || 0) >= 0;
-              const is1mProfit = (h.oneMonthReturn || 0) >= 0;
+              const isActiveProfit = (h.activeReturn || 0) >= 0;
+              const isNextProfit = (h.nextReturn || 0) >= 0;
 
               return (
                 <tr 
@@ -404,35 +409,37 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   className="hover:bg-[#1A1D2D]/90 cursor-pointer transition-all duration-150 group h-12"
                   title={`Click to inspect ${h.symbol}`}
                 >
-                  {/* Column 1: Symbol (Clean, High Contrast, Bold, Left-Aligned) */}
+                  {/* === Section 1: Cost Basis (Left Aligned) === */}
+                  {/* Column 1: Symbol */}
                   <td className="px-3 py-3 text-left whitespace-nowrap">
                     <span className="font-black text-white text-base tracking-tight font-heading group-hover:text-[#823AFD] transition-colors">
                       {h.symbol}
                     </span>
                   </td>
 
-                  {/* Column 2: Shares (Position Basis - Left Aligned) */}
+                  {/* Column 2: Shares */}
                   <td className="px-3 py-3 text-left whitespace-nowrap">
                     <span className="font-semibold text-slate-300 text-[14px] tabular-nums font-heading">
                       {Number(h.quantity).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </span>
                   </td>
 
-                  {/* Column 3: Price (Position Basis - Left Aligned) */}
+                  {/* Column 3: Price */}
                   <td className="px-3 py-3 text-left whitespace-nowrap">
                     <span className="font-bold text-white text-[14px] tabular-nums font-heading">
                       {formatClean(h.lastPrice)}
                     </span>
                   </td>
 
-                  {/* Column 4: Total Cost (Position Basis - Left Aligned + Subtle Border Divider) */}
-                  <td className="px-3 py-3 text-left whitespace-nowrap border-r border-[#2A2E45]/60">
+                  {/* Column 4: Total Cost + Subtle Border Divider */}
+                  <td className="px-3 py-3 text-left whitespace-nowrap border-r border-[#2A2E45]/70">
                     <span className="font-semibold text-slate-300 text-[14px] tabular-nums font-heading">
                       {formatClean(h.totalCost)}
                     </span>
                   </td>
 
-                  {/* Column 5: Current Value (Performance & Valuation - Right Aligned) */}
+                  {/* === Section 2: Current Valuation & All-Time Return === */}
+                  {/* Column 5: Current Value */}
                   <td className="px-3 py-3 text-right whitespace-nowrap">
                     <span className="font-black text-white text-[14px] tabular-nums font-heading">
                       {formatClean(h.currentValue)}
@@ -449,8 +456,8 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                     </span>
                   </td>
 
-                  {/* Column 7: Total P/L % */}
-                  <td className="px-3 py-3 text-right whitespace-nowrap">
+                  {/* Column 7: Total P/L % + Subtle Border Divider */}
+                  <td className="px-3 py-3 text-right whitespace-nowrap border-r border-[#2A2E45]/70">
                     <span className={clsx(
                       "font-bold text-[14px] tabular-nums font-heading",
                       isProfit ? "text-emerald-400" : "text-rose-400"
@@ -459,43 +466,45 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                     </span>
                   </td>
 
-                  {/* Column 8: 1D Return (Amount) */}
-                  <td className="px-3 py-3 text-right whitespace-nowrap">
+                  {/* === Section 3: Active Focus Dynamic Range (Distinct BG Highlight) === */}
+                  {/* Column 8: Active Range Return (Amount) */}
+                  <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/60 group-hover:bg-[#1E2440]/80 transition-colors border-l border-[#823AFD]/20">
                     <span className={clsx(
                       "font-bold text-[14px] tabular-nums font-heading",
-                      isDayProfit ? "text-emerald-400" : "text-rose-400"
+                      isActiveProfit ? "text-emerald-400" : "text-rose-400"
                     )}>
-                      {isDayProfit ? '+' : '-'}{formatClean(h.dayReturn)}
+                      {isActiveProfit ? '+' : '-'}{formatClean(h.activeReturn)}
                     </span>
                   </td>
 
-                  {/* Column 9: 1D % */}
-                  <td className="px-3 py-3 text-right whitespace-nowrap">
+                  {/* Column 9: Active Range % */}
+                  <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/60 group-hover:bg-[#1E2440]/80 transition-colors border-r border-[#2A2E45]/70">
                     <span className={clsx(
                       "font-bold text-[14px] tabular-nums font-heading",
-                      isDayProfit ? "text-emerald-400" : "text-rose-400"
+                      isActiveProfit ? "text-emerald-400" : "text-rose-400"
                     )}>
-                      {isDayProfit ? '+' : ''}{(h.dayChangePercent || 0).toFixed(2)}%
+                      {isActiveProfit ? '+' : ''}{(h.activeReturnPercent || 0).toFixed(2)}%
                     </span>
                   </td>
 
-                  {/* Column 10: 1M Return (Amount) */}
+                  {/* === Section 4: Next-Step Ladder Benchmark & Weight === */}
+                  {/* Column 10: Next Step Return (Amount) */}
                   <td className="px-3 py-3 text-right whitespace-nowrap">
                     <span className={clsx(
                       "font-bold text-[14px] tabular-nums font-heading",
-                      is1mProfit ? "text-emerald-400" : "text-rose-400"
+                      isNextProfit ? "text-emerald-400" : "text-rose-400"
                     )}>
-                      {is1mProfit ? '+' : '-'}{formatClean(h.oneMonthReturn)}
+                      {isNextProfit ? '+' : '-'}{formatClean(h.nextReturn)}
                     </span>
                   </td>
 
-                  {/* Column 11: 1M % */}
+                  {/* Column 11: Next Step % */}
                   <td className="px-3 py-3 text-right whitespace-nowrap">
                     <span className={clsx(
                       "font-bold text-[14px] tabular-nums font-heading",
-                      is1mProfit ? "text-emerald-400" : "text-rose-400"
+                      isNextProfit ? "text-emerald-400" : "text-rose-400"
                     )}>
-                      {is1mProfit ? '+' : ''}{h.oneMonthReturnPercent.toFixed(2)}%
+                      {isNextProfit ? '+' : ''}{(h.nextReturnPercent || 0).toFixed(2)}%
                     </span>
                   </td>
 
@@ -511,23 +520,25 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
             
             {/* Summary Row 1: Stocks Total */}
             <tr className="bg-[#141724] border-t-2 border-[#2A2E45] h-12">
+              {/* Section 1 Total */}
               <td className="px-3 py-3 text-left whitespace-nowrap">
                 <span className="text-sm font-black text-white font-heading">Stocks Total</span>
                 <span className="text-[13px] text-slate-400 font-body ml-1.5">({holdings.length})</span>
               </td>
               <td className="px-3 py-3 text-left text-slate-400 font-heading">-</td>
               <td className="px-3 py-3 text-left text-slate-400 font-heading">-</td>
-              <td className="px-3 py-3 text-left whitespace-nowrap border-r border-[#2A2E45]/60">
+              <td className="px-3 py-3 text-left whitespace-nowrap border-r border-[#2A2E45]/70">
                 <span className="text-[14px] font-semibold text-slate-300 tabular-nums font-heading">
                   {formatClean(totalCostBasis)}
                 </span>
               </td>
+
+              {/* Section 2 Total */}
               <td className="px-3 py-3 text-right whitespace-nowrap">
                 <span className="text-[14px] font-black text-white tabular-nums font-heading">
                   {formatClean(totalSecuritiesValue)}
                 </span>
               </td>
-              {/* Total P/L Amount */}
               <td className="px-3 py-3 text-right whitespace-nowrap">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
@@ -536,8 +547,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   {totalTotalPnl >= 0 ? '+' : '-'}{formatClean(totalTotalPnl)}
                 </span>
               </td>
-              {/* Total P/L % */}
-              <td className="px-3 py-3 text-right whitespace-nowrap">
+              <td className="px-3 py-3 text-right whitespace-nowrap border-r border-[#2A2E45]/70">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
                   totalTotalPnl >= 0 ? "text-emerald-400" : "text-rose-400"
@@ -545,43 +555,42 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   {totalTotalPnl >= 0 ? '+' : ''}{totalTotalPnlPercent.toFixed(2)}%
                 </span>
               </td>
-              {/* 1D Return Amount */}
+
+              {/* Section 3 Total (Highlighted BG) */}
+              <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70 border-l border-[#823AFD]/20">
+                <span className={clsx(
+                  "font-bold text-[14px] tabular-nums font-heading",
+                  totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                )}>
+                  {totalActiveReturn >= 0 ? '+' : '-'}{formatClean(totalActiveReturn)}
+                </span>
+              </td>
+              <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70 border-r border-[#2A2E45]/70">
+                <span className={clsx(
+                  "font-bold text-[14px] tabular-nums font-heading",
+                  totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                )}>
+                  {totalActiveReturn >= 0 ? '+' : ''}{totalActiveReturnPercent.toFixed(2)}%
+                </span>
+              </td>
+
+              {/* Section 4 Total */}
               <td className="px-3 py-3 text-right whitespace-nowrap">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
-                  totalDayReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                  totalNextReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
-                  {totalDayReturn >= 0 ? '+' : '-'}{formatClean(totalDayReturn)}
+                  {totalNextReturn >= 0 ? '+' : '-'}{formatClean(totalNextReturn)}
                 </span>
               </td>
-              {/* 1D % */}
               <td className="px-3 py-3 text-right whitespace-nowrap">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
-                  totalDayReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                  totalNextReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
-                  {totalDayReturn >= 0 ? '+' : ''}{totalDayReturnPercent.toFixed(2)}%
+                  {totalNextReturn >= 0 ? '+' : ''}{totalNextReturnPercent.toFixed(2)}%
                 </span>
               </td>
-              {/* 1M Return Amount */}
-              <td className="px-3 py-3 text-right whitespace-nowrap">
-                <span className={clsx(
-                  "font-bold text-[14px] tabular-nums font-heading",
-                  total1mReturn >= 0 ? "text-emerald-400" : "text-rose-400"
-                )}>
-                  {total1mReturn >= 0 ? '+' : '-'}{formatClean(total1mReturn)}
-                </span>
-              </td>
-              {/* 1M % */}
-              <td className="px-3 py-3 text-right whitespace-nowrap">
-                <span className={clsx(
-                  "font-bold text-[14px] tabular-nums font-heading",
-                  total1mReturn >= 0 ? "text-emerald-400" : "text-rose-400"
-                )}>
-                  {total1mReturn >= 0 ? '+' : ''}{total1mReturnPercent.toFixed(2)}%
-                </span>
-              </td>
-              {/* Weight Summary */}
               <td className="px-3 py-3 text-right whitespace-nowrap">
                 <span className="text-[14px] font-bold text-slate-200 tabular-nums font-heading">
                   {(totalSecuritiesValue / totalNetWorth * 100).toFixed(2)}%
@@ -591,7 +600,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
 
             {/* Summary Row 2: Cash Balance */}
             <tr className="bg-[#121420] h-12">
-              <td className="px-3 py-3 text-left whitespace-nowrap border-r border-[#2A2E45]/60" colSpan={4}>
+              <td className="px-3 py-3 text-left whitespace-nowrap border-r border-[#2A2E45]/70" colSpan={4}>
                 <div className="text-sm font-bold text-white flex items-center gap-2 font-heading">
                   <span>💵 Cash Balance</span>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[#CBD5E1] font-body">
@@ -605,9 +614,9 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                 </span>
               </td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
-              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
-              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
-              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
+              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading border-r border-[#2A2E45]/70">-</td>
+              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading bg-[#181D33]/40 border-l border-[#823AFD]/20">-</td>
+              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading bg-[#181D33]/40 border-r border-[#2A2E45]/70">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
               <td className="px-3 py-3 text-right whitespace-nowrap">
@@ -638,7 +647,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   {totalTotalPnl >= 0 ? '+' : '-'}{formatClean(totalTotalPnl)}
                 </span>
               </td>
-              <td className="px-3 py-3 text-right whitespace-nowrap">
+              <td className="px-3 py-3 text-right whitespace-nowrap border-r border-[#823AFD]/30">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
                   totalTotalPnl >= 0 ? "text-emerald-400" : "text-rose-400"
@@ -646,36 +655,36 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   {totalTotalPnl >= 0 ? '+' : ''}{totalTotalPnlPercent.toFixed(2)}%
                 </span>
               </td>
-              <td className="px-3 py-3 text-right whitespace-nowrap">
+              <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70 border-l border-[#823AFD]/20">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
-                  totalDayReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                  totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
-                  {totalDayReturn >= 0 ? '+' : '-'}{formatClean(totalDayReturn)}
+                  {totalActiveReturn >= 0 ? '+' : '-'}{formatClean(totalActiveReturn)}
+                </span>
+              </td>
+              <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70 border-r border-[#823AFD]/30">
+                <span className={clsx(
+                  "font-bold text-[14px] tabular-nums font-heading",
+                  totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                )}>
+                  {totalActiveReturn >= 0 ? '+' : ''}{totalActiveReturnPercent.toFixed(2)}%
                 </span>
               </td>
               <td className="px-3 py-3 text-right whitespace-nowrap">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
-                  totalDayReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                  totalNextReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
-                  {totalDayReturn >= 0 ? '+' : ''}{totalDayReturnPercent.toFixed(2)}%
+                  {totalNextReturn >= 0 ? '+' : '-'}{formatClean(totalNextReturn)}
                 </span>
               </td>
               <td className="px-3 py-3 text-right whitespace-nowrap">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
-                  total1mReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                  totalNextReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
-                  {total1mReturn >= 0 ? '+' : '-'}{formatClean(total1mReturn)}
-                </span>
-              </td>
-              <td className="px-3 py-3 text-right whitespace-nowrap">
-                <span className={clsx(
-                  "font-bold text-[14px] tabular-nums font-heading",
-                  total1mReturn >= 0 ? "text-emerald-400" : "text-rose-400"
-                )}>
-                  {total1mReturn >= 0 ? '+' : ''}{total1mReturnPercent.toFixed(2)}%
+                  {totalNextReturn >= 0 ? '+' : ''}{totalNextReturnPercent.toFixed(2)}%
                 </span>
               </td>
               <td className="px-3 py-3 text-right whitespace-nowrap">
