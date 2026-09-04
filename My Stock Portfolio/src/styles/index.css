@@ -29,21 +29,17 @@ th,
 }
 
 /* Narrative, Description, Captions, Explanations: Sarabun (Readable, Looped) */
-p, 
-small, 
+p:not(.num):not(.tabular-nums), 
+small:not(.num):not(.tabular-nums), 
 caption,
 .font-body,
 .font-sarabun,
 .subtitle,
-.description,
-[class*="text-slate-300"],
-[class*="text-[#CBD5E1]"],
-[class*="text-[#9898C8]"],
-[class*="text-gray"] {
+.description {
   font-family: 'Sarabun', system-ui, -apple-system, sans-serif;
 }
 
-/* Headings & Bold Metric Elements always use Prompt */
+/* Headings, Numbers & Bold Metric Elements always use Prompt */
 h1, h2, h3, h4, h5, h6,
 button,
 th,
@@ -52,6 +48,8 @@ th,
 .font-extrabold,
 .font-semibold,
 .tabular-nums,
+.num,
+.font-prompt,
 [class*="tracking-tight"] {
   font-family: 'Prompt', system-ui, -apple-system, sans-serif !important;
 }
@@ -67,8 +65,15 @@ th,
   font-family: 'Sarabun', sans-serif !important;
 }
 
-.font-mono,
-[class*="font-mono"],
+/* All numeric displays use Prompt with tabular numbers for institutional consistency */
+.num,
+.tabular-nums,
+[class*="tabular-nums"],
+[class*="font-mono"] {
+  font-family: 'Prompt', system-ui, -apple-system, sans-serif !important;
+  font-variant-numeric: tabular-nums;
+}
+
 code,
 pre,
 kbd {

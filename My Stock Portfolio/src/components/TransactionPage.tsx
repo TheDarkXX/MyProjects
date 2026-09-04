@@ -395,9 +395,15 @@ const TransactionPage: React.FC<TransactionPageProps> = ({
     setSelectedTxIds(new Set());
   }
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
       if (selectedTxIds.size === 0) return;
-      if (window.confirm(`Are you sure you want to delete ${selectedTxIds.size} selected transaction(s)? This action cannot be undone.`)) {
+      const { useModalStore } = await import('../stores/modalStore');
+      const confirmed = await useModalStore.getState().confirm(
+        'ยืนยันการลบรายการธุรกรรม',
+        `คุณแน่ใจหรือไม่ว่าต้องการลบ ${selectedTxIds.size} รายการที่เลือก? การกระทำนี้ไม่สามารถย้อนกลับได้`,
+        { variant: 'danger', confirmText: 'ลบรายการ' }
+      );
+      if (confirmed) {
           onBulkDeleteTransactions(Array.from(selectedTxIds));
           setSelectedTxIds(new Set());
       }

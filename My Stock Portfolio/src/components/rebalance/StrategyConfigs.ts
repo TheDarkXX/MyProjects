@@ -135,13 +135,13 @@ export const PRESET_TEMPLATES: StrategyTemplate[] = [
   {
     id: 'garp-leap',
     name: 'GARP / Leap Growth (Lynch)',
-    description: 'โตก้าวกระโดด + เสี่ยงปานกลาง (40% Growth / 40% Compounders / 20% Cash)',
+    description: 'โตก้าวกระโดด + เสี่ยงปานกลาง (40% Growth / 20% Mid-Tier / 20% Compounders / 20% Cash)',
     category: 'Pure Equity',
     mode: 'growth',
     entries: [
       { symbol: 'NVDA', target_percent: 20, target_price: null, status: 'WATCHLIST', category: 'Growth' },
       { symbol: 'META', target_percent: 20, target_price: null, status: 'WATCHLIST', category: 'Growth' },
-      { symbol: 'AMZN', target_percent: 20, target_price: null, status: 'WATCHLIST', category: 'Compounders' },
+      { symbol: 'AMZN', target_percent: 20, target_price: null, status: 'WATCHLIST', category: 'Mid-Tier' },
       { symbol: 'V', target_percent: 20, target_price: null, status: 'WATCHLIST', category: 'Compounders' },
       { symbol: 'CASH', target_percent: 20, target_price: null, status: 'OWNED', category: 'Cash' },
     ]
@@ -149,12 +149,12 @@ export const PRESET_TEMPLATES: StrategyTemplate[] = [
   {
     id: 'hyper-growth',
     name: 'Hyper Growth (Cathie Wood)',
-    description: 'โตขั้นสุด + เสี่ยงสูง (50% Growth / 50% Bets & Small Cap)',
+    description: 'โตขั้นสุด + เสี่ยงสูง (25% Growth / 25% Mid-Tier / 25% Small Cap / 25% Bets)',
     category: 'Pure Equity',
     mode: 'growth',
     entries: [
-      { symbol: 'TSLA', target_percent: 25, target_price: null, status: 'WATCHLIST', category: 'Growth' },
       { symbol: 'PLTR', target_percent: 25, target_price: null, status: 'WATCHLIST', category: 'Growth' },
+      { symbol: 'TSLA', target_percent: 25, target_price: null, status: 'WATCHLIST', category: 'Mid-Tier' },
       { symbol: 'SQ', target_percent: 25, target_price: null, status: 'WATCHLIST', category: 'Small Cap' },
       { symbol: 'CRSP', target_percent: 25, target_price: null, status: 'WATCHLIST', category: 'Bets' },
     ]
@@ -162,13 +162,13 @@ export const PRESET_TEMPLATES: StrategyTemplate[] = [
   {
     id: 'high-conviction',
     name: 'High Conviction (Shay Booler)',
-    description: 'สไตล์กระจุกตัว Top 3 ตัวละ 30% เน้นความมั่นใจสูงสุด + 10% Cash',
+    description: 'สไตล์กระจุกตัว Top 3 ตัวละ 30% (Growth & Mid-Tier) + 10% Cash',
     category: 'Pure Equity',
     mode: 'growth',
     entries: [
-      { symbol: 'TSLA', target_percent: 30, target_price: null, status: 'WATCHLIST', category: 'Growth' },
       { symbol: 'PLTR', target_percent: 30, target_price: null, status: 'WATCHLIST', category: 'Growth' },
       { symbol: 'CRWD', target_percent: 30, target_price: null, status: 'WATCHLIST', category: 'Growth' },
+      { symbol: 'TSLA', target_percent: 30, target_price: null, status: 'WATCHLIST', category: 'Mid-Tier' },
       { symbol: 'CASH', target_percent: 10, target_price: null, status: 'OWNED', category: 'Cash' },
     ]
   },

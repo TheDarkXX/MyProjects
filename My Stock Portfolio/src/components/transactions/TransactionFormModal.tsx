@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Transaction, useTransactionStore } from '../../stores/transactionStore';
 import { usePortfolioStore } from '../../stores/portfolioStore';
+import { useModalStore } from '../../stores/modalStore';
 import { X } from 'lucide-react';
 
 interface Props {
@@ -61,7 +62,7 @@ export const TransactionFormModal: React.FC<Props> = ({ transaction, onClose }) 
       onClose();
     } catch (error) {
       console.error(error);
-      alert('Failed to save transaction');
+      useModalStore.getState().alert('บันทึกไม่สำเร็จ', 'เกิดข้อผิดพลาดในการบันทึกรายการธุรกรรม กรุณาลองใหม่อีกครั้ง', { variant: 'danger' });
     }
   };
 

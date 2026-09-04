@@ -93,7 +93,7 @@ export const UpcomingDividendStrip: React.FC = () => {
           <div>
             <h4 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               Upcoming Dividend Strip
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#1A1D2D] border border-[#2A2E45] text-emerald-400 font-semibold">
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#1A1D2D] border border-[#2A2E45] text-emerald-400 font-bold">
                 Next 60-90 Days
               </span>
             </h4>
@@ -106,7 +106,7 @@ export const UpcomingDividendStrip: React.FC = () => {
         {upcomingDividends.length > 0 && (
           <div className="bg-[#161926] px-3.5 py-1.5 rounded-xl border border-[#2A2E45] flex items-center gap-2 self-start sm:self-auto">
             <span className="text-xs text-[#9898C8] font-medium">Est. Incoming Cash:</span>
-            <span className="text-sm font-black text-emerald-400 tabular-nums">
+            <span className="text-sm font-black text-emerald-400 tabular-nums font-prompt">
               +{formatMoney(totalUpcomingExpected)}
             </span>
           </div>
@@ -132,27 +132,27 @@ export const UpcomingDividendStrip: React.FC = () => {
                   </div>
                   <span className="font-extrabold text-white text-sm">{item.symbol}</span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 tabular-nums font-prompt">
                   in {item.daysRemaining} days
                 </span>
               </div>
 
               <div className="flex justify-between items-baseline mt-2">
                 <div>
-                  <span className="text-[10px] font-semibold text-[#9898C8] block">Est. Payout</span>
-                  <span className="text-lg font-black text-emerald-400 tabular-nums">
+                  <span className="text-xs font-semibold text-[#9898C8] block">Est. Payout</span>
+                  <span className="text-lg font-black text-emerald-400 tabular-nums font-prompt">
                     +{formatMoney(item.expectedAmountUsd)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-[#9898C8] block">Rate / Share</span>
-                  <span className="text-xs font-semibold text-[#CBD5E1] tabular-nums">
+                  <span className="text-xs text-[#9898C8] block">Rate / Share</span>
+                  <span className="text-xs font-semibold text-[#CBD5E1] tabular-nums font-prompt">
                     ${item.estimatedRate.toFixed(2)}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-[#9898C8] mt-3 pt-2.5 border-t border-[#2A2E45]/60">
+              <div className="flex items-center justify-between text-xs text-[#9898C8] mt-3 pt-2.5 border-t border-[#2A2E45]/60">
                 <span>Ex-Date: <strong className="text-white">{new Date(item.exDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</strong></span>
                 <span>Pay: <strong className="text-white">{new Date(item.payDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</strong></span>
               </div>

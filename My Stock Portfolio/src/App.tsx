@@ -5,6 +5,7 @@ import { useUiStore } from './stores/uiStore';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { Dashboard } from './components/dashboard/Dashboard';
+import { AppModal } from './components/common/AppModal';
 
 // Dynamic Lazy Imports for optimal performance and chunking
 const ScorecardPage = lazy(() => import('./components/scorecard/ScorecardPage').then(m => ({ default: m.ScorecardPage })));
@@ -135,6 +136,7 @@ const MainLayout = () => {
           </ErrorBoundary>
         </main>
       </div>
+      <AppModal />
     </div>
   );
 };

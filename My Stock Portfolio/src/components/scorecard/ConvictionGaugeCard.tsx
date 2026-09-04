@@ -145,16 +145,16 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
           <div className="bg-[#1A1D2D]/70 border border-[#2A2E45] rounded-2xl p-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-[#9898C8] font-semibold">หุ้นเบอร์ 1 ของพอร์ต</span>
-                <span className="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="text-xs text-[#CBD5E1] font-semibold">หุ้นเบอร์ 1 ของพอร์ต</span>
+                <span className="text-xs font-bold text-white px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 tabular-nums font-prompt">
                   {concentration.top1Symbol}
                 </span>
               </div>
               <div className="flex items-baseline justify-between mb-2">
-                <span className="text-2xl font-black text-white font-mono tabular-nums">
+                <span className="text-2xl font-black text-white tabular-nums font-prompt">
                   {concentration.top1.toFixed(1)}%
                 </span>
-                <span className="text-[10px] text-[#CBD5E1] font-mono">
+                <span className="text-xs text-[#CBD5E1] tabular-nums font-prompt">
                   เกณฑ์ดี: 15 - 30%
                 </span>
               </div>
@@ -168,14 +168,14 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] mt-1">
+            <div className="flex items-center justify-between text-xs mt-1">
               <span className={clsx(
-                "font-bold px-2 py-0.5 rounded-full text-[10px]",
+                "font-bold px-2 py-0.5 rounded-full text-xs",
                 concentration.top1 > 35 ? "bg-amber-500/20 text-amber-300" : concentration.top1 >= 15 ? "bg-emerald-500/20 text-emerald-300" : "bg-blue-500/20 text-blue-300"
               )}>
                 {concentration.top1 > 35 ? '⚠️ เสี่ยงสูง เกินเกณฑ์ 35%' : concentration.top1 >= 15 ? '✅ ผ่านเกณฑ์พอดี' : '🔵 น้ำหนักเบาไป'}
               </span>
-              <span className="text-[#9898C8] text-[10px]">
+              <span className="text-[#CBD5E1] text-xs">
                 {concentration.top1 > 35 ? 'ระวังตัวนี้สะดุด' : 'น้ำหนักแข็งแกร่ง'}
               </span>
             </div>
@@ -185,16 +185,16 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
           <div className="bg-[#1A1D2D]/70 border border-[#2A2E45] rounded-2xl p-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-[#9898C8] font-semibold">สามทหารเสือ (Top 3)</span>
-                <span className="text-xs font-mono font-bold text-[#FC2D79] truncate max-w-[130px]" title={concentration.top3Symbols.join(', ')}>
+                <span className="text-xs text-[#CBD5E1] font-semibold">สามทหารเสือ (Top 3)</span>
+                <span className="text-xs font-bold text-[#FC2D79] truncate max-w-[130px] font-prompt" title={concentration.top3Symbols.join(', ')}>
                   {concentration.top3Symbols.join(', ') || '-'}
                 </span>
               </div>
               <div className="flex items-baseline justify-between mb-2">
-                <span className="text-2xl font-black text-white font-mono tabular-nums">
+                <span className="text-2xl font-black text-white tabular-nums font-prompt">
                   {concentration.top3.toFixed(1)}%
                 </span>
-                <span className="text-[10px] text-[#CBD5E1] font-mono">
+                <span className="text-xs text-[#CBD5E1] tabular-nums font-prompt">
                   เกณฑ์ดี: 45 - 65%
                 </span>
               </div>
@@ -205,9 +205,9 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] mt-1">
+            <div className="flex items-center justify-between text-xs mt-1">
               <span className={clsx(
-                "font-bold px-2 py-0.5 rounded-full text-[10px]",
+                "font-bold px-2 py-0.5 rounded-full text-xs",
                 concentration.top3 >= 45 && concentration.top3 <= 65 ? "bg-emerald-500/20 text-emerald-300" : concentration.top3 > 65 ? "bg-amber-500/20 text-amber-300" : "bg-blue-500/20 text-blue-300"
               )}>
                 {concentration.top3 >= 45 && concentration.top3 <= 65 ? '🎯 โฟกัสเฉียบคม (Alpha Zone)' : concentration.top3 > 65 ? '⚠️ กระจุกตัวสูงมาก' : '🌧️ กระจายจนเฉื่อย'}
@@ -222,16 +222,16 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
           <div className="bg-[#1A1D2D]/70 border border-[#2A2E45] rounded-2xl p-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-[#9898C8] font-semibold">ทัพหลัก 5 อันดับแรก</span>
-                <span className="text-xs font-mono font-bold text-blue-400">
+                <span className="text-xs text-[#CBD5E1] font-semibold">ทัพหลัก 5 อันดับแรก</span>
+                <span className="text-xs font-bold text-blue-400 tabular-nums font-prompt">
                   {Math.min(5, sortedHoldings.length)} หุ้น
                 </span>
               </div>
               <div className="flex items-baseline justify-between mb-2">
-                <span className="text-2xl font-black text-white font-mono tabular-nums">
+                <span className="text-2xl font-black text-white tabular-nums font-prompt">
                   {concentration.top5.toFixed(1)}%
                 </span>
-                <span className="text-[10px] text-[#CBD5E1] font-mono">
+                <span className="text-xs text-[#CBD5E1] tabular-nums font-prompt">
                   เกณฑ์ดี: 65 - 80%
                 </span>
               </div>
@@ -242,14 +242,14 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] mt-1">
+            <div className="flex items-center justify-between text-xs mt-1">
               <span className={clsx(
-                "font-bold px-2 py-0.5 rounded-full text-[10px]",
+                "font-bold px-2 py-0.5 rounded-full text-xs",
                 concentration.top5 >= 65 && concentration.top5 <= 80 ? "bg-emerald-500/20 text-emerald-300" : concentration.top5 > 80 ? "bg-amber-500/20 text-amber-300" : "bg-blue-500/20 text-blue-300"
               )}>
                 {concentration.top5 >= 65 && concentration.top5 <= 80 ? '💪 ฐานรากแน่นหนา' : concentration.top5 > 80 ? 'พึ่งพา 5 ตัวหลักสูง' : 'กระจายตัวกว้าง'}
               </span>
-              <span className="text-[#9898C8] text-[10px]">
+              <span className="text-[#CBD5E1] text-xs">
                 {concentration.top5 >= 65 ? 'Core แข็งแรง' : 'หุ้นย่อยเยอะ'}
               </span>
             </div>
@@ -266,9 +266,9 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
             <div className="bg-[#111418]/80 p-2.5 rounded-xl border border-[#2A2E45]/60">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-bold text-white">1. หุ้นผู้นำ (Top 1)</span>
-                <span className="text-emerald-400 font-mono font-bold text-[11px]">15 - 30%</span>
+                <span className="text-emerald-400 font-bold text-xs tabular-nums font-prompt">15 - 30%</span>
               </div>
-              <p className="text-[11px] text-[#9898C8] leading-tight">
+              <p className="text-xs text-[#CBD5E1] leading-relaxed">
                 ต้องมีน้ำหนักพอขับเคลื่อนพอร์ต แต่ห้ามเกิน 35% เพื่อป้องกันพอร์ตพังหากหุ้นตัวนี้งบสะดุด (Single-Stock Risk)
               </p>
             </div>
@@ -276,9 +276,9 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
             <div className="bg-[#111418]/80 p-2.5 rounded-xl border border-[#2A2E45]/60">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-bold text-white">2. สามทหารเสือ (Top 3)</span>
-                <span className="text-emerald-400 font-mono font-bold text-[11px]">45 - 65%</span>
+                <span className="text-emerald-400 font-bold text-xs tabular-nums font-prompt">45 - 65%</span>
               </div>
-              <p className="text-[11px] text-[#9898C8] leading-tight">
+              <p className="text-xs text-[#CBD5E1] leading-relaxed">
                 หัวใจของการสร้าง Alpha ชนะ S&P 500 ตามสูตร Shay Boloor ถ้าต่ำกว่า 30% แปลว่ากระจายหุ้นเยอะจนเฉื่อย (Diworsification)
               </p>
             </div>
@@ -286,9 +286,9 @@ export const ConvictionGaugeCard: React.FC<ConvictionGaugeCardProps> = ({ holdin
             <div className="bg-[#111418]/80 p-2.5 rounded-xl border border-[#2A2E45]/60">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-bold text-white">3. ทัพหลัก 5 ตัว (Top 5)</span>
-                <span className="text-emerald-400 font-mono font-bold text-[11px]">65 - 80%</span>
+                <span className="text-emerald-400 font-bold text-xs tabular-nums font-prompt">65 - 80%</span>
               </div>
-              <p className="text-[11px] text-[#9898C8] leading-tight">
+              <p className="text-xs text-[#CBD5E1] leading-relaxed">
                 เป็นแกนหลักคุมพอร์ต ส่วน 20-35% ที่เหลือค่อยแบ่งไปถือหุ้น Small Cap / Hyper Growth เพื่อเร่งความเร็ว
               </p>
             </div>

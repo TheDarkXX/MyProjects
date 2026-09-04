@@ -185,45 +185,45 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
         {/* 2. Key Insights Ribbon (เข้าใจง่ายใน 3 วินาที) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
           <div className="bg-[#1A1D2D]/70 border border-[#2A2E45] rounded-2xl p-4 flex flex-col justify-between">
-            <span className="text-xs text-[#9898C8] font-medium flex items-center justify-between">
+            <span className="text-xs text-[#CBD5E1] font-medium flex items-center justify-between">
               <span>ปันผลรับปี {currentYear} (YTD)</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">รับจริง</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">รับจริง</span>
             </span>
-            <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight mt-1">
+            <div className="text-2xl font-black text-emerald-400 tabular-nums font-prompt tracking-tight mt-1">
               {currSymbol}{stats.currTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <span className="text-[11px] text-[#9898C8] mt-1 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-400" /> นำไป Reinvest สร้างพลังทบต้น
+            <span className="text-xs text-[#CBD5E1] mt-1 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> นำไป Reinvest สร้างพลังทบต้น
             </span>
           </div>
 
           <div className="bg-[#1A1D2D]/70 border border-[#2A2E45] rounded-2xl p-4 flex flex-col justify-between">
-            <span className="text-xs text-[#9898C8] font-medium flex items-center justify-between">
+            <span className="text-xs text-[#CBD5E1] font-medium flex items-center justify-between">
               <span>อัตราเติบโต YoY Velocity</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold">vs {prevYear}</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold">vs {prevYear}</span>
             </span>
             <div className={clsx(
-              "text-2xl font-black font-mono tracking-tight mt-1 flex items-center gap-1.5",
+              "text-2xl font-black tabular-nums font-prompt tracking-tight mt-1 flex items-center gap-1.5",
               stats.yoyGrowth >= 0 ? "text-emerald-400" : "text-rose-400"
             )}>
               {stats.yoyGrowth >= 0 ? `+${stats.yoyGrowth.toFixed(1)}%` : `${stats.yoyGrowth.toFixed(1)}%`}
               <TrendingUp className="w-4 h-4" />
             </div>
-            <span className="text-[11px] text-[#9898C8] mt-1">
+            <span className="text-xs text-[#CBD5E1] mt-1">
               {stats.prevTotal > 0 ? `เทียบกับ ${currSymbol}${stats.prevTotal.toFixed(2)} ในปี ${prevYear}` : 'ปีแรกของการเก็บสถิติ'}
             </span>
           </div>
 
           <div className="bg-[#1A1D2D]/70 border border-[#2A2E45] rounded-2xl p-4 flex flex-col justify-between">
-            <span className="text-xs text-[#9898C8] font-medium flex items-center justify-between">
+            <span className="text-xs text-[#CBD5E1] font-medium flex items-center justify-between">
               <span>เฉลี่ยเดือนละ (Monthly Run-rate)</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">Cash</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">Cash</span>
             </span>
-            <div className="text-2xl font-black text-white font-mono tracking-tight mt-1">
+            <div className="text-2xl font-black text-white tabular-nums font-prompt tracking-tight mt-1">
               {currSymbol}{stats.monthlyAverage.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-              <span className="text-xs font-normal text-[#9898C8]"> /ด.</span>
+              <span className="text-xs font-normal text-[#CBD5E1]"> /ด.</span>
             </div>
-            <span className="text-[11px] text-[#823AFD] font-semibold mt-1">
+            <span className="text-xs text-[#823AFD] font-semibold mt-1">
               รวมรับเงินปันผลไปแล้ว {stats.totalEvents} ครั้ง
             </span>
           </div>
@@ -255,7 +255,7 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
                             {entry.name}:
                           </span>
-                          <span className="font-mono font-bold text-white">
+                          <span className="tabular-nums font-bold text-white font-prompt">
                             {currSymbol}{Number(entry.value).toFixed(2)}
                           </span>
                         </div>
@@ -291,9 +291,9 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
                           y={y - 8} 
                           fill="#34D399" 
                           textAnchor="middle" 
-                          fontSize={10} 
+                          fontSize={12} 
                           fontWeight="bold"
-                          fontFamily="monospace"
+                          fontFamily="'Prompt', system-ui, sans-serif"
                         >
                           {currSymbol}{formatted}
                         </text>
@@ -381,7 +381,7 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
               💡 <strong className="text-white">คำอธิบายกราฟ:</strong> ปี {currentYear} มีเงินปันผลเข้าพอร์ตจริง 4 เดือน (ก.พ., มี.ค., เม.ย., มิ.ย.) รวม {currSymbol}{stats.currTotal.toFixed(2)} — เดือนอื่นๆ ที่ว่างอยู่คือยังไม่ถึงรอบจ่ายเงินปันผลของบริษัท
             </span>
           </div>
-          <span className="text-emerald-400 font-mono font-bold text-[11px] shrink-0">
+          <span className="text-emerald-400 tabular-nums font-bold text-xs shrink-0 font-prompt">
             {stats.totalEvents} รอบจ่ายจริง
           </span>
         </div>
@@ -395,7 +395,7 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
               <Award className="w-3.5 h-3.5 text-amber-400" />
               แชมป์จ่ายเงินปันผลสะสม (Top Contributors)
             </h4>
-            <span className="text-[11px] text-[#9898C8]">เรียงตามยอดเงินสดรวมที่ได้รับจริง</span>
+            <span className="text-xs text-[#CBD5E1]">เรียงตามยอดเงินสดรวมที่ได้รับจริง</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
@@ -403,17 +403,17 @@ export const DividendSnowballCard: React.FC<DividendSnowballCardProps> = ({ tran
               <div key={p.symbol} className="bg-[#1A1D2D]/60 border border-[#2A2E45] rounded-xl p-3 flex flex-col justify-between hover:border-emerald-500/40 transition-all">
                 <div className="flex items-center justify-between">
                   <span className="font-extrabold text-sm text-white tracking-wide">{p.symbol}</span>
-                  <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                  <span className="text-xs text-emerald-400 font-bold tabular-nums font-prompt bg-emerald-500/10 px-1.5 py-0.5 rounded">
                     #{idx + 1}
                   </span>
                 </div>
                 <div className="mt-2">
-                  <span className="text-sm font-bold text-emerald-400 font-mono block">
+                  <span className="text-sm font-bold text-emerald-400 tabular-nums font-prompt block">
                     {currSymbol}{p.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
-                  <div className="flex items-center justify-between text-[10px] text-[#94A3B8] mt-0.5 font-medium">
+                  <div className="flex items-center justify-between text-xs text-[#CBD5E1] mt-0.5 font-medium">
                     <span>{p.count} ครั้ง</span>
-                    <span className="text-[#CBD5E1] font-mono">{p.share.toFixed(0)}% ของปันผล</span>
+                    <span className="text-[#CBD5E1] tabular-nums font-prompt">{p.share.toFixed(0)}% ของปันผล</span>
                   </div>
                 </div>
               </div>

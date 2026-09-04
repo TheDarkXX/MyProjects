@@ -6,7 +6,15 @@ import { useHoldings } from '../../hooks/useHoldings';
 import { api } from '../../services/api';
 import { PRESET_TEMPLATES, STRATEGY_CATEGORIES, StrategyCategory, CATEGORY_CONFIG } from './StrategyConfigs';
 import { BlueprintPieChart } from './BlueprintPieChart';
-import { Search, Edit2, Trash2, Sparkles, TrendingUp, Shield, Target } from 'lucide-react';
+import { Search, Edit2, Trash2, Sparkles, TrendingUp, Shield, Target, BookmarkPlus, RotateCcw, Save } from 'lucide-react';
+import { useModalStore } from '../../stores/modalStore';
+
+export interface CustomTemplate {
+  id: string;
+  name: string;
+  created_at: string;
+  entries: Omit<BlueprintEntry, 'portfolio_id' | 'id' | 'updated_at'>[];
+}
 
 interface BlueprintEditorProps {
   portfolioId: string;
@@ -307,10 +315,168 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
     setEditingSymbol(null);
   };
 
+  const modalConfirm = useModalStore(s => s.confirm);
+  const modalAlert = useModalStore(s => s.alert);
+  const modalPrompt = useModalStore(s => s.prompt);
+
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [hasSnapshot, setHasSnapshot] = useState<boolean>(false);
+
+  // Load custom templates and check snapshot for this portfolio
+  useEffect(() => {
+    if (!portfolioId) return;
+    try {
+      const saved = localStorage.getItem(`portfolio_custom_templates_${portfolioId}`);
+      if (saved) {
+        setCustomTemplates(JSON.parse(saved));
+      } else {
+        setCustomTemplates([]);
+      }
+      const snapshot = localStorage.getItem(`portfolio_blueprint_snapshot_${portfolioId}`);
+      setHasSnapshot(!!snapshot);
+    } catch (e) {
+      console.error('Error loading custom templates:', e);
+    }
+  }, [portfolioId]);
+
+  const takeAutoSnapshot = () => {
+    if (blueprints.length > 0) {
+      const snapshotData = blueprints.map(b => ({
+        symbol: b.symbol,
+        target_percent: b.target_percent,
+        target_price: b.target_price,
+        status: b.status,
+        category: b.category,
+      }));
+      localStorage.setItem(`portfolio_blueprint_snapshot_${portfolioId}`, JSON.stringify(snapshotData));
+      setHasSnapshot(true);
+    }
+  };
+
   const handleApplyTemplate = async (templateId: string) => {
-    const template = PRESET_TEMPLATES.find(t => t.id === templateId);
-    if (template && window.confirm(`คุณแน่ใจหรือไม่ที่จะใช้เทมเพลต ${template.name}? ระบบจะนำเข้าเป้าหมายของหุ้นกลุ่มนี้ลงใน Blueprint`)) {
+    setSelectedTemplateId(templateId);
+    const customT = customTemplates.find(t => t.id === templateId);
+    const presetT = PRESET_TEMPLATES.find(t => t.id === templateId);
+    const template = customT || presetT;
+
+    if (!template) return;
+
+    const confirmed = await modalConfirm(
+      `ใช้เทมเพลต: ${template.name}?`,
+      `ระบบจะบันทึก Snapshot แผนเดิมของคุณไว้โดยอัตโนมัติ (สามารถกดปุ่ม "กู้คืนแผนเดิม" ได้ทุกเมื่อ) แล้วนำเข้าเป้าหมายหุ้น ${template.entries.length} ตัวของเทมเพลตนี้`,
+      { variant: 'info', confirmText: 'ยืนยันใช้เทมเพลต' }
+    );
+
+    if (confirmed) {
+      takeAutoSnapshot();
       await applyTemplate(portfolioId, template.entries);
+    }
+  };
+
+  const handleSaveCustomTemplate = async () => {
+    if (blueprints.length === 0) {
+      await modalAlert('ไม่พบข้อมูล Blueprint', 'กรุณาเพิ่มหุ้นและสัดส่วนใน Blueprint ก่อนบันทึกเป็นแม่แบบ', { variant: 'warning' });
+      return;
+    }
+
+    const defaultName = `แผนแม่แบบ (${new Date().toLocaleDateString('th-TH')})`;
+    const name = await modalPrompt(
+      'บันทึกเป็นแม่แบบของฉัน',
+      'ตั้งชื่อแม่แบบสำหรับพอร์ตนี้ เพื่อนำกลับมาใช้ใหม่ได้ตลอดเวลา (สามารถบันทึกได้หลายแบบ):',
+      defaultName,
+      { placeholder: 'เช่น แผน Core 70/30, พอร์ตเติบโตขั้นสุด...', confirmText: 'บันทึกแม่แบบ' }
+    );
+
+    if (!name || !name.trim()) return;
+
+    const newTemplate: CustomTemplate = {
+      id: `custom-${Date.now()}`,
+      name: name.trim(),
+      created_at: new Date().toISOString(),
+      entries: blueprints.map(b => ({
+        symbol: b.symbol,
+        target_percent: b.target_percent,
+        target_price: b.target_price,
+        status: b.status,
+        category: b.category,
+      })),
+    };
+
+    const updated = [newTemplate, ...customTemplates];
+    setCustomTemplates(updated);
+    localStorage.setItem(`portfolio_custom_templates_${portfolioId}`, JSON.stringify(updated));
+    setSelectedTemplateId(newTemplate.id);
+
+    await modalAlert(
+      'บันทึกสำเร็จ!',
+      `บันทึกแม่แบบ "${name.trim()}" เรียบร้อยแล้ว สามารถเลือกใช้ได้จากรายการแม่แบบ`,
+      { variant: 'success' }
+    );
+  };
+
+  const handleDeleteCustomTemplate = async (templateId: string) => {
+    const t = customTemplates.find(item => item.id === templateId);
+    if (!t) return;
+
+    const confirmed = await modalConfirm(
+      'ลบแม่แบบนี้?',
+      `คุณต้องการลบแม่แบบ "${t.name}" ออกจากรายการแม่แบบส่วนตัวใช่หรือไม่?`,
+      { variant: 'danger', confirmText: 'ลบแม่แบบ' }
+    );
+
+    if (confirmed) {
+      const updated = customTemplates.filter(item => item.id !== templateId);
+      setCustomTemplates(updated);
+      localStorage.setItem(`portfolio_custom_templates_${portfolioId}`, JSON.stringify(updated));
+      if (selectedTemplateId === templateId) {
+        setSelectedTemplateId('');
+      }
+      await modalAlert('ลบสำเร็จ', `ลบแม่แบบ "${t.name}" เรียบร้อยแล้ว`, { variant: 'info' });
+    }
+  };
+
+  const handleRestoreSnapshot = async () => {
+    const raw = localStorage.getItem(`portfolio_blueprint_snapshot_${portfolioId}`);
+    if (!raw) return;
+
+    try {
+      const snapshotEntries = JSON.parse(raw);
+      const confirmed = await modalConfirm(
+        'กู้คืนแผนเดิมก่อนหน้า?',
+        `ระบบจะกู้คืนสัดส่วน Blueprint (${snapshotEntries.length} รายการ) ที่คุณตั้งไว้ก่อนเปลี่ยนเทมเพลตล่าสุด`,
+        { variant: 'warning', confirmText: 'กู้คืนแผนเดิม' }
+      );
+
+      if (confirmed) {
+        await applyTemplate(portfolioId, snapshotEntries);
+        await modalAlert('กู้คืนสำเร็จ', 'กู้คืนแผน Blueprint เดิมเรียบร้อยแล้ว', { variant: 'success' });
+      }
+    } catch (e) {
+      console.error('Failed to restore snapshot:', e);
+    }
+  };
+
+  const handleAutoGenerate = async () => {
+    const confirmed = await modalConfirm(
+      'Auto-Generate จากพอร์ตปัจจุบัน?',
+      'ระบบจะบันทึก Snapshot แผนปัจจุบันไว้ แล้วดึงหุ้นทั้งหมดที่คุณถืออยู่จริงมาสร้างเป็น Blueprint สัดส่วนเท่าๆ กัน',
+      { variant: 'info', confirmText: 'สร้าง Blueprint' }
+    );
+    if (confirmed) {
+      takeAutoSnapshot();
+      await autoGenerate(portfolioId);
+    }
+  };
+
+  const handleDeleteBlueprint = async (symbol: string) => {
+    const confirmed = await modalConfirm(
+      `ลบ ${symbol} ออกจาก Blueprint?`,
+      `คุณต้องการลบ ${symbol} ออกจากเป้าหมายการจัดสรรพอร์ตใช่หรือไม่?`,
+      { variant: 'danger', confirmText: 'ลบออก' }
+    );
+    if (confirmed) {
+      await deleteBlueprint(portfolioId, symbol);
     }
   };
 
@@ -326,24 +492,73 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
           <h2 className="text-xl font-bold text-white mb-1">Portfolio Blueprint Setup</h2>
           <p className="text-sm text-slate-300">กำหนดสัดส่วนเป้าหมายในอุดมคติ ระบบ Smart Rebalance จะใช้ข้อมูลนี้คำนวณการปรับพอร์ตอัตโนมัติ</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <select 
-            className="bg-[#161926] border border-[#2A2E45] text-sm font-semibold rounded-xl px-4 py-2 text-white outline-none focus:border-[#823AFD]"
-            onChange={(e) => handleApplyTemplate(e.target.value)}
-            defaultValue=""
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Template Selector with Grouping */}
+          <div className="flex items-center gap-1.5">
+            <select 
+              className="bg-[#161926] border border-[#2A2E45] text-sm font-semibold rounded-xl px-3.5 py-2 text-white outline-none focus:border-[#823AFD] transition-all cursor-pointer"
+              value={selectedTemplateId}
+              onChange={(e) => handleApplyTemplate(e.target.value)}
+            >
+              <option value="" disabled>เลือกเทมเพลต...</option>
+              {customTemplates.length > 0 && (
+                <optgroup label="🌟 แม่แบบของฉัน (บันทึกไว้)">
+                  {customTemplates.map(t => (
+                    <option key={t.id} value={t.id}>🌟 {t.name} ({t.entries.length} ตัว)</option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="🏛️ แม่แบบสากล (Presets)">
+                {PRESET_TEMPLATES.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </optgroup>
+            </select>
+
+            {/* If a custom template is currently selected, show delete button */}
+            {customTemplates.some(t => t.id === selectedTemplateId) && (
+              <button
+                type="button"
+                onClick={() => handleDeleteCustomTemplate(selectedTemplateId)}
+                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all"
+                title="ลบแม่แบบส่วนตัวที่เลือกอยู่นี้"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Save Current as Custom Template Button */}
+          <button
+            type="button"
+            onClick={handleSaveCustomTemplate}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-[#823AFD]/20 to-[#6366F1]/20 hover:from-[#823AFD]/30 hover:to-[#6366F1]/30 text-purple-200 text-sm font-bold rounded-xl border border-[#823AFD]/40 transition-all shadow-[0_2px_12px_rgba(130,58,253,0.15)]"
+            title="บันทึก Blueprint ปัจจุบันเป็นแม่แบบใหม่ เก็บไว้ใช้ซ้ำได้หลายๆ แบบ"
           >
-            <option value="" disabled>เลือกเทมเพลตมาตรฐาน...</option>
-            {PRESET_TEMPLATES.map(t => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+            <BookmarkPlus className="w-4 h-4 text-purple-400" />
+            <span>บันทึกเป็นแม่แบบ</span>
+          </button>
+
+          {/* Revert to Snapshot Button */}
+          {hasSnapshot && (
+            <button
+              type="button"
+              onClick={handleRestoreSnapshot}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-sm font-bold rounded-xl border border-amber-500/30 transition-all animate-fade-in"
+              title="กู้คืนสัดส่วน Blueprint ก่อนเปลี่ยนเทมเพลตล่าสุด"
+            >
+              <RotateCcw className="w-4 h-4 text-amber-400" />
+              <span>กู้คืนแผนเดิม</span>
+            </button>
+          )}
+
+          {/* Auto-Generate Button */}
           <button 
-            onClick={() => {
-              if (window.confirm('สร้าง Blueprint อัตโนมัติจากหุ้นที่มีอยู่ในพอร์ตปัจจุบัน?')) autoGenerate(portfolioId);
-            }}
-            className="px-4 py-2 bg-[#1A1D2D] hover:bg-[#2A2E45] text-white text-sm font-bold rounded-xl border border-[#2A2E45] transition-colors"
+            type="button"
+            onClick={handleAutoGenerate}
+            className="px-3.5 py-2 bg-[#1A1D2D] hover:bg-[#2A2E45] text-white text-sm font-bold rounded-xl border border-[#2A2E45] transition-colors"
           >
-            Auto-Generate จากพอร์ตปัจจุบัน
+            Auto-Generate จากพอร์ต
           </button>
         </div>
       </div>
@@ -620,7 +835,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                       แก้ไข
                     </button>
                     <button 
-                      onClick={() => deleteBlueprint(portfolioId, bp.symbol)} 
+                      onClick={() => handleDeleteBlueprint(bp.symbol)} 
                       className="text-rose-400 hover:text-rose-300 text-xs font-bold px-2 py-1 rounded-lg hover:bg-rose-500/10 transition-all"
                     >
                       ลบออก

@@ -198,7 +198,7 @@ export const LifecycleMatrixCard: React.FC<LifecycleMatrixCardProps> = ({ holdin
         <div className="mb-6">
           <div className="flex items-center justify-between text-xs text-[#CBD5E1] font-semibold mb-2">
             <span>สัดส่วนการกระจายทัพทั้งพอร์ต (Allocation)</span>
-            <span className="font-mono text-purple-400 font-bold">100% Allocated</span>
+            <span className="tabular-nums font-prompt text-purple-400 font-bold">100% Allocated</span>
           </div>
           
           <div className="w-full h-4 bg-[#1A1D2D] rounded-full overflow-hidden flex shadow-inner border border-[#2A2E45]/80 p-0.5">
@@ -224,7 +224,7 @@ export const LifecycleMatrixCard: React.FC<LifecycleMatrixCardProps> = ({ holdin
                 <div key={stage.id} className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: stage.color }} />
                   <span className="text-white font-medium">{stage.badgeName}</span>
-                  <span className="font-mono text-[#9898C8] font-bold">({pct.toFixed(1)}%)</span>
+                  <span className="tabular-nums font-prompt text-[#CBD5E1] font-bold">({pct.toFixed(1)}%)</span>
                 </div>
               );
             })}
@@ -276,14 +276,14 @@ export const LifecycleMatrixCard: React.FC<LifecycleMatrixCardProps> = ({ holdin
 
               <div>
                 <div className="bg-[#0F111A]/80 rounded-xl p-3 border border-[#2A2E45] mb-2">
-                  <div className="flex items-center justify-between text-[10px] text-[#9898C8] mb-0.5">
+                  <div className="flex items-center justify-between text-xs text-[#CBD5E1] mb-0.5">
                     <span>มูลค่าจัดสรร</span>
                     <span>เป้าหมาย {stage.targetPercent}</span>
                   </div>
-                  <div className="font-mono font-bold text-base text-white">
+                  <div className="tabular-nums font-prompt font-bold text-base text-white">
                     {currSymbol}{displayVal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </div>
-                  <span className="text-[10px] text-[#CBD5E1] font-medium">
+                  <span className="text-xs text-[#CBD5E1] font-medium">
                     {data.holdings.length} หุ้นในกลุ่มนี้
                   </span>
                 </div>
@@ -294,17 +294,17 @@ export const LifecycleMatrixCard: React.FC<LifecycleMatrixCardProps> = ({ holdin
                     data.holdings.map(h => (
                       <span 
                         key={h.symbol}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#1A1D2D] border border-[#2A2E45] text-white flex items-center gap-1 hover:border-[#823AFD] transition-all"
+                        className="text-xs font-bold px-2 py-0.5 rounded-md bg-[#1A1D2D] border border-[#2A2E45] text-white flex items-center gap-1 hover:border-[#823AFD] transition-all"
                         title={`${h.symbol}: ${(h.weightPercent || 0).toFixed(1)}% of portfolio`}
                       >
                         {h.symbol}
-                        <span className="text-emerald-400 font-normal font-mono">
+                        <span className="text-emerald-400 font-normal tabular-nums font-prompt">
                           {(h.weightPercent || 0).toFixed(0)}%
                         </span>
                       </span>
                     ))
                   ) : (
-                    <span className="text-[10px] text-[#64748B] italic py-1">
+                    <span className="text-xs text-[#64748B] italic py-1">
                       ยังไม่มีการจัดสรรหุ้น
                     </span>
                   )}

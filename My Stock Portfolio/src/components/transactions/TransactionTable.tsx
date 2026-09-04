@@ -4,6 +4,7 @@ import { usePortfolioStore } from '../../stores/portfolioStore';
 import { Search, Plus, Trash2, Edit2, Upload, Filter, X } from 'lucide-react';
 import { TransactionFormModal } from './TransactionFormModal';
 import { BulkTransactionModal } from './BulkTransactionModal';
+import { useModalStore } from '../../stores/modalStore';
 import clsx from 'clsx';
 
 export const resolveSector = (tx: Transaction): string => {
@@ -169,11 +170,29 @@ export const TransactionTable = () => {
     setSelectedIds(newSelected);
   };
 
+  const modalConfirm = useModalStore(s => s.confirm);
+
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (confirm(`Are you sure you want to delete ${selectedIds.size} transactions?`)) {
+    const confirmed = await modalConfirm(
+      'ยืนยันการลบรายการธุรกรรม',
+      `คุณแน่ใจหรือไม่ว่าต้องการลบ ${selectedIds.size} รายการที่เลือก? การกระทำนี้ไม่สามารถย้อนกลับได้`,
+      { variant: 'danger', confirmText: 'ลบรายการ' }
+    );
+    if (confirmed) {
       await bulkDeleteTransaction(Array.from(selectedIds));
       setSelectedIds(new Set());
+    }
+  };
+
+  const handleDeleteSingle = async (id: number, symbol: string) => {
+    const confirmed = await modalConfirm(
+      'ลบรายการธุรกรรม',
+      `คุณแน่ใจหรือไม่ว่าต้องการลบรายการของ ${symbol}?`,
+      { variant: 'danger', confirmText: 'ลบรายการ' }
+    );
+    if (confirmed) {
+      await deleteTransaction(id);
     }
   };
 
@@ -460,7 +479,7 @@ export const TransactionTable = () => {
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button 
-                            onClick={() => { if(confirm('Delete?')) deleteTransaction(tx.id); }}
+                            onClick={() => handleDeleteSingle(tx.id, tx.symbol)}
                             className="p-1.5 rounded-lg bg-[#1A1D2D] text-[#9898C8] hover:text-[#FC2D79] hover:bg-[#FC2D79]/10 transition-colors"
                             title="Delete"
                           >

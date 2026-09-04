@@ -186,7 +186,7 @@ export const ScorecardPage: React.FC = () => {
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-white font-mono tracking-tight">
+          <div className="text-2xl font-black text-white tabular-nums tracking-tight font-prompt">
             {formatMoney(summary.padiUsd)} <span className="text-xs font-normal text-[#9898C8]">/ปี</span>
           </div>
           <span className="text-xs text-emerald-400 font-semibold mt-1 block">
@@ -204,7 +204,7 @@ export const ScorecardPage: React.FC = () => {
               <Sparkles className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-white font-mono tracking-tight">
+          <div className="text-2xl font-black text-white tabular-nums tracking-tight font-prompt">
             {formatMoney(summary.currYearDivs)}
           </div>
           <span className="text-xs text-[#823AFD] font-semibold mt-1 block">
@@ -222,7 +222,7 @@ export const ScorecardPage: React.FC = () => {
               <Award className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-white font-mono tracking-tight">
+          <div className="text-2xl font-black text-white tabular-nums tracking-tight font-prompt">
             {summary.top3Share.toFixed(1)}%
           </div>
           <span className="text-xs text-amber-400 font-semibold mt-1 truncate block" title={summary.top3Names}>
