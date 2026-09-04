@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, 
-  PieChart as RechartsPieChart, Pie, Cell, ReferenceLine, Legend
+  PieChart as RechartsPieChart, Pie, Cell, ReferenceLine, Legend, Sector
 } from 'recharts';
 import clsx from 'clsx';
 
@@ -80,6 +80,33 @@ const LongZigzagTrendDown = ({ className = "w-[18px] h-[12px] text-rose-400" }: 
   </svg>
 );
 
+const renderActivePieShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  return (
+    <g>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 8}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        style={{ filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.6))' }}
+      />
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={outerRadius + 11}
+        outerRadius={outerRadius + 14}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+    </g>
+  );
+};
+
 export const SmartRebalancePage: React.FC = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
   const { fetchTransactions } = useTransactionStore();
@@ -102,6 +129,11 @@ export const SmartRebalancePage: React.FC = () => {
   });
   const [technicals, setTechnicals] = useState<Record<string, any>>({});
   const [techLoading, setTechLoading] = useState<boolean>(false);
+
+  // Interactive pie chart hover states
+  const [activeActualIndex, setActiveActualIndex] = useState<number | undefined>();
+  const [activeTargetIndex, setActiveTargetIndex] = useState<number | undefined>();
+  const [activeDividendIndex, setActiveDividendIndex] = useState<number | undefined>();
 
   // Sync data on load
   useEffect(() => {
@@ -1509,7 +1541,7 @@ export const SmartRebalancePage: React.FC = () => {
 
                   {/* Mode 2 Visual Charts Grid */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Chart A: Actual vs Blueprint Target Allocation Donut */}
+                    {/* Chart A: Actual vs Blueprint Target Allocation Pie Charts */}
                     <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.36)] flex flex-col justify-between relative overflow-hidden">
                       {/* Ambient corner glow */}
                       <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#823AFD]/10 via-[#06B6D4]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
@@ -1521,23 +1553,23 @@ export const SmartRebalancePage: React.FC = () => {
                             <h4 className="text-base font-bold text-white flex items-center gap-2">
                               <PieChartIcon className="w-4 h-4 text-[#823AFD]" /> Actual vs Target Allocation
                             </h4>
-                            <p className="text-xs text-[#CBD5E1] mt-0.5">
-                              เปรียบเทียบสัดส่วนพอร์ตจริง (ซ้าย) กับเป้าหมาย Blueprint (ขวา) เพื่อหาส่วนต่าง
+                            <p className="text-[13px] text-[#CBD5E1] mt-0.5">
+                              เปรียบเทียบสัดส่วนพอร์ตจริง (ซ้าย) กับเป้าหมาย Blueprint (ขวา) แบบ Interactive Pie
                             </p>
                           </div>
-                          <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#161926] border border-[#2A2E45] text-slate-300 font-bold hidden sm:inline-flex">
-                            Twin Gauges
+                          <span className="text-xs px-3 py-1 rounded-full bg-[#161926] border border-[#2A2E45] text-slate-200 font-bold hidden sm:inline-flex">
+                            Dual Pie
                           </span>
                         </div>
 
-                        {/* Twin Modern Gauges */}
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                          {/* Bay 1: Actual Gauge */}
-                          <div className="bg-[#161926]/80 border border-[#2A2E45]/80 rounded-2xl p-3.5 flex flex-col items-center relative shadow-inner">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-extrabold uppercase tracking-wider mb-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Actual (ปัจจุบัน)
+                        {/* Twin Large Interactive Pie Charts */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Bay 1: Actual Pie */}
+                          <div className="bg-[#161926]/80 border border-[#2A2E45]/80 rounded-2xl p-4 flex flex-col items-center relative shadow-inner">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-extrabold uppercase tracking-wider mb-2">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Actual (ปัจจุบัน)
                             </span>
-                            <div className="relative w-full h-44 flex items-center justify-center">
+                            <div className="relative w-full h-60 sm:h-64 flex items-center justify-center">
                               <ResponsiveContainer width="100%" height="100%">
                                 <RechartsPieChart>
                                   <Pie
@@ -1546,11 +1578,15 @@ export const SmartRebalancePage: React.FC = () => {
                                     nameKey="name"
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={48}
-                                    outerRadius={68}
-                                    paddingAngle={3}
+                                    innerRadius={0}
+                                    outerRadius={82}
+                                    paddingAngle={2}
                                     stroke="#111418"
-                                    strokeWidth={3}
+                                    strokeWidth={2}
+                                    activeIndex={activeActualIndex}
+                                    activeShape={renderActivePieShape}
+                                    onMouseEnter={(_, index) => setActiveActualIndex(index)}
+                                    onMouseLeave={() => setActiveActualIndex(undefined)}
                                   >
                                     {actualDonutData.map((entry, index) => (
                                       <Cell key={`actual-cell-${index}`} fill={entry.color} />
@@ -1561,10 +1597,22 @@ export const SmartRebalancePage: React.FC = () => {
                                       if (active && payload && payload.length) {
                                         const data = payload[0].payload;
                                         return (
-                                          <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-0.5">
-                                            <div className="font-extrabold text-white text-[13px]">{data.name}</div>
-                                            <div className="text-slate-200">สัดส่วนจริง: <span className="font-black text-emerald-400">{data.value}%</span></div>
-                                            <div className="text-slate-400">มูลค่า: {formatMoney(data.currentVal)}</div>
+                                          <div className="bg-[#161926]/95 backdrop-blur-md border border-[#2A2E45] rounded-2xl p-3 shadow-2xl space-y-1.5 z-50 pointer-events-none">
+                                            <div className="flex items-center gap-2">
+                                              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: data.color }} />
+                                              <span className="font-black text-white text-sm">{data.name}</span>
+                                              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                                                Actual
+                                              </span>
+                                            </div>
+                                            <div className="text-slate-300 text-[13px] flex justify-between gap-4">
+                                              <span>สัดส่วนจริง:</span>
+                                              <span className="font-black text-emerald-400 text-sm">{data.value}%</span>
+                                            </div>
+                                            <div className="text-slate-300 text-[13px] flex justify-between gap-4">
+                                              <span>มูลค่าพอร์ต:</span>
+                                              <span className="font-bold text-white text-[13px]">{formatMoney(data.currentVal)}</span>
+                                            </div>
                                           </div>
                                         );
                                       }
@@ -1573,23 +1621,15 @@ export const SmartRebalancePage: React.FC = () => {
                                   />
                                 </RechartsPieChart>
                               </ResponsiveContainer>
-                              {/* Center Readout */}
-                              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current</span>
-                                <span className="text-base sm:text-lg font-black text-white tabular-nums tracking-tight">
-                                  {totalNetWorth > 0 ? formatMoney(totalNetWorth) : '$0'}
-                                </span>
-                                <span className="text-[10px] font-bold text-emerald-400">Portfolio Val</span>
-                              </div>
                             </div>
                           </div>
 
-                          {/* Bay 2: Target Blueprint Gauge */}
-                          <div className="bg-[#161926]/80 border border-[#2A2E45]/80 rounded-2xl p-3.5 flex flex-col items-center relative shadow-inner">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-[11px] font-extrabold uppercase tracking-wider mb-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" /> Blueprint (เป้า)
+                          {/* Bay 2: Target Blueprint Pie */}
+                          <div className="bg-[#161926]/80 border border-[#2A2E45]/80 rounded-2xl p-4 flex flex-col items-center relative shadow-inner">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-xs font-extrabold uppercase tracking-wider mb-2">
+                              <span className="w-2 h-2 rounded-full bg-cyan-400" /> Blueprint (เป้า)
                             </span>
-                            <div className="relative w-full h-44 flex items-center justify-center">
+                            <div className="relative w-full h-60 sm:h-64 flex items-center justify-center">
                               <ResponsiveContainer width="100%" height="100%">
                                 <RechartsPieChart>
                                   <Pie
@@ -1598,11 +1638,15 @@ export const SmartRebalancePage: React.FC = () => {
                                     nameKey="name"
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={48}
-                                    outerRadius={68}
-                                    paddingAngle={3}
+                                    innerRadius={0}
+                                    outerRadius={82}
+                                    paddingAngle={2}
                                     stroke="#111418"
-                                    strokeWidth={3}
+                                    strokeWidth={2}
+                                    activeIndex={activeTargetIndex}
+                                    activeShape={renderActivePieShape}
+                                    onMouseEnter={(_, index) => setActiveTargetIndex(index)}
+                                    onMouseLeave={() => setActiveTargetIndex(undefined)}
                                   >
                                     {targetDonutData.map((entry, index) => (
                                       <Cell key={`target-cell-${index}`} fill={entry.color} />
@@ -1613,9 +1657,18 @@ export const SmartRebalancePage: React.FC = () => {
                                       if (active && payload && payload.length) {
                                         const data = payload[0].payload;
                                         return (
-                                          <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-0.5">
-                                            <div className="font-extrabold text-white text-[13px]">{data.name}</div>
-                                            <div className="text-slate-200">เป้าหมาย: <span className="font-black text-[#06B6D4]">{data.value}%</span></div>
+                                          <div className="bg-[#161926]/95 backdrop-blur-md border border-[#2A2E45] rounded-2xl p-3 shadow-2xl space-y-1.5 z-50 pointer-events-none">
+                                            <div className="flex items-center gap-2">
+                                              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: data.color }} />
+                                              <span className="font-black text-white text-sm">{data.name}</span>
+                                              <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/20">
+                                                Target
+                                              </span>
+                                            </div>
+                                            <div className="text-slate-300 text-[13px] flex justify-between gap-4">
+                                              <span>เป้าหมาย Blueprint:</span>
+                                              <span className="font-black text-cyan-400 text-sm">{data.value}%</span>
+                                            </div>
                                           </div>
                                         );
                                       }
@@ -1624,47 +1677,60 @@ export const SmartRebalancePage: React.FC = () => {
                                   />
                                 </RechartsPieChart>
                               </ResponsiveContainer>
-                              {/* Center Readout */}
-                              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target Goal</span>
-                                <span className="text-base sm:text-lg font-black text-cyan-400 tabular-nums tracking-tight">100%</span>
-                                <span className="text-[10px] font-bold text-[#823AFD]">Blueprint</span>
-                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Comparative Asset Breakdown Strip */}
+                      {/* Interactive Comparative Asset Breakdown Strip */}
                       <div className="mt-4 pt-3.5 border-t border-[#2A2E45]/60 space-y-2 max-h-36 overflow-y-auto pr-1">
-                        {matrixAnalysis.map((item) => (
-                          <div 
-                            key={item.symbol} 
-                            className="flex items-center justify-between p-2 rounded-xl bg-[#161926]/70 border border-[#2A2E45]/50 hover:border-[#2A2E45] transition-all text-xs"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getAssetColor(item.symbol, 0) }} />
-                              <span className="font-extrabold text-white text-[13px]">{item.symbol}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
-                                <span className="text-slate-200 font-bold">{item.actualPct.toFixed(1)}%</span>
-                                <span className="text-slate-500 mx-1">→</span>
-                                <span className="text-cyan-400 font-bold">{item.targetPct}%</span>
+                        {matrixAnalysis.map((item) => {
+                          const actualIdx = actualDonutData.findIndex(a => a.name === item.symbol);
+                          const targetIdx = targetDonutData.findIndex(t => t.name === item.symbol);
+                          const isHovered = (activeActualIndex !== undefined && actualDonutData[activeActualIndex]?.name === item.symbol) ||
+                                            (activeTargetIndex !== undefined && targetDonutData[activeTargetIndex]?.name === item.symbol);
+                          return (
+                            <div 
+                              key={item.symbol} 
+                              onMouseEnter={() => {
+                                if (actualIdx !== -1) setActiveActualIndex(actualIdx);
+                                if (targetIdx !== -1) setActiveTargetIndex(targetIdx);
+                              }}
+                              onMouseLeave={() => {
+                                setActiveActualIndex(undefined);
+                                setActiveTargetIndex(undefined);
+                              }}
+                              className={clsx(
+                                "flex items-center justify-between p-2 rounded-xl border transition-all text-xs cursor-pointer",
+                                isHovered 
+                                  ? "bg-[#1F2438] border-[#823AFD] shadow-[0_0_12px_rgba(130,58,253,0.35)]" 
+                                  : "bg-[#161926]/70 border-[#2A2E45]/50 hover:border-[#2A2E45]"
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: getAssetColor(item.symbol, 0) }} />
+                                <span className="font-extrabold text-white text-[13px]">{item.symbol}</span>
                               </div>
-                              <span className={clsx(
-                                "px-2 py-0.5 rounded-md font-extrabold text-[11px] min-w-[54px] text-center",
-                                item.status === 'on_target' 
-                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                                  : item.deltaPct > 0 
-                                    ? "bg-blue-500/15 text-blue-400 border border-blue-500/25"
-                                    : "bg-amber-500/15 text-amber-400 border border-amber-500/25"
-                              )}>
-                                {item.status === 'on_target' ? 'Target' : `${item.deltaPct > 0 ? '+' : ''}${item.deltaPct.toFixed(1)}%`}
-                              </span>
+                              <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                  <span className="text-slate-200 font-bold text-[13px]">{item.actualPct.toFixed(1)}%</span>
+                                  <span className="text-slate-400 mx-1 text-[13px]">→</span>
+                                  <span className="text-cyan-400 font-bold text-[13px]">{item.targetPct}%</span>
+                                </div>
+                                <span className={clsx(
+                                  "px-2.5 py-0.5 rounded-md font-extrabold text-xs min-w-[56px] text-center",
+                                  item.status === 'on_target' 
+                                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                                    : item.deltaPct > 0 
+                                      ? "bg-blue-500/15 text-blue-400 border border-blue-500/25"
+                                      : "bg-amber-500/15 text-amber-400 border border-amber-500/25"
+                                )}>
+                                  {item.status === 'on_target' ? 'Target' : `${item.deltaPct > 0 ? '+' : ''}${item.deltaPct.toFixed(1)}%`}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -1863,7 +1929,7 @@ export const SmartRebalancePage: React.FC = () => {
 
                   {/* Mode 4 Visual Charts Grid */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Chart A: Income Share Donut */}
+                    {/* Chart A: Income Share Interactive Pie */}
                     <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.36)] flex flex-col justify-between relative overflow-hidden">
                       {/* Ambient corner glow */}
                       <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-amber-500/10 via-orange-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
@@ -1875,19 +1941,19 @@ export const SmartRebalancePage: React.FC = () => {
                             <h4 className="text-base font-bold text-white flex items-center gap-2">
                               <PieChartIcon className="w-4 h-4 text-amber-400" /> Dividend Income Contribution
                             </h4>
-                            <p className="text-xs text-[#CBD5E1] mt-0.5">
+                            <p className="text-[13px] text-[#CBD5E1] mt-0.5">
                               สัดส่วนกระแสเงินสดปันผลที่ได้รับแยกตามหุ้นแต่ละตัวในพอร์ต
                             </p>
                           </div>
-                          <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#161926] border border-[#2A2E45] text-amber-300 font-bold hidden sm:inline-flex">
-                            Yield Breakdown
+                          <span className="text-xs px-3 py-1 rounded-full bg-[#161926] border border-[#2A2E45] text-amber-300 font-bold hidden sm:inline-flex">
+                            Interactive Pie
                           </span>
                         </div>
 
-                        {/* Split Executive Layout: Donut on Left + Contribution Leaderboard on Right */}
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center mt-2">
-                          {/* Left: Donut with Center Stat */}
-                          <div className="md:col-span-5 relative w-full h-52 flex items-center justify-center">
+                        {/* Split Executive Layout: Pie on Left + Contribution Leaderboard on Right */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center mt-2">
+                          {/* Left: Large Solid Interactive Pie Chart */}
+                          <div className="lg:col-span-5 relative w-full h-64 sm:h-72 flex items-center justify-center">
                             <ResponsiveContainer width="100%" height="100%">
                               <RechartsPieChart>
                                 <Pie
@@ -1896,11 +1962,15 @@ export const SmartRebalancePage: React.FC = () => {
                                   nameKey="name"
                                   cx="50%"
                                   cy="50%"
-                                  innerRadius={54}
-                                  outerRadius={78}
-                                  paddingAngle={4}
+                                  innerRadius={0}
+                                  outerRadius={96}
+                                  paddingAngle={2}
                                   stroke="#111418"
-                                  strokeWidth={3}
+                                  strokeWidth={2}
+                                  activeIndex={activeDividendIndex}
+                                  activeShape={renderActivePieShape}
+                                  onMouseEnter={(_, index) => setActiveDividendIndex(index)}
+                                  onMouseLeave={() => setActiveDividendIndex(undefined)}
                                 >
                                   {dividendStats.dividendDonutData.map((entry, index) => (
                                     <Cell key={`div-cell-${index}`} fill={entry.color} />
@@ -1911,11 +1981,26 @@ export const SmartRebalancePage: React.FC = () => {
                                     if (active && payload && payload.length) {
                                       const data = payload[0].payload;
                                       return (
-                                        <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-1">
-                                          <div className="font-extrabold text-white text-[13px]">{data.name}</div>
-                                          <div className="text-slate-200">เงินปันผล: <span className="font-black text-amber-400">{formatMoney(data.value)}/ปี</span></div>
-                                          <div className="text-slate-200">สัดส่วนพอร์ตปันผล: <span className="font-bold text-white">{data.pct}%</span></div>
-                                          <div className="text-slate-400">Div Yield: {data.divYield}%</div>
+                                        <div className="bg-[#161926]/95 backdrop-blur-md border border-[#2A2E45] rounded-2xl p-3.5 shadow-2xl space-y-1.5 z-50 pointer-events-none">
+                                          <div className="flex items-center gap-2">
+                                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: data.color }} />
+                                            <span className="font-black text-white text-sm">{data.name}</span>
+                                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-bold border border-amber-500/20">
+                                              Yield {data.divYield}%
+                                            </span>
+                                          </div>
+                                          <div className="text-slate-300 text-[13px] flex justify-between gap-4">
+                                            <span>เงินปันผลต่อปี:</span>
+                                            <span className="font-black text-amber-400 text-sm">{formatMoney(data.value)}/ปี</span>
+                                          </div>
+                                          <div className="text-slate-300 text-[13px] flex justify-between gap-4">
+                                            <span>สัดส่วนพอร์ตปันผล:</span>
+                                            <span className="font-bold text-white text-[13px]">{data.pct}%</span>
+                                          </div>
+                                          <div className="text-slate-400 text-xs flex justify-between gap-4">
+                                            <span>เฉลี่ยต่อเดือน:</span>
+                                            <span className="font-semibold text-slate-200 text-xs">{formatMoney(data.value / 12)}/mo</span>
+                                          </div>
                                         </div>
                                       );
                                     }
@@ -1924,44 +2009,47 @@ export const SmartRebalancePage: React.FC = () => {
                                 />
                               </RechartsPieChart>
                             </ResponsiveContainer>
-                            {/* Center Metric */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                              <span className="text-[10px] font-bold text-amber-400/90 uppercase tracking-widest">Est. Annual</span>
-                              <span className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tight">
-                                {formatMoney(dividendStats.totalAnnualIncomeUsd)}
-                              </span>
-                              <span className="text-[10px] font-bold text-slate-300">
-                                ~{formatMoney(dividendStats.totalAnnualIncomeUsd / 12)}/mo
-                              </span>
-                            </div>
                           </div>
 
-                          {/* Right: Asset Contribution Leaderboard with progress bars */}
-                          <div className="md:col-span-7 space-y-2.5 max-h-52 overflow-y-auto pr-1">
-                            {dividendStats.dividendDonutData.map(item => (
-                              <div key={item.name} className="p-2.5 rounded-2xl bg-[#161926]/80 border border-[#2A2E45]/80 hover:border-[#2A2E45] transition-all shadow-sm">
-                                <div className="flex items-center justify-between text-xs mb-1.5">
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                                    <span className="font-extrabold text-white text-[13px]">{item.name}</span>
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#1A1D2D] text-emerald-400 font-bold border border-[#2A2E45]">
-                                      Yield {item.divYield}%
-                                    </span>
+                          {/* Right: Interactive Asset Contribution Leaderboard with progress bars */}
+                          <div className="lg:col-span-7 space-y-2.5 max-h-64 sm:max-h-72 overflow-y-auto pr-1">
+                            {dividendStats.dividendDonutData.map((item, index) => {
+                              const isHovered = activeDividendIndex === index;
+                              return (
+                                <div 
+                                  key={item.name} 
+                                  onMouseEnter={() => setActiveDividendIndex(index)}
+                                  onMouseLeave={() => setActiveDividendIndex(undefined)}
+                                  className={clsx(
+                                    "p-2.5 rounded-2xl border transition-all shadow-sm cursor-pointer",
+                                    isHovered 
+                                      ? "bg-[#1F2438] border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.25)] ring-1 ring-amber-400/40" 
+                                      : "bg-[#161926]/80 border-[#2A2E45]/80 hover:border-[#2A2E45]"
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between text-xs mb-1.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                                      <span className="font-extrabold text-white text-[13px]">{item.name}</span>
+                                      <span className="text-xs px-2 py-0.5 rounded-md bg-[#1A1D2D] text-emerald-400 font-bold border border-[#2A2E45]">
+                                        Yield {item.divYield}%
+                                      </span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="font-black text-amber-400 text-[13px]">{formatMoney(item.value)}</span>
+                                      <span className="text-slate-300 text-xs ml-1">/ปี ({item.pct}%)</span>
+                                    </div>
                                   </div>
-                                  <div className="text-right">
-                                    <span className="font-black text-amber-400 text-[13px]">{formatMoney(item.value)}</span>
-                                    <span className="text-slate-400 text-[11px] ml-1">/ปี ({item.pct}%)</span>
+                                  {/* Micro progress bar */}
+                                  <div className="w-full bg-[#1A1D2D] h-1.5 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full transition-all duration-500"
+                                      style={{ width: `${Math.max(6, Math.min(100, item.pct))}%`, backgroundColor: item.color }}
+                                    />
                                   </div>
                                 </div>
-                                {/* Micro progress bar */}
-                                <div className="w-full bg-[#1A1D2D] h-1.5 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.max(6, Math.min(100, item.pct))}%`, backgroundColor: item.color }}
-                                  />
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
