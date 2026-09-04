@@ -126,9 +126,9 @@ export const SmartRebalancePage: React.FC = () => {
       if (!bp) return; // Skip if not in blueprint
       
       const tgtPct = bp.target_percent;
-      const tgtVal = (tgtPct / 100) * newTotalVal;
+      const targetVal = (tgtPct / 100) * newTotalVal;
       const currentVal = item.currentVal;
-      const deficit = Math.max(0, tgtVal - currentVal);
+      const deficit = Math.max(0, targetVal - currentVal);
       
       deficits.push({
         ...item,

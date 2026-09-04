@@ -24,7 +24,7 @@ interface BlueprintStore {
   upsertBlueprint: (portfolioId: string, entry: Partial<BlueprintEntry>) => Promise<void>;
   deleteBlueprint: (portfolioId: string, symbol: string) => Promise<void>;
   autoGenerate: (portfolioId: string) => Promise<void>;
-  applyTemplate: (portfolioId: string, template: BlueprintEntry[]) => Promise<void>;
+  applyTemplate: (portfolioId: string, template: Partial<BlueprintEntry>[]) => Promise<void>;
 }
 
 export const useBlueprintStore = create<BlueprintStore>((set, get) => ({
@@ -78,7 +78,7 @@ export const useBlueprintStore = create<BlueprintStore>((set, get) => ({
     }
   },
 
-  applyTemplate: async (portfolioId: string, template: BlueprintEntry[]) => {
+  applyTemplate: async (portfolioId: string, template: Partial<BlueprintEntry>[]) => {
     set({ isLoading: true, error: null });
     try {
       for (const entry of template) {
