@@ -1,8 +1,7 @@
 import React from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
-import { useHoldings } from '../../hooks/useHoldings';
-import { LayoutDashboard, ReceiptText, Settings, LogOut, Briefcase, TrendingUp, TrendingDown, PieChart, LineChart, Target, ShieldCheck, Scale } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Settings, LogOut, Briefcase, PieChart, LineChart, Target, ShieldCheck, Scale } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAV_ITEMS = [
@@ -20,10 +19,6 @@ const NAV_ITEMS = [
 export const Sidebar = () => {
   const { activeTab, setActiveTab } = useUiStore();
   const logout = useAuthStore((s) => s.logout);
-  const { holdings } = useHoldings();
-
-  const topWinners = [...holdings].filter(h => h.dayChangePercent > 0).sort((a, b) => b.dayChangePercent - a.dayChangePercent).slice(0, 3);
-  const topLosers = [...holdings].filter(h => h.dayChangePercent < 0).sort((a, b) => a.dayChangePercent - b.dayChangePercent).slice(0, 3);
 
   return (
     <aside className="w-72 bg-[#0F111A] border-r border-[#1F2233] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.2)] h-screen overflow-y-auto custom-scrollbar">
@@ -60,47 +55,6 @@ export const Sidebar = () => {
           );
         })}
       </nav>
-
-      {/* Top Movers */}
-      {(topWinners.length > 0 || topLosers.length > 0) && (
-        <div className="px-4 py-6 mt-4 border-t border-[#1F2233]">
-          <h3 className="text-xs font-bold text-[#9898C8] uppercase tracking-wider mb-4 px-2">Top Movers Today</h3>
-          
-          {topWinners.length > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2 px-2">
-                <TrendingUp className="w-4 h-4 text-[#FC2D79]" />
-                <span className="text-sm font-medium text-white">Winners</span>
-              </div>
-              <div className="space-y-2">
-                {topWinners.map(h => (
-                  <div key={h.symbol} className="flex justify-between items-center p-2 rounded-lg hover:bg-[#1A1D2D] transition-colors">
-                    <span className="text-white text-sm font-bold">{h.symbol}</span>
-                    <span className="text-[#FC2D79] text-sm font-medium">+{h.dayChangePercent.toFixed(2)}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {topLosers.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2 px-2">
-                <TrendingDown className="w-4 h-4 text-[#823AFD]" />
-                <span className="text-sm font-medium text-white">Losers</span>
-              </div>
-              <div className="space-y-2">
-                {topLosers.map(h => (
-                  <div key={h.symbol} className="flex justify-between items-center p-2 rounded-lg hover:bg-[#1A1D2D] transition-colors">
-                    <span className="text-white text-sm font-bold">{h.symbol}</span>
-                    <span className="text-[#823AFD] text-sm font-medium">{h.dayChangePercent.toFixed(2)}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="flex-1"></div>
 

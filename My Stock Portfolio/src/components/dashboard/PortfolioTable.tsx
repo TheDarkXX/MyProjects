@@ -386,9 +386,9 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               {renderTH('Total P/L', 'totalReturn', 'right')}
               {renderTH('Total %', 'totalReturnPercent', 'right', 'border-r border-[#2A2E45]/70')}
 
-              {/* Section 3 (Blue Box): Active Focus Dynamic Range (Highlighted Background) */}
-              {renderTH(`${activeRangeLabel} Return`, 'activeReturn', 'right', 'bg-[#181D33]/90 text-white font-black border-l border-[#823AFD]/30')}
-              {renderTH(`${activeRangeLabel} %`, 'activeReturnPercent', 'right', 'bg-[#181D33]/90 text-white font-black border-r border-[#2A2E45]/70')}
+              {/* Section 3 (Amber Box): Active Focus Dynamic Range (Soft Warm Amber Highlight) */}
+              {renderTH(`${activeRangeLabel} Return`, 'activeReturn', 'right', 'bg-amber-400/[0.12] text-amber-300 font-black border-l border-amber-500/30')}
+              {renderTH(`${activeRangeLabel} %`, 'activeReturnPercent', 'right', 'bg-amber-400/[0.12] text-amber-300 font-black border-r border-[#2A2E45]/70')}
 
               {/* Section 4 (Green Box): Next-Step Ladder Benchmark & Weight */}
               {renderTH(`${nextRangeLabel} Return`, 'nextReturn', 'right')}
@@ -468,7 +468,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
 
                   {/* === Section 3: Active Focus Dynamic Range (Distinct BG Highlight) === */}
                   {/* Column 8: Active Range Return (Amount) */}
-                  <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/60 group-hover:bg-[#1E2440]/80 transition-colors border-l border-[#823AFD]/20">
+                  <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.08] group-hover:bg-amber-400/[0.14] transition-colors border-l border-amber-500/20">
                     <span className={clsx(
                       "font-bold text-[14px] tabular-nums font-heading",
                       isActiveProfit ? "text-emerald-400" : "text-rose-400"
@@ -478,7 +478,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   </td>
 
                   {/* Column 9: Active Range % */}
-                  <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/60 group-hover:bg-[#1E2440]/80 transition-colors border-r border-[#2A2E45]/70">
+                  <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.08] group-hover:bg-amber-400/[0.14] transition-colors border-r border-[#2A2E45]/70">
                     <span className={clsx(
                       "font-bold text-[14px] tabular-nums font-heading",
                       isActiveProfit ? "text-emerald-400" : "text-rose-400"
@@ -557,7 +557,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               </td>
 
               {/* Section 3 Total (Highlighted BG) */}
-              <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70 border-l border-[#823AFD]/20">
+              <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.10] border-l border-amber-500/25">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
                   totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
@@ -565,7 +565,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   {totalActiveReturn >= 0 ? '+' : '-'}{formatClean(totalActiveReturn)}
                 </span>
               </td>
-              <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70 border-r border-[#2A2E45]/70">
+              <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.10] border-r border-[#2A2E45]/70">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
                   totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
@@ -615,8 +615,8 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               </td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading border-r border-[#2A2E45]/70">-</td>
-              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading bg-[#181D33]/40 border-l border-[#823AFD]/20">-</td>
-              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading bg-[#181D33]/40 border-r border-[#2A2E45]/70">-</td>
+              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading bg-amber-400/[0.04] border-l border-amber-500/15">-</td>
+              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading bg-amber-400/[0.04] border-r border-[#2A2E45]/70">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
               <td className="px-3 py-3 text-right whitespace-nowrap">

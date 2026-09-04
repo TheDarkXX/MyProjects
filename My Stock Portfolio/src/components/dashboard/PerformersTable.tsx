@@ -44,9 +44,10 @@ export const PerformersTable: React.FC<PerformersTableProps> = ({ holdings, form
         <table className="w-full">
           <thead className="bg-[#1A1D2D]">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-[#CBD5E1] uppercase">Asset</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-[#CBD5E1] uppercase">{returnLabel}</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-[#CBD5E1] uppercase">Market Value</th>
+              <th className="px-3.5 py-3 text-left text-xs font-bold text-[#CBD5E1] uppercase">Asset</th>
+              <th className="px-3.5 py-3 text-right text-xs font-bold text-[#CBD5E1] uppercase">{returnLabel}</th>
+              <th className="px-3.5 py-3 text-right text-xs font-bold text-[#CBD5E1] uppercase">Return %</th>
+              <th className="px-3.5 py-3 text-right text-xs font-bold text-[#CBD5E1] uppercase">Market Value</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2A2E45]">
@@ -56,28 +57,32 @@ export const PerformersTable: React.FC<PerformersTableProps> = ({ holdings, form
 
               return (
                 <tr key={h.symbol} className="hover:bg-[#1A1D2D]/50 transition-colors">
-                  <td className="px-4 py-3 text-sm font-bold text-white">
+                  <td className="px-3.5 py-3 text-sm font-bold text-white">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-[#823AFD]"></span>
-                      <span>{h.symbol}</span>
+                      <span className="font-heading">{h.symbol}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <div className={clsx("text-sm font-bold tabular-nums", returnVal >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                  <td className="px-3.5 py-3 text-right whitespace-nowrap">
+                    <span className={clsx("text-sm font-bold tabular-nums font-prompt", returnVal >= 0 ? "text-emerald-400" : "text-rose-400")}>
                       {returnVal >= 0 ? '+' : ''}{formatCurrency(returnVal)}
-                    </div>
-                    <div className={clsx("text-xs font-semibold tabular-nums mt-0.5", returnPct >= 0 ? "text-emerald-400/90" : "text-rose-400/90")}>
-                      {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
-                    </div>
+                    </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-right font-black text-white tabular-nums whitespace-nowrap">
+                  <td className="px-3.5 py-3 text-right whitespace-nowrap">
+                    <span className={clsx("text-xs font-bold tabular-nums font-prompt px-2 py-0.5 rounded-md", 
+                      returnPct >= 0 ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20" : "text-rose-400 bg-rose-500/10 border border-rose-500/20"
+                    )}>
+                      {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
+                    </span>
+                  </td>
+                  <td className="px-3.5 py-3 text-sm text-right font-black text-white tabular-nums font-prompt whitespace-nowrap">
                     {formatCurrency(h.currentValue)}
                   </td>
                 </tr>
               );
             }) : (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-[#9898C8] text-sm">No data available</td>
+                <td colSpan={4} className="px-4 py-8 text-center text-[#9898C8] text-sm">No data available</td>
               </tr>
             )}
           </tbody>
@@ -87,7 +92,7 @@ export const PerformersTable: React.FC<PerformersTableProps> = ({ holdings, form
   );
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 mt-8">
+    <div className="flex flex-col xl:flex-row gap-4 xl:gap-6 h-full">
       {renderTable(topPerformers, "Top 5 Performers", true)}
       {renderTable(bottomPerformers, "Bottom 5 Performers", false)}
     </div>

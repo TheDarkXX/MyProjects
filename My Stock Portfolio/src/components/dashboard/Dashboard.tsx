@@ -104,12 +104,21 @@ export const Dashboard = () => {
     totalDividends
   } = useHoldings();
 
-  const [timeRange, setTimeRange] = useState<DashboardTimeRange>('1M');
+  const [timeRange, setTimeRange] = useState<DashboardTimeRange>('ALL');
   const [customFrom, setCustomFrom] = useState<string>('');
   const [customTo, setCustomTo] = useState<string>('');
   const [tempCustomFrom, setTempCustomFrom] = useState<string>('');
   const [tempCustomTo, setTempCustomTo] = useState<string>('');
   const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
+
+  const topWinners = useMemo(() => 
+    [...holdings].filter(h => h.dayChangePercent > 0).sort((a, b) => b.dayChangePercent - a.dayChangePercent).slice(0, 3),
+    [holdings]
+  );
+  const topLosers = useMemo(() => 
+    [...holdings].filter(h => h.dayChangePercent < 0).sort((a, b) => a.dayChangePercent - b.dayChangePercent).slice(0, 3),
+    [holdings]
+  );
 
   const earliestTxDate = useMemo(() => {
     const validTxs = transactions.filter(t => t.status === 'CONFIRMED' && t.date);
@@ -518,30 +527,111 @@ export const Dashboard = () => {
           </div>
         </div>
 
+        {/* Top Movers Today */}
+        <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 flex flex-col justify-between shadow-lg">
+          <div>
+            <div className="flex justify-between items-center mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#823AFD]/20 to-[#FC2D79]/20 border border-[#2A2E45] flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-[#FC2D79]" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white tracking-tight">Top Movers Today</h3>
+                  <p className="text-xs text-[#9898C8]">หุ้นที่ผันผวนสูงสุดในรอบวัน</p>
+                </div>
+              </div>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#1A1D2D] border border-[#2A2E45] text-slate-300 font-semibold">
+                1D Live
+              </span>
+            </div>
+
+            {/* Winners */}
+            <div className="mb-4">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 mb-2 px-1">
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                <span>Top Gainers</span>
+              </div>
+              <div className="space-y-1.5">
+                {topWinners.length > 0 ? topWinners.map(h => (
+                  <div key={h.symbol} className="flex justify-between items-center px-3.5 py-2 rounded-xl bg-[#1A1D2D]/60 border border-[#2A2E45]/60 hover:border-emerald-500/40 transition-all">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                      <span className="text-white text-sm font-bold font-heading">{h.symbol}</span>
+                    </div>
+                    <span className="text-emerald-400 text-sm font-bold tabular-nums font-prompt">+{h.dayChangePercent.toFixed(2)}%</span>
+                  </div>
+                )) : (
+                  <div className="text-xs text-[#9898C8] px-3 py-2 bg-[#1A1D2D]/40 rounded-xl">ไม่มีหุ้นที่เป็นบวกวันนี้</div>
+                )}
+              </div>
+            </div>
+
+            {/* Losers */}
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400 mb-2 px-1">
+                <ArrowDownRight className="w-3.5 h-3.5" />
+                <span>Top Decliners</span>
+              </div>
+              <div className="space-y-1.5">
+                {topLosers.length > 0 ? topLosers.map(h => (
+                  <div key={h.symbol} className="flex justify-between items-center px-3.5 py-2 rounded-xl bg-[#1A1D2D]/60 border border-[#2A2E45]/60 hover:border-rose-500/40 transition-all">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-rose-400"></span>
+                      <span className="text-white text-sm font-bold font-heading">{h.symbol}</span>
+                    </div>
+                    <span className="text-rose-400 text-sm font-bold tabular-nums font-prompt">{h.dayChangePercent.toFixed(2)}%</span>
+                  </div>
+                )) : (
+                  <div className="text-xs text-[#9898C8] px-3 py-2 bg-[#1A1D2D]/40 rounded-xl">ไม่มีหุ้นที่เป็นลบวันนี้</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 4: Full-Width Holdings Table */}
+      <PortfolioTable 
+        holdings={holdings} 
+        formatCurrency={formatCurrency} 
+        cashBalance={cashBalance}
+        totalSecuritiesValue={totalSecuritiesValue}
+        totalNetWorth={totalNetWorth}
+      />
+
+      {/* Row 5: Performers (2/3) + Activity (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+        <div className="lg:col-span-2">
+          <PerformersTable 
+            holdings={holdings} 
+            formatCurrency={formatCurrency} 
+          />
+        </div>
+
         {/* Recent Activity */}
-        <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6">
-          <div className="flex justify-between items-center mb-6">
+        <div className="lg:col-span-1 bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 flex flex-col shadow-lg">
+          <div className="flex justify-between items-center mb-5">
             <h3 className="text-xl font-bold text-white">Activity</h3>
             <span className="text-xs text-[#9898C8] px-2 py-0.5 rounded-full bg-[#1A1D2D] border border-[#2A2E45]">
               {filteredTxs.length} {filteredTxs.length === 1 ? 'tx' : 'txs'}
             </span>
           </div>
-          <div className="space-y-4 overflow-y-auto max-h-[320px] pr-2 custom-scrollbar">
+          <div className="space-y-3 overflow-y-auto max-h-[380px] pr-2 custom-scrollbar flex-1">
             {filteredTxs.length > 0 ? filteredTxs.slice(0, 10).map(tx => (
-              <div key={tx.id} className="flex items-center justify-between p-4 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] transition-colors cursor-pointer group">
+              <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] transition-colors cursor-pointer group">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#0F111A] flex items-center justify-center border border-[#2A2E45]">
+                  <div className="w-9 h-9 rounded-full bg-[#0F111A] flex items-center justify-center border border-[#2A2E45]">
                     <span className="text-[#9898C8] text-xs font-bold">{tx.symbol || tx.type.slice(0, 3)}</span>
                   </div>
                   <div>
-                    <p className="text-white font-medium group-hover:text-[#823AFD] transition-colors">
+                    <p className="text-white font-medium text-sm group-hover:text-[#823AFD] transition-colors">
                       {tx.type === 'BUY' ? 'Bought' : tx.type === 'SELL' ? 'Sold' : tx.type} {tx.symbol}
                     </p>
                     <p className="text-[#9898C8] text-xs">{new Date(tx.date).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={clsx("font-bold tabular-nums", tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? "text-green-400" : "text-white")}>
+                  <p className={clsx("font-bold text-sm tabular-nums font-prompt", tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? "text-green-400" : "text-white")}>
                     {tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? '+' : '-'}{formatCurrency(tx.amount * (tx.price || 1))}
                   </p>
                   {tx.symbol && <p className="text-[#823AFD] text-xs font-medium">{tx.amount} Shares</p>}
@@ -561,18 +651,6 @@ export const Dashboard = () => {
           </div>
         </div>
       </div>
-
-      <PortfolioTable 
-        holdings={holdings} 
-        formatCurrency={formatCurrency} 
-        cashBalance={cashBalance}
-        totalSecuritiesValue={totalSecuritiesValue}
-        totalNetWorth={totalNetWorth}
-      />
-      <PerformersTable 
-        holdings={holdings} 
-        formatCurrency={formatCurrency} 
-      />
     </div>
   );
 };
