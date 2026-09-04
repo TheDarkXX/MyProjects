@@ -49,6 +49,56 @@ const Login = () => {
   );
 };
 
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[App ErrorBoundary caught an error]:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-[#111418] border border-rose-500/30 rounded-3xl p-8 max-w-2xl mx-auto my-12 shadow-[0_8px_32px_rgba(252,45,121,0.15)] text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center mx-auto text-xl font-bold">
+            ⚠️
+          </div>
+          <h2 className="text-xl font-black text-white font-heading">เกิดข้อผิดพลาดในการโหลดโมดูลนี้</h2>
+          <p className="text-xs text-[#CBD5E1] font-body">
+            {this.state.error?.message || 'ระบบตรวจพบข้อผิดพลาดที่ไม่คาดคิด'}
+          </p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+            className="px-5 py-2.5 bg-gradient-to-r from-[#823AFD] to-[#FC2D79] hover:opacity-90 text-white font-bold text-xs rounded-xl shadow-md transition-all font-heading"
+          >
+            รีโหลดหน้าเว็บ (Refresh)
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const MainLayout = () => {
   const { activeTab } = useUiStore();
   
@@ -58,12 +108,13 @@ const MainLayout = () => {
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-8 scroll-smooth">
-          <Suspense fallback={
-            <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-12 flex flex-col items-center justify-center min-h-[400px] shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
-              <div className="w-10 h-10 border-4 border-[#823AFD] border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-[#9898C8] text-sm font-semibold mt-4">Loading module...</span>
-            </div>
-          }>
+          <ErrorBoundary>
+            <Suspense fallback={
+              <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-12 flex flex-col items-center justify-center min-h-[400px] shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
+                <div className="w-10 h-10 border-4 border-[#823AFD] border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-[#CBD5E1] text-sm font-semibold mt-4">Loading module...</span>
+              </div>
+            }>
             {activeTab === 'dashboard' && <Dashboard />}
             {activeTab === 'scorecard' && <ScorecardPage />}
             {activeTab === 'risk' && <RiskPage />}
@@ -81,6 +132,7 @@ const MainLayout = () => {
               </div>
             )}
           </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

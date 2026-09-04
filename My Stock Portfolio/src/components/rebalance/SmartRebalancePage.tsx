@@ -63,7 +63,8 @@ export const SmartRebalancePage: React.FC = () => {
   const effectiveRate = exchangeRate > 0 ? exchangeRate : 35.0;
 
   const formatMoney = (usd: number) => {
-    const val = currency === 'THB' ? usd * effectiveRate : usd;
+    const safeUsd = typeof usd === 'number' && !isNaN(usd) ? usd : 0;
+    const val = currency === 'THB' ? safeUsd * effectiveRate : safeUsd;
     return `${currSymbol}${val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
@@ -133,8 +134,8 @@ export const SmartRebalancePage: React.FC = () => {
     const deficits = sortedHoldings.map(h => {
       const tgtPct = targetWeights[h.symbol] || 0;
       const tgtVal = (tgtPct / 100) * newTotalVal;
-      const currVal = h.currentValue || 0;
-      const deficit = Math.max(0, tgtVal - currVal);
+      const currentVal = h.currentValue || 0;
+      const deficit = Math.max(0, tgtVal - currentVal);
       return {
         symbol: h.symbol,
         stockType: h.stockType || 'Core Compounder',
@@ -508,14 +509,14 @@ export const SmartRebalancePage: React.FC = () => {
                     <div className="flex justify-between text-[#9898C8]">
                       <span>สัดส่วนในพอร์ต:</span>
                       <span>
-                        <strong className="text-white">{rec.currentWeight.toFixed(1)}%</strong>
+                        <strong className="text-white">{(rec.currentWeight ?? 0).toFixed(1)}%</strong>
                         {' '}&rarr;{' '}
-                        <strong className="text-emerald-400">{rec.projectedWeight.toFixed(1)}%</strong>
+                        <strong className="text-emerald-400">{(rec.projectedWeight ?? 0).toFixed(1)}%</strong>
                       </span>
                     </div>
                     <div className="w-full h-2 bg-[#1A1D2D] rounded-full overflow-hidden flex">
-                      <div style={{ width: `${Math.min(100, rec.currentWeight)}%` }} className="bg-[#823AFD] h-full" />
-                      <div style={{ width: `${Math.min(100, rec.projectedWeight - rec.currentWeight)}%` }} className="bg-emerald-400 h-full" />
+                      <div style={{ width: `${Math.max(0, Math.min(100, rec.currentWeight ?? 0))}%` }} className="bg-[#823AFD] h-full" />
+                      <div style={{ width: `${Math.max(0, Math.min(100, (rec.projectedWeight ?? 0) - (rec.currentWeight ?? 0)))}%` }} className="bg-emerald-400 h-full" />
                     </div>
                   </div>
                 </div>
@@ -568,7 +569,7 @@ export const SmartRebalancePage: React.FC = () => {
                       {formatMoney(item.currentVal)}
                     </td>
                     <td className="py-3 px-4 text-right font-black text-white tabular-nums">
-                      {item.actualPct.toFixed(1)}%
+                      {(item.actualPct ?? 0).toFixed(1)}%
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="inline-flex items-center gap-1 bg-[#161926] border border-[#2A2E45] rounded-xl px-2.5 py-1">
@@ -596,7 +597,7 @@ export const SmartRebalancePage: React.FC = () => {
                         item.status === 'overweight' ? "bg-blue-500/15 text-blue-300" :
                         "bg-amber-500/15 text-amber-300"
                       )}>
-                        {item.deltaPct >= 0 ? '+' : ''}{item.deltaPct.toFixed(1)}% ({item.deltaVal >= 0 ? '+' : ''}{formatMoney(item.deltaVal)})
+                        {(item.deltaPct ?? 0) >= 0 ? '+' : ''}{(item.deltaPct ?? 0).toFixed(1)}% ({((item.deltaVal ?? 0) >= 0 ? '+' : '')}{formatMoney(item.deltaVal ?? 0)})
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center text-xs font-semibold">
@@ -607,7 +608,7 @@ export const SmartRebalancePage: React.FC = () => {
                       )}
                       {item.status === 'underweight' && (
                         <span className="text-amber-400 font-bold">
-                          เติม +{item.sharesGap.toFixed(1)} หุ้น
+                          เติม +{(item.sharesGap ?? 0).toFixed(1)} หุ้น
                         </span>
                       )}
                       {item.status === 'overweight' && (
@@ -674,7 +675,7 @@ export const SmartRebalancePage: React.FC = () => {
                   <input
                     type="range"
                     min="1"
-                    max={Math.max(1, Math.floor(trimHolding.quantity))}
+                    max={Math.max(1, Math.floor(trimHolding.quantity || 1))}
                     value={trimShares}
                     onChange={(e) => setTrimShares(Number(e.target.value))}
                     className="w-full accent-rose-500 cursor-pointer"
