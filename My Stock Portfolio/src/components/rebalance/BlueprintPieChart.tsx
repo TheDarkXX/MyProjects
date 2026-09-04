@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { BlueprintEntry } from '../../stores/blueprintStore';
 import { CATEGORY_CONFIG, STRATEGY_CATEGORIES, StrategyCategory } from './StrategyConfigs';
 import { ShieldAlert, CheckCircle2, AlertTriangle, Layers, PieChart as PieIcon, Wallet } from 'lucide-react';
+import { AIBlueprintAdvisor } from './AIBlueprintAdvisor';
 
 interface BlueprintPieChartProps {
   blueprints: BlueprintEntry[];
+  portfolioId?: string;
 }
 
 interface CategoryGroup {
@@ -19,7 +21,9 @@ interface CategoryGroup {
   symbols: { symbol: string; percent: number; status: 'OWNED' | 'WATCHLIST' }[];
 }
 
-export const BlueprintPieChart: React.FC<BlueprintPieChartProps> = ({ blueprints }) => {
+export const BlueprintPieChart: React.FC<BlueprintPieChartProps> = ({ blueprints, portfolioId }) => {
+  const [showAiAdvisor, setShowAiAdvisor] = useState(false);
+
   // Aggregate data by category
   const { chartData, healthMetrics, totalPercent } = useMemo(() => {
     const groups: Record<string, CategoryGroup> = {};
@@ -146,23 +150,35 @@ export const BlueprintPieChart: React.FC<BlueprintPieChartProps> = ({ blueprints
           </div>
         </div>
 
-        {/* Status Badge */}
-        <div className={`self-start sm:self-auto px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${
-          isTotal100 
-            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' 
-            : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-        }`}>
-          {isTotal100 ? (
-            <>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>สัดส่วนครบ 100% พอดี</span>
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <span>รวม {totalPercent}% (ต่างจาก 100% อยู่ {(100 - totalPercent).toFixed(1)}%)</span>
-            </>
-          )}
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => setShowAiAdvisor(!showAiAdvisor)}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-colors ${
+              showAiAdvisor 
+                ? 'bg-[#A855F7]/20 text-[#A855F7] border-[#A855F7]/40' 
+                : 'bg-[#181B2A] text-slate-300 border-[#262B3F] hover:border-[#A855F7]/40 hover:text-[#A855F7]'
+            }`}
+          >
+            <span className="text-base">🧠</span> {showAiAdvisor ? 'Hide AI Advisor' : 'AI Advisor'}
+          </button>
+          <div className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+            isTotal100 
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' 
+              : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+          }`}>
+            {isTotal100 ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>สัดส่วนครบ 100% พอดี</span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <span>รวม {totalPercent}% (ต่างจาก 100% อยู่ {(100 - totalPercent).toFixed(1)}%)</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -344,6 +360,17 @@ export const BlueprintPieChart: React.FC<BlueprintPieChartProps> = ({ blueprints
           </div>
         </div>
       </div>
+
+      {/* AI Advisor */}
+      {showAiAdvisor && (
+        <div className="mt-6 border-t border-[#232738] pt-6">
+          <AIBlueprintAdvisor 
+            portfolioId={portfolioId || blueprints[0]?.portfolio_id || 'unknown'} 
+            blueprints={blueprints} 
+            onApplySuggestion={(s) => console.log('apply suggestion', s)} 
+          />
+        </div>
+      )}
     </div>
   );
 };

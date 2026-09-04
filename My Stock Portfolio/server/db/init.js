@@ -95,6 +95,48 @@ export function initDb() {
         PRIMARY KEY (portfolio_id, date)
     );
 
+    -- AI Advisor
+    CREATE TABLE IF NOT EXISTS symbol_fundamentals (
+        symbol TEXT PRIMARY KEY,
+        sector TEXT,
+        industry TEXT,
+        current_price REAL,
+        pe_trailing REAL,
+        pe_forward REAL,
+        pb_ratio REAL,
+        roe REAL,
+        revenue_growth REAL,
+        profit_margin REAL,
+        debt_to_equity REAL,
+        beta REAL,
+        div_yield REAL,
+        annual_dividend REAL,
+        fifty_two_week_high REAL,
+        fifty_two_week_low REAL,
+        sma50 REAL,
+        sma200 REAL,
+        market_cap REAL,
+        short_percent REAL,
+        fetched_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(symbol)
+    );
+
+    CREATE TABLE IF NOT EXISTS ai_analysis_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        portfolio_id TEXT NOT NULL REFERENCES portfolios(id),
+        mode TEXT NOT NULL CHECK(mode IN ('quick', 'deep', 'strategist')),
+        blueprint_hash TEXT NOT NULL,
+        overall_grade TEXT,
+        result_json TEXT NOT NULL,
+        model_used TEXT DEFAULT 'gpt-5.6-terra-high',
+        tokens_used INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_history_portfolio 
+        ON ai_analysis_history(portfolio_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_ai_history_hash 
+        ON ai_analysis_history(portfolio_id, blueprint_hash);
+
     -- Backup
     CREATE TABLE IF NOT EXISTS backups (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -60,6 +60,7 @@ export const api = {
     search: (query: string) => authFetch(`/prices/search?q=${encodeURIComponent(query)}`),
     technicals: (symbol: string) => authFetch(`/prices/technicals/${encodeURIComponent(symbol)}`),
     profile: (symbol: string) => authFetch(`/prices/profile/${encodeURIComponent(symbol)}`),
+    fundamentalsBatch: (symbols: string[]) => authFetch(`/prices/fundamentals-batch?symbols=${symbols.join(',')}`),
   },
   metadata: {
     list: (symbols: string[]) => authFetch(`/metadata?symbols=${symbols.join(',')}`),
@@ -74,6 +75,7 @@ export const api = {
   },
   ai: {
     chat: (prompt: string) => authFetch('/ai-chat', { method: 'POST', body: JSON.stringify({ prompt }) }),
+    advisor: (mode: string, blueprints: any[], fundamentals: any, portfolio_id: string) => authFetch('/ai-advisor', { method: 'POST', body: JSON.stringify({ mode, blueprints, fundamentals, portfolio_id }) }),
   },
   blueprints: {
     list: (portfolioId: string) => authFetch(`/blueprints/${portfolioId}`),

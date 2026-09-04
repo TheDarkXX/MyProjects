@@ -114,4 +114,53 @@ pricesRoutes.get('/profile/:symbol', async (c) => {
   }
 });
 
+// Fetch fundamentals for a single symbol
+pricesRoutes.get('/fundamentals/:symbol', async (c) => {
+  const symbol = c.req.param('symbol');
+  if (!symbol) return c.json({ error: 'Symbol is required' }, 400);
+  try {
+    const { fetchFundamentals } = await import('../services/yahooFundamentals.js');
+    const data = await fetchFundamentals(symbol);
+    if (!data) return c.json({ error: 'Failed to fetch fundamentals' }, 404);
+    return c.json(data);
+  } catch (error) {
+    console.error('[Fundamentals] Error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Fetch fundamentals for multiple symbols
+pricesRoutes.get('/fundamentals-batch', async (c) => {
+  const symbolsStr = c.req.query('symbols');
+  if (!symbolsStr) return c.json({ error: 'Symbols query parameter is required' }, 400);
+  const symbols = symbolsStr.split(',').map(s => s.trim()).filter(Boolean);
+  if (symbols.length === 0) return c.json({ error: 'Valid symbols required' }, 400);
+  
+  try {
+    const { fetchFundamentals } = await import('../services/yahooFundamentals.js');
+    const results = {};
+    
+    // Batch process with concurrency limit of 3
+    const batchSize = 3;
+    for (let i = 0; i < symbols.length; i += batchSize) {
+      const batch = symbols.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (sym) => {
+        const data = await fetchFundamentals(sym);
+        if (data) {
+          results[sym] = data;
+        }
+      }));
+      // Delay 200ms between batches to avoid rate limit if there are more batches
+      if (i + batchSize < symbols.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+    
+    return c.json(results);
+  } catch (error) {
+    console.error('[Fundamentals Batch] Error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 export { pricesRoutes };

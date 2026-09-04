@@ -1002,7 +1002,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
       </div>
 
       {/* Blueprint Health Diagnostic Section (Pie Chart + Metrics) */}
-      <BlueprintPieChart blueprints={blueprints} />
+      <BlueprintPieChart blueprints={blueprints} portfolioId={portfolioId} />
     </div>
   );
 };
