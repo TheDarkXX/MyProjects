@@ -4,7 +4,7 @@ import { useTransactionStore } from '../../stores/transactionStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useHoldings } from '../../hooks/useHoldings';
-import { TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Activity, DollarSign, PieChart, Calendar, Landmark, Coins } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight, Activity, DollarSign, PieChart, Calendar, Landmark, Coins } from 'lucide-react';
 import clsx from 'clsx';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PortfolioTable } from './PortfolioTable';
@@ -41,6 +41,52 @@ const getStartDateForRange = (range: DashboardTimeRange, earliestDate: string, c
       return earliestDate || '2024-01-01';
   }
   return today.toISOString().split('T')[0];
+};
+
+const LongZigzagTrendUp = ({ className = "w-5 h-3.5 text-emerald-400" }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 14" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.4" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={clsx("shrink-0", className)}
+  >
+    <polyline points="1 12 6 6 11 10 16 4 23 2" />
+    <polyline points="16 2 23 2 23 8" />
+  </svg>
+);
+
+const LongZigzagTrendDown = ({ className = "w-5 h-3.5 text-rose-400" }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 14" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.4" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={clsx("shrink-0", className)}
+  >
+    <polyline points="1 2 6 8 11 4 16 10 23 12" />
+    <polyline points="16 12 23 12 23 6" />
+  </svg>
+);
+
+const formatDateYYYYMMDD = (dStr?: string) => {
+  if (!dStr) return '-';
+  const clean = dStr.split('T')[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+  try {
+    const d = new Date(dStr);
+    if (!isNaN(d.getTime())) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+  } catch {}
+  return clean;
 };
 
 const StatCard = ({ title, value, change, isPositive, subValue, icon: Icon, gradient }: any) => (
@@ -548,17 +594,25 @@ export const Dashboard = () => {
             {/* Winners */}
             <div className="mb-4">
               <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 mb-2 px-1">
-                <ArrowUpRight className="w-3.5 h-3.5" />
+                <LongZigzagTrendUp className="w-4.5 h-3 text-emerald-400" />
                 <span>Top Gainers</span>
               </div>
               <div className="space-y-1.5">
                 {topWinners.length > 0 ? topWinners.map(h => (
-                  <div key={h.symbol} className="flex justify-between items-center px-3.5 py-2 rounded-xl bg-[#1A1D2D]/60 border border-[#2A2E45]/60 hover:border-emerald-500/40 transition-all">
+                  <div key={h.symbol} className="flex justify-between items-center px-3.5 py-2.5 rounded-xl bg-[#1A1D2D]/60 border border-[#2A2E45]/60 hover:border-emerald-500/40 transition-all group">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                      <span className="text-white text-sm font-bold font-heading">{h.symbol}</span>
+                      <span className="text-white text-sm font-bold font-heading group-hover:text-emerald-300 transition-colors">{h.symbol}</span>
                     </div>
-                    <span className="text-emerald-400 text-sm font-bold tabular-nums font-prompt">+{h.dayChangePercent.toFixed(2)}%</span>
+                    <div className="flex items-center gap-2">
+                      <LongZigzagTrendUp className="w-5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="text-white text-sm font-black tabular-nums font-prompt">
+                        {formatCurrency(h.lastPrice)}
+                      </span>
+                      <span className="text-emerald-400 text-[13px] font-bold tabular-nums font-prompt px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                        +{h.dayChangePercent.toFixed(2)}%
+                      </span>
+                    </div>
                   </div>
                 )) : (
                   <div className="text-xs text-[#9898C8] px-3 py-2 bg-[#1A1D2D]/40 rounded-xl">ไม่มีหุ้นที่เป็นบวกวันนี้</div>
@@ -569,17 +623,25 @@ export const Dashboard = () => {
             {/* Losers */}
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400 mb-2 px-1">
-                <ArrowDownRight className="w-3.5 h-3.5" />
+                <LongZigzagTrendDown className="w-4.5 h-3 text-rose-400" />
                 <span>Top Decliners</span>
               </div>
               <div className="space-y-1.5">
                 {topLosers.length > 0 ? topLosers.map(h => (
-                  <div key={h.symbol} className="flex justify-between items-center px-3.5 py-2 rounded-xl bg-[#1A1D2D]/60 border border-[#2A2E45]/60 hover:border-rose-500/40 transition-all">
+                  <div key={h.symbol} className="flex justify-between items-center px-3.5 py-2.5 rounded-xl bg-[#1A1D2D]/60 border border-[#2A2E45]/60 hover:border-rose-500/40 transition-all group">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-rose-400"></span>
-                      <span className="text-white text-sm font-bold font-heading">{h.symbol}</span>
+                      <span className="text-white text-sm font-bold font-heading group-hover:text-rose-300 transition-colors">{h.symbol}</span>
                     </div>
-                    <span className="text-rose-400 text-sm font-bold tabular-nums font-prompt">{h.dayChangePercent.toFixed(2)}%</span>
+                    <div className="flex items-center gap-2">
+                      <LongZigzagTrendDown className="w-5 h-3.5 text-rose-400 shrink-0" />
+                      <span className="text-white text-sm font-black tabular-nums font-prompt">
+                        {formatCurrency(h.lastPrice)}
+                      </span>
+                      <span className="text-rose-400 text-[13px] font-bold tabular-nums font-prompt px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20">
+                        {h.dayChangePercent.toFixed(2)}%
+                      </span>
+                    </div>
                   </div>
                 )) : (
                   <div className="text-xs text-[#9898C8] px-3 py-2 bg-[#1A1D2D]/40 rounded-xl">ไม่มีหุ้นที่เป็นลบวันนี้</div>
@@ -617,27 +679,59 @@ export const Dashboard = () => {
             </span>
           </div>
           <div className="space-y-3 overflow-y-auto max-h-[380px] pr-2 custom-scrollbar flex-1">
-            {filteredTxs.length > 0 ? filteredTxs.slice(0, 10).map(tx => (
-              <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] hover:border-[#823AFD] transition-colors cursor-pointer group">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#0F111A] flex items-center justify-center border border-[#2A2E45]">
-                    <span className="text-[#9898C8] text-xs font-bold">{tx.symbol || tx.type.slice(0, 3)}</span>
+            {filteredTxs.length > 0 ? filteredTxs.slice(0, 10).map(tx => {
+              const typeBadge = () => {
+                switch (tx.type) {
+                  case 'BUY':
+                    return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 uppercase font-prompt">BUY</span>;
+                  case 'SELL':
+                    return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-400 border border-rose-500/25 uppercase font-prompt">SELL</span>;
+                  case 'DIVIDEND':
+                    return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25 uppercase font-prompt">DIV</span>;
+                  case 'INTEREST':
+                    return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25 uppercase font-prompt">INT</span>;
+                  case 'DEPOSIT':
+                    return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 uppercase font-prompt">DEP</span>;
+                  case 'WITHDRAW':
+                    return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/25 uppercase font-prompt">WTH</span>;
+                  default:
+                    return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-slate-500/15 text-slate-300 border border-slate-500/25 uppercase font-prompt">{tx.type.slice(0, 4)}</span>;
+                }
+              };
+
+              const formattedDate = formatDateYYYYMMDD(tx.date);
+
+              return (
+                <div key={tx.id} className="p-3 rounded-2xl bg-[#1A1D2D]/70 border border-[#2A2E45]/80 hover:border-[#823AFD]/50 transition-all group">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] text-slate-300 font-mono tracking-tight tabular-nums font-semibold">
+                        {formattedDate}
+                      </span>
+                      <span className="text-white text-sm font-black font-heading group-hover:text-[#823AFD] transition-colors">
+                        {tx.symbol || (tx.asset === 'Cash' ? 'CASH' : tx.type)}
+                      </span>
+                      {typeBadge()}
+                    </div>
+                    <span className={clsx("font-black text-sm tabular-nums font-prompt", tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? "text-emerald-400" : "text-white")}>
+                      {tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? '+' : '-'}{formatCurrency(tx.amount * (tx.price || 1))}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-white font-medium text-sm group-hover:text-[#823AFD] transition-colors">
-                      {tx.type === 'BUY' ? 'Bought' : tx.type === 'SELL' ? 'Sold' : tx.type} {tx.symbol}
-                    </p>
-                    <p className="text-[#9898C8] text-xs">{new Date(tx.date).toLocaleDateString()}</p>
+                  <div className="flex items-center justify-between text-[13px] text-slate-300 pt-1 border-t border-[#2A2E45]/40 font-prompt">
+                    <span className="tabular-nums">
+                      {tx.symbol && tx.amount ? `${Number(tx.amount).toLocaleString('en-US', { maximumFractionDigits: 4 })} shares` : (tx.asset || 'Cash Flow')}
+                    </span>
+                    {tx.price > 0 && tx.symbol ? (
+                      <span className="tabular-nums text-slate-200 font-semibold">
+                        @ {formatCurrency(tx.price)}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">-</span>
+                    )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={clsx("font-bold text-sm tabular-nums font-prompt", tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? "text-green-400" : "text-white")}>
-                    {tx.type === 'SELL' || tx.type === 'DEPOSIT' || tx.type === 'DIVIDEND' ? '+' : '-'}{formatCurrency(tx.amount * (tx.price || 1))}
-                  </p>
-                  {tx.symbol && <p className="text-[#823AFD] text-xs font-medium">{tx.amount} Shares</p>}
-                </div>
-              </div>
-            )) : (
+              );
+            }) : (
               <div className="py-12 text-center text-[#9898C8]">
                 <p className="text-sm">No transactions during {getRangeLabel(timeRange).toLowerCase()}.</p>
                 <button

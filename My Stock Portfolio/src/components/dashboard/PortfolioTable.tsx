@@ -28,6 +28,7 @@ export interface HoldingWithPeriod extends Holding {
 type SortKey = 
   | 'symbol' 
   | 'quantity' 
+  | 'avgCost'
   | 'lastPrice' 
   | 'totalCost' 
   | 'currentValue' 
@@ -375,19 +376,20 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
         <table className="w-full">
           <thead className="bg-[#161926] border-b border-[#2A2E45]">
             <tr>
-              {/* Section 1 (Red Box): Investor's Cost Basis (Left Aligned) */}
+              {/* Section 1: Investor's Cost Basis (Left Aligned) */}
               {renderTH('Symbol', 'symbol', 'left')}
               {renderTH('Shares', 'quantity', 'left')}
-              {renderTH('Price', 'lastPrice', 'left')}
+              {renderTH('Avg Cost', 'avgCost', 'left')}
               {renderTH('Total Cost', 'totalCost', 'left', 'border-r border-[#2A2E45]/70')}
 
-              {/* Section 2 (Yellow Box): Current Valuation & Total P/L (Right Aligned) */}
+              {/* Section 2: Current Valuation & Total P/L (Right Aligned) */}
               {renderTH('Value', 'currentValue', 'right')}
               {renderTH('Total P/L', 'totalReturn', 'right')}
               {renderTH('Total %', 'totalReturnPercent', 'right', 'border-r border-[#2A2E45]/70')}
 
               {/* Section 3 (Amber Box): Active Focus Dynamic Range (Soft Warm Amber Highlight) */}
-              {renderTH(`${activeRangeLabel} Return`, 'activeReturn', 'right', 'bg-amber-400/[0.12] text-amber-300 font-black border-l border-amber-500/30')}
+              {renderTH('Price', 'lastPrice', 'right', 'bg-amber-400/[0.12] text-amber-300 font-black border-l border-amber-500/30')}
+              {renderTH(`${activeRangeLabel} Return`, 'activeReturn', 'right', 'bg-amber-400/[0.12] text-amber-300 font-black')}
               {renderTH(`${activeRangeLabel} %`, 'activeReturnPercent', 'right', 'bg-amber-400/[0.12] text-amber-300 font-black border-r border-[#2A2E45]/70')}
 
               {/* Section 4 (Green Box): Next-Step Ladder Benchmark & Weight */}
@@ -424,10 +426,10 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                     </span>
                   </td>
 
-                  {/* Column 3: Price */}
+                  {/* Column 3: Avg Cost */}
                   <td className="px-3 py-3 text-left whitespace-nowrap">
-                    <span className="font-bold text-white text-[14px] tabular-nums font-heading">
-                      {formatClean(h.lastPrice)}
+                    <span className="font-semibold text-slate-300 text-[14px] tabular-nums font-heading">
+                      {formatClean(h.avgCost)}
                     </span>
                   </td>
 
@@ -467,8 +469,15 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   </td>
 
                   {/* === Section 3: Active Focus Dynamic Range (Distinct BG Highlight) === */}
-                  {/* Column 8: Active Range Return (Amount) */}
+                  {/* Column 8: Current Market Price (Moved to 1D section) */}
                   <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.08] group-hover:bg-amber-400/[0.14] transition-colors border-l border-amber-500/20">
+                    <span className="font-bold text-white text-[14px] tabular-nums font-heading">
+                      {formatClean(h.lastPrice)}
+                    </span>
+                  </td>
+
+                  {/* Column 9: Active Range Return (Amount) */}
+                  <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.08] group-hover:bg-amber-400/[0.14] transition-colors">
                     <span className={clsx(
                       "font-bold text-[14px] tabular-nums font-heading",
                       isActiveProfit ? "text-emerald-400" : "text-rose-400"
@@ -477,7 +486,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                     </span>
                   </td>
 
-                  {/* Column 9: Active Range % */}
+                  {/* Column 10: Active Range % */}
                   <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.08] group-hover:bg-amber-400/[0.14] transition-colors border-r border-[#2A2E45]/70">
                     <span className={clsx(
                       "font-bold text-[14px] tabular-nums font-heading",
@@ -557,7 +566,8 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               </td>
 
               {/* Section 3 Total (Highlighted BG) */}
-              <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.10] border-l border-amber-500/25">
+              <td className="px-3 py-3 text-right text-slate-400 font-heading bg-amber-400/[0.10] border-l border-amber-500/25">-</td>
+              <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.10]">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
                   totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
@@ -616,6 +626,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading border-r border-[#2A2E45]/70">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading bg-amber-400/[0.04] border-l border-amber-500/15">-</td>
+              <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading bg-amber-400/[0.04]">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading bg-amber-400/[0.04] border-r border-[#2A2E45]/70">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
               <td className="px-3 py-3 text-right text-sm text-slate-400 font-heading">-</td>
@@ -655,7 +666,8 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   {totalTotalPnl >= 0 ? '+' : ''}{totalTotalPnlPercent.toFixed(2)}%
                 </span>
               </td>
-              <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70 border-l border-[#823AFD]/20">
+              <td className="px-3 py-3 text-right text-slate-400 font-heading bg-[#181D33]/70 border-l border-[#823AFD]/20">-</td>
+              <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
                   totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
