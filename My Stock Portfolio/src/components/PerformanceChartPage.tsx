@@ -604,8 +604,9 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         }
     
         const isRef = name && name !== 'My Portfolio';
-        const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-        const textWidth = Math.max(54, formattedValue.length * 7 + 14);
+        const rawPct = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+        const labelText = isRef ? `${rawPct} - ${name}` : `${rawPct} - Portfolio`;
+        const textWidth = Math.max(64, labelText.length * 7 + 16);
     
         return (
             <g transform={`translate(0, ${yOffset})`}>
@@ -616,8 +617,8 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                     height={22} 
                     fill="#111827" 
                     stroke={stroke} 
-                    strokeOpacity={isRef ? 0.4 : 1}
-                    strokeWidth={isRef ? "1.2" : "1.8"}
+                    strokeOpacity={isRef ? 0.6 : 1}
+                    strokeWidth={isRef ? "1.4" : "1.8"}
                     rx="4" 
                     style={{
                         filter: isRef ? 'none' : 'drop-shadow(0 2px 5px rgba(0,0,0,0.85))'
@@ -627,7 +628,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                     x={x + 8 + (textWidth / 2)} 
                     y={y + 4} 
                     fill="#FFFFFF" 
-                    fillOpacity={isRef ? 0.75 : 1}
+                    fillOpacity={isRef ? 0.9 : 1}
                     fontSize="11.5px" 
                     fontWeight="bold"
                     fontFamily="'Roboto Flex', sans-serif"
@@ -637,7 +638,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                         textShadow: '0 1px 2px rgba(0,0,0,0.9)'
                     }}
                 >
-                    {formattedValue}
+                    {labelText}
                 </text>
             </g>
         );
@@ -717,7 +718,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                                         <div key={name} className="flex items-center">
                                             <input id={`checkbox-${name}`} type="checkbox" checked={isVisible} onChange={() => handleVisibilityChange(name as keyof typeof visibleLines)} className="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-500 focus:ring-blue-600 cursor-pointer" style={{accentColor: color}} />
                                             <label htmlFor={`checkbox-${name}`} className="ml-2 flex items-center text-sm text-gray-300 cursor-pointer">
-                                                <span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: color, opacity: name === 'My Portfolio' ? 1 : 0.4 }}></span>
+                                                <span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: color, opacity: name === 'My Portfolio' ? 1 : 0.6 }}></span>
                                                 <span className={name === 'My Portfolio' ? 'text-white font-bold' : 'text-gray-400'}>{name}</span>
                                             </label>
                                         </div>
@@ -779,7 +780,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                              </div>
                         ) : (
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={displayData} margin={{ top: 5, right: 90, left: -10, bottom: 5 }}>
+                                <LineChart data={displayData} margin={{ top: 5, right: 155, left: -10, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
                                     <XAxis dataKey="date" stroke="#9CA3AF" tickFormatter={(tick) => new Date(tick).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} name="Date" />
                                     <YAxis stroke="#9CA3AF" tickFormatter={(tick) => `${tick.toFixed(0)}%`} domain={['auto', 'auto']} allowDataOverflow name="Cumulative Return (%)" />
@@ -792,7 +793,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                                                 type="monotone" 
                                                 dataKey={name} 
                                                 stroke={lineColors[name as keyof typeof lineColors]} 
-                                                strokeOpacity={name === 'My Portfolio' ? 1 : 0.4}
+                                                strokeOpacity={name === 'My Portfolio' ? 1 : 0.6}
                                                 dot={false} 
                                                 strokeWidth={name === 'My Portfolio' ? 3.5 : 1.75} 
                                                 name={name} 

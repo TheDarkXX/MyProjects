@@ -9,7 +9,11 @@ import { UnderwaterDrawdownChart } from '../charts/UnderwaterDrawdownChart';
 import { ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle2, TrendingUp, DollarSign, Activity, Sparkles, Layers } from 'lucide-react';
 import clsx from 'clsx';
 
-export const RiskPage: React.FC = () => {
+export interface RiskPageProps {
+  showHeader?: boolean;
+}
+
+export const RiskPage: React.FC<RiskPageProps> = ({ showHeader = true }) => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
   const { transactions, fetchTransactions } = useTransactionStore();
   const { historical, fetchPrices, fetchHistorical, fetchExchangeRate, exchangeRate } = usePriceStore();
@@ -158,30 +162,32 @@ export const RiskPage: React.FC = () => {
   return (
     <div className="w-full max-w-[2800px] mx-auto pb-16 space-y-6 px-1">
       {/* 1. Page Header */}
-      <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 via-[#823AFD] to-[#FC2D79] flex items-center justify-center shadow-[0_4px_16px_rgba(244,63,94,0.3)]">
-            <ShieldCheck className="w-6 h-6 text-white" />
+      {showHeader && (
+        <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 via-[#823AFD] to-[#FC2D79] flex items-center justify-center shadow-[0_4px_16px_rgba(244,63,94,0.3)]">
+              <ShieldCheck className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                Risk & Alpha Management Center
+                <span className="text-xs px-3 py-1 rounded-full bg-[#1A1D2D] border border-[#2A2E45] text-rose-400 font-bold">
+                  Level 3 Analytics
+                </span>
+              </h2>
+              <p className="text-xs sm:text-sm text-[#9898C8] mt-1">
+                ศูนย์ควบคุมความเสี่ยง วัดผลความคุ้มค่าผลตอบแทนเทียบความเสี่ยง (Risk-Adjusted Return) และจุดย่อตัวของพอร์ต
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-              Risk & Alpha Management Center
-              <span className="text-xs px-3 py-1 rounded-full bg-[#1A1D2D] border border-[#2A2E45] text-rose-400 font-bold">
-                Level 3 Analytics
-              </span>
-            </h2>
-            <p className="text-xs sm:text-sm text-[#9898C8] mt-1">
-              ศูนย์ควบคุมความเสี่ยง วัดผลความคุ้มค่าผลตอบแทนเทียบความเสี่ยง (Risk-Adjusted Return) และจุดย่อตัวของพอร์ต
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2 self-start xl:self-auto bg-[#1A1D2D] px-4 py-2 rounded-2xl border border-[#2A2E45]">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-xs text-[#CBD5E1] font-semibold">Active Portfolio:</span>
-          <span className="text-xs font-bold text-white">{activePortfolio?.name || 'My Portfolio'}</span>
+          <div className="flex items-center gap-2 self-start xl:self-auto bg-[#1A1D2D] px-4 py-2 rounded-2xl border border-[#2A2E45]">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-xs text-[#CBD5E1] font-semibold">Active Portfolio:</span>
+            <span className="text-xs font-bold text-white">{activePortfolio?.name || 'My Portfolio'}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 2. Top Executive Risk Gauges */}
       <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
