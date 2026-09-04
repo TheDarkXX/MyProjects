@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { usePortfolioStore } from '../stores/portfolioStore';
 import { useTransactionStore } from '../stores/transactionStore';
 import { usePriceStore } from '../stores/priceStore';
+import { resolveStockCategory } from '../components/rebalance/StrategyConfigs';
 
 export interface Holding {
   symbol: string;
@@ -48,7 +49,7 @@ export function useHoldings() {
         if (!symbolMeta[tx.symbol]) {
           symbolMeta[tx.symbol] = {};
         }
-        if (tx.stock_type) symbolMeta[tx.symbol].stockType = tx.stock_type;
+        symbolMeta[tx.symbol].stockType = resolveStockCategory(tx.symbol, tx.stock_type, tx.type, tx.asset);
         if (tx.sector) symbolMeta[tx.symbol].sector = tx.sector;
       }
 
@@ -98,7 +99,7 @@ export function useHoldings() {
     // Calculate current values
     Object.keys(holds).forEach(symbol => {
       const quantity = holds[symbol].quantity;
-      if (quantity <= 0.000001) return; // Skip zero/negative holdings
+      if (quantity <= 0.0001) return; // Skip zero, negative, or residual dust holdings (< 0.0001)
 
       const totalCost = holds[symbol].totalCost;
       const avgCost = totalCost / quantity;
@@ -130,7 +131,7 @@ export function useHoldings() {
           totalReturn,
           totalReturnPercent,
           weightPercent: 0, // Will calculate below
-          stockType: symbolMeta[symbol]?.stockType || 'Core Compounder',
+          stockType: symbolMeta[symbol]?.stockType || resolveStockCategory(symbol) || 'Compounders',
           sector: symbolMeta[symbol]?.sector || 'Technology',
         });
       }

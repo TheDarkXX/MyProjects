@@ -87,6 +87,28 @@ export const CATEGORY_CONFIG: Record<StrategyCategory, {
   },
 };
 
+export const resolveStockCategory = (symbol: string, rawStockType?: string | null, type?: string, asset?: string): StrategyCategory => {
+  if (rawStockType) {
+    if (rawStockType === 'Core Compounder') return 'Compounders';
+    if (rawStockType === 'Hyper Growth') return 'Growth';
+    if (rawStockType === 'Defensive / Value') return 'Defensive';
+    if (rawStockType === 'Index / ETF') return 'ETF';
+    if (STRATEGY_CATEGORIES.includes(rawStockType as StrategyCategory)) {
+      return rawStockType as StrategyCategory;
+    }
+  }
+  const sym = (symbol || '').toUpperCase();
+  if (sym === 'COST' || sym === 'ISRG' || sym === 'AAPL' || sym === 'MSFT' || sym === 'GOOGL' || sym === 'GOOG' || sym === 'V' || sym === 'MA') return 'Compounders';
+  if (sym === 'NVDA' || sym === 'CRWD' || sym === 'MELI' || sym === 'RBRK' || sym === 'PLTR' || sym === 'META') return 'Growth';
+  if (sym === 'AMZN' || sym === 'TSLA' || sym === 'AMD') return 'Mid-Tier';
+  if (sym === 'KO' || sym === 'JNJ' || sym === 'PG' || sym === 'O' || sym === 'TLT' || sym === 'GLD') return 'Defensive';
+  if (sym === 'HIMS' || sym === 'SQ' || sym === 'SOFI') return 'Small Cap';
+  if (sym === 'ASTS' || sym === 'RKLB' || sym === 'CRWV' || sym === 'CRSP' || sym === 'BTC-USD' || sym === 'BTC') return 'Bets';
+  if (sym === 'SCHG' || sym === 'VOO' || sym === 'QQQ' || sym === 'SPY' || sym === 'SCHD' || sym === 'VTI' || sym === 'IVV') return 'ETF';
+  if (sym === 'CASH' || type === 'DEPOSIT' || type === 'INTEREST' || type === 'WITHDRAW' || asset === 'Cash') return 'Cash';
+  return 'Compounders';
+};
+
 export interface StrategyTemplate {
   id: string;
   name: string;

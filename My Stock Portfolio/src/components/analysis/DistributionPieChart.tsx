@@ -6,7 +6,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { Layers } from 'lucide-react';
 import clsx from 'clsx';
-import { CATEGORY_CONFIG, STRATEGY_CATEGORIES, StrategyCategory } from '../rebalance/StrategyConfigs';
+import { CATEGORY_CONFIG, STRATEGY_CATEGORIES, StrategyCategory, resolveStockCategory } from '../rebalance/StrategyConfigs';
 
 interface Props {
   holdings: Holding[];
@@ -63,7 +63,7 @@ const PALETTE = [
 ];
 
 export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
-  const [mode, setMode] = useState<'Sector' | 'Asset' | 'Type'>('Sector');
+  const [mode, setMode] = useState<'Sector' | 'Asset' | 'Strategy'>('Sector');
   const [activeIndex, setActiveIndex] = useState<number>(0);
 
   const { transactions } = useTransactionStore();
@@ -86,7 +86,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
         if (tx.symbol) {
           txMetaMap[tx.symbol] = {
             asset: tx.asset || 'Stock',
-            stock_type: tx.stock_type || 'Unknown'
+            stock_type: resolveStockCategory(tx.symbol, tx.stock_type, tx.type, tx.asset)
           };
         }
       });
@@ -104,7 +104,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
       } else if (mode === 'Asset') {
         key = txMetaMap[h.symbol]?.asset || 'Stock';
       } else {
-        key = txMetaMap[h.symbol]?.stock_type || 'Unknown';
+        key = h.stockType || txMetaMap[h.symbol]?.stock_type || resolveStockCategory(h.symbol);
       }
 
       groups[key] = (groups[key] || 0) + h.currentValue;
@@ -208,7 +208,7 @@ export const DistributionPieChart: React.FC<Props> = ({ holdings }) => {
 
         {/* Mode Selector */}
         <div className="flex bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-xl gap-1">
-          {(['Sector', 'Asset', 'Type'] as const).map(m => (
+          {(['Sector', 'Asset', 'Strategy'] as const).map(m => (
             <button
               key={m}
               onClick={() => { setMode(m); setActiveIndex(0); }}

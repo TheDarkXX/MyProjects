@@ -94,11 +94,11 @@ export const LifecycleMatrixCard: React.FC<LifecycleMatrixCardProps> = ({ holdin
       const rawType = (h.stockType || (h as any).stock_type || '').toLowerCase().trim();
       
       let targetKey = 'Core Compounder';
-      if (rawType.includes('small') || rawType.includes('speculative')) {
+      if (rawType.includes('small') || rawType.includes('speculative') || rawType.includes('bet')) {
         targetKey = 'Small Cap';
-      } else if (rawType.includes('growth') || rawType.includes('winner') || rawType.includes('hyper')) {
+      } else if (rawType.includes('growth') || rawType.includes('winner') || rawType.includes('hyper') || rawType.includes('mid-tier')) {
         targetKey = 'Hyper Growth';
-      } else if (rawType.includes('dividend') || rawType.includes('yield') || rawType.includes('income')) {
+      } else if (rawType.includes('dividend') || rawType.includes('yield') || rawType.includes('income') || rawType.includes('defensive')) {
         targetKey = 'Dividend Growth';
       } else {
         targetKey = 'Core Compounder';
