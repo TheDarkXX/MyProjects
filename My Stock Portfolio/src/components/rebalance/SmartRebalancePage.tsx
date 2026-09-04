@@ -1510,22 +1510,34 @@ export const SmartRebalancePage: React.FC = () => {
                   {/* Mode 2 Visual Charts Grid */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Chart A: Actual vs Blueprint Target Allocation Donut */}
-                    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-5 shadow-lg flex flex-col justify-between">
+                    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.36)] flex flex-col justify-between relative overflow-hidden">
+                      {/* Ambient corner glow */}
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#823AFD]/10 via-[#06B6D4]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+
                       <div>
-                        <div className="flex items-center justify-between mb-3">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-4">
                           <div>
                             <h4 className="text-base font-bold text-white flex items-center gap-2">
                               <PieChartIcon className="w-4 h-4 text-[#823AFD]" /> Actual vs Target Allocation
                             </h4>
-                            <p className="text-xs text-[#CBD5E1] mt-0.5">สัดส่วนปัจจุบันจริง (ซ้าย) เทียบกับเป้าหมาย Blueprint (ขวา)</p>
+                            <p className="text-xs text-[#CBD5E1] mt-0.5">
+                              เปรียบเทียบสัดส่วนพอร์ตจริง (ซ้าย) กับเป้าหมาย Blueprint (ขวา) เพื่อหาส่วนต่าง
+                            </p>
                           </div>
+                          <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#161926] border border-[#2A2E45] text-slate-300 font-bold hidden sm:inline-flex">
+                            Twin Gauges
+                          </span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 h-52">
-                          {/* Actual Donut */}
-                          <div className="flex flex-col items-center justify-center relative">
-                            <div className="text-xs font-bold text-slate-300 mb-1">Actual (ปัจจุบัน)</div>
-                            <div className="w-full h-40">
+                        {/* Twin Modern Gauges */}
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                          {/* Bay 1: Actual Gauge */}
+                          <div className="bg-[#161926]/80 border border-[#2A2E45]/80 rounded-2xl p-3.5 flex flex-col items-center relative shadow-inner">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-extrabold uppercase tracking-wider mb-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Actual (ปัจจุบัน)
+                            </span>
+                            <div className="relative w-full h-44 flex items-center justify-center">
                               <ResponsiveContainer width="100%" height="100%">
                                 <RechartsPieChart>
                                   <Pie
@@ -1534,9 +1546,11 @@ export const SmartRebalancePage: React.FC = () => {
                                     nameKey="name"
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={36}
-                                    outerRadius={56}
-                                    paddingAngle={2}
+                                    innerRadius={48}
+                                    outerRadius={68}
+                                    paddingAngle={3}
+                                    stroke="#111418"
+                                    strokeWidth={3}
                                   >
                                     {actualDonutData.map((entry, index) => (
                                       <Cell key={`actual-cell-${index}`} fill={entry.color} />
@@ -1547,9 +1561,9 @@ export const SmartRebalancePage: React.FC = () => {
                                       if (active && payload && payload.length) {
                                         const data = payload[0].payload;
                                         return (
-                                          <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl">
-                                            <div className="font-bold text-white">{data.name}</div>
-                                            <div className="text-slate-300">สัดส่วนจริง: <span className="font-bold text-emerald-400">{data.value}%</span></div>
+                                          <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-0.5">
+                                            <div className="font-extrabold text-white text-[13px]">{data.name}</div>
+                                            <div className="text-slate-200">สัดส่วนจริง: <span className="font-black text-emerald-400">{data.value}%</span></div>
                                             <div className="text-slate-400">มูลค่า: {formatMoney(data.currentVal)}</div>
                                           </div>
                                         );
@@ -1559,13 +1573,23 @@ export const SmartRebalancePage: React.FC = () => {
                                   />
                                 </RechartsPieChart>
                               </ResponsiveContainer>
+                              {/* Center Readout */}
+                              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current</span>
+                                <span className="text-base sm:text-lg font-black text-white tabular-nums tracking-tight">
+                                  {totalNetWorth > 0 ? formatMoney(totalNetWorth) : '$0'}
+                                </span>
+                                <span className="text-[10px] font-bold text-emerald-400">Portfolio Val</span>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Target Donut */}
-                          <div className="flex flex-col items-center justify-center relative">
-                            <div className="text-xs font-bold text-slate-300 mb-1">Blueprint Target (เป้า)</div>
-                            <div className="w-full h-40">
+                          {/* Bay 2: Target Blueprint Gauge */}
+                          <div className="bg-[#161926]/80 border border-[#2A2E45]/80 rounded-2xl p-3.5 flex flex-col items-center relative shadow-inner">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-[11px] font-extrabold uppercase tracking-wider mb-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" /> Blueprint (เป้า)
+                            </span>
+                            <div className="relative w-full h-44 flex items-center justify-center">
                               <ResponsiveContainer width="100%" height="100%">
                                 <RechartsPieChart>
                                   <Pie
@@ -1574,9 +1598,11 @@ export const SmartRebalancePage: React.FC = () => {
                                     nameKey="name"
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={36}
-                                    outerRadius={56}
-                                    paddingAngle={2}
+                                    innerRadius={48}
+                                    outerRadius={68}
+                                    paddingAngle={3}
+                                    stroke="#111418"
+                                    strokeWidth={3}
                                   >
                                     {targetDonutData.map((entry, index) => (
                                       <Cell key={`target-cell-${index}`} fill={entry.color} />
@@ -1587,9 +1613,9 @@ export const SmartRebalancePage: React.FC = () => {
                                       if (active && payload && payload.length) {
                                         const data = payload[0].payload;
                                         return (
-                                          <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl">
-                                            <div className="font-bold text-white">{data.name}</div>
-                                            <div className="text-slate-300">เป้าหมาย: <span className="font-bold text-[#06B6D4]">{data.value}%</span></div>
+                                          <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-0.5">
+                                            <div className="font-extrabold text-white text-[13px]">{data.name}</div>
+                                            <div className="text-slate-200">เป้าหมาย: <span className="font-black text-[#06B6D4]">{data.value}%</span></div>
                                           </div>
                                         );
                                       }
@@ -1598,18 +1624,46 @@ export const SmartRebalancePage: React.FC = () => {
                                   />
                                 </RechartsPieChart>
                               </ResponsiveContainer>
+                              {/* Center Readout */}
+                              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target Goal</span>
+                                <span className="text-base sm:text-lg font-black text-cyan-400 tabular-nums tracking-tight">100%</span>
+                                <span className="text-[10px] font-bold text-[#823AFD]">Blueprint</span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Mini Asset Badges Legend */}
-                      <div className="flex flex-wrap gap-1.5 mt-2 justify-center max-h-16 overflow-y-auto">
-                        {actualDonutData.map(item => (
-                          <span key={item.name} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#161926] border border-[#2A2E45] text-xs font-medium text-slate-200">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                            {item.name} <span className="text-slate-300 font-bold">{item.value}%</span>
-                          </span>
+                      {/* Comparative Asset Breakdown Strip */}
+                      <div className="mt-4 pt-3.5 border-t border-[#2A2E45]/60 space-y-2 max-h-36 overflow-y-auto pr-1">
+                        {matrixAnalysis.map((item) => (
+                          <div 
+                            key={item.symbol} 
+                            className="flex items-center justify-between p-2 rounded-xl bg-[#161926]/70 border border-[#2A2E45]/50 hover:border-[#2A2E45] transition-all text-xs"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getAssetColor(item.symbol, 0) }} />
+                              <span className="font-extrabold text-white text-[13px]">{item.symbol}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <span className="text-slate-200 font-bold">{item.actualPct.toFixed(1)}%</span>
+                                <span className="text-slate-500 mx-1">→</span>
+                                <span className="text-cyan-400 font-bold">{item.targetPct}%</span>
+                              </div>
+                              <span className={clsx(
+                                "px-2 py-0.5 rounded-md font-extrabold text-[11px] min-w-[54px] text-center",
+                                item.status === 'on_target' 
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                                  : item.deltaPct > 0 
+                                    ? "bg-blue-500/15 text-blue-400 border border-blue-500/25"
+                                    : "bg-amber-500/15 text-amber-400 border border-amber-500/25"
+                              )}>
+                                {item.status === 'on_target' ? 'Target' : `${item.deltaPct > 0 ? '+' : ''}${item.deltaPct.toFixed(1)}%`}
+                              </span>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -1810,63 +1864,106 @@ export const SmartRebalancePage: React.FC = () => {
                   {/* Mode 4 Visual Charts Grid */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Chart A: Income Share Donut */}
-                    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-5 shadow-lg flex flex-col justify-between">
+                    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.36)] flex flex-col justify-between relative overflow-hidden">
+                      {/* Ambient corner glow */}
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-amber-500/10 via-orange-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+
                       <div>
+                        {/* Header */}
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <h4 className="text-base font-bold text-white flex items-center gap-2">
-                              <PieChartIcon className="w-4 h-4 text-amber-400" /> Dividend Contribution
+                              <PieChartIcon className="w-4 h-4 text-amber-400" /> Dividend Income Contribution
                             </h4>
-                            <p className="text-xs text-[#CBD5E1] mt-0.5">สัดส่วนเงินปันผลที่ได้รับแยกตามหุ้นในพอร์ต</p>
+                            <p className="text-xs text-[#CBD5E1] mt-0.5">
+                              สัดส่วนกระแสเงินสดปันผลที่ได้รับแยกตามหุ้นแต่ละตัวในพอร์ต
+                            </p>
+                          </div>
+                          <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#161926] border border-[#2A2E45] text-amber-300 font-bold hidden sm:inline-flex">
+                            Yield Breakdown
+                          </span>
+                        </div>
+
+                        {/* Split Executive Layout: Donut on Left + Contribution Leaderboard on Right */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center mt-2">
+                          {/* Left: Donut with Center Stat */}
+                          <div className="md:col-span-5 relative w-full h-52 flex items-center justify-center">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <RechartsPieChart>
+                                <Pie
+                                  data={dividendStats.dividendDonutData}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={54}
+                                  outerRadius={78}
+                                  paddingAngle={4}
+                                  stroke="#111418"
+                                  strokeWidth={3}
+                                >
+                                  {dividendStats.dividendDonutData.map((entry, index) => (
+                                    <Cell key={`div-cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Pie>
+                                <RechartsTooltip
+                                  content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                      const data = payload[0].payload;
+                                      return (
+                                        <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-1">
+                                          <div className="font-extrabold text-white text-[13px]">{data.name}</div>
+                                          <div className="text-slate-200">เงินปันผล: <span className="font-black text-amber-400">{formatMoney(data.value)}/ปี</span></div>
+                                          <div className="text-slate-200">สัดส่วนพอร์ตปันผล: <span className="font-bold text-white">{data.pct}%</span></div>
+                                          <div className="text-slate-400">Div Yield: {data.divYield}%</div>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  }}
+                                />
+                              </RechartsPieChart>
+                            </ResponsiveContainer>
+                            {/* Center Metric */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                              <span className="text-[10px] font-bold text-amber-400/90 uppercase tracking-widest">Est. Annual</span>
+                              <span className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tight">
+                                {formatMoney(dividendStats.totalAnnualIncomeUsd)}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-300">
+                                ~{formatMoney(dividendStats.totalAnnualIncomeUsd / 12)}/mo
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Right: Asset Contribution Leaderboard with progress bars */}
+                          <div className="md:col-span-7 space-y-2.5 max-h-52 overflow-y-auto pr-1">
+                            {dividendStats.dividendDonutData.map(item => (
+                              <div key={item.name} className="p-2.5 rounded-2xl bg-[#161926]/80 border border-[#2A2E45]/80 hover:border-[#2A2E45] transition-all shadow-sm">
+                                <div className="flex items-center justify-between text-xs mb-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                                    <span className="font-extrabold text-white text-[13px]">{item.name}</span>
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#1A1D2D] text-emerald-400 font-bold border border-[#2A2E45]">
+                                      Yield {item.divYield}%
+                                    </span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="font-black text-amber-400 text-[13px]">{formatMoney(item.value)}</span>
+                                    <span className="text-slate-400 text-[11px] ml-1">/ปี ({item.pct}%)</span>
+                                  </div>
+                                </div>
+                                {/* Micro progress bar */}
+                                <div className="w-full bg-[#1A1D2D] h-1.5 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all duration-500"
+                                    style={{ width: `${Math.max(6, Math.min(100, item.pct))}%`, backgroundColor: item.color }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-
-                        <div className="w-full h-56">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <RechartsPieChart>
-                              <Pie
-                                data={dividendStats.dividendDonutData}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={48}
-                                outerRadius={74}
-                                paddingAngle={2}
-                              >
-                                {dividendStats.dividendDonutData.map((entry, index) => (
-                                  <Cell key={`div-cell-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                              <RechartsTooltip
-                                content={({ active, payload }) => {
-                                  if (active && payload && payload.length) {
-                                    const data = payload[0].payload;
-                                    return (
-                                      <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-1">
-                                        <div className="font-bold text-white">{data.name}</div>
-                                        <div className="text-slate-300">เงินปันผล: <span className="font-bold text-amber-400">{formatMoney(data.value)}/ปี</span></div>
-                                        <div className="text-slate-300">สัดส่วนพอร์ตปันผล: <span className="font-bold text-white">{data.pct}%</span></div>
-                                        <div className="text-slate-400">Div Yield: {data.divYield}%</div>
-                                      </div>
-                                    );
-                                  }
-                                  return null;
-                                }}
-                              />
-                            </RechartsPieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-
-                      {/* Legend Pills */}
-                      <div className="flex flex-wrap gap-1.5 mt-2 justify-center max-h-16 overflow-y-auto">
-                        {dividendStats.dividendDonutData.map(item => (
-                          <span key={item.name} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#161926] border border-[#2A2E45] text-xs font-medium text-slate-200">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                            {item.name} <span className="text-amber-400 font-bold">{formatMoney(item.value)}</span> <span className="text-slate-400">({item.pct}%)</span>
-                          </span>
-                        ))}
                       </div>
                     </div>
 
