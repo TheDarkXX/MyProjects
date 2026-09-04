@@ -179,3 +179,79 @@ export async function fetchYahooSearch(query) {
     return [];
   }
 }
+
+const technicalsCache = new Map();
+const TECHNICALS_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Fetch technical price levels (Current Price, EMA 150, SMA 50, SMA 200, Sector)
+ * @param {string} symbol
+ */
+export async function fetchYahooTechnicals(symbol) {
+  if (!symbol || symbol === 'CASH') return null;
+  const upper = symbol.toUpperCase();
+
+  const cached = technicalsCache.get(upper);
+  if (cached && (Date.now() - cached.timestamp < TECHNICALS_CACHE_TTL)) {
+    return cached.data;
+  }
+
+  try {
+    const q = await yahooFinance.quote(upper).catch(() => null);
+    if (!q) return null;
+
+    const currentPrice = q.regularMarketPrice || 0;
+    const sma50 = q.fiftyDayAverage ? Number(q.fiftyDayAverage.toFixed(2)) : null;
+    const sma200 = q.twoHundredDayAverage ? Number(q.twoHundredDayAverage.toFixed(2)) : null;
+    const currency = q.currency || 'USD';
+
+    let ema150 = null;
+    let ema50 = null;
+    let ema200 = null;
+
+    try {
+      const from = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const chart = await yahooFinance.chart(upper, { period1: from, interval: '1d' });
+      if (chart && chart.quotes && chart.quotes.length > 0) {
+        const closes = chart.quotes.map(x => x.close).filter(x => x !== null && x !== undefined);
+
+        const calcEMA = (data, period) => {
+          if (data.length < period) return null;
+          const k = 2 / (period + 1);
+          let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+          for (let i = period; i < data.length; i++) {
+            ema = (data[i] * k) + (ema * (1 - k));
+          }
+          return Number(ema.toFixed(2));
+        };
+
+        ema150 = calcEMA(closes, 150);
+        ema50 = calcEMA(closes, 50);
+        ema200 = calcEMA(closes, 200);
+      }
+    } catch (chartErr) {
+      console.warn(`[Yahoo] Chart calculation error for ${upper}:`, chartErr.message);
+    }
+
+    const profile = await fetchYahooProfile(upper);
+
+    const data = {
+      symbol: upper,
+      currentPrice,
+      currency,
+      sma50,
+      sma200,
+      ema50,
+      ema150,
+      ema200,
+      sector: profile?.sector || 'Core',
+      industry: profile?.industry || ''
+    };
+
+    technicalsCache.set(upper, { timestamp: Date.now(), data });
+    return data;
+  } catch (error) {
+    console.error(`[Yahoo] Error fetching technicals for ${symbol}:`, error.message);
+    return null;
+  }
+}

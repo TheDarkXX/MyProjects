@@ -85,4 +85,33 @@ pricesRoutes.get('/search', async (c) => {
   }
 });
 
+// Fetch technical indicators (EMA150, SMA50, SMA200, Current Price, Sector)
+pricesRoutes.get('/technicals/:symbol', async (c) => {
+  const symbol = c.req.param('symbol');
+  if (!symbol) return c.json({ error: 'Symbol is required' }, 400);
+  try {
+    const { fetchYahooTechnicals } = await import('../services/yahoo.js');
+    const data = await fetchYahooTechnicals(symbol);
+    if (!data) return c.json({ error: 'Failed to fetch technicals' }, 404);
+    return c.json(data);
+  } catch (error) {
+    console.error('[Technicals] Error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Fetch company profile / sector from Yahoo
+pricesRoutes.get('/profile/:symbol', async (c) => {
+  const symbol = c.req.param('symbol');
+  if (!symbol) return c.json({ error: 'Symbol is required' }, 400);
+  try {
+    const { fetchYahooProfile } = await import('../services/yahoo.js');
+    const data = await fetchYahooProfile(symbol);
+    return c.json(data);
+  } catch (error) {
+    console.error('[Profile] Error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 export { pricesRoutes };

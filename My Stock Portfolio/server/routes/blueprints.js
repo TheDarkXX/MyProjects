@@ -30,6 +30,26 @@ blueprintsRoutes.post('/:portfolioId', async (c) => {
             return c.json({ error: 'Symbol is required' }, 400);
         }
 
+        let finalCategory = category;
+        if (!finalCategory || finalCategory === 'Custom') {
+            const meta = db.prepare('SELECT sector FROM stock_metadata WHERE symbol = ?').get(symbol);
+            if (meta?.sector && meta.sector.trim().length > 0) {
+                finalCategory = meta.sector;
+            } else {
+                try {
+                    const { fetchYahooProfile } = await import('../services/yahoo.js');
+                    const prof = await fetchYahooProfile(symbol);
+                    if (prof?.sector && prof.sector !== 'Other') {
+                        finalCategory = prof.sector;
+                    } else {
+                        finalCategory = 'Core';
+                    }
+                } catch (e) {
+                    finalCategory = 'Core';
+                }
+            }
+        }
+
         const stmt = db.prepare(`
             INSERT INTO portfolio_blueprints 
             (portfolio_id, symbol, target_percent, target_price, status, category, notes, updated_at) 
@@ -43,7 +63,7 @@ blueprintsRoutes.post('/:portfolioId', async (c) => {
                 updated_at = datetime('now')
         `);
 
-        stmt.run(portfolioId, symbol, target_percent || 0, target_price || null, status || 'OWNED', category || 'Core', notes || null);
+        stmt.run(portfolioId, symbol, target_percent || 0, target_price || null, status || 'OWNED', finalCategory || 'Core', notes || null);
         
         const updated = db.prepare('SELECT * FROM portfolio_blueprints WHERE portfolio_id = ? AND symbol = ?').get(portfolioId, symbol);
         return c.json(updated, 201);
@@ -153,18 +173,21 @@ blueprintsRoutes.post('/:portfolioId/auto-generate', async (c) => {
         const results = [];
         const upsertStmt = db.prepare(`
             INSERT INTO portfolio_blueprints (portfolio_id, symbol, target_percent, status, category, updated_at)
-            VALUES (?, ?, ?, 'OWNED', 'Core', datetime('now'))
+            VALUES (?, ?, ?, 'OWNED', ?, datetime('now'))
             ON CONFLICT(portfolio_id, symbol) DO UPDATE SET 
                 target_percent = excluded.target_percent,
                 status = 'OWNED',
+                category = excluded.category,
                 updated_at = datetime('now')
         `);
 
         db.transaction(() => {
             for (const holding of activeHoldings) {
                 const targetPercent = parseFloat(((holding.value / totalValue) * 100).toFixed(2));
-                upsertStmt.run(portfolioId, holding.symbol, targetPercent);
-                results.push({ symbol: holding.symbol, targetPercent });
+                const meta = db.prepare('SELECT sector FROM stock_metadata WHERE symbol = ?').get(holding.symbol);
+                const category = (meta?.sector && meta.sector.trim().length > 0) ? meta.sector : 'Core';
+                upsertStmt.run(portfolioId, holding.symbol, targetPercent, category);
+                results.push({ symbol: holding.symbol, targetPercent, category });
             }
         })();
 

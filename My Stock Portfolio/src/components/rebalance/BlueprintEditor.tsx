@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useBlueprintStore, BlueprintEntry } from '../../stores/blueprintStore';
 import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
+import { useHoldings } from '../../hooks/useHoldings';
 import { api } from '../../services/api';
 import { PRESET_TEMPLATES } from './StrategyConfigs';
-import { Search, Check, X, Edit2, Trash2 } from 'lucide-react';
+import { Search, Edit2, Trash2, Sparkles, TrendingUp, Shield, Target } from 'lucide-react';
 
 interface BlueprintEditorProps {
   portfolioId: string;
@@ -16,6 +17,19 @@ interface SearchItem {
   exchange: string;
   type: string;
   sector?: string;
+}
+
+interface TechnicalData {
+  symbol: string;
+  currentPrice: number;
+  currency: string;
+  sma50: number | null;
+  sma200: number | null;
+  ema50: number | null;
+  ema150: number | null;
+  ema200: number | null;
+  sector: string;
+  industry?: string;
 }
 
 // Reusable Symbol Search Autocomplete Input
@@ -94,7 +108,7 @@ const SymbolSearchInput: React.FC<{
           className={inputClassName || "w-full bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white uppercase font-bold outline-none focus:border-[#823AFD]"}
         />
         {loading && (
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 animate-spin text-xs">
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 animate-spin text-xs">
             ⏳
           </div>
         )}
@@ -102,8 +116,8 @@ const SymbolSearchInput: React.FC<{
 
       {isOpen && suggestions.length > 0 && (
         <div className="absolute left-0 top-full mt-1.5 w-72 bg-[#161926] border border-[#2A2E45] rounded-xl shadow-2xl p-1.5 z-50 max-h-64 overflow-y-auto">
-          <div className="text-[11px] font-bold text-[#CBD5E1] px-2 py-1 uppercase tracking-wider flex items-center gap-1 border-b border-[#2A2E45]/50 mb-1">
-            <Search className="w-3 h-3 text-[#823AFD]" /> ผลการค้นหาจาก Yahoo Finance
+          <div className="text-xs font-bold text-slate-300 px-2 py-1 uppercase tracking-wider flex items-center gap-1 border-b border-[#2A2E45]/50 mb-1">
+            <Search className="w-3.5 h-3.5 text-[#823AFD]" /> ผลการค้นหาจาก Yahoo Finance
           </div>
           {suggestions.map((item) => (
             <button
@@ -117,16 +131,21 @@ const SymbolSearchInput: React.FC<{
                   <span className="font-extrabold text-white text-sm group-hover:text-[#823AFD] transition-colors">
                     {item.symbol}
                   </span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-[#CBD5E1] border border-slate-700">
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                     {item.type}
                   </span>
                   {item.exchange && (
-                    <span className="text-[10px] text-[#CBD5E1]">{item.exchange}</span>
+                    <span className="text-xs text-slate-400">{item.exchange}</span>
                   )}
                 </div>
-                <div className="text-xs text-[#CBD5E1] line-clamp-1 mt-0.5">
+                <div className="text-xs text-slate-300 line-clamp-1 mt-0.5">
                   {item.name}
                 </div>
+                {item.sector && (
+                  <div className="text-xs text-emerald-400 font-semibold mt-0.5">
+                    หมวด: {item.sector}
+                  </div>
+                )}
               </div>
             </button>
           ))}
@@ -139,13 +158,22 @@ const SymbolSearchInput: React.FC<{
 export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId }) => {
   const { blueprints, isLoading, error, fetchBlueprints, upsertBlueprint, updateBlueprint, deleteBlueprint, autoGenerate, applyTemplate } = useBlueprintStore();
   const { currency } = useUiStore();
-  const { exchangeRate } = usePriceStore();
+  const { prices, fetchPrices, exchangeRate } = usePriceStore();
+  const { holdings } = useHoldings();
+
+  // Set of actively owned symbols in portfolio
+  const ownedSymbols = useMemo(() => {
+    return new Set(holdings.filter(h => h.quantity > 0.0001).map(h => h.symbol.toUpperCase()));
+  }, [holdings]);
 
   // Add form state
   const [newSymbol, setNewSymbol] = useState('');
   const [newTargetPercent, setNewTargetPercent] = useState<number | ''>('');
   const [newStatus, setNewStatus] = useState<'OWNED' | 'WATCHLIST'>('WATCHLIST');
   const [newTargetPrice, setNewTargetPrice] = useState<number | ''>('');
+  const [newCategory, setNewCategory] = useState('Core');
+  const [techData, setTechData] = useState<TechnicalData | null>(null);
+  const [techLoading, setTechLoading] = useState(false);
 
   // Inline edit state
   const [editingSymbol, setEditingSymbol] = useState<string | null>(null);
@@ -153,6 +181,8 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
   const [editPercent, setEditPercent] = useState<number | ''>('');
   const [editStatus, setEditStatus] = useState<'OWNED' | 'WATCHLIST'>('WATCHLIST');
   const [editPrice, setEditPrice] = useState<number | ''>('');
+  const [editCategory, setEditCategory] = useState('Core');
+  const [editTechData, setEditTechData] = useState<TechnicalData | null>(null);
 
   const currSymbol = currency === 'THB' ? '฿' : '$';
   const effectiveRate = exchangeRate > 0 ? exchangeRate : 35.0;
@@ -169,6 +199,60 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
     }
   }, [portfolioId, fetchBlueprints]);
 
+  // Fetch prices for all blueprint symbols
+  useEffect(() => {
+    if (blueprints.length > 0) {
+      const symbols = blueprints.map(b => b.symbol);
+      fetchPrices(symbols);
+    }
+  }, [blueprints, fetchPrices]);
+
+  // Auto-detect status & fetch technicals (EMA150, SMA200, SMA50) when newSymbol changes
+  useEffect(() => {
+    const sym = newSymbol.trim().toUpperCase();
+    if (sym.length === 0) {
+      setTechData(null);
+      return;
+    }
+
+    // Auto-detect status based on active portfolio holdings
+    if (ownedSymbols.has(sym)) {
+      setNewStatus('OWNED');
+    } else {
+      setNewStatus('WATCHLIST');
+    }
+
+    const timer = setTimeout(async () => {
+      setTechLoading(true);
+      try {
+        const data = await api.prices.technicals(sym);
+        if (data) {
+          setTechData(data);
+          if (data.sector && data.sector !== 'Other') {
+            setNewCategory(data.sector);
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching technicals for', sym, err);
+      } finally {
+        setTechLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [newSymbol, ownedSymbols]);
+
+  // Fetch technicals when editing an existing symbol
+  useEffect(() => {
+    if (!editingSymbol) {
+      setEditTechData(null);
+      return;
+    }
+    api.prices.technicals(editingSymbol).then(data => {
+      if (data) setEditTechData(data);
+    }).catch(() => {});
+  }, [editingSymbol]);
+
   const handleAdd = async () => {
     if (!newSymbol || newTargetPercent === '') return;
     await upsertBlueprint(portfolioId, {
@@ -176,20 +260,25 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
       target_percent: Number(newTargetPercent),
       target_price: newTargetPrice !== '' ? Number(newTargetPrice) : null,
       status: newStatus,
-      category: 'Custom'
+      category: newCategory || 'Core'
     });
     setNewSymbol('');
     setNewTargetPercent('');
     setNewTargetPrice('');
     setNewStatus('WATCHLIST');
+    setNewCategory('Core');
+    setTechData(null);
   };
 
   const handleStartEdit = (bp: BlueprintEntry) => {
     setEditingSymbol(bp.symbol);
     setEditSymbol(bp.symbol);
     setEditPercent(bp.target_percent);
-    setEditStatus(bp.status);
+    // Auto-detect status from ownedSymbols if desired
+    const autoStatus = ownedSymbols.has(bp.symbol.toUpperCase()) ? 'OWNED' : bp.status;
+    setEditStatus(autoStatus);
     setEditPrice(bp.target_price !== null ? bp.target_price : '');
+    setEditCategory(bp.category || 'Core');
   };
 
   const handleCancelEdit = () => {
@@ -203,6 +292,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
       target_percent: Number(editPercent),
       status: editStatus,
       target_price: editPrice !== '' ? Number(editPrice) : null,
+      category: editCategory || 'Core',
     });
     setEditingSymbol(null);
   };
@@ -217,14 +307,14 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
   const totalPercent = blueprints.reduce((acc, curr) => acc + curr.target_percent, 0);
   const isPercentValid = Math.abs(totalPercent - 100) < 0.01;
 
-  if (isLoading && blueprints.length === 0) return <div className="p-8 text-center text-[#CBD5E1]">กำลังโหลด Blueprint...</div>;
+  if (isLoading && blueprints.length === 0) return <div className="p-8 text-center text-slate-300 font-semibold">กำลังโหลด Blueprint...</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-white mb-1">Portfolio Blueprint Setup</h2>
-          <p className="text-sm text-[#CBD5E1]">กำหนดสัดส่วนเป้าหมายในอุดมคติของคุณ ระบบ Smart Rebalance จะใช้ข้อมูลนี้แนะนำการซื้อขาย</p>
+          <p className="text-sm text-slate-300">กำหนดสัดส่วนเป้าหมายในอุดมคติ ระบบ Smart Rebalance จะใช้ข้อมูลนี้คำนวณการปรับพอร์ตอัตโนมัติ</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select 
@@ -251,35 +341,50 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
       {error && <div className="bg-rose-500/10 border border-rose-500/50 text-rose-400 px-4 py-3 rounded-xl text-sm">{error}</div>}
 
       <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl overflow-visible shadow-lg">
-        <table className="w-full text-left text-sm text-[#CBD5E1]">
-          <thead className="bg-[#161926] text-xs uppercase text-[#CBD5E1] border-b border-[#2A2E45]">
+        <table className="w-full text-left text-sm text-slate-200">
+          <thead className="bg-[#161926] text-xs uppercase text-slate-300 border-b border-[#2A2E45]">
             <tr>
-              <th className="px-6 py-4 font-bold">Symbol (คลิกแก้ไขได้)</th>
-              <th className="px-6 py-4 font-bold text-right">Target %</th>
-              <th className="px-6 py-4 font-bold text-center">Status</th>
-              <th className="px-6 py-4 font-bold text-right">Target Price ({currSymbol})</th>
-              <th className="px-6 py-4 font-bold">Category</th>
-              <th className="px-6 py-4 text-right font-bold">Actions</th>
+              <th className="px-5 py-4 font-bold">Symbol</th>
+              <th className="px-5 py-4 font-bold text-right">ราคาตลาด (ปัจจุบัน)</th>
+              <th className="px-5 py-4 font-bold text-right">Target % (คลิกแก้ได้)</th>
+              <th className="px-5 py-4 font-bold text-center">Status</th>
+              <th className="px-5 py-4 font-bold text-right">Target Price ({currSymbol})</th>
+              <th className="px-5 py-4 font-bold">Category</th>
+              <th className="px-5 py-4 text-right font-bold">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2A2E45]/60">
             {blueprints.map(bp => {
               const isEditingThis = editingSymbol === bp.symbol;
+              const isActuallyOwned = ownedSymbols.has(bp.symbol.toUpperCase());
+              const currentPriceUsd = prices[bp.symbol]?.price || holdings.find(h => h.symbol.toUpperCase() === bp.symbol.toUpperCase())?.lastPrice;
+              const priceChange = prices[bp.symbol]?.percent_change;
 
               if (isEditingThis) {
                 return (
                   <tr key={bp.symbol} className="bg-[#161926] border-2 border-[#823AFD]/50">
-                    <td className="px-6 py-3">
+                    <td className="px-5 py-3">
                       <SymbolSearchInput
                         value={editSymbol}
-                        onChange={(val) => setEditSymbol(val)}
+                        onChange={(val, item) => {
+                          setEditSymbol(val);
+                          if (item?.sector) setEditCategory(item.sector);
+                        }}
                         inputClassName="w-32 bg-[#1A1D2D] border border-[#823AFD] rounded-xl px-3 py-1.5 text-sm text-white uppercase font-black outline-none"
                       />
                     </td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="px-5 py-3 text-right">
+                      <div className="font-bold text-white text-sm">
+                        {currentPriceUsd ? formatPrice(currentPriceUsd) : '-'}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <input
                           type="number"
+                          step="0.5"
+                          min="0"
+                          max="100"
                           value={editPercent}
                           onChange={(e) => setEditPercent(Number(e.target.value))}
                           className="w-20 bg-[#1A1D2D] border border-[#10B981] rounded-xl px-2.5 py-1.5 text-sm text-white text-right font-bold outline-none"
@@ -287,7 +392,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                         <span className="text-white font-bold">%</span>
                       </div>
                     </td>
-                    <td className="px-6 py-3 text-center">
+                    <td className="px-5 py-3 text-center">
                       <select
                         value={editStatus}
                         onChange={(e) => setEditStatus(e.target.value as 'OWNED' | 'WATCHLIST')}
@@ -297,17 +402,51 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                         <option value="OWNED">Owned (ถืออยู่)</option>
                       </select>
                     </td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex flex-col items-end gap-1">
+                        <input
+                          type="number"
+                          placeholder="เป้าหมาย ($)"
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(Number(e.target.value))}
+                          className="w-28 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white text-right outline-none"
+                        />
+                        {/* Quick-fill Technical Levels Chips */}
+                        {editTechData && (
+                          <div className="flex flex-wrap items-center justify-end gap-1 mt-1 max-w-[280px]">
+                            {editTechData.ema150 && (
+                              <button
+                                type="button"
+                                onClick={() => setEditPrice(editTechData.ema150!)}
+                                className="px-2 py-0.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-0.5"
+                                title="คลิกเพื่อใช้ EMA 150 วัน"
+                              >
+                                <Target className="w-3 h-3 text-purple-300" /> EMA150: {formatPrice(editTechData.ema150)}
+                              </button>
+                            )}
+                            {editTechData.sma200 && (
+                              <button
+                                type="button"
+                                onClick={() => setEditPrice(editTechData.sma200!)}
+                                className="px-2 py-0.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-0.5"
+                                title="คลิกเพื่อใช้ SMA 200 วัน"
+                              >
+                                <Shield className="w-3 h-3 text-blue-300" /> SMA200: {formatPrice(editTechData.sma200)}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
                       <input
-                        type="number"
-                        placeholder="เป้าหมาย ($)"
-                        value={editPrice}
-                        onChange={(e) => setEditPrice(Number(e.target.value))}
-                        className="w-28 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white text-right outline-none"
+                        type="text"
+                        value={editCategory}
+                        onChange={(e) => setEditCategory(e.target.value)}
+                        className="w-28 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-2 py-1 text-xs text-white outline-none"
                       />
                     </td>
-                    <td className="px-6 py-3 text-[#CBD5E1] text-xs font-bold">{bp.category}</td>
-                    <td className="px-6 py-3 text-right whitespace-nowrap">
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
                       <button
                         onClick={() => handleSaveEdit(bp.symbol)}
                         className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 rounded-xl text-xs font-bold transition-all mr-2"
@@ -325,9 +464,15 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                 );
               }
 
+              // Distance % between Target Price and Current Price
+              const targetDist = (bp.target_price && currentPriceUsd) 
+                ? ((bp.target_price - currentPriceUsd) / currentPriceUsd) * 100 
+                : null;
+
               return (
                 <tr key={bp.symbol} className="hover:bg-white/[0.02] transition-colors group">
-                  <td className="px-6 py-4">
+                  {/* Symbol */}
+                  <td className="px-5 py-4">
                     <button
                       type="button"
                       onClick={() => handleStartEdit(bp)}
@@ -338,15 +483,83 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
                       <Edit2 className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   </td>
-                  <td className="px-6 py-4 text-right font-black text-emerald-400 text-base">{bp.target_percent.toFixed(1)}%</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-2.5 py-1 text-xs font-bold rounded-full uppercase ${bp.status === 'OWNED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}`}>
-                      {bp.status}
+
+                  {/* Current Market Price Column */}
+                  <td className="px-5 py-4 text-right">
+                    <div className="font-extrabold text-white text-sm">
+                      {currentPriceUsd ? formatPrice(currentPriceUsd) : '-'}
+                    </div>
+                    {priceChange !== undefined && (
+                      <div className={`text-xs font-bold ${priceChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Direct Inline Editable Target % */}
+                  <td className="px-5 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        max="100"
+                        defaultValue={bp.target_percent}
+                        key={`${bp.symbol}-${bp.target_percent}`}
+                        onBlur={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && Math.abs(val - bp.target_percent) > 0.001) {
+                            updateBlueprint(portfolioId, bp.symbol, { target_percent: val });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        className="w-20 bg-transparent hover:bg-[#1A1D2D] focus:bg-[#1A1D2D] border border-transparent hover:border-[#2A2E45] focus:border-emerald-500 rounded-xl px-2 py-1 text-right font-black text-emerald-400 text-base outline-none transition-all cursor-pointer focus:cursor-text"
+                        title="คลิกแก้ Target % ได้ทันที (กด Enter หรือคลิกออกเพื่อบันทึก)"
+                      />
+                      <span className="text-emerald-400 font-bold text-sm">%</span>
+                    </div>
+                  </td>
+
+                  {/* Auto-detected Status */}
+                  <td className="px-5 py-4 text-center">
+                    {isActuallyOwned ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        OWNED (มีในพอร์ต)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                        WATCHLIST
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Target Price */}
+                  <td className="px-5 py-4 text-right">
+                    <div className="text-white font-bold text-sm">
+                      {bp.target_price ? formatPrice(bp.target_price) : '-'}
+                    </div>
+                    {targetDist !== null && (
+                      <div className={`text-xs font-semibold ${targetDist < 0 ? 'text-purple-300' : 'text-emerald-300'}`}>
+                        {targetDist > 0 ? `+${targetDist.toFixed(1)}%` : `${targetDist.toFixed(1)}%`} จากตลาด
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Category (Auto-generated sector) */}
+                  <td className="px-5 py-4">
+                    <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-200 border border-slate-700">
+                      {bp.category || 'Core'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right text-white font-medium">{formatPrice(bp.target_price)}</td>
-                  <td className="px-6 py-4 text-[#CBD5E1]">{bp.category || 'Core'}</td>
-                  <td className="px-6 py-4 text-right whitespace-nowrap">
+
+                  {/* Actions */}
+                  <td className="px-5 py-4 text-right whitespace-nowrap">
                     <button 
                       onClick={() => handleStartEdit(bp)}
                       className="text-[#823AFD] hover:text-purple-300 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-[#823AFD]/10 transition-all mr-2"
@@ -365,49 +578,123 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
             })}
             
             {/* Add New Row */}
-            <tr className="bg-[#161926]/70 border-t border-[#2A2E45]">
-              <td className="px-6 py-3">
+            <tr className="bg-[#161926]/80 border-t border-[#2A2E45]">
+              <td className="px-5 py-3">
                 <SymbolSearchInput
                   value={newSymbol}
-                  onChange={(val) => setNewSymbol(val)}
+                  onChange={(val, item) => {
+                    setNewSymbol(val);
+                    if (item?.sector) setNewCategory(item.sector);
+                  }}
                   placeholder="เช่น NVDA, AAPL"
                   inputClassName="w-36 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white uppercase font-bold outline-none focus:border-[#823AFD]"
                 />
               </td>
-              <td className="px-6 py-3 text-right">
+
+              {/* Live Market Price for newly typed symbol */}
+              <td className="px-5 py-3 text-right">
+                <div className="font-extrabold text-white text-sm">
+                  {techData?.currentPrice ? formatPrice(techData.currentPrice) : (techLoading ? '⏳...' : '-')}
+                </div>
+              </td>
+
+              <td className="px-5 py-3 text-right">
                 <div className="flex items-center justify-end gap-1">
                   <input 
                     type="number" 
+                    step="0.5"
+                    min="0"
+                    max="100"
                     placeholder="0" 
                     value={newTargetPercent}
-                    onChange={e => setNewTargetPercent(Number(e.target.value))}
+                    onChange={e => setNewTargetPercent(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-20 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white text-right font-bold outline-none focus:border-[#10B981]"
                   />
                   <span className="text-white font-bold">%</span>
                 </div>
               </td>
-              <td className="px-6 py-3 text-center">
+
+              {/* Status with auto-detection info */}
+              <td className="px-5 py-3 text-center">
                 <select 
                   value={newStatus}
                   onChange={e => setNewStatus(e.target.value as 'OWNED' | 'WATCHLIST')}
-                  className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-xs text-white font-bold outline-none"
+                  className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-2.5 py-1.5 text-xs text-white font-bold outline-none"
                 >
                   <option value="WATCHLIST">Watchlist (ยังไม่มี)</option>
                   <option value="OWNED">Owned (ถืออยู่)</option>
                 </select>
               </td>
-              <td className="px-6 py-3 text-right">
-                <input 
-                  type="number" 
-                  placeholder="ราคาเป้าหมาย ($)" 
-                  value={newTargetPrice}
-                  onChange={e => setNewTargetPrice(Number(e.target.value))}
-                  className="w-28 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white text-right outline-none focus:border-[#823AFD]"
-                />
+
+              {/* Target Price with 1-Click Technicals Quick-fill Chips */}
+              <td className="px-5 py-3 text-right">
+                <div className="flex flex-col items-end gap-1">
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    placeholder={`เป้าหมาย (${currSymbol})`} 
+                    value={newTargetPrice}
+                    onChange={e => setNewTargetPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-32 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white text-right outline-none focus:border-[#823AFD]"
+                  />
+
+                  {/* 1-Click Technical Indicator Chips: EMA 150 / SMA 200 / SMA 50 */}
+                  {techData && (
+                    <div className="flex flex-wrap items-center justify-end gap-1 mt-1 max-w-[280px]">
+                      {techData.ema150 && (
+                        <button
+                          type="button"
+                          onClick={() => setNewTargetPrice(techData.ema150!)}
+                          className="px-2 py-0.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                          title="คลิกเพื่อตั้งราคาเป้าหมายที่เส้น EMA 150 วัน (แนวรับ Trend สำคัญ)"
+                        >
+                          <Target className="w-3 h-3 text-purple-300" />
+                          <span>EMA150:</span>
+                          <span>{formatPrice(techData.ema150)}</span>
+                        </button>
+                      )}
+                      {techData.sma200 && (
+                        <button
+                          type="button"
+                          onClick={() => setNewTargetPrice(techData.sma200!)}
+                          className="px-2 py-0.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                          title="คลิกเพื่อตั้งราคาเป้าหมายที่เส้น SMA 200 วัน (แนวรับกองทุนสถาบัน)"
+                        >
+                          <Shield className="w-3 h-3 text-blue-300" />
+                          <span>SMA200:</span>
+                          <span>{formatPrice(techData.sma200)}</span>
+                        </button>
+                      )}
+                      {techData.sma50 && (
+                        <button
+                          type="button"
+                          onClick={() => setNewTargetPrice(techData.sma50!)}
+                          className="px-2 py-0.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                          title="คลิกเพื่อตั้งราคาเป้าหมายที่เส้น SMA 50 วัน"
+                        >
+                          <TrendingUp className="w-3 h-3 text-emerald-300" />
+                          <span>SMA50:</span>
+                          <span>{formatPrice(techData.sma50)}</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </td>
-              <td className="px-6 py-3"></td>
-              <td className="px-6 py-3 text-right">
-                <button onClick={handleAdd} disabled={!newSymbol || newTargetPercent === ''} className="px-4 py-1.5 bg-[#823AFD] hover:bg-[#7220FB] text-white font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-40">
+
+              {/* Auto-detected Category Badge */}
+              <td className="px-5 py-3">
+                <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-200 border border-slate-700">
+                  {newCategory || 'Core'}
+                </span>
+              </td>
+
+              <td className="px-5 py-3 text-right">
+                <button 
+                  onClick={handleAdd} 
+                  disabled={!newSymbol || newTargetPercent === ''} 
+                  className="px-4 py-2 bg-[#823AFD] hover:bg-[#7220FB] text-white font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-40"
+                >
                   + เพิ่มหุ้น
                 </button>
               </td>
