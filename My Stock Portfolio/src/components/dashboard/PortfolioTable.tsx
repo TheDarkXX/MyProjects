@@ -41,6 +41,38 @@ type SortKey =
   | 'weightPercent';
 type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
 
+const LongZigzagTrendUp = ({ className = "w-[18px] h-[12px] text-emerald-400" }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 16" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    style={{ overflow: 'visible' }}
+    className={clsx("shrink-0", className)}
+  >
+    <polyline points="2 13 7 7 12 11 21 3" />
+    <polyline points="15 3 21 3 21 9" />
+  </svg>
+);
+
+const LongZigzagTrendDown = ({ className = "w-[18px] h-[12px] text-rose-400" }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 16" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    style={{ overflow: 'visible' }}
+    className={clsx("shrink-0", className)}
+  >
+    <polyline points="2 3 7 9 12 5 21 13" />
+    <polyline points="15 13 21 13 21 7" />
+  </svg>
+);
+
 const getStartDateForRange = (range: HoldingTimeRange, customStartDate?: string): string => {
   const today = new Date();
   switch (range) {
@@ -73,8 +105,8 @@ const getStartDateForRange = (range: HoldingTimeRange, customStartDate?: string)
 };
 
 // Returns the timeframe that is exactly 1 step larger on the ladder
-const getNextStepRange = (range: HoldingTimeRange): HoldingTimeRange => {
-  switch (range) {
+const getNextStepRange = (current: HoldingTimeRange): HoldingTimeRange => {
+  switch (current) {
     case '1D': return '1W';
     case '1W': return '1M';
     case '1M': return '3M';
@@ -114,7 +146,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
   const [customFrom, setCustomFrom] = useState<string>('');
   const [customTo, setCustomTo] = useState<string>('');
   const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
-  const [sortConfig, setSortConfig] = useState<SortConfig>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'activeReturnPercent', direction: 'desc' });
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
   const activeRangeLabel = useMemo(() => getRangeLabel(timeRange), [timeRange]);
@@ -469,11 +501,18 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                   </td>
 
                   {/* === Section 3: Active Focus Dynamic Range (Distinct BG Highlight) === */}
-                  {/* Column 8: Current Market Price (Moved to 1D section) */}
+                  {/* Column 8: Current Market Price (Moved to 1D section with Sharp Trend Arrow) */}
                   <td className="px-3 py-3 text-right whitespace-nowrap bg-amber-400/[0.08] group-hover:bg-amber-400/[0.14] transition-colors border-l border-amber-500/20">
-                    <span className="font-bold text-white text-[14px] tabular-nums font-heading">
-                      {formatClean(h.lastPrice)}
-                    </span>
+                    <div className="inline-flex items-center justify-end gap-1.5">
+                      {isActiveProfit ? (
+                        <LongZigzagTrendUp className="w-[18px] h-[12px] text-emerald-400 shrink-0" />
+                      ) : (
+                        <LongZigzagTrendDown className="w-[18px] h-[12px] text-rose-400 shrink-0" />
+                      )}
+                      <span className="font-bold text-white text-[14px] tabular-nums font-heading">
+                        {formatClean(h.lastPrice)}
+                      </span>
+                    </div>
                   </td>
 
                   {/* Column 9: Active Range Return (Amount) */}
