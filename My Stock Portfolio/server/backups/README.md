@@ -33,3 +33,9 @@ node /root/stock-portfolio/server/restore_source_of_truth.js
 pm2 reload stock-api
 ```
 ระบบจะดึงข้อมูลจากโฟลเดอร์นี้ไปสร้างฐานข้อมูลใหม่ให้ตรง 100% ภายใน 1 วินาที
+
+---
+
+## 🔗 GBRAIN Backlinks
+- **2026-09-04 23:25** | [V2.1.2 Hotfix & Smart Rebalance v2 Overhaul](file:///c:/My%20Claw/MyProjects/Quick%20Save/Complete/My%20Stock%20Portfolio/V2.1.2_[hotfix]_smart-rebalance-reference-error-and-error-boundary.md) -- Context, Tiger reconciliation history, and triple-redundancy architecture.
+
