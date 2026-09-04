@@ -1,0 +1,205 @@
+[
+  {
+    "symbol": "AXON",
+    "price": 518.3,
+    "change": -48.26,
+    "percent_change": -8.5181,
+    "updated_at": "2026-09-02 12:05:25"
+  },
+  {
+    "symbol": "CIFR",
+    "price": 14.61,
+    "change": -0.89,
+    "percent_change": -5.7419,
+    "updated_at": "2026-09-02 12:05:25"
+  },
+  {
+    "symbol": "SOFI",
+    "price": 17.05,
+    "change": -0.83,
+    "percent_change": -4.6421,
+    "updated_at": "2026-09-02 12:05:26"
+  },
+  {
+    "symbol": "IREN",
+    "price": 36.82,
+    "change": -0.295,
+    "percent_change": -0.7948,
+    "updated_at": "2026-09-02 12:05:26"
+  },
+  {
+    "symbol": "COST",
+    "price": 925.41,
+    "change": -3.07,
+    "percent_change": -0.3306,
+    "updated_at": "2026-09-04 13:10:01"
+  },
+  {
+    "symbol": "ASTS",
+    "price": 62.13,
+    "change": -0.27,
+    "percent_change": -0.4327,
+    "updated_at": "2026-09-04 13:10:06"
+  },
+  {
+    "symbol": "RKLB",
+    "price": 63.81,
+    "change": 0.71,
+    "percent_change": 1.1252,
+    "updated_at": "2026-09-04 13:10:07"
+  },
+  {
+    "symbol": "CRWV",
+    "price": 84.56,
+    "change": 3.63,
+    "percent_change": 4.4854,
+    "updated_at": "2026-09-04 13:10:08"
+  },
+  {
+    "symbol": "ISRG",
+    "price": 369.83,
+    "change": -2.05,
+    "percent_change": -0.5513,
+    "updated_at": "2026-09-04 13:10:08"
+  },
+  {
+    "symbol": "SPY",
+    "price": 769.63,
+    "change": -3.54,
+    "percent_change": -0.4579,
+    "updated_at": "2026-09-04 15:18:41"
+  },
+  {
+    "symbol": "QQQ",
+    "price": 717.81,
+    "change": 0.14,
+    "percent_change": 0.0195,
+    "updated_at": "2026-09-04 15:18:42"
+  },
+  {
+    "symbol": "SCHD",
+    "price": 34.92,
+    "change": -0.16,
+    "percent_change": -0.4561,
+    "updated_at": "2026-09-04 15:24:16"
+  },
+  {
+    "symbol": "AAPL",
+    "price": 319.04,
+    "change": -9.17,
+    "percent_change": -2.7939,
+    "updated_at": "2026-09-04 15:24:16"
+  },
+  {
+    "symbol": "MSFT",
+    "price": 500.75,
+    "change": -9.37,
+    "percent_change": -1.8368,
+    "updated_at": "2026-09-04 15:24:19"
+  },
+  {
+    "symbol": "AMZN",
+    "price": 256.02,
+    "change": -2.88,
+    "percent_change": -1.1124,
+    "updated_at": "2026-09-04 15:24:21"
+  },
+  {
+    "symbol": "O",
+    "price": 61.82,
+    "change": 0.08,
+    "percent_change": 0.1296,
+    "updated_at": "2026-09-04 15:24:21"
+  },
+  {
+    "symbol": "V",
+    "price": 374.06,
+    "change": -4.69,
+    "percent_change": -1.2383,
+    "updated_at": "2026-09-04 15:24:21"
+  },
+  {
+    "symbol": "GOOG",
+    "price": 334.43,
+    "change": -4.65,
+    "percent_change": -1.3714,
+    "updated_at": "2026-09-04 15:24:22"
+  },
+  {
+    "symbol": "PLTR",
+    "price": 176.09,
+    "change": -6.44,
+    "percent_change": -3.5282,
+    "updated_at": "2026-09-04 15:24:32"
+  },
+  {
+    "symbol": "TSLA",
+    "price": 352.97,
+    "change": -23.395,
+    "percent_change": -6.216,
+    "updated_at": "2026-09-04 15:24:32"
+  },
+  {
+    "symbol": "NVDA",
+    "price": 230.95,
+    "change": 2.5,
+    "percent_change": 1.0943,
+    "updated_at": "2026-09-04 15:56:52"
+  },
+  {
+    "symbol": "CRWD",
+    "price": 213,
+    "change": -1.97,
+    "percent_change": -0.9164,
+    "updated_at": "2026-09-04 15:56:53"
+  },
+  {
+    "symbol": "GOOGL",
+    "price": 338.22,
+    "change": -4.26,
+    "percent_change": -1.2439,
+    "updated_at": "2026-09-04 15:56:53"
+  },
+  {
+    "symbol": "MELI",
+    "price": 1987.26,
+    "change": -3.795,
+    "percent_change": -0.1906,
+    "updated_at": "2026-09-04 15:56:53"
+  },
+  {
+    "symbol": "META",
+    "price": 611.8,
+    "change": 1.12,
+    "percent_change": 0.1834,
+    "updated_at": "2026-09-04 15:56:54"
+  },
+  {
+    "symbol": "RBRK",
+    "price": 94.13,
+    "change": 1.99,
+    "percent_change": 2.1598,
+    "updated_at": "2026-09-04 15:56:54"
+  },
+  {
+    "symbol": "HIMS",
+    "price": 27.76,
+    "change": -0.06,
+    "percent_change": -0.2157,
+    "updated_at": "2026-09-04 15:56:54"
+  },
+  {
+    "symbol": "CASH",
+    "price": 82.92,
+    "change": 0.15,
+    "percent_change": 0.1812,
+    "updated_at": "2026-09-04 15:57:14"
+  },
+  {
+    "symbol": "SCHG",
+    "price": 35.52,
+    "change": -0.32,
+    "percent_change": -0.8929,
+    "updated_at": "2026-09-04 15:57:17"
+  }
+]

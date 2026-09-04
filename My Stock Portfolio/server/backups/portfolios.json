@@ -1,0 +1,30 @@
+[
+  {
+    "id": "fcfdd1e0-bf53-4910-89e7-8ca2474d4c27",
+    "name": "Doctorbank Growth",
+    "description": "Growth-focused investment portfolio",
+    "icon": "🌟",
+    "color_hex": "#1b21da",
+    "initial_cash": 0,
+    "base_currency": "USD",
+    "status": "active",
+    "goal_amount": 0,
+    "goal_currency": "USD",
+    "created_at": "2025-09-25T15:54:52.558439+00:00",
+    "updated_at": null
+  },
+  {
+    "id": "1c32059d-7847-41c8-a45f-311b3ade67b7",
+    "name": "Tiger",
+    "description": "",
+    "icon": "🐯",
+    "color_hex": "#d1d416",
+    "initial_cash": 0,
+    "base_currency": "USD",
+    "status": "active",
+    "goal_amount": 0,
+    "goal_currency": "USD",
+    "created_at": "2025-10-10T18:47:17.742259+00:00",
+    "updated_at": null
+  }
+]

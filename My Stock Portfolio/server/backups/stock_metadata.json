@@ -1,0 +1,132 @@
+[
+  {
+    "symbol": "NVDA",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:56:55",
+    "dividend_yield": 0.0044,
+    "annual_dividend": 1,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "META",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:56:55",
+    "dividend_yield": 0.0035,
+    "annual_dividend": 2.1,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "GOOG",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:24:22",
+    "dividend_yield": 0.0026,
+    "annual_dividend": 0.88,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "COST",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 13:10:08",
+    "dividend_yield": 0.0063,
+    "annual_dividend": 5.88,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "SPY",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:18:42",
+    "dividend_yield": 0.007323,
+    "annual_dividend": 5.662,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "QQQ",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:18:42",
+    "dividend_yield": 0.002466,
+    "annual_dividend": 1.77,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "MSFT",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:24:22",
+    "dividend_yield": 0.007136,
+    "annual_dividend": 3.64,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "AAPL",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:24:22",
+    "dividend_yield": 0.0033,
+    "annual_dividend": 1.08,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "GOOGL",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:56:55",
+    "dividend_yield": 0.0026,
+    "annual_dividend": 0.88,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "V",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:24:22",
+    "dividend_yield": 0.0071,
+    "annual_dividend": 2.68,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "SCHD",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:24:22",
+    "dividend_yield": 0.03,
+    "annual_dividend": 1.05,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "O",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:24:22",
+    "dividend_yield": 0.0529,
+    "annual_dividend": 3.25,
+    "dividend_frequency": ""
+  },
+  {
+    "symbol": "SCHG",
+    "name": null,
+    "sector": null,
+    "logo": null,
+    "updated_at": "2026-09-04 15:57:17",
+    "dividend_yield": 0.0037,
+    "annual_dividend": 0.13,
+    "dividend_frequency": ""
+  }
+]
