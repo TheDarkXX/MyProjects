@@ -20,6 +20,7 @@ import { snapshotsRoutes } from './routes/snapshots.js';
 import { backupRoutes } from './routes/backup.js';
 import { aiRoutes } from './routes/ai.js';
 import { dividendsRoutes } from './routes/dividends.js';
+import { blueprintsRoutes } from './routes/blueprints.js';
 
 const app = new Hono();
 
@@ -44,6 +45,7 @@ app.route('/api/snapshots', snapshotsRoutes);
 app.route('/api/backup', backupRoutes);
 app.route('/api/ai-chat', aiRoutes);
 app.route('/api/dividends', dividendsRoutes);
+app.route('/api/blueprints', blueprintsRoutes);
 
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));

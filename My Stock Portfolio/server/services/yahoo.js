@@ -1,5 +1,5 @@
 import YahooFinance from 'yahoo-finance2';
-const yahooFinance = new YahooFinance();
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 /**
  * Fetch historical prices for a symbol.
@@ -104,4 +104,53 @@ export async function fetchYahooProfile(symbol) {
   }
 }
 
+/**
+ * Fetch dividend information from Yahoo Finance.
+ * @param {string} symbol
+ */
+export async function fetchYahooDividend(symbol) {
+  if (!symbol || symbol === 'CASH') return { dividendYield: 0, annualDividend: 0 };
+  const upper = symbol.toUpperCase();
+  try {
+    const res = await yahooFinance.quoteSummary(upper, { modules: ['summaryDetail'] }).catch(() => null);
+    const detail = res?.summaryDetail || {};
+    
+    let divYield = detail.dividendYield || detail.trailingAnnualDividendYield || detail.yield || 0;
+    let annualDiv = detail.dividendRate || detail.trailingAnnualDividendRate || 0;
+    
+    // For ETFs or fund quotes where annual dividend rate is 0 but yield is given
+    if (annualDiv === 0 && divYield > 0) {
+      const price = detail.previousClose || detail.navPrice || detail.regularMarketOpen || 0;
+      if (price > 0) {
+        annualDiv = Number((divYield * price).toFixed(2));
+      }
+    }
 
+    // If still 0, fallback to quote
+    if (annualDiv === 0 && divYield === 0) {
+      const q = await yahooFinance.quote(upper).catch(() => null);
+      if (q) {
+        annualDiv = q.dividendRate || q.trailingAnnualDividendRate || 0;
+        let qYield = q.dividendYield || q.trailingAnnualDividendYield || q.yield || 0;
+        if (qYield > 1) qYield = qYield / 100;
+        if (divYield === 0) divYield = qYield;
+        if (annualDiv === 0 && divYield > 0 && q.regularMarketPrice) {
+          annualDiv = Number((divYield * q.regularMarketPrice).toFixed(2));
+        }
+      }
+    }
+
+    // Normalize yield to decimal ratio (e.g. 0.035 for 3.5%)
+    if (divYield > 1) {
+      divYield = divYield / 100;
+    }
+
+    return {
+      dividendYield: Number(divYield.toFixed(6)),
+      annualDividend: Number(annualDiv.toFixed(4))
+    };
+  } catch (error) {
+    console.error(`[Yahoo] Error fetching dividend for ${symbol}:`, error.message);
+  }
+  return { dividendYield: 0, annualDividend: 0 };
+}

@@ -43,6 +43,25 @@ pricesRoutes.post('/latest', async (c) => {
     if (symbolsToFetch.length > 0) {
       const fetched = await updatePricesInCache(symbolsToFetch);
       Object.assign(results, fetched);
+      
+      // Also fetch dividend info from Yahoo Finance in the background and update metadata
+      const { fetchYahooDividend } = await import('../services/yahoo.js');
+      const updateMetadata = db.prepare(`
+        INSERT INTO stock_metadata (symbol, dividend_yield, annual_dividend, updated_at) 
+        VALUES (?, ?, ?, datetime('now'))
+        ON CONFLICT(symbol) DO UPDATE SET 
+          dividend_yield = excluded.dividend_yield, 
+          annual_dividend = excluded.annual_dividend,
+          updated_at = datetime('now')
+      `);
+      
+      // Fire and forget dividend fetch
+      Promise.all(symbolsToFetch.map(async (sym) => {
+        const divInfo = await fetchYahooDividend(sym);
+        if (divInfo && (divInfo.dividendYield > 0 || divInfo.annualDividend > 0)) {
+          updateMetadata.run(sym, divInfo.dividendYield, divInfo.annualDividend);
+        }
+      })).catch(err => console.error('Error fetching dividends:', err));
     }
     
     return c.json(results);

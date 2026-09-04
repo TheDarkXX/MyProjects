@@ -66,7 +66,25 @@ export function initDb() {
         name TEXT,
         sector TEXT,
         logo TEXT,
+        dividend_yield REAL DEFAULT 0,
+        annual_dividend REAL DEFAULT 0,
+        dividend_frequency TEXT DEFAULT '',
         updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- Blueprints
+    CREATE TABLE IF NOT EXISTS portfolio_blueprints (
+        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+        portfolio_id TEXT NOT NULL REFERENCES portfolios(id),
+        symbol TEXT NOT NULL,
+        target_percent REAL NOT NULL DEFAULT 0,
+        target_price REAL,
+        status TEXT DEFAULT 'OWNED',
+        category TEXT DEFAULT 'Core',
+        notes TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(portfolio_id, symbol)
     );
 
     -- Analytics

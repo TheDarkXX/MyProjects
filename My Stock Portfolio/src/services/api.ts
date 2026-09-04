@@ -71,5 +71,12 @@ export const api = {
   },
   ai: {
     chat: (prompt: string) => authFetch('/ai-chat', { method: 'POST', body: JSON.stringify({ prompt }) }),
+  },
+  blueprints: {
+    list: (portfolioId: string) => authFetch(`/blueprints/${portfolioId}`),
+    upsert: (portfolioId: string, data: any) => authFetch(`/blueprints/${portfolioId}`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (portfolioId: string, symbol: string, data: any) => authFetch(`/blueprints/${portfolioId}/${symbol}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (portfolioId: string, symbol: string) => authFetch(`/blueprints/${portfolioId}/${symbol}`, { method: 'DELETE' }),
+    autoGenerate: (portfolioId: string) => authFetch(`/blueprints/${portfolioId}/auto-generate`, { method: 'POST' }),
   }
 };
