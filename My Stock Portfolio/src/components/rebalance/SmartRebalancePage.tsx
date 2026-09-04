@@ -10,13 +10,43 @@ import { api } from '../../services/api';
 import { 
   Scale, SlidersHorizontal, DollarSign, ArrowRight, Check, Copy, Sparkles, 
   TrendingUp, Scissors, CheckCircle2, AlertCircle, CheckSquare, Square, 
-  RefreshCw, Wallet, Filter, AlertTriangle, LayoutGrid, Layers, Table2
+  RefreshCw, Wallet, Filter, AlertTriangle, LayoutGrid, Layers, Table2,
+  Calendar, Coins, Percent, BarChart3, PieChart as PieChartIcon
 } from 'lucide-react';
+import { 
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, 
+  PieChart as RechartsPieChart, Pie, Cell, ReferenceLine, Legend
+} from 'recharts';
 import clsx from 'clsx';
 
 type MainTab = 'blueprint' | 'tools';
 type RebalanceMode = 'cashflow' | 'matrix' | 'trim' | 'dividend';
 type BuyingPlanView = 'card' | 'compact' | 'table';
+
+const ASSET_COLORS: Record<string, string> = {
+  NVDA: '#10B981',
+  CRWD: '#823AFD',
+  META: '#06B6D4',
+  MELI: '#F59E0B',
+  RBRK: '#EC4899',
+  HIMS: '#F97316',
+  CASH: '#64748B',
+  GOOG: '#3B82F6',
+  GOOGL: '#3B82F6',
+  AAPL: '#A855F7',
+  MSFT: '#0EA5E9',
+  AMZN: '#EAB308',
+  SCHG: '#FC2D79',
+  VOO: '#14B8A6',
+  QQQ: '#8B5CF6',
+  SPY: '#6366F1',
+};
+
+const getAssetColor = (symbol: string, index: number) => {
+  if (ASSET_COLORS[symbol]) return ASSET_COLORS[symbol];
+  const PALETTE = ['#823AFD', '#06B6D4', '#10B981', '#F59E0B', '#EC4899', '#3B82F6', '#14B8A6', '#F97316', '#A855F7'];
+  return PALETTE[index % PALETTE.length];
+};
 
 const LongZigzagTrendUp = ({ className = "w-[18px] h-[12px] text-emerald-400" }: { className?: string }) => (
   <svg 
@@ -68,7 +98,7 @@ export const SmartRebalancePage: React.FC = () => {
   const [remainderMode, setRemainderMode] = useState<'redistribute' | 'reserve'>('redistribute');
   const [selectedSymbols, setSelectedSymbols] = useState<Set<string> | null>(null);
   const [planView, setPlanView] = useState<BuyingPlanView>(() => {
-    return (localStorage.getItem('smart_rebalance_plan_view') as BuyingPlanView) || 'compact';
+    return (localStorage.getItem('smart_rebalance_plan_view') as BuyingPlanView) || 'table';
   });
   const [technicals, setTechnicals] = useState<Record<string, any>>({});
   const [techLoading, setTechLoading] = useState<boolean>(false);
@@ -479,6 +509,55 @@ export const SmartRebalancePage: React.FC = () => {
     });
   }, [combinedPortfolio, totalNetWorth, blueprints]);
 
+  // Mode 2 Visualizations: Diverging Bar Data & Comparison Donuts
+  const matrixDivergingData = useMemo(() => {
+    return [...matrixAnalysis]
+      .sort((a, b) => b.deltaPct - a.deltaPct)
+      .map(item => ({
+        symbol: item.symbol,
+        deltaPct: Number(item.deltaPct.toFixed(1)),
+        actualPct: Number(item.actualPct.toFixed(1)),
+        targetPct: Number(item.targetPct.toFixed(1)),
+        deltaVal: item.deltaVal,
+        sharesGap: item.sharesGap,
+        status: item.status
+      }));
+  }, [matrixAnalysis]);
+
+  const { actualDonutData, targetDonutData, matrixSummary } = useMemo(() => {
+    const actual = matrixAnalysis
+      .filter(m => m.actualPct > 0)
+      .map((m, i) => ({
+        name: m.symbol,
+        value: Number(m.actualPct.toFixed(1)),
+        currentVal: m.currentVal,
+        color: getAssetColor(m.symbol, i)
+      }));
+
+    const target = matrixAnalysis
+      .filter(m => m.targetPct > 0)
+      .map((m, i) => ({
+        name: m.symbol,
+        value: Number(m.targetPct.toFixed(1)),
+        color: getAssetColor(m.symbol, i)
+      }));
+
+    let overweight = 0;
+    let underweight = 0;
+    let onTarget = 0;
+    matrixAnalysis.forEach(m => {
+      if (m.status === 'overweight') overweight++;
+      else if (m.status === 'underweight') underweight++;
+      else onTarget++;
+    });
+
+    return {
+      actualDonutData: actual,
+      targetDonutData: target,
+      matrixSummary: { overweight, underweight, onTarget }
+    };
+  }, [matrixAnalysis]);
+
   // MODE 3: Trim Simulation
   const trimHolding = useMemo(() => holdings.find(h => h.symbol === trimSymbol), [holdings, trimSymbol]);
   const targetAsset = useMemo(() => combinedPortfolio.find(h => h.symbol === targetFundSymbol), [combinedPortfolio, targetFundSymbol]);
@@ -498,6 +577,8 @@ export const SmartRebalancePage: React.FC = () => {
   // MODE 4: Dividend DRIP Simulator
   const dividendStats = useMemo(() => {
     let totalAnnualIncomeUsd = 0;
+    let totalCostBasis = 0;
+
     const items = holdings.map(h => {
       const meta = metadata[h.symbol] || {};
       const annualDiv = meta.annual_dividend || 0;
@@ -505,6 +586,7 @@ export const SmartRebalancePage: React.FC = () => {
       
       const holdingIncome = annualDiv * h.quantity;
       totalAnnualIncomeUsd += holdingIncome;
+      totalCostBasis += (h.avgCost * h.quantity);
       
       const yoc = h.avgCost > 0 ? (annualDiv / h.avgCost) * 100 : 0;
       const livePrice = prices[h.symbol]?.price || h.lastPrice || h.avgCost || 1;
@@ -523,8 +605,58 @@ export const SmartRebalancePage: React.FC = () => {
       };
     }).sort((a, b) => b.holdingIncome - a.holdingIncome);
 
-    return { items, totalAnnualIncomeUsd };
-  }, [holdings, metadata, prices]);
+    const weightedYoc = totalCostBasis > 0 ? (totalAnnualIncomeUsd / totalCostBasis) * 100 : 0;
+
+    const dividendDonutData = items
+      .filter(it => it.holdingIncome > 0)
+      .map((it, i) => ({
+        name: it.symbol,
+        value: Number(it.holdingIncome.toFixed(2)),
+        pct: totalAnnualIncomeUsd > 0 ? Number(((it.holdingIncome / totalAnnualIncomeUsd) * 100).toFixed(1)) : 0,
+        divYield: Number((it.divYield * 100).toFixed(2)),
+        color: getAssetColor(it.symbol, i)
+      }));
+
+    // Multi-Year DRIP Snowball Compounding Projection (0, 1, 3, 5, 10 Years)
+    const divGrowthRate = 0.06; // 6% annual dividend growth
+    const avgYield = totalNetWorth > 0 ? (totalAnnualIncomeUsd / totalNetWorth) : 0.02;
+
+    const snowballYears = [
+      { label: 'ปัจจุบัน', years: 0 },
+      { label: 'ปีที่ 1', years: 1 },
+      { label: 'ปีที่ 3', years: 3 },
+      { label: 'ปีที่ 5', years: 5 },
+      { label: 'ปีที่ 10', years: 10 },
+    ];
+
+    const dripSnowballData = snowballYears.map(({ label, years }) => {
+      if (years === 0) {
+        return {
+          year: label,
+          withDrip: Number(totalAnnualIncomeUsd.toFixed(2)),
+          withoutDrip: Number(totalAnnualIncomeUsd.toFixed(2)),
+          gainFromDrip: 0
+        };
+      }
+      const withoutDrip = totalAnnualIncomeUsd * Math.pow(1 + divGrowthRate, years);
+      const withDrip = totalAnnualIncomeUsd * Math.pow(1 + divGrowthRate + Math.max(0.015, avgYield), years);
+
+      return {
+        year: label,
+        withDrip: Number(withDrip.toFixed(2)),
+        withoutDrip: Number(withoutDrip.toFixed(2)),
+        gainFromDrip: Number(Math.max(0, withDrip - withoutDrip).toFixed(2))
+      };
+    });
+
+    return { 
+      items, 
+      totalAnnualIncomeUsd, 
+      weightedYoc, 
+      dividendDonutData, 
+      dripSnowballData 
+    };
+  }, [holdings, metadata, prices, totalNetWorth]);
 
   const copyBuyingPlan = () => {
     const selectedBuys = cashflowPlan.items.filter(r => r.isSelected && r.allocatedUsd >= 5);
@@ -1331,47 +1463,256 @@ export const SmartRebalancePage: React.FC = () => {
 
               {/* MODE 2: MATRIX */}
               {mode === 'matrix' && (
-                <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-lg">
-                  <h3 className="text-xl font-bold text-white tracking-tight mb-4">Blueprint Gap Matrix</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b border-[#2A2E45] text-xs uppercase text-[#CBD5E1] font-bold">
-                          <th className="pb-3 px-4">Asset</th>
-                          <th className="pb-3 px-4 text-right">Current Val</th>
-                          <th className="pb-3 px-4 text-right">Actual %</th>
-                          <th className="pb-3 px-4 text-center">Target %</th>
-                          <th className="pb-3 px-4 text-right">Delta</th>
-                          <th className="pb-3 px-4 text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#2A2E45]/60 text-sm">
-                        {matrixAnalysis.map((item) => (
-                          <tr key={item.symbol} className="hover:bg-white/[0.02]">
-                            <td className="py-3 px-4 font-extrabold text-white">
-                              {item.symbol} {!item.inBlueprint && <span className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full ml-2">NOT IN BLUEPRINT</span>}
-                            </td>
-                            <td className="py-3 px-4 text-right font-medium text-white">{formatMoney(item.currentVal)}</td>
-                            <td className="py-3 px-4 text-right font-bold text-white">{(item.actualPct ?? 0).toFixed(1)}%</td>
-                            <td className="py-3 px-4 text-center font-bold text-emerald-400">{item.targetPct}%</td>
-                            <td className="py-3 px-4 text-right">
-                              <span className={clsx("font-bold text-xs px-2 py-0.5 rounded-md", item.deltaPct >= 0 ? "text-blue-400 bg-blue-500/10" : "text-amber-400 bg-amber-500/10")}>
-                                {item.deltaPct > 0 ? '+' : ''}{(item.deltaPct ?? 0).toFixed(1)}%
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-center text-xs">
-                              {item.status === 'on_target' ? (
-                                <span className="text-emerald-400 font-bold">On Target</span>
-                              ) : item.status === 'underweight' ? (
-                                <span className="text-amber-400 font-bold">เติม +{(item.sharesGap ?? 0).toFixed(1)} หุ้น</span>
-                              ) : (
-                                <span className="text-blue-400 font-bold">เกินเป้า {formatMoney(item.deltaVal)}</span>
-                              )}
-                            </td>
-                          </tr>
+                <div className="space-y-6">
+                  {/* Mode 2 KPI Strip */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-[#161926] border border-[#2A2E45] rounded-2xl p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <Layers className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#CBD5E1]">Total Tracked</div>
+                        <div className="text-xl font-black text-white">{matrixAnalysis.length} Assets</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#161926] border border-[#2A2E45] rounded-2xl p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                        <TrendingUp className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#CBD5E1]">Overweight (&gt; +1%)</div>
+                        <div className="text-xl font-black text-blue-400">{matrixSummary.overweight} Assets</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#161926] border border-[#2A2E45] rounded-2xl p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#CBD5E1]">On Target (±1%)</div>
+                        <div className="text-xl font-black text-emerald-400">{matrixSummary.onTarget} Assets</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#161926] border border-[#2A2E45] rounded-2xl p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#CBD5E1]">Underweight (&lt; -1%)</div>
+                        <div className="text-xl font-black text-amber-400">{matrixSummary.underweight} Assets</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mode 2 Visual Charts Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Chart A: Actual vs Blueprint Target Allocation Donut */}
+                    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-5 shadow-lg flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="text-base font-bold text-white flex items-center gap-2">
+                              <PieChartIcon className="w-4 h-4 text-[#823AFD]" /> Actual vs Target Allocation
+                            </h4>
+                            <p className="text-xs text-[#CBD5E1] mt-0.5">สัดส่วนปัจจุบันจริง (ซ้าย) เทียบกับเป้าหมาย Blueprint (ขวา)</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 h-52">
+                          {/* Actual Donut */}
+                          <div className="flex flex-col items-center justify-center relative">
+                            <div className="text-xs font-bold text-slate-300 mb-1">Actual (ปัจจุบัน)</div>
+                            <div className="w-full h-40">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <RechartsPieChart>
+                                  <Pie
+                                    data={actualDonutData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={36}
+                                    outerRadius={56}
+                                    paddingAngle={2}
+                                  >
+                                    {actualDonutData.map((entry, index) => (
+                                      <Cell key={`actual-cell-${index}`} fill={entry.color} />
+                                    ))}
+                                  </Pie>
+                                  <RechartsTooltip
+                                    content={({ active, payload }) => {
+                                      if (active && payload && payload.length) {
+                                        const data = payload[0].payload;
+                                        return (
+                                          <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl">
+                                            <div className="font-bold text-white">{data.name}</div>
+                                            <div className="text-slate-300">สัดส่วนจริง: <span className="font-bold text-emerald-400">{data.value}%</span></div>
+                                            <div className="text-slate-400">มูลค่า: {formatMoney(data.currentVal)}</div>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    }}
+                                  />
+                                </RechartsPieChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+
+                          {/* Target Donut */}
+                          <div className="flex flex-col items-center justify-center relative">
+                            <div className="text-xs font-bold text-slate-300 mb-1">Blueprint Target (เป้า)</div>
+                            <div className="w-full h-40">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <RechartsPieChart>
+                                  <Pie
+                                    data={targetDonutData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={36}
+                                    outerRadius={56}
+                                    paddingAngle={2}
+                                  >
+                                    {targetDonutData.map((entry, index) => (
+                                      <Cell key={`target-cell-${index}`} fill={entry.color} />
+                                    ))}
+                                  </Pie>
+                                  <RechartsTooltip
+                                    content={({ active, payload }) => {
+                                      if (active && payload && payload.length) {
+                                        const data = payload[0].payload;
+                                        return (
+                                          <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl">
+                                            <div className="font-bold text-white">{data.name}</div>
+                                            <div className="text-slate-300">เป้าหมาย: <span className="font-bold text-[#06B6D4]">{data.value}%</span></div>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    }}
+                                  />
+                                </RechartsPieChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mini Asset Badges Legend */}
+                      <div className="flex flex-wrap gap-1.5 mt-2 justify-center max-h-16 overflow-y-auto">
+                        {actualDonutData.map(item => (
+                          <span key={item.name} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#161926] border border-[#2A2E45] text-xs font-medium text-slate-200">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                            {item.name} <span className="text-slate-300 font-bold">{item.value}%</span>
+                          </span>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    </div>
+
+                    {/* Chart B: Blueprint Gap Delta Diverging Bar Chart */}
+                    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-5 shadow-lg flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="text-base font-bold text-white flex items-center gap-2">
+                              <BarChart3 className="w-4 h-4 text-emerald-400" /> Blueprint Gap Delta (%)
+                            </h4>
+                            <p className="text-xs text-[#CBD5E1] mt-0.5">ส่วนต่างจากเป้า (สีฟ้า = เกินเป้า / สีส้ม = ขาดเป้า ต้องเติม)</p>
+                          </div>
+                          <div className="flex items-center gap-2.5 text-xs font-medium">
+                            <span className="flex items-center gap-1 text-blue-400"><span className="w-2.5 h-2.5 rounded bg-blue-500 inline-block" /> Over</span>
+                            <span className="flex items-center gap-1 text-amber-400"><span className="w-2.5 h-2.5 rounded bg-amber-500 inline-block" /> Under</span>
+                          </div>
+                        </div>
+
+                        <div className="w-full h-60">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={matrixDivergingData} layout="vertical" margin={{ top: 5, right: 25, left: 10, bottom: 5 }}>
+                              <XAxis type="number" stroke="#64748B" tickFormatter={(v) => `${v > 0 ? '+' : ''}${v}%`} tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                              <YAxis dataKey="symbol" type="category" stroke="#64748B" tick={{ fill: '#F1F5F9', fontSize: 12, fontWeight: 700 }} width={48} />
+                              <ReferenceLine x={0} stroke="#475569" strokeDasharray="3 3" />
+                              <RechartsTooltip
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    const data = payload[0].payload;
+                                    return (
+                                      <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-1">
+                                        <div className="font-bold text-white flex items-center justify-between gap-4">
+                                          <span>{data.symbol}</span>
+                                          <span className={clsx("px-1.5 py-0.5 rounded font-bold", data.deltaPct >= 0 ? "bg-blue-500/20 text-blue-400" : "bg-amber-500/20 text-amber-400")}>
+                                            {data.deltaPct > 0 ? '+' : ''}{data.deltaPct}%
+                                          </span>
+                                        </div>
+                                        <div className="text-slate-300">ปัจจุบัน: {data.actualPct}% (เป้า: {data.targetPct}%)</div>
+                                        <div className="text-slate-400">
+                                          {data.status === 'underweight' ? `ขาดอีก: +${data.sharesGap.toFixed(1)} หุ้น (~${formatMoney(Math.abs(data.deltaVal))})` : `เกินเป้า: ${formatMoney(data.deltaVal)}`}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }}
+                              />
+                              <Bar dataKey="deltaPct" radius={[4, 4, 4, 4]}>
+                                {matrixDivergingData.map((entry, idx) => (
+                                  <Cell key={`bar-${idx}`} fill={entry.deltaPct >= 0 ? '#3B82F6' : '#F59E0B'} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Gap Matrix Table */}
+                  <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-lg">
+                    <h3 className="text-xl font-bold text-white tracking-tight mb-4">Blueprint Gap Matrix Detail</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="border-b border-[#2A2E45] text-xs uppercase text-[#CBD5E1] font-bold">
+                            <th className="pb-3 px-4">Asset</th>
+                            <th className="pb-3 px-4 text-right">Current Val</th>
+                            <th className="pb-3 px-4 text-right">Actual %</th>
+                            <th className="pb-3 px-4 text-center">Target %</th>
+                            <th className="pb-3 px-4 text-right">Delta</th>
+                            <th className="pb-3 px-4 text-center">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#2A2E45]/60 text-sm">
+                          {matrixAnalysis.map((item) => (
+                            <tr key={item.symbol} className="hover:bg-white/[0.02]">
+                              <td className="py-3 px-4 font-extrabold text-white">
+                                {item.symbol} {!item.inBlueprint && <span className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full ml-2">NOT IN BLUEPRINT</span>}
+                              </td>
+                              <td className="py-3 px-4 text-right font-medium text-white">{formatMoney(item.currentVal)}</td>
+                              <td className="py-3 px-4 text-right font-bold text-white">{(item.actualPct ?? 0).toFixed(1)}%</td>
+                              <td className="py-3 px-4 text-center font-bold text-emerald-400">{item.targetPct}%</td>
+                              <td className="py-3 px-4 text-right">
+                                <span className={clsx("font-bold text-xs px-2 py-0.5 rounded-md", item.deltaPct >= 0 ? "text-blue-400 bg-blue-500/10" : "text-amber-400 bg-amber-500/10")}>
+                                  {item.deltaPct > 0 ? '+' : ''}{(item.deltaPct ?? 0).toFixed(1)}%
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-center text-xs">
+                                {item.status === 'on_target' ? (
+                                  <span className="text-emerald-400 font-bold">On Target</span>
+                                ) : item.status === 'underweight' ? (
+                                  <span className="text-amber-400 font-bold">เติม +{(item.sharesGap ?? 0).toFixed(1)} หุ้น</span>
+                                ) : (
+                                  <span className="text-blue-400 font-bold">เกินเป้า {formatMoney(item.deltaVal)}</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1415,24 +1756,178 @@ export const SmartRebalancePage: React.FC = () => {
               {/* MODE 4: DIVIDEND DRIP */}
               {mode === 'dividend' && (
                 <div className="space-y-6">
-                  {/* Summary Banner */}
-                  <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-3xl p-6 shadow-lg flex items-center justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold text-amber-500 flex items-center gap-2 mb-1">
-                        <Sparkles className="w-5 h-5" /> Estimated Annual Dividend Income
-                      </h3>
-                      <p className="text-[#CBD5E1] text-sm">รายได้ปันผลคาดการณ์ต่อปี (ยังไม่หักภาษี)</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-4xl font-black text-amber-400 tabular-nums">
+                  {/* Mode 4 KPI Strip */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Card 1: Annual Income */}
+                    <div className="bg-[#161926] border border-amber-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Est. Annual Dividend</span>
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div className="text-3xl font-black text-amber-400 mt-2 tabular-nums">
                         {formatMoney(dividendStats.totalAnnualIncomeUsd)}
                       </div>
-                      <div className="text-sm font-bold text-amber-300 mt-1">
-                        / ปี
+                      <div className="text-xs text-[#CBD5E1] mt-1 font-medium">
+                        เงินปันผลคาดการณ์ต่อปี (ก่อนหักภาษี)
+                      </div>
+                    </div>
+
+                    {/* Card 2: Monthly Cashflow */}
+                    <div className="bg-[#161926] border border-cyan-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Avg. Monthly Cashflow</span>
+                        <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                          <Coins className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div className="text-3xl font-black text-cyan-400 mt-2 tabular-nums">
+                        {formatMoney(dividendStats.totalAnnualIncomeUsd / 12)}
+                      </div>
+                      <div className="text-xs text-[#CBD5E1] mt-1 font-medium">
+                        กระแสเงินสดเฉลี่ยต่อเดือน
+                      </div>
+                    </div>
+
+                    {/* Card 3: Weighted YOC */}
+                    <div className="bg-[#161926] border border-emerald-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Portfolio Weighted YOC</span>
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                          <Percent className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div className="text-3xl font-black text-emerald-400 mt-2 tabular-nums">
+                        {dividendStats.weightedYoc.toFixed(2)}%
+                      </div>
+                      <div className="text-xs text-[#CBD5E1] mt-1 font-medium">
+                        Yield on Cost ถัวเฉลี่ยจากต้นทุนทั้งพอร์ต
                       </div>
                     </div>
                   </div>
 
+                  {/* Mode 4 Visual Charts Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Chart A: Income Share Donut */}
+                    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-5 shadow-lg flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="text-base font-bold text-white flex items-center gap-2">
+                              <PieChartIcon className="w-4 h-4 text-amber-400" /> Dividend Contribution
+                            </h4>
+                            <p className="text-xs text-[#CBD5E1] mt-0.5">สัดส่วนเงินปันผลที่ได้รับแยกตามหุ้นในพอร์ต</p>
+                          </div>
+                        </div>
+
+                        <div className="w-full h-56">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsPieChart>
+                              <Pie
+                                data={dividendStats.dividendDonutData}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={48}
+                                outerRadius={74}
+                                paddingAngle={2}
+                              >
+                                {dividendStats.dividendDonutData.map((entry, index) => (
+                                  <Cell key={`div-cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <RechartsTooltip
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    const data = payload[0].payload;
+                                    return (
+                                      <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-1">
+                                        <div className="font-bold text-white">{data.name}</div>
+                                        <div className="text-slate-300">เงินปันผล: <span className="font-bold text-amber-400">{formatMoney(data.value)}/ปี</span></div>
+                                        <div className="text-slate-300">สัดส่วนพอร์ตปันผล: <span className="font-bold text-white">{data.pct}%</span></div>
+                                        <div className="text-slate-400">Div Yield: {data.divYield}%</div>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }}
+                              />
+                            </RechartsPieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* Legend Pills */}
+                      <div className="flex flex-wrap gap-1.5 mt-2 justify-center max-h-16 overflow-y-auto">
+                        {dividendStats.dividendDonutData.map(item => (
+                          <span key={item.name} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#161926] border border-[#2A2E45] text-xs font-medium text-slate-200">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                            {item.name} <span className="text-amber-400 font-bold">{formatMoney(item.value)}</span> <span className="text-slate-400">({item.pct}%)</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Chart B: DRIP Snowball Compounding Projection */}
+                    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-5 shadow-lg flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="text-base font-bold text-white flex items-center gap-2">
+                              <BarChart3 className="w-4 h-4 text-emerald-400" /> DRIP Snowball Compounding
+                            </h4>
+                            <p className="text-xs text-[#CBD5E1] mt-0.5">จำลองการเติบโต: ซื้อซ้ำด้วยปันผล (DRIP) vs ถอนเงินสดออก</p>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs font-medium">
+                            <span className="flex items-center gap-1 text-emerald-400"><span className="w-2.5 h-2.5 rounded bg-emerald-500 inline-block" /> With DRIP</span>
+                            <span className="flex items-center gap-1 text-slate-400"><span className="w-2.5 h-2.5 rounded bg-slate-500 inline-block" /> No DRIP</span>
+                          </div>
+                        </div>
+
+                        <div className="w-full h-56">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={dividendStats.dripSnowballData} margin={{ top: 10, right: 15, left: 10, bottom: 5 }}>
+                              <XAxis dataKey="year" stroke="#64748B" tick={{ fill: '#CBD5E1', fontSize: 12, fontWeight: 600 }} />
+                              <YAxis stroke="#64748B" tickFormatter={(v) => `$${Math.round(v)}`} tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                              <RechartsTooltip
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    const data = payload[0].payload;
+                                    return (
+                                      <div className="bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-2 text-xs shadow-xl space-y-1">
+                                        <div className="font-bold text-white text-sm">{data.year}</div>
+                                        <div className="text-emerald-400 font-semibold">
+                                          With DRIP: <span className="font-bold">{formatMoney(data.withDrip)}/ปี</span>
+                                        </div>
+                                        <div className="text-slate-400">
+                                          No DRIP: <span>{formatMoney(data.withoutDrip)}/ปี</span>
+                                        </div>
+                                        {data.gainFromDrip > 0 && (
+                                          <div className="text-xs text-amber-300 font-bold pt-1 border-t border-[#2A2E45]">
+                                            +พลังดอกเบี้ยทบต้น: +{formatMoney(data.gainFromDrip)}/ปี
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }}
+                              />
+                              <Bar dataKey="withoutDrip" name="No DRIP" fill="#475569" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="withDrip" name="With DRIP" fill="#10B981" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-center text-xs text-[#CBD5E1]">
+                        💡 สมมติฐาน: ปันผลเติบโตเฉลี่ย 6%/ปี + นำปันผลซื้อซ้ำหุ้นเดิมสะสมทบต้น
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DRIP Simulator Table */}
                   <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-lg">
                     <h3 className="text-xl font-bold text-white tracking-tight mb-4">DRIP Simulator (Dividend Reinvestment Plan)</h3>
                     <div className="overflow-x-auto">
@@ -1460,7 +1955,7 @@ export const SmartRebalancePage: React.FC = () => {
                                 <td className="py-3 px-4 font-extrabold text-white">
                                   {item.symbol}
                                 </td>
-                                <td className="py-3 px-4 text-right text-white font-medium">{item.quantity}</td>
+                                <td className="py-3 px-4 text-right text-white font-medium">{Number(item.quantity.toFixed(4))}</td>
                                 <td className="py-3 px-4 text-right text-emerald-400 font-bold">{(item.divYield * 100).toFixed(2)}%</td>
                                 <td className="py-3 px-4 text-right text-amber-400 font-bold">{item.yoc.toFixed(2)}%</td>
                                 <td className="py-3 px-4 text-right text-white font-bold">{formatMoney(item.holdingIncome)}</td>
