@@ -188,7 +188,12 @@ export const BlueprintPieChart: React.FC<BlueprintPieChartProps> = ({ blueprints
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip 
+                  content={<CustomTooltip />} 
+                  wrapperStyle={{ zIndex: 100, pointerEvents: 'none' }}
+                  position={{ x: 220, y: 0 }}
+                  allowEscapeViewBox={{ x: true, y: true }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>

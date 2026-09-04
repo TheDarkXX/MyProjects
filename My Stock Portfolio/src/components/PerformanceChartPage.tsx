@@ -608,34 +608,37 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
         const labelText = isRef ? `${rawPct} - ${name}` : `${rawPct} - Portfolio`;
         const textWidth = Math.max(64, labelText.length * 7 + 16);
     
+        const badgeHeight = isRef ? 22 : 26;
+        const badgeY = isRef ? y - 11 : y - 13;
+
         return (
             <g transform={`translate(0, ${yOffset})`}>
                 <rect 
                     x={x + 8} 
-                    y={y - 11} 
+                    y={badgeY} 
                     width={textWidth} 
-                    height={22} 
-                    fill="#111827" 
-                    stroke={stroke} 
+                    height={badgeHeight} 
+                    fill={isRef ? "#111827" : "#1a1607"} 
+                    stroke={isRef ? stroke : "#FBBF24"} 
                     strokeOpacity={isRef ? 0.6 : 1}
-                    strokeWidth={isRef ? "1.4" : "1.8"}
-                    rx="4" 
+                    strokeWidth={isRef ? "1.4" : "2"}
+                    rx="5" 
                     style={{
-                        filter: isRef ? 'none' : 'drop-shadow(0 2px 5px rgba(0,0,0,0.85))'
+                        filter: isRef ? 'none' : 'drop-shadow(0 2px 8px rgba(251,191,36,0.35))'
                     }}
                 />
                 <text 
                     x={x + 8 + (textWidth / 2)} 
                     y={y + 4} 
-                    fill="#FFFFFF" 
+                    fill={isRef ? "#FFFFFF" : "#FBBF24"} 
                     fillOpacity={isRef ? 0.9 : 1}
-                    fontSize="11.5px" 
-                    fontWeight="bold"
+                    fontSize={isRef ? "11.5px" : "13px"} 
+                    fontWeight={isRef ? "bold" : "900"}
                     fontFamily="'Roboto Flex', sans-serif"
                     textAnchor="middle"
                     style={{ 
                         fontFeatureSettings: "'tnum'",
-                        textShadow: '0 1px 2px rgba(0,0,0,0.9)'
+                        textShadow: isRef ? '0 1px 2px rgba(0,0,0,0.9)' : '0 1px 4px rgba(0,0,0,0.95)'
                     }}
                 >
                     {labelText}
