@@ -10,12 +10,45 @@ import { api } from '../../services/api';
 import { 
   Scale, SlidersHorizontal, DollarSign, ArrowRight, Check, Copy, Sparkles, 
   TrendingUp, Scissors, CheckCircle2, AlertCircle, CheckSquare, Square, 
-  RefreshCw, Wallet, Filter, AlertTriangle 
+  RefreshCw, Wallet, Filter, AlertTriangle, LayoutGrid, Layers, Table2
 } from 'lucide-react';
 import clsx from 'clsx';
 
 type MainTab = 'blueprint' | 'tools';
 type RebalanceMode = 'cashflow' | 'matrix' | 'trim' | 'dividend';
+type BuyingPlanView = 'card' | 'compact' | 'table';
+
+const LongZigzagTrendUp = ({ className = "w-[18px] h-[12px] text-emerald-400" }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 16" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    style={{ overflow: 'visible' }}
+    className={clsx("shrink-0", className)}
+  >
+    <polyline points="2 13 7 7 12 11 21 3" />
+    <polyline points="15 3 21 3 21 9" />
+  </svg>
+);
+
+const LongZigzagTrendDown = ({ className = "w-[18px] h-[12px] text-rose-400" }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 16" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    style={{ overflow: 'visible' }}
+    className={clsx("shrink-0", className)}
+  >
+    <polyline points="2 3 7 9 12 5 21 13" />
+    <polyline points="15 13 21 13 21 7" />
+  </svg>
+);
 
 export const SmartRebalancePage: React.FC = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
@@ -34,6 +67,9 @@ export const SmartRebalancePage: React.FC = () => {
   // Selective Buy & Option C Remainder Strategy States
   const [remainderMode, setRemainderMode] = useState<'redistribute' | 'reserve'>('redistribute');
   const [selectedSymbols, setSelectedSymbols] = useState<Set<string> | null>(null);
+  const [planView, setPlanView] = useState<BuyingPlanView>(() => {
+    return (localStorage.getItem('smart_rebalance_plan_view') as BuyingPlanView) || 'compact';
+  });
   const [technicals, setTechnicals] = useState<Record<string, any>>({});
   const [techLoading, setTechLoading] = useState<boolean>(false);
 
@@ -260,19 +296,17 @@ export const SmartRebalancePage: React.FC = () => {
       .filter(Boolean) as any[];
   }, [combinedPortfolio, depositAmountUsd, totalNetWorth, blueprints, getBuySignal]);
 
-  // Active selected symbols (Auto-select non-expensive by default, user can toggle freely)
+  // Active selected symbols (All unchecked by default as requested)
   const activeSelectedSymbols = useMemo(() => {
     if (selectedSymbols !== null) {
       return selectedSymbols;
     }
-    const nonExpensive = cashflowCandidates
-      .filter(c => c.deficit > 0 && c.signalInfo.signal !== 'expensive')
-      .map(c => c.symbol);
-    if (nonExpensive.length > 0) {
-      return new Set(nonExpensive);
-    }
-    return new Set(cashflowCandidates.filter(c => c.deficit > 0).map(c => c.symbol));
-  }, [selectedSymbols, cashflowCandidates]);
+    return new Set<string>(); // Default empty (all unchecked)
+  }, [selectedSymbols]);
+
+  const isAllSelected = useMemo(() => {
+    return cashflowCandidates.length > 0 && activeSelectedSymbols.size === cashflowCandidates.length;
+  }, [cashflowCandidates, activeSelectedSymbols]);
 
   const toggleSymbol = (sym: string) => {
     const next = new Set(activeSelectedSymbols);
@@ -288,6 +322,18 @@ export const SmartRebalancePage: React.FC = () => {
     setSelectedSymbols(new Set(cashflowCandidates.map(c => c.symbol)));
   };
 
+  const clearAllSelections = () => {
+    setSelectedSymbols(new Set());
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      clearAllSelections();
+    } else {
+      selectAll();
+    }
+  };
+
   const selectBuySignalsOnly = () => {
     const buySignals = cashflowCandidates
       .filter(c => c.signalInfo.signal === 'strong_buy')
@@ -300,10 +346,6 @@ export const SmartRebalancePage: React.FC = () => {
       .filter(c => c.signalInfo.signal !== 'expensive')
       .map(c => c.symbol);
     setSelectedSymbols(new Set(good));
-  };
-
-  const clearAllSelections = () => {
-    setSelectedSymbols(new Set());
   };
 
   const signalCounts = useMemo(() => {
@@ -712,31 +754,49 @@ export const SmartRebalancePage: React.FC = () => {
                         <span className="text-xs font-bold text-[#CBD5E1] flex items-center gap-1.5 mr-1">
                           <Filter className="w-3.5 h-3.5 text-[#06B6D4]" /> เลือกหุ้นรอบนี้:
                         </span>
+                        
+                        {/* Master Select / Deselect All Toggle */}
                         <button
                           type="button"
-                          onClick={selectAll}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#1A1D2D] hover:bg-[#2A2E45] text-white border border-[#2A2E45] transition-all"
+                          onClick={toggleSelectAll}
+                          className={clsx(
+                            "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-sm",
+                            isAllSelected
+                              ? "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30"
+                              : "bg-[#1A1D2D] hover:bg-[#2A2E45] text-white border-[#2A2E45]"
+                          )}
                         >
-                          เลือกทั้งหมด ({cashflowCandidates.length})
+                          {isAllSelected ? (
+                            <>
+                              <CheckSquare className="w-3.5 h-3.5 text-rose-400" />
+                              <span>☒ ปลดทั้งหมด ({activeSelectedSymbols.size}/{cashflowCandidates.length})</span>
+                            </>
+                          ) : (
+                            <>
+                              <Square className="w-3.5 h-3.5 text-slate-400" />
+                              <span>☑️ เลือกทั้งหมด ({activeSelectedSymbols.size}/{cashflowCandidates.length})</span>
+                            </>
+                          )}
                         </button>
+
                         <button
                           type="button"
                           onClick={selectBuySignalsOnly}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1.5"
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1.5"
                         >
                           <span>🟢</span> เฉพาะ Strong Buy ({signalCounts.strongBuy})
                         </button>
                         <button
                           type="button"
                           onClick={selectFairAndStrong}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5"
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5"
                         >
                           <span>🟢+🟡</span> ตัวที่ราคาน่าซื้อ ({signalCounts.strongBuy + signalCounts.fair})
                         </button>
                         <button
                           type="button"
                           onClick={clearAllSelections}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#1A1D2D] hover:bg-rose-500/20 text-[#CBD5E1] hover:text-rose-400 border border-[#2A2E45] transition-all"
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#1A1D2D] hover:bg-rose-500/20 text-[#CBD5E1] hover:text-rose-400 border border-[#2A2E45] transition-all"
                         >
                           ล้างที่เลือก
                         </button>
@@ -757,7 +817,7 @@ export const SmartRebalancePage: React.FC = () => {
                           {formatMoney(cashflowPlan.totalAllocatedUsd)}
                         </span>
                         <span className="text-xs text-emerald-400 mt-0.5">
-                          {activeSelectedSymbols.size > 0 ? `กระจายลง ${activeSelectedSymbols.size} ตัวที่เลือก` : 'ยังไม่ได้เลือกหุ้น'}
+                          {activeSelectedSymbols.size > 0 ? `กระจายลง ${activeSelectedSymbols.size} ตัวที่เลือก` : 'ยังไม่ได้เลือกหุ้น (งบพักใน Reserve)'}
                         </span>
                       </div>
 
@@ -793,7 +853,7 @@ export const SmartRebalancePage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 3. Buying Plan Cards Grid */}
+                  {/* 3. Buying Plan View Container */}
                   <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-lg space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
@@ -804,172 +864,469 @@ export const SmartRebalancePage: React.FC = () => {
                           </span>
                         </h3>
                         <p className="text-xs text-[#CBD5E1] mt-0.5">
-                          คลิกการ์ดเพื่อติ๊กเลือก/ไม่เลือกซื้อในรอบนี้ ระบบจะคำนวณงบใหม่ทันที
+                          คลิกการ์ดหรือแถวตารางเพื่อติ๊กเลือก/ไม่เลือกซื้อในรอบนี้ ระบบจะคำนวณงบใหม่ทันที
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={copyBuyingPlan}
-                        className="px-4 py-2 bg-[#1A1D2D] hover:bg-[#2A2E45] border border-[#2A2E45] text-white text-xs font-bold rounded-xl flex items-center gap-2 self-start sm:self-auto transition-all"
-                      >
-                        {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-[#823AFD]" />}
-                        {copied ? 'คัดลอกเรียบร้อย!' : 'คัดลอกแผนเคาะซื้อ'}
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                        {/* 3 View Switcher: Card | Compact | Table */}
+                        <div className="flex items-center bg-[#1A1D2D] p-1 rounded-xl border border-[#2A2E45]">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPlanView('card');
+                              localStorage.setItem('smart_rebalance_plan_view', 'card');
+                            }}
+                            className={clsx(
+                              "px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
+                              planView === 'card'
+                                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md shadow-[#823AFD]/30"
+                                : "text-[#9898C8] hover:text-white"
+                            )}
+                            title="Card View (การ์ดใหญ่เต็มยศ)"
+                          >
+                            <LayoutGrid className="w-3.5 h-3.5" />
+                            <span>Card</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPlanView('compact');
+                              localStorage.setItem('smart_rebalance_plan_view', 'compact');
+                            }}
+                            className={clsx(
+                              "px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
+                              planView === 'compact'
+                                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md shadow-[#823AFD]/30"
+                                : "text-[#9898C8] hover:text-white"
+                            )}
+                            title="Compact View (การ์ดย่อส่วนมินิมอล)"
+                          >
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>Compact</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPlanView('table');
+                              localStorage.setItem('smart_rebalance_plan_view', 'table');
+                            }}
+                            className={clsx(
+                              "px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
+                              planView === 'table'
+                                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md shadow-[#823AFD]/30"
+                                : "text-[#9898C8] hover:text-white"
+                            )}
+                            title="Table View (ตาราง Execution Terminal)"
+                          >
+                            <Table2 className="w-3.5 h-3.5" />
+                            <span>Table</span>
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={copyBuyingPlan}
+                          className="px-4 py-2 bg-[#1A1D2D] hover:bg-[#2A2E45] border border-[#2A2E45] text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all"
+                        >
+                          {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-[#823AFD]" />}
+                          <span>{copied ? 'คัดลอกเรียบร้อย!' : 'คัดลอกแผนเคาะซื้อ'}</span>
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-2">
-                      {cashflowPlan.items.map((rec) => (
-                        <div
-                          key={rec.symbol}
-                          onClick={() => toggleSymbol(rec.symbol)}
-                          className={clsx(
-                            "cursor-pointer transition-all duration-200 rounded-2xl p-5 shadow-sm space-y-4 border text-left relative select-none",
-                            rec.isSelected
-                              ? "bg-[#161926] border-emerald-500/70 shadow-[0_0_24px_rgba(16,185,129,0.14)] hover:border-emerald-400"
-                              : "bg-[#121520]/80 border-[#2A2E45]/80 opacity-70 hover:opacity-100 hover:border-slate-500"
-                          )}
-                        >
-                          {/* Top Row: Checkbox, Symbol, Live Price */}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-3">
-                              {/* Checkbox */}
-                              <div className={clsx(
-                                "w-6 h-6 rounded-lg flex items-center justify-center border transition-all shrink-0",
-                                rec.isSelected
-                                  ? "bg-emerald-500 border-emerald-400 text-black shadow-md shadow-emerald-500/30"
-                                  : "bg-[#1A1D2D] border-[#2A2E45] text-transparent hover:border-slate-400"
-                              )}>
-                                <Check className={clsx("w-4 h-4 stroke-[3]", rec.isSelected ? "text-slate-950" : "opacity-0")} />
-                              </div>
-
-                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#823AFD] to-[#FC2D79] flex items-center justify-center font-black text-white text-sm shrink-0">
-                                {rec.symbol.slice(0, 3)}
-                              </div>
-
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-extrabold text-white text-base tracking-tight">{rec.symbol}</span>
-                                  {rec.status === 'WATCHLIST' && (
-                                    <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                                      WATCHLIST
-                                    </span>
-                                  )}
+                    {/* VIEW 1: Rich Card View (Large) */}
+                    {planView === 'card' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-2">
+                        {cashflowPlan.items.map((rec) => (
+                          <div
+                            key={rec.symbol}
+                            onClick={() => toggleSymbol(rec.symbol)}
+                            className={clsx(
+                              "cursor-pointer transition-all duration-200 rounded-2xl p-5 shadow-sm space-y-4 border text-left relative select-none",
+                              rec.isSelected
+                                ? "bg-[#161926] border-emerald-500/70 shadow-[0_0_24px_rgba(16,185,129,0.14)] hover:border-emerald-400"
+                                : "bg-[#121520]/80 border-[#2A2E45]/80 opacity-70 hover:opacity-100 hover:border-slate-500"
+                            )}
+                          >
+                            {/* Top Row: Checkbox, Symbol, Live Price */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-3">
+                                {/* Checkbox */}
+                                <div className={clsx(
+                                  "w-6 h-6 rounded-lg flex items-center justify-center border transition-all shrink-0",
+                                  rec.isSelected
+                                    ? "bg-emerald-500 border-emerald-400 text-black shadow-md shadow-emerald-500/30"
+                                    : "bg-[#1A1D2D] border-[#2A2E45] text-transparent hover:border-slate-400"
+                                )}>
+                                  <Check className={clsx("w-4 h-4 stroke-[3]", rec.isSelected ? "text-slate-950" : "opacity-0")} />
                                 </div>
-                                <span className="text-xs text-[#CBD5E1] block font-medium">
-                                  เป้า Blueprint: <strong className="text-emerald-400">{rec.targetWeight}%</strong>
-                                </span>
-                              </div>
-                            </div>
 
-                            <div className="text-right">
-                              <div className="text-base font-extrabold text-white">{formatMoney(rec.price, 2)}</div>
-                              <span className="text-xs text-[#CBD5E1]">ราคาตลาด</span>
-                            </div>
-                          </div>
-
-                          {/* Price Gate Signal Pill */}
-                          <div className={clsx("p-2.5 rounded-xl border flex items-center justify-between text-xs", rec.signalInfo.badgeClass)}>
-                            <div className="flex items-center gap-1.5 font-bold">
-                              <span>{rec.signalInfo.icon}</span>
-                              <span>{rec.signalInfo.label}</span>
-                              <span className="text-[#CBD5E1] font-normal mx-0.5">|</span>
-                              <span className="text-slate-200 font-semibold">{rec.signalInfo.detail}</span>
-                            </div>
-                            <div className="text-right text-xs font-medium text-[#CBD5E1]">
-                              {rec.signalInfo.subtext}
-                            </div>
-                          </div>
-
-                          {/* Buy Action Box */}
-                          {rec.isSelected ? (
-                            <div className="bg-[#1A1D2D] p-3.5 rounded-xl border border-emerald-500/40 flex items-center justify-between">
-                              <div>
-                                <span className="text-xs uppercase text-emerald-400 font-bold block flex items-center gap-1">
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> ซื้อรอบนี้ (Allocated)
-                                </span>
-                                <div className="text-lg font-black text-white mt-0.5">
-                                  BUY +{rec.buyShares} หุ้น
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#823AFD] to-[#FC2D79] flex items-center justify-center font-black text-white text-sm shrink-0">
+                                  {rec.symbol.slice(0, 3)}
                                 </div>
-                              </div>
-                              <div className="text-right">
-                                <span className="text-xs text-[#CBD5E1] block">งบที่ใช้</span>
-                                <div className="text-lg font-black text-emerald-400 mt-0.5">
-                                  {formatMoney(rec.allocatedUsd)}
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="bg-[#161926]/70 p-3.5 rounded-xl border border-[#2A2E45] flex items-center justify-between text-slate-300">
-                              <div className="flex items-center gap-2">
-                                <span className="text-slate-400 text-base">⏸️</span>
+
                                 <div>
-                                  <span className="text-xs font-bold text-slate-300 block">ข้ามการซื้อรอบนี้</span>
-                                  <span className="text-xs text-[#9898C8]">
-                                    {rec.signalInfo.signal === 'expensive' ? 'ราคายังแพง แนะนำรอจังหวะ' : 'คลิกการ์ดนี้เพื่อรวมเข้าแผน'}
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-extrabold text-white text-base tracking-tight font-heading">{rec.symbol}</span>
+                                    {rec.status === 'WATCHLIST' && (
+                                      <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-prompt">
+                                        WATCHLIST
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-[#CBD5E1] block font-medium font-prompt">
+                                    เป้า Blueprint: <strong className="text-emerald-400">{rec.targetWeight}%</strong>
                                   </span>
                                 </div>
                               </div>
-                              <span className="text-xs font-bold text-[#823AFD] hover:text-white bg-[#1A1D2D] px-2.5 py-1 rounded-lg border border-[#2A2E45]">
-                                + เลือกซื้อ
-                              </span>
-                            </div>
-                          )}
 
-                          {/* Weight Progression Bar */}
-                          <div className="space-y-1.5 text-xs pt-1">
-                            <div className="flex justify-between text-[#CBD5E1]">
-                              <span>สัดส่วนในพอร์ต:</span>
-                              <span>
-                                <strong className="text-white">{(rec.currentWeight ?? 0).toFixed(1)}%</strong>
+                              <div className="text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {rec.signalInfo.signal !== 'expensive' ? (
+                                    <LongZigzagTrendUp className="w-[18px] h-[12px] text-emerald-400" />
+                                  ) : (
+                                    <LongZigzagTrendDown className="w-[18px] h-[12px] text-rose-400" />
+                                  )}
+                                  <span className="text-base font-extrabold text-white font-prompt">{formatMoney(rec.price, 2)}</span>
+                                </div>
+                                <span className="text-xs text-[#CBD5E1] font-prompt">ราคาตลาด</span>
+                              </div>
+                            </div>
+
+                            {/* Price Gate Signal Pill */}
+                            <div className={clsx("p-2.5 rounded-xl border flex items-center justify-between text-xs font-prompt", rec.signalInfo.badgeClass)}>
+                              <div className="flex items-center gap-1.5 font-bold">
+                                <span>{rec.signalInfo.icon}</span>
+                                <span>{rec.signalInfo.label}</span>
+                                <span className="text-[#CBD5E1] font-normal mx-0.5">|</span>
+                                <span className="text-slate-200 font-semibold">{rec.signalInfo.detail}</span>
+                              </div>
+                              <div className="text-right text-xs font-medium text-[#CBD5E1]">
+                                {rec.signalInfo.subtext}
+                              </div>
+                            </div>
+
+                            {/* Buy Action Box */}
+                            {rec.isSelected ? (
+                              <div className="bg-[#1A1D2D] p-3.5 rounded-xl border border-emerald-500/40 flex items-center justify-between font-prompt">
+                                <div>
+                                  <span className="text-xs uppercase text-emerald-400 font-bold block flex items-center gap-1">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> ซื้อรอบนี้ (Allocated)
+                                  </span>
+                                  <div className="text-lg font-black text-white mt-0.5">
+                                    BUY +{rec.buyShares} หุ้น
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-xs text-[#CBD5E1] block">งบที่ใช้</span>
+                                  <div className="text-lg font-black text-emerald-400 mt-0.5">
+                                    {formatMoney(rec.allocatedUsd)}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-[#161926]/70 p-3.5 rounded-xl border border-[#2A2E45] flex items-center justify-between text-slate-300 font-prompt">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-400 text-base">⏸️</span>
+                                  <div>
+                                    <span className="text-xs font-bold text-slate-300 block">ข้ามการซื้อรอบนี้</span>
+                                    <span className="text-xs text-[#9898C8]">
+                                      {rec.signalInfo.signal === 'expensive' ? 'ราคายังแพง แนะนำรอจังหวะ' : 'คลิกการ์ดนี้เพื่อรวมเข้าแผน'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <span className="text-xs font-bold text-[#823AFD] hover:text-white bg-[#1A1D2D] px-2.5 py-1 rounded-lg border border-[#2A2E45]">
+                                  + เลือกซื้อ
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Weight Progression Bar */}
+                            <div className="space-y-1.5 text-xs pt-1 font-prompt">
+                              <div className="flex justify-between text-[#CBD5E1]">
+                                <span>สัดส่วนในพอร์ต:</span>
+                                <span>
+                                  <strong className="text-white">{(rec.currentWeight ?? 0).toFixed(1)}%</strong>
+                                  {rec.isSelected && (
+                                    <>
+                                      {' '}&rarr;{' '}
+                                      <strong className="text-emerald-400">{(rec.projectedWeight ?? 0).toFixed(1)}%</strong>
+                                    </>
+                                  )}
+                                  {' '}<span className="text-[#9898C8]">(เป้า {rec.targetWeight}%)</span>
+                                </span>
+                              </div>
+                              <div className="w-full h-2 bg-[#1A1D2D] rounded-full overflow-hidden flex">
+                                <div style={{ width: `${Math.max(0, Math.min(100, rec.currentWeight ?? 0))}%` }} className="bg-[#823AFD] h-full" />
                                 {rec.isSelected && (
-                                  <>
-                                    {' '}&rarr;{' '}
-                                    <strong className="text-emerald-400">{(rec.projectedWeight ?? 0).toFixed(1)}%</strong>
-                                  </>
+                                  <div style={{ width: `${Math.max(0, Math.min(100, (rec.projectedWeight ?? 0) - (rec.currentWeight ?? 0)))}%` }} className="bg-emerald-400 h-full" />
                                 )}
-                                {' '}<span className="text-[#9898C8]">(เป้า {rec.targetWeight}%)</span>
-                              </span>
-                            </div>
-                            <div className="w-full h-2 bg-[#1A1D2D] rounded-full overflow-hidden flex">
-                              <div style={{ width: `${Math.max(0, Math.min(100, rec.currentWeight ?? 0))}%` }} className="bg-[#823AFD] h-full" />
-                              {rec.isSelected && (
-                                <div style={{ width: `${Math.max(0, Math.min(100, (rec.projectedWeight ?? 0) - (rec.currentWeight ?? 0)))}%` }} className="bg-emerald-400 h-full" />
-                              )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
 
-                      {/* Empty selection warning */}
-                      {cashflowPlan.items.filter(r => r.isSelected).length === 0 && (
-                        <div className="col-span-full p-8 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center space-y-3">
-                          <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto" />
-                          <div className="text-base font-bold text-white">ยังไม่ได้เลือกหุ้นที่จะซื้อในรอบนี้</div>
-                          <p className="text-sm text-[#CBD5E1] max-w-md mx-auto">
-                            มึงปลดติ๊กทั้งหมด งบ {formatMoney(depositAmountUsd)} จึงยังไม่ถูกจัดสรร คลิกเลือกหุ้นที่การ์ด หรือกดปุ่มด้านล่างเพื่อเลือกอัตโนมัติ
-                          </p>
-                          <div className="flex justify-center gap-3 pt-2">
-                            <button
-                              type="button"
-                              onClick={selectFairAndStrong}
-                              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl transition-all"
-                            >
-                              เลือกตัวที่ราคาน่าซื้อ (🟢 + 🟡)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={selectAll}
-                              className="px-4 py-2 bg-[#1A1D2D] hover:bg-[#2A2E45] text-white font-bold text-xs rounded-xl border border-[#2A2E45] transition-all"
-                            >
-                              เลือกทั้งหมดตาม Blueprint
-                            </button>
+                    {/* VIEW 2: Compact Mini-Card Grid (50% smaller) */}
+                    {planView === 'compact' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 pt-2">
+                        {cashflowPlan.items.map((rec) => (
+                          <div
+                            key={rec.symbol}
+                            onClick={() => toggleSymbol(rec.symbol)}
+                            className={clsx(
+                              "cursor-pointer transition-all duration-200 rounded-2xl p-4 shadow-sm border text-left relative select-none flex flex-col justify-between space-y-3",
+                              rec.isSelected
+                                ? "bg-[#161926] border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.12)] hover:border-emerald-400"
+                                : "bg-[#121520]/80 border-[#2A2E45]/80 opacity-70 hover:opacity-100 hover:border-slate-500"
+                            )}
+                          >
+                            {/* Top row: Checkbox, Symbol, Price, Signal Pill */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5">
+                                <div className={clsx(
+                                  "w-5 h-5 rounded-md flex items-center justify-center border transition-all shrink-0",
+                                  rec.isSelected
+                                    ? "bg-emerald-500 border-emerald-400 text-black shadow-sm"
+                                    : "bg-[#1A1D2D] border-[#2A2E45] text-transparent hover:border-slate-400"
+                                )}>
+                                  <Check className={clsx("w-3.5 h-3.5 stroke-[3]", rec.isSelected ? "text-slate-950" : "opacity-0")} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-black text-white text-base tracking-tight font-heading">{rec.symbol}</span>
+                                    {rec.status === 'WATCHLIST' && (
+                                      <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded-md font-prompt">
+                                        WATCH
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-[#CBD5E1] block font-medium font-prompt">
+                                    เป้า: <strong className="text-emerald-400">{rec.targetWeight}%</strong>
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="text-right flex flex-col items-end">
+                                <div className="flex items-center gap-1.5">
+                                  {rec.signalInfo.signal !== 'expensive' ? (
+                                    <LongZigzagTrendUp className="w-[18px] h-[12px] text-emerald-400" />
+                                  ) : (
+                                    <LongZigzagTrendDown className="w-[18px] h-[12px] text-rose-400" />
+                                  )}
+                                  <span className="text-sm font-extrabold text-white tabular-nums font-prompt">
+                                    {formatMoney(rec.price, 2)}
+                                  </span>
+                                </div>
+                                <span className={clsx("px-2 py-0.5 rounded-md text-[11px] font-bold border mt-0.5 font-prompt", rec.signalInfo.badgeClass)}>
+                                  {rec.signalInfo.icon} {rec.signalInfo.label}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Middle: Action Badge */}
+                            {rec.isSelected ? (
+                              <div className="bg-[#1A1D2D] px-3.5 py-2.5 rounded-xl border border-emerald-500/40 flex items-center justify-between font-prompt">
+                                <span className="font-black text-white text-sm">
+                                  BUY +{rec.buyShares} หุ้น
+                                </span>
+                                <div className="text-right">
+                                  <span className="text-xs text-[#CBD5E1] mr-1.5">งบ:</span>
+                                  <span className="text-base font-black text-emerald-400 tabular-nums font-prompt">
+                                    {formatMoney(rec.allocatedUsd)}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-[#161926]/50 px-3.5 py-2 rounded-xl border border-[#2A2E45]/60 flex items-center justify-between text-xs text-slate-400 font-prompt">
+                                <span>⏸️ ข้ามรอบนี้</span>
+                                <span className="text-[#823AFD] font-bold hover:underline">+ ติ๊กเลือกซื้อ</span>
+                              </div>
+                            )}
+
+                            {/* Bottom: Compact Progress Bar */}
+                            <div className="space-y-1 text-xs font-prompt">
+                              <div className="flex justify-between text-[#CBD5E1]">
+                                <span>สัดส่วน:</span>
+                                <span>
+                                  <strong className="text-white">{(rec.currentWeight ?? 0).toFixed(1)}%</strong>
+                                  {rec.isSelected && (
+                                    <>
+                                      {' '}&rarr;{' '}
+                                      <strong className="text-emerald-400">{(rec.projectedWeight ?? 0).toFixed(1)}%</strong>
+                                    </>
+                                  )}
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-[#1A1D2D] rounded-full overflow-hidden flex">
+                                <div style={{ width: `${Math.max(0, Math.min(100, rec.currentWeight ?? 0))}%` }} className="bg-[#823AFD] h-full" />
+                                {rec.isSelected && (
+                                  <div style={{ width: `${Math.max(0, Math.min(100, (rec.projectedWeight ?? 0) - (rec.currentWeight ?? 0)))}%` }} className="bg-emerald-400 h-full" />
+                                )}
+                              </div>
+                            </div>
                           </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* VIEW 3: Institutional Execution Terminal Table */}
+                    {planView === 'table' && (
+                      <div className="overflow-x-auto rounded-2xl border border-[#2A2E45] bg-[#161926]/60 pt-1">
+                        <table className="w-full text-left border-collapse">
+                          <thead className="bg-[#111418] border-b border-[#2A2E45] text-[13px] font-bold uppercase text-slate-300 tracking-wider">
+                            <tr>
+                              <th className="py-3.5 pl-4 pr-2 w-12 text-center">เลือก</th>
+                              <th className="py-3.5 px-3">หุ้น (Symbol)</th>
+                              <th className="py-3.5 px-3 text-right">ราคาตลาด</th>
+                              <th className="py-3.5 px-3 text-center">สัญญาณราคา</th>
+                              <th className="py-3.5 px-3 text-center">สัดส่วนพอร์ต (จริง &rarr; เป้า)</th>
+                              <th className="py-3.5 px-3 text-right">คำสั่งเคาะซื้อ</th>
+                              <th className="py-3.5 pl-3 pr-4 text-right">งบที่จะใช้</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#2A2E45]/60 text-sm">
+                            {cashflowPlan.items.map(rec => (
+                              <tr 
+                                key={rec.symbol}
+                                onClick={() => toggleSymbol(rec.symbol)}
+                                className={clsx(
+                                  "cursor-pointer transition-all duration-150 group select-none",
+                                  rec.isSelected
+                                    ? "bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] border-l-4 border-emerald-400"
+                                    : "hover:bg-[#1A1D2D]/60 opacity-80 hover:opacity-100 border-l-4 border-transparent"
+                                )}
+                              >
+                                {/* Col 1: Checkbox */}
+                                <td className="py-3.5 pl-4 pr-2 text-center">
+                                  <div className={clsx(
+                                    "w-5 h-5 rounded-md flex items-center justify-center border transition-all mx-auto",
+                                    rec.isSelected
+                                      ? "bg-emerald-500 border-emerald-400 text-black shadow-sm"
+                                      : "bg-[#1A1D2D] border-[#2A2E45] text-transparent group-hover:border-slate-400"
+                                  )}>
+                                    <Check className={clsx("w-3.5 h-3.5 stroke-[3]", rec.isSelected ? "text-slate-950" : "opacity-0")} />
+                                  </div>
+                                </td>
+
+                                {/* Col 2: Symbol + Watchlist badge */}
+                                <td className="py-3.5 px-3 whitespace-nowrap">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-extrabold text-white text-[15px] font-heading group-hover:text-emerald-300 transition-colors">
+                                      {rec.symbol}
+                                    </span>
+                                    {rec.status === 'WATCHLIST' && (
+                                      <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-prompt">
+                                        WATCHLIST
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Col 3: Market Price with Trend Arrow */}
+                                <td className="py-3.5 px-3 text-right whitespace-nowrap">
+                                  <div className="inline-flex items-center justify-end gap-1.5 font-prompt">
+                                    {rec.signalInfo.signal !== 'expensive' ? (
+                                      <LongZigzagTrendUp className="w-[18px] h-[12px] text-emerald-400 shrink-0" />
+                                    ) : (
+                                      <LongZigzagTrendDown className="w-[18px] h-[12px] text-rose-400 shrink-0" />
+                                    )}
+                                    <span className="font-bold text-white text-[14px] tabular-nums">
+                                      {formatMoney(rec.price, 2)}
+                                    </span>
+                                  </div>
+                                </td>
+
+                                {/* Col 4: Price Gate Signal */}
+                                <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                                  <span className={clsx("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border font-prompt", rec.signalInfo.badgeClass)}>
+                                    <span>{rec.signalInfo.icon}</span>
+                                    <span>{rec.signalInfo.label}</span>
+                                  </span>
+                                </td>
+
+                                {/* Col 5: Weight progression */}
+                                <td className="py-3.5 px-3 text-center whitespace-nowrap font-prompt">
+                                  <div className="inline-flex items-center gap-1.5 text-xs text-slate-300">
+                                    <span className="text-white font-bold">{(rec.currentWeight ?? 0).toFixed(1)}%</span>
+                                    {rec.isSelected && (
+                                      <>
+                                        <span className="text-emerald-400 font-bold">&rarr; {(rec.projectedWeight ?? 0).toFixed(1)}%</span>
+                                      </>
+                                    )}
+                                    <span className="text-slate-400">(เป้า {rec.targetWeight}%)</span>
+                                  </div>
+                                </td>
+
+                                {/* Col 6: Action */}
+                                <td className="py-3.5 px-3 text-right whitespace-nowrap font-prompt">
+                                  {rec.isSelected ? (
+                                    <span className="font-black text-emerald-400 text-sm">
+                                      BUY +{rec.buyShares} หุ้น
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-500 text-xs">
+                                      ⏸️ ข้ามรอบนี้
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Col 7: Allocated Budget */}
+                                <td className="py-3.5 pl-3 pr-4 text-right whitespace-nowrap font-prompt">
+                                  <span className={clsx("font-black text-sm tabular-nums", rec.isSelected ? "text-emerald-400" : "text-slate-500")}>
+                                    {formatMoney(rec.allocatedUsd)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot className="bg-[#111418] border-t-2 border-[#2A2E45] font-prompt">
+                            <tr>
+                              <td colSpan={5} className="py-3.5 pl-4 pr-3 text-left font-bold text-white text-sm">
+                                รวมคำสั่งเคาะซื้อที่เลือก ({activeSelectedSymbols.size} ตัว)
+                              </td>
+                              <td className="py-3.5 px-3 text-right text-xs text-slate-400">
+                                งบจัดสรรรวม:
+                              </td>
+                              <td className="py-3.5 pl-3 pr-4 text-right font-black text-emerald-400 text-base tabular-nums">
+                                {formatMoney(cashflowPlan.totalAllocatedUsd)}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Empty selection notice */}
+                    {cashflowPlan.items.filter(r => r.isSelected).length === 0 && (
+                      <div className="p-8 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center space-y-3 font-prompt">
+                        <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto" />
+                        <div className="text-base font-bold text-white">ยังไม่ได้เลือกหุ้นที่จะซื้อในรอบนี้</div>
+                        <p className="text-sm text-[#CBD5E1] max-w-md mx-auto">
+                          ระบบตั้งต้นแบบ All Unchecked งบ {formatMoney(depositAmountUsd)} จึงถูกเก็บไว้ใน Cash Reserve คลิกเลือกหุ้น หรือกดปุ่มด้านล่างเพื่อเลือกอัตโนมัติ
+                        </p>
+                        <div className="flex justify-center gap-3 pt-2">
+                          <button
+                            type="button"
+                            onClick={selectFairAndStrong}
+                            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl transition-all shadow-md"
+                          >
+                            เลือกตัวที่ราคาน่าซื้อ (🟢 + 🟡)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={selectAll}
+                            className="px-4 py-2 bg-[#1A1D2D] hover:bg-[#2A2E45] text-white font-bold text-xs rounded-xl border border-[#2A2E45] transition-all"
+                          >
+                            เลือกทั้งหมดตาม Blueprint
+                          </button>
                         </div>
-                      )}
+                      </div>
+                    )}
                     </div>
                   </div>
-                </div>
               )}
 
               {/* MODE 2: MATRIX */}
