@@ -24,27 +24,49 @@ function createBlueprintHash(blueprints) {
 function compressPromptData(blueprints, fundamentals) {
   const count = blueprints.length;
   
-  const combined = blueprints.map(b => {
+  const holdings = blueprints.map(b => {
     const f = fundamentals[b.symbol] || {};
-    return { 
+    return {
       symbol: b.symbol,
       target_percent: b.target_percent,
-      category: b.category,
       sector: f.sector || b.category || 'Other',
+      industry: f.industry || '',
+      market_cap: f.market_cap || 0,
+      current_price: f.current_price || 0,
       pe_trailing: f.pe_trailing || 0,
+      pe_forward: f.pe_forward || 0,
+      pb_ratio: f.pb_ratio || 0,
+      roe: f.roe || 0,
+      profit_margin: f.profit_margin || 0,
+      debt_to_equity: f.debt_to_equity || 0,
+      revenue_growth: f.revenue_growth || 0,
       beta: f.beta || 1,
       div_yield: f.div_yield || 0,
-      revenue_growth: f.revenue_growth || 0
+      short_percent: f.short_percent || 0,
+      fifty_two_week_high: f.fifty_two_week_high || 0,
+      fifty_two_week_low: f.fifty_two_week_low || 0,
+      sma200: f.sma200 || 0,
+      target_mean_price: f.target_mean_price || 0,
+      recommendation_key: f.recommendation_key || '',
+      num_analyst_opinions: f.num_analyst_opinions || 0,
+      eps_growth_next_year: f.eps_growth_next_year || 0,
+      rec_strong_buy: f.rec_strong_buy || 0,
+      rec_buy: f.rec_buy || 0,
+      rec_hold: f.rec_hold || 0,
+      rec_sell: f.rec_sell || 0,
+      earnings_beat_streak: f.earnings_beat_streak || 0,
+      earnings_q1_surprise: f.earnings_q1_surprise || 0,
     };
   }).sort((a, b) => b.target_percent - a.target_percent);
 
   const summary = {
     totalHoldings: count,
-    avgPe: Number((combined.reduce((acc, c) => acc + (c.pe_trailing || 0), 0) / (count || 1)).toFixed(1)),
-    avgBeta: Number((combined.reduce((acc, c) => acc + (c.beta || 1), 0) / (count || 1)).toFixed(2)),
+    avgPe: Number((holdings.reduce((acc, c) => acc + (c.pe_trailing || 0), 0) / (count || 1)).toFixed(1)),
+    avgBeta: Number((holdings.reduce((acc, c) => acc + (c.beta || 1), 0) / (count || 1)).toFixed(2)),
+    top5Concentration: holdings.slice(0, 5).reduce((s, h) => s + h.target_percent, 0),
   };
 
-  return { summary, holdings: combined };
+  return { summary, holdings };
 }
 
 // Check and fetch latest analysis for each mode for a portfolio, detecting if blueprint has changed
@@ -215,21 +237,34 @@ aiAdvisorRoutes.post('/', async (c) => {
     
     const isStrategist = mode === 'strategist';
 
-    const systemPrompt = `คุณคือสุดยอดนักกลยุทธ์การลงทุนระดับโลก (Elite Chief Investment Strategist)
-มีหน้าที่วิเคราะห์ Blueprint พอร์ตโฟลิโออย่างเฉียบคม ชี้จุดแข็ง จุดเสี่ยง และแนะนำการปรับพอร์ตแบบ Actionable เชิงลึก
+    const systemPrompt = `คุณคือ Chief Investment Strategist ระดับ Wall Street
+ปรัชญา: Joseph Carlson (Dividend Growth, Cash Flow, Moat) × Shay Booler (Fundamental แน่น ตัดสินเด็ดขาด)
+โทนเสียง: ตรงไปตรงมา ดุดัน กระชับ ฟันธง ไม่อ้อมค้อม (ไม่ใช้คำว่า มึง/กู)
 
 กฎเหล็กเรื่องภาษา (Strict Language Rule):
-- คำวิเคราะห์ทั้งหมด (Strengths, Weaknesses, Suggestions, Reasons, Roadmap, Macro, Role) ต้องเขียนเป็น "ภาษาไทยที่สละสลวย เข้าใจง่าย กระชับ ตรงประเด็นแบบมืออาชีพ" ยกเว้นชื่อย่อหุ้น (Tickers) หรือ Heading เฉพาะ
+- คำวิเคราะห์ทั้งหมดต้องเขียนเป็น "ภาษาไทยที่สละสลวย เข้าใจง่าย กระชับ ตรงประเด็นแบบมืออาชีพ" ยกเว้นชื่อย่อหุ้น (Tickers) หรือ Heading เฉพาะ
 - ห้ามตอบเป็นภาษาอังกฤษในเนื้อหาคำอธิบายโดยเด็ดขาด
+
+ข้อมูลเชิงอนาคตที่ได้รับ (Analyst Consensus):
+- Analyst Price Target: คำนวณ Upside/Downside จากราคาปัจจุบัน (target_mean_price)
+- Buy/Hold/Sell: สรุปว่านักวิเคราะห์ส่วนใหญ่มองยังไง
+- EPS Growth Forecast: กำไรจะโตแค่ไหนปีหน้า
+- Earnings Beat Streak: บริษัทเอาชนะคาดการณ์กี่ไตรมาสติด
+
+คำสั่ง Future Story:
+1. ใช้ตัวเลข Analyst Consensus + EPS Growth เพื่อประเมิน "เรื่องเล่าอนาคต"
+2. ใช้ Earnings Beat Streak บอกว่าบริษัทส่งมอบผลงานจริงตามที่สัญญาไว้หรือไม่
+3. ใช้ความรู้ของคุณ (Training Data) เกี่ยวกับ Earnings Call, แผนธุรกิจ, CEO Vision, Product Roadmap เพื่อเติม Context ให้ลึกระดับนักวิเคราะห์มืออาชีพ
+4. ห้ามตอบกลางๆ Generic — ต้องชี้ชื่อหุ้น + ตัวเลข + เหตุผลเสมอ
 
 ข้อมูลพอร์ต:
 ${JSON.stringify(payloadData, null, 2)}
 
 โหมดการวิเคราะห์: ${mode.toUpperCase()}
 
-จงตอบกลับเป็น Single Valid JSON Object เท่านั้น (ห้ามใส่คำเกริ่น ห้ามใส่ Markdown code block ห้ามมีข้อความอื่นนอก JSON) ตามโครงสร้างนี้:
+จงตอบกลับเป็น Single Valid JSON Object เท่านั้น ห้ามใส่ข้อความอื่นนอก JSON ตามโครงสร้างนี้:
 {
-  "overallGrade": "A" | "A-" | "B+" | "B" | "B-" | "C" | "D",
+  "overallGrade": "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C" | "D",
   "radarData": {
     "diversification": number (0-100),
     "valuation": number (0-100),
@@ -237,39 +272,42 @@ ${JSON.stringify(payloadData, null, 2)}
     "risk": number (0-100),
     "income": number (0-100)
   },
-  "macroAnalysis": "วิเคราะห์ภาพรวมเศรษฐกิจมหภาค ทิศทางดอกเบี้ย และธีมเทคโนโลยี/อุตสาหกรรมที่กระทบพอร์ตนี้ เป็นภาษาไทย (2-4 บรรทัด)",
+  "macroAnalysis": "ภาพรวมเศรษฐกิจมหภาค ทิศทางดอกเบี้ย และธีมเทคโนโลยีที่กระทบพอร์ตนี้ ภาษาไทย (2-4 บรรทัด)",
+  "portfolioStyle": "สไตล์พอร์ต เช่น Aggressive Growth / Balanced / Dividend Income / Defensive",
+  "concentrationRisk": "ความเสี่ยงกระจุกตัว Top3/5 หรือ Overlap warnings ภาษาไทย (1-2 บรรทัด)",
+  "dividendHealth": "สุขภาพปันผล Portfolio Yield และระวัง Yield Trap (1-2 บรรทัด)",
   "strengths": [
-    { "title": "หัวข้อจุดแข็งที่ 1 ภาษาไทย", "description": "คำอธิบายเชิงลึกภาษาไทย พร้อมเหตุผล" },
-    { "title": "หัวข้อจุดแข็งที่ 2 ภาษาไทย", "description": "คำอธิบายเชิงลึกภาษาไทย พร้อมเหตุผล" },
-    { "title": "หัวข้อจุดแข็งที่ 3 ภาษาไทย", "description": "คำอธิบายเชิงลึกภาษาไทย พร้อมเหตุผล" }
+    { "title": "หัวข้อจุดแข็งภาษาไทย", "description": "ชี้ตัวเลขและชื่อหุ้นประกอบ พร้อมเหตุผลภาษาไทย" }
   ],
   "weaknesses": [
-    { "title": "หัวข้อจุดเสี่ยงที่ 1 ภาษาไทย", "description": "คำอธิบายจุดเสี่ยงภาษาไทย เช่น การกระจุกตัว ความผันผวน หรือการขาดกลุ่มป้องกัน" },
-    { "title": "หัวข้อจุดเสี่ยงที่ 2 ภาษาไทย", "description": "คำอธิบายจุดเสี่ยงภาษาไทย พร้อมผลกระทบ" },
-    { "title": "หัวข้อจุดเสี่ยงที่ 3 ภาษาไทย", "description": "คำอธิบายจุดเสี่ยงภาษาไทย พร้อมผลกระทบ" }
+    { "title": "หัวข้อจุดเสี่ยงภาษาไทย", "description": "ชี้ตัวถ่วง พร้อมเหตุผลเชิงตัวเลข" }
   ],
   "suggestions": [
     {
       "action": "ADD" | "REDUCE" | "SWAP" | "REMOVE",
       "symbol": "TICKER",
       "percent": number,
-      "category": "หมวดกลยุทธ์ เช่น Core, Growth, Dividend, Cash",
-      "reason": "เหตุผลเชิงกลยุทธ์ภาษาไทยอย่างชัดเจน ทำไมต้องปรับสัดส่วนนี้"
+      "category": "หมวดกลยุทธ์",
+      "reason": "เหตุผลเชิงกลยุทธ์ ตัดตัวไหน ไปโปะตัวไหน ทำไม"
     }
   ],
   ${isStrategist ? `
+  "stockVerdicts": [
+    { "symbol": "TICKER", "grade": "A-D", "role": "บทบาทในพอร์ต", "flag": "HOLD/REDUCE/ADD", "futureOutlook": "สรุปอนาคต 1 บรรทัดอิงจาก Consensus" }
+  ],
   "idealBlueprint": [
-    // สร้างสัดส่วนพิมพ์เขียวในอุดมคติสำหรับหุ้นทุกตัวในพอร์ต เปรียบเทียบ currentPercent กับ idealPercent พร้อมบอก role ภาษาไทย
-    { "symbol": "TICKER", "currentPercent": number, "idealPercent": number, "change": number, "role": "บทบาทเชิงกลยุทธ์ เช่น หุ้นเติบโตหลัก, สินทรัพย์ลดความผันผวน, ปันผลสร้างกระแสเงินสด" }
+    { "symbol": "TICKER", "currentPercent": number, "idealPercent": number, "change": number, "role": "บทบาทเชิงกลยุทธ์" }
   ],
   "actionRoadmap": [
-    { "phase": "ระยะเร่งด่วน (1-2 สัปดาห์)", "action": "ขั้นตอนการปรับสัดส่วนทันทีเพื่อลดความเสี่ยงเฉพาะหน้า เป็นภาษาไทย" },
-    { "phase": "ระยะกลาง (1-3 เดือน)", "action": "ขั้นตอนการเข้าซื้อหรือสะสมหุ้นคุณภาพตามระดับราคาที่เหมาะสม เป็นภาษาไทย" },
-    { "phase": "การบริหารสภาพคล่อง", "action": "แนวทางการสำรองเงินสด (Cash Reserve) เพื่อรอจังหวะช้อนซื้อเมื่อตลาดผันผวน เป็นภาษาไทย" }
+    { "phase": "ระยะเร่งด่วน (1-2 สัปดาห์)", "action": "ขั้นตอนการปรับสัดส่วนทันที" },
+    { "phase": "ระยะกลาง (1-3 เดือน)", "action": "ขั้นตอนสะสมหุ้นตามระดับราคา" }
+  ],
+  "stressTest": [
+    { "scenario": "ชื่อสถานการณ์ เช่น 'AI Bubble Burst' หรือ 'Rate Hike Shock'", "impact": "หุ้นที่โดนกระทบและเหตุผล", "estDrawdown": "ตัวเลข % (เช่น -15% ถึง -25%)" }
   ],
   ` : ''}
-  "missingExposure": ["กลุ่มอุตสาหกรรมหรือสินทรัพย์ที่ขาดหายไปในพอร์ต เช่น Defensive, Healthcare, Cash Buffer"],
-  "riskScore": number (0-100, ยิ่งสูงยิ่งผันผวนเสี่ยงสูง)
+  "missingExposure": ["กลุ่มที่ขาดหายไป เช่น Defensive, Healthcare"],
+  "riskScore": number (0-100)
 }`;
 
     let jsonContent = '';
@@ -291,7 +329,7 @@ ${JSON.stringify(payloadData, null, 2)}
             { role: 'system', content: 'You are an elite investment strategist. Output ONLY a single valid raw JSON object matching the requested schema. Do not include markdown fences, backticks, or any explanation text.' },
             { role: 'user', content: systemPrompt }
           ],
-          max_tokens: 3000
+          max_tokens: 8000
         }),
         signal: AbortSignal.timeout(50000)
       });
@@ -348,6 +386,11 @@ ${JSON.stringify(payloadData, null, 2)}
       jsonContent = jsonContent.split('```')[1].split('```')[0].trim();
     }
 
+    // Sanitize Tone
+    jsonContent = jsonContent.replace(/มึง/g, 'คุณ')
+                             .replace(/กู/g, 'ผม')
+                             .replace(/ห่า|เหี้ย|สัส|แม่ง/g, '');
+
     let parsedResult;
     try {
       parsedResult = JSON.parse(jsonContent);
@@ -356,16 +399,23 @@ ${JSON.stringify(payloadData, null, 2)}
       parsedResult = {
         overallGrade: 'B',
         radarData: { diversification: 60, valuation: 65, growth: 80, risk: 65, income: 40 },
-        macroAnalysis: 'พอร์ตโฟลิโอมีสัดส่วนหลักในหุ้นเทคโนโลยีและหุ้นเติบโตสูง ควรจับตาปัจจัยทิศทางอัตราดอกเบี้ยและการประเมินมูลค่าหุ้นกลุ่ม AI',
+        macroAnalysis: 'พอร์ตโฟลิโอมีสัดส่วนหลักในหุ้นเติบโตสูง ควรจับตาปัจจัยทิศทางอัตราดอกเบี้ย',
+        portfolioStyle: 'Growth',
+        concentrationRisk: 'มีความเสี่ยงกระจุกตัว',
+        dividendHealth: 'ปันผลอยู่ในระดับต่ำ',
         strengths: [
-          { title: 'มีหุ้นแกนหลักคุณภาพสูง', description: 'บริษัทส่วนใหญ่ในพอร์ตมีสถานะทางการเงินและโมเดลธุรกิจที่แข็งแกร่ง' }
+          { title: 'มีหุ้นแกนหลัก', description: 'บริษัทมีสถานะทางการเงินและโมเดลธุรกิจแข็งแกร่ง' }
         ],
         weaknesses: [
-          { title: 'สัดส่วนอาจกระจุกตัวในบางธีม', description: 'ควรพิจารณากระจายความเสี่ยงข้ามกลุ่มอุตสาหกรรมเพื่อลดความผันผวน' }
+          { title: 'สัดส่วนกระจุกตัว', description: 'ควรกระจายความเสี่ยงข้ามกลุ่มอุตสาหกรรม' }
         ],
         suggestions: [],
         missingExposure: ['Healthcare', 'Financials'],
-        riskScore: 65
+        riskScore: 65,
+        stockVerdicts: [],
+        idealBlueprint: [],
+        actionRoadmap: [],
+        stressTest: []
       };
     }
 

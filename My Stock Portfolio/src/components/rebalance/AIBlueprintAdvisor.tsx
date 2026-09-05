@@ -689,6 +689,11 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                  aiResult.overallGrade?.startsWith('B') ? 'โครงสร้างดี มีจุดที่สามารถปรับให้แกร่งขึ้นได้' :
                  'ควรกระจายความเสี่ยงและลดการกระจุกตัว'}
               </div>
+              {aiResult.portfolioStyle && (
+                <div className="mt-4 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full text-blue-300 text-xs font-bold flex items-center gap-1.5">
+                  <span>📊</span> Style: {aiResult.portfolioStyle}
+                </div>
+              )}
             </div>
             <div className="col-span-2 border border-slate-700 rounded-lg p-4 bg-[#12141F]">
               <div className="text-[13px] font-bold text-slate-200 mb-1 px-2">5-Axis Portfolio Health Radar</div>
@@ -702,6 +707,30 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
             </div>
           </div>
           
+          {/* Row 1.5: Concentration & Dividend Health */}
+          {(aiResult.concentrationRisk || aiResult.dividendHealth) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {aiResult.concentrationRisk && (
+                <div className="border border-orange-500/30 rounded-lg p-4 bg-orange-500/5 flex items-start gap-3">
+                  <span className="text-xl shrink-0">⚠️</span>
+                  <div>
+                    <h4 className="text-orange-400 font-bold text-sm mb-1">Concentration Risk</h4>
+                    <p className="text-[13px] text-slate-200">{aiResult.concentrationRisk}</p>
+                  </div>
+                </div>
+              )}
+              {aiResult.dividendHealth && (
+                <div className="border border-cyan-500/30 rounded-lg p-4 bg-cyan-500/5 flex items-start gap-3">
+                  <span className="text-xl shrink-0">💰</span>
+                  <div>
+                    <h4 className="text-cyan-400 font-bold text-sm mb-1">Dividend Health</h4>
+                    <p className="text-[13px] text-slate-200">{aiResult.dividendHealth}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Row 2: Strengths & Weaknesses */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border border-emerald-500/30 rounded-lg p-4 bg-emerald-500/5">
@@ -743,6 +772,50 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
               </ul>
             </div>
           </div>
+
+          {/* Strategist Section 2.5: Stock-by-Stock Verdicts */}
+          {aiResult.stockVerdicts && aiResult.stockVerdicts.length > 0 && (
+            <div className="border border-slate-700/80 rounded-lg p-5 bg-[#12141F]">
+              <h3 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
+                <span className="text-base">🔎</span> เจาะลึกรายตัว (Forward-Looking Verdicts)
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#232738] text-[13px] text-slate-300">
+                      <th className="py-2.5 px-3 font-semibold">Symbol</th>
+                      <th className="py-2.5 px-3 font-semibold text-center">Grade</th>
+                      <th className="py-2.5 px-3 font-semibold text-center">Action</th>
+                      <th className="py-2.5 px-3 font-semibold">Role</th>
+                      <th className="py-2.5 px-3 font-semibold">Future Outlook (Consensus)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#232738]/60">
+                    {aiResult.stockVerdicts.map((v: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="py-3 px-3 font-bold text-white text-[14px]">{v.symbol}</td>
+                        <td className="py-3 px-3 text-center">
+                          <span className={`font-black text-[14px] ${getGradeColor(v.grade)}`}>{v.grade}</span>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold ${
+                            v.flag === 'ADD' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                            v.flag === 'REDUCE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                            v.flag === 'HOLD' ? 'bg-slate-700/50 text-slate-300 border border-slate-600' :
+                            'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          }`}>
+                            {v.flag}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-[13px] text-slate-200">{v.role}</td>
+                        <td className="py-3 px-3 text-[13px] text-slate-300">{v.futureOutlook}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Strategist Section 2: Ideal Blueprint (Before vs After) Table */}
           {aiResult.idealBlueprint && aiResult.idealBlueprint.length > 0 && (
@@ -857,6 +930,32 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
             </div>
           )}
           
+          {/* Strategist Section 4: Stress Test */}
+          {aiResult.stressTest && aiResult.stressTest.length > 0 && (
+            <div className="border border-rose-900/40 rounded-lg p-5 bg-gradient-to-r from-rose-950/20 to-[#12141F] shadow-lg">
+              <h3 className="text-rose-400 font-bold mb-4 text-sm flex items-center gap-2">
+                <span className="text-base">🌪️</span> Portfolio Stress Test (สถานการณ์จำลอง)
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {aiResult.stressTest.map((test: any, i: number) => (
+                  <div key={i} className="border border-rose-500/20 bg-rose-950/10 rounded-lg p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-bold text-rose-300 text-[14px]">{test.scenario}</h4>
+                        <span className="text-xs font-bold px-2 py-1 bg-rose-500/20 text-rose-300 rounded border border-rose-500/30 whitespace-nowrap ml-2">
+                          {test.estDrawdown}
+                        </span>
+                      </div>
+                      <p className="text-[13px] text-slate-200 leading-relaxed font-normal">
+                        {test.impact}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Row 3: Risk Gauge & Sector Gap Comparison */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border border-slate-700 rounded-lg p-4 bg-[#12141F]">

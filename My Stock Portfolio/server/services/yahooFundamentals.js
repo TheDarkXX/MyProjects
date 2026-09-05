@@ -30,7 +30,8 @@ export async function fetchFundamentals(symbol) {
     const row = stmt.get(upper);
     if (row) {
       const fetchedAt = new Date(row.fetched_at).getTime();
-      if (Date.now() - fetchedAt < SQLITE_TTL) {
+      const hasForwardData = row.target_mean_price !== undefined && row.target_mean_price !== null && row.num_analyst_opinions !== undefined;
+      if (hasForwardData && (Date.now() - fetchedAt < SQLITE_TTL)) {
         // Hydrate memory cache
         memoryCache.set(upper, { timestamp: Date.now(), data: row });
         return row;
@@ -46,7 +47,10 @@ export async function fetchFundamentals(symbol) {
       'financialData',
       'defaultKeyStatistics',
       'summaryDetail',
-      'assetProfile'
+      'assetProfile',
+      'earningsTrend',
+      'earningsHistory',
+      'recommendationTrend'
     ];
     
     // Also fetch regular quote for current price
@@ -69,6 +73,34 @@ export async function fetchFundamentals(symbol) {
     const stat = summary.defaultKeyStatistics || {};
     const det = summary.summaryDetail || {};
     const prof = summary.assetProfile || {};
+    const eTrend = summary.earningsTrend?.trend || [];
+    const eHistory = summary.earningsHistory?.history || [];
+    const rTrend = summary.recommendationTrend?.trend?.[0] || {}; // Current month trend
+
+    // Process Earnings Trend (find current year and next year)
+    let eps_current = 0, eps_next = 0, eps_growth = 0, rev_growth = 0;
+    for (const t of eTrend) {
+      if (t.period === '0y' || t.period === '+0y') {
+        eps_current = t.earningsEstimate?.avg || 0;
+      } else if (t.period === '+1y' || t.period === '1y') {
+        eps_next = t.earningsEstimate?.avg || 0;
+        eps_growth = t.earningsEstimate?.growth || 0;
+        rev_growth = t.revenueEstimate?.growth || 0;
+      }
+    }
+
+    // Process Earnings History (last 4 quarters, newest quarter first: -1q -> -2q -> -3q -> -4q)
+    const reversedHistory = [...eHistory].reverse();
+    const surprises = reversedHistory.map(h => (h.surprisePercent !== undefined ? h.surprisePercent : 0));
+    const earnings_q1_surprise = surprises[0] || 0; // Most recent reported quarter (-1q)
+    const earnings_q2_surprise = surprises[1] || 0;
+    const earnings_q3_surprise = surprises[2] || 0;
+    const earnings_q4_surprise = surprises[3] || 0;
+    let beat_streak = 0;
+    for (const s of surprises) {
+      if (s > 0) beat_streak++;
+      else break;
+    }
 
     const data = {
       symbol: upper,
@@ -91,6 +123,25 @@ export async function fetchFundamentals(symbol) {
       sma200: det.twoHundredDayAverage || quote?.twoHundredDayAverage || 0,
       market_cap: det.marketCap || quote?.marketCap || 0,
       short_percent: stat.shortPercentOfFloat || 0,
+      target_mean_price: fin.targetMeanPrice || 0,
+      target_high_price: fin.targetHighPrice || 0,
+      target_low_price: fin.targetLowPrice || 0,
+      recommendation_key: fin.recommendationKey || '',
+      recommendation_mean: fin.recommendationMean || 0,
+      num_analyst_opinions: fin.numberOfAnalystOpinions || 0,
+      eps_current_estimate: eps_current,
+      eps_next_year_estimate: eps_next,
+      eps_growth_next_year: eps_growth,
+      revenue_growth_estimate: rev_growth,
+      rec_strong_buy: rTrend.strongBuy || 0,
+      rec_buy: rTrend.buy || 0,
+      rec_hold: rTrend.hold || 0,
+      rec_sell: (rTrend.sell || 0) + (rTrend.strongSell || 0),
+      earnings_q1_surprise,
+      earnings_q2_surprise,
+      earnings_q3_surprise,
+      earnings_q4_surprise,
+      earnings_beat_streak: beat_streak,
       fetched_at: new Date().toISOString()
     };
 
@@ -101,12 +152,20 @@ export async function fetchFundamentals(symbol) {
           symbol, sector, industry, current_price, pe_trailing, pe_forward, pb_ratio, 
           roe, revenue_growth, profit_margin, debt_to_equity, beta, div_yield, 
           annual_dividend, fifty_two_week_high, fifty_two_week_low, sma50, sma200, 
-          market_cap, short_percent, fetched_at
+          market_cap, short_percent, target_mean_price, target_high_price, target_low_price,
+          recommendation_key, recommendation_mean, num_analyst_opinions, eps_current_estimate,
+          eps_next_year_estimate, eps_growth_next_year, revenue_growth_estimate, rec_strong_buy,
+          rec_buy, rec_hold, rec_sell, earnings_q1_surprise, earnings_q2_surprise,
+          earnings_q3_surprise, earnings_q4_surprise, earnings_beat_streak, fetched_at
         ) VALUES (
           @symbol, @sector, @industry, @current_price, @pe_trailing, @pe_forward, @pb_ratio, 
           @roe, @revenue_growth, @profit_margin, @debt_to_equity, @beta, @div_yield, 
           @annual_dividend, @fifty_two_week_high, @fifty_two_week_low, @sma50, @sma200, 
-          @market_cap, @short_percent, @fetched_at
+          @market_cap, @short_percent, @target_mean_price, @target_high_price, @target_low_price,
+          @recommendation_key, @recommendation_mean, @num_analyst_opinions, @eps_current_estimate,
+          @eps_next_year_estimate, @eps_growth_next_year, @revenue_growth_estimate, @rec_strong_buy,
+          @rec_buy, @rec_hold, @rec_sell, @earnings_q1_surprise, @earnings_q2_surprise,
+          @earnings_q3_surprise, @earnings_q4_surprise, @earnings_beat_streak, @fetched_at
         )
         ON CONFLICT(symbol) DO UPDATE SET
           sector = excluded.sector,
@@ -128,6 +187,25 @@ export async function fetchFundamentals(symbol) {
           sma200 = excluded.sma200,
           market_cap = excluded.market_cap,
           short_percent = excluded.short_percent,
+          target_mean_price = excluded.target_mean_price,
+          target_high_price = excluded.target_high_price,
+          target_low_price = excluded.target_low_price,
+          recommendation_key = excluded.recommendation_key,
+          recommendation_mean = excluded.recommendation_mean,
+          num_analyst_opinions = excluded.num_analyst_opinions,
+          eps_current_estimate = excluded.eps_current_estimate,
+          eps_next_year_estimate = excluded.eps_next_year_estimate,
+          eps_growth_next_year = excluded.eps_growth_next_year,
+          revenue_growth_estimate = excluded.revenue_growth_estimate,
+          rec_strong_buy = excluded.rec_strong_buy,
+          rec_buy = excluded.rec_buy,
+          rec_hold = excluded.rec_hold,
+          rec_sell = excluded.rec_sell,
+          earnings_q1_surprise = excluded.earnings_q1_surprise,
+          earnings_q2_surprise = excluded.earnings_q2_surprise,
+          earnings_q3_surprise = excluded.earnings_q3_surprise,
+          earnings_q4_surprise = excluded.earnings_q4_surprise,
+          earnings_beat_streak = excluded.earnings_beat_streak,
           fetched_at = excluded.fetched_at
       `);
       insertStmt.run(data);

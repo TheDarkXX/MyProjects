@@ -116,7 +116,26 @@ export function initDb() {
         sma50 REAL,
         sma200 REAL,
         market_cap REAL,
-        short_percent REAL,
+        short_percent REAL DEFAULT 0,
+        target_mean_price REAL DEFAULT 0,
+        target_high_price REAL DEFAULT 0,
+        target_low_price REAL DEFAULT 0,
+        recommendation_key TEXT DEFAULT '',
+        recommendation_mean REAL DEFAULT 0,
+        num_analyst_opinions INTEGER DEFAULT 0,
+        eps_current_estimate REAL DEFAULT 0,
+        eps_next_year_estimate REAL DEFAULT 0,
+        eps_growth_next_year REAL DEFAULT 0,
+        revenue_growth_estimate REAL DEFAULT 0,
+        rec_strong_buy INTEGER DEFAULT 0,
+        rec_buy INTEGER DEFAULT 0,
+        rec_hold INTEGER DEFAULT 0,
+        rec_sell INTEGER DEFAULT 0,
+        earnings_q1_surprise REAL DEFAULT 0,
+        earnings_q2_surprise REAL DEFAULT 0,
+        earnings_q3_surprise REAL DEFAULT 0,
+        earnings_q4_surprise REAL DEFAULT 0,
+        earnings_beat_streak INTEGER DEFAULT 0,
         fetched_at TEXT DEFAULT (datetime('now')),
         UNIQUE(symbol)
     );
@@ -154,6 +173,43 @@ export function initDb() {
         created_at TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Migration for symbol_fundamentals (Forward-Looking Data for existing DBs)
+  const migrationColumns = [
+    'target_mean_price REAL DEFAULT 0',
+    'target_high_price REAL DEFAULT 0',
+    'target_low_price REAL DEFAULT 0',
+    'recommendation_key TEXT DEFAULT ""',
+    'recommendation_mean REAL DEFAULT 0',
+    'num_analyst_opinions INTEGER DEFAULT 0',
+    'eps_current_estimate REAL DEFAULT 0',
+    'eps_next_year_estimate REAL DEFAULT 0',
+    'eps_growth_next_year REAL DEFAULT 0',
+    'revenue_growth_estimate REAL DEFAULT 0',
+    'rec_strong_buy INTEGER DEFAULT 0',
+    'rec_buy INTEGER DEFAULT 0',
+    'rec_hold INTEGER DEFAULT 0',
+    'rec_sell INTEGER DEFAULT 0',
+    'earnings_q1_surprise REAL DEFAULT 0',
+    'earnings_q2_surprise REAL DEFAULT 0',
+    'earnings_q3_surprise REAL DEFAULT 0',
+    'earnings_q4_surprise REAL DEFAULT 0',
+    'earnings_beat_streak INTEGER DEFAULT 0'
+  ];
+
+  try {
+    const existingCols = new Set(
+      db.pragma('table_info(symbol_fundamentals)').map(col => col.name)
+    );
+    for (const colDef of migrationColumns) {
+      const colName = colDef.split(' ')[0];
+      if (!existingCols.has(colName)) {
+        db.exec(`ALTER TABLE symbol_fundamentals ADD COLUMN ${colDef};`);
+      }
+    }
+  } catch (err) {
+    console.error('[DB] Migration error on symbol_fundamentals:', err.message);
+  }
 
   console.log('✅ SQLite DB Initialized at', dbPath);
 }
