@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { api } from '../../services/api';
+import { useBlueprintStore } from '../../stores/blueprintStore';
 
 import { HealthRadar } from './advisor/HealthRadar';
 import { SectorGapChart } from './advisor/SectorGapChart';
@@ -27,6 +28,96 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
     deep: null,
     quick: null
   });
+
+  // Safety & Undo states for Ideal Blueprint
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [applySuccessMessage, setApplySuccessMessage] = useState<string | null>(null);
+  const [previousBlueprintBackup, setPreviousBlueprintBackup] = useState<any[] | null>(() => {
+    try {
+      const saved = localStorage.getItem(`ai_advisor_backup_${portfolioId}`);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleApplyIdealBlueprint = async () => {
+    if (!aiResult?.idealBlueprint || !portfolioId) return;
+
+    try {
+      setIsApplying(true);
+      // 1. Snapshot previous blueprints
+      const backup = blueprints.map(b => ({
+        symbol: b.symbol,
+        target_percent: Number(b.target_percent) || 0,
+        category: b.category,
+        status: b.status || 'OWNED',
+        target_price: b.target_price || null,
+        notes: b.notes || null
+      }));
+      setPreviousBlueprintBackup(backup);
+      try {
+        localStorage.setItem(`ai_advisor_backup_${portfolioId}`, JSON.stringify(backup));
+      } catch (e) {}
+
+      // 2. Apply all items from idealBlueprint
+      const updates = aiResult.idealBlueprint.map((item: any) => {
+        const symbol = item.symbol.toUpperCase();
+        const existing = blueprints.find(b => b.symbol.toUpperCase() === symbol);
+        return {
+          portfolio_id: portfolioId,
+          symbol,
+          target_percent: Number(item.idealPercent) || 0,
+          category: existing?.category || (symbol === 'CASH' ? 'Cash' : 'Compounders'),
+          status: existing?.status || (symbol === 'CASH' ? 'OWNED' : 'WATCHLIST'),
+          target_price: existing?.target_price || null,
+          notes: existing?.notes || `ปรับตาม AI Strategist: ${item.role || ''}`
+        };
+      });
+
+      for (const entry of updates) {
+        await api.blueprints.upsert(portfolioId, entry);
+      }
+
+      // 3. Refresh store to re-render charts & rebalance table immediately
+      await useBlueprintStore.getState().fetchBlueprints(portfolioId);
+
+      setIsConfirmModalOpen(false);
+      setIsApplying(false);
+      setApplySuccessMessage('✅ อัปเดตสัดส่วน Blueprint ตามคำแนะนำของ AI Strategist เรียบร้อยแล้ว!');
+      setTimeout(() => setApplySuccessMessage(null), 8000);
+    } catch (err: any) {
+      console.error('[Apply Ideal Blueprint Error]:', err);
+      setIsApplying(false);
+      setError(err.message || 'ไม่สามารถปรับสัดส่วนได้ กรุณาลองใหม่');
+    }
+  };
+
+  const handleUndoAllocation = async () => {
+    if (!previousBlueprintBackup || !portfolioId) return;
+
+    try {
+      setIsApplying(true);
+      for (const entry of previousBlueprintBackup) {
+        await api.blueprints.upsert(portfolioId, entry);
+      }
+      await useBlueprintStore.getState().fetchBlueprints(portfolioId);
+
+      setPreviousBlueprintBackup(null);
+      try {
+        localStorage.removeItem(`ai_advisor_backup_${portfolioId}`);
+      } catch (e) {}
+
+      setIsApplying(false);
+      setApplySuccessMessage('↩️ กู้คืนสัดส่วน Blueprint เดิมเรียบร้อยแล้ว!');
+      setTimeout(() => setApplySuccessMessage(null), 5000);
+    } catch (err: any) {
+      console.error('[Undo Allocation Error]:', err);
+      setIsApplying(false);
+      setError(err.message || 'ไม่สามารถกู้คืนสัดส่วนเดิมได้');
+    }
+  };
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -665,9 +756,31 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                     เปรียบเทียบสัดส่วนเป้าหมายปัจจุบันกับสัดส่วนในอุดมคติที่ AI Strategist แนะนำเพื่อปรับสมดุลและลดความเสี่ยง
                   </p>
                 </div>
-                <span className="text-xs font-bold px-3 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 self-start sm:self-auto">
-                  OPTIMIZED ALLOCATION
-                </span>
+                <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                  <button
+                    onClick={() => setIsConfirmModalOpen(true)}
+                    disabled={isApplying}
+                    className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[13px] font-bold transition-all shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center gap-1.5 cursor-pointer"
+                    title="คลิกเพื่อนำสัดส่วนเป้าหมายที่ AI แนะนำไปปรับใช้กับ Blueprint ทันที"
+                  >
+                    <span>⚡</span> ปรับใช้สัดส่วนนี้ (Apply)
+                  </button>
+
+                  {previousBlueprintBackup && (
+                    <button
+                      onClick={handleUndoAllocation}
+                      disabled={isApplying}
+                      className="px-3 py-1.5 rounded-lg bg-sky-950/40 hover:bg-sky-900/50 text-sky-300 border border-sky-500/50 text-[13px] font-bold transition-all shadow-[0_0_12px_rgba(56,189,248,0.25)] flex items-center gap-1.5 cursor-pointer"
+                      title="กู้คืนสัดส่วน Blueprint เดิมก่อนปรับใช้"
+                    >
+                      <span>↩️</span> ย้อนกลับสัดส่วนเดิม (Undo)
+                    </button>
+                  )}
+
+                  <span className="text-xs font-bold px-2.5 py-1 rounded bg-amber-500/10 text-amber-300/80 border border-amber-500/20">
+                    OPTIMIZED ALLOCATION
+                  </span>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -804,6 +917,109 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Confirmation Modal for Applying Ideal Blueprint */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#181B2A] border border-amber-500/40 rounded-2xl max-w-lg w-full p-6 shadow-[0_0_30px_rgba(245,158,11,0.25)] text-white relative">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xl shrink-0">
+                🎯
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">
+                  ยืนยันการปรับสัดส่วน Blueprint ตามคำแนะนำ
+                </h3>
+                <p className="text-[13px] text-slate-300">
+                  AI Strategist Optimized Allocation
+                </p>
+              </div>
+            </div>
+
+            <p className="text-[13px] text-slate-200 leading-relaxed mb-3">
+              ระบบจะอัปเดตสัดส่วนเป้าหมาย (Target %) ของสินทรัพย์ทั้งหมด {aiResult.idealBlueprint?.length || 0} รายการให้ตรงตามพิมพ์เขียวแนะนำในตารางทันที
+            </p>
+
+            <div className="bg-[#12141F] border border-[#232738] rounded-xl p-3 mb-4 max-h-48 overflow-y-auto divide-y divide-[#232738]/60">
+              {aiResult.idealBlueprint?.map((item: any, idx: number) => {
+                const change = Number(item.change ?? (item.idealPercent - item.currentPercent));
+                return (
+                  <div key={idx} className="flex justify-between items-center py-1.5 px-2 text-[13px]">
+                    <div className="font-semibold text-white">{item.symbol}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400">{item.currentPercent}%</span>
+                      <span className="text-slate-500">➔</span>
+                      <span className="font-bold text-amber-300">{item.idealPercent}%</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${
+                        change > 0 ? 'bg-emerald-500/20 text-emerald-300' :
+                        change < 0 ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-700 text-slate-300'
+                      }`}>
+                        {change > 0 ? `+${change}%` : `${change}%`}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-[13px] text-blue-200 flex items-center gap-2 mb-6">
+              <span>💡</span>
+              <span>ระบบจะบันทึก Snapshot สัดส่วนเดิมไว้ให้อัตโนมัติ สามารถกดย้อนกลับ (Undo) ได้ทุกเมื่อ</span>
+            </div>
+
+            <div className="flex justify-end items-center gap-3">
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                disabled={isApplying}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-lg text-[13px] transition-colors cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleApplyIdealBlueprint}
+                disabled={isApplying}
+                className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold rounded-lg text-[13px] transition-all shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center gap-2 cursor-pointer"
+              >
+                {isApplying ? (
+                  <>
+                    <span className="animate-spin text-sm">⏳</span>
+                    <span>กำลังปรับสัดส่วน...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>✅</span>
+                    <span>ยืนยันการปรับสัดส่วน</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Toast Banner */}
+      {applySuccessMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#181B2A] border border-emerald-500/40 rounded-xl p-4 shadow-[0_0_25px_rgba(52,211,153,0.3)] text-white flex items-center gap-3 animate-fade-in max-w-md">
+          <span className="text-xl">🎉</span>
+          <div className="text-[13px] text-slate-200 font-medium flex-1">
+            {applySuccessMessage}
+          </div>
+          {previousBlueprintBackup && (
+            <button
+              onClick={handleUndoAllocation}
+              className="px-3 py-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded text-xs font-bold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+            >
+              <span>↩️</span> Undo
+            </button>
+          )}
+          <button
+            onClick={() => setApplySuccessMessage(null)}
+            className="text-slate-400 hover:text-white text-sm shrink-0 ml-1 cursor-pointer"
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>
