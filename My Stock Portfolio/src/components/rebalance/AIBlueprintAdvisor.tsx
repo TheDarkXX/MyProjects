@@ -19,6 +19,9 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
   const [fundamentals, setFundamentals] = useState<Record<string, any>>({});
   const [aiResult, setAiResult] = useState<any>(null);
   const [error, setError] = useState('');
+  const [isStale, setIsStale] = useState(false);
+  const [cachedCreatedAt, setCachedCreatedAt] = useState<string | null>(null);
+  const [cachedModel, setCachedModel] = useState<string>('');
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -27,6 +30,48 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  // Auto-load latest saved analysis on mount or portfolio change
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadLatest() {
+      if (!portfolioId || !blueprints || blueprints.length === 0) return;
+
+      try {
+        const latest = await api.ai.latestAdvisor(portfolioId, blueprints);
+        if (isCancelled) return;
+
+        if (latest && latest.found && latest.result) {
+          setAiResult(latest.result);
+          setIsStale(Boolean(latest.isStale));
+          setCachedCreatedAt(latest.createdAt || null);
+          setCachedModel(latest.modelUsed || '');
+          if (latest.mode) setMode(latest.mode);
+          setLoadingPhase(4); // Immediately display cached results
+
+          // Silently fetch fundamentals in background if not already loaded so charts have live data
+          const symbols = blueprints.map((b: any) => b.symbol).filter(Boolean);
+          if (symbols.length > 0) {
+            api.prices.fundamentalsBatch(symbols).then(funData => {
+              if (funData && !isCancelled) setFundamentals(funData);
+            }).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('[Advisor] Failed to load latest analysis:', err);
+      }
+    }
+
+    // Auto-load if in welcome phase or if results already shown (to check if blueprint changed)
+    if (loadingPhase === 0 || loadingPhase === 4) {
+      loadLatest();
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [portfolioId, blueprints]);
 
   // Calculate sector weights dynamically from blueprints and fundamentals
   const portfolioSectors = useMemo(() => {
@@ -201,6 +246,8 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
         const result = computeQuickScan(funData);
         setTimeout(() => {
           setAiResult(result);
+          setIsStale(false);
+          setCachedCreatedAt(new Date().toISOString());
           setLoadingPhase(4);
           setProgress(100);
           setStatusMessage('วิเคราะห์เสร็จสมบูรณ์');
@@ -258,6 +305,8 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       setStatusMessage('เสร็จสิ้นการวิเคราะห์ กำลังแสดงผล...');
       setProgress(100);
       setAiResult(aiRes);
+      setIsStale(false);
+      setCachedCreatedAt(new Date().toISOString());
       setLoadingPhase(4); 
     } catch (err: any) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -377,6 +426,53 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       {/* Results Section */}
       {loadingPhase === 4 && aiResult && (
         <div className="space-y-6 animate-fade-in">
+          {/* Stale Blueprint Warning Banner */}
+          {isStale && (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+              <div className="flex items-start sm:items-center gap-3">
+                <span className="text-xl shrink-0 mt-0.5 sm:mt-0">⚠️</span>
+                <div>
+                  <div className="text-[14px] font-bold text-amber-300">
+                    สัดส่วนพอร์ตหรือรายการหุ้นมีการเปลี่ยนแปลง
+                  </div>
+                  <div className="text-[13px] text-slate-200 mt-0.5">
+                    ผลการวิเคราะห์นี้อ้างอิงจาก Blueprint เดิม{cachedCreatedAt ? ` (${new Date(cachedCreatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })})` : ''} แนะนำให้กดวิเคราะห์ใหม่เพื่อให้ได้คำแนะนำที่ตรงกับพอร์ตปัจจุบัน
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => runAnalysis(mode)}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[13px] shrink-0 transition-colors shadow flex items-center gap-1.5 self-end sm:self-auto"
+              >
+                <span>🔄</span> วิเคราะห์ใหม่ทันที
+              </button>
+            </div>
+          )}
+
+          {/* Up-to-date Meta Info Strip */}
+          {!isStale && cachedCreatedAt && (
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#12141F] border border-[#232738] rounded-lg text-[13px] text-slate-300">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+                <span className="text-slate-200 font-medium">ผลวิเคราะห์ล่าสุด</span>
+                <span className="text-slate-400">•</span>
+                <span className="text-slate-300">
+                  โหมด: <span className="font-semibold text-white capitalize">{mode === 'strategist' ? '🎯 Strategist' : mode === 'deep' ? '🧠 Deep Analysis' : '⚡ Quick Scan'}</span>
+                </span>
+                <span className="text-slate-400">•</span>
+                <span className="text-slate-300">
+                  เมื่อ {new Date(cachedCreatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <button
+                onClick={() => runAnalysis(mode)}
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded text-[13px] border border-slate-700 transition-colors flex items-center gap-1"
+              >
+                <span>🔄</span> วิเคราะห์ใหม่
+              </button>
+            </div>
+          )}
+
           {/* Strategist Section 1: Macro & Market Environment Context */}
           {aiResult.macroAnalysis && (
             <div className="border border-purple-500/30 rounded-lg p-5 bg-gradient-to-r from-purple-950/25 via-[#181B2A] to-blue-950/20 shadow-lg">

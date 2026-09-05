@@ -47,6 +47,77 @@ function compressPromptData(blueprints, fundamentals) {
   return { summary, holdings: combined };
 }
 
+// Check and fetch latest analysis for a portfolio, detecting if blueprint has changed
+aiAdvisorRoutes.post('/latest', async (c) => {
+  try {
+    const { portfolio_id, blueprints } = await c.req.json();
+    if (!portfolio_id) {
+      return c.json({ error: 'Missing portfolio_id' }, 400);
+    }
+
+    const row = db.prepare(`
+      SELECT * FROM ai_analysis_history 
+      WHERE portfolio_id = ? 
+      ORDER BY created_at DESC LIMIT 1
+    `).get(portfolio_id);
+
+    if (!row) {
+      return c.json({ found: false });
+    }
+
+    const currentHash = createBlueprintHash(blueprints || []);
+    const isStale = currentHash !== row.blueprint_hash;
+
+    let parsedResult = null;
+    try {
+      parsedResult = JSON.parse(row.result_json);
+    } catch (e) {
+      console.warn('[AI Advisor Latest] JSON parse error:', e.message);
+    }
+
+    return c.json({
+      found: true,
+      isStale,
+      mode: row.mode,
+      blueprint_hash: row.blueprint_hash,
+      overallGrade: row.overall_grade,
+      result: parsedResult,
+      modelUsed: row.model_used,
+      createdAt: row.created_at
+    });
+  } catch (err) {
+    console.error('[AI Advisor Latest] Error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+aiAdvisorRoutes.get('/latest/:portfolio_id', async (c) => {
+  try {
+    const portfolioId = c.req.param('portfolio_id');
+    const row = db.prepare(`
+      SELECT * FROM ai_analysis_history 
+      WHERE portfolio_id = ? 
+      ORDER BY created_at DESC LIMIT 1
+    `).get(portfolioId);
+
+    if (!row) {
+      return c.json({ found: false });
+    }
+
+    return c.json({
+      found: true,
+      mode: row.mode,
+      blueprint_hash: row.blueprint_hash,
+      overallGrade: row.overall_grade,
+      result: JSON.parse(row.result_json),
+      modelUsed: row.model_used,
+      createdAt: row.created_at
+    });
+  } catch (err) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 aiAdvisorRoutes.post('/', async (c) => {
   try {
     const body = await c.req.json();
