@@ -30,7 +30,7 @@ export async function fetchFundamentals(symbol) {
     const row = stmt.get(upper);
     if (row) {
       const fetchedAt = new Date(row.fetched_at).getTime();
-      const hasForwardData = row.target_mean_price !== undefined && row.target_mean_price !== null && row.num_analyst_opinions !== undefined;
+      const hasForwardData = (row.target_mean_price > 0) || (row.num_analyst_opinions > 0) || (row.recommendation_key && row.recommendation_key.length > 0);
       if (hasForwardData && (Date.now() - fetchedAt < SQLITE_TTL)) {
         // Hydrate memory cache
         memoryCache.set(upper, { timestamp: Date.now(), data: row });
