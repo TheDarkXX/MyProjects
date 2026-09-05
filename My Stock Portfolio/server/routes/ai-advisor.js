@@ -103,9 +103,11 @@ aiAdvisorRoutes.post('/latest', async (c) => {
           console.warn(`[AI Advisor Latest] JSON parse error for mode ${m}:`, e.message);
         }
 
+        const isEmptyDummy = !parsedResult || !parsedResult.portfolioStyle || (m === 'strategist' && (!parsedResult.stockVerdicts || parsedResult.stockVerdicts.length === 0));
+
         modesSummary[m] = {
-          found: true,
-          isStale: currentHash !== row.blueprint_hash || (parsedResult && !parsedResult.portfolioStyle),
+          found: !isEmptyDummy,
+          isStale: currentHash !== row.blueprint_hash || isEmptyDummy,
           mode: row.mode,
           blueprint_hash: row.blueprint_hash,
           overallGrade: row.overall_grade,
@@ -221,8 +223,9 @@ aiAdvisorRoutes.post('/', async (c) => {
       const cached = getCached.get(portfolio_id, hash, mode);
       
       if (cached) {
-        // Ignore stale or old English fallback cache
-        const isOldSchema = !cached.result_json.includes('portfolioStyle');
+        // Ignore stale, dummy or old schema cache
+        const isOldSchema = !cached.result_json.includes('portfolioStyle') ||
+          (mode === 'strategist' && (!cached.result_json.includes('stockVerdicts') || cached.result_json.includes('"stockVerdicts":[]')));
         const isOldMock = cached.result_json.includes('Solid Blueprint Structure') || cached.result_json.includes('Needs Periodic Review');
         const createdTime = new Date(cached.created_at).getTime();
         if (!isOldMock && !isOldSchema && (Date.now() - createdTime < 6 * 60 * 60 * 1000)) {
@@ -332,7 +335,7 @@ ${JSON.stringify(payloadData, null, 2)}
           ],
           max_tokens: 8000
         }),
-        signal: AbortSignal.timeout(50000)
+        signal: AbortSignal.timeout(120000)
       });
 
       if (response.ok) {
@@ -348,9 +351,9 @@ ${JSON.stringify(payloadData, null, 2)}
       console.warn('[AI Advisor] Local Terra failed, falling back to Brain Gateway:', terraErr.message);
     }
 
-    // 2. Fallback to Brain AI Gateway (gemini-3.1-pro-preview) if local Terra was unavailable
+    // 2. Fallback to Brain AI Gateway (gemini-2.5-flash) if local Terra was unavailable
     if (!jsonContent) {
-      usedModel = 'gemini-3.1-pro-preview';
+      usedModel = 'gemini-2.5-flash';
       try {
         const fallbackRes = await fetch(FALLBACK_GATEWAY_URL, {
           method: 'POST',
@@ -360,9 +363,9 @@ ${JSON.stringify(payloadData, null, 2)}
           },
           body: JSON.stringify({
             message: systemPrompt,
-            model: 'gemini-3.1-pro-preview'
+            model: 'gemini-2.5-flash'
           }),
-          signal: AbortSignal.timeout(45000)
+          signal: AbortSignal.timeout(60000)
         });
 
         if (fallbackRes.ok) {
@@ -397,27 +400,7 @@ ${JSON.stringify(payloadData, null, 2)}
       parsedResult = JSON.parse(jsonContent);
     } catch (parseErr) {
       console.error('[AI Advisor] JSON parse error:', parseErr.message, 'Raw content:', jsonContent.slice(0, 300));
-      parsedResult = {
-        overallGrade: 'B',
-        radarData: { diversification: 60, valuation: 65, growth: 80, risk: 65, income: 40 },
-        macroAnalysis: 'พอร์ตโฟลิโอมีสัดส่วนหลักในหุ้นเติบโตสูง ควรจับตาปัจจัยทิศทางอัตราดอกเบี้ย',
-        portfolioStyle: 'Growth',
-        concentrationRisk: 'มีความเสี่ยงกระจุกตัว',
-        dividendHealth: 'ปันผลอยู่ในระดับต่ำ',
-        strengths: [
-          { title: 'มีหุ้นแกนหลัก', description: 'บริษัทมีสถานะทางการเงินและโมเดลธุรกิจแข็งแกร่ง' }
-        ],
-        weaknesses: [
-          { title: 'สัดส่วนกระจุกตัว', description: 'ควรกระจายความเสี่ยงข้ามกลุ่มอุตสาหกรรม' }
-        ],
-        suggestions: [],
-        missingExposure: ['Healthcare', 'Financials'],
-        riskScore: 65,
-        stockVerdicts: [],
-        idealBlueprint: [],
-        actionRoadmap: [],
-        stressTest: []
-      };
+      throw new Error(`AI generated invalid response format: ${parseErr.message}`);
     }
 
     // Ensure radarData exists
