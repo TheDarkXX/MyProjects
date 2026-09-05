@@ -28,6 +28,15 @@ const PALETTE = [
   '#EAB308', // Yellow
 ];
 
+const parsePercent = (val: any): number => {
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  if (typeof val === 'string') {
+    const cleaned = parseFloat(val.replace(/[^0-9.-]/g, ''));
+    return isNaN(cleaned) ? 0 : cleaned;
+  }
+  return 0;
+};
+
 export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items }) => {
   // Map consistent colors by symbol
   const symbolColors = useMemo(() => {
@@ -46,33 +55,33 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items }) => 
   // Current data for left pie
   const currentData = useMemo(() => {
     return items
-      .filter(it => it.currentPercent > 0)
       .map(it => ({
         name: it.symbol,
-        value: Number(it.currentPercent) || 0,
+        value: parsePercent(it.currentPercent),
         role: it.role,
         color: symbolColors[it.symbol.toUpperCase()] || '#6366F1'
       }))
+      .filter(it => it.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [items, symbolColors]);
 
   // Ideal data for right pie
   const idealData = useMemo(() => {
     return items
-      .filter(it => it.idealPercent > 0)
       .map(it => ({
         name: it.symbol,
-        value: Number(it.idealPercent) || 0,
+        value: parsePercent(it.idealPercent),
         role: it.role,
-        isNew: (it.currentPercent || 0) === 0,
+        isNew: parsePercent(it.currentPercent) === 0,
         color: symbolColors[it.symbol.toUpperCase()] || '#6366F1'
       }))
+      .filter(it => it.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [items, symbolColors]);
 
   // Identify newly introduced assets
   const newAssets = useMemo(() => {
-    return items.filter(it => (it.currentPercent || 0) === 0 && it.idealPercent > 0);
+    return items.filter(it => parsePercent(it.currentPercent) === 0 && parsePercent(it.idealPercent) > 0);
   }, [items]);
 
   const renderTooltip = (props: any) => {

@@ -148,6 +148,7 @@ pricesRoutes.get('/fundamentals-batch', async (c) => {
         const data = await fetchFundamentals(sym);
         if (data) {
           results[sym] = data;
+          results[sym.toUpperCase()] = data;
         }
       }));
       // Delay 200ms between batches to avoid rate limit if there are more batches

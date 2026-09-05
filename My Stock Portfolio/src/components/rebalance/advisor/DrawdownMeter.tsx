@@ -7,8 +7,9 @@ interface DrawdownMeterProps {
 }
 
 export const DrawdownMeter: React.FC<DrawdownMeterProps> = ({ scenario, estDrawdown, impact }) => {
-  // Extract numbers from estDrawdown string (e.g., "-22% ถึง -32%" -> [22, 32])
-  const matches = estDrawdown.match(/\d+(\.\d+)?/g);
+  // Safe string conversion and extract numbers from estDrawdown string (e.g., "-22% ถึง -32%" -> [22, 32])
+  const safeDrawdown = typeof estDrawdown === 'string' ? estDrawdown : String(estDrawdown || '-15%');
+  const matches = safeDrawdown.match(/\d+(\.\d+)?/g);
   const nums = matches ? matches.map(Number) : [15];
   const minVal = nums[0] || 10;
   const maxVal = nums.length > 1 ? nums[1] : minVal;

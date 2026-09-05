@@ -107,11 +107,13 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
 
         {/* Forward-Looking Key Metrics Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-2.5 px-3 bg-[#181B2A] rounded-lg border border-[#2A2E45]/80 mb-3.5">
-          {/* Target Price & Upside */}
+          {/* Current & Target Price */}
           <div>
-            <div className="text-xs text-slate-400 font-medium">เป้าหมายเฉลี่ย</div>
-            <div className="text-[14px] font-bold text-white mt-0.5">
-              {targetPrice > 0 ? `$${targetPrice.toFixed(2)}` : (currentPrice > 0 ? `$${currentPrice.toFixed(2)}` : 'N/A')}
+            <div className="text-xs text-slate-400 font-medium">ปัจจุบัน ➔ เป้าหมาย</div>
+            <div className="text-[13px] font-bold text-white mt-0.5 flex items-center gap-1.5 flex-wrap">
+              <span>{currentPrice > 0 ? `$${currentPrice.toFixed(2)}` : 'N/A'}</span>
+              <span className="text-slate-400 text-xs font-normal">➔</span>
+              <span className="text-purple-300 font-extrabold">{targetPrice > 0 ? `$${targetPrice.toFixed(2)}` : 'N/A'}</span>
             </div>
           </div>
 

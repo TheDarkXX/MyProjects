@@ -162,10 +162,19 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
           }
 
           // Silently fetch fundamentals in background if not already loaded so charts have live data
-          const symbols = blueprints.map((b: any) => b.symbol).filter(Boolean);
+          const symbols = blueprints
+            .map((b: any) => b.symbol)
+            .filter((s: string) => s && s.toUpperCase() !== 'CASH');
           if (symbols.length > 0) {
             api.prices.fundamentalsBatch(symbols).then(funData => {
-              if (funData && !isCancelled) setFundamentals(funData);
+              if (funData && !isCancelled) {
+                const normalized: Record<string, any> = {};
+                Object.entries(funData).forEach(([k, v]) => {
+                  normalized[k] = v;
+                  normalized[k.toUpperCase()] = v;
+                });
+                setFundamentals(prev => ({ ...prev, ...normalized }));
+              }
             }).catch(() => {});
           }
         }
@@ -183,6 +192,38 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       isCancelled = true;
     };
   }, [portfolioId, blueprints]);
+
+  // Auto-sync fundamentals for any recommended/verdict symbols not yet in memory
+  useEffect(() => {
+    if (!aiResult) return;
+
+    const allSymbols = new Set<string>();
+    aiResult.stockVerdicts?.forEach((v: any) => {
+      if (v.symbol && v.symbol.toUpperCase() !== 'CASH') {
+        allSymbols.add(v.symbol.toUpperCase());
+      }
+    });
+
+    aiResult.idealBlueprint?.forEach((b: any) => {
+      if (b.symbol && b.symbol.toUpperCase() !== 'CASH') {
+        allSymbols.add(b.symbol.toUpperCase());
+      }
+    });
+
+    const missing = Array.from(allSymbols).filter(sym => !fundamentals[sym]);
+    if (missing.length > 0) {
+      api.prices.fundamentalsBatch(missing).then(freshData => {
+        if (freshData && Object.keys(freshData).length > 0) {
+          const normalized: Record<string, any> = {};
+          Object.entries(freshData).forEach(([k, v]) => {
+            normalized[k] = v;
+            normalized[k.toUpperCase()] = v;
+          });
+          setFundamentals(prev => ({ ...prev, ...normalized }));
+        }
+      }).catch(err => console.warn('[Advisor] Sync missing fundamentals error:', err));
+    }
+  }, [aiResult]);
 
   // Switch instantly if cached data exists for this mode, otherwise run analysis
   const handleSelectMode = (selectedMode: 'quick' | 'deep' | 'strategist') => {
@@ -397,19 +438,28 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       setError('');
       setStatusMessage('กำลังวิเคราะห์โครงสร้างเป้าหมาย Blueprint และสัดส่วนพอร์ต...');
 
-      // Step 1: Fetch fundamentals batch for all blueprint symbols
-      const symbols = blueprints.map((b: any) => b.symbol).filter(Boolean);
-      let funData = fundamentals;
+      // Step 1: Fetch fundamentals batch for all blueprint symbols (excluding CASH)
+      const symbols = blueprints
+        .map((b: any) => b.symbol)
+        .filter((s: string) => s && s.toUpperCase() !== 'CASH');
+      let funData = { ...fundamentals };
 
-      if (Object.keys(funData).length === 0 || symbols.some(s => !funData[s])) {
+      const missing = symbols.filter(s => !funData[s] && !funData[s.toUpperCase()]);
+      if (missing.length > 0) {
         setLoadingPhase(2);
         setProgress(35);
-        const displaySymbols = symbols.slice(0, 4).join(', ') + (symbols.length > 4 ? ` +อีก ${symbols.length - 4} ตัว` : '');
+        const displaySymbols = missing.slice(0, 4).join(', ') + (missing.length > 4 ? ` +อีก ${missing.length - 4} ตัว` : '');
         setStatusMessage(`กำลังดึงข้อมูลราคาตลาดและ Fundamental จาก Yahoo Finance (${displaySymbols})...`);
         
         try {
-          funData = await api.prices.fundamentalsBatch(symbols);
-          setFundamentals(funData);
+          const fresh = await api.prices.fundamentalsBatch(missing);
+          if (fresh) {
+            Object.entries(fresh).forEach(([k, v]) => {
+              funData[k] = v;
+              funData[k.toUpperCase()] = v;
+            });
+            setFundamentals(prev => ({ ...prev, ...funData }));
+          }
         } catch (fErr) {
           console.warn('[Advisor] Fundamentals fetch non-blocking fallback:', fErr);
         }
