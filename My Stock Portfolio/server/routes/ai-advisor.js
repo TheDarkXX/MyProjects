@@ -315,9 +315,9 @@ ${JSON.stringify(payloadData, null, 2)}
 }`;
 
     let jsonContent = '';
-    let usedModel = LOCAL_TERRA_MODEL;
+    const usedModel = 'gpt-5.6-terra-high';
 
-    // 1. Try local Hermes GPT 5.6 Terra first
+    // Call Hermes GPT 5.6 Terra on local proxy (NO Fallback - Strict GPT-5.6 Terra Only)
     try {
       const response = await fetch(LOCAL_TERRA_URL, {
         method: 'POST',
@@ -335,52 +335,23 @@ ${JSON.stringify(payloadData, null, 2)}
           ],
           max_tokens: 8000
         }),
-        signal: AbortSignal.timeout(120000)
+        signal: AbortSignal.timeout(180000) // 3 minutes timeout for complete 15-section generation
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content && content.trim().length > 0) {
-          jsonContent = content.trim();
-        }
-      } else {
-        console.warn(`[AI Advisor] Local Terra returned status ${response.status}`);
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`GPT-5.6 Terra returned status ${response.status}: ${errText.slice(0, 200)}`);
       }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (!content || content.trim().length === 0) {
+        throw new Error('GPT-5.6 Terra returned an empty response.');
+      }
+      jsonContent = content.trim();
     } catch (terraErr) {
-      console.warn('[AI Advisor] Local Terra failed, falling back to Brain Gateway:', terraErr.message);
-    }
-
-    // 2. Fallback to Brain AI Gateway (gemini-2.5-flash) if local Terra was unavailable
-    if (!jsonContent) {
-      usedModel = 'gemini-2.5-flash';
-      try {
-        const fallbackRes = await fetch(FALLBACK_GATEWAY_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${FALLBACK_GATEWAY_TOKEN}`
-          },
-          body: JSON.stringify({
-            message: systemPrompt,
-            model: 'gemini-2.5-flash'
-          }),
-          signal: AbortSignal.timeout(60000)
-        });
-
-        if (fallbackRes.ok) {
-          const fbData = await fallbackRes.json();
-          if (fbData && fbData.reply && !fbData.reply.startsWith('AI Error:')) {
-            jsonContent = fbData.reply.trim();
-          }
-        }
-      } catch (fbErr) {
-        console.error('[AI Advisor] Fallback Gateway also failed:', fbErr.message);
-      }
-    }
-
-    if (!jsonContent) {
-      throw new Error('AI engines are currently busy. Please retry in a few moments.');
+      console.error('[AI Advisor] GPT-5.6 Terra error (Strict Mode, No Fallback):', terraErr.message);
+      throw terraErr;
     }
 
     // Strip markdown code fences if present
