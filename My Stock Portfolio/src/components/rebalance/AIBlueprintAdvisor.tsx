@@ -12,7 +12,7 @@ interface AIBlueprintAdvisorProps {
 }
 
 export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion }: AIBlueprintAdvisorProps) {
-  const [mode, setMode] = useState<'quick' | 'deep' | 'strategist'>('deep');
+  const [mode, setMode] = useState<'quick' | 'deep' | 'strategist'>('strategist');
   const [loadingPhase, setLoadingPhase] = useState(0); 
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
@@ -22,6 +22,11 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
   const [isStale, setIsStale] = useState(false);
   const [cachedCreatedAt, setCachedCreatedAt] = useState<string | null>(null);
   const [cachedModel, setCachedModel] = useState<string>('');
+  const [modesSummary, setModesSummary] = useState<Record<string, any>>({
+    strategist: null,
+    deep: null,
+    quick: null
+  });
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -31,7 +36,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
     };
   }, []);
 
-  // Auto-load latest saved analysis on mount or portfolio change
+  // Auto-load latest saved analysis on mount or portfolio change (defaults to highest tier mode)
   useEffect(() => {
     let isCancelled = false;
 
@@ -42,13 +47,23 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
         const latest = await api.ai.latestAdvisor(portfolioId, blueprints);
         if (isCancelled) return;
 
-        if (latest && latest.found && latest.result) {
-          setAiResult(latest.result);
-          setIsStale(Boolean(latest.isStale));
-          setCachedCreatedAt(latest.createdAt || null);
-          setCachedModel(latest.modelUsed || '');
-          if (latest.mode) setMode(latest.mode);
-          setLoadingPhase(4); // Immediately display cached results
+        if (latest && latest.found) {
+          if (latest.modesSummary) {
+            setModesSummary(latest.modesSummary);
+          }
+          
+          // Select highest available tier mode: strategist > deep > quick
+          const activeMode = latest.highestMode || latest.mode || 'strategist';
+          const activeData = (latest.modesSummary && latest.modesSummary[activeMode]) || latest;
+
+          if (activeData && activeData.result) {
+            setAiResult(activeData.result);
+            setIsStale(Boolean(activeData.isStale));
+            setCachedCreatedAt(activeData.createdAt || null);
+            setCachedModel(activeData.modelUsed || '');
+            setMode(activeMode as any);
+            setLoadingPhase(4); // Immediately display cached results
+          }
 
           // Silently fetch fundamentals in background if not already loaded so charts have live data
           const symbols = blueprints.map((b: any) => b.symbol).filter(Boolean);
@@ -72,6 +87,50 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       isCancelled = true;
     };
   }, [portfolioId, blueprints]);
+
+  // Switch instantly if cached data exists for this mode, otherwise run analysis
+  const handleSelectMode = (selectedMode: 'quick' | 'deep' | 'strategist') => {
+    if (loadingPhase > 0 && loadingPhase < 4) return;
+
+    const cachedForMode = modesSummary[selectedMode];
+    if (cachedForMode && cachedForMode.result) {
+      setMode(selectedMode);
+      setAiResult(cachedForMode.result);
+      setIsStale(Boolean(cachedForMode.isStale));
+      setCachedCreatedAt(cachedForMode.createdAt || null);
+      setCachedModel(cachedForMode.modelUsed || '');
+      setLoadingPhase(4);
+      return;
+    }
+
+    runAnalysis(selectedMode);
+  };
+
+  // Cyber Glow Badge: emerald glow for fresh saved, amber glow for stale
+  const renderModeBadge = (targetMode: 'quick' | 'deep' | 'strategist') => {
+    const info = modesSummary[targetMode];
+    if (!info || !info.found) return null;
+
+    if (info.isStale) {
+      return (
+        <span 
+          title="มีข้อมูลเดิม แต่พอร์ตมีการเปลี่ยนแปลง (แนะนำกดวิเคราะห์ใหม่)"
+          className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/60 text-[10px] font-black shadow-[0_0_8px_rgba(245,158,11,0.5)] ml-1 shrink-0"
+        >
+          !
+        </span>
+      );
+    }
+
+    return (
+      <span 
+        title="วิเคราะห์แล้ว ข้อมูลเป็นปัจจุบันพร้อมดู"
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/70 text-[10px] font-black shadow-[0_0_10px_rgba(52,211,153,0.7)] ml-1 shrink-0 animate-pulse"
+      >
+        ✓
+      </span>
+    );
+  };
 
   // Calculate sector weights dynamically from blueprints and fundamentals
   const portfolioSectors = useMemo(() => {
@@ -247,10 +306,27 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
         setTimeout(() => {
           setAiResult(result);
           setIsStale(false);
-          setCachedCreatedAt(new Date().toISOString());
+          const nowIso = new Date().toISOString();
+          setCachedCreatedAt(nowIso);
           setLoadingPhase(4);
           setProgress(100);
           setStatusMessage('วิเคราะห์เสร็จสมบูรณ์');
+          setModesSummary(prev => ({
+            ...prev,
+            quick: {
+              found: true,
+              isStale: false,
+              mode: 'quick',
+              blueprint_hash: '',
+              overallGrade: result.overallGrade,
+              result,
+              modelUsed: 'rule-engine',
+              createdAt: nowIso
+            }
+          }));
+          api.ai.saveAdvisorHistory(portfolioId, 'quick', blueprints, result).catch(e => {
+            console.warn('[Advisor] Quick scan auto-save error:', e);
+          });
         }, 500);
         return;
       }
@@ -306,8 +382,22 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       setProgress(100);
       setAiResult(aiRes);
       setIsStale(false);
-      setCachedCreatedAt(new Date().toISOString());
+      const nowIso = new Date().toISOString();
+      setCachedCreatedAt(nowIso);
       setLoadingPhase(4); 
+      setModesSummary(prev => ({
+        ...prev,
+        [selectedMode]: {
+          found: true,
+          isStale: false,
+          mode: selectedMode,
+          blueprint_hash: '',
+          overallGrade: aiRes.overallGrade,
+          result: aiRes,
+          modelUsed: selectedMode === 'strategist' ? 'GPT-5.6 Terra (Strategist)' : 'GPT-5.6 Terra',
+          createdAt: nowIso
+        }
+      })); 
     } catch (err: any) {
       if (timerRef.current) clearInterval(timerRef.current);
       console.error('[Advisor UI Error]:', err);
@@ -337,30 +427,33 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
           </p>
         </div>
         
-        <div className="flex bg-[#12141F] rounded-lg p-1 border border-[#232738]">
+        <div className="flex bg-[#12141F] rounded-lg p-1 border border-[#232738] gap-1">
           <button 
-            onClick={() => runAnalysis('quick')}
-            className={`px-3 py-1.5 rounded-md text-[13px] font-bold transition-colors ${
-              mode === 'quick' && loadingPhase > 0 ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white'
+            onClick={() => handleSelectMode('quick')}
+            className={`px-3 py-1.5 rounded-md text-[13px] font-bold transition-all flex items-center gap-1.5 ${
+              mode === 'quick' && loadingPhase > 0 ? 'bg-slate-700 text-white shadow' : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
             }`}
           >
-            ⚡ Quick Scan
+            <span>⚡ Quick Scan</span>
+            {renderModeBadge('quick')}
           </button>
           <button 
-            onClick={() => runAnalysis('deep')}
-            className={`px-3 py-1.5 rounded-md text-[13px] font-bold transition-colors ${
-              mode === 'deep' && loadingPhase > 0 ? 'bg-[#A855F7] text-white' : 'text-slate-300 hover:text-white'
+            onClick={() => handleSelectMode('deep')}
+            className={`px-3 py-1.5 rounded-md text-[13px] font-bold transition-all flex items-center gap-1.5 ${
+              mode === 'deep' && loadingPhase > 0 ? 'bg-[#A855F7] text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
             }`}
           >
-            🧠 Deep Analysis
+            <span>🧠 Deep Analysis</span>
+            {renderModeBadge('deep')}
           </button>
           <button 
-            onClick={() => runAnalysis('strategist')}
-            className={`px-3 py-1.5 rounded-md text-[13px] font-bold transition-colors ${
-              mode === 'strategist' && loadingPhase > 0 ? 'bg-amber-600 text-white' : 'text-slate-300 hover:text-white'
+            onClick={() => handleSelectMode('strategist')}
+            className={`px-3 py-1.5 rounded-md text-[13px] font-bold transition-all flex items-center gap-1.5 ${
+              mode === 'strategist' && loadingPhase > 0 ? 'bg-amber-600 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
             }`}
           >
-            🎯 Strategist
+            <span>🎯 Strategist</span>
+            {renderModeBadge('strategist')}
           </button>
         </div>
       </div>
@@ -402,22 +495,25 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button 
-              onClick={() => runAnalysis('quick')}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[13px] font-bold rounded-lg border border-slate-700 transition-all"
+              onClick={() => handleSelectMode('quick')}
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[13px] font-bold rounded-lg border border-slate-700 transition-all flex items-center gap-2"
             >
-              ⚡ Quick Scan (เร็วทันใจ)
+              <span>⚡ Quick Scan (เร็วทันใจ)</span>
+              {renderModeBadge('quick')}
             </button>
             <button 
-              onClick={() => runAnalysis('deep')}
-              className="px-5 py-2.5 bg-gradient-to-r from-[#A855F7] to-blue-600 hover:opacity-90 text-white text-[13px] font-bold rounded-lg shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all"
+              onClick={() => handleSelectMode('deep')}
+              className="px-5 py-2.5 bg-gradient-to-r from-[#A855F7] to-blue-600 hover:opacity-90 text-white text-[13px] font-bold rounded-lg shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all flex items-center gap-2"
             >
-              🧠 Deep Analysis
+              <span>🧠 Deep Analysis</span>
+              {renderModeBadge('deep')}
             </button>
             <button 
-              onClick={() => runAnalysis('strategist')}
-              className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:opacity-90 text-white text-[13px] font-bold rounded-lg shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all"
+              onClick={() => handleSelectMode('strategist')}
+              className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:opacity-90 text-white text-[13px] font-bold rounded-lg shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all flex items-center gap-2"
             >
-              🎯 Full Strategist (พิมพ์เขียว + Roadmap)
+              <span>🎯 Full Strategist (พิมพ์เขียว + Roadmap)</span>
+              {renderModeBadge('strategist')}
             </button>
           </div>
         </div>

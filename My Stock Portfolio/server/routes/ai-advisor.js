@@ -47,7 +47,7 @@ function compressPromptData(blueprints, fundamentals) {
   return { summary, holdings: combined };
 }
 
-// Check and fetch latest analysis for a portfolio, detecting if blueprint has changed
+// Check and fetch latest analysis for each mode for a portfolio, detecting if blueprint has changed
 aiAdvisorRoutes.post('/latest', async (c) => {
   try {
     const { portfolio_id, blueprints } = await c.req.json();
@@ -55,38 +55,98 @@ aiAdvisorRoutes.post('/latest', async (c) => {
       return c.json({ error: 'Missing portfolio_id' }, 400);
     }
 
-    const row = db.prepare(`
-      SELECT * FROM ai_analysis_history 
-      WHERE portfolio_id = ? 
-      ORDER BY created_at DESC LIMIT 1
-    `).get(portfolio_id);
-
-    if (!row) {
-      return c.json({ found: false });
-    }
-
     const currentHash = createBlueprintHash(blueprints || []);
-    const isStale = currentHash !== row.blueprint_hash;
 
-    let parsedResult = null;
-    try {
-      parsedResult = JSON.parse(row.result_json);
-    } catch (e) {
-      console.warn('[AI Advisor Latest] JSON parse error:', e.message);
+    // Fetch the latest entry for each mode in order of hierarchy: strategist > deep > quick
+    const modes = ['strategist', 'deep', 'quick'];
+    const modesSummary = { strategist: null, deep: null, quick: null };
+    let highestMode = null;
+
+    for (const m of modes) {
+      const row = db.prepare(`
+        SELECT * FROM ai_analysis_history 
+        WHERE portfolio_id = ? AND mode = ?
+        ORDER BY created_at DESC LIMIT 1
+      `).get(portfolio_id, m);
+
+      if (row) {
+        if (!highestMode) {
+          highestMode = m;
+        }
+
+        let parsedResult = null;
+        try {
+          parsedResult = JSON.parse(row.result_json);
+        } catch (e) {
+          console.warn(`[AI Advisor Latest] JSON parse error for mode ${m}:`, e.message);
+        }
+
+        modesSummary[m] = {
+          found: true,
+          isStale: currentHash !== row.blueprint_hash,
+          mode: row.mode,
+          blueprint_hash: row.blueprint_hash,
+          overallGrade: row.overall_grade,
+          result: parsedResult,
+          modelUsed: row.model_used,
+          createdAt: row.created_at
+        };
+      }
     }
+
+    if (!highestMode) {
+      return c.json({ found: false, modesSummary });
+    }
+
+    const primary = modesSummary[highestMode];
 
     return c.json({
       found: true,
-      isStale,
-      mode: row.mode,
-      blueprint_hash: row.blueprint_hash,
-      overallGrade: row.overall_grade,
-      result: parsedResult,
-      modelUsed: row.model_used,
-      createdAt: row.created_at
+      highestMode,
+      modesSummary,
+      isStale: primary.isStale,
+      mode: primary.mode,
+      blueprint_hash: primary.blueprint_hash,
+      overallGrade: primary.overallGrade,
+      result: primary.result,
+      modelUsed: primary.modelUsed,
+      createdAt: primary.createdAt
     });
   } catch (err) {
     console.error('[AI Advisor Latest] Error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Save client-side generated analysis (e.g. quick scan)
+aiAdvisorRoutes.post('/save', async (c) => {
+  try {
+    const { portfolio_id, mode, blueprints, result } = await c.req.json();
+    if (!portfolio_id || !mode || !result) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    const hash = createBlueprintHash(blueprints || []);
+    const portCheck = db.prepare('SELECT id FROM portfolios WHERE id = ?').get(portfolio_id);
+    if (portCheck) {
+      const insertStmt = db.prepare(`
+        INSERT INTO ai_analysis_history (
+          portfolio_id, mode, blueprint_hash, overall_grade, result_json, model_used
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      insertStmt.run(
+        portfolio_id,
+        mode,
+        hash,
+        result.overallGrade || 'B',
+        JSON.stringify(result),
+        'rule-engine'
+      );
+    }
+
+    return c.json({ success: true, blueprint_hash: hash });
+  } catch (err) {
+    console.error('[AI Advisor Save] Error:', err);
     return c.json({ error: err.message }, 500);
   }
 });

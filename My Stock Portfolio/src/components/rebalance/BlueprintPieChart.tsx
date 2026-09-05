@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { BlueprintEntry } from '../../stores/blueprintStore';
 import { CATEGORY_CONFIG, STRATEGY_CATEGORIES, StrategyCategory } from './StrategyConfigs';
 import { ShieldAlert, CheckCircle2, AlertTriangle, Layers, PieChart as PieIcon, Wallet } from 'lucide-react';
 import { AIBlueprintAdvisor } from './AIBlueprintAdvisor';
+import { api } from '../../services/api';
 
 interface BlueprintPieChartProps {
   blueprints: BlueprintEntry[];
@@ -23,6 +24,25 @@ interface CategoryGroup {
 
 export const BlueprintPieChart: React.FC<BlueprintPieChartProps> = ({ blueprints, portfolioId }) => {
   const [showAiAdvisor, setShowAiAdvisor] = useState(false);
+
+  // Auto-expand AI Advisor if saved analysis exists in backend
+  useEffect(() => {
+    const targetPortId = portfolioId || blueprints[0]?.portfolio_id;
+    if (!targetPortId) return;
+
+    let isMounted = true;
+    api.ai.latestAdvisor(targetPortId, blueprints || [])
+      .then(res => {
+        if (isMounted && res && res.found) {
+          setShowAiAdvisor(true);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [portfolioId, blueprints]);
 
   // Aggregate data by category
   const { chartData, healthMetrics, totalPercent } = useMemo(() => {
