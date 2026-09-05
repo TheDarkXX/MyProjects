@@ -5,6 +5,10 @@ import { useBlueprintStore } from '../../stores/blueprintStore';
 import { HealthRadar } from './advisor/HealthRadar';
 import { SectorGapChart } from './advisor/SectorGapChart';
 import { RiskGauge } from './advisor/RiskGauge';
+import { BeforeAfterDonut } from './advisor/BeforeAfterDonut';
+import { StockVerdictCard } from './advisor/StockVerdictCard';
+import { DrawdownMeter } from './advisor/DrawdownMeter';
+import { TimelineStepper } from './advisor/TimelineStepper';
 
 interface AIBlueprintAdvisorProps {
   portfolioId: string;
@@ -14,6 +18,7 @@ interface AIBlueprintAdvisorProps {
 
 export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion }: AIBlueprintAdvisorProps) {
   const [mode, setMode] = useState<'quick' | 'deep' | 'strategist'>('strategist');
+  const [activeTab, setActiveTab] = useState<'plan' | 'stocks' | 'stress' | 'macro'>('plan');
   const [loadingPhase, setLoadingPhase] = useState(0); 
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
@@ -262,6 +267,30 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
     });
 
     return totalWeight > 0 ? Number((sumBeta / totalWeight).toFixed(2)) : 1.0;
+  }, [blueprints, fundamentals]);
+
+  // Calculate cash percent
+  const cashPercent = useMemo(() => {
+    if (!blueprints || blueprints.length === 0) return 0;
+    const cashBp = blueprints.find((b: any) => b.symbol?.toUpperCase() === 'CASH');
+    return Number(cashBp?.target_percent) || 0;
+  }, [blueprints]);
+
+  // Calculate weighted average P/E
+  const weightedPE = useMemo(() => {
+    if (!blueprints || blueprints.length === 0) return null;
+    let totalWeight = 0;
+    let sumPE = 0;
+    blueprints.forEach((b: any) => {
+      const weight = Number(b.target_percent) || 0;
+      const f = fundamentals[b.symbol];
+      const pe = f?.pe_trailing || f?.pe_forward || 0;
+      if (pe > 0 && pe < 250) {
+        sumPE += weight * pe;
+        totalWeight += weight;
+      }
+    });
+    return totalWeight > 0 ? Number((sumPE / totalWeight).toFixed(1)) : null;
   }, [blueprints, fundamentals]);
 
   // Quick scan evaluation engine (rule-based, fast, runs locally with Thai advice)
@@ -660,360 +689,527 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
             </div>
           )}
 
-          {/* Strategist Section 1: Macro & Market Environment Context */}
-          {aiResult.macroAnalysis && (
-            <div className="border border-purple-500/30 rounded-lg p-5 bg-gradient-to-r from-purple-950/25 via-[#181B2A] to-blue-950/20 shadow-lg">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-3 gap-2">
-                <h3 className="text-purple-300 font-bold text-sm flex items-center gap-2">
-                  <span className="text-base">🌐</span> การวิเคราะห์ภาพรวมเศรษฐกิจและธีมตลาด (Macro & Market Context)
+          {/* ========================================================= */}
+          {/* 🏅 LAYER 1: EXECUTIVE INVESTMENT COCKPIT (Always on Top) */}
+          {/* ========================================================= */}
+          <div className="bg-[#12141F] border border-[#232738] rounded-xl p-4 md:p-5 shadow-lg space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#232738] pb-3">
+              <div>
+                <h3 className="text-white font-bold text-base flex items-center gap-2">
+                  <span className="text-xl">🏅</span> Executive Investment Cockpit
                 </h3>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 self-start sm:self-auto">
-                  CHIEF STRATEGIST PERSPECTIVE
-                </span>
-              </div>
-              <p className="text-[14px] text-slate-200 leading-relaxed font-normal">
-                {aiResult.macroAnalysis}
-              </p>
-            </div>
-          )}
-
-          {/* Row 1: Grade Card & Radar Chart */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="col-span-1 border border-slate-700 rounded-lg p-5 flex flex-col items-center justify-center bg-[#12141F]">
-              <div className="text-[13px] font-bold text-slate-300 mb-2">Overall Grade</div>
-              <div className={`text-6xl font-black ${getGradeColor(aiResult.overallGrade)}`}>
-                {aiResult.overallGrade || 'B'}
-              </div>
-              <div className="text-[13px] text-slate-300 mt-3 text-center">
-                {aiResult.overallGrade?.startsWith('A') ? 'พอร์ตมีความสมดุลและคุณภาพสูง' :
-                 aiResult.overallGrade?.startsWith('B') ? 'โครงสร้างดี มีจุดที่สามารถปรับให้แกร่งขึ้นได้' :
-                 'ควรกระจายความเสี่ยงและลดการกระจุกตัว'}
+                <p className="text-[13px] text-slate-300 mt-0.5">
+                  สรุปผลประเมินสุขภาพพอร์ตโดยรวม 5 มิติ และตัวชี้วัดความเสี่ยงสำคัญ
+                </p>
               </div>
               {aiResult.portfolioStyle && (
-                <div className="mt-4 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full text-blue-300 text-xs font-bold flex items-center gap-1.5">
+                <div className="px-3 py-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-purple-500/40 rounded-full text-purple-200 text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto shadow-[0_0_12px_rgba(168,85,247,0.25)]">
                   <span>📊</span> Style: {aiResult.portfolioStyle}
                 </div>
               )}
             </div>
-            <div className="col-span-2 border border-slate-700 rounded-lg p-4 bg-[#12141F]">
-              <div className="text-[13px] font-bold text-slate-200 mb-1 px-2">5-Axis Portfolio Health Radar</div>
-              <HealthRadar data={aiResult.radarData || {
-                diversification: 75,
-                valuation: 70,
-                growth: 70,
-                risk: 65,
-                income: 50
-              }} />
-            </div>
-          </div>
-          
-          {/* Row 1.5: Concentration & Dividend Health */}
-          {(aiResult.concentrationRisk || aiResult.dividendHealth) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {aiResult.concentrationRisk && (
-                <div className="border border-orange-500/30 rounded-lg p-4 bg-orange-500/5 flex items-start gap-3">
-                  <span className="text-xl shrink-0">⚠️</span>
-                  <div>
-                    <h4 className="text-orange-400 font-bold text-sm mb-1">Concentration Risk</h4>
-                    <p className="text-[13px] text-slate-200">{aiResult.concentrationRisk}</p>
-                  </div>
-                </div>
-              )}
-              {aiResult.dividendHealth && (
-                <div className="border border-cyan-500/30 rounded-lg p-4 bg-cyan-500/5 flex items-start gap-3">
-                  <span className="text-xl shrink-0">💰</span>
-                  <div>
-                    <h4 className="text-cyan-400 font-bold text-sm mb-1">Dividend Health</h4>
-                    <p className="text-[13px] text-slate-200">{aiResult.dividendHealth}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* Row 2: Strengths & Weaknesses */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border border-emerald-500/30 rounded-lg p-4 bg-emerald-500/5">
-              <h3 className="text-emerald-400 font-bold mb-3 flex items-center gap-2 text-sm">
-                💪 จุดแข็ง (Strengths)
-              </h3>
-              <ul className="space-y-3">
-                {aiResult.strengths?.map((s: any, i: number) => (
-                  <li key={i} className="text-[13px] text-slate-200 flex items-start gap-2.5">
-                    <span className="text-emerald-400 font-black text-sm shrink-0 mt-0.5">✓</span>
-                    <div>
-                      <span className="font-bold text-white">{s.title}: </span>
-                      <span className="text-slate-200">{s.description}</span>
-                    </div>
-                  </li>
-                ))}
-                {(!aiResult.strengths || aiResult.strengths.length === 0) && (
-                  <li className="text-[13px] text-slate-300">ยังไม่พบจุดแข็งที่โดดเด่น</li>
-                )}
-              </ul>
-            </div>
-            <div className="border border-rose-500/30 rounded-lg p-4 bg-rose-500/5">
-              <h3 className="text-rose-400 font-bold mb-3 flex items-center gap-2 text-sm">
-                ⚠️ จุดเสี่ยงที่ควรระวัง (Weaknesses)
-              </h3>
-              <ul className="space-y-3">
-                {aiResult.weaknesses?.map((w: any, i: number) => (
-                  <li key={i} className="text-[13px] text-slate-200 flex items-start gap-2.5">
-                    <span className="text-rose-400 font-black text-sm shrink-0 mt-0.5">!</span>
-                    <div>
-                      <span className="font-bold text-white">{w.title}: </span>
-                      <span className="text-slate-200">{w.description}</span>
-                    </div>
-                  </li>
-                ))}
-                {(!aiResult.weaknesses || aiResult.weaknesses.length === 0) && (
-                  <li className="text-[13px] text-slate-300">ไม่พบจุดเสี่ยงที่มีนัยสำคัญ</li>
-                )}
-              </ul>
-            </div>
-          </div>
+            {/* Cockpit Grid: Grade (col 1) + 5-Axis Radar (col 2-3) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+              {/* Grade Card */}
+              <div className="col-span-1 border border-[#2A2E45] rounded-xl p-5 flex flex-col items-center justify-center bg-[#181B2A]/80 shadow-inner">
+                <div className="text-[13px] font-bold text-slate-300 mb-1 tracking-wider uppercase">Overall Grade</div>
+                <div className={`text-6xl font-black ${getGradeColor(aiResult.overallGrade)} my-1`}>
+                  {aiResult.overallGrade || 'B'}
+                </div>
+                <div className="text-[13px] text-slate-200 text-center font-medium mt-1">
+                  {aiResult.overallGrade?.startsWith('A') ? 'พอร์ตสมดุลสูง ศักยภาพการเติบโตยอดเยี่ยม' :
+                   aiResult.overallGrade?.startsWith('B') ? 'โครงสร้างดี มีจุดที่สามารถปรับให้แกร่งขึ้นได้' :
+                   'ควรกระจายความเสี่ยงและลดการกระจุกตัว'}
+                </div>
+              </div>
 
-          {/* Strategist Section 2.5: Stock-by-Stock Verdicts */}
-          {aiResult.stockVerdicts && aiResult.stockVerdicts.length > 0 && (
-            <div className="border border-slate-700/80 rounded-lg p-5 bg-[#12141F]">
-              <h3 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
-                <span className="text-base">🔎</span> เจาะลึกรายตัว (Forward-Looking Verdicts)
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-[#232738] text-[13px] text-slate-300">
-                      <th className="py-2.5 px-3 font-semibold">Symbol</th>
-                      <th className="py-2.5 px-3 font-semibold text-center">Grade</th>
-                      <th className="py-2.5 px-3 font-semibold text-center">Action</th>
-                      <th className="py-2.5 px-3 font-semibold">Role</th>
-                      <th className="py-2.5 px-3 font-semibold">Future Outlook (Consensus)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#232738]/60">
-                    {aiResult.stockVerdicts.map((v: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-3 font-bold text-white text-[14px]">{v.symbol}</td>
-                        <td className="py-3 px-3 text-center">
-                          <span className={`font-black text-[14px] ${getGradeColor(v.grade)}`}>{v.grade}</span>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold ${
-                            v.flag === 'ADD' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                            v.flag === 'REDUCE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                            v.flag === 'HOLD' ? 'bg-slate-700/50 text-slate-300 border border-slate-600' :
-                            'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                          }`}>
-                            {v.flag}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-[13px] text-slate-200">{v.role}</td>
-                        <td className="py-3 px-3 text-[13px] text-slate-300">{v.futureOutlook}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* 5-Axis Health Radar */}
+              <div className="col-span-2 border border-[#2A2E45] rounded-xl p-4 bg-[#181B2A]/80 shadow-inner">
+                <div className="flex items-center justify-between mb-1 px-2">
+                  <span className="text-[13px] font-bold text-slate-200">5-Axis Portfolio Health Radar</span>
+                  <span className="text-xs text-slate-400 font-semibold">คะแนนเต็ม 100</span>
+                </div>
+                <HealthRadar data={aiResult.radarData || {
+                  diversification: 75,
+                  valuation: 70,
+                  growth: 70,
+                  risk: 65,
+                  income: 50
+                }} />
               </div>
             </div>
+
+            {/* Key Metric Badges Strip (4 Cards) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+              <div className="bg-[#181B2A] border border-[#2A2E45] rounded-lg p-3 flex flex-col justify-between">
+                <div className="text-xs text-slate-400 font-semibold">Weighted Beta (β)</div>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-xl font-black text-white">{weightedBeta.toFixed(2)}</span>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                    weightedBeta > 1.35 ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
+                  }`}>
+                    {weightedBeta > 1.35 ? 'High Vol' : 'Balanced'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-[#181B2A] border border-[#2A2E45] rounded-lg p-3 flex flex-col justify-between">
+                <div className="text-xs text-slate-400 font-semibold">Weighted P/E</div>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-xl font-black text-purple-300">
+                    {weightedPE !== null ? `${weightedPE}x` : 'N/A'}
+                  </span>
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">
+                    Valuation
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-[#181B2A] border border-[#2A2E45] rounded-lg p-3 flex flex-col justify-between">
+                <div className="text-xs text-slate-400 font-semibold">Risk Score</div>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-xl font-black text-white">
+                    {aiResult.riskScore || 50}<span className="text-xs text-slate-400 font-normal">/100</span>
+                  </span>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                    (aiResult.riskScore || 50) > 65 ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
+                  }`}>
+                    {(aiResult.riskScore || 50) > 65 ? 'Elevated' : 'Moderate'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-[#181B2A] border border-[#2A2E45] rounded-lg p-3 flex flex-col justify-between">
+                <div className="text-xs text-slate-400 font-semibold">Cash Allocation</div>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-xl font-black text-emerald-400">{cashPercent}%</span>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                    cashPercent >= 10 && cashPercent <= 25 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+                  }`}>
+                    {cashPercent > 25 ? 'Excess' : cashPercent < 5 ? 'Low Buffer' : 'Optimal'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Alert Banners: Concentration & Dividend Health */}
+            {(aiResult.concentrationRisk || aiResult.dividendHealth) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {aiResult.concentrationRisk && (
+                  <div className="border border-amber-500/30 rounded-lg p-3.5 bg-amber-500/10 flex items-start gap-3">
+                    <span className="text-lg shrink-0 mt-0.5">⚠️</span>
+                    <div>
+                      <h4 className="text-amber-300 font-bold text-[13px] mb-0.5">Concentration Risk</h4>
+                      <p className="text-[13px] text-slate-200 leading-relaxed">{aiResult.concentrationRisk}</p>
+                    </div>
+                  </div>
+                )}
+                {aiResult.dividendHealth && (
+                  <div className="border border-cyan-500/30 rounded-lg p-3.5 bg-cyan-500/10 flex items-start gap-3">
+                    <span className="text-lg shrink-0 mt-0.5">💰</span>
+                    <div>
+                      <h4 className="text-cyan-300 font-bold text-[13px] mb-0.5">Dividend Health</h4>
+                      <p className="text-[13px] text-slate-200 leading-relaxed">{aiResult.dividendHealth}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ========================================================= */}
+          {/* 📑 LAYER 2: SEGMENTED TABS NAVIGATION                     */}
+          {/* ========================================================= */}
+          <div className="flex border-b border-[#232738] gap-1 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              onClick={() => setActiveTab('plan')}
+              className={`px-4 py-2.5 rounded-t-lg font-bold text-[13px] transition-all flex items-center gap-2 shrink-0 border-b-2 ${
+                activeTab === 'plan'
+                  ? 'border-amber-400 text-amber-300 bg-[#12141F]'
+                  : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-800/40'
+              }`}
+            >
+              <span>🎯 แผนปรับพอร์ต (Portfolio Plan)</span>
+              {aiResult.idealBlueprint?.length > 0 && (
+                <span className="text-xs px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-black">
+                  {aiResult.idealBlueprint.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('stocks')}
+              className={`px-4 py-2.5 rounded-t-lg font-bold text-[13px] transition-all flex items-center gap-2 shrink-0 border-b-2 ${
+                activeTab === 'stocks'
+                  ? 'border-purple-400 text-purple-300 bg-[#12141F]'
+                  : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-800/40'
+              }`}
+            >
+              <span>🔎 หุ้นรายตัว (Individual Stocks)</span>
+              {aiResult.stockVerdicts?.length > 0 && (
+                <span className="text-xs px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 font-black">
+                  {aiResult.stockVerdicts.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('stress')}
+              className={`px-4 py-2.5 rounded-t-lg font-bold text-[13px] transition-all flex items-center gap-2 shrink-0 border-b-2 ${
+                activeTab === 'stress'
+                  ? 'border-rose-400 text-rose-300 bg-[#12141F]'
+                  : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-800/40'
+              }`}
+            >
+              <span>🌪️ จำลองวิกฤต (Stress Test & Risk)</span>
+              {aiResult.stressTest?.length > 0 && (
+                <span className="text-xs px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 font-black">
+                  {aiResult.stressTest.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('macro')}
+              className={`px-4 py-2.5 rounded-t-lg font-bold text-[13px] transition-all flex items-center gap-2 shrink-0 border-b-2 ${
+                activeTab === 'macro'
+                  ? 'border-sky-400 text-sky-300 bg-[#12141F]'
+                  : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-800/40'
+              }`}
+            >
+              <span>🌐 ภาพรวม & สภาพตลาด (Macro & Overview)</span>
+            </button>
+          </div>
+
+          {/* ========================================================= */}
+          {/* TAB 1: 🎯 แผนปรับพอร์ต (Portfolio Plan)                     */}
+          {/* ========================================================= */}
+          {activeTab === 'plan' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Before vs After Donut Comparison */}
+              {aiResult.idealBlueprint && aiResult.idealBlueprint.length > 0 && (
+                <BeforeAfterDonut items={aiResult.idealBlueprint} />
+              )}
+
+              {/* Ideal Blueprint Allocation Table */}
+              {aiResult.idealBlueprint && aiResult.idealBlueprint.length > 0 && (
+                <div className="border border-amber-500/30 rounded-xl p-4 md:p-5 bg-[#12141F] shadow-lg">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+                    <div>
+                      <h4 className="text-amber-400 font-bold text-sm flex items-center gap-2">
+                        <span className="text-base">🎯</span> ตารางพิมพ์เขียวเป้าหมายเชิงกลยุทธ์ (Ideal Blueprint)
+                      </h4>
+                      <p className="text-[13px] text-slate-300 mt-0.5">
+                        เปรียบเทียบสัดส่วนเป้าหมายปัจจุบันกับสัดส่วนในอุดมคติที่ AI Strategist แนะนำเพื่อปรับสมดุล
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                      <button
+                        onClick={() => setIsConfirmModalOpen(true)}
+                        disabled={isApplying}
+                        className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[13px] font-bold transition-all shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center gap-1.5 cursor-pointer"
+                        title="คลิกเพื่อนำสัดส่วนเป้าหมายที่ AI แนะนำไปปรับใช้กับ Blueprint ทันที"
+                      >
+                        <span>⚡</span> ปรับใช้สัดส่วนนี้ (Apply)
+                      </button>
+
+                      {previousBlueprintBackup && (
+                        <button
+                          onClick={handleUndoAllocation}
+                          disabled={isApplying}
+                          className="px-3 py-1.5 rounded-lg bg-sky-950/40 hover:bg-sky-900/50 text-sky-300 border border-sky-500/50 text-[13px] font-bold transition-all shadow-[0_0_12px_rgba(56,189,248,0.25)] flex items-center gap-1.5 cursor-pointer"
+                          title="กู้คืนสัดส่วน Blueprint เดิมก่อนปรับใช้"
+                        >
+                          <span>↩️</span> ย้อนกลับสัดส่วนเดิม (Undo)
+                        </button>
+                      )}
+
+                      <span className="text-xs font-bold px-2.5 py-1 rounded bg-amber-500/10 text-amber-300/80 border border-amber-500/20">
+                        OPTIMIZED ALLOCATION
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#232738] text-[13px] text-slate-300">
+                          <th className="py-2.5 px-3 font-semibold">สินทรัพย์</th>
+                          <th className="py-2.5 px-3 font-semibold">บทบาทเชิงกลยุทธ์</th>
+                          <th className="py-2.5 px-3 font-semibold text-right">ปัจจุบัน</th>
+                          <th className="py-2.5 px-3 font-semibold text-right">แนะนำ</th>
+                          <th className="py-2.5 px-3 font-semibold text-center">การเปลี่ยนผ่าน</th>
+                          <th className="py-2.5 px-3 font-semibold text-center">ส่วนต่าง</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#232738]/60">
+                        {aiResult.idealBlueprint.map((item: any, idx: number) => {
+                          const change = Number(item.change ?? (item.idealPercent - item.currentPercent));
+                          const isNew = (item.currentPercent || 0) === 0 && item.idealPercent > 0;
+                          return (
+                            <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
+                              <td className="py-3 px-3">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-white text-[14px]">{item.symbol}</span>
+                                  {isNew && (
+                                    <span className="text-[11px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
+                                      ✨ NEW
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 text-[13px] text-slate-200">
+                                {item.role || 'แกนหลักการเติบโต'}
+                              </td>
+                              <td className="py-3 px-3 text-[13px] text-slate-300 font-semibold text-right">
+                                {item.currentPercent}%
+                              </td>
+                              <td className="py-3 px-3 text-[14px] text-white font-bold text-right">
+                                {item.idealPercent}%
+                              </td>
+                              {/* Visual Shift Bar */}
+                              <td className="py-3 px-3">
+                                <div className="w-24 mx-auto bg-slate-800/80 rounded-full h-2 overflow-hidden flex">
+                                  <div
+                                    style={{ width: `${Math.min(100, item.currentPercent * 2)}%` }}
+                                    className="bg-slate-500 h-full"
+                                    title={`ปัจจุบัน: ${item.currentPercent}%`}
+                                  />
+                                  <div
+                                    style={{ width: `${Math.min(100, Math.abs(change) * 2)}%` }}
+                                    className={`h-full ${change > 0 ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                                    title={`ปรับเปลี่ยน: ${change > 0 ? `+${change}%` : `${change}%`}`}
+                                  />
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold ${
+                                  change > 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                                  change < 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                                  'bg-slate-700/50 text-slate-300 border border-slate-600'
+                                }`}>
+                                  {change > 0 ? `+${change.toFixed(1)}%` : change < 0 ? `${change.toFixed(1)}%` : 'คงที่ (0%)'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Strategic Action Roadmap Stepper */}
+              {aiResult.actionRoadmap && aiResult.actionRoadmap.length > 0 && (
+                <TimelineStepper roadmap={aiResult.actionRoadmap} />
+              )}
+
+              {/* Actionable Suggestions */}
+              {aiResult.suggestions && aiResult.suggestions.length > 0 && (
+                <div>
+                  <h4 className="text-white font-bold mb-3 text-sm flex items-center gap-2">
+                    <span>🔧</span> คำแนะนำปรับสัดส่วนเพิ่มเติม (Actionable Suggestions)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {aiResult.suggestions.map((s: any, i: number) => (
+                      <div key={i} className="border border-[#232738] bg-[#12141F] rounded-xl p-4 flex flex-col justify-between hover:border-slate-600 transition-colors shadow-sm">
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded ${
+                              s.action === 'ADD' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
+                              s.action === 'REDUCE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
+                              s.action === 'SWAP' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' :
+                              'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            }`}>
+                              {s.action}
+                            </span>
+                            <span className="font-bold text-white text-[14px]">{s.symbol} {s.percent}%</span>
+                          </div>
+                          <p className="text-[13px] text-slate-200 mb-4 leading-relaxed font-normal">{s.reason}</p>
+                        </div>
+                        <button 
+                          onClick={() => onApplySuggestion && onApplySuggestion(s)}
+                          className="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 rounded-lg text-[13px] font-bold transition-colors border border-emerald-500/30 cursor-pointer"
+                        >
+                          นำคำแนะนำไปปรับใช้
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
-          {/* Strategist Section 2: Ideal Blueprint (Before vs After) Table */}
-          {aiResult.idealBlueprint && aiResult.idealBlueprint.length > 0 && (
-            <div className="border border-amber-500/30 rounded-lg p-5 bg-[#12141F]">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+          {/* ========================================================= */}
+          {/* TAB 2: 🔎 หุ้นรายตัว (Individual Stocks)                   */}
+          {/* ========================================================= */}
+          {activeTab === 'stocks' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
                 <div>
-                  <h3 className="text-amber-400 font-bold text-sm flex items-center gap-2">
-                    <span className="text-base">🎯</span> พิมพ์เขียวเป้าหมายเชิงกลยุทธ์ (Ideal Blueprint: Before vs After)
-                  </h3>
+                  <h4 className="text-white font-bold text-sm flex items-center gap-2">
+                    <span className="text-base">🔎</span> เจาะลึกรายตัว (Forward-Looking Stock Verdicts)
+                  </h4>
                   <p className="text-[13px] text-slate-300 mt-0.5">
-                    เปรียบเทียบสัดส่วนเป้าหมายปัจจุบันกับสัดส่วนในอุดมคติที่ AI Strategist แนะนำเพื่อปรับสมดุลและลดความเสี่ยง
+                    ประเมินคุณภาพหุ้นรายตัวพร้อมเป้าหมายราคา Wall Street Consensus, EPS Growth และ Earnings Beat Streak
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                  <button
-                    onClick={() => setIsConfirmModalOpen(true)}
-                    disabled={isApplying}
-                    className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[13px] font-bold transition-all shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center gap-1.5 cursor-pointer"
-                    title="คลิกเพื่อนำสัดส่วนเป้าหมายที่ AI แนะนำไปปรับใช้กับ Blueprint ทันที"
-                  >
-                    <span>⚡</span> ปรับใช้สัดส่วนนี้ (Apply)
-                  </button>
+                <span className="text-xs font-bold px-2.5 py-1 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 self-start sm:self-auto">
+                  {aiResult.stockVerdicts?.length || 0} รายการ
+                </span>
+              </div>
 
-                  {previousBlueprintBackup && (
-                    <button
-                      onClick={handleUndoAllocation}
-                      disabled={isApplying}
-                      className="px-3 py-1.5 rounded-lg bg-sky-950/40 hover:bg-sky-900/50 text-sky-300 border border-sky-500/50 text-[13px] font-bold transition-all shadow-[0_0_12px_rgba(56,189,248,0.25)] flex items-center gap-1.5 cursor-pointer"
-                      title="กู้คืนสัดส่วน Blueprint เดิมก่อนปรับใช้"
-                    >
-                      <span>↩️</span> ย้อนกลับสัดส่วนเดิม (Undo)
-                    </button>
-                  )}
+              {aiResult.stockVerdicts && aiResult.stockVerdicts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {aiResult.stockVerdicts.map((v: any, idx: number) => {
+                    const upperSym = v.symbol?.toUpperCase();
+                    const funData = fundamentals[upperSym] || fundamentals[v.symbol];
+                    return (
+                      <StockVerdictCard
+                        key={idx}
+                        verdict={v}
+                        fundamentals={funData}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-[#12141F] border border-[#232738] rounded-xl text-slate-300 text-[13px]">
+                  ไม่มีข้อมูลการวิเคราะห์หุ้นรายตัว (โหมด Quick Scan จะเน้นภาพรวม กรุณาเลือกโหมด Deep หรือ Strategist เพื่อดูข้อมูลเจาะลึก)
+                </div>
+              )}
+            </div>
+          )}
 
-                  <span className="text-xs font-bold px-2.5 py-1 rounded bg-amber-500/10 text-amber-300/80 border border-amber-500/20">
-                    OPTIMIZED ALLOCATION
-                  </span>
+          {/* ========================================================= */}
+          {/* TAB 3: 🌪️ จำลองวิกฤต (Stress Test & Risk)                  */}
+          {/* ========================================================= */}
+          {activeTab === 'stress' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Stress Test Scenarios */}
+              {aiResult.stressTest && aiResult.stressTest.length > 0 ? (
+                <div className="border border-rose-900/30 rounded-xl p-4 md:p-5 bg-gradient-to-b from-rose-950/20 via-[#12141F] to-[#12141F] shadow-lg space-y-4">
+                  <div>
+                    <h4 className="text-rose-400 font-bold text-sm flex items-center gap-2">
+                      <span className="text-base">🌪️</span> Portfolio Stress Test (สถานการณ์จำลองวิกฤต)
+                    </h4>
+                    <p className="text-[13px] text-slate-300 mt-0.5">
+                      ประเมินความทนทานต่อสภาวะตลาดช็อกและระดับ Drawdown ที่อาจเกิดขึ้นกับพอร์ต
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {aiResult.stressTest.map((test: any, i: number) => (
+                      <DrawdownMeter
+                        key={i}
+                        scenario={test.scenario}
+                        estDrawdown={test.estDrawdown}
+                        impact={test.impact}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-6 text-center bg-[#12141F] border border-[#232738] rounded-xl text-slate-300 text-[13px]">
+                  โหมดนี้ยังไม่มีการจำลอง Stress Test (มีเฉพาะในโหมด Full Strategist)
+                </div>
+              )}
+
+              {/* Risk Gauge & Sector Gap Comparison */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border border-slate-700/80 rounded-xl p-4 bg-[#12141F] shadow-md">
+                  <RiskGauge score={aiResult.riskScore || 50} beta={weightedBeta} />
+                </div>
+                <div className="border border-slate-700/80 rounded-xl p-4 bg-[#12141F] overflow-x-auto shadow-md">
+                  <SectorGapChart portfolioSectors={portfolioSectors} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 4: 🌐 ภาพรวม & สภาพตลาด (Macro & Overview)             */}
+          {/* ========================================================= */}
+          {activeTab === 'macro' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Macro Analysis */}
+              {aiResult.macroAnalysis && (
+                <div className="border border-purple-500/30 rounded-xl p-5 bg-gradient-to-r from-purple-950/25 via-[#181B2A] to-blue-950/20 shadow-lg">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-3 gap-2">
+                    <h4 className="text-purple-300 font-bold text-sm flex items-center gap-2">
+                      <span className="text-base">🌐</span> การวิเคราะห์ภาพรวมเศรษฐกิจและธีมตลาด (Macro & Market Context)
+                    </h4>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 self-start sm:self-auto">
+                      CHIEF STRATEGIST PERSPECTIVE
+                    </span>
+                  </div>
+                  <p className="text-[14px] text-slate-200 leading-relaxed font-normal">
+                    {aiResult.macroAnalysis}
+                  </p>
+                </div>
+              )}
+
+              {/* Strengths & Weaknesses */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border border-emerald-500/30 rounded-xl p-4 bg-emerald-500/5 shadow-md">
+                  <h4 className="text-emerald-400 font-bold mb-3 flex items-center gap-2 text-sm">
+                    💪 จุดแข็ง (Strengths)
+                  </h4>
+                  <ul className="space-y-3">
+                    {aiResult.strengths?.map((s: any, i: number) => (
+                      <li key={i} className="text-[13px] text-slate-200 flex items-start gap-2.5">
+                        <span className="text-emerald-400 font-black text-sm shrink-0 mt-0.5">✓</span>
+                        <div>
+                          <span className="font-bold text-white">{s.title}: </span>
+                          <span className="text-slate-200">{s.description}</span>
+                        </div>
+                      </li>
+                    ))}
+                    {(!aiResult.strengths || aiResult.strengths.length === 0) && (
+                      <li className="text-[13px] text-slate-300">ยังไม่พบจุดแข็งที่โดดเด่น</li>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="border border-rose-500/30 rounded-xl p-4 bg-rose-500/5 shadow-md">
+                  <h4 className="text-rose-400 font-bold mb-3 flex items-center gap-2 text-sm">
+                    ⚠️ จุดเสี่ยงที่ควรระวัง (Weaknesses)
+                  </h4>
+                  <ul className="space-y-3">
+                    {aiResult.weaknesses?.map((w: any, i: number) => (
+                      <li key={i} className="text-[13px] text-slate-200 flex items-start gap-2.5">
+                        <span className="text-rose-400 font-black text-sm shrink-0 mt-0.5">!</span>
+                        <div>
+                          <span className="font-bold text-white">{w.title}: </span>
+                          <span className="text-slate-200">{w.description}</span>
+                        </div>
+                      </li>
+                    ))}
+                    {(!aiResult.weaknesses || aiResult.weaknesses.length === 0) && (
+                      <li className="text-[13px] text-slate-300">ไม่พบจุดเสี่ยงที่มีนัยสำคัญ</li>
+                    )}
+                  </ul>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-[#232738] text-[13px] text-slate-300">
-                      <th className="py-2.5 px-3 font-semibold">สินทรัพย์ (Asset)</th>
-                      <th className="py-2.5 px-3 font-semibold">บทบาทเชิงกลยุทธ์ (Role)</th>
-                      <th className="py-2.5 px-3 font-semibold text-right">สัดส่วนปัจจุบัน</th>
-                      <th className="py-2.5 px-3 font-semibold text-right">สัดส่วนแนะนำ</th>
-                      <th className="py-2.5 px-3 font-semibold text-center">ส่วนต่าง (Delta)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#232738]/60">
-                    {aiResult.idealBlueprint.map((item: any, idx: number) => {
-                      const change = Number(item.change ?? (item.idealPercent - item.currentPercent));
-                      return (
-                        <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
-                          <td className="py-3 px-3">
-                            <div className="font-bold text-white text-[14px]">{item.symbol}</div>
-                          </td>
-                          <td className="py-3 px-3 text-[13px] text-slate-200">
-                            {item.role || 'แกนหลักการเติบโต'}
-                          </td>
-                          <td className="py-3 px-3 text-[13px] text-slate-300 font-semibold text-right">
-                            {item.currentPercent}%
-                          </td>
-                          <td className="py-3 px-3 text-[14px] text-white font-bold text-right">
-                            {item.idealPercent}%
-                          </td>
-                          <td className="py-3 px-3 text-center">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold ${
-                              change > 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                              change < 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                              'bg-slate-700/50 text-slate-300 border border-slate-600'
-                            }`}>
-                              {change > 0 ? `+${change.toFixed(1)}%` : change < 0 ? `${change.toFixed(1)}%` : 'คงที่ (0%)'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Strategist Section 3: Action Roadmap */}
-          {aiResult.actionRoadmap && aiResult.actionRoadmap.length > 0 && (
-            <div>
-              <h3 className="text-white font-bold mb-3 text-sm flex items-center gap-2">
-                <span>🗺️</span> แผนปฏิบัติการรายระยะ (Strategic Action Roadmap)
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {aiResult.actionRoadmap.map((step: any, i: number) => (
-                  <div key={i} className="border border-[#232738] bg-[#12141F] rounded-lg p-4 flex flex-col justify-between hover:border-purple-500/40 transition-colors">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 text-xs font-black flex items-center justify-center border border-purple-500/40">
-                          {i + 1}
-                        </span>
-                        <h4 className="font-bold text-white text-[13px]">
-                          {step.phase}
-                        </h4>
-                      </div>
-                      <p className="text-[13px] text-slate-200 leading-relaxed font-normal">
-                        {step.action}
-                      </p>
-                    </div>
+              {/* Missing Exposure */}
+              {aiResult.missingExposure && aiResult.missingExposure.length > 0 && (
+                <div className="border border-[#232738] bg-[#12141F] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+                  <div className="text-[13px] font-semibold text-slate-300 flex items-center gap-2">
+                    <span>🔍</span> กลุ่มอุตสาหกรรม/สินทรัพย์ที่แนะนำให้พิจารณาเพิ่ม:
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Strategist Section 4: Stress Test */}
-          {aiResult.stressTest && aiResult.stressTest.length > 0 && (
-            <div className="border border-rose-900/40 rounded-lg p-5 bg-gradient-to-r from-rose-950/20 to-[#12141F] shadow-lg">
-              <h3 className="text-rose-400 font-bold mb-4 text-sm flex items-center gap-2">
-                <span className="text-base">🌪️</span> Portfolio Stress Test (สถานการณ์จำลอง)
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {aiResult.stressTest.map((test: any, i: number) => (
-                  <div key={i} className="border border-rose-500/20 bg-rose-950/10 rounded-lg p-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-bold text-rose-300 text-[14px]">{test.scenario}</h4>
-                        <span className="text-xs font-bold px-2 py-1 bg-rose-500/20 text-rose-300 rounded border border-rose-500/30 whitespace-nowrap ml-2">
-                          {test.estDrawdown}
-                        </span>
-                      </div>
-                      <p className="text-[13px] text-slate-200 leading-relaxed font-normal">
-                        {test.impact}
-                      </p>
-                    </div>
+                  <div className="flex flex-wrap gap-2">
+                    {aiResult.missingExposure.map((exp: string, idx: number) => (
+                      <span key={idx} className="text-xs font-bold px-3 py-1 bg-slate-800 text-slate-200 rounded-full border border-slate-700">
+                        + {exp}
+                      </span>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Row 3: Risk Gauge & Sector Gap Comparison */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border border-slate-700 rounded-lg p-4 bg-[#12141F]">
-              <RiskGauge score={aiResult.riskScore || 50} beta={weightedBeta} />
-            </div>
-            <div className="border border-slate-700 rounded-lg p-4 bg-[#12141F] overflow-x-auto">
-              <SectorGapChart portfolioSectors={portfolioSectors} />
-            </div>
-          </div>
-
-          {/* Missing Exposures Tags if available */}
-          {aiResult.missingExposure && aiResult.missingExposure.length > 0 && (
-            <div className="border border-[#232738] bg-[#12141F] rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="text-[13px] font-semibold text-slate-300 flex items-center gap-2">
-                <span>🔍</span> กลุ่มอุตสาหกรรม/สินทรัพย์ที่แนะนำให้พิจารณาเพิ่ม:
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {aiResult.missingExposure.map((exp: string, idx: number) => (
-                  <span key={idx} className="text-xs font-bold px-3 py-1 bg-slate-800 text-slate-200 rounded-full border border-slate-700">
-                    + {exp}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Row 4: Actionable Suggestions */}
-          {aiResult.suggestions && aiResult.suggestions.length > 0 && (
-            <div>
-              <h3 className="text-white font-bold mb-3 text-sm flex items-center gap-2">
-                🔧 คำแนะนำปรับสัดส่วน (Actionable Suggestions)
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {aiResult.suggestions.map((s: any, i: number) => (
-                  <div key={i} className="border border-[#232738] bg-[#12141F] rounded-lg p-4 flex flex-col justify-between hover:border-slate-600 transition-colors">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded ${
-                          s.action === 'ADD' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
-                          s.action === 'REDUCE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
-                          s.action === 'SWAP' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' :
-                          'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                        }`}>
-                          {s.action}
-                        </span>
-                        <span className="font-bold text-white text-[14px]">{s.symbol} {s.percent}%</span>
-                      </div>
-                      <p className="text-[13px] text-slate-200 mb-4 leading-relaxed font-normal">{s.reason}</p>
-                    </div>
-                    <button 
-                      onClick={() => onApplySuggestion && onApplySuggestion(s)}
-                      className="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 rounded text-[13px] font-bold transition-colors border border-emerald-500/30"
-                    >
-                      นำคำแนะนำไปปรับใช้
-                    </button>
-                  </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>
