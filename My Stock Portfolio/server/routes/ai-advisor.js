@@ -105,7 +105,7 @@ aiAdvisorRoutes.post('/latest', async (c) => {
 
         modesSummary[m] = {
           found: true,
-          isStale: currentHash !== row.blueprint_hash,
+          isStale: currentHash !== row.blueprint_hash || (parsedResult && !parsedResult.portfolioStyle),
           mode: row.mode,
           blueprint_hash: row.blueprint_hash,
           overallGrade: row.overall_grade,
@@ -222,9 +222,10 @@ aiAdvisorRoutes.post('/', async (c) => {
       
       if (cached) {
         // Ignore stale or old English fallback cache
+        const isOldSchema = !cached.result_json.includes('portfolioStyle');
         const isOldMock = cached.result_json.includes('Solid Blueprint Structure') || cached.result_json.includes('Needs Periodic Review');
         const createdTime = new Date(cached.created_at).getTime();
-        if (!isOldMock && (Date.now() - createdTime < 6 * 60 * 60 * 1000)) {
+        if (!isOldMock && !isOldSchema && (Date.now() - createdTime < 6 * 60 * 60 * 1000)) {
           return c.json(JSON.parse(cached.result_json));
         }
       }
