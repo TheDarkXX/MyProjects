@@ -553,12 +553,17 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
   const handleAutoGenerate = async () => {
     const confirmed = await modalConfirm(
       'Auto-Generate จากพอร์ตปัจจุบัน?',
-      'ระบบจะบันทึก Snapshot แผนปัจจุบันไว้ แล้วดึงหุ้นทั้งหมดที่คุณถืออยู่จริงมาสร้างเป็น Blueprint สัดส่วนเท่าๆ กัน',
+      'ระบบจะบันทึก Snapshot แผนปัจจุบันไว้ แล้วดึงเฉพาะหุ้นที่คุณถืออยู่จริงในพอร์ตนี้ มาคำนวณสัดส่วนตามมูลค่าพอร์ตปัจจุบันให้รวมเป็น 100% พอดี (แทนที่รายการเดิม)',
       { variant: 'info', confirmText: 'สร้าง Blueprint' }
     );
     if (confirmed) {
-      takeAutoSnapshot();
-      await autoGenerate(portfolioId);
+      await takeAutoSnapshot();
+      try {
+        await autoGenerate(portfolioId);
+        await modalAlert('สร้างสำเร็จ', 'สร้าง Blueprint จากหุ้นที่ถือครองอยู่จริงในพอร์ตเรียบร้อยแล้ว', { variant: 'success' });
+      } catch (err: any) {
+        await modalAlert('ไม่สามารถสร้างได้', err.message || 'เกิดข้อผิดพลาดในการดึงข้อมูลหุ้นจากพอร์ต', { variant: 'danger' });
+      }
     }
   };
 
