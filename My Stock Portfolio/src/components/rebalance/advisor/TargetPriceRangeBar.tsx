@@ -36,19 +36,19 @@ export const TargetPriceRangeBar: React.FC<TargetPriceRangeBarProps> = ({
     }
   }
 
-  // Determine domain bounds with 4% buffer so markers don't clip at edges
-  const allPoints = [targetLow, targetHigh];
+  // Determine domain bounds with 5% buffer so markers don't clip at edges
+  const allPoints = [targetLow, targetHigh].filter(p => p > 0);
   if (targetMean > 0) allPoints.push(targetMean);
   if (currentPrice > 0) allPoints.push(currentPrice);
   if (numAiTarget && numAiTarget > 0) allPoints.push(numAiTarget);
 
-  const minDomain = Math.min(...allPoints) * 0.96;
-  const maxDomain = Math.max(...allPoints) * 1.04;
+  const minDomain = Math.min(...allPoints) * 0.95;
+  const maxDomain = Math.max(...allPoints) * 1.05;
   const range = maxDomain - minDomain;
 
   const toPct = (val: number) => {
     if (range <= 0) return 50;
-    return Math.max(3, Math.min(97, ((val - minDomain) / range) * 100));
+    return Math.max(4, Math.min(96, ((val - minDomain) / range) * 100));
   };
 
   const lowPct = toPct(targetLow);
@@ -58,26 +58,52 @@ export const TargetPriceRangeBar: React.FC<TargetPriceRangeBarProps> = ({
   const aiPct = numAiTarget ? toPct(numAiTarget) : null;
 
   return (
-    <div className="py-2.5 px-3 bg-[#151828] border border-[#2A2E45] rounded-lg mt-2 mb-3">
+    <div className="py-3 px-3.5 bg-[#151828] border border-[#2A2E45] rounded-xl mt-2 mb-3.5 shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between text-xs text-slate-300 font-semibold mb-2">
-        <span className="flex items-center gap-1.5 text-slate-200">
+      <div className="flex items-center justify-between text-xs text-slate-300 font-semibold mb-3">
+        <span className="flex items-center gap-1.5 text-slate-200 font-bold">
           <span>🎯</span> Wall St Target Range
         </span>
         {numAiTarget && (
-          <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold flex items-center gap-1">
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-200 border border-purple-500/40 font-bold flex items-center gap-1">
             <span>🤖</span> AI Target: {currency}{numAiTarget.toFixed(2)} {aiTimeframe ? `(${aiTimeframe})` : ''}
           </span>
         )}
       </div>
 
-      {/* Target Price Track */}
-      <div className="relative pt-4 pb-5">
-        {/* Background track */}
-        <div className="h-2 bg-slate-800 rounded-full relative overflow-hidden">
-          {/* Target range highlight span */}
+      {/* Target Price Track Container */}
+      <div className="relative pt-7 pb-6 select-none">
+        {/* Top Floating Badge: Current Price Pin */}
+        {currPct !== null && (
           <div
-            className="absolute top-0 bottom-0 bg-gradient-to-r from-sky-500/40 via-emerald-500/50 to-purple-500/50 rounded-full"
+            className="absolute top-0 -translate-x-1/2 flex flex-col items-center z-20 pointer-events-none"
+            style={{ left: `${currPct}%` }}
+          >
+            <div className="bg-amber-400 text-slate-950 text-xs font-black px-2 py-0.5 rounded-full shadow-[0_0_12px_rgba(251,191,36,0.6)] whitespace-nowrap">
+              ปัจจุบัน {currency}{currentPrice.toFixed(2)}
+            </div>
+            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-amber-400" />
+          </div>
+        )}
+
+        {/* Top Floating Badge: AI Target Pin if significantly different from Current */}
+        {aiPct !== null && numAiTarget && currPct !== null && Math.abs(aiPct - currPct) > 8 && (
+          <div
+            className="absolute top-0 -translate-x-1/2 flex flex-col items-center z-15 pointer-events-none"
+            style={{ left: `${aiPct}%` }}
+          >
+            <div className="bg-purple-600 text-purple-100 text-xs font-black px-2 py-0.5 rounded-full border border-purple-400/50 shadow-[0_0_10px_rgba(168,85,247,0.5)] whitespace-nowrap">
+              AI {currency}{numAiTarget.toFixed(0)}
+            </div>
+            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-purple-500" />
+          </div>
+        )}
+
+        {/* The Track */}
+        <div className="h-2.5 bg-slate-800/90 rounded-full relative overflow-hidden border border-[#2A2E45]">
+          {/* Target range highlight span (Low to High) */}
+          <div
+            className="absolute top-0 bottom-0 bg-gradient-to-r from-sky-500/40 via-emerald-500/50 to-purple-500/40 rounded-full"
             style={{
               left: `${lowPct}%`,
               width: `${Math.max(4, highPct - lowPct)}%`
@@ -85,66 +111,56 @@ export const TargetPriceRangeBar: React.FC<TargetPriceRangeBarProps> = ({
           />
         </div>
 
-        {/* Low Marker */}
+        {/* Current Price Dot on the track */}
+        {currPct !== null && (
+          <div
+            className="absolute top-[31px] -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-slate-900 shadow-[0_0_10px_rgba(251,191,36,0.9)] z-20 pointer-events-none"
+            style={{ left: `${currPct}%` }}
+          />
+        )}
+
+        {/* Mean Indicator Dot on the track */}
+        {meanPct !== null && (
+          <div
+            className="absolute top-[31px] -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-sky-400 border-2 border-slate-900 shadow-[0_0_8px_rgba(56,189,248,0.8)] z-10"
+            style={{ left: `${meanPct}%` }}
+          />
+        )}
+
+        {/* Bottom Markers: Low Target */}
         <div
-          className="absolute top-0 -translate-x-1/2 flex flex-col items-center"
+          className="absolute top-[42px] -translate-x-1/2 flex flex-col items-center"
           style={{ left: `${lowPct}%` }}
         >
-          <span className="text-[11px] font-bold text-slate-400">Low</span>
-          <div className="w-1.5 h-3 bg-slate-500 rounded-full mt-0.5" />
-          <span className="text-[11px] font-semibold text-slate-300 mt-1 whitespace-nowrap">
-            {currency}{targetLow.toFixed(0)}
+          <div className="w-1 h-1.5 bg-slate-600 rounded-full mb-0.5" />
+          <span className="text-xs font-bold text-slate-300 whitespace-nowrap">
+            Low {currency}{targetLow.toFixed(0)}
           </span>
         </div>
 
-        {/* Mean Marker */}
+        {/* Bottom Markers: Mean Target */}
         {meanPct !== null && (
           <div
-            className="absolute top-0 -translate-x-1/2 flex flex-col items-center z-10"
+            className="absolute top-[42px] -translate-x-1/2 flex flex-col items-center z-10"
             style={{ left: `${meanPct}%` }}
           >
-            <span className="text-[11px] font-bold text-sky-300">Mean</span>
-            <div className="w-2 h-3.5 bg-sky-400 rounded-full mt-0.5 shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
-            <span className="text-[12px] font-black text-white mt-1 whitespace-nowrap bg-slate-900/90 px-1 rounded border border-sky-500/30">
-              {currency}{targetMean.toFixed(0)}
+            <div className="w-1 h-1.5 bg-sky-500 rounded-full mb-0.5" />
+            <span className="text-xs font-black text-sky-300 whitespace-nowrap bg-[#12141F] px-1.5 py-0.5 rounded border border-sky-500/30">
+              Mean {currency}{targetMean.toFixed(0)}
             </span>
           </div>
         )}
 
-        {/* High Marker */}
+        {/* Bottom Markers: High Target */}
         <div
-          className="absolute top-0 -translate-x-1/2 flex flex-col items-center"
+          className="absolute top-[42px] -translate-x-1/2 flex flex-col items-center"
           style={{ left: `${highPct}%` }}
         >
-          <span className="text-[11px] font-bold text-emerald-400">High</span>
-          <div className="w-1.5 h-3 bg-emerald-500 rounded-full mt-0.5" />
-          <span className="text-[11px] font-semibold text-emerald-300 mt-1 whitespace-nowrap">
-            {currency}{targetHigh.toFixed(0)}
+          <div className="w-1 h-1.5 bg-emerald-600 rounded-full mb-0.5" />
+          <span className="text-xs font-bold text-emerald-300 whitespace-nowrap">
+            High {currency}{targetHigh.toFixed(0)}
           </span>
         </div>
-
-        {/* Current Price Pin */}
-        {currPct !== null && (
-          <div
-            className="absolute top-1.5 -translate-x-1/2 flex flex-col items-center z-20 pointer-events-none"
-            style={{ left: `${currPct}%` }}
-          >
-            <div className="w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-[#151828] shadow-[0_0_10px_rgba(251,191,36,0.9)] animate-pulse" />
-            <div className="bg-amber-500/25 border border-amber-400/60 text-amber-200 text-[11px] font-black px-1.5 py-0.2 rounded mt-2.5 whitespace-nowrap shadow-md">
-              Current: {currency}{currentPrice.toFixed(2)}
-            </div>
-          </div>
-        )}
-
-        {/* AI Target Pin if exists */}
-        {aiPct !== null && numAiTarget && Math.abs(aiPct - (meanPct || 0)) > 6 && (
-          <div
-            className="absolute top-0 -translate-x-1/2 flex flex-col items-center z-15"
-            style={{ left: `${aiPct}%` }}
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-purple-400 border border-white shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
-          </div>
-        )}
       </div>
     </div>
   );

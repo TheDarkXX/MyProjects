@@ -78,8 +78,22 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
   const isKnownETF = ['VOO', 'SPY', 'QQQ', 'SCHD', 'SCHG', 'DIA', 'IWM', 'VTI', 'VXUS', 'BND', 'IVV', 'JEPI', 'JEPQ', 'SMH', 'XLK', 'XLF', 'SOXX'].includes(sym);
   const isETF = isKnownETF || fundamentals?.sector === 'ETF' || (currentPrice > 0 && targetPrice === 0 && (fundamentals?.num_analyst_opinions || 0) === 0 && epsGrowth === null);
 
-  const outlookText = verdict.futureOutlook || 'ไม่มีข้อมูลภาพรวมในอนาคต';
+  const outlookText = typeof verdict.futureOutlook === 'string'
+    ? verdict.futureOutlook
+    : String(verdict.futureOutlook || 'ไม่มีข้อมูลภาพรวมในอนาคต');
   const shouldTruncate = outlookText.length > 140;
+
+  const catalysts: string[] = Array.isArray(verdict.catalysts)
+    ? verdict.catalysts.filter(Boolean).map(String)
+    : typeof verdict.catalysts === 'string' && (verdict.catalysts as string).trim().length > 0
+    ? [(verdict.catalysts as string).trim()]
+    : [];
+
+  const risks: string[] = Array.isArray(verdict.risks)
+    ? verdict.risks.filter(Boolean).map(String)
+    : typeof verdict.risks === 'string' && (verdict.risks as string).trim().length > 0
+    ? [(verdict.risks as string).trim()]
+    : [];
 
   return (
     <div className="bg-[#12141F] border border-[#232738] hover:border-purple-500/40 rounded-xl p-4 md:p-5 transition-all duration-300 flex flex-col justify-between shadow-md group">
@@ -208,15 +222,15 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
         )}
 
         {/* Catalysts & Risks Badges */}
-        {((verdict.catalysts && verdict.catalysts.length > 0) || (verdict.risks && verdict.risks.length > 0)) && (
+        {(catalysts.length > 0 || risks.length > 0) && (
           <div className="space-y-2 mb-3.5 pt-2 border-t border-[#232738]/80">
-            {verdict.catalysts && verdict.catalysts.length > 0 && (
+            {catalysts.length > 0 && (
               <div>
                 <div className="text-xs font-bold text-emerald-400 flex items-center gap-1 mb-1">
                   <span>🚀</span> ปัจจัยบวกเร่งการเติบโต (Catalysts):
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {verdict.catalysts.map((cat, i) => (
+                  {catalysts.map((cat, i) => (
                     <span key={i} className="text-xs px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-200 border border-emerald-500/35 font-medium">
                       {cat}
                     </span>
@@ -224,13 +238,13 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
                 </div>
               </div>
             )}
-            {verdict.risks && verdict.risks.length > 0 && (
+            {risks.length > 0 && (
               <div>
                 <div className="text-xs font-bold text-amber-400 flex items-center gap-1 mb-1">
                   <span>⚠️</span> ความเสี่ยงเฉพาะตัว (Key Risks):
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {verdict.risks.map((risk, i) => (
+                  {risks.map((risk, i) => (
                     <span key={i} className="text-xs px-2.5 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/35 font-medium">
                       {risk}
                     </span>

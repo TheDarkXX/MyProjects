@@ -985,7 +985,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
             >
               <span>🎯 แผนปรับพอร์ต (Portfolio Plan)</span>
               {aiResult.idealBlueprint?.length > 0 && (
-                <span className="text-xs px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-black">
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-black">
                   {aiResult.idealBlueprint.length}
                 </span>
               )}
@@ -1001,7 +1001,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
             >
               <span>🔎 หุ้นรายตัว (Individual Stocks)</span>
               {aiResult.stockVerdicts?.length > 0 && (
-                <span className="text-xs px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 font-black">
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-black">
                   {aiResult.stockVerdicts.length}
                 </span>
               )}
@@ -1017,7 +1017,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
             >
               <span>🌪️ จำลองวิกฤต (Stress Test & Risk)</span>
               {aiResult.stressTest?.length > 0 && (
-                <span className="text-xs px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 font-black">
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-black">
                   {aiResult.stressTest.length}
                 </span>
               )}
@@ -1218,8 +1218,9 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
               {aiResult.stockVerdicts && aiResult.stockVerdicts.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {aiResult.stockVerdicts.map((v: any, idx: number) => {
-                    const upperSym = v.symbol?.toUpperCase();
-                    const funData = fundamentals[upperSym] || fundamentals[v.symbol];
+                    const upperSym = (v.symbol || '').toUpperCase();
+                    const altSym = upperSym.includes('.') ? upperSym.replace('.', '-') : upperSym.includes('-') ? upperSym.replace('-', '.') : upperSym;
+                    const funData = fundamentals[upperSym] || fundamentals[altSym] || fundamentals[v.symbol];
                     return (
                       <StockVerdictCard
                         key={idx}
@@ -1342,19 +1343,21 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                     </div>
                     <div className="space-y-3">
                       {aiResult.strengths?.map((s: any, i: number) => {
-                        const tier = getStrengthTier(s.title || '', s.description || '');
+                        const sTitle = typeof s === 'object' && s !== null ? (s.title || 'จุดแข็งเชิงกลยุทธ์') : 'จุดแข็งเชิงกลยุทธ์';
+                        const sDesc = typeof s === 'object' && s !== null ? (s.description || '') : String(s || '');
+                        const tier = getStrengthTier(sTitle, sDesc);
                         return (
                           <div key={i} className={`p-3.5 rounded-xl border ${tier.border} ${tier.bg} transition-all`}>
                             <div className="flex items-start justify-between gap-2 mb-1.5">
                               <h5 className="font-bold text-white text-[14px] flex items-center gap-1.5">
-                                <span className="text-emerald-400 font-black text-sm">✓</span> {s.title}
+                                <span className="text-emerald-400 font-black text-sm">✓</span> {sTitle}
                               </h5>
                               <span className={`text-xs font-black px-2 py-0.5 rounded shrink-0 border ${tier.badge}`}>
                                 {tier.label}
                               </span>
                             </div>
                             <p className="text-[13px] text-slate-200 leading-relaxed font-normal pl-4">
-                              {s.description}
+                              {sDesc}
                             </p>
                           </div>
                         );
@@ -1379,19 +1382,21 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                     </div>
                     <div className="space-y-3">
                       {aiResult.weaknesses?.map((w: any, i: number) => {
-                        const sev = getWeaknessSeverity(w.title || '', w.description || '');
+                        const wTitle = typeof w === 'object' && w !== null ? (w.title || 'จุดเสี่ยงและแผลในพอร์ต') : 'จุดเสี่ยงและแผลในพอร์ต';
+                        const wDesc = typeof w === 'object' && w !== null ? (w.description || '') : String(w || '');
+                        const sev = getWeaknessSeverity(wTitle, wDesc);
                         return (
                           <div key={i} className={`p-3.5 rounded-xl border ${sev.border} ${sev.bg} transition-all`}>
                             <div className="flex items-start justify-between gap-2 mb-1.5">
                               <h5 className="font-bold text-white text-[14px] flex items-center gap-1.5">
-                                <span className="text-rose-400 font-black text-sm">!</span> {w.title}
+                                <span className="text-rose-400 font-black text-sm">!</span> {wTitle}
                               </h5>
                               <span className={`text-xs font-black px-2 py-0.5 rounded shrink-0 border ${sev.badge}`}>
                                 {sev.label}
                               </span>
                             </div>
                             <p className="text-[13px] text-slate-200 leading-relaxed font-normal pl-4">
-                              {w.description}
+                              {wDesc}
                             </p>
                           </div>
                         );

@@ -18,9 +18,9 @@ export const DrawdownMeter: React.FC<DrawdownMeterProps> = ({
   // Safe string conversion and extract numbers from estDrawdown string (e.g., "-22% ถึง -32%" -> [22, 32])
   const safeDrawdown = typeof estDrawdown === 'string' ? estDrawdown : String(estDrawdown || '-15%');
   const matches = safeDrawdown.match(/\d+(\.\d+)?/g);
-  const nums = matches ? matches.map(Number) : [15];
-  const minVal = nums[0] || 10;
-  const maxVal = nums.length > 1 ? nums[1] : minVal;
+  const rawNums = matches ? matches.map(Number).filter(n => !isNaN(n) && n > 0) : [15];
+  const minVal = rawNums.length > 0 ? Math.min(...rawNums) : 10;
+  const maxVal = rawNums.length > 0 ? Math.max(...rawNums) : minVal;
 
   const currSym = currency === 'THB' ? '฿' : '$';
   const hasDollarImpact = typeof portfolioTotalValue === 'number' && portfolioTotalValue > 0;
@@ -28,7 +28,7 @@ export const DrawdownMeter: React.FC<DrawdownMeterProps> = ({
   const maxDollarLoss = hasDollarImpact ? portfolioTotalValue * (maxVal / 100) : 0;
 
   const formattedDollarLoss = hasDollarImpact
-    ? nums.length > 1
+    ? minVal !== maxVal
       ? `-${currSym}${Math.round(minDollarLoss).toLocaleString()} ~ -${currSym}${Math.round(maxDollarLoss).toLocaleString()}`
       : `-${currSym}${Math.round(minDollarLoss).toLocaleString()}`
     : null;
