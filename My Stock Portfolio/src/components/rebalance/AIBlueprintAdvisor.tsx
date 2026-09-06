@@ -412,9 +412,10 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
           }
 
           // Silently fetch fundamentals in background if not already loaded so charts have live data
-          const symbols = blueprints
-            .map((b: any) => b.symbol)
-            .filter((s: string) => s && s.toUpperCase() !== 'CASH');
+          const allSyms = new Set<string>();
+          blueprints.forEach((b: any) => { if (b.symbol && b.symbol.toUpperCase() !== 'CASH') allSyms.add(b.symbol.toUpperCase()); });
+          holdings.forEach((h: any) => { if (h.symbol && h.symbol.toUpperCase() !== 'CASH') allSyms.add(h.symbol.toUpperCase()); });
+          const symbols = Array.from(allSyms);
           if (symbols.length > 0) {
             api.prices.fundamentalsBatch(symbols).then(funData => {
               if (funData && !isCancelled) {
@@ -477,21 +478,42 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
 
 
 
-  // Calculate sector weights dynamically from blueprints and fundamentals
+  // Calculate sector weights dynamically from actual holdings (or blueprints if sandbox)
   const portfolioSectors = useMemo(() => {
     const sectors: Record<string, number> = {};
-    if (!blueprints || blueprints.length === 0) return sectors;
+    if (hasRealHoldings) {
+      let totalPct = 0;
+      holdings.forEach(h => {
+        const pct = Number(h.weightPercent) || 0;
+        totalPct += pct;
+        const sym = h.symbol?.toUpperCase();
+        const f = fundamentals[sym] || fundamentals[h.symbol];
+        const sector = f?.sector || h.sector || 'Other';
+        sectors[sector] = (sectors[sector] || 0) + pct;
+      });
+      if (cashWeight > 0) {
+        sectors['Cash'] = Number(cashWeight.toFixed(1));
+        totalPct += cashWeight;
+      }
+      if (totalPct > 0 && Math.abs(totalPct - 100) > 1) {
+        Object.keys(sectors).forEach(k => {
+          sectors[k] = Number(((sectors[k] / totalPct) * 100).toFixed(1));
+        });
+      }
+      return sectors;
+    }
 
+    if (!blueprints || blueprints.length === 0) return sectors;
     let totalPct = 0;
     blueprints.forEach((b: any) => {
       const pct = Number(b.target_percent) || 0;
       totalPct += pct;
-      const f = fundamentals[b.symbol];
+      const sym = b.symbol?.toUpperCase();
+      const f = fundamentals[sym] || fundamentals[b.symbol];
       const sector = f?.sector || b.category || 'Other';
       sectors[sector] = (sectors[sector] || 0) + pct;
     });
 
-    // Normalize to 100% scale if totalPct > 0
     if (totalPct > 0 && Math.abs(totalPct - 100) > 1) {
       Object.keys(sectors).forEach(k => {
         sectors[k] = Number(((sectors[k] / totalPct) * 100).toFixed(1));
@@ -499,40 +521,76 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
     }
 
     return sectors;
-  }, [blueprints, fundamentals]);
+  }, [hasRealHoldings, holdings, cashWeight, blueprints, fundamentals]);
 
-  // Calculate weighted average beta
+  // Calculate weighted average beta (Reality-First: from actual holdings if available, else blueprints)
   const weightedBeta = useMemo(() => {
+    if (hasRealHoldings) {
+      let totalWeight = 0;
+      let sumBeta = 0;
+      holdings.forEach(h => {
+        const weight = Number(h.weightPercent) || 0;
+        const sym = h.symbol?.toUpperCase();
+        const f = fundamentals[sym] || fundamentals[h.symbol];
+        const beta = typeof f?.beta === 'number' && f.beta > 0 ? f.beta : 1.0;
+        sumBeta += weight * beta;
+        totalWeight += weight;
+      });
+      return totalWeight > 0 ? Number((sumBeta / totalWeight).toFixed(2)) : 1.0;
+    }
+
     if (!blueprints || blueprints.length === 0) return 1.0;
     let totalWeight = 0;
     let sumBeta = 0;
-
     blueprints.forEach((b: any) => {
+      if (b.symbol?.toUpperCase() === 'CASH') return;
       const weight = Number(b.target_percent) || 0;
-      const f = fundamentals[b.symbol];
+      const sym = b.symbol?.toUpperCase();
+      const f = fundamentals[sym] || fundamentals[b.symbol];
       const beta = typeof f?.beta === 'number' && f.beta > 0 ? f.beta : 1.0;
       sumBeta += weight * beta;
       totalWeight += weight;
     });
 
     return totalWeight > 0 ? Number((sumBeta / totalWeight).toFixed(2)) : 1.0;
-  }, [blueprints, fundamentals]);
+  }, [hasRealHoldings, holdings, blueprints, fundamentals]);
 
-  // Calculate cash percent
+  // Calculate cash percent (Reality-First: actual cashWeight if real holdings, else blueprint target)
   const cashPercent = useMemo(() => {
+    if (hasRealHoldings) {
+      return Number(cashWeight.toFixed(1));
+    }
     if (!blueprints || blueprints.length === 0) return 0;
     const cashBp = blueprints.find((b: any) => b.symbol?.toUpperCase() === 'CASH');
     return Number(cashBp?.target_percent) || 0;
-  }, [blueprints]);
+  }, [hasRealHoldings, cashWeight, blueprints]);
 
-  // Calculate weighted average P/E
+  // Calculate weighted average P/E (Reality-First: from actual holdings if available, else blueprints)
   const weightedPE = useMemo(() => {
+    if (hasRealHoldings) {
+      let totalWeight = 0;
+      let sumPE = 0;
+      holdings.forEach(h => {
+        const weight = Number(h.weightPercent) || 0;
+        const sym = h.symbol?.toUpperCase();
+        const f = fundamentals[sym] || fundamentals[h.symbol];
+        const pe = f?.pe_trailing || f?.pe_forward || 0;
+        if (pe > 0 && pe < 250) {
+          sumPE += weight * pe;
+          totalWeight += weight;
+        }
+      });
+      return totalWeight > 0 ? Number((sumPE / totalWeight).toFixed(1)) : null;
+    }
+
     if (!blueprints || blueprints.length === 0) return null;
     let totalWeight = 0;
     let sumPE = 0;
     blueprints.forEach((b: any) => {
+      if (b.symbol?.toUpperCase() === 'CASH') return;
       const weight = Number(b.target_percent) || 0;
-      const f = fundamentals[b.symbol];
+      const sym = b.symbol?.toUpperCase();
+      const f = fundamentals[sym] || fundamentals[b.symbol];
       const pe = f?.pe_trailing || f?.pe_forward || 0;
       if (pe > 0 && pe < 250) {
         sumPE += weight * pe;
@@ -540,7 +598,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       }
     });
     return totalWeight > 0 ? Number((sumPE / totalWeight).toFixed(1)) : null;
-  }, [blueprints, fundamentals]);
+  }, [hasRealHoldings, holdings, blueprints, fundamentals]);
 
   const runAnalysis = async () => {
     try {
