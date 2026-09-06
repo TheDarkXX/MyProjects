@@ -533,7 +533,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
         }
       }, 3500);
 
-      const aiRes = await api.ai.advisor(selectedMode, blueprints, funData, portfolioId);
+      const aiRes = await api.ai.advisor(selectedMode, blueprints, funData, portfolioId, true);
 
       if (timerRef.current) clearInterval(timerRef.current);
       
