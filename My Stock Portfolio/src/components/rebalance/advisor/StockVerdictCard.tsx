@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ConsensusBar } from './ConsensusBar';
+import { TargetPriceRangeBar } from './TargetPriceRangeBar';
 
 interface StockVerdictCardProps {
   verdict: {
@@ -8,6 +9,10 @@ interface StockVerdictCardProps {
     flag: string;
     role?: string;
     futureOutlook?: string;
+    aiTargetPrice?: number | string;
+    aiTimeframe?: string;
+    catalysts?: string[];
+    risks?: string[];
   };
   fundamentals?: {
     current_price?: number;
@@ -177,6 +182,18 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
           </div>
         </div>
 
+        {/* Target Price Range Bar (Low - Mean - High - Current - AI) */}
+        {fundamentals && fundamentals.target_low_price && fundamentals.target_high_price && fundamentals.target_high_price > fundamentals.target_low_price ? (
+          <TargetPriceRangeBar
+            currentPrice={currentPrice}
+            targetLow={fundamentals.target_low_price}
+            targetMean={fundamentals.target_mean_price}
+            targetHigh={fundamentals.target_high_price}
+            aiTargetPrice={verdict.aiTargetPrice}
+            aiTimeframe={verdict.aiTimeframe}
+          />
+        ) : null}
+
         {/* Analyst Consensus Bar */}
         {fundamentals && (
           <div className="mb-3.5 px-1">
@@ -187,6 +204,40 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
               sell={fundamentals.rec_sell}
               recommendationKey={fundamentals.recommendation_key}
             />
+          </div>
+        )}
+
+        {/* Catalysts & Risks Badges */}
+        {((verdict.catalysts && verdict.catalysts.length > 0) || (verdict.risks && verdict.risks.length > 0)) && (
+          <div className="space-y-2 mb-3.5 pt-2 border-t border-[#232738]/80">
+            {verdict.catalysts && verdict.catalysts.length > 0 && (
+              <div>
+                <div className="text-xs font-bold text-emerald-400 flex items-center gap-1 mb-1">
+                  <span>🚀</span> ปัจจัยบวกเร่งการเติบโต (Catalysts):
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {verdict.catalysts.map((cat, i) => (
+                    <span key={i} className="text-xs px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-200 border border-emerald-500/35 font-medium">
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {verdict.risks && verdict.risks.length > 0 && (
+              <div>
+                <div className="text-xs font-bold text-amber-400 flex items-center gap-1 mb-1">
+                  <span>⚠️</span> ความเสี่ยงเฉพาะตัว (Key Risks):
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {verdict.risks.map((risk, i) => (
+                    <span key={i} className="text-xs px-2.5 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/35 font-medium">
+                      {risk}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

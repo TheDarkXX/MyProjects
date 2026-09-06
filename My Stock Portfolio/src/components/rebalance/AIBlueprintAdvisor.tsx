@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useBlueprintStore } from '../../stores/blueprintStore';
+import { useHoldings } from '../../hooks/useHoldings';
+import { useUiStore } from '../../stores/uiStore';
 
 import { HealthRadar } from './advisor/HealthRadar';
 import { SectorGapChart } from './advisor/SectorGapChart';
@@ -9,6 +11,110 @@ import { BeforeAfterDonut } from './advisor/BeforeAfterDonut';
 import { StockVerdictCard } from './advisor/StockVerdictCard';
 import { DrawdownMeter } from './advisor/DrawdownMeter';
 import { TimelineStepper } from './advisor/TimelineStepper';
+
+// Helper: Extract key macro themes dynamically from analysis text
+const extractMacroPills = (text: string) => {
+  if (!text) return [];
+  const rules = [
+    { regex: /ดอกเบี้ย|interest rate|fed|กนง/i, label: '🏦 วงจรอัตราดอกเบี้ย', color: 'bg-amber-500/20 text-amber-200 border-amber-500/40' },
+    { regex: /เงินเฟ้อ|inflation|cpi/i, label: '📈 แรงกดดันเงินเฟ้อ', color: 'bg-rose-500/20 text-rose-200 border-rose-500/40' },
+    { regex: /ai|ปัญญาประดิษฐ์|capex|ชิป|semiconductor|nvidia/i, label: '🤖 AI & Tech Capex Cycle', color: 'bg-purple-500/20 text-purple-200 border-purple-500/40' },
+    { regex: /recession|ถดถอย|hard landing|ชะลอตัว/i, label: '📉 ภาวะเศรษฐกิจชะลอตัว', color: 'bg-orange-500/20 text-orange-200 border-orange-500/40' },
+    { regex: /สภาพคล่อง|liquidity|m2|qt|qe/i, label: '💧 สภาพคล่องในระบบ', color: 'bg-sky-500/20 text-sky-200 border-sky-500/40' },
+    { regex: /ภูมิรัฐศาสตร์|geopolitic|สงคราม|ไต้หวัน|ตะวันออกกลาง/i, label: '🌍 ความเสี่ยงภูมิรัฐศาสตร์', color: 'bg-red-500/20 text-red-200 border-red-500/40' },
+    { regex: /พลังงาน|น้ำมัน|energy|opec/i, label: '🛢️ ความผันผวนพลังงาน', color: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40' },
+  ];
+  return rules.filter(r => r.regex.test(text)).slice(0, 4);
+};
+
+// Helper: Auto-detect weakness severity based on decisive keywords
+const getWeaknessSeverity = (title: string, desc: string) => {
+  const combined = `${title} ${desc}`.toLowerCase();
+  if (/วิกฤต|หายนะ|ยาพิษ|กับดัก|ดอย|ล่ม|รุนแรง|เลือดสาด|ตัดทิ้ง|critical/i.test(combined)) {
+    return {
+      label: 'วิกฤตเร่งด่วน (Critical)',
+      badge: 'bg-rose-500/25 text-rose-300 border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.35)]',
+      border: 'border-rose-500/40 hover:border-rose-500/70',
+      bg: 'bg-rose-950/20'
+    };
+  }
+  if (/กระจุก|ตึงตัว|ผันผวน|แบก|ชะลอ|หดตัว|เสี่ยงสูง|แพง|severe|elevated/i.test(combined)) {
+    return {
+      label: 'ความเสี่ยงสูง (High)',
+      badge: 'bg-orange-500/25 text-orange-300 border-orange-500/50',
+      border: 'border-orange-500/40 hover:border-orange-500/70',
+      bg: 'bg-orange-950/20'
+    };
+  }
+  return {
+    label: 'เฝ้าระวัง (Watch)',
+    badge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    border: 'border-amber-500/30 hover:border-amber-500/60',
+    bg: 'bg-amber-950/15'
+  };
+};
+
+// Helper: Auto-detect strength tier based on strategic keywords
+const getStrengthTier = (title: string, desc: string) => {
+  const combined = `${title} ${desc}`.toLowerCase();
+  if (/moat|ป้อมปราการ|ผูกขาด|ไร้เทียมทาน|เสาหลัก|แข็งแกร่ง/i.test(combined)) {
+    return {
+      label: 'Wide Moat Fortress',
+      badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.3)]',
+      border: 'border-cyan-500/35 hover:border-cyan-500/60',
+      bg: 'bg-cyan-950/15'
+    };
+  }
+  if (/เติบโต|กำไร|วิ่งแรง|นวัตกรรม|ชนะ|beat|cash cow|growth/i.test(combined)) {
+    return {
+      label: 'High Compounder',
+      badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_8px_rgba(52,211,153,0.3)]',
+      border: 'border-emerald-500/35 hover:border-emerald-500/60',
+      bg: 'bg-emerald-950/15'
+    };
+  }
+  return {
+    label: 'Defensive Shield',
+    badge: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+    border: 'border-sky-500/30 hover:border-sky-500/50',
+    bg: 'bg-sky-950/15'
+  };
+};
+
+// Helper: Normalize missing exposure item to object format
+const normalizeMissingExposure = (item: any) => {
+  if (typeof item === 'object' && item !== null) {
+    const sector = item.sector || item.title || 'สินทรัพย์ทางเลือก';
+    const reason = item.reason || item.description || 'ช่วยกระจายความเสี่ยงและลดความเปราะบางของพอร์ต';
+    const suggestion = item.suggestion || item.ticker || null;
+    const priority = item.priority || 'HIGH';
+    let icon = '🛡️';
+    if (/health|การแพทย์|ยา/i.test(sector)) icon = '🏥';
+    else if (/energy|พลังงาน|น้ำมัน/i.test(sector)) icon = '⚡';
+    else if (/gold|ทอง|commodity|โภคภัณฑ์/i.test(sector)) icon = '🪙';
+    else if (/tech|เทคโนโลยี/i.test(sector)) icon = '💻';
+    else if (/staple|บริโภค|อาหาร/i.test(sector)) icon = '🛒';
+    else if (/utility|สาธารณูปโภค/i.test(sector)) icon = '💡';
+    else if (/finance|ธนาคาร/i.test(sector)) icon = '🏦';
+    return { sector, reason, suggestion, priority, icon };
+  }
+  
+  const str = String(item || '');
+  let icon = '🛡️';
+  let sector = str;
+  let suggestion: string | null = null;
+  let reason = 'เป็นหมวดสินทรัพย์ที่ช่วยเสริมความสมดุลและลดความผันผวนยามตลาดปรับฐาน';
+
+  if (/health/i.test(str)) { icon = '🏥'; suggestion = 'XLV / UNH'; }
+  else if (/energy|น้ำมัน/i.test(str)) { icon = '⚡'; suggestion = 'XLE / CVX'; }
+  else if (/gold|ทอง|โภคภัณฑ์/i.test(str)) { icon = '🪙'; suggestion = 'GLD / IAU'; }
+  else if (/consumer staple|สินค้าจำเป็น/i.test(str)) { icon = '🛒'; suggestion = 'XLP / PG'; }
+  else if (/utilit/i.test(str)) { icon = '💡'; suggestion = 'XLU / NEE'; }
+  else if (/finance|ธนาคาร/i.test(str)) { icon = '🏦'; suggestion = 'XLF / JPM'; }
+  else if (/reit|อสังหา/i.test(str)) { icon = '🏢'; suggestion = 'VNQ / O'; }
+
+  return { sector, reason, suggestion, priority: 'HIGH', icon };
+};
 
 const METRIC_GUIDES: Record<'beta' | 'pe' | 'risk' | 'cash', {
   title: string;
@@ -80,6 +186,8 @@ interface AIBlueprintAdvisorProps {
 }
 
 export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion }: AIBlueprintAdvisorProps) {
+  const { totalNetWorth } = useHoldings();
+  const { currency } = useUiStore();
   const [mode, setMode] = useState<'strategist'>('strategist');
   const [activeTab, setActiveTab] = useState<'plan' | 'stocks' | 'stress' | 'macro'>('plan');
   const [activeMetricModal, setActiveMetricModal] = useState<'beta' | 'pe' | 'risk' | 'cash' | null>(null);
@@ -1137,13 +1245,20 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
               {/* Stress Test Scenarios */}
               {aiResult.stressTest && aiResult.stressTest.length > 0 ? (
                 <div className="border border-rose-900/30 rounded-xl p-4 md:p-5 bg-gradient-to-b from-rose-950/20 via-[#12141F] to-[#12141F] shadow-lg space-y-4">
-                  <div>
-                    <h4 className="text-rose-400 font-bold text-sm flex items-center gap-2">
-                      <span className="text-base">🌪️</span> Portfolio Stress Test (สถานการณ์จำลองวิกฤต)
-                    </h4>
-                    <p className="text-[13px] text-slate-300 mt-0.5">
-                      ประเมินความทนทานต่อสภาวะตลาดช็อกและระดับ Drawdown ที่อาจเกิดขึ้นกับพอร์ต
-                    </p>
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                    <div>
+                      <h4 className="text-rose-400 font-bold text-sm flex items-center gap-2">
+                        <span className="text-base">🌪️</span> Portfolio Stress Test (สถานการณ์จำลองวิกฤต)
+                      </h4>
+                      <p className="text-[13px] text-slate-300 mt-0.5">
+                        ประเมินความทนทานต่อสภาวะตลาดช็อกและระดับ Drawdown ที่อาจเกิดขึ้นกับพอร์ต
+                      </p>
+                    </div>
+                    {totalNetWorth > 0 && (
+                      <span className="text-xs font-bold px-2.5 py-1 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 self-start sm:self-auto">
+                        มูลค่าพอร์ต: {currency === 'THB' ? '฿' : '$'}{Math.round(totalNetWorth).toLocaleString()}
+                      </span>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1153,6 +1268,8 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                         scenario={test.scenario}
                         estDrawdown={test.estDrawdown}
                         impact={test.impact}
+                        portfolioTotalValue={totalNetWorth}
+                        currency={currency}
                       />
                     ))}
                   </div>
@@ -1178,85 +1295,171 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
           {/* ========================================================= */}
           {/* TAB 4: 🌐 ภาพรวม & สภาพตลาด (Macro & Overview)             */}
           {/* ========================================================= */}
-          {activeTab === 'macro' && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Macro Analysis */}
-              {aiResult.macroAnalysis && (
-                <div className="border border-purple-500/30 rounded-xl p-5 bg-gradient-to-r from-purple-950/25 via-[#181B2A] to-blue-950/20 shadow-lg">
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-3 gap-2">
-                    <h4 className="text-purple-300 font-bold text-sm flex items-center gap-2">
-                      <span className="text-base">🌐</span> การวิเคราะห์ภาพรวมเศรษฐกิจและธีมตลาด (Macro & Market Context)
-                    </h4>
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 self-start sm:self-auto">
-                      CHIEF STRATEGIST PERSPECTIVE
-                    </span>
-                  </div>
-                  <p className="text-[14px] text-slate-200 leading-relaxed font-normal">
-                    {aiResult.macroAnalysis}
-                  </p>
-                </div>
-              )}
-
-              {/* Strengths & Weaknesses */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-emerald-500/30 rounded-xl p-4 bg-emerald-500/5 shadow-md">
-                  <h4 className="text-emerald-400 font-bold mb-3 flex items-center gap-2 text-sm">
-                    💪 จุดแข็ง (Strengths)
-                  </h4>
-                  <ul className="space-y-3">
-                    {aiResult.strengths?.map((s: any, i: number) => (
-                      <li key={i} className="text-[13px] text-slate-200 flex items-start gap-2.5">
-                        <span className="text-emerald-400 font-black text-sm shrink-0 mt-0.5">✓</span>
-                        <div>
-                          <span className="font-bold text-white">{s.title}: </span>
-                          <span className="text-slate-200">{s.description}</span>
-                        </div>
-                      </li>
-                    ))}
-                    {(!aiResult.strengths || aiResult.strengths.length === 0) && (
-                      <li className="text-[13px] text-slate-300">ยังไม่พบจุดแข็งที่โดดเด่น</li>
-                    )}
-                  </ul>
-                </div>
-
-                <div className="border border-rose-500/30 rounded-xl p-4 bg-rose-500/5 shadow-md">
-                  <h4 className="text-rose-400 font-bold mb-3 flex items-center gap-2 text-sm">
-                    ⚠️ จุดเสี่ยงที่ควรระวัง (Weaknesses)
-                  </h4>
-                  <ul className="space-y-3">
-                    {aiResult.weaknesses?.map((w: any, i: number) => (
-                      <li key={i} className="text-[13px] text-slate-200 flex items-start gap-2.5">
-                        <span className="text-rose-400 font-black text-sm shrink-0 mt-0.5">!</span>
-                        <div>
-                          <span className="font-bold text-white">{w.title}: </span>
-                          <span className="text-slate-200">{w.description}</span>
-                        </div>
-                      </li>
-                    ))}
-                    {(!aiResult.weaknesses || aiResult.weaknesses.length === 0) && (
-                      <li className="text-[13px] text-slate-300">ไม่พบจุดเสี่ยงที่มีนัยสำคัญ</li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Missing Exposure */}
-              {aiResult.missingExposure && aiResult.missingExposure.length > 0 && (
-                <div className="border border-[#232738] bg-[#12141F] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
-                  <div className="text-[13px] font-semibold text-slate-300 flex items-center gap-2">
-                    <span>🔍</span> กลุ่มอุตสาหกรรม/สินทรัพย์ที่แนะนำให้พิจารณาเพิ่ม:
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {aiResult.missingExposure.map((exp: string, idx: number) => (
-                      <span key={idx} className="text-xs font-bold px-3 py-1 bg-slate-800 text-slate-200 rounded-full border border-slate-700">
-                        + {exp}
+          {activeTab === 'macro' && (() => {
+            const macroPills = extractMacroPills(aiResult.macroAnalysis || '');
+            return (
+              <div className="space-y-6 animate-fade-in">
+                {/* Macro Analysis */}
+                {aiResult.macroAnalysis && (
+                  <div className="border border-purple-500/30 rounded-xl p-5 bg-gradient-to-r from-purple-950/25 via-[#181B2A] to-blue-950/20 shadow-lg">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-3 gap-2">
+                      <h4 className="text-purple-300 font-bold text-sm flex items-center gap-2">
+                        <span className="text-base">🌐</span> การวิเคราะห์ภาพรวมเศรษฐกิจและธีมตลาด (Macro & Market Context)
+                      </h4>
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 self-start sm:self-auto">
+                        CHIEF STRATEGIST PERSPECTIVE
                       </span>
-                    ))}
+                    </div>
+
+                    {/* Macro Theme Pills */}
+                    {macroPills.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {macroPills.map((pill, idx) => (
+                          <span key={idx} className={`text-xs font-bold px-2.5 py-1 rounded-full border ${pill.color} shadow-sm`}>
+                            {pill.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-[14px] text-slate-200 leading-relaxed font-normal">
+                      {aiResult.macroAnalysis}
+                    </p>
+                  </div>
+                )}
+
+                {/* Strengths & Weaknesses (Visual Cards with Severity) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Strengths */}
+                  <div className="border border-emerald-500/30 rounded-xl p-4 md:p-5 bg-gradient-to-b from-emerald-950/15 to-[#12141F] shadow-md">
+                    <div className="flex items-center justify-between mb-3.5">
+                      <h4 className="text-emerald-400 font-bold flex items-center gap-2 text-sm">
+                        <span>💪</span> จุดแข็งเชิงกลยุทธ์ (Strengths)
+                      </h4>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        {aiResult.strengths?.length || 0} จุดเด่น
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {aiResult.strengths?.map((s: any, i: number) => {
+                        const tier = getStrengthTier(s.title || '', s.description || '');
+                        return (
+                          <div key={i} className={`p-3.5 rounded-xl border ${tier.border} ${tier.bg} transition-all`}>
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <h5 className="font-bold text-white text-[14px] flex items-center gap-1.5">
+                                <span className="text-emerald-400 font-black text-sm">✓</span> {s.title}
+                              </h5>
+                              <span className={`text-xs font-black px-2 py-0.5 rounded shrink-0 border ${tier.badge}`}>
+                                {tier.label}
+                              </span>
+                            </div>
+                            <p className="text-[13px] text-slate-200 leading-relaxed font-normal pl-4">
+                              {s.description}
+                            </p>
+                          </div>
+                        );
+                      })}
+                      {(!aiResult.strengths || aiResult.strengths.length === 0) && (
+                        <div className="text-[13px] text-slate-300 p-4 text-center bg-slate-900/40 rounded-lg">
+                          ยังไม่พบจุดแข็งที่โดดเด่น
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Weaknesses */}
+                  <div className="border border-rose-500/30 rounded-xl p-4 md:p-5 bg-gradient-to-b from-rose-950/15 to-[#12141F] shadow-md">
+                    <div className="flex items-center justify-between mb-3.5">
+                      <h4 className="text-rose-400 font-bold flex items-center gap-2 text-sm">
+                        <span>⚠️</span> จุดเสี่ยงและเนื้อร้าย (Weaknesses)
+                      </h4>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        {aiResult.weaknesses?.length || 0} แผลเสี่ยง
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {aiResult.weaknesses?.map((w: any, i: number) => {
+                        const sev = getWeaknessSeverity(w.title || '', w.description || '');
+                        return (
+                          <div key={i} className={`p-3.5 rounded-xl border ${sev.border} ${sev.bg} transition-all`}>
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <h5 className="font-bold text-white text-[14px] flex items-center gap-1.5">
+                                <span className="text-rose-400 font-black text-sm">!</span> {w.title}
+                              </h5>
+                              <span className={`text-xs font-black px-2 py-0.5 rounded shrink-0 border ${sev.badge}`}>
+                                {sev.label}
+                              </span>
+                            </div>
+                            <p className="text-[13px] text-slate-200 leading-relaxed font-normal pl-4">
+                              {w.description}
+                            </p>
+                          </div>
+                        );
+                      })}
+                      {(!aiResult.weaknesses || aiResult.weaknesses.length === 0) && (
+                        <div className="text-[13px] text-slate-300 p-4 text-center bg-slate-900/40 rounded-lg">
+                          ไม่พบจุดเสี่ยงที่มีนัยสำคัญ
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+
+                {/* Missing Exposure (Rich Visual Cards) */}
+                {aiResult.missingExposure && aiResult.missingExposure.length > 0 && (
+                  <div className="border border-sky-500/30 bg-gradient-to-b from-sky-950/15 via-[#12141F] to-[#12141F] rounded-xl p-4 md:p-5 shadow-lg space-y-3">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                      <div>
+                        <h4 className="text-sky-300 font-bold text-sm flex items-center gap-2">
+                          <span>🔍</span> หลุมพรางที่ขาดหายไป (Missing Tactical Exposures)
+                        </h4>
+                        <p className="text-[13px] text-slate-300 mt-0.5">
+                          กลุ่มอุตสาหกรรมหรือสินทรัพย์ที่พอร์ตยังขาด เพื่อสร้างความยืดหยุ่นและเกราะป้องกันในทุกวัฏจักร
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 self-start sm:self-auto">
+                        PORTFOLIO GAPS
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                      {aiResult.missingExposure.map((item: any, idx: number) => {
+                        const exp = normalizeMissingExposure(item);
+                        return (
+                          <div
+                            key={idx}
+                            className="border border-sky-500/25 bg-[#151828] hover:border-sky-500/50 rounded-xl p-4 flex flex-col justify-between transition-colors shadow-sm"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="font-bold text-white text-[14px] flex items-center gap-1.5">
+                                  <span>{exp.icon}</span> {exp.sector}
+                                </span>
+                                <span className="text-xs font-black px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                                  {exp.priority}
+                                </span>
+                              </div>
+                              <p className="text-[13px] text-slate-200 leading-relaxed mb-3 font-normal">
+                                {exp.reason}
+                              </p>
+                            </div>
+                            {exp.suggestion && (
+                              <div className="pt-2.5 border-t border-[#232738] flex items-center justify-between text-xs">
+                                <span className="text-slate-400 font-medium">สินทรัพย์แนะนำ:</span>
+                                <span className="font-bold text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
+                                  {exp.suggestion}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

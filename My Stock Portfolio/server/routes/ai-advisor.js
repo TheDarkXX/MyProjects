@@ -301,7 +301,17 @@ ${JSON.stringify(payloadData, null, 2)}
   ],
   ${isStrategist ? `
   "stockVerdicts": [
-    { "symbol": "TICKER", "grade": "A-D", "role": "บทบาทในสนามรบ (เช่น เสาหลักค้ำพอร์ต / ทหารม้าทะลวงฟัน / ตัวถ่วงรอวันตาย / กับดักปันผล)", "flag": "ADD/HOLD/REDUCE/CUT", "futureOutlook": "ฟันธงอนาคต 1-2 บรรทัดแบบเลือดเย็น อิง Consensus และ Beat Streak" }
+    {
+      "symbol": "TICKER",
+      "grade": "A-D",
+      "role": "บทบาทในสนามรบ (เช่น เสาหลักค้ำพอร์ต / ทหารม้าทะลวงฟัน / ตัวถ่วงรอวันตาย / กับดักปันผล)",
+      "flag": "ADD/HOLD/REDUCE/CUT",
+      "futureOutlook": "ฟันธงอนาคต 1-2 บรรทัดแบบเลือดเย็น อิง Consensus และ Beat Streak",
+      "aiTargetPrice": "ราคาเป้าหมายประเมินโดย AI (ตัวเลข เช่น 195 หรือ 'N/A' ถ้าเป็น ETF)",
+      "aiTimeframe": "กรอบเวลา (เช่น '6-12 เดือน')",
+      "catalysts": ["ปัจจัยเร่งเชิงบวก 1-2 ข้อสั้นๆ"],
+      "risks": ["ความเสี่ยงเฉพาะตัว 1-2 ข้อสั้นๆ"]
+    }
   ],
   "idealBlueprint": [
     { "symbol": "TICKER", "currentPercent": number, "idealPercent": number, "change": number, "role": "บทบาทเชิงกลยุทธ์หลังปรับทัพ" }
@@ -314,7 +324,14 @@ ${JSON.stringify(payloadData, null, 2)}
     { "scenario": "ชื่อวิกฤต เช่น 'AI Bubble Burst' หรือ 'Liquidity Crunch & Rate Shock'", "impact": "ชี้ชื่อหุ้นที่จะโดนถล่มเละและสาเหตุเชิงโครงสร้าง", "estDrawdown": "ตัวเลข % ความเสียหาย (เช่น -20% ถึง -35%)" }
   ],
   ` : ''}
-  "missingExposure": ["กลุ่มเกราะกำบังหรือโอกาสที่พอร์ตนี้ขาดหายไป"],
+  "missingExposure": [
+    {
+      "sector": "ชื่อกลุ่มหรือสินทรัพย์ที่ขาด เช่น Defensive Health Care หรือ Commodity Hedge",
+      "reason": "ทำไมขาดกลุ่มนี้แล้วพอร์ตถึงเปราะบางหรือเสียโอกาส",
+      "suggestion": "ชื่อ ETF หรือหุ้นตัวแทนที่แนะนำเพิ่ม เช่น XLV, XLE, GLD",
+      "priority": "HIGH"
+    }
+  ],
   "riskScore": number (0-100)
 }`;
 

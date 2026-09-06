@@ -4,15 +4,34 @@ interface DrawdownMeterProps {
   scenario: string;
   estDrawdown: string;
   impact: string;
+  portfolioTotalValue?: number;
+  currency?: string;
 }
 
-export const DrawdownMeter: React.FC<DrawdownMeterProps> = ({ scenario, estDrawdown, impact }) => {
+export const DrawdownMeter: React.FC<DrawdownMeterProps> = ({
+  scenario,
+  estDrawdown,
+  impact,
+  portfolioTotalValue = 0,
+  currency = 'USD'
+}) => {
   // Safe string conversion and extract numbers from estDrawdown string (e.g., "-22% ถึง -32%" -> [22, 32])
   const safeDrawdown = typeof estDrawdown === 'string' ? estDrawdown : String(estDrawdown || '-15%');
   const matches = safeDrawdown.match(/\d+(\.\d+)?/g);
   const nums = matches ? matches.map(Number) : [15];
   const minVal = nums[0] || 10;
   const maxVal = nums.length > 1 ? nums[1] : minVal;
+
+  const currSym = currency === 'THB' ? '฿' : '$';
+  const hasDollarImpact = typeof portfolioTotalValue === 'number' && portfolioTotalValue > 0;
+  const minDollarLoss = hasDollarImpact ? portfolioTotalValue * (minVal / 100) : 0;
+  const maxDollarLoss = hasDollarImpact ? portfolioTotalValue * (maxVal / 100) : 0;
+
+  const formattedDollarLoss = hasDollarImpact
+    ? nums.length > 1
+      ? `-${currSym}${Math.round(minDollarLoss).toLocaleString()} ~ -${currSym}${Math.round(maxDollarLoss).toLocaleString()}`
+      : `-${currSym}${Math.round(minDollarLoss).toLocaleString()}`
+    : null;
 
   // Maximum scale is 50% drawdown
   const leftPct = Math.min(100, Math.max(0, (minVal / 50) * 100));
@@ -50,13 +69,18 @@ export const DrawdownMeter: React.FC<DrawdownMeterProps> = ({ scenario, estDrawd
           <h4 className="font-bold text-rose-200 text-[14px] flex items-center gap-2">
             <span>⚡</span> {scenario}
           </h4>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
             <span className={`text-xs font-black px-2.5 py-0.5 rounded border ${severity.badge}`}>
               {severity.label}
             </span>
             <span className="text-[13px] font-black px-2.5 py-0.5 bg-rose-500/20 text-rose-300 rounded border border-rose-500/40 whitespace-nowrap">
               {estDrawdown}
             </span>
+            {formattedDollarLoss && (
+              <span className="text-[13px] font-black px-2.5 py-0.5 bg-rose-950/80 text-rose-200 rounded border border-rose-500/60 whitespace-nowrap shadow-sm">
+                💸 {formattedDollarLoss}
+              </span>
+            )}
           </div>
         </div>
 
