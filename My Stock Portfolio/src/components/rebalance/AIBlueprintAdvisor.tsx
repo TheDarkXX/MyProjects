@@ -600,6 +600,80 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
     return totalWeight > 0 ? Number((sumPE / totalWeight).toFixed(1)) : null;
   }, [hasRealHoldings, holdings, blueprints, fundamentals]);
 
+  // Detect changes between current blueprint/holdings and the cached analysis
+  const driftDetails = useMemo(() => {
+    if (!aiResult) return null;
+
+    const analyzedSymbolsSet = new Set<string>();
+    const analyzedPercentages: Record<string, number> = {};
+
+    (aiResult.idealBlueprint || []).forEach((item: any) => {
+      if (item.symbol) {
+        const sym = item.symbol.toUpperCase();
+        analyzedSymbolsSet.add(sym);
+        analyzedPercentages[sym] = Number(item.currentPercent ?? 0);
+      }
+    });
+
+    (aiResult.stockVerdicts || []).forEach((item: any) => {
+      if (item.symbol) {
+        analyzedSymbolsSet.add(item.symbol.toUpperCase());
+      }
+    });
+
+    // 1. Current blueprint symbols & percentage changes
+    const currentBpSymbolsSet = new Set<string>();
+    const addedBpSymbols: string[] = [];
+    const percentChanges: { symbol: string; oldPct: number; newPct: number }[] = [];
+
+    blueprints.forEach((b: any) => {
+      if (!b.symbol) return;
+      const sym = b.symbol.toUpperCase();
+      currentBpSymbolsSet.add(sym);
+
+      if (!analyzedSymbolsSet.has(sym)) {
+        addedBpSymbols.push(b.symbol);
+      } else if (analyzedPercentages[sym] !== undefined) {
+        const currentPct = Number(b.target_percent) || 0;
+        const oldPct = analyzedPercentages[sym];
+        if (Math.abs(currentPct - oldPct) >= 0.5) {
+          percentChanges.push({ symbol: b.symbol, oldPct, newPct: currentPct });
+        }
+      }
+    });
+
+    // 2. Blueprint symbols that were removed
+    const removedBpSymbols: string[] = [];
+    analyzedSymbolsSet.forEach(sym => {
+      if (sym !== 'CASH' && !currentBpSymbolsSet.has(sym)) {
+        removedBpSymbols.push(sym);
+      }
+    });
+
+    // 3. Check actual holdings newly added/orphan
+    const newHoldingsSymbols: string[] = [];
+    if (hasRealHoldings) {
+      holdings.forEach(h => {
+        if (!h.symbol || h.symbol.toUpperCase() === 'CASH') return;
+        const sym = h.symbol.toUpperCase();
+        if (!analyzedSymbolsSet.has(sym)) {
+          newHoldingsSymbols.push(h.symbol);
+        }
+      });
+    }
+
+    const hasDrift = isStale || addedBpSymbols.length > 0 || removedBpSymbols.length > 0 || percentChanges.length > 0 || newHoldingsSymbols.length > 0;
+
+    return {
+      hasDrift,
+      addedBpSymbols,
+      removedBpSymbols,
+      percentChanges,
+      newHoldingsSymbols
+    };
+  }, [aiResult, blueprints, holdings, hasRealHoldings, isStale]);
+
+
   const runAnalysis = async () => {
     try {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -773,10 +847,14 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
           {aiResult && loadingPhase === 4 && (
             <button 
               onClick={() => runAnalysis()}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-500 hover:opacity-90 text-white text-[13px] font-bold rounded-lg shadow-[0_0_15px_rgba(168,85,247,0.35)] transition-all flex items-center gap-2 cursor-pointer"
+              className={`px-4 py-2 text-[13px] font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+                driftDetails?.hasDrift
+                  ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:opacity-95 text-slate-950 font-extrabold shadow-[0_0_18px_rgba(245,158,11,0.45)] ring-1 ring-amber-400/50 animate-pulse'
+                  : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-500 hover:opacity-90 text-white shadow-[0_0_15px_rgba(168,85,247,0.35)]'
+              }`}
             >
               <span>🔄</span>
-              <span>วิเคราะห์ใหม่</span>
+              <span>{driftDetails?.hasDrift ? 'วิเคราะห์ใหม่ (ข้อมูลเปลี่ยน)' : 'วิเคราะห์ใหม่'}</span>
             </button>
           )}
         </div>
@@ -833,50 +911,80 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       {/* Results Section */}
       {loadingPhase === 4 && aiResult && (
         <div className="space-y-6 animate-fade-in">
-          {/* Stale Blueprint Warning Banner */}
-          {isStale && (
-            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
-              <div className="flex items-start sm:items-center gap-3">
-                <span className="text-xl shrink-0 mt-0.5 sm:mt-0">⚠️</span>
-                <div>
+          {/* Analysis Status & Change Remark Banner */}
+          {driftDetails?.hasDrift ? (
+            /* Stale / Changed Blueprint Warning & Detailed Diff */
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2.5 shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl shrink-0">⚠️</span>
                   <div className="text-[14px] font-bold text-amber-300">
-                    สัดส่วนพอร์ตหรือรายการหุ้นมีการเปลี่ยนแปลง
-                  </div>
-                  <div className="text-[13px] text-slate-200 mt-0.5">
-                    ผลการวิเคราะห์นี้อ้างอิงจาก Blueprint เดิม{cachedCreatedAt ? ` (${new Date(cachedCreatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })})` : ''} แนะนำให้กดวิเคราะห์ใหม่เพื่อให้ได้คำแนะนำที่ตรงกับพอร์ตปัจจุบัน
+                    หมายเหตุ: ตรวจพบการเปลี่ยนแปลงสัดส่วนหรือหุ้นจากผลวิเคราะห์ล่าสุด
                   </div>
                 </div>
+                {cachedCreatedAt && (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 shrink-0 self-start sm:self-auto">
+                    อ้างอิงข้อมูลเดิมเมื่อ {new Date(cachedCreatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
               </div>
-              <button
-                onClick={() => runAnalysis()}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[13px] shrink-0 transition-colors shadow flex items-center gap-1.5 self-end sm:self-auto cursor-pointer"
-              >
-                <span>🔄</span> วิเคราะห์ใหม่ทันที
-              </button>
-            </div>
-          )}
 
-          {/* Up-to-date Meta Info Strip */}
-          {!isStale && cachedCreatedAt && (
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#12141F] border border-[#232738] rounded-lg text-[13px] text-slate-300">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-                <span className="text-slate-200 font-medium">ผลวิเคราะห์ล่าสุด</span>
-                <span className="text-slate-400">•</span>
+              {/* Breakdown of what changed */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-[13px]">
+                {driftDetails.addedBpSymbols.length > 0 && (
+                  <span className="px-2.5 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-lg font-medium flex items-center gap-1">
+                    <span className="font-bold">+ เพิ่มหุ้นใหม่ในพิมพ์เขียว:</span> {driftDetails.addedBpSymbols.join(', ')}
+                  </span>
+                )}
+                {driftDetails.removedBpSymbols.length > 0 && (
+                  <span className="px-2.5 py-1 bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-lg font-medium flex items-center gap-1">
+                    <span className="font-bold">- ตัดหุ้นเดิมออกจากพิมพ์เขียว:</span> {driftDetails.removedBpSymbols.join(', ')}
+                  </span>
+                )}
+                {driftDetails.percentChanges.length > 0 && (
+                  <span className="px-2.5 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-lg font-medium flex items-center gap-1">
+                    <span className="font-bold">⚖️ ปรับสัดส่วนเป้าหมาย:</span> {driftDetails.percentChanges.map(p => `${p.symbol} (${p.oldPct}% ➔ ${p.newPct}%)`).join(', ')}
+                  </span>
+                )}
+                {driftDetails.newHoldingsSymbols.length > 0 && (
+                  <span className="px-2.5 py-1 bg-sky-500/15 border border-sky-500/30 text-sky-300 rounded-lg font-medium flex items-center gap-1">
+                    <span className="font-bold">💼 พบหุ้นใหม่ในพอร์ตจริง:</span> {driftDetails.newHoldingsSymbols.join(', ')}
+                  </span>
+                )}
+                {driftDetails.addedBpSymbols.length === 0 && driftDetails.removedBpSymbols.length === 0 && driftDetails.percentChanges.length === 0 && driftDetails.newHoldingsSymbols.length === 0 && (
+                  <span className="text-slate-300 text-[13px]">
+                    สัดส่วนพอร์ตหรือพิมพ์เขียวมีการปรับปรุงจากข้อมูลที่ใช้ประเมินครั้งก่อน
+                  </span>
+                )}
+              </div>
+
+              <div className="text-[13px] text-slate-200 pt-0.5 leading-relaxed">
+                👉 แนะนำให้กดปุ่ม <span className="font-bold text-amber-300">"วิเคราะห์ใหม่ (ข้อมูลเปลี่ยน)"</span> ที่มุมบนขวา เพื่อให้ระบบประเมิน 5 มิติสุขภาพพอร์ตและคำนวณ Ideal Blueprint ตามโครงสร้างล่าสุด
+              </div>
+            </div>
+          ) : (
+            /* Up-to-date Meta Info Strip (No Changes) */
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-4 py-3 bg-[#12141F] border border-[#232738] rounded-xl text-[13px]">
+              <div className="flex flex-wrap items-center gap-2 text-slate-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block shadow-[0_0_8px_rgba(52,211,153,0.6)] animate-pulse shrink-0"></span>
+                <span className="text-slate-200 font-bold">ผลวิเคราะห์ล่าสุด</span>
+                <span className="text-slate-500">•</span>
                 <span className="text-slate-300">
                   โหมด: <span className="font-semibold text-purple-300">🧠 Deep Analysis</span>
                 </span>
-                <span className="text-slate-400">•</span>
-                <span className="text-slate-300">
-                  เมื่อ {new Date(cachedCreatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                </span>
+                {cachedCreatedAt && (
+                  <>
+                    <span className="text-slate-500">•</span>
+                    <span className="text-slate-300">
+                      เมื่อ {new Date(cachedCreatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </>
+                )}
               </div>
-              <button
-                onClick={() => runAnalysis()}
-                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded text-[13px] border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <span>🔄</span> วิเคราะห์ใหม่
-              </button>
+              <div className="flex items-center gap-1.5 text-emerald-300 font-medium bg-emerald-950/40 border border-emerald-500/30 px-3 py-1 rounded-full self-start sm:self-auto text-[13px]">
+                <span>✓</span>
+                <span>หมายเหตุ: สัดส่วนและรายชื่อหุ้นตรงกับผลวิเคราะห์ (ไม่มีข้อมูลเปลี่ยนแปลง)</span>
+              </div>
             </div>
           )}
 
