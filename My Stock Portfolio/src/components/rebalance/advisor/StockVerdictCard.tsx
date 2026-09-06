@@ -32,9 +32,17 @@ interface StockVerdictCardProps {
     pe_forward?: number;
     sector?: string;
   };
+  actualHolding?: {
+    actualPercent: number;
+    pnlPercent?: number;
+    marketValue?: number;
+    avgCost?: number;
+    quantity?: number;
+    isOrphan?: boolean;
+  } | null;
 }
 
-export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fundamentals }) => {
+export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fundamentals, actualHolding }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getGradeStyle = (grade: string) => {
@@ -112,6 +120,25 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
                   {fundamentals.sector}
                 </span>
               ) : null}
+              {actualHolding ? (
+                <span className={`text-xs px-2.5 py-0.5 rounded font-bold flex items-center gap-1 border ${
+                  actualHolding.isOrphan
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.25)]'
+                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_8px_rgba(52,211,153,0.2)]'
+                }`}>
+                  <span>{actualHolding.isOrphan ? '⚠️ นอกแผน' : '💼 ถืออยู่จริง'}</span>
+                  <span>{actualHolding.actualPercent}%</span>
+                  {typeof actualHolding.pnlPercent === 'number' && (
+                    <span className={actualHolding.pnlPercent >= 0 ? 'text-emerald-300 font-black' : 'text-rose-300 font-black'}>
+                      ({actualHolding.pnlPercent >= 0 ? `+${actualHolding.pnlPercent}%` : `${actualHolding.pnlPercent}%`})
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 rounded bg-slate-800/90 text-slate-300 border border-slate-700 font-medium">
+                  🎯 ยังไม่มีของ
+                </span>
+              )}
             </div>
             {verdict.role && (
               <p className="text-[13px] text-slate-300 mt-0.5 font-medium">

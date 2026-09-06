@@ -21,52 +21,81 @@ function createBlueprintHash(blueprints) {
   return crypto.createHash('md5').update(sorted).digest('hex').slice(0, 12);
 }
 
-function compressPromptData(blueprints, fundamentals) {
-  const count = blueprints.length;
-  
-  const holdings = blueprints.map(b => {
-    const f = fundamentals[b.symbol] || {};
+function compressPromptData(blueprints, fundamentals, actualHoldings = null) {
+  const hasReal = actualHoldings && actualHoldings.hasRealHoldings && Array.isArray(actualHoldings.items) && actualHoldings.items.length > 0;
+
+  // 1. Target Blueprint list
+  const targetBlueprint = blueprints.map(b => {
+    const f = fundamentals[b.symbol] || fundamentals[(b.symbol || '').toUpperCase()] || {};
     return {
       symbol: b.symbol,
       target_percent: b.target_percent,
+      category: b.category || 'Other',
       sector: f.sector || b.category || 'Other',
-      industry: f.industry || '',
-      market_cap: f.market_cap || 0,
-      current_price: f.current_price || 0,
+      beta: b.symbol === 'CASH' ? 0 : (f.beta || 1),
       pe_trailing: f.pe_trailing || 0,
-      pe_forward: f.pe_forward || 0,
-      pb_ratio: f.pb_ratio || 0,
-      roe: f.roe || 0,
-      profit_margin: f.profit_margin || 0,
-      debt_to_equity: f.debt_to_equity || 0,
-      revenue_growth: f.revenue_growth || 0,
-      beta: f.beta || 1,
-      div_yield: f.div_yield || 0,
-      short_percent: f.short_percent || 0,
-      fifty_two_week_high: f.fifty_two_week_high || 0,
-      fifty_two_week_low: f.fifty_two_week_low || 0,
-      sma200: f.sma200 || 0,
       target_mean_price: f.target_mean_price || 0,
       recommendation_key: f.recommendation_key || '',
-      num_analyst_opinions: f.num_analyst_opinions || 0,
       eps_growth_next_year: f.eps_growth_next_year || 0,
-      rec_strong_buy: f.rec_strong_buy || 0,
-      rec_buy: f.rec_buy || 0,
-      rec_hold: f.rec_hold || 0,
-      rec_sell: f.rec_sell || 0,
-      earnings_beat_streak: f.earnings_beat_streak || 0,
-      earnings_q1_surprise: f.earnings_q1_surprise || 0,
+      earnings_beat_streak: f.earnings_beat_streak || 0
     };
   }).sort((a, b) => b.target_percent - a.target_percent);
 
-  const summary = {
-    totalHoldings: count,
-    avgPe: Number((holdings.reduce((acc, c) => acc + (c.pe_trailing || 0), 0) / (count || 1)).toFixed(1)),
-    avgBeta: Number((holdings.reduce((acc, c) => acc + (c.beta || 1), 0) / (count || 1)).toFixed(2)),
-    top5Concentration: holdings.slice(0, 5).reduce((s, h) => s + h.target_percent, 0),
-  };
+  // 2. Actual Portfolio list (if provided)
+  let actualPortfolio = null;
+  if (hasReal) {
+    actualPortfolio = actualHoldings.items.map(item => {
+      const sym = item.symbol;
+      const f = fundamentals[sym] || fundamentals[(sym || '').toUpperCase()] || {};
+      return {
+        symbol: sym,
+        actual_percent: item.actualPercent,
+        market_value: item.marketValue,
+        quantity: item.quantity,
+        avg_cost: item.avgCost,
+        current_price: item.currentPrice || f.current_price || 0,
+        pnl_percent: item.pnlPercent,
+        is_orphan: item.isOrphan || false, // True if held in real portfolio but missing in user's blueprint
+        sector: f.sector || (sym === 'CASH' ? 'Cash' : 'Other'),
+        beta: sym === 'CASH' ? 0 : (f.beta || 1),
+        pe_trailing: f.pe_trailing || 0,
+        div_yield: f.div_yield || 0,
+        target_mean_price: f.target_mean_price || 0,
+        recommendation_key: f.recommendation_key || '',
+        eps_growth_next_year: f.eps_growth_next_year || 0,
+        earnings_beat_streak: f.earnings_beat_streak || 0
+      };
+    }).sort((a, b) => b.actual_percent - a.actual_percent);
+  }
 
-  return { summary, holdings };
+  // Summary calculation
+  let summary = {};
+  if (hasReal) {
+    const nonCash = actualPortfolio.filter(h => h.symbol !== 'CASH');
+    const totalCount = nonCash.length;
+    summary = {
+      evaluationMode: 'REALITY_FIRST',
+      totalNetWorth: actualHoldings.totalNetWorth,
+      cashBalance: actualHoldings.cashBalance,
+      cashPercent: actualHoldings.cashWeight,
+      totalActualSecurities: totalCount,
+      orphanSecuritiesCount: actualPortfolio.filter(h => h.is_orphan).length,
+      avgPe: Number((nonCash.reduce((acc, c) => acc + (c.pe_trailing || 0), 0) / (totalCount || 1)).toFixed(1)),
+      avgBeta: Number((nonCash.reduce((acc, c) => acc + (c.beta || 1), 0) / (totalCount || 1)).toFixed(2)),
+      top5ActualConcentration: actualPortfolio.slice(0, 5).reduce((s, h) => s + h.actual_percent, 0)
+    };
+  } else {
+    const count = blueprints.length;
+    summary = {
+      evaluationMode: 'BLUEPRINT_SANDBOX',
+      totalHoldings: count,
+      avgPe: Number((targetBlueprint.reduce((acc, c) => acc + (c.pe_trailing || 0), 0) / (count || 1)).toFixed(1)),
+      avgBeta: Number((targetBlueprint.reduce((acc, c) => acc + (c.beta || 1), 0) / (count || 1)).toFixed(2)),
+      top5Concentration: targetBlueprint.slice(0, 5).reduce((s, h) => s + h.target_percent, 0)
+    };
+  }
+
+  return { summary, actualPortfolio, targetBlueprint };
 }
 
 // Check and fetch latest analysis for each mode for a portfolio, detecting if blueprint has changed
@@ -205,7 +234,7 @@ aiAdvisorRoutes.get('/latest/:portfolio_id', async (c) => {
 aiAdvisorRoutes.post('/', async (c) => {
   try {
     const body = await c.req.json();
-    const { mode, blueprints, fundamentals, portfolio_id, force } = body;
+    const { mode, blueprints, fundamentals, portfolio_id, force, actualHoldings } = body;
 
     if (!mode || !blueprints || !portfolio_id) {
       return c.json({ error: 'Missing required fields' }, 400);
@@ -238,8 +267,8 @@ aiAdvisorRoutes.post('/', async (c) => {
       }
     }
 
-    // Compress data
-    const payloadData = compressPromptData(blueprints, fundamentals || {});
+    // Compress data (Reality-First: actual holdings vs target blueprint)
+    const payloadData = compressPromptData(blueprints, fundamentals || {}, actualHoldings);
     
     const isStrategist = mode === 'strategist';
 
@@ -253,17 +282,24 @@ aiAdvisorRoutes.post('/', async (c) => {
 4. **กฎเรื่องคำสรรพนาม**: **ห้ามใช้คำหยาบคาย และห้ามใช้คำว่า มึง/กู** (ตัดแค่มึงกูออก) ให้ใช้สรรพนามแบบแม่ทัพบัญชาการรบ เช่น "คุณ" หรือขึ้นด้วยคำสั่งการรบตรงๆ ไม่อ้อมค้อม
 5. **ภาษาไทยสละสลวยแต่ดุดันเชือดเฉือน**: เนื้อหาทั้งหมดต้องเขียนเป็นภาษาไทย ยกเว้นชื่อ Ticker หุ้น หรือศัพท์เฉพาะทางเทคนิค
 
-ข้อมูลเชิงอนาคตที่ได้รับ (Analyst Consensus & Execution Power):
-- Analyst Target Price: คำนวณ Upside/Downside เทียบกับราคาปัจจุบัน
-- Buy/Hold/Sell Consensus: ฉันทามติของ Wall Street
-- EPS Growth Forecast: คาดการณ์การเติบโตของกำไรปีหน้า
-- Earnings Beat Streak: สถิติชนะคาดการณ์กี่ไตรมาสติด (ตัวพิสูจน์ว่าผู้บริหารส่งมอบผลงานจริงหรือแค่ขายฝัน)
+โครงสร้างข้อมูล 2 มิติที่ได้รับ (ความจริง vs พิมพ์เขียวเป้าหมาย):
+1. **actualPortfolio (ความจริง ณ วินาทีนี้)**: สินทรัพย์ที่ถือจริง สัดส่วนจริง (actual_percent %) ต้นทุนจริง (avg_cost) กำไร/ขาดทุนสะสม (pnl_percent %) และเงินสดจริง (CASH). หากมีหุ้นที่มี is_orphan = true นั่นคือ "สินทรัพย์นอกแผน" ที่ผู้ใช้ถืออยู่จริงแต่ไม่ได้ใส่อยู่ในพิมพ์เขียวใหม่!
+2. **targetBlueprint (พิมพ์เขียวเป้าหมายที่ผู้ใช้วางแผนไว้)**: สัดส่วนเป้าหมาย (target_percent %) ที่ผู้ใช้ตั้งใจอยากได้
 
-หลักการพิพากษา (Doctrines of Judgment):
-1. **Free Cash Flow & Moat คือทุกสิ่ง**: ตัวเลขกำไรจริงและกระแสเงินสดคือเกราะกำบัง ถ้ามีแต่กระแสไฮป์แต่เงินสดแห้งแล้ง นั่นคือกับดัก
-2. **การกระจุกตัว = ความโง่เขลาและความโลภ**: ถ้าพอร์ตถือ Tech หรือสินทรัพย์เสี่ยงกระจุกตัวเกิน 50-60% อย่าเรียกมันว่าพอร์ตลงทุน ให้เรียกว่าบ่อนการพนันบนยอดดอย ชี้ให้เห็นว่าถ้าตลาดปรับฐานจะเลือดสาดแค่ไหน
-3. **Yield Trap คือยาพิษ**: หุ้นปันผลสูงที่ราคาดิ่งเหวและกำไรหดตัว คือยาพิษล่อเม่า จงสั่งกำจัดทิ้งทันที
-4. **ห้ามตอบ Generic กลางๆ**: ทุกคำวิจารณ์ต้องระบุชื่อหุ้น + ตัวเลข P/E, Beta, Growth หรือ Drawdown ประกอบเสมอ
+หลักการพิพากษาและจัดทัพ (Doctrines of Judgment):
+1. **ยึดความเป็นจริงเป็นที่ตั้ง (Reality-First)**: ชี้หน้าด่าแผลสดและหุ้นเน่าที่ถืออยู่จริง ตัวไหนติดดอย กำไรหด ไร้ Moat หรือเป็นหุ้นนอกแผน (is_orphan) จงสั่งเชือดทิ้งทันที (CUT 100%) เพื่อดึงเงินสดกลับมา
+2. **วิพากษ์พิมพ์เขียวเป้าหมาย (Blueprint Critique)**: วิเคราะห์ว่าพิมพ์เขียวที่ผู้ใช้วางไว้ ช่วยแก้จุดตายของพอร์ตจริงได้จริงหรือไม่ หรือกำลังจะย้ายเงินไปเสี่ยงในจุดใหม่
+3. **การสร้าง idealBlueprint (Before vs After ที่แท้จริง)**:
+   - "currentPercent": **ต้องเป็นสัดส่วนจริง (actual_percent) จากพอร์ตจริง ณ ปัจจุบัน** (หากไม่มีพอร์ตจริงให้ใช้ target_percent ของ blueprint)
+   - "idealPercent": สัดส่วนในอุดมคติที่ AI จอมมารฟันธงให้ปรับทัพหลังหักลบหุ้นเน่าออกและจัดสรรเงินใหม่
+   - "change": ส่วนต่างที่แท้จริง (idealPercent - currentPercent) สะท้อนการซื้อเพิ่ม (+) หรือขายออก (-) จากพอร์ตจริง!
+4. **Action Roadmap ต้องสั่งการจากของจริง**:
+   - ระยะเร่งด่วน (1-2 สัปดาห์): สั่งขาย/ตัดขาดทุนหุ้นตัวไหนในพอร์ตจริงออก ดึงเงินสดได้กี่ดอลลาร์/กี่ %
+   - ระยะกลาง (1-3 เดือน): นำเงินสดที่ได้จากการตัดขาย ไปสะสมหุ้นป้อมปราการตัวไหนตามพิมพ์เขียว
+5. **stockVerdicts ต้องครอบคลุมทั้งหุ้นในพิมพ์เขียวและหุ้นที่ถือจริง**:
+   - หากมีหุ้นนอกแผน (is_orphan) ต้องมี verdict ชี้ขาดเสมอ เช่น flag: "CUT", role: "เนื้อร้ายนอกพิมพ์เขียว"
+6. **Free Cash Flow & Moat คือทุกสิ่ง**: ตัวเลขกำไรจริงและกระแสเงินสดคือเกราะกำบัง ถ้ามีแต่กระแสไฮป์แต่เงินสดแห้งแล้ง นั่นคือกับดัก
+7. **ห้ามตอบ Generic กลางๆ**: ทุกคำวิจารณ์ต้องระบุชื่อหุ้น + ตัวเลข P/E, Beta, Growth หรือ Drawdown ประกอบเสมอ
 
 ข้อมูลพอร์ต:
 ${JSON.stringify(payloadData, null, 2)}

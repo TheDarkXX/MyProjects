@@ -186,7 +186,50 @@ interface AIBlueprintAdvisorProps {
 }
 
 export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion }: AIBlueprintAdvisorProps) {
-  const { totalNetWorth } = useHoldings();
+  const { holdings, cashBalance, cashWeight, totalNetWorth } = useHoldings();
+  const hasRealHoldings = holdings && holdings.length > 0;
+
+  // Map of actual holdings for fast O(1) lookup by symbol
+  const actualHoldingsMap = useMemo(() => {
+    const map = new Map<string, { actualPercent: number; pnlPercent: number; marketValue: number; avgCost: number; quantity: number; isOrphan: boolean }>();
+    if (!holdings || holdings.length === 0) return map;
+    holdings.forEach(h => {
+      const sym = h.symbol?.toUpperCase();
+      if (!sym || sym === 'CASH') return;
+      const isOrphan = !blueprints.some(b => b.symbol?.toUpperCase() === sym);
+      map.set(sym, {
+        actualPercent: Number(h.weightPercent.toFixed(1)),
+        pnlPercent: Number(h.totalReturnPercent.toFixed(1)),
+        marketValue: Math.round(h.currentValue),
+        avgCost: h.avgCost,
+        quantity: h.quantity,
+        isOrphan
+      });
+    });
+    if (cashBalance > 0 || cashWeight > 0) {
+      map.set('CASH', {
+        actualPercent: Number(cashWeight.toFixed(1)),
+        pnlPercent: 0,
+        marketValue: Math.round(cashBalance),
+        avgCost: Math.round(cashBalance),
+        quantity: 1,
+        isOrphan: false
+      });
+    }
+    return map;
+  }, [holdings, blueprints, cashBalance, cashWeight]);
+
+  // Map of user blueprint target percentages
+  const userBlueprintMap = useMemo(() => {
+    const map = new Map<string, number>();
+    blueprints.forEach(b => {
+      if (b.symbol) {
+        map.set(b.symbol.toUpperCase(), Number(b.target_percent || 0));
+      }
+    });
+    return map;
+  }, [blueprints]);
+
   const { currency } = useUiStore();
   const [mode, setMode] = useState<'strategist'>('strategist');
   const [activeTab, setActiveTab] = useState<'plan' | 'stocks' | 'stress' | 'macro'>('plan');
@@ -508,10 +551,15 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       setError('');
       setStatusMessage('กำลังวิเคราะห์โครงสร้างเป้าหมาย Blueprint และสัดส่วนพอร์ต...');
 
-      // Step 1: Fetch fundamentals batch for all blueprint symbols (excluding CASH)
-      const symbols = blueprints
-        .map((b: any) => b.symbol)
-        .filter((s: string) => s && s.toUpperCase() !== 'CASH');
+      // Step 1: Fetch fundamentals batch for all blueprint AND actual holdings symbols (excluding CASH)
+      const allSymsSet = new Set<string>();
+      blueprints.forEach((b: any) => {
+        if (b.symbol && b.symbol.toUpperCase() !== 'CASH') allSymsSet.add(b.symbol.toUpperCase());
+      });
+      holdings.forEach((h: any) => {
+        if (h.symbol && h.symbol.toUpperCase() !== 'CASH') allSymsSet.add(h.symbol.toUpperCase());
+      });
+      const symbols = Array.from(allSymsSet);
       let funData = { ...fundamentals };
 
       const missing = symbols.filter(s => !funData[s] && !funData[s.toUpperCase()]);
@@ -538,7 +586,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       setProgress(55);
       setStatusMessage(`กำลังประมวลผล 5-Axis Health Metrics และวิเคราะห์การกระจายตัว (Beta: ${weightedBeta})...`);
 
-      // Step 2: Call AI Backend Advisor
+      // Step 2: Call AI Backend Advisor with Reality-First Payload
       setLoadingPhase(3);
       setProgress(70);
       setStatusMessage('กำลังเชื่อมต่อ Hermes: GPT 5.6 Terra (Deep Analysis Engine)...');
@@ -547,7 +595,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       let currentP = 70;
       const statusSteps = [
         'กำลังวิเคราะห์สภาวะเศรษฐกิจมหภาคและทิศทางอัตราดอกเบี้ย...',
-        'กำลังสร้างพิมพ์เขียวในอุดมคติ (Ideal Blueprint: Before vs After)...',
+        'กำลังตรวจสอบพอร์ตจริงเปรียบเทียบกับพิมพ์เขียวเป้าหมาย...',
         'กำลังประเมิน Stress Test และเจาะลึกหุ้นรายตัว...',
         'กำลังจัดทำแผนกลยุทธ์และขั้นตอน Action Roadmap...',
         'กำลังสังเคราะห์และตรวจสอบความสมบูรณ์ของผลการวิเคราะห์...'
@@ -565,7 +613,37 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
         }
       }, 3500);
 
-      const aiRes = await api.ai.advisor('strategist', blueprints, funData, portfolioId, true);
+      // Build reality-first actual holdings payload
+      const actualHoldingsPayload = {
+        totalNetWorth,
+        cashBalance,
+        cashWeight: Number(cashWeight.toFixed(1)),
+        hasRealHoldings: holdings.length > 0,
+        items: [
+          {
+            symbol: 'CASH',
+            actualPercent: Number(cashWeight.toFixed(1)),
+            marketValue: Math.round(cashBalance),
+            quantity: 1,
+            avgCost: Math.round(cashBalance),
+            currentPrice: 1,
+            pnlPercent: 0,
+            isOrphan: false,
+          },
+          ...holdings.map(h => ({
+            symbol: h.symbol,
+            actualPercent: Number(h.weightPercent.toFixed(1)),
+            marketValue: Math.round(h.currentValue),
+            quantity: h.quantity,
+            avgCost: h.avgCost,
+            currentPrice: h.lastPrice,
+            pnlPercent: Number(h.totalReturnPercent.toFixed(1)),
+            isOrphan: !blueprints.some(b => b.symbol?.toUpperCase() === h.symbol?.toUpperCase())
+          }))
+        ]
+      };
+
+      const aiRes = await api.ai.advisor('strategist', blueprints, funData, portfolioId, true, actualHoldingsPayload);
 
       if (timerRef.current) clearInterval(timerRef.current);
       
@@ -1042,7 +1120,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
             <div className="space-y-6 animate-fade-in">
               {/* Before vs After Donut Comparison */}
               {aiResult.idealBlueprint && aiResult.idealBlueprint.length > 0 && (
-                <BeforeAfterDonut items={aiResult.idealBlueprint} />
+                <BeforeAfterDonut items={aiResult.idealBlueprint} isActualPortfolio={hasRealHoldings} />
               )}
 
               {/* Ideal Blueprint Allocation Table */}
@@ -1054,7 +1132,9 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                         <span className="text-base">🎯</span> ตารางพิมพ์เขียวเป้าหมายเชิงกลยุทธ์ (Ideal Blueprint)
                       </h4>
                       <p className="text-[13px] text-slate-300 mt-0.5">
-                        เปรียบเทียบสัดส่วนเป้าหมายปัจจุบันกับสัดส่วนในอุดมคติที่ AI Deep Analysis แนะนำเพื่อปรับสมดุล
+                        {hasRealHoldings 
+                          ? 'เปรียบเทียบสัดส่วนพอร์ตจริง กับแผนพิมพ์เขียวของคุณ และคำแนะนำที่ AI จอมมารปรับทัพ'
+                          : 'เปรียบเทียบสัดส่วนเป้าหมายปัจจุบันกับสัดส่วนในอุดมคติที่ AI Deep Analysis แนะนำ'}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
@@ -1090,8 +1170,15 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                         <tr className="border-b border-[#232738] text-[13px] text-slate-300">
                           <th className="py-2.5 px-3 font-semibold">สินทรัพย์</th>
                           <th className="py-2.5 px-3 font-semibold">บทบาทเชิงกลยุทธ์</th>
-                          <th className="py-2.5 px-3 font-semibold text-right">ปัจจุบัน</th>
-                          <th className="py-2.5 px-3 font-semibold text-right">แนะนำ</th>
+                          <th className="py-2.5 px-3 font-semibold text-right">
+                            {hasRealHoldings ? 'พอร์ตจริง' : 'ปัจจุบัน'}
+                          </th>
+                          {hasRealHoldings && (
+                            <th className="py-2.5 px-3 font-semibold text-right text-slate-400">
+                              แผนคุณ
+                            </th>
+                          )}
+                          <th className="py-2.5 px-3 font-semibold text-right text-amber-300">AI แนะนำ</th>
                           <th className="py-2.5 px-3 font-semibold text-center">การเปลี่ยนผ่าน</th>
                           <th className="py-2.5 px-3 font-semibold text-center">ส่วนต่าง</th>
                         </tr>
@@ -1100,13 +1187,14 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                         {aiResult.idealBlueprint.map((item: any, idx: number) => {
                           const change = Number(item.change ?? (item.idealPercent - item.currentPercent));
                           const isNew = (item.currentPercent || 0) === 0 && item.idealPercent > 0;
+                          const userPlanVal = userBlueprintMap.get((item.symbol || '').toUpperCase());
                           return (
                             <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
                               <td className="py-3 px-3">
                                 <div className="flex items-center gap-1.5">
                                   <span className="font-bold text-white text-[14px]">{item.symbol}</span>
                                   {isNew && (
-                                    <span className="text-[11px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
+                                    <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
                                       ✨ NEW
                                     </span>
                                   )}
@@ -1115,10 +1203,15 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                               <td className="py-3 px-3 text-[13px] text-slate-200">
                                 {item.role || 'แกนหลักการเติบโต'}
                               </td>
-                              <td className="py-3 px-3 text-[13px] text-slate-300 font-semibold text-right">
+                              <td className="py-3 px-3 text-[13px] text-slate-200 font-semibold text-right">
                                 {item.currentPercent}%
                               </td>
-                              <td className="py-3 px-3 text-[14px] text-white font-bold text-right">
+                              {hasRealHoldings && (
+                                <td className="py-3 px-3 text-[13px] text-slate-400 text-right">
+                                  {typeof userPlanVal === 'number' ? `${userPlanVal}%` : '-'}
+                                </td>
+                              )}
+                              <td className="py-3 px-3 text-[14px] text-amber-300 font-black text-right">
                                 {item.idealPercent}%
                               </td>
                               {/* Visual Shift Bar */}
@@ -1226,6 +1319,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                         key={idx}
                         verdict={v}
                         fundamentals={funData}
+                        actualHolding={actualHoldingsMap.get(upperSym) || actualHoldingsMap.get(altSym) || null}
                       />
                     );
                   })}

@@ -11,6 +11,7 @@ interface IdealBlueprintItem {
 
 interface BeforeAfterDonutProps {
   items: IdealBlueprintItem[];
+  isActualPortfolio?: boolean;
 }
 
 const PALETTE = [
@@ -37,7 +38,7 @@ const parsePercent = (val: any): number => {
   return 0;
 };
 
-export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items }) => {
+export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items, isActualPortfolio = false }) => {
   // Map consistent colors by symbol
   const symbolColors = useMemo(() => {
     const map: Record<string, string> = {};
@@ -94,7 +95,7 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items }) => 
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }} />
             <span>{data.name}</span>
             {data.isNew && (
-              <span className="text-[11px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
+              <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
                 ✨ NEW
               </span>
             )}
@@ -103,7 +104,7 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items }) => 
             สัดส่วน: <b className="text-white font-bold">{data.value}%</b>
           </div>
           {data.role && (
-            <div className="text-slate-400 text-xs mt-0.5">
+            <div className="text-slate-300 text-xs mt-0.5">
               {data.role}
             </div>
           )}
@@ -121,7 +122,9 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items }) => 
             <span>🍩</span> สัดส่วนพอร์ตเปรียบเทียบ (Before vs After Allocation)
           </h4>
           <p className="text-[13px] text-slate-300 mt-0.5">
-            เห็นการเปลี่ยนผ่านจากพอร์ตปัจจุบันสู่พอร์ตในอุดมคติอย่างชัดเจน
+            {isActualPortfolio 
+              ? 'เปรียบเทียบระหว่าง "พอร์ตที่ถืออยู่จริง ณ ปัจจุบัน" สู่ "พิมพ์เขียวใหม่ที่ AI ปรับทัพ"'
+              : 'เห็นการเปลี่ยนผ่านจากพิมพ์เขียวเดิมสู่พิมพ์เขียวในอุดมคติอย่างชัดเจน'}
           </p>
         </div>
         {newAssets.length > 0 && (
@@ -135,9 +138,9 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items }) => 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
         {/* Left: Current Allocation */}
         <div className="flex flex-col items-center bg-[#181B2A]/60 rounded-xl p-4 border border-[#232738]">
-          <div className="text-[13px] font-bold text-slate-300 mb-1 flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-            <span>พอร์ตปัจจุบัน (Current)</span>
+          <div className="text-[13px] font-bold text-slate-200 mb-1 flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.5)]" />
+            <span>{isActualPortfolio ? 'พอร์ตจริงปัจจุบัน (Actual Holdings)' : 'พิมพ์เขียวปัจจุบัน (Current Blueprint)'}</span>
           </div>
           <div className="w-full h-56 relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
@@ -161,7 +164,7 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items }) => 
             </ResponsiveContainer>
             {/* Center Text */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xs text-slate-400 font-semibold uppercase">สินทรัพย์</span>
+              <span className="text-xs text-slate-300 font-semibold uppercase">สินทรัพย์</span>
               <span className="text-xl font-black text-white">{currentData.length} ตัว</span>
             </div>
           </div>
@@ -171,7 +174,7 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items }) => 
         <div className="flex flex-col items-center bg-[#181B2A]/60 rounded-xl p-4 border border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.08)]">
           <div className="text-[13px] font-bold text-amber-300 mb-1 flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
-            <span>พอร์ตแนะนำ (AI Strategist Ideal)</span>
+            <span>พิมพ์เขียวแนะนำใหม่ (AI Ideal Blueprint)</span>
           </div>
           <div className="w-full h-56 relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">

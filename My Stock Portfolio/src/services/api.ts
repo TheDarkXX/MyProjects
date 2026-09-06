@@ -75,7 +75,7 @@ export const api = {
   },
   ai: {
     chat: (prompt: string) => authFetch('/ai-chat', { method: 'POST', body: JSON.stringify({ prompt }) }),
-    advisor: (mode: string, blueprints: any[], fundamentals: any, portfolio_id: string, force = false) => authFetch('/ai-advisor', { method: 'POST', body: JSON.stringify({ mode, blueprints, fundamentals, portfolio_id, force }) }),
+    advisor: (mode: string, blueprints: any[], fundamentals: any, portfolio_id: string, force = false, actualHoldings?: any) => authFetch('/ai-advisor', { method: 'POST', body: JSON.stringify({ mode, blueprints, fundamentals, portfolio_id, force, actualHoldings }) }),
     latestAdvisor: (portfolio_id: string, blueprints: any[]) => authFetch('/ai-advisor/latest', { method: 'POST', body: JSON.stringify({ portfolio_id, blueprints }) }),
     saveAdvisorHistory: (portfolio_id: string, mode: string, blueprints: any[], result: any) => authFetch('/ai-advisor/save', { method: 'POST', body: JSON.stringify({ portfolio_id, mode, blueprints, result }) }),
   },
