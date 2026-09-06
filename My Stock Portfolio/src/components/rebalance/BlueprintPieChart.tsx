@@ -180,7 +180,7 @@ export const BlueprintPieChart: React.FC<BlueprintPieChartProps> = ({ blueprints
                 : 'bg-[#181B2A] text-slate-300 border-[#262B3F] hover:border-[#A855F7]/40 hover:text-[#A855F7]'
             }`}
           >
-            <span className="text-base">🧠</span> {showAiAdvisor ? 'Hide AI Advisor' : 'AI Advisor'}
+            <span className="text-base">🧠</span> {showAiAdvisor ? 'Hide Deep Analysis' : 'Deep Analysis'}
           </button>
           <div className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${
             isTotal100 

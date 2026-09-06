@@ -17,7 +17,7 @@ interface AIBlueprintAdvisorProps {
 }
 
 export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion }: AIBlueprintAdvisorProps) {
-  const [mode, setMode] = useState<'quick' | 'deep' | 'strategist'>('strategist');
+  const [mode, setMode] = useState<'strategist'>('strategist');
   const [activeTab, setActiveTab] = useState<'plan' | 'stocks' | 'stress' | 'macro'>('plan');
   const [loadingPhase, setLoadingPhase] = useState(0); 
   const [progress, setProgress] = useState(0);
@@ -98,7 +98,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
           category: existing?.category || (symbol === 'CASH' ? 'Cash' : 'Compounders'),
           status: existing?.status || (symbol === 'CASH' ? 'OWNED' : 'WATCHLIST'),
           target_price: existing?.target_price || null,
-          notes: existing?.notes || `ปรับตาม AI Strategist: ${item.role || ''}`
+          notes: existing?.notes || `ปรับตาม AI Deep Analysis: ${item.role || ''}`
         };
       });
 
@@ -111,7 +111,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
 
       setIsConfirmModalOpen(false);
       setIsApplying(false);
-      setApplySuccessMessage('✅ อัปเดตสัดส่วน Blueprint ตามคำแนะนำของ AI Strategist เรียบร้อยแล้ว!');
+      setApplySuccessMessage('✅ อัปเดตสัดส่วน Blueprint ตามคำแนะนำของ AI Deep Analysis เรียบร้อยแล้ว!');
       setTimeout(() => setApplySuccessMessage(null), 8000);
     } catch (err: any) {
       console.error('[Apply Ideal Blueprint Error]:', err);
@@ -260,49 +260,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
     }
   }, [aiResult]);
 
-  // Switch instantly if cached data exists for this mode, otherwise run analysis
-  const handleSelectMode = (selectedMode: 'quick' | 'deep' | 'strategist') => {
-    if (loadingPhase > 0 && loadingPhase < 4) return;
 
-    const cachedForMode = modesSummary[selectedMode];
-    if (cachedForMode && cachedForMode.result) {
-      setMode(selectedMode);
-      setAiResult(cachedForMode.result);
-      setIsStale(Boolean(cachedForMode.isStale));
-      setCachedCreatedAt(cachedForMode.createdAt || null);
-      setCachedModel(cachedForMode.modelUsed || '');
-      setLoadingPhase(4);
-      return;
-    }
-
-    runAnalysis(selectedMode);
-  };
-
-  // Cyber Glow Badge: emerald glow for fresh saved, amber glow for stale
-  const renderModeBadge = (targetMode: 'quick' | 'deep' | 'strategist') => {
-    const info = modesSummary[targetMode];
-    if (!info || !info.found) return null;
-
-    if (info.isStale) {
-      return (
-        <span 
-          title="มีข้อมูลเดิม แต่พอร์ตมีการเปลี่ยนแปลง (แนะนำกดวิเคราะห์ใหม่)"
-          className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/60 text-[10px] font-black shadow-[0_0_8px_rgba(245,158,11,0.5)] ml-1 shrink-0"
-        >
-          !
-        </span>
-      );
-    }
-
-    return (
-      <span 
-        title="วิเคราะห์แล้ว ข้อมูลเป็นปัจจุบันพร้อมดู"
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/70 text-[10px] font-black shadow-[0_0_10px_rgba(52,211,153,0.7)] ml-1 shrink-0 animate-pulse"
-      >
-        ✓
-      </span>
-    );
-  };
 
   // Calculate sector weights dynamically from blueprints and fundamentals
   const portfolioSectors = useMemo(() => {
@@ -369,105 +327,10 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
     return totalWeight > 0 ? Number((sumPE / totalWeight).toFixed(1)) : null;
   }, [blueprints, fundamentals]);
 
-  // Quick scan evaluation engine (rule-based, fast, runs locally with Thai advice)
-  const computeQuickScan = (funData: Record<string, any>) => {
-    const count = blueprints.length;
-    const sorted = [...blueprints].sort((a, b) => (b.target_percent || 0) - (a.target_percent || 0));
-    const top1 = sorted[0];
-    const top2Sum = (sorted[0]?.target_percent || 0) + (sorted[1]?.target_percent || 0);
-
-    const strengths: { title: string; description: string }[] = [];
-    const weaknesses: { title: string; description: string }[] = [];
-    const suggestions: any[] = [];
-
-    // Check diversification
-    if (count >= 5 && top2Sum <= 45) {
-      strengths.push({ 
-        title: 'การกระจายตัวของพอร์ตสมดุลดี', 
-        description: `หุ้น 2 อันดับแรกมีสัดส่วนรวมกันเพียง ${top2Sum.toFixed(1)}% ของพอร์ต ช่วยลดความเสี่ยงจากการพึ่งพาหุ้นตัวใดตัวหนึ่ง` 
-      });
-    } else if (top1 && top1.target_percent > 30) {
-      weaknesses.push({ 
-        title: 'ความเสี่ยงจากการกระจุกตัวในหุ้นรายตัวสูง', 
-        description: `หุ้น ${top1.symbol} มีสัดส่วนสูงถึง ${top1.target_percent}% ซึ่งเกินเกณฑ์ปลอดภัยที่ 30% ของพอร์ต` 
-      });
-      suggestions.push({
-        action: 'REDUCE',
-        symbol: top1.symbol,
-        percent: Math.round(top1.target_percent - 20),
-        category: top1.category || 'Core',
-        reason: 'ปรับลดสัดส่วนเพื่อกระจายความเสี่ยงและลดผลกระทบหากหุ้นแกว่งตัวแรง'
-      });
-    }
-
-    // Check Sector Overlap
-    const sectorEntries = Object.entries(portfolioSectors);
-    const dominantSector = sectorEntries.sort((a, b) => b[1] - a[1])[0];
-    if (dominantSector && dominantSector[1] > 45) {
-      weaknesses.push({ 
-        title: 'สัดส่วนกระจุกตัวในกลุ่มอุตสาหกรรมเดียว', 
-        description: `กลุ่มอุตสาหกรรม ${dominantSector[0]} มีสัดส่วนสูงถึง ${dominantSector[1]}% ของพอร์ตโดยรวม` 
-      });
-    } else if (sectorEntries.length >= 3) {
-      strengths.push({ 
-        title: 'กระจายการลงทุนหลากหลายภาคธุรกิจ', 
-        description: `พอร์ตมีการกระจายความเสี่ยงครอบคลุม ${sectorEntries.length} ภาคอุตสาหกรรมหลัก` 
-      });
-    }
-
-    // Check Beta
-    if (weightedBeta > 1.35) {
-      weaknesses.push({ 
-        title: 'ความผันผวนสูงกว่าตลาดอย่างมีนัยสำคัญ', 
-        description: `ค่าเฉลี่ย Beta รวมของพอร์ตอยู่ที่ ${weightedBeta} ซึ่งมีโอกาสแกว่งตัวรุนแรงในภาวะตลาดผันผวน` 
-      });
-    } else if (weightedBeta >= 0.85 && weightedBeta <= 1.15) {
-      strengths.push({ 
-        title: 'ระดับความผันผวนสอดคล้องกับดัชนีตลาด', 
-        description: `ค่าเฉลี่ย Beta รวมของพอร์ตอยู่ที่ ${weightedBeta} เคลื่อนไหวใกล้เคียงกับดัชนีภาพรวม ไม่เสี่ยงสูงเกินไป` 
-      });
-    }
-
-    // Calculate score
-    let score = 80;
-    if (top1 && top1.target_percent > 35) score -= 15;
-    if (dominantSector && dominantSector[1] > 50) score -= 15;
-    if (weightedBeta > 1.4) score -= 10;
-    if (count < 4) score -= 15;
-    if (count >= 8) score += 5;
-    score = Math.max(30, Math.min(95, score));
-
-    let overallGrade = 'B+';
-    if (score >= 90) overallGrade = 'A';
-    else if (score >= 82) overallGrade = 'A-';
-    else if (score >= 75) overallGrade = 'B+';
-    else if (score >= 68) overallGrade = 'B';
-    else if (score >= 60) overallGrade = 'C';
-    else overallGrade = 'D';
-
-    const riskScore = Math.round(Math.min(100, Math.max(10, (weightedBeta * 40) + (top1?.target_percent || 0))));
-
-    return {
-      overallGrade,
-      radarData: {
-        diversification: Math.min(100, count * 12),
-        valuation: 70,
-        growth: Math.round(Math.min(100, weightedBeta * 60)),
-        risk: Math.round(100 - riskScore),
-        income: 50
-      },
-      strengths,
-      weaknesses,
-      suggestions,
-      missingExposure: sectorEntries.length < 4 ? ['Healthcare', 'Financials', 'Defensive'] : [],
-      riskScore
-    };
-  };
-
-  const runAnalysis = async (selectedMode: 'quick' | 'deep' | 'strategist') => {
+  const runAnalysis = async () => {
     try {
       if (timerRef.current) clearInterval(timerRef.current);
-      setMode(selectedMode);
+      setMode('strategist');
       setLoadingPhase(1); 
       setProgress(15);
       setError('');
@@ -503,55 +366,17 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       setProgress(55);
       setStatusMessage(`กำลังประมวลผล 5-Axis Health Metrics และวิเคราะห์การกระจายตัว (Beta: ${weightedBeta})...`);
 
-      if (selectedMode === 'quick') {
-        setLoadingPhase(3);
-        setProgress(85);
-        setStatusMessage('กำลังประมวลผลกฎ Rule-Engine และตรวจสอบเกณฑ์ความเสี่ยง...');
-        const result = computeQuickScan(funData);
-        setTimeout(() => {
-          setAiResult(result);
-          setIsStale(false);
-          const nowIso = new Date().toISOString();
-          setCachedCreatedAt(nowIso);
-          setLoadingPhase(4);
-          setProgress(100);
-          setStatusMessage('วิเคราะห์เสร็จสมบูรณ์');
-          setModesSummary(prev => ({
-            ...prev,
-            quick: {
-              found: true,
-              isStale: false,
-              mode: 'quick',
-              blueprint_hash: '',
-              overallGrade: result.overallGrade,
-              result,
-              modelUsed: 'rule-engine',
-              createdAt: nowIso
-            }
-          }));
-          api.ai.saveAdvisorHistory(portfolioId, 'quick', blueprints, result).catch(e => {
-            console.warn('[Advisor] Quick scan auto-save error:', e);
-          });
-        }, 500);
-        return;
-      }
-
       // Step 2: Call AI Backend Advisor
       setLoadingPhase(3);
       setProgress(70);
-      setStatusMessage(
-        selectedMode === 'strategist'
-          ? 'กำลังเชื่อมต่อ Hermes: GPT 5.6 Terra (Chief Strategist Engine)...'
-          : 'กำลังส่งข้อมูลให้ Hermes: GPT 5.6 Terra วิเคราะห์เชิงลึก...'
-      );
+      setStatusMessage('กำลังเชื่อมต่อ Hermes: GPT 5.6 Terra (Deep Analysis Engine)...');
 
       // Simulation timer for dynamic feeling during AI generation
       let currentP = 70;
       const statusSteps = [
         'กำลังวิเคราะห์สภาวะเศรษฐกิจมหภาคและทิศทางอัตราดอกเบี้ย...',
-        selectedMode === 'strategist' 
-          ? 'กำลังสร้างพิมพ์เขียวในอุดมคติ (Ideal Blueprint: Before vs After)...'
-          : 'กำลังตรวจสอบจุดแข็งและจุดเปราะบางของพอร์ต...',
+        'กำลังสร้างพิมพ์เขียวในอุดมคติ (Ideal Blueprint: Before vs After)...',
+        'กำลังประเมิน Stress Test และเจาะลึกหุ้นรายตัว...',
         'กำลังจัดทำแผนกลยุทธ์และขั้นตอน Action Roadmap...',
         'กำลังสังเคราะห์และตรวจสอบความสมบูรณ์ของผลการวิเคราะห์...'
       ];
@@ -568,7 +393,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
         }
       }, 3500);
 
-      const aiRes = await api.ai.advisor(selectedMode, blueprints, funData, portfolioId, true);
+      const aiRes = await api.ai.advisor('strategist', blueprints, funData, portfolioId, true);
 
       if (timerRef.current) clearInterval(timerRef.current);
       
@@ -589,17 +414,18 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       setIsStale(false);
       const nowIso = new Date().toISOString();
       setCachedCreatedAt(nowIso);
+      setCachedModel('GPT-5.6 Terra (Deep Analysis)');
       setLoadingPhase(4); 
       setModesSummary(prev => ({
         ...prev,
-        [selectedMode]: {
+        strategist: {
           found: true,
           isStale: false,
-          mode: selectedMode,
+          mode: 'strategist',
           blueprint_hash: '',
           overallGrade: aiRes.overallGrade,
           result: aiRes,
-          modelUsed: selectedMode === 'strategist' ? 'GPT-5.6 Terra (Strategist)' : 'GPT-5.6 Terra',
+          modelUsed: 'GPT-5.6 Terra (Deep Analysis)',
           createdAt: nowIso
         }
       })); 
@@ -624,42 +450,27 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       {/* Header Bar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
             <span className="text-2xl">🧠</span> AI Portfolio Advisor
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold tracking-wide">
+              Deep Analysis
+            </span>
           </h2>
           <p className="text-[13px] text-slate-300 mt-1">
-            วิเคราะห์ Blueprint เชิงลึก ตรวจสอบความสมดุล จุดแข็ง จุดเสี่ยง และแนวทางปรับพอร์ตให้เหมาะสม
+            วิเคราะห์ Blueprint เชิงลึกรอบด้าน ทั้งจุดแข็ง จุดเสี่ยง หุ้นรายตัว จำลองวิกฤต (Stress Test) และพิมพ์เขียวเป้าหมาย
           </p>
         </div>
         
-        <div className="flex bg-[#12141F] rounded-lg p-1 border border-[#232738] gap-1">
-          <button 
-            onClick={() => handleSelectMode('quick')}
-            className={`px-3 py-1.5 rounded-md text-[13px] font-bold transition-all flex items-center gap-1.5 ${
-              mode === 'quick' && loadingPhase > 0 ? 'bg-slate-700 text-white shadow' : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-            }`}
-          >
-            <span>⚡ Quick Scan</span>
-            {renderModeBadge('quick')}
-          </button>
-          <button 
-            onClick={() => handleSelectMode('deep')}
-            className={`px-3 py-1.5 rounded-md text-[13px] font-bold transition-all flex items-center gap-1.5 ${
-              mode === 'deep' && loadingPhase > 0 ? 'bg-[#A855F7] text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-            }`}
-          >
-            <span>🧠 Deep Analysis</span>
-            {renderModeBadge('deep')}
-          </button>
-          <button 
-            onClick={() => handleSelectMode('strategist')}
-            className={`px-3 py-1.5 rounded-md text-[13px] font-bold transition-all flex items-center gap-1.5 ${
-              mode === 'strategist' && loadingPhase > 0 ? 'bg-amber-600 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-            }`}
-          >
-            <span>🎯 Strategist</span>
-            {renderModeBadge('strategist')}
-          </button>
+        <div className="flex items-center gap-2">
+          {aiResult && loadingPhase === 4 && (
+            <button 
+              onClick={() => runAnalysis()}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-500 hover:opacity-90 text-white text-[13px] font-bold rounded-lg shadow-[0_0_15px_rgba(168,85,247,0.35)] transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <span>🔄</span>
+              <span>วิเคราะห์ใหม่</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -695,32 +506,19 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       {/* Welcome State */}
       {loadingPhase === 0 && (
         <div className="text-center py-10">
-          <p className="text-[13px] text-slate-300 mb-4 max-w-md mx-auto">
-            กดเลือกโหมดเพื่อเริ่มให้ AI และ Rule-Engine ตรวจสอบความแข็งแกร่งของสัดส่วนเป้าหมายใน Blueprint
+          <p className="text-[14px] text-slate-200 mb-2 font-medium">
+            เริ่มวิเคราะห์ความแข็งแกร่งของ Blueprint พอร์ตการลงทุนของคุณ
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <button 
-              onClick={() => handleSelectMode('quick')}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[13px] font-bold rounded-lg border border-slate-700 transition-all flex items-center gap-2"
-            >
-              <span>⚡ Quick Scan (เร็วทันใจ)</span>
-              {renderModeBadge('quick')}
-            </button>
-            <button 
-              onClick={() => handleSelectMode('deep')}
-              className="px-5 py-2.5 bg-gradient-to-r from-[#A855F7] to-blue-600 hover:opacity-90 text-white text-[13px] font-bold rounded-lg shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all flex items-center gap-2"
-            >
-              <span>🧠 Deep Analysis</span>
-              {renderModeBadge('deep')}
-            </button>
-            <button 
-              onClick={() => handleSelectMode('strategist')}
-              className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:opacity-90 text-white text-[13px] font-bold rounded-lg shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all flex items-center gap-2"
-            >
-              <span>🎯 Full Strategist (พิมพ์เขียว + Roadmap)</span>
-              {renderModeBadge('strategist')}
-            </button>
-          </div>
+          <p className="text-[13px] text-slate-400 mb-6 max-w-lg mx-auto leading-relaxed">
+            เจาะลึก 5 มิติความสมดุล, พิมพ์เขียวในอุดมคติ (Before/After), วินิจฉัยหุ้นรายตัว (Consensus & Verdicts), จำลองวิกฤตตลาด (Stress Test) และแผน Action Roadmap
+          </p>
+          <button 
+            onClick={() => runAnalysis()}
+            className="px-6 py-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-500 hover:opacity-95 text-white text-[14px] font-extrabold rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all flex items-center gap-2.5 cursor-pointer mx-auto transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <span className="text-lg">🧠</span>
+            <span>เริ่มวิเคราะห์เชิงลึก (Deep Analysis)</span>
+          </button>
         </div>
       )}
 
@@ -742,8 +540,8 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                 </div>
               </div>
               <button
-                onClick={() => runAnalysis(mode)}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[13px] shrink-0 transition-colors shadow flex items-center gap-1.5 self-end sm:self-auto"
+                onClick={() => runAnalysis()}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[13px] shrink-0 transition-colors shadow flex items-center gap-1.5 self-end sm:self-auto cursor-pointer"
               >
                 <span>🔄</span> วิเคราะห์ใหม่ทันที
               </button>
@@ -754,11 +552,11 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
           {!isStale && cachedCreatedAt && (
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#12141F] border border-[#232738] rounded-lg text-[13px] text-slate-300">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
                 <span className="text-slate-200 font-medium">ผลวิเคราะห์ล่าสุด</span>
                 <span className="text-slate-400">•</span>
                 <span className="text-slate-300">
-                  โหมด: <span className="font-semibold text-white capitalize">{mode === 'strategist' ? '🎯 Strategist' : mode === 'deep' ? '🧠 Deep Analysis' : '⚡ Quick Scan'}</span>
+                  โหมด: <span className="font-semibold text-purple-300">🧠 Deep Analysis</span>
                 </span>
                 <span className="text-slate-400">•</span>
                 <span className="text-slate-300">
@@ -766,8 +564,8 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                 </span>
               </div>
               <button
-                onClick={() => runAnalysis(mode)}
-                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded text-[13px] border border-slate-700 transition-colors flex items-center gap-1"
+                onClick={() => runAnalysis()}
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded text-[13px] border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <span>🔄</span> วิเคราะห์ใหม่
               </button>
@@ -986,7 +784,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                         <span className="text-base">🎯</span> ตารางพิมพ์เขียวเป้าหมายเชิงกลยุทธ์ (Ideal Blueprint)
                       </h4>
                       <p className="text-[13px] text-slate-300 mt-0.5">
-                        เปรียบเทียบสัดส่วนเป้าหมายปัจจุบันกับสัดส่วนในอุดมคติที่ AI Strategist แนะนำเพื่อปรับสมดุล
+                        เปรียบเทียบสัดส่วนเป้าหมายปัจจุบันกับสัดส่วนในอุดมคติที่ AI Deep Analysis แนะนำเพื่อปรับสมดุล
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
@@ -1163,7 +961,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                 </div>
               ) : (
                 <div className="p-8 text-center bg-[#12141F] border border-[#232738] rounded-xl text-slate-300 text-[13px]">
-                  ไม่มีข้อมูลการวิเคราะห์หุ้นรายตัว (โหมด Quick Scan จะเน้นภาพรวม กรุณาเลือกโหมด Deep หรือ Strategist เพื่อดูข้อมูลเจาะลึก)
+                  ไม่มีข้อมูลการวิเคราะห์หุ้นรายตัว กรุณากดวิเคราะห์ Deep Analysis ใหม่อีกครั้ง
                 </div>
               )}
             </div>
@@ -1199,7 +997,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                 </div>
               ) : (
                 <div className="p-6 text-center bg-[#12141F] border border-[#232738] rounded-xl text-slate-300 text-[13px]">
-                  โหมดนี้ยังไม่มีการจำลอง Stress Test (มีเฉพาะในโหมด Full Strategist)
+                  ไม่มีข้อมูลการจำลอง Stress Test กรุณากดวิเคราะห์ Deep Analysis ใหม่อีกครั้ง
                 </div>
               )}
 
@@ -1313,7 +1111,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                   ยืนยันการปรับสัดส่วน Blueprint ตามคำแนะนำ
                 </h3>
                 <p className="text-[13px] text-slate-300">
-                  AI Strategist Optimized Allocation
+                  AI Deep Analysis Optimized Allocation
                 </p>
               </div>
             </div>
