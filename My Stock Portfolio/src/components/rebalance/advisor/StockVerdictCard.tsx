@@ -69,6 +69,10 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
     ? fundamentals.eps_growth_next_year * 100
     : null;
 
+  const sym = (verdict.symbol || '').toUpperCase();
+  const isKnownETF = ['VOO', 'SPY', 'QQQ', 'SCHD', 'SCHG', 'DIA', 'IWM', 'VTI', 'VXUS', 'BND', 'IVV', 'JEPI', 'JEPQ', 'SMH', 'XLK', 'XLF', 'SOXX'].includes(sym);
+  const isETF = isKnownETF || fundamentals?.sector === 'ETF' || (currentPrice > 0 && targetPrice === 0 && (fundamentals?.num_analyst_opinions || 0) === 0 && epsGrowth === null);
+
   const outlookText = verdict.futureOutlook || 'ไม่มีข้อมูลภาพรวมในอนาคต';
   const shouldTruncate = outlookText.length > 140;
 
@@ -78,13 +82,17 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
       <div>
         <div className="flex items-start justify-between gap-2 mb-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-lg font-black text-white tracking-wide">{verdict.symbol}</span>
-              {fundamentals?.sector && (
+              {isETF ? (
+                <span className="text-xs px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/50 font-bold flex items-center gap-1 shadow-[0_0_8px_rgba(56,189,248,0.2)]">
+                  <span>🏛️</span> Index ETF
+                </span>
+              ) : fundamentals?.sector ? (
                 <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-medium">
                   {fundamentals.sector}
                 </span>
-              )}
+              ) : null}
             </div>
             {verdict.role && (
               <p className="text-[13px] text-slate-300 mt-0.5 font-medium">
@@ -112,8 +120,14 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
             <div className="text-xs text-slate-400 font-medium">ปัจจุบัน ➔ เป้าหมาย</div>
             <div className="text-[13px] font-bold text-white mt-0.5 flex items-center gap-1.5 flex-wrap">
               <span>{currentPrice > 0 ? `$${currentPrice.toFixed(2)}` : 'N/A'}</span>
-              <span className="text-slate-400 text-xs font-normal">➔</span>
-              <span className="text-purple-300 font-extrabold">{targetPrice > 0 ? `$${targetPrice.toFixed(2)}` : 'N/A'}</span>
+              {isETF && targetPrice === 0 ? (
+                <span className="text-sky-400 text-xs font-semibold">(Passive ETF)</span>
+              ) : (
+                <>
+                  <span className="text-slate-400 text-xs font-normal">➔</span>
+                  <span className="text-purple-300 font-extrabold">{targetPrice > 0 ? `$${targetPrice.toFixed(2)}` : 'N/A'}</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -128,6 +142,8 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
                 }`}>
                   {upsidePercent > 0 ? `+${upsidePercent.toFixed(1)}%` : `${upsidePercent.toFixed(1)}%`}
                 </span>
+              ) : isETF ? (
+                <span className="text-xs text-sky-300/90 font-medium">อิงดัชนีตลาด</span>
               ) : (
                 <span className="text-[13px] text-slate-400 font-semibold">-</span>
               )}

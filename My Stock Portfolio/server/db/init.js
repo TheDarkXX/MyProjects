@@ -174,6 +174,31 @@ export function initDb() {
         details TEXT,
         created_at TEXT DEFAULT (datetime('now'))
     );
+
+    -- Custom Templates (Persistent across devices)
+    CREATE TABLE IF NOT EXISTS custom_templates (
+        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+        portfolio_id TEXT,
+        name TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        entries_json TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_custom_templates_port 
+        ON custom_templates(portfolio_id);
+
+    -- Blueprint Snapshots (Undo / History across devices)
+    CREATE TABLE IF NOT EXISTS blueprint_snapshots (
+        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+        portfolio_id TEXT NOT NULL REFERENCES portfolios(id),
+        source TEXT DEFAULT 'manual',
+        name TEXT DEFAULT '',
+        entries_json TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_blueprint_snapshots_port 
+        ON blueprint_snapshots(portfolio_id, created_at DESC);
   `);
 
   // Migration for symbol_fundamentals (Forward-Looking Data for existing DBs)

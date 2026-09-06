@@ -47,12 +47,28 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
     }
   });
 
+  // Sync snapshot from server on mount or portfolio change
+  useEffect(() => {
+    if (!portfolioId) return;
+    let isCancelled = false;
+    api.blueprints.getLatestSnapshot(portfolioId, 'ai_advisor')
+      .then(res => {
+        if (!isCancelled && res && res.found && Array.isArray(res.entries) && res.entries.length > 0) {
+          setPreviousBlueprintBackup(res.entries);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isCancelled = true;
+    };
+  }, [portfolioId]);
+
   const handleApplyIdealBlueprint = async () => {
     if (!aiResult?.idealBlueprint || !portfolioId) return;
 
     try {
       setIsApplying(true);
-      // 1. Snapshot previous blueprints
+      // 1. Snapshot previous blueprints to state, localStorage, and SQLite server
       const backup = blueprints.map(b => ({
         symbol: b.symbol,
         target_percent: Number(b.target_percent) || 0,
@@ -64,6 +80,11 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       setPreviousBlueprintBackup(backup);
       try {
         localStorage.setItem(`ai_advisor_backup_${portfolioId}`, JSON.stringify(backup));
+        await api.blueprints.saveSnapshot(portfolioId, {
+          source: 'ai_advisor',
+          name: 'ก่อนปรับใช้ AI Ideal Blueprint',
+          entries: backup
+        }).catch(() => {});
       } catch (e) {}
 
       // 2. Apply all items from idealBlueprint
@@ -100,11 +121,25 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
   };
 
   const handleUndoAllocation = async () => {
-    if (!previousBlueprintBackup || !portfolioId) return;
+    if (!portfolioId) return;
 
     try {
       setIsApplying(true);
-      for (const entry of previousBlueprintBackup) {
+      let backupToRestore = previousBlueprintBackup;
+      
+      // If not in memory, try fetching latest snapshot from server
+      if (!backupToRestore || backupToRestore.length === 0) {
+        const snap = await api.blueprints.getLatestSnapshot(portfolioId, 'ai_advisor').catch(() => null);
+        if (snap && snap.found && Array.isArray(snap.entries) && snap.entries.length > 0) {
+          backupToRestore = snap.entries;
+        }
+      }
+
+      if (!backupToRestore || backupToRestore.length === 0) {
+        throw new Error('ไม่พบข้อมูลสำรอง Blueprint ก่อนหน้า');
+      }
+
+      for (const entry of backupToRestore) {
         await api.blueprints.upsert(portfolioId, entry);
       }
       await useBlueprintStore.getState().fetchBlueprints(portfolioId);

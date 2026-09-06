@@ -85,5 +85,10 @@ export const api = {
     update: (portfolioId: string, symbol: string, data: any) => authFetch(`/blueprints/${portfolioId}/${symbol}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (portfolioId: string, symbol: string) => authFetch(`/blueprints/${portfolioId}/${symbol}`, { method: 'DELETE' }),
     autoGenerate: (portfolioId: string) => authFetch(`/blueprints/${portfolioId}/auto-generate`, { method: 'POST' }),
+    getTemplates: (portfolioId: string) => authFetch(`/blueprints/${portfolioId}/templates`),
+    saveTemplate: (portfolioId: string, data: any) => authFetch(`/blueprints/${portfolioId}/templates`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteTemplate: (portfolioId: string, templateId: string) => authFetch(`/blueprints/${portfolioId}/templates/${templateId}`, { method: 'DELETE' }),
+    getLatestSnapshot: (portfolioId: string, source?: string) => authFetch(`/blueprints/${portfolioId}/snapshots/latest${source ? `?source=${source}` : ''}`),
+    saveSnapshot: (portfolioId: string, data: any) => authFetch(`/blueprints/${portfolioId}/snapshots`, { method: 'POST', body: JSON.stringify(data) }),
   }
 };

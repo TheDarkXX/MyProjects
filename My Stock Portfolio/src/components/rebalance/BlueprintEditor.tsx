@@ -323,24 +323,65 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [hasSnapshot, setHasSnapshot] = useState<boolean>(false);
 
-  // Load custom templates and check snapshot for this portfolio
+  // Load custom templates and check snapshot for this portfolio (Server SQLite + Local Migration)
   useEffect(() => {
     if (!portfolioId) return;
-    try {
-      const saved = localStorage.getItem(`portfolio_custom_templates_${portfolioId}`);
-      if (saved) {
-        setCustomTemplates(JSON.parse(saved));
-      } else {
-        setCustomTemplates([]);
+    let isCancelled = false;
+
+    async function loadTemplatesAndSnapshot() {
+      try {
+        // 1. Fetch from server SQLite
+        const serverTemplates = await api.blueprints.getTemplates(portfolioId);
+        
+        // 2. Check local storage for legacy templates to auto-migrate to server
+        let combinedTemplates = Array.isArray(serverTemplates) ? [...serverTemplates] : [];
+        try {
+          const localSaved = localStorage.getItem(`portfolio_custom_templates_${portfolioId}`);
+          if (localSaved) {
+            const localParsed: CustomTemplate[] = JSON.parse(localSaved);
+            for (const lt of localParsed) {
+              if (!combinedTemplates.some(st => st.id === lt.id || st.name === lt.name)) {
+                // Auto-migrate legacy local template to server database
+                await api.blueprints.saveTemplate(portfolioId, lt).catch(() => {});
+                combinedTemplates.push(lt);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[Template Migration] Warning checking local storage:', e);
+        }
+
+        if (!isCancelled) {
+          setCustomTemplates(combinedTemplates);
+        }
+
+        // 3. Check snapshot for this portfolio (server first, then local)
+        const snapRes = await api.blueprints.getLatestSnapshot(portfolioId).catch(() => null);
+        const hasServerSnap = snapRes && snapRes.found;
+        const hasLocalSnap = !!localStorage.getItem(`portfolio_blueprint_snapshot_${portfolioId}`);
+        if (!isCancelled) {
+          setHasSnapshot(hasServerSnap || hasLocalSnap);
+        }
+      } catch (err) {
+        console.error('[BlueprintEditor] Error loading templates/snapshots:', err);
+        // Fallback to local storage if network blips
+        try {
+          const saved = localStorage.getItem(`portfolio_custom_templates_${portfolioId}`);
+          if (saved && !isCancelled) setCustomTemplates(JSON.parse(saved));
+          const snapshot = localStorage.getItem(`portfolio_blueprint_snapshot_${portfolioId}`);
+          if (!isCancelled) setHasSnapshot(!!snapshot);
+        } catch (e) {}
       }
-      const snapshot = localStorage.getItem(`portfolio_blueprint_snapshot_${portfolioId}`);
-      setHasSnapshot(!!snapshot);
-    } catch (e) {
-      console.error('Error loading custom templates:', e);
     }
+
+    loadTemplatesAndSnapshot();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [portfolioId]);
 
-  const takeAutoSnapshot = () => {
+  const takeAutoSnapshot = async () => {
     if (blueprints.length > 0) {
       const snapshotData = blueprints.map(b => ({
         symbol: b.symbol,
@@ -349,7 +390,15 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
         status: b.status,
         category: b.category,
       }));
-      localStorage.setItem(`portfolio_blueprint_snapshot_${portfolioId}`, JSON.stringify(snapshotData));
+      // Save locally and to server SQLite
+      try {
+        localStorage.setItem(`portfolio_blueprint_snapshot_${portfolioId}`, JSON.stringify(snapshotData));
+        await api.blueprints.saveSnapshot(portfolioId, {
+          source: 'template_apply',
+          name: 'ก่อนเปลี่ยนเทมเพลต',
+          entries: snapshotData
+        }).catch(() => {});
+      } catch (e) {}
       setHasSnapshot(true);
     }
   };
@@ -369,7 +418,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
     );
 
     if (confirmed) {
-      takeAutoSnapshot();
+      await takeAutoSnapshot();
       await applyTemplate(portfolioId, template.entries);
     }
   };
@@ -383,7 +432,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
     const defaultName = `แผนแม่แบบ (${new Date().toLocaleDateString('th-TH')})`;
     const name = await modalPrompt(
       'บันทึกเป็นแม่แบบของฉัน',
-      'ตั้งชื่อแม่แบบสำหรับพอร์ตนี้ เพื่อนำกลับมาใช้ใหม่ได้ตลอดเวลา (สามารถบันทึกได้หลายแบบ):',
+      'ตั้งชื่อแม่แบบสำหรับพอร์ตนี้ เพื่อนำกลับมาใช้ใหม่ได้ตลอดเวลา (บันทึกลง Database ถาวร ไม่สูญหาย):',
       defaultName,
       { placeholder: 'เช่น แผน Core 70/30, พอร์ตเติบโตขั้นสุด...', confirmText: 'บันทึกแม่แบบ' }
     );
@@ -403,16 +452,34 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
       })),
     };
 
-    const updated = [newTemplate, ...customTemplates];
-    setCustomTemplates(updated);
-    localStorage.setItem(`portfolio_custom_templates_${portfolioId}`, JSON.stringify(updated));
-    setSelectedTemplateId(newTemplate.id);
+    try {
+      // 1. Save to SQLite backend
+      const saved = await api.blueprints.saveTemplate(portfolioId, newTemplate);
+      const templateToUse = saved || newTemplate;
 
-    await modalAlert(
-      'บันทึกสำเร็จ!',
-      `บันทึกแม่แบบ "${name.trim()}" เรียบร้อยแล้ว สามารถเลือกใช้ได้จากรายการแม่แบบ`,
-      { variant: 'success' }
-    );
+      const updated = [templateToUse, ...customTemplates.filter(t => t.id !== templateToUse.id)];
+      setCustomTemplates(updated);
+      // 2. Also keep in localStorage as local cache
+      try {
+        localStorage.setItem(`portfolio_custom_templates_${portfolioId}`, JSON.stringify(updated));
+      } catch (e) {}
+
+      setSelectedTemplateId(templateToUse.id);
+
+      await modalAlert(
+        'บันทึกสำเร็จ!',
+        `บันทึกแม่แบบ "${name.trim()}" ลงฐานข้อมูลเรียบร้อยแล้ว ข้อมูลจะคงอยู่ตลอดไปและซิงค์ทุกอุปกรณ์`,
+        { variant: 'success' }
+      );
+    } catch (err: any) {
+      console.error('[Save Custom Template Error]:', err);
+      // Fallback local save
+      const updated = [newTemplate, ...customTemplates];
+      setCustomTemplates(updated);
+      localStorage.setItem(`portfolio_custom_templates_${portfolioId}`, JSON.stringify(updated));
+      setSelectedTemplateId(newTemplate.id);
+      await modalAlert('บันทึกสำเร็จ (โหมดสำรอง)', `บันทึกแม่แบบ "${name.trim()}" เรียบร้อยแล้ว`, { variant: 'info' });
+    }
   };
 
   const handleDeleteCustomTemplate = async (templateId: string) => {
@@ -421,14 +488,23 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
 
     const confirmed = await modalConfirm(
       'ลบแม่แบบนี้?',
-      `คุณต้องการลบแม่แบบ "${t.name}" ออกจากรายการแม่แบบส่วนตัวใช่หรือไม่?`,
+      `คุณต้องการลบแม่แบบ "${t.name}" ออกจากระบบถาวรใช่หรือไม่?`,
       { variant: 'danger', confirmText: 'ลบแม่แบบ' }
     );
 
     if (confirmed) {
+      try {
+        await api.blueprints.deleteTemplate(portfolioId, templateId);
+      } catch (e) {
+        console.warn('[Delete Template Warning]:', e);
+      }
+
       const updated = customTemplates.filter(item => item.id !== templateId);
       setCustomTemplates(updated);
-      localStorage.setItem(`portfolio_custom_templates_${portfolioId}`, JSON.stringify(updated));
+      try {
+        localStorage.setItem(`portfolio_custom_templates_${portfolioId}`, JSON.stringify(updated));
+      } catch (e) {}
+
       if (selectedTemplateId === templateId) {
         setSelectedTemplateId('');
       }
@@ -437,23 +513,40 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
   };
 
   const handleRestoreSnapshot = async () => {
-    const raw = localStorage.getItem(`portfolio_blueprint_snapshot_${portfolioId}`);
-    if (!raw) return;
+    let snapshotEntries: any[] | null = null;
 
     try {
-      const snapshotEntries = JSON.parse(raw);
-      const confirmed = await modalConfirm(
-        'กู้คืนแผนเดิมก่อนหน้า?',
-        `ระบบจะกู้คืนสัดส่วน Blueprint (${snapshotEntries.length} รายการ) ที่คุณตั้งไว้ก่อนเปลี่ยนเทมเพลตล่าสุด`,
-        { variant: 'warning', confirmText: 'กู้คืนแผนเดิม' }
-      );
-
-      if (confirmed) {
-        await applyTemplate(portfolioId, snapshotEntries);
-        await modalAlert('กู้คืนสำเร็จ', 'กู้คืนแผน Blueprint เดิมเรียบร้อยแล้ว', { variant: 'success' });
+      // Try server snapshot first
+      const serverSnap = await api.blueprints.getLatestSnapshot(portfolioId);
+      if (serverSnap && serverSnap.found && serverSnap.entries?.length > 0) {
+        snapshotEntries = serverSnap.entries;
       }
     } catch (e) {
-      console.error('Failed to restore snapshot:', e);
+      console.warn('[Restore Snapshot] Server fetch warning:', e);
+    }
+
+    // Fallback to localStorage
+    if (!snapshotEntries) {
+      const raw = localStorage.getItem(`portfolio_blueprint_snapshot_${portfolioId}`);
+      if (raw) {
+        try { snapshotEntries = JSON.parse(raw); } catch (e) {}
+      }
+    }
+
+    if (!snapshotEntries || snapshotEntries.length === 0) {
+      await modalAlert('ไม่พบข้อมูล Snapshot', 'ไม่พบประวัติสัดส่วนเดิมก่อนหน้าสำหรับพอร์ตนี้', { variant: 'warning' });
+      return;
+    }
+
+    const confirmed = await modalConfirm(
+      'กู้คืนแผนเดิมก่อนหน้า?',
+      `ระบบจะกู้คืนสัดส่วน Blueprint (${snapshotEntries.length} รายการ) ที่คุณตั้งไว้ก่อนเปลี่ยนเทมเพลตล่าสุด`,
+      { variant: 'warning', confirmText: 'กู้คืนแผนเดิม' }
+    );
+
+    if (confirmed) {
+      await applyTemplate(portfolioId, snapshotEntries);
+      await modalAlert('กู้คืนสำเร็จ', 'กู้คืนแผน Blueprint เดิมเรียบร้อยแล้ว', { variant: 'success' });
     }
   };
 

@@ -319,9 +319,9 @@ ${JSON.stringify(payloadData, null, 2)}
 }`;
 
     let jsonContent = '';
-    const usedModel = 'gpt-5.6-terra-high';
+    let usedModel = 'gpt-5.6-terra-high';
 
-    // Call Hermes GPT 5.6 Terra on local proxy (NO Fallback - Strict GPT-5.6 Terra Only)
+    // 1. Primary: Call Hermes GPT 5.6 Terra on local proxy
     try {
       const response = await fetch(LOCAL_TERRA_URL, {
         method: 'POST',
@@ -342,20 +342,54 @@ ${JSON.stringify(payloadData, null, 2)}
         signal: AbortSignal.timeout(180000) // 3 minutes timeout for complete 15-section generation
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content && content.trim().length > 0) {
+          jsonContent = content.trim();
+        }
+      } else {
         const errText = await response.text().catch(() => '');
-        throw new Error(`GPT-5.6 Terra returned status ${response.status}: ${errText.slice(0, 200)}`);
+        console.warn(`[AI Advisor] Local Terra returned status ${response.status}: ${errText.slice(0, 100)}`);
       }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (!content || content.trim().length === 0) {
-        throw new Error('GPT-5.6 Terra returned an empty response.');
-      }
-      jsonContent = content.trim();
     } catch (terraErr) {
-      console.error('[AI Advisor] GPT-5.6 Terra error (Strict Mode, No Fallback):', terraErr.message);
-      throw terraErr;
+      console.warn('[AI Advisor] Local Hermes Proxy unreachable/failed:', terraErr.message);
+    }
+
+    // 2. Emergency Fallback: If local proxy failed, route to Brain Gateway
+    if (!jsonContent) {
+      usedModel = 'brain-gateway-fallback';
+      try {
+        console.log('[AI Advisor] Attempting emergency fallback via Brain AI Gateway...');
+        const fbRes = await fetch(FALLBACK_GATEWAY_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${FALLBACK_GATEWAY_TOKEN}`
+          },
+          body: JSON.stringify({
+            message: systemPrompt,
+            model: 'gemini-2.5-flash'
+          }),
+          signal: AbortSignal.timeout(90000)
+        });
+
+        if (fbRes.ok) {
+          const fbData = await fbRes.json();
+          if (fbData && fbData.reply && !fbData.reply.startsWith('AI Error:')) {
+            jsonContent = fbData.reply.trim();
+          }
+        } else {
+          const fbErrText = await fbRes.text().catch(() => '');
+          console.error(`[AI Advisor] Fallback Gateway status ${fbRes.status}: ${fbErrText.slice(0, 100)}`);
+        }
+      } catch (fbErr) {
+        console.error('[AI Advisor] Emergency fallback also failed:', fbErr.message);
+      }
+    }
+
+    if (!jsonContent) {
+      throw new Error('AI Strategist engine is currently unavailable or busy. Please retry in a few moments.');
     }
 
     // Strip markdown code fences if present
