@@ -10,6 +10,69 @@ import { StockVerdictCard } from './advisor/StockVerdictCard';
 import { DrawdownMeter } from './advisor/DrawdownMeter';
 import { TimelineStepper } from './advisor/TimelineStepper';
 
+const METRIC_GUIDES: Record<'beta' | 'pe' | 'risk' | 'cash', {
+  title: string;
+  subtitle: string;
+  icon: string;
+  whatIsIt: string;
+  howToMeasure: string;
+  howToInterpret: string;
+  benchmarks: { label: string; range: string; desc: string; color: string }[];
+}> = {
+  beta: {
+    title: 'Weighted Beta (β)',
+    subtitle: 'ความผันผวนเฉลี่ยถ่วงน้ำหนักเทียบตลาด (S&P 500 = 1.0)',
+    icon: '📊',
+    whatIsIt: 'มาตรวัดความอ่อนไหวและความผันผวนของพอร์ตการลงทุน เมื่อเทียบกับการแกว่งตัวของดัชนีตลาดภาพรวม (S&P 500 มีค่า Beta = 1.0)',
+    howToMeasure: 'คำนวณจากผลรวมของ (Beta ของหุ้นแต่ละตัว × น้ำหนัก Target % ใน Blueprint) หารด้วยน้ำหนักรวมทั้งหมด (ไม่นับรวมเงินสด)',
+    howToInterpret: 'Beta = 1.0 พอร์ตแกว่งตามตลาดพอดี, Beta > 1.0 ผันผวนแรงกว่าตลาดทั้งขาขึ้นและขาลง, Beta < 1.0 ผันผวนต่ำกว่าตลาด ทนทานต่อการปรับฐาน',
+    benchmarks: [
+      { label: 'Balanced (สมดุล)', range: '0.85 – 1.15', desc: 'ระดับสมดุลมาตรฐาน เคลื่อนไหวสอดคล้องกับดัชนีตลาด ไม่เสี่ยงจนตระหนกยามตลาดพักฐาน', color: 'text-emerald-300 bg-emerald-500/20 border-emerald-500/40' },
+      { label: 'Defensive (เกราะเหล็ก)', range: '< 0.85', desc: 'เน้นหุ้นมั่นคง ปันผลสูง ผันผวนต่ำมาก ปลอดภัยยามวิกฤต แต่อาจวิ่งช้ากว่าตลาดในขาขึ้นแรง', color: 'text-sky-300 bg-sky-500/20 border-sky-500/40' },
+      { label: 'High Volatility (เสี่ยงสูง)', range: '> 1.35', desc: 'แกว่งตัวรุนแรง ตลาดลบ 10% พอร์ตอาจดิ่ง 15-25% เสี่ยง Drawdown หนักยามฟองสบู่แตก', color: 'text-rose-300 bg-rose-500/20 border-rose-500/40' },
+    ]
+  },
+  pe: {
+    title: 'Weighted P/E (Price-to-Earnings)',
+    subtitle: 'ระดับความถูก-แพงของมูลค่าเฉลี่ยทั้งพอร์ต',
+    icon: '🏷️',
+    whatIsIt: 'อัตราส่วนราคาต่อกำไรสุทธิเฉลี่ยถ่วงน้ำหนัก สะท้อนว่าเรากำลังยอมจ่ายเงินกี่เท่าของกำไรสุทธิที่บริษัทในพอร์ตทำได้',
+    howToMeasure: 'คำนวณจากผลรวมถ่วงน้ำหนักของค่า P/E Trailing / Forward ของหุ้นแต่ละตัวตามสัดส่วนใน Blueprint (ไม่นำหุ้นที่ขาดทุน P/E <= 0 มารวมคำนวณ)',
+    howToInterpret: 'P/E สูง = ตลาดให้ความคาดหวังการเติบโตสูงลิบ แต่ราคาก็ตึงตัวเสี่ยง Valuation Compression, P/E ต่ำ = หุ้นราคาถูก มี Margin of Safety แต่อาจเติบโตช้า',
+    benchmarks: [
+      { label: 'Reasonable (สมเหตุสมผล)', range: '15x – 25x', desc: 'ระดับสมดุลของพอร์ต Quality Compounders ผสมผสานการเติบโตและกำไรจริง ไม่แพงฟุ่มเฟือย', color: 'text-emerald-300 bg-emerald-500/20 border-emerald-500/40' },
+      { label: 'Elevated (เริ่มตึงตัว)', range: '26x – 35x', desc: 'เน้นหุ้นเทคโนโลยีหรือหุ้นเติบโตสูง ราคาวิ่งนำกำไรไปไกล เสี่ยงโดนเทขายหากงบไม่เป็นไปตามคาด', color: 'text-amber-300 bg-amber-500/20 border-amber-500/40' },
+      { label: 'Extreme Hype (แพงจัด)', range: '> 35x', desc: 'พอร์ตเต็มไปด้วยหุ้นเก็งกำไรความหวัง หากดอกเบี้ยค้างสูงหรือเศรษฐกิจชะลอ หุ้นกลุ่มนี้จะปรับฐานแรงที่สุด', color: 'text-rose-300 bg-rose-500/20 border-rose-500/40' },
+    ]
+  },
+  risk: {
+    title: 'Risk Score (คะแนนความเสี่ยงรวม)',
+    subtitle: 'ดัชนีประเมินความเปราะบางของพอร์ต (0 = ปลอดภัยสุด, 100 = เสี่ยงสูงสุด)',
+    icon: '⚡',
+    whatIsIt: 'คะแนนประเมินความเปราะบางต่อวิกฤตของพอร์ตโดยรวม สังเคราะห์ร่วมกันระหว่างค่าสถิติเชิงปริมาณ (Beta, Top 1 Weight, Sector Overlap) กับการวินิจฉัยของ AI',
+    howToMeasure: 'ประมวลผลจากสูตร: (Weighted Beta × 40) + สัดส่วนหุ้นตัวใหญ่สุด + ความเสี่ยงจากการกระจุกตัวในเซกเตอร์เดี่ยว ปรับมาตราส่วนให้อยู่ในสเกล 0–100',
+    howToInterpret: 'ยิ่งคะแนนสูง = พอร์ตยิ่งเปราะบางต่อวิกฤตตลาด, ยิ่งคะแนนต่ำ = พอร์ตมีเกราะป้องกันและกระจายความเสี่ยงแข็งแกร่ง',
+    benchmarks: [
+      { label: 'Safe / Well-Guarded', range: '< 50 / 100', desc: 'พอร์ตกระจายตัวดีเยี่ยม มี Moat หนาแน่น ไม่พึ่งพาหุ้นตัวใดตัวหนึ่งเกินไป ทนทานทุกสภาวะ', color: 'text-emerald-300 bg-emerald-500/20 border-emerald-500/40' },
+      { label: 'Moderate Risk', range: '50 – 65 / 100', desc: 'ระดับความเสี่ยงมาตรฐานของพอร์ตหุ้นเติบโตแบบ Core & Satellites ควบคุมความผันผวนได้ดี', color: 'text-sky-300 bg-sky-500/20 border-sky-500/40' },
+      { label: 'Elevated / Vulnerable', range: '> 65 / 100', desc: 'เปราะบางสูง มีการกระจุกตัวในหุ้นหรือกลุ่มอุตสาหกรรมเดียวเกิน 30-40% เสี่ยง Drawdown ลึกยามตลาดช็อก', color: 'text-rose-300 bg-rose-500/20 border-rose-500/40' },
+    ]
+  },
+  cash: {
+    title: 'Cash Allocation (สัดส่วนเงินสดสำรอง)',
+    subtitle: 'กระสุนสำรองเชิงกลยุทธ์ (Dry Powder) ในพิมพ์เขียวเป้าหมาย',
+    icon: '💵',
+    whatIsIt: 'สัดส่วนเงินสด (CASH) ที่กันไว้ในพิมพ์เขียวเป้าหมาย เพื่อใช้เป็นกันชนลดความผันผวน และเป็นกระสุนคว้าโอกาสทองยามตลาดเทขายหนัก',
+    howToMeasure: 'คำนวณจากเปอร์เซ็นต์เป้าหมาย (Target %) ของรายการ CASH เทียบกับสัดส่วน Blueprint ทั้งหมด 100%',
+    howToInterpret: 'มีเงินสด = มีสภาพคล่องและมีสติยามวิกฤต ไม่ต้องจำใจขายหุ้นดีตอนราคาดิ่ง, ไม่มีเงินสด = พอร์ตลงสุดตามตลาดโดยไม่มีเงินสดช้อนซื้อ',
+    benchmarks: [
+      { label: 'Optimal Buffer (เหมาะสมที่สุด)', range: '10% – 20%', desc: 'มีสภาพคล่องพร้อมช้อนซื้อหุ้นชั้นยอดตอนตลาดปรับฐาน 10-15% โดยไม่ดึงผลตอบแทนพอร์ตตกต่ำ', color: 'text-emerald-300 bg-emerald-500/20 border-emerald-500/40' },
+      { label: 'Low Buffer (กระสุนน้อย)', range: '< 5%', desc: 'ถือหุ้นเต็ม 100% ไร้ความยืดหยุ่น ยามตลาดตกหนักจะทำได้แค่นั่งมอง ไม่มีกระสุนช้อนซื้อของถูก', color: 'text-amber-300 bg-amber-500/20 border-amber-500/40' },
+      { label: 'Cash Drag (เงินสดล้นเกิน)', range: '> 25%', desc: 'ถือเงินสดเยอะเกินไป เสียโอกาสรับผลตอบแทนทบต้น (Opportunity Cost) เงินสดแพ้เงินเฟ้อในระยะยาว', color: 'text-sky-300 bg-sky-500/20 border-sky-500/40' },
+    ]
+  }
+};
+
 interface AIBlueprintAdvisorProps {
   portfolioId: string;
   blueprints: any[];
@@ -19,6 +82,7 @@ interface AIBlueprintAdvisorProps {
 export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion }: AIBlueprintAdvisorProps) {
   const [mode, setMode] = useState<'strategist'>('strategist');
   const [activeTab, setActiveTab] = useState<'plan' | 'stocks' | 'stress' | 'macro'>('plan');
+  const [activeMetricModal, setActiveMetricModal] = useState<'beta' | 'pe' | 'risk' | 'cash' | null>(null);
   const [loadingPhase, setLoadingPhase] = useState(0); 
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
@@ -623,55 +687,153 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
               </div>
             </div>
 
-            {/* Key Metric Badges Strip (4 Cards) */}
+            {/* Key Metric Badges Strip (4 Cards) with Interactive Tooltips */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-              <div className="bg-[#181B2A] border border-[#2A2E45] rounded-lg p-3 flex flex-col justify-between">
-                <div className="text-xs text-slate-400 font-semibold">Weighted Beta (β)</div>
-                <div className="flex items-baseline justify-between mt-1">
+              {/* Card 1: Weighted Beta */}
+              <div 
+                onClick={() => setActiveMetricModal('beta')}
+                className="bg-[#181B2A] border border-[#2A2E45] hover:border-purple-500/50 hover:bg-[#1C2033] rounded-xl p-3.5 flex flex-col justify-between transition-all cursor-pointer group relative shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-[13px] text-slate-300 font-semibold flex items-center gap-1.5">
+                    <span>Weighted Beta (β)</span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setActiveMetricModal('beta'); }}
+                    className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 group-hover:text-purple-300 group-hover:bg-purple-500/20 text-xs font-bold flex items-center justify-center transition-colors"
+                    title="คลิกเพื่อดูคำอธิบายและเกณฑ์วัดผล"
+                  >
+                    ⓘ
+                  </button>
+                </div>
+                <div className="flex items-baseline justify-between mt-2">
                   <span className="text-xl font-black text-white">{weightedBeta.toFixed(2)}</span>
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                    weightedBeta > 1.35 ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                    weightedBeta > 1.35 
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' 
+                      : weightedBeta < 0.85
+                      ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                      : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                   }`}>
-                    {weightedBeta > 1.35 ? 'High Vol' : 'Balanced'}
+                    {weightedBeta > 1.35 ? 'High Vol' : weightedBeta < 0.85 ? 'Defensive' : 'Balanced'}
                   </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1.5 flex items-center justify-between">
+                  <span>เทียบ S&P 500 (1.0)</span>
+                  <span className="text-purple-400 font-medium group-hover:underline">ดูเกณฑ์ ➔</span>
                 </div>
               </div>
 
-              <div className="bg-[#181B2A] border border-[#2A2E45] rounded-lg p-3 flex flex-col justify-between">
-                <div className="text-xs text-slate-400 font-semibold">Weighted P/E</div>
-                <div className="flex items-baseline justify-between mt-1">
+              {/* Card 2: Weighted P/E */}
+              <div 
+                onClick={() => setActiveMetricModal('pe')}
+                className="bg-[#181B2A] border border-[#2A2E45] hover:border-purple-500/50 hover:bg-[#1C2033] rounded-xl p-3.5 flex flex-col justify-between transition-all cursor-pointer group relative shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-[13px] text-slate-300 font-semibold flex items-center gap-1.5">
+                    <span>Weighted P/E</span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setActiveMetricModal('pe'); }}
+                    className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 group-hover:text-purple-300 group-hover:bg-purple-500/20 text-xs font-bold flex items-center justify-center transition-colors"
+                    title="คลิกเพื่อดูคำอธิบายและเกณฑ์วัดผล"
+                  >
+                    ⓘ
+                  </button>
+                </div>
+                <div className="flex items-baseline justify-between mt-2">
                   <span className="text-xl font-black text-purple-300">
                     {weightedPE !== null ? `${weightedPE}x` : 'N/A'}
                   </span>
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">
-                    Valuation
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                    weightedPE && weightedPE > 35 
+                      ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' 
+                      : weightedPE && weightedPE > 25
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  }`}>
+                    {weightedPE && weightedPE > 35 ? 'High Valuation' : weightedPE && weightedPE > 25 ? 'Elevated' : 'Reasonable'}
                   </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1.5 flex items-center justify-between">
+                  <span>ความถูกแพงของมูลค่า</span>
+                  <span className="text-purple-400 font-medium group-hover:underline">ดูเกณฑ์ ➔</span>
                 </div>
               </div>
 
-              <div className="bg-[#181B2A] border border-[#2A2E45] rounded-lg p-3 flex flex-col justify-between">
-                <div className="text-xs text-slate-400 font-semibold">Risk Score</div>
-                <div className="flex items-baseline justify-between mt-1">
+              {/* Card 3: Risk Score */}
+              <div 
+                onClick={() => setActiveMetricModal('risk')}
+                className="bg-[#181B2A] border border-[#2A2E45] hover:border-purple-500/50 hover:bg-[#1C2033] rounded-xl p-3.5 flex flex-col justify-between transition-all cursor-pointer group relative shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-[13px] text-slate-300 font-semibold flex items-center gap-1.5">
+                    <span>Risk Score</span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setActiveMetricModal('risk'); }}
+                    className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 group-hover:text-purple-300 group-hover:bg-purple-500/20 text-xs font-bold flex items-center justify-center transition-colors"
+                    title="คลิกเพื่อดูคำอธิบายและเกณฑ์วัดผล"
+                  >
+                    ⓘ
+                  </button>
+                </div>
+                <div className="flex items-baseline justify-between mt-2">
                   <span className="text-xl font-black text-white">
                     {aiResult.riskScore || 50}<span className="text-xs text-slate-400 font-normal">/100</span>
                   </span>
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                    (aiResult.riskScore || 50) > 65 ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                    (aiResult.riskScore || 50) > 65 
+                      ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' 
+                      : (aiResult.riskScore || 50) >= 50
+                      ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                      : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                   }`}>
-                    {(aiResult.riskScore || 50) > 65 ? 'Elevated' : 'Moderate'}
+                    {(aiResult.riskScore || 50) > 65 ? 'Elevated' : (aiResult.riskScore || 50) >= 50 ? 'Moderate' : 'Safe'}
                   </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1.5 flex items-center justify-between">
+                  <span>ความเปราะบางของพอร์ต</span>
+                  <span className="text-purple-400 font-medium group-hover:underline">ดูเกณฑ์ ➔</span>
                 </div>
               </div>
 
-              <div className="bg-[#181B2A] border border-[#2A2E45] rounded-lg p-3 flex flex-col justify-between">
-                <div className="text-xs text-slate-400 font-semibold">Cash Allocation</div>
-                <div className="flex items-baseline justify-between mt-1">
+              {/* Card 4: Cash Allocation */}
+              <div 
+                onClick={() => setActiveMetricModal('cash')}
+                className="bg-[#181B2A] border border-[#2A2E45] hover:border-purple-500/50 hover:bg-[#1C2033] rounded-xl p-3.5 flex flex-col justify-between transition-all cursor-pointer group relative shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-[13px] text-slate-300 font-semibold flex items-center gap-1.5">
+                    <span>Cash Allocation</span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setActiveMetricModal('cash'); }}
+                    className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 group-hover:text-purple-300 group-hover:bg-purple-500/20 text-xs font-bold flex items-center justify-center transition-colors"
+                    title="คลิกเพื่อดูคำอธิบายและเกณฑ์วัดผล"
+                  >
+                    ⓘ
+                  </button>
+                </div>
+                <div className="flex items-baseline justify-between mt-2">
                   <span className="text-xl font-black text-emerald-400">{cashPercent}%</span>
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                    cashPercent >= 10 && cashPercent <= 25 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                    cashPercent >= 10 && cashPercent <= 25 
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' 
+                      : cashPercent > 25
+                      ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                      : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                   }`}>
-                    {cashPercent > 25 ? 'Excess' : cashPercent < 5 ? 'Low Buffer' : 'Optimal'}
+                    {cashPercent > 25 ? 'Cash Drag' : cashPercent < 5 ? 'Low Buffer' : 'Optimal'}
                   </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1.5 flex items-center justify-between">
+                  <span>กระสุนสำรองยามวิกฤต</span>
+                  <span className="text-purple-400 font-medium group-hover:underline">ดูเกณฑ์ ➔</span>
                 </div>
               </div>
             </div>
@@ -1095,6 +1257,140 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Metric Guide / Explanation Modal */}
+      {activeMetricModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#181B2A] border border-purple-500/40 rounded-2xl max-w-xl w-full p-6 shadow-[0_0_35px_rgba(168,85,247,0.25)] text-white relative">
+            {/* Header with Close */}
+            <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-[#232738]">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-2xl shrink-0">
+                  {METRIC_GUIDES[activeMetricModal].icon}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    {METRIC_GUIDES[activeMetricModal].title}
+                  </h3>
+                  <p className="text-[13px] text-slate-300">
+                    {METRIC_GUIDES[activeMetricModal].subtitle}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveMetricModal(null)}
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Quick Switch Tabs */}
+            <div className="grid grid-cols-4 gap-1.5 mb-5 p-1 bg-[#12141F] rounded-lg border border-[#232738]">
+              {(['beta', 'pe', 'risk', 'cash'] as const).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveMetricModal(key)}
+                  className={`py-1.5 px-2 rounded-md text-[13px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeMetricModal === key
+                      ? 'bg-purple-600 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <span>{METRIC_GUIDES[key].icon}</span>
+                  <span className="hidden sm:inline">{key === 'beta' ? 'Beta' : key === 'pe' ? 'P/E' : key === 'risk' ? 'Risk' : 'Cash'}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Content Sections */}
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              {/* 1. คืออะไร */}
+              <div>
+                <h4 className="text-[13px] font-bold text-purple-300 flex items-center gap-1.5 mb-1">
+                  <span>📌</span> คืออะไร (Concept)
+                </h4>
+                <p className="text-[13px] text-slate-200 leading-relaxed bg-[#12141F] p-3 rounded-lg border border-[#232738]">
+                  {METRIC_GUIDES[activeMetricModal].whatIsIt}
+                </p>
+              </div>
+
+              {/* 2. วัดผลยังไง */}
+              <div>
+                <h4 className="text-[13px] font-bold text-sky-300 flex items-center gap-1.5 mb-1">
+                  <span>📐</span> วัดผลยังไง (Measurement & Formula)
+                </h4>
+                <p className="text-[13px] text-slate-200 leading-relaxed bg-[#12141F] p-3 rounded-lg border border-[#232738]">
+                  {METRIC_GUIDES[activeMetricModal].howToMeasure}
+                </p>
+              </div>
+
+              {/* 3. แปลผลยังไง */}
+              <div>
+                <h4 className="text-[13px] font-bold text-amber-300 flex items-center gap-1.5 mb-1">
+                  <span>🔍</span> แปลผลยังไง (Interpretation)
+                </h4>
+                <p className="text-[13px] text-slate-200 leading-relaxed bg-[#12141F] p-3 rounded-lg border border-[#232738]">
+                  {METRIC_GUIDES[activeMetricModal].howToInterpret}
+                </p>
+              </div>
+
+              {/* 4. เกณฑ์ ดี vs ไม่ดี */}
+              <div>
+                <h4 className="text-[13px] font-bold text-emerald-300 flex items-center gap-1.5 mb-2">
+                  <span>⚖️</span> เกณฑ์ ดี vs เสี่ยง (Benchmarks & Status)
+                </h4>
+                <div className="space-y-2">
+                  {METRIC_GUIDES[activeMetricModal].benchmarks.map((b, i) => (
+                    <div 
+                      key={i} 
+                      className="p-3 bg-[#12141F] rounded-lg border border-[#232738] flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${b.color}`}>
+                          {b.label}
+                        </span>
+                        <span className="text-[13px] font-black text-white">{b.range}</span>
+                      </div>
+                      <p className="text-[13px] text-slate-300 sm:text-right flex-1 sm:max-w-[65%]">
+                        {b.desc}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Current Portfolio Reading Banner */}
+              <div className="p-3 bg-gradient-to-r from-purple-950/40 via-[#12141F] to-indigo-950/30 rounded-xl border border-purple-500/30 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-slate-400 font-semibold">ค่าปัจจุบันของ Blueprint พอร์ตคุณ</div>
+                  <div className="text-base font-black text-white mt-0.5">
+                    {activeMetricModal === 'beta' ? `${weightedBeta.toFixed(2)} (เทียบตลาด 1.0)` :
+                     activeMetricModal === 'pe' ? (weightedPE !== null ? `${weightedPE}x (Forward/Trailing)` : 'N/A') :
+                     activeMetricModal === 'risk' ? `${aiResult.riskScore || 50} / 100` :
+                     `${cashPercent}% (สัดส่วนเป้าหมาย)`}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                    Live จาก Blueprint
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Close Button */}
+            <div className="mt-5 pt-3 border-t border-[#232738] flex justify-end">
+              <button
+                onClick={() => setActiveMetricModal(null)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg text-[13px] transition-colors cursor-pointer"
+              >
+                เข้าใจแล้ว / ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
