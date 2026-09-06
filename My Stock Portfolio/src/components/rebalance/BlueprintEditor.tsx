@@ -6,7 +6,7 @@ import { useHoldings } from '../../hooks/useHoldings';
 import { api } from '../../services/api';
 import { PRESET_TEMPLATES, STRATEGY_CATEGORIES, StrategyCategory, CATEGORY_CONFIG } from './StrategyConfigs';
 import { BlueprintPieChart } from './BlueprintPieChart';
-import { Search, Edit2, Trash2, Sparkles, TrendingUp, Shield, Target, BookmarkPlus, RotateCcw, Save } from 'lucide-react';
+import { Search, Edit2, Trash2, Sparkles, TrendingUp, Shield, Target, BookmarkPlus, RotateCcw, Save, Banknote } from 'lucide-react';
 import { useModalStore } from '../../stores/modalStore';
 
 export interface CustomTemplate {
@@ -123,11 +123,28 @@ const SymbolSearchInput: React.FC<{
         )}
       </div>
 
-      {isOpen && suggestions.length > 0 && (
+      {isOpen && (
         <div className="absolute left-0 top-full mt-1.5 w-72 bg-[#161926] border border-[#2A2E45] rounded-xl shadow-2xl p-1.5 z-50 max-h-64 overflow-y-auto">
-          <div className="text-xs font-bold text-slate-300 px-2 py-1 uppercase tracking-wider flex items-center gap-1 border-b border-[#2A2E45]/50 mb-1">
-            <Search className="w-3.5 h-3.5 text-[#823AFD]" /> ผลการค้นหาจาก Yahoo Finance
-          </div>
+          {/* Quick Cash suggestion if query matches cash or is short */}
+          {('CASH'.includes(query.trim().toUpperCase()) || query.trim().toUpperCase() === '') && (
+            <button
+              type="button"
+              onClick={() => handleSelect({ symbol: 'CASH', name: 'Cash / เงินสดในพอร์ต', exchange: 'CURRENCY', type: 'Cash', sector: 'Cash' })}
+              className="w-full text-left p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-colors flex items-center justify-between group mb-1"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-black text-emerald-400 text-sm">💵 CASH</span>
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">เงินสด</span>
+              </div>
+              <span className="text-xs text-slate-400">เงินสดสำรอง</span>
+            </button>
+          )}
+
+          {suggestions.length > 0 && (
+            <div className="text-xs font-bold text-slate-300 px-2 py-1 uppercase tracking-wider flex items-center gap-1 border-b border-[#2A2E45]/50 mb-1">
+              <Search className="w-3.5 h-3.5 text-[#823AFD]" /> ผลการค้นหาจาก Yahoo Finance
+            </div>
+          )}
           {suggestions.map((item) => (
             <button
               key={item.symbol}
@@ -946,14 +963,32 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
             {/* Add New Row */}
             <tr className="bg-[#161926]/80 border-t border-[#2A2E45]">
               <td className="px-5 py-3">
-                <SymbolSearchInput
-                  value={newSymbol}
-                  onChange={(val) => {
-                    setNewSymbol(val);
-                  }}
-                  placeholder="เช่น NVDA, AAPL, CASH"
-                  inputClassName="w-36 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white uppercase font-bold outline-none focus:border-[#823AFD]"
-                />
+                <div className="flex items-center gap-1.5">
+                  <SymbolSearchInput
+                    value={newSymbol}
+                    onChange={(val) => {
+                      setNewSymbol(val);
+                    }}
+                    placeholder="เช่น NVDA, AAPL, CASH"
+                    inputClassName="w-32 bg-[#1A1D2D] border border-[#2A2E45] rounded-xl px-3 py-1.5 text-sm text-white uppercase font-bold outline-none focus:border-[#823AFD]"
+                  />
+                  {!blueprints.some(b => b.symbol.toUpperCase() === 'CASH') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewSymbol('CASH');
+                        setNewCategory('Cash');
+                        setNewStatus('OWNED');
+                        setNewTargetPrice('');
+                      }}
+                      className="px-2 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap"
+                      title="กดเพื่อเพิ่มเงินสด (CASH) เข้า Blueprint อัตโนมัติ"
+                    >
+                      <Banknote className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>+ เงินสด</span>
+                    </button>
+                  )}
+                </div>
               </td>
 
               {/* Live Market Price for newly typed symbol */}

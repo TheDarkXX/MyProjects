@@ -167,11 +167,33 @@ blueprintsRoutes.post('/:portfolioId/auto-generate', async (c) => {
         const priceMap = {};
         latestPrices.forEach(lp => priceMap[lp.symbol] = lp.price);
 
-        // 2. Filter strictly active holdings (threshold > 0.0001 to eliminate fractional dust like -0.0004 or 0.00001)
+        // 2. Calculate real Portfolio Cash Balance
+        const portfolioRow = db.prepare("SELECT initial_cash FROM portfolios WHERE id = ?").get(portfolioId);
+        let cashBalance = portfolioRow?.initial_cash || 0;
+
+        txs.forEach(tx => {
+            const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
+            const amt = tx.amount || 0;
+            const prc = tx.price || 0;
+            const fee = tx.fee || 0;
+            if (tx.type === 'BUY') {
+                if (isCash) cashBalance += amt;
+                else cashBalance -= (amt * prc) + fee;
+            } else if (tx.type === 'SELL') {
+                if (isCash) cashBalance -= amt;
+                else cashBalance += (amt * prc) - fee;
+            } else if (tx.type === 'DEPOSIT') cashBalance += amt;
+            else if (tx.type === 'WITHDRAW') cashBalance -= amt;
+            else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST') cashBalance += (amt - fee);
+        });
+
+        // 3. Filter strictly active holdings (threshold > 0.0001 to eliminate fractional dust like -0.0004 or 0.00001)
         const activeHoldings = [];
         let totalValue = 0;
 
         for (const [symbol, data] of Object.entries(holdings)) {
+            // Skip if symbol is CASH since cash balance is handled separately
+            if (symbol.toUpperCase() === 'CASH') continue;
             if (data.shares > 0.0001) {
                 const currentPrice = priceMap[symbol] || (data.costBase / (data.shares || 1));
                 const value = data.shares * currentPrice;
@@ -188,8 +210,19 @@ blueprintsRoutes.post('/:portfolioId/auto-generate', async (c) => {
             }
         }
 
+        // Include Cash holding if cashBalance > 1.0
+        if (cashBalance > 1.0) {
+            activeHoldings.push({
+                symbol: 'CASH',
+                shares: cashBalance,
+                value: cashBalance,
+                category: 'Cash'
+            });
+            totalValue += cashBalance;
+        }
+
         if (activeHoldings.length === 0 || totalValue === 0) {
-            return c.json({ error: 'ไม่พบหุ้นที่ถือครองอยู่จริงในพอร์ตนี้ (No active holdings found)' }, 400);
+            return c.json({ error: 'ไม่พบหุ้นหรือเงินสดที่ถือครองอยู่จริงในพอร์ตนี้ (No active holdings or cash found)' }, 400);
         }
 
         const results = [];
@@ -198,7 +231,7 @@ blueprintsRoutes.post('/:portfolioId/auto-generate', async (c) => {
             VALUES (?, ?, ?, 'OWNED', ?, datetime('now'))
         `);
 
-        // 3. Atomically replace the current portfolio blueprint so ghost/watchlist tickers from previous templates do not linger!
+        // 4. Atomically replace the current portfolio blueprint so ghost/watchlist tickers from previous templates do not linger!
         db.transaction(() => {
             // Clear existing blueprints for this portfolio
             db.prepare("DELETE FROM portfolio_blueprints WHERE portfolio_id = ?").run(portfolioId);
@@ -220,7 +253,7 @@ blueprintsRoutes.post('/:portfolioId/auto-generate', async (c) => {
             }
         })();
 
-        return c.json({ success: true, message: `Auto-generated blueprint for ${results.length} active stocks`, data: results });
+        return c.json({ success: true, message: `Auto-generated blueprint for ${results.length} active holdings (including Cash)`, data: results });
     } catch (err) {
         console.error('Error auto-generating blueprint:', err);
         return c.json({ error: err.message }, 500);
