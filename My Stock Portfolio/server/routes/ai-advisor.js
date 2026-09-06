@@ -266,9 +266,9 @@ aiAdvisorRoutes.post('/', async (c) => {
 4. **ห้ามตอบ Generic กลางๆ**: ทุกคำวิจารณ์ต้องระบุชื่อหุ้น + ตัวเลข P/E, Beta, Growth หรือ Drawdown ประกอบเสมอ
 
 ข้อมูลพอร์ต:
-\${JSON.stringify(payloadData, null, 2)}
+${JSON.stringify(payloadData, null, 2)}
 
-โหมดการวิเคราะห์: \${mode.toUpperCase()}
+โหมดการวิเคราะห์: ${mode.toUpperCase()}
 
 จงตอบกลับเป็น Single Valid JSON Object เท่านั้น ห้ามใส่ข้อความอื่นนอก JSON ตามโครงสร้างนี้:
 {
@@ -299,7 +299,7 @@ aiAdvisorRoutes.post('/', async (c) => {
       "reason": "คำสั่งจัดทัพเด็ดขาด ตัดเนื้อร้ายตัวไหน โยกไปเสริมเกราะตัวไหน ทำไมต้องทำทันที"
     }
   ],
-  \${isStrategist ? `
+  ${isStrategist ? `
   "stockVerdicts": [
     { "symbol": "TICKER", "grade": "A-D", "role": "บทบาทในสนามรบ (เช่น เสาหลักค้ำพอร์ต / ทหารม้าทะลวงฟัน / ตัวถ่วงรอวันตาย / กับดักปันผล)", "flag": "ADD/HOLD/REDUCE/CUT", "futureOutlook": "ฟันธงอนาคต 1-2 บรรทัดแบบเลือดเย็น อิง Consensus และ Beat Streak" }
   ],
@@ -327,7 +327,7 @@ aiAdvisorRoutes.post('/', async (c) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer \${FALLBACK_GATEWAY_TOKEN}`,
+          'Authorization': `Bearer ${FALLBACK_GATEWAY_TOKEN}`,
           'X-Claw-Cron': 'stock-advisor',
           'X-Agent-Id': 'ai-advisor'
         },
