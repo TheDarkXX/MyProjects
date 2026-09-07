@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabaseClient';
 import 'chart.js/auto'; // Ensures all necessary components are registered
 import { MonthlyReturnHeatmap } from './charts/MonthlyReturnHeatmap';
 import { CapitalGrowthChart } from './charts/CapitalGrowthChart';
+import { HoldingsPerformanceAttribution } from './charts/HoldingsPerformanceAttribution';
 
 const DEFAULT_POLYGON_KEY = 'nU1_qIjq8inMDa7CXUjPETsl6TY0OHQD';
 
@@ -815,6 +816,15 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Holdings Performance Attribution (3/4 Line Chart + 1/4 Leaderboard Bar Chart) */}
+                <HoldingsPerformanceAttribution
+                    transactions={transactions.filter(t => (t.portfolio_id === selectedPortfolioId || (t as any).portfolioId === selectedPortfolioId))}
+                    priceData={rawPriceDataCache[selectedPortfolioId || ''] || {}}
+                    displayDates={displayData.map(d => d.date)}
+                    portfolioReturnData={displayData.map(d => ({ date: d.date, value: d['My Portfolio'] }))}
+                    timeRangeLabel={timeRange}
+                />
 
                 {/* Capital Growth & Organic Wealth Chart */}
                 <div className="mt-8">
