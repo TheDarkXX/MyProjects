@@ -1532,12 +1532,14 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                     const upperSym = (v.symbol || '').toUpperCase();
                     const altSym = upperSym.includes('.') ? upperSym.replace('.', '-') : upperSym.includes('-') ? upperSym.replace('-', '.') : upperSym;
                     const funData = fundamentals[upperSym] || fundamentals[altSym] || fundamentals[v.symbol];
+                    const momentum = aiResult._consensusMomentum?.[upperSym] || aiResult._consensusMomentum?.[altSym] || aiResult._consensusMomentum?.[v.symbol] || null;
                     return (
                       <StockVerdictCard
                         key={idx}
                         verdict={v}
                         fundamentals={funData}
                         actualHolding={actualHoldingsMap.get(upperSym) || actualHoldingsMap.get(altSym) || null}
+                        consensusMomentum={momentum}
                       />
                     );
                   })}

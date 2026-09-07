@@ -22,7 +22,115 @@ function createBlueprintHash(blueprints) {
   return crypto.createHash('md5').update(sorted).digest('hex').slice(0, 12);
 }
 
-function compressPromptData(blueprints, fundamentals, actualHoldings = null, technicalMap = {}) {
+function getConsensusMomentum(symbol) {
+  try {
+    if (!symbol || symbol === 'CASH') {
+      return { direction: 'INSUFFICIENT_DATA', changePct: 0, dataPoints: 0 };
+    }
+    const sym = symbol.toUpperCase();
+    const altSym = sym.includes('.') ? sym.replace('.', '-') : sym.includes('-') ? sym.replace('-', '.') : sym;
+    const rows = db.prepare(`
+      SELECT snapshot_date, target_mean, current_price, analyst_count
+      FROM consensus_history
+      WHERE (symbol = ? OR symbol = ?) AND target_mean > 0
+      ORDER BY snapshot_date DESC
+      LIMIT 2
+    `).all(sym, altSym);
+
+    if (!rows || rows.length < 2) {
+      return {
+        direction: 'INSUFFICIENT_DATA',
+        dataPoints: rows ? rows.length : 0,
+        currentMean: rows?.[0]?.target_mean || null,
+        priorMean: null,
+        changePct: 0
+      };
+    }
+
+    const current = rows[0].target_mean;
+    const prior = rows[1].target_mean;
+    const changePct = prior > 0 ? Number((((current - prior) / prior) * 100).toFixed(2)) : 0;
+
+    let direction = 'STABLE';
+    if (changePct >= 2.0) {
+      direction = 'UPWARD';
+    } else if (changePct <= -2.0) {
+      direction = 'DOWNWARD';
+    }
+
+    return {
+      direction,
+      currentMean: current,
+      priorMean: prior,
+      changePct,
+      dataPoints: rows.length,
+      currentDate: rows[0].snapshot_date,
+      priorDate: rows[1].snapshot_date
+    };
+  } catch (err) {
+    console.warn(`[getConsensusMomentum] Error for ${symbol}:`, err.message);
+    return { direction: 'INSUFFICIENT_DATA', dataPoints: 0, changePct: 0 };
+  }
+}
+
+function repairJson(jsonStr) {
+  let trimmed = jsonStr.trim();
+  try {
+    JSON.parse(trimmed);
+    return trimmed;
+  } catch (e) {
+    // Attempt repair
+  }
+
+  const stack = [];
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = 0; i < trimmed.length; i++) {
+    const char = trimmed[i];
+    if (isEscaped) {
+      isEscaped = false;
+      continue;
+    }
+    if (char === '\\') {
+      isEscaped = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === '{') {
+        stack.push('}');
+      } else if (char === '[') {
+        stack.push(']');
+      } else if (char === '}') {
+        if (stack.length > 0 && stack[stack.length - 1] === '}') {
+          stack.pop();
+        }
+      } else if (char === ']') {
+        if (stack.length > 0 && stack[stack.length - 1] === ']') {
+          stack.pop();
+        }
+      }
+    }
+  }
+
+  if (inString) {
+    trimmed += '"';
+  }
+
+  trimmed = trimmed.replace(/,\s*$/, '');
+
+  while (stack.length > 0) {
+    trimmed += stack.pop();
+  }
+
+  return trimmed;
+}
+
+function compressPromptData(blueprints, fundamentals, actualHoldings = null, technicalMap = {}, consensusMomentumMap = {}) {
   const hasReal = actualHoldings && actualHoldings.hasRealHoldings && Array.isArray(actualHoldings.items) && actualHoldings.items.length > 0;
 
   // Build blueprint target lookup
@@ -36,6 +144,7 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
     const sym = (b.symbol || '').toUpperCase();
     const f = fundamentals[b.symbol] || fundamentals[sym] || {};
     const tech = technicalMap[sym] || null;
+    const mom = consensusMomentumMap[sym] || consensusMomentumMap[b.symbol] || null;
     return {
       symbol: b.symbol,
       target_percent: b.target_percent,
@@ -47,6 +156,7 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
       recommendation_key: f.recommendation_key || '',
       eps_growth_next_year: f.eps_growth_next_year || 0,
       earnings_beat_streak: f.earnings_beat_streak || 0,
+      consensus_momentum: mom ? { direction: mom.direction, changePct: mom.changePct } : null,
       rsi14: tech?.rsi14 ?? null,
       rsiState: tech?.rsiState ?? null
     };
@@ -60,6 +170,7 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
       const sym = (item.symbol || '').toUpperCase();
       const f = fundamentals[item.symbol] || fundamentals[sym] || {};
       const tech = technicalMap[sym] || null;
+      const mom = consensusMomentumMap[sym] || consensusMomentumMap[item.symbol] || null;
       const curPrice = item.currentPrice || f.current_price || 0;
       
       const targetPct = blueprintMap.get(sym) ?? 0;
@@ -101,6 +212,7 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
         recommendation_key: f.recommendation_key || '',
         eps_growth_next_year: f.eps_growth_next_year || 0,
         earnings_beat_streak: f.earnings_beat_streak || 0,
+        consensus_momentum: mom ? { direction: mom.direction, changePct: mom.changePct } : null,
         priceVsSma50,
         priceVsSma200,
         technicals: tech ? {
@@ -192,6 +304,14 @@ aiAdvisorRoutes.post('/latest', async (c) => {
           modelUsed: row.model_used,
           createdAt: row.created_at
         };
+
+        if (parsedResult && !parsedResult._consensusMomentum && blueprints) {
+          const momMap = {};
+          for (const b of blueprints) {
+            if (b.symbol) momMap[b.symbol.toUpperCase()] = getConsensusMomentum(b.symbol);
+          }
+          parsedResult._consensusMomentum = momMap;
+        }
       }
     }
 
@@ -265,12 +385,21 @@ aiAdvisorRoutes.get('/latest/:portfolio_id', async (c) => {
       return c.json({ found: false });
     }
 
+    const parsed = JSON.parse(row.result_json);
+    if (!parsed._consensusMomentum && parsed.stockVerdicts) {
+      const momMap = {};
+      for (const v of parsed.stockVerdicts) {
+        if (v.symbol) momMap[v.symbol.toUpperCase()] = getConsensusMomentum(v.symbol);
+      }
+      parsed._consensusMomentum = momMap;
+    }
+
     return c.json({
       found: true,
       mode: row.mode,
       blueprint_hash: row.blueprint_hash,
       overallGrade: row.overall_grade,
-      result: JSON.parse(row.result_json),
+      result: parsed,
       modelUsed: row.model_used,
       createdAt: row.created_at
     });
@@ -301,13 +430,26 @@ aiAdvisorRoutes.post('/', async (c) => {
         const cached = getCached.get(portfolio_id, hash, mode);
         
         if (cached) {
-          // Ignore stale, dummy or old schema cache
+          // Ignore stale, dummy or old schema cache (must include coreThesis for new 4 Pillars)
           const isOldSchema = !cached.result_json.includes('portfolioStyle') ||
-            (mode === 'strategist' && (!cached.result_json.includes('stockVerdicts') || cached.result_json.includes('"stockVerdicts":[]') || !cached.result_json.includes('executionStrategies')));
+            (mode === 'strategist' && (
+              !cached.result_json.includes('stockVerdicts') || 
+              cached.result_json.includes('"stockVerdicts":[]') || 
+              !cached.result_json.includes('executionStrategies') ||
+              !cached.result_json.includes('coreThesis')
+            ));
           const isOldMock = cached.result_json.includes('Solid Blueprint Structure') || cached.result_json.includes('Needs Periodic Review');
           const createdTime = new Date(cached.created_at).getTime();
           if (!isOldMock && !isOldSchema && (Date.now() - createdTime < 6 * 60 * 60 * 1000)) {
-            return c.json(JSON.parse(cached.result_json));
+            const cachedResult = JSON.parse(cached.result_json);
+            if (!cachedResult._consensusMomentum) {
+              const momMap = {};
+              for (const b of blueprints) {
+                if (b.symbol) momMap[b.symbol.toUpperCase()] = getConsensusMomentum(b.symbol);
+              }
+              cachedResult._consensusMomentum = momMap;
+            }
+            return c.json(cachedResult);
           }
         }
       } catch (dbErr) {
@@ -331,8 +473,14 @@ aiAdvisorRoutes.post('/', async (c) => {
       }
     }));
 
+    // Fetch consensus momentum for all symbols
+    const consensusMomentumMap = {};
+    for (const sym of allSymbols) {
+      consensusMomentumMap[sym] = getConsensusMomentum(sym);
+    }
+
     // Compress data (Reality-First: actual holdings vs target blueprint)
-    const payloadData = compressPromptData(blueprints, fundamentals || {}, actualHoldings, technicalMap);
+    const payloadData = compressPromptData(blueprints, fundamentals || {}, actualHoldings, technicalMap, consensusMomentumMap);
     
     const isStrategist = mode === 'strategist';
 
@@ -347,8 +495,8 @@ aiAdvisorRoutes.post('/', async (c) => {
 5. **ภาษาไทยสละสลวยแต่ดุดันเชือดเฉือน**: เนื้อหาทั้งหมดต้องเขียนเป็นภาษาไทย ยกเว้นชื่อ Ticker หุ้น หรือศัพท์เฉพาะทางเทคนิค
 
 โครงสร้างข้อมูล 2 มิติที่ได้รับ (ความจริง vs พิมพ์เขียวเป้าหมาย):
-1. **actualPortfolio (ความจริง ณ วินาทีนี้)**: สินทรัพย์ที่ถือจริง สัดส่วนจริง (actual_percent %) ต้นทุนจริง (avg_cost) กำไร/ขาดทุนสะสม (pnl_percent %) เงินสดจริง (CASH) คำสั่งคำนวณเบื้องต้น (action_needed) และข้อมูลเทคนิคอล (technicals: RSI14, ATR14, SMA20, 2xATR Trailing Stop, 20D Support/Resistance Pivots, priceVsSma50, priceVsSma200). หากมีหุ้นที่มี is_orphan = true นั่นคือ "สินทรัพย์นอกแผน" ที่ผู้ใช้ถืออยู่จริงแต่ไม่ได้ใส่อยู่ในพิมพ์เขียวใหม่!
-2. **targetBlueprint (พิมพ์เขียวเป้าหมายที่ผู้ใช้วางแผนไว้)**: สัดส่วนเป้าหมาย (target_percent %) ที่ผู้ใช้ตั้งใจอยากได้
+1. **actualPortfolio (ความจริง ณ วินาทีนี้)**: สินทรัพย์ที่ถือจริง สัดส่วนจริง (actual_percent %) ต้นทุนจริง (avg_cost) กำไร/ขาดทุนสะสม (pnl_percent %) เงินสดจริง (CASH) คำสั่งคำนวณเบื้องต้น (action_needed), consensus_momentum (direction, changePct) และข้อมูลเทคนิคอล (technicals: RSI14, ATR14, SMA20, 2xATR Trailing Stop, 20D Support/Resistance Pivots, priceVsSma50, priceVsSma200). หากมีหุ้นที่มี is_orphan = true นั่นคือ "สินทรัพย์นอกแผน" ที่ผู้ใช้ถืออยู่จริงแต่ไม่ได้ใส่อยู่ในพิมพ์เขียวใหม่!
+2. **targetBlueprint (พิมพ์เขียวเป้าหมายที่ผู้ใช้วางแผนไว้)**: สัดส่วนเป้าหมาย (target_percent %) ที่ผู้ใช้ตั้งใจอยากได้ พร้อม consensus_momentum และ metrics พื้นฐาน
 
 หลักการพิพากษาและจัดทัพ (Doctrines of Judgment):
 1. **ยึดความเป็นจริงเป็นที่ตั้ง (Reality-First)**: ชี้หน้าด่าแผลสดและหุ้นเน่าที่ถืออยู่จริง ตัวไหนติดดอย กำไรหด ไร้ Moat หรือเป็นหุ้นนอกแผน (is_orphan) จงสั่งเชือดทิ้งทันที (CUT 100%) เพื่อดึงเงินสดกลับมา
@@ -360,8 +508,15 @@ aiAdvisorRoutes.post('/', async (c) => {
 4. **Action Roadmap ต้องสั่งการจากของจริง**:
    - ระยะเร่งด่วน (1-2 สัปดาห์): สั่งขาย/ตัดขาดทุนหุ้นตัวไหนในพอร์ตจริงออก ดึงเงินสดได้กี่ดอลลาร์/กี่ %
    - ระยะกลาง (1-3 เดือน): นำเงินสดที่ได้จากการตัดขาย ไปสะสมหุ้นป้อมปราการตัวไหนตามพิมพ์เขียว
-5. **stockVerdicts ต้องครอบคลุมทั้งหุ้นในพิมพ์เขียวและหุ้นที่ถือจริง**:
+5. **stockVerdicts ต้องครอบคลุมทั้งหุ้นในพิมพ์เขียวและหุ้นที่ถือจริง และวิเคราะห์ตาม 4 เสาหลัก (4 Pillars of Conviction)**:
    - หากมีหุ้นนอกแผน (is_orphan) ต้องมี verdict ชี้ขาดเสมอ เช่น flag: "CUT", role: "เนื้อร้ายนอกพิมพ์เขียว"
+   - **เสาหลักที่ 1: coreThesis (แก่นธุรกิจ & Economic Moat & ทิศทางกิจการ)**: เจาะลึกความได้เปรียบในการแข่งขันที่ยั่งยืน (Network Effect, Switching Cost, IP, หรือ Cost Advantage), กระแสเงินสดอิสระ (FCF), และทิศทาง 6-12 เดือนข้างหน้าพร้อมตัวเลขประกอบ ห้ามตอบสั้นๆ แบบผิวเผิน ห้ามบอกแค่ว่า "มี Moat ดี" แต่ต้องบอกว่า Moat คืออะไรและทำไมคู่แข่งเจาะไม่เข้า (เขียน 3-4 บรรทัด อย่างลึกและเฉียบขาด)
+   - **เสาหลักที่ 2: catalysts & risks (ปัจจัยเร่ง & ความเสี่ยงเฉพาะตัวแบบผูกกับตัวเลข)**:
+     - catalysts: ระบุโครงการหรือปัจจัยขับเคลื่อน โดยต้องระบุ title, impact เชิงตัวเลขต่อ Revenue/EPS/Margin อย่างชัดเจน และ timeframe ที่คาดว่าจะเห็นผล (เช่น Q4 2026, H1 2027)
+     - risks: ระบุ title และ impact กลไกที่จะทำให้ราคาหุ้นหรือกำไรเสียหาย
+   - **เสาหลักที่ 3: thesisBreaker (จุดตายที่ต้องสั่งขายทิ้งทันที)**: กำหนดเงื่อนไขชี้ขาดเชิงโครงสร้างธุรกิจที่ถ้าเกิดขึ้นจริง ให้สั่งตัดขายทิ้งทันทีโดยไม่ต้องรอ ต้องเป็นระดับพื้นฐานพังถาวร (เช่น Big Tech ลด Capex ด้าน AI 30%+, หรือคู่แข่งชิง Market Share เกิน 20%) ห้ามตอบแค่ราคาหุ้นตกชั่วคราว
+   - **เสาหลักที่ 4: valuationVerdict & Consensus Momentum (ฟันธงความถูกแพง & ทิศทางสถาบัน)**: ฟันธงชัดเจนว่าราคาปัจจุบัน Underpriced, Fair, หรือ Overpriced เมื่อเทียบกับเป้า Consensus และ Forward PE พร้อม Margin of Safety หากมีข้อมูล consensus_momentum ในพอร์ต ให้อ้างอิงว่าสถาบันกำลังปรับเป้าขึ้นหรือลง
+   - **convictionScore (1-10)**: ให้คะแนนความเชื่อมั่นรวม (Moat 30%, Catalyst 25%, Thesis Breaker clarity 25%, Valuation gap 20%)
 6. **Free Cash Flow & Moat คือทุกสิ่ง**: ตัวเลขกำไรจริงและกระแสเงินสดคือเกราะกำบัง ถ้ามีแต่กระแสไฮป์แต่เงินสดแห้งแล้ง นั่นคือกับดัก
 7. **ห้ามตอบ Generic กลางๆ**: ทุกคำวิจารณ์ต้องระบุชื่อหุ้น + ตัวเลข P/E, Beta, Growth หรือ Drawdown ประกอบเสมอ
 ${isStrategist ? `8. **Actionable Execution Strategies (เฉพาะ Strategist Mode)**:
@@ -426,11 +581,25 @@ ${JSON.stringify(payloadData, null, 2)}
       "grade": "A-D",
       "role": "บทบาทในสนามรบ (เช่น เสาหลักค้ำพอร์ต / ทหารม้าทะลวงฟัน / ตัวถ่วงรอวันตาย / กับดักปันผล)",
       "flag": "ADD/HOLD/REDUCE/CUT",
-      "futureOutlook": "เล่า Story อนาคตของกิจการแบบกระชับ (Business Moat/ทิศทางตลาด) ผสมผสานกับการประเมินความถูกแพง (Valuation/PE) ฟันธงแบบเลือดเย็นว่าจุดนี้ยังน่าลงทุนต่อหรือควรหนี (2-3 บรรทัด)",
+      "convictionScore": 8,
+      "coreThesis": "🛡️ อธิบายแก่นธุรกิจ Economic Moat กำแพงผูกขาด กระแสเงินสดอิสระ และทิศทางกิจการ 6-12 เดือนอย่างเจาะลึกพร้อมตัวเลขประกอบ (3-4 บรรทัด ห้ามสั้น ให้ลึกและมีสาระ)",
+      "catalysts": [
+        {
+          "title": "ชื่อโครงการหรือปัจจัยเร่ง",
+          "impact": "ผลกระทบเชิงตัวเลขต่อ Revenue/EPS/Margin ชัดเจน",
+          "timeframe": "กรอบเวลา เช่น Q4 2026 หรือ H1 2027"
+        }
+      ],
+      "risks": [
+        {
+          "title": "ชื่อความเสี่ยงเฉพาะตัว",
+          "impact": "ผลกระทบเชิงตัวเลขและกลไกความเสียหายต่อกำไรหรือราคา"
+        }
+      ],
+      "thesisBreaker": "💥 เงื่อนไขชี้ขาดที่ถ้าเกิดขึ้นจริง ให้ขายทิ้งทันทีโดยไม่ต้องรอ เป็นเรื่องพื้นฐานพังถาวรไม่ใช่แค่ราคาตกชั่วคราว",
+      "valuationVerdict": "⚖️ ฟันธงว่าราคาปัจจุบันถูกหรือแพงเมื่อเทียบกับ Consensus เป้าหมาย, Forward PE, และ Margin of Safety ว่าตลาดตั้งความหวังเกินจริงหรือยัง (Priced-in หรือ Underpriced)",
       "aiTargetPrice": "ราคาเป้าหมายประเมินโดย AI (ตัวเลข เช่น 195 หรือ 'N/A' ถ้าเป็น ETF)",
-      "aiTimeframe": "กรอบเวลา (เช่น '6-12 เดือน')",
-      "catalysts": ["ปัจจัยเร่งเชิงบวก 1-2 ข้อสั้นๆ"],
-      "risks": ["ความเสี่ยงเฉพาะตัว 1-2 ข้อสั้นๆ"]
+      "aiTimeframe": "กรอบเวลา (เช่น '6-12 เดือน')"
     }
   ],
   "idealBlueprint": [
@@ -474,7 +643,7 @@ ${JSON.stringify(payloadData, null, 2)}
             { role: 'system', content: 'You are the Ruthless Investment Strategist (จอมมารแห่ง Wall Street). Output ONLY a single valid raw JSON object matching the requested schema with brutal, decisive, uncompromising Thai analysis. Do not include markdown fences, backticks, or any explanation text outside JSON.' },
             { role: 'user', content: systemPrompt }
           ],
-          max_tokens: isStrategist ? 12000 : 8000
+          max_tokens: isStrategist ? 16000 : 8000
         }),
         signal: AbortSignal.timeout(180000) // 3 minutes timeout for complete 15-section generation
       });
@@ -544,16 +713,26 @@ ${JSON.stringify(payloadData, null, 2)}
     let parsedResult;
     try {
       parsedResult = JSON.parse(jsonContent);
-
-      // Inject request snapshot for UI drift detection (V2.6.0 Reality-First Drift Fix)
-      parsedResult._requestSnapshot = {
-        blueprints: blueprints.map(b => ({ symbol: b.symbol, target_percent: Number(b.target_percent) || 0 })),
-        holdings: actualHoldings && actualHoldings.items ? actualHoldings.items.map(h => ({ symbol: h.symbol, actualPercent: h.actualPercent })) : []
-      };
     } catch (parseErr) {
-      console.error('[AI Advisor] JSON parse error:', parseErr.message, 'Raw content:', jsonContent.slice(0, 300));
-      throw new Error(`AI generated invalid response format: ${parseErr.message}`);
+      console.warn('[AI Advisor] Initial JSON parse failed, attempting repair:', parseErr.message);
+      try {
+        const repaired = repairJson(jsonContent);
+        parsedResult = JSON.parse(repaired);
+        console.log('[AI Advisor] JSON repair succeeded!');
+      } catch (repairErr) {
+        console.error('[AI Advisor] JSON parse & repair error:', repairErr.message, 'Raw content:', jsonContent.slice(0, 300));
+        throw new Error(`AI generated invalid response format: ${repairErr.message}`);
+      }
     }
+
+    // Inject request snapshot for UI drift detection (V2.6.0 Reality-First Drift Fix)
+    parsedResult._requestSnapshot = {
+      blueprints: blueprints.map(b => ({ symbol: b.symbol, target_percent: Number(b.target_percent) || 0 })),
+      holdings: actualHoldings && actualHoldings.items ? actualHoldings.items.map(h => ({ symbol: h.symbol, actualPercent: h.actualPercent })) : []
+    };
+
+    // Inject consensus momentum map for UI display
+    parsedResult._consensusMomentum = consensusMomentumMap;
 
     // Ensure radarData exists
     if (!parsedResult.radarData) {

@@ -2,18 +2,45 @@ import React, { useState } from 'react';
 import { ConsensusBar } from './ConsensusBar';
 import { TargetPriceRangeBar } from './TargetPriceRangeBar';
 
-interface StockVerdictCardProps {
-  verdict: {
-    symbol: string;
-    grade: string;
-    flag: string;
-    role?: string;
-    futureOutlook?: string;
-    aiTargetPrice?: number | string;
-    aiTimeframe?: string;
-    catalysts?: string[];
-    risks?: string[];
-  };
+export interface CatalystItem {
+  title: string;
+  impact: string;
+  timeframe?: string;
+}
+
+export interface RiskItem {
+  title: string;
+  impact: string;
+}
+
+export interface ConsensusMomentumData {
+  direction: 'UPWARD' | 'DOWNWARD' | 'STABLE' | 'INSUFFICIENT_DATA';
+  currentMean?: number | null;
+  priorMean?: number | null;
+  changePct?: number;
+  dataPoints?: number;
+  currentDate?: string;
+  priorDate?: string;
+}
+
+export interface StockVerdict {
+  symbol: string;
+  grade: string;
+  flag: string;
+  role?: string;
+  convictionScore?: number;           // NEW: 1-10
+  coreThesis?: string;                // NEW: replaces futureOutlook
+  futureOutlook?: string;             // LEGACY: backward compat
+  catalysts?: (string | CatalystItem)[];  // DUAL: old string[] or new object[]
+  risks?: (string | RiskItem)[];          // DUAL: old string[] or new object[]
+  thesisBreaker?: string;             // NEW
+  valuationVerdict?: string;          // NEW
+  aiTargetPrice?: number | string;
+  aiTimeframe?: string;
+}
+
+export interface StockVerdictCardProps {
+  verdict: StockVerdict;
   fundamentals?: {
     current_price?: number;
     target_mean_price?: number;
@@ -40,9 +67,15 @@ interface StockVerdictCardProps {
     quantity?: number;
     isOrphan?: boolean;
   } | null;
+  consensusMomentum?: ConsensusMomentumData | null;
 }
 
-export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fundamentals, actualHolding }) => {
+export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({
+  verdict,
+  fundamentals,
+  actualHolding,
+  consensusMomentum
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getGradeStyle = (grade: string) => {
@@ -64,6 +97,7 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
       case 'TRIM':
         return 'bg-orange-500/25 text-orange-300 border-orange-400/60';
       case 'EXIT':
+      case 'CUT':
       case 'REMOVE':
         return 'bg-rose-500/25 text-rose-300 border-rose-400/60 shadow-[0_0_10px_rgba(244,63,94,0.3)]';
       default:
@@ -86,28 +120,82 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
   const isKnownETF = ['VOO', 'SPY', 'QQQ', 'SCHD', 'SCHG', 'DIA', 'IWM', 'VTI', 'VXUS', 'BND', 'IVV', 'JEPI', 'JEPQ', 'SMH', 'XLK', 'XLF', 'SOXX'].includes(sym);
   const isETF = isKnownETF || fundamentals?.sector === 'ETF' || (currentPrice > 0 && targetPrice === 0 && (fundamentals?.num_analyst_opinions || 0) === 0 && epsGrowth === null);
 
-  const outlookText = typeof verdict.futureOutlook === 'string'
+  // Runtime Type Guard for Thesis
+  const thesisText = (typeof verdict.coreThesis === 'string' && verdict.coreThesis.trim().length > 0)
+    ? verdict.coreThesis
+    : (typeof verdict.futureOutlook === 'string' && verdict.futureOutlook.trim().length > 0)
     ? verdict.futureOutlook
-    : String(verdict.futureOutlook || 'ไม่มีข้อมูลภาพรวมในอนาคต');
-  const shouldTruncate = outlookText.length > 140;
+    : 'ไม่มีข้อมูลภาพรวมในอนาคต';
+  const shouldTruncate = thesisText.length > 280;
 
-  const catalysts: string[] = Array.isArray(verdict.catalysts)
-    ? verdict.catalysts.filter(Boolean).map(String)
+  // Runtime Type Guard for Catalysts
+  const catalystItems: CatalystItem[] = Array.isArray(verdict.catalysts)
+    ? verdict.catalysts.map(c => {
+        if (typeof c === 'string') {
+          return { title: c, impact: '', timeframe: '' };
+        }
+        return {
+          title: c?.title || '',
+          impact: c?.impact || '',
+          timeframe: c?.timeframe || ''
+        };
+      }).filter(c => c.title && c.title.trim().length > 0)
     : typeof verdict.catalysts === 'string' && (verdict.catalysts as string).trim().length > 0
-    ? [(verdict.catalysts as string).trim()]
+    ? [{ title: (verdict.catalysts as string).trim(), impact: '', timeframe: '' }]
     : [];
 
-  const risks: string[] = Array.isArray(verdict.risks)
-    ? verdict.risks.filter(Boolean).map(String)
+  // Runtime Type Guard for Risks
+  const riskItems: RiskItem[] = Array.isArray(verdict.risks)
+    ? verdict.risks.map(r => {
+        if (typeof r === 'string') {
+          return { title: r, impact: '' };
+        }
+        return {
+          title: r?.title || '',
+          impact: r?.impact || ''
+        };
+      }).filter(r => r.title && r.title.trim().length > 0)
     : typeof verdict.risks === 'string' && (verdict.risks as string).trim().length > 0
-    ? [(verdict.risks as string).trim()]
+    ? [{ title: (verdict.risks as string).trim(), impact: '' }]
     : [];
+
+  // Format Consensus Momentum Badge
+  const renderMomentumBadge = () => {
+    if (!consensusMomentum) return null;
+
+    if (consensusMomentum.direction === 'UPWARD') {
+      return (
+        <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold flex items-center gap-1 shadow-[0_0_8px_rgba(52,211,153,0.2)]">
+          <span>📈</span> สถาบันปรับเป้าขึ้น {consensusMomentum.changePct ? `(+${consensusMomentum.changePct}%)` : ''}
+        </span>
+      );
+    }
+    if (consensusMomentum.direction === 'DOWNWARD') {
+      return (
+        <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold flex items-center gap-1 shadow-[0_0_8px_rgba(244,63,94,0.2)]">
+          <span>📉</span> สถาบันปรับเป้าลง {consensusMomentum.changePct ? `(${consensusMomentum.changePct}%)` : ''}
+        </span>
+      );
+    }
+    if (consensusMomentum.direction === 'STABLE') {
+      return (
+        <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-bold flex items-center gap-1">
+          <span>⚖️</span> เป้าสถาบันทรงตัว
+        </span>
+      );
+    }
+    return (
+      <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-800/90 text-slate-300 border border-slate-700 font-medium flex items-center gap-1">
+        <span>📊</span> กำลังสะสมข้อมูล (รอ 7+ วัน)
+      </span>
+    );
+  };
 
   return (
     <div className="bg-[#12141F] border border-[#232738] hover:border-purple-500/40 rounded-xl p-4 md:p-5 transition-all duration-300 flex flex-col justify-between shadow-md group">
-      {/* Top Header */}
-      <div>
-        <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="space-y-3.5">
+        {/* Top Header */}
+        <div className="flex items-start justify-between gap-2">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-lg font-black text-white tracking-wide">{verdict.symbol}</span>
@@ -141,13 +229,29 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
               )}
             </div>
             {verdict.role && (
-              <p className="text-[13px] text-slate-300 mt-0.5 font-medium">
+              <p className="text-[13px] text-slate-300 mt-1 font-medium">
                 {verdict.role}
               </p>
             )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Conviction Score Pill */}
+            {typeof verdict.convictionScore === 'number' && (
+              <div
+                className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 text-xs font-black ${
+                  verdict.convictionScore >= 8
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(52,211,153,0.25)]'
+                    : verdict.convictionScore >= 5
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                }`}
+                title={`คะแนนความเชื่อมั่นรวม 4 เสาหลัก: ${verdict.convictionScore}/10`}
+              >
+                <span>🎯</span>
+                <span>{verdict.convictionScore}/10</span>
+              </div>
+            )}
             {/* Action Flag */}
             <span className={`px-2.5 py-1 rounded text-xs font-black border ${getFlagStyle(verdict.flag)}`}>
               {verdict.flag}
@@ -160,7 +264,7 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
         </div>
 
         {/* Forward-Looking Key Metrics Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-2.5 px-3 bg-[#181B2A] rounded-lg border border-[#2A2E45]/80 mb-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-2.5 px-3 bg-[#181B2A] rounded-lg border border-[#2A2E45]/80">
           {/* Current & Target Price */}
           <div>
             <div className="text-xs text-slate-400 font-medium">ปัจจุบัน ➔ เป้าหมาย</div>
@@ -237,7 +341,7 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
 
         {/* Analyst Consensus Bar */}
         {fundamentals && (
-          <div className="mb-3.5 px-1">
+          <div className="px-1">
             <ConsensusBar
               strongBuy={fundamentals.rec_strong_buy}
               buy={fundamentals.rec_buy}
@@ -248,33 +352,73 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
           </div>
         )}
 
-        {/* Catalysts & Risks Badges */}
-        {(catalysts.length > 0 || risks.length > 0) && (
-          <div className="space-y-2 mb-3.5 pt-2 border-t border-[#232738]/80">
-            {catalysts.length > 0 && (
-              <div>
-                <div className="text-xs font-bold text-emerald-400 flex items-center gap-1 mb-1">
-                  <span>🚀</span> ปัจจัยบวกเร่งการเติบโต (Catalysts):
+        {/* ========================================================= */}
+        {/* 4 PILLARS OF CONVICTION BLOCKS                            */}
+        {/* ========================================================= */}
+
+        {/* Pillar 1: Core Thesis & Economic Moat */}
+        <div className="bg-indigo-950/25 border border-indigo-900/40 rounded-lg p-3 space-y-1.5">
+          <div className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+            <span>🛡️</span> 1. Core Thesis & Economic Moat
+          </div>
+          <p className="text-[13px] text-slate-200 leading-relaxed font-normal">
+            {shouldTruncate && !isExpanded ? `${thesisText.slice(0, 280)}...` : thesisText}
+          </p>
+          {shouldTruncate && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              {isExpanded ? 'ย่อข้อความ ▲' : 'อ่านต่อทั้งหมด ▼'}
+            </button>
+          )}
+        </div>
+
+        {/* Pillar 2: Active Catalysts & Key Risks */}
+        {(catalystItems.length > 0 || riskItems.length > 0) && (
+          <div className="space-y-2">
+            {catalystItems.length > 0 && (
+              <div className="bg-emerald-950/20 border border-emerald-900/40 rounded-lg p-3 space-y-2">
+                <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                  <span>🚀</span> 2. Active Catalysts (ปัจจัยเร่งการเติบโต)
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {catalysts.map((cat, i) => (
-                    <span key={i} className="text-xs px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-200 border border-emerald-500/35 font-medium">
-                      {cat}
-                    </span>
+                <div className="space-y-1.5">
+                  {catalystItems.map((cat, idx) => (
+                    <div key={idx} className="bg-[#161928] border border-emerald-900/30 rounded-md p-2 text-[13px]">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-white font-semibold">{cat.title}</span>
+                        {cat.timeframe && (
+                          <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            {cat.timeframe}
+                          </span>
+                        )}
+                      </div>
+                      {cat.impact && (
+                        <div className="text-[13px] text-emerald-300/90 mt-1 font-medium">
+                          ⚡ {cat.impact}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
             )}
-            {risks.length > 0 && (
-              <div>
-                <div className="text-xs font-bold text-amber-400 flex items-center gap-1 mb-1">
-                  <span>⚠️</span> ความเสี่ยงเฉพาะตัว (Key Risks):
+
+            {riskItems.length > 0 && (
+              <div className="bg-amber-950/20 border border-amber-900/40 rounded-lg p-3 space-y-2">
+                <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                  <span>⚠️</span> Key Risks (ความเสี่ยงเฉพาะตัว)
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {risks.map((risk, i) => (
-                    <span key={i} className="text-xs px-2.5 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/35 font-medium">
-                      {risk}
-                    </span>
+                <div className="space-y-1.5">
+                  {riskItems.map((risk, idx) => (
+                    <div key={idx} className="bg-[#161928] border border-amber-900/30 rounded-md p-2 text-[13px]">
+                      <div className="text-slate-200 font-semibold">{risk.title}</div>
+                      {risk.impact && (
+                        <div className="text-[13px] text-amber-300/90 mt-0.5 font-medium">
+                          ⚠️ {risk.impact}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -282,23 +426,34 @@ export const StockVerdictCard: React.FC<StockVerdictCardProps> = ({ verdict, fun
           </div>
         )}
 
-        {/* AI Future Outlook */}
-        <div className="pt-2 border-t border-[#232738]">
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-            <span>🔮</span> AI Strategic Outlook
+        {/* Pillar 3: Thesis Breaker (จุดตายที่ต้องสั่งขายทิ้ง) */}
+        {verdict.thesisBreaker && (
+          <div className="bg-rose-950/30 border border-rose-900/60 rounded-lg p-3 space-y-1.5 shadow-[0_0_12px_rgba(244,63,94,0.1)]">
+            <div className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+              <span>💥</span> 3. Thesis Breaker (จุดตัดขาดทุนเชิงพื้นฐาน)
+            </div>
+            <p className="text-[13px] text-rose-200 leading-relaxed font-normal">
+              {verdict.thesisBreaker}
+            </p>
           </div>
-          <p className="text-[13px] text-slate-200 leading-relaxed font-normal">
-            {shouldTruncate && !isExpanded ? `${outlookText.slice(0, 140)}...` : outlookText}
-          </p>
-          {shouldTruncate && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="mt-1 text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors"
-            >
-              {isExpanded ? 'ย่อข้อความ ▲' : 'อ่านต่อทั้งหมด ▼'}
-            </button>
-          )}
-        </div>
+        )}
+
+        {/* Pillar 4: Valuation Verdict & Consensus Momentum */}
+        {(verdict.valuationVerdict || consensusMomentum) && (
+          <div className="bg-purple-950/25 border border-purple-900/40 rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                <span>⚖️</span> 4. Valuation Verdict
+              </div>
+              {renderMomentumBadge()}
+            </div>
+            {verdict.valuationVerdict && (
+              <p className="text-[13px] text-slate-200 leading-relaxed font-normal">
+                {verdict.valuationVerdict}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
