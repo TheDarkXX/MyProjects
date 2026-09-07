@@ -52,9 +52,9 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
   ];
 
   return (
-    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-4 md:p-5 shadow-xl space-y-4">
+    <div className="bg-[#0E111A] border border-[#282E47] rounded-3xl p-5 shadow-[0_16px_40px_rgba(0,0,0,0.75)] space-y-4">
       {/* Top Header: Active Range Label + Active P&L Badge */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#2A2E45]/60">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#242A42]">
         <div className="flex items-center gap-2.5">
           <span className="text-[#CBD5E1] text-sm font-semibold tracking-wide">Timeframe:</span>
           <span className="text-white text-sm font-bold">
@@ -81,8 +81,8 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
             className={clsx(
               "text-xs font-semibold px-3 py-1 rounded-full border flex items-center gap-1.5 tabular-nums transition-colors",
               displayPnl >= 0
-                ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/25 shadow-[0_0_12px_rgba(52,211,153,0.15)]"
-                : "text-rose-400 bg-rose-400/10 border-rose-500/25 shadow-[0_0_12px_rgba(244,63,94,0.15)]"
+                ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/30 shadow-[0_0_14px_rgba(52,211,153,0.2)]"
+                : "text-rose-400 bg-rose-500/15 border-rose-500/30 shadow-[0_0_14px_rgba(244,63,94,0.2)]"
             )}
           >
             {displayPnl >= 0 ? <ArrowUpRight className="w-3.5 h-3.5 shrink-0" /> : <ArrowDownRight className="w-3.5 h-3.5 shrink-0" />}
@@ -93,7 +93,7 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
         </div>
       </div>
 
-      {/* Multi-Period Return Cards Grid (8 columns: 1+1+1+1+1+2+1 = 8) */}
+      {/* Multi-Period Return Cards Grid (8 columns: 1+1+1+1+1+2+1 = 8) with Pronounced Borders and 3D Shadows */}
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
         {periods.map((item) => {
           const isActive = activeRange === item.id;
@@ -107,10 +107,10 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                 type="button"
                 onClick={onCustomClick}
                 className={clsx(
-                  "col-span-1 p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between cursor-pointer select-none group min-h-[82px]",
+                  "col-span-1 p-3.5 rounded-2xl transition-all text-left flex flex-col justify-between cursor-pointer select-none group min-h-[86px]",
                   isActive
-                    ? "bg-[#181D2E] border-2 border-[#823AFD] shadow-[0_0_20px_rgba(130,58,253,0.35)] ring-1 ring-[#823AFD]/50"
-                    : "bg-[#131624]/90 border border-[#2D334D] hover:border-[#823AFD]/60 hover:bg-[#181C2B] shadow-md"
+                    ? "bg-gradient-to-b from-[#241C42] via-[#1B1833] to-[#131526] border-2 border-[#823AFD] ring-1 ring-[#FC2D79]/50 shadow-[0_0_24px_rgba(130,58,253,0.45),inset_0_1px_2px_rgba(252,45,121,0.25),0_8px_20px_rgba(0,0,0,0.6)]"
+                    : "bg-gradient-to-b from-[#1C2033] to-[#121422] border border-[#384063] hover:border-[#823AFD] hover:from-[#222842] hover:to-[#16192B] shadow-[inset_0_1px_1px_rgba(255,255,255,0.08),0_6px_18px_rgba(0,0,0,0.55)] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),0_8px_24px_rgba(130,58,253,0.3)] hover:-translate-y-0.5"
                 )}
                 title="Custom Date Range"
               >
@@ -121,7 +121,9 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                   )}>
                     {item.label}
                   </span>
-                  <Calendar className={clsx("w-3.5 h-3.5", isActive ? "text-[#FC2D79]" : "text-[#CBD5E1]")} />
+                  <div className="w-6 h-6 rounded-lg bg-[#22273D] border border-[#384063] flex items-center justify-center">
+                    <Calendar className={clsx("w-3.5 h-3.5", isActive ? "text-[#FC2D79]" : "text-[#CBD5E1]")} />
+                  </div>
                 </div>
                 <div className="text-xs font-semibold text-[#CBD5E1] truncate mt-auto">
                   {customFrom && customTo ? `${customFrom.slice(5)} ~ ${customTo.slice(5)}` : 'Select range'}
@@ -136,16 +138,16 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
               type="button"
               onClick={() => onRangeChange(item.id)}
               className={clsx(
-                "p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between cursor-pointer select-none group relative overflow-hidden min-h-[82px]",
+                "p-3.5 rounded-2xl transition-all text-left flex flex-col justify-between cursor-pointer select-none group relative overflow-hidden min-h-[86px]",
                 item.isTotal ? "col-span-2 sm:col-span-2 xl:col-span-2" : "col-span-1",
                 isActive
-                  ? "bg-[#181D2E] border-2 border-[#823AFD] shadow-[0_0_20px_rgba(130,58,253,0.35)] ring-1 ring-[#823AFD]/50"
-                  : "bg-[#131624]/90 border border-[#2D334D] hover:border-[#823AFD]/60 hover:bg-[#181C2B] shadow-md"
+                  ? "bg-gradient-to-b from-[#241C42] via-[#1B1833] to-[#131526] border-2 border-[#823AFD] ring-1 ring-[#FC2D79]/50 shadow-[0_0_24px_rgba(130,58,253,0.45),inset_0_1px_2px_rgba(252,45,121,0.25),0_8px_20px_rgba(0,0,0,0.6)]"
+                  : "bg-gradient-to-b from-[#1C2033] to-[#121422] border border-[#384063] hover:border-[#823AFD] hover:from-[#222842] hover:to-[#16192B] shadow-[inset_0_1px_1px_rgba(255,255,255,0.08),0_6px_18px_rgba(0,0,0,0.55)] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),0_8px_24px_rgba(130,58,253,0.3)] hover:-translate-y-0.5"
               )}
             >
-              {/* Active Indicator Top Accent */}
+              {/* Active Indicator Glowing Top Bar */}
               {isActive && (
-                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#FC2D79] to-[#823AFD]" />
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#FC2D79] via-[#823AFD] to-[#60A5FA]" />
               )}
 
               {/* Top Row: Period Label (Left) + P&L Currency Amount (Right) */}
@@ -158,12 +160,14 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                 >
                   {item.label}
                 </span>
+
+                {/* +value Badge in Top Right */}
                 <span
                   className={clsx(
-                    "text-xs font-semibold px-1.5 py-0.5 rounded-md border tabular-nums truncate max-w-[55%]",
+                    "text-[12px] font-bold px-2 py-0.5 rounded-lg border tabular-nums truncate max-w-[58%] shadow-sm",
                     isPositive 
-                      ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/25" 
-                      : "text-rose-400 bg-rose-500/10 border-rose-500/25"
+                      ? "text-emerald-300 bg-emerald-500/20 border-emerald-500/40 shadow-[0_1px_4px_rgba(52,211,153,0.2)]" 
+                      : "text-rose-300 bg-rose-500/20 border-rose-500/40 shadow-[0_1px_4px_rgba(244,63,94,0.2)]"
                   )}
                   title={formatCurrency(metric.amount, true)}
                 >
@@ -171,19 +175,21 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                 </span>
               </div>
 
-              {/* Center / Main Area: Prominent Big Percentage Return */}
+              {/* Center / Main Area: Prominent Big Percentage Return with Rich Glow */}
               <div className="flex items-baseline justify-between gap-1 w-full mt-1">
                 <div
                   className={clsx(
                     "font-black tabular-nums tracking-tight flex items-center gap-0.5",
-                    item.isTotal ? "text-xl md:text-2xl" : "text-lg md:text-xl",
-                    isPositive ? "text-emerald-400" : "text-rose-400"
+                    item.isTotal ? "text-2xl md:text-3xl" : "text-xl md:text-2xl",
+                    isPositive 
+                      ? "text-emerald-400 drop-shadow-[0_2px_10px_rgba(52,211,153,0.35)]" 
+                      : "text-rose-400 drop-shadow-[0_2px_10px_rgba(244,63,94,0.35)]"
                   )}
                 >
                   {isPositive ? (
-                    <ArrowUpRight className="w-4 h-4 inline-block shrink-0" />
+                    <ArrowUpRight className="w-5 h-5 inline-block shrink-0" />
                   ) : (
-                    <ArrowDownRight className="w-4 h-4 inline-block shrink-0" />
+                    <ArrowDownRight className="w-5 h-5 inline-block shrink-0" />
                   )}
                   <span>{isPositive ? '+' : ''}{metric.percent.toFixed(2)}%</span>
                 </div>
