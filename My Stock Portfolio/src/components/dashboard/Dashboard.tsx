@@ -308,14 +308,8 @@ export const Dashboard = () => {
 
   // 4. Historical What-If Growth Anchor
   const whatIfData = useMemo(() => {
-    let growthMultiple = 1 + (totalPnlPercent / 100);
-    if (allDailyPoints.length > 0) {
-      const firstValid = allDailyPoints.find(p => p.value > 0);
-      const lastPoint = allDailyPoints[allDailyPoints.length - 1];
-      if (firstValid && lastPoint && firstValid.value > 0) {
-        growthMultiple = lastPoint.value / firstValid.value;
-      }
-    }
+    const totalReturnPct = totalPnlPercent;
+    const growthMultiple = 1 + (totalReturnPct / 100);
     const seedAmount = currency === 'THB' ? 100000 : 10000;
     const seedLabel = currency === 'THB' ? '฿100,000' : '$10,000';
     const currentValue = seedAmount * growthMultiple;
