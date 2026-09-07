@@ -29,6 +29,8 @@ const PALETTE = [
 
 const PORTFOLIO_COLOR = '#FBBF24'; // Golden amber
 
+export type AttributionMode = 'inception' | 'tradingview';
+
 export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttributionProps> = ({
   transactions,
   priceData,
@@ -85,6 +87,9 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     });
     return map;
   }, [activeHoldings]);
+
+  // Attribution Mode: 'inception' (Default - Since Buy) vs 'tradingview' (Dynamic Window Rebase)
+  const [mode, setMode] = useState<AttributionMode>('inception');
 
   // Selection state (default: Top 5 selected)
   const [selectedSymbols, setSelectedSymbols] = useState<Record<string, boolean>>({});
@@ -183,13 +188,13 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     setSelectedSymbols(updated);
   };
 
-  // 2. Build time series data normalized to Day 0 (TradingView style dynamic rebase)
+  // 2. Build time series data (Supports both 'inception' and 'tradingview' modes)
   const { chartData, leaderboardData } = useMemo(() => {
     if (effectiveDates.length === 0 || activeHoldings.length === 0) {
       return { chartData: [], leaderboardData: [] };
     }
 
-    // Dynamic Day 0: The first visible date on the screen (left-most bar)
+    // Window start date (left-most visible date)
     const startDate = effectiveDates[0];
     const portfolioMap = new Map<string, number>();
     portfolioReturnData.forEach(p => {
@@ -200,9 +205,6 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
 
     const baselinePortfolio = portfolioMap.get(startDate) ?? 0;
 
-    // Base price map for each holding:
-    // If firstBuyDate <= startDate -> base is price on or closest before startDate
-    // If firstBuyDate > startDate -> base is price on firstBuyDate (starts at 0% when bought)
     const basePriceMap: Record<string, number> = {};
     const effectiveStartMap: Record<string, string> = {};
 
@@ -210,26 +212,43 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       const prices = priceData[sym] || {};
       const firstBuy = firstBuyDates[sym] || startDate;
 
-      if (firstBuy <= startDate) {
-        effectiveStartMap[sym] = startDate;
-        if (prices[startDate]) {
-          basePriceMap[sym] = prices[startDate];
-        } else {
-          const sortedDates = Object.keys(prices).filter(d => d <= startDate).sort();
-          if (sortedDates.length > 0) {
-            basePriceMap[sym] = prices[sortedDates[sortedDates.length - 1]];
+      if (mode === 'tradingview') {
+        // TradingView: Window Rebase (left-most date = 0%)
+        if (firstBuy <= startDate) {
+          effectiveStartMap[sym] = startDate;
+          if (prices[startDate]) {
+            basePriceMap[sym] = prices[startDate];
           } else {
-            const anyDates = Object.keys(prices).sort();
-            basePriceMap[sym] = anyDates.length > 0 ? prices[anyDates[0]] : 0;
+            const sortedDates = Object.keys(prices).filter(d => d <= startDate).sort();
+            if (sortedDates.length > 0) {
+              basePriceMap[sym] = prices[sortedDates[sortedDates.length - 1]];
+            } else {
+              const anyDates = Object.keys(prices).sort();
+              basePriceMap[sym] = anyDates.length > 0 ? prices[anyDates[0]] : 0;
+            }
+          }
+        } else {
+          effectiveStartMap[sym] = firstBuy;
+          if (prices[firstBuy]) {
+            basePriceMap[sym] = prices[firstBuy];
+          } else {
+            const sortedDates = Object.keys(prices).filter(d => d >= firstBuy).sort();
+            basePriceMap[sym] = sortedDates.length > 0 ? prices[sortedDates[0]] : 0;
           }
         }
       } else {
+        // Inception: Actual return since first bought into portfolio
         effectiveStartMap[sym] = firstBuy;
         if (prices[firstBuy]) {
           basePriceMap[sym] = prices[firstBuy];
         } else {
           const sortedDates = Object.keys(prices).filter(d => d >= firstBuy).sort();
-          basePriceMap[sym] = sortedDates.length > 0 ? prices[sortedDates[0]] : 0;
+          if (sortedDates.length > 0) {
+            basePriceMap[sym] = prices[sortedDates[0]];
+          } else {
+            const anyDates = Object.keys(prices).sort();
+            basePriceMap[sym] = anyDates.length > 0 ? prices[anyDates[0]] : 0;
+          }
         }
       }
     });
@@ -237,14 +256,18 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     const series: any[] = [];
     const latestReturns: Record<string, number | null> = {};
 
-    // Build chart data slice for effectiveDates (all lines rebased to 0% at startDate)
+    // Build chart data slice for effectiveDates
     effectiveDates.forEach(date => {
       const point: any = { date };
 
       if (portfolioMap.has(date)) {
         const rawPort = portfolioMap.get(date) ?? 0;
-        point['Portfolio'] = Number((rawPort - baselinePortfolio).toFixed(2));
-      } else if (date === startDate) {
+        if (mode === 'tradingview') {
+          point['Portfolio'] = Number((rawPort - baselinePortfolio).toFixed(2));
+        } else {
+          point['Portfolio'] = Number(rawPort.toFixed(2));
+        }
+      } else if (mode === 'tradingview' && date === startDate) {
         point['Portfolio'] = 0;
       }
 
@@ -289,7 +312,9 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     // Compute leaderboard ranking
     const ranking = activeHoldings.map(sym => {
       const ret = latestReturns[sym] ?? 0;
-      const isNew = (firstBuyDates[sym] || '') > startDate;
+      const isNew = mode === 'tradingview'
+        ? (firstBuyDates[sym] || '') > startDate
+        : (firstBuyDates[sym] || '') > (effectiveDates[0] || '');
       return {
         symbol: sym,
         returnPercent: ret,
@@ -303,7 +328,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       chartData: series,
       leaderboardData: ranking,
     };
-  }, [displayDates, effectiveDates, activeHoldings, priceData, firstBuyDates, portfolioReturnData, colorMap]);
+  }, [mode, displayDates, effectiveDates, activeHoldings, priceData, firstBuyDates, portfolioReturnData, colorMap]);
 
   // Sort holdings by return descending (มาก ไว้หน้า)
   const sortedHoldingsByReturn = useMemo(() => {
@@ -526,42 +551,80 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       {/* Header with Quick Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] flex items-center justify-center text-[#823AFD]">
-            <Layers className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] flex items-center justify-center text-[#823AFD]">
+            <Layers className="w-5 h-5" />
           </div>
           <div>
             <h3 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
               Holdings Performance Attribution
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#823AFD]/15 text-[#A855F7] border border-[#823AFD]/30">
-                Normalized Trajectory
+              <span className={clsx(
+                "text-xs font-semibold px-2 py-0.5 rounded-full border transition-all",
+                mode === 'inception'
+                  ? "bg-[#823AFD]/15 text-[#A855F7] border-[#823AFD]/30"
+                  : "bg-[#06B6D4]/15 text-[#38BDF8] border-[#06B6D4]/30"
+              )}>
+                {mode === 'inception' ? 'Since Inception (Default)' : 'TradingView Rebase'}
               </span>
             </h3>
             <p className="text-[13px] text-[#CBD5E1]">
-              เปรียบเทียบผลตอบแทนแบบ TradingView (จุดเริ่มต้นซ้ายสุดของจอ = ฐาน 0.00%)
+              {mode === 'inception'
+                ? 'เส้นกราฟเริ่มนับ 0% ณ วันแรกที่ซื้อหุ้นแต่ละตัวเข้าพอร์ตจริง (Actual Return Since Buy)'
+                : 'เปรียบเทียบโมเมนตัมแบบ TradingView (ทุกเส้นเริ่มสตาร์ท 0.00% ณ วันแรกซ้ายสุดของจอ)'}
             </p>
           </div>
         </div>
 
-        {/* Quick Selection Buttons */}
-        <div className="flex items-center gap-2 bg-[#141824] border border-[#2A2E45] p-1 rounded-xl text-xs">
-          <button
-            onClick={selectTop5}
-            className="px-2.5 py-1 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors cursor-pointer"
-          >
-            Top 5
-          </button>
-          <button
-            onClick={selectAll}
-            className="px-2.5 py-1 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors cursor-pointer"
-          >
-            All
-          </button>
-          <button
-            onClick={clearAll}
-            className="px-2.5 py-1 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors cursor-pointer"
-          >
-            Clear
-          </button>
+        {/* Dual Mode Switcher & Quick Selection Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Mode Switcher */}
+          <div className="flex items-center bg-[#141824] border border-[#2A2E45] p-1 rounded-xl text-xs">
+            <button
+              onClick={() => setMode('inception')}
+              className={clsx(
+                "flex items-center gap-1.5 px-3 py-1.2 rounded-lg font-bold transition-all cursor-pointer",
+                mode === 'inception'
+                  ? "bg-[#823AFD] text-white shadow-sm shadow-[#823AFD]/40"
+                  : "text-[#CBD5E1] hover:text-white hover:bg-[#1E293B]"
+              )}
+            >
+              <span>💼</span>
+              <span>Since Inception</span>
+            </button>
+            <button
+              onClick={() => setMode('tradingview')}
+              className={clsx(
+                "flex items-center gap-1.5 px-3 py-1.2 rounded-lg font-bold transition-all cursor-pointer",
+                mode === 'tradingview'
+                  ? "bg-[#06B6D4] text-white shadow-sm shadow-[#06B6D4]/40"
+                  : "text-[#CBD5E1] hover:text-white hover:bg-[#1E293B]"
+              )}
+            >
+              <span>⚡</span>
+              <span>TradingView (0%)</span>
+            </button>
+          </div>
+
+          {/* Quick Selection Buttons */}
+          <div className="flex items-center gap-1 bg-[#141824] border border-[#2A2E45] p-1 rounded-xl text-xs">
+            <button
+              onClick={selectTop5}
+              className="px-2.5 py-1.2 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors cursor-pointer"
+            >
+              Top 5
+            </button>
+            <button
+              onClick={selectAll}
+              className="px-2.5 py-1.2 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors cursor-pointer"
+            >
+              All
+            </button>
+            <button
+              onClick={clearAll}
+              className="px-2.5 py-1.2 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
         </div>
       </div>
 
@@ -642,7 +705,9 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
                 Holdings Trajectory ({timeRangeLabel})
               </h4>
               <p className="text-[13px] text-[#CBD5E1]">
-                ทุกเส้นเริ่มสตาร์ทที่ 0.00% ณ วันแรกทางซ้ายของจอ (Dynamic Rebase)
+                {mode === 'inception'
+                  ? 'เส้นกราฟเริ่มนับ 0% ณ วันแรกที่ซื้อเข้าพอร์ตจริง (Actual Cost-Basis)'
+                  : 'ทุกเส้นเริ่มสตาร์ทที่ 0.00% ณ วันแรกทางซ้ายของจอ (Dynamic Rebase)'}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -737,7 +802,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
               <h4 className="text-white font-bold text-base tracking-wide">Holdings Ranking</h4>
             </div>
             <p className="text-[13px] text-[#CBD5E1] mb-4">
-              เรียงลำดับผลตอบแทนในรอบ {timeRangeLabel}
+              {mode === 'inception' ? 'ผลตอบแทนจริงนับตั้งแต่วันที่ซื้อ' : `ผลตอบแทนเฉพาะรอบ ${timeRangeLabel}`}
             </p>
 
             <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
