@@ -9,6 +9,8 @@ import clsx from 'clsx';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PortfolioTable } from './PortfolioTable';
 import { PerformersTable } from './PerformersTable';
+import { MultiPeriodReturnStrip } from './MultiPeriodReturnStrip';
+import { PortfolioPulseBanner } from './PortfolioPulseBanner';
 
 export type DashboardTimeRange = '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL' | 'CUSTOM';
 
@@ -188,8 +190,8 @@ export const Dashboard = () => {
   // Recent Txs (new to old)
   const recentTxs = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4);
 
-  // Chart Data
-  const chartData = useMemo(() => {
+  // 1. All Daily Points (calculated once across all historical points, independent of timeRange)
+  const allDailyPoints = useMemo(() => {
     if (activeSymbols.length === 0) return [];
     
     const dateSet = new Set<string>();
@@ -204,7 +206,7 @@ export const Dashboard = () => {
       .filter(t => t.status === 'CONFIRMED')
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    const allDailyPoints = sortedDates.map(date => {
+    return sortedDates.map(date => {
       let dailyCash = activePortfolio?.initial_cash || 0;
       let dailyHolds: Record<string, number> = {};
 
@@ -225,7 +227,7 @@ export const Dashboard = () => {
           if (isCash) {
             dailyCash -= tx.amount;
           } else {
-            dailyCash += (tx.amount * tx.price) - (tx.fee || 0);
+            dailyCash -= (tx.amount * tx.price) - (tx.fee || 0);
             dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) - tx.amount;
           }
         } else if (tx.type === 'DEPOSIT') {
@@ -255,12 +257,109 @@ export const Dashboard = () => {
         value: dailyCash + dailyStockValue
       };
     });
+  }, [historical, transactions, activePortfolio, activeSymbols]);
 
+  // 2. Filtered Chart Data for selected timeRange
+  const chartData = useMemo(() => {
+    if (allDailyPoints.length === 0) return [];
     const startDate = getStartDateForRange(timeRange, earliestTxDate, customFrom);
     const endDate = customTo || new Date().toISOString().split('T')[0];
-
     return allDailyPoints.filter(p => p.date >= startDate && p.date <= endDate);
-  }, [historical, transactions, activePortfolio, activeSymbols, timeRange, earliestTxDate, customFrom, customTo]);
+  }, [allDailyPoints, timeRange, earliestTxDate, customFrom, customTo]);
+
+  // 3. Multi-Period Returns for Strip
+  const periodReturns = useMemo(() => {
+    const returns: Record<string, number> = {
+      '1D': todaysProfitPercent,
+      '1W': 0,
+      '1M': 0,
+      '3M': 0,
+      'YTD': 0,
+      '1Y': 0,
+      'ALL': totalPnlPercent,
+    };
+
+    if (allDailyPoints.length === 0) return returns;
+
+    const lastPoint = allDailyPoints[allDailyPoints.length - 1];
+    const endVal = lastPoint ? lastPoint.value : totalNetWorth;
+
+    const calcReturnForStartDate = (startDate: string) => {
+      const startPoint = allDailyPoints.find(p => p.date >= startDate);
+      if (!startPoint || startPoint.value <= 0) return 0;
+      return ((endVal - startPoint.value) / startPoint.value) * 100;
+    };
+
+    returns['1W'] = calcReturnForStartDate(getStartDateForRange('1W', earliestTxDate));
+    returns['1M'] = calcReturnForStartDate(getStartDateForRange('1M', earliestTxDate));
+    returns['3M'] = calcReturnForStartDate(getStartDateForRange('3M', earliestTxDate));
+    returns['YTD'] = calcReturnForStartDate(getStartDateForRange('YTD', earliestTxDate));
+    returns['1Y'] = calcReturnForStartDate(getStartDateForRange('1Y', earliestTxDate));
+
+    if (totalPnlPercent !== 0) {
+      returns['ALL'] = totalPnlPercent;
+    } else if (allDailyPoints.length > 0 && allDailyPoints[0].value > 0) {
+      returns['ALL'] = ((endVal - allDailyPoints[0].value) / allDailyPoints[0].value) * 100;
+    }
+
+    return returns;
+  }, [allDailyPoints, todaysProfitPercent, totalPnlPercent, earliestTxDate, totalNetWorth]);
+
+  // 4. Historical What-If Growth Anchor
+  const whatIfData = useMemo(() => {
+    let growthMultiple = 1 + (totalPnlPercent / 100);
+    if (allDailyPoints.length > 0) {
+      const firstValid = allDailyPoints.find(p => p.value > 0);
+      const lastPoint = allDailyPoints[allDailyPoints.length - 1];
+      if (firstValid && lastPoint && firstValid.value > 0) {
+        growthMultiple = lastPoint.value / firstValid.value;
+      }
+    }
+    const seedAmount = currency === 'THB' ? 100000 : 10000;
+    const seedLabel = currency === 'THB' ? '฿100,000' : '$10,000';
+    const currentValue = seedAmount * growthMultiple;
+    const currentLabel = currency === 'THB'
+      ? `฿${Math.round(currentValue).toLocaleString()}`
+      : `$${Math.round(currentValue).toLocaleString()}`;
+
+    let inceptionDateLabel = 'Inception';
+    if (earliestTxDate) {
+      try {
+        const d = new Date(earliestTxDate);
+        if (!isNaN(d.getTime())) {
+          inceptionDateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+      } catch {}
+    }
+
+    return {
+      seedLabel,
+      currentLabel,
+      totalReturnPercent: (growthMultiple - 1) * 100,
+      inceptionDateLabel,
+    };
+  }, [allDailyPoints, totalPnlPercent, currency, earliestTxDate]);
+
+  // 5. Recent Week Transactions Count
+  const recentWeekTxCount = useMemo(() => {
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return transactions.filter(t => {
+      if (t.status === 'CANCELLED' || !t.date) return false;
+      return new Date(t.date).getTime() >= oneWeekAgo;
+    }).length;
+  }, [transactions]);
+
+  // 6. Inception Date formatted string
+  const inceptionDateLabel = useMemo(() => {
+    if (!earliestTxDate) return '';
+    try {
+      const d = new Date(earliestTxDate);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+    } catch {}
+    return earliestTxDate;
+  }, [earliestTxDate]);
 
   const periodStartValue = chartData.length > 0 ? chartData[0].value : totalNetWorth;
   const periodEndValue = chartData.length > 0 ? chartData[chartData.length - 1].value : totalNetWorth;
@@ -359,60 +458,22 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-fade-in-up pb-12">
-      {/* Global Time Range & Currency Selector Bar */}
-      <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-4 px-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-lg">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[#CBD5E1] text-sm font-semibold">Timeframe:</span>
-          <span className="text-white text-sm font-bold">
-            {timeRange === 'CUSTOM' && customFrom && customTo ? `${customFrom} to ${customTo}` : getRangeLabel(timeRange)}
-          </span>
-          <span className={clsx(
-            "text-xs font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1 tabular-nums",
-            displayPnl >= 0 
-              ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
-              : "text-rose-400 bg-rose-400/10 border-rose-500/20"
-          )}>
-            {displayPnl >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-            <span>{displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl)} ({displayPnl >= 0 ? '+' : ''}{displayPnlPercent.toFixed(2)}%)</span>
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 self-start xl:self-auto">
-          {/* Time Range Pills */}
-          <div className="flex items-center bg-[#1A1D2D] border border-[#2A2E45] p-1 rounded-2xl text-xs gap-1 overflow-x-auto custom-scrollbar">
-            {(['1D', '1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as DashboardTimeRange[]).map(range => (
-              <button
-                key={range}
-                onClick={() => {
-                  setTimeRange(range);
-                  setShowCustomModal(false);
-                }}
-                className={clsx(
-                  "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap select-none",
-                  timeRange === range
-                    ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_12px_rgba(252,45,121,0.45)]"
-                    : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
-                )}
-              >
-                {range}
-              </button>
-            ))}
-            <button
-              onClick={() => setShowCustomModal(!showCustomModal)}
-              className={clsx(
-                "px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap select-none",
-                timeRange === 'CUSTOM'
-                  ? "bg-gradient-to-r from-[#FC2D79] to-[#823AFD] text-white shadow-[0_0_12px_rgba(252,45,121,0.45)]"
-                  : "text-[#CBD5E1] hover:text-white hover:bg-[#2A2E45]/50"
-              )}
-              title="Custom date range"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Custom</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Multi-Period Return Strip (Unified Timeframe & Returns) */}
+      <MultiPeriodReturnStrip
+        activeRange={timeRange}
+        onRangeChange={(range) => {
+          setTimeRange(range);
+          setShowCustomModal(false);
+        }}
+        periodReturns={periodReturns}
+        displayPnl={displayPnl}
+        displayPnlPercent={displayPnlPercent}
+        inceptionDate={inceptionDateLabel}
+        formatCurrency={formatCurrency}
+        onCustomClick={() => setShowCustomModal(!showCustomModal)}
+        customFrom={customFrom}
+        customTo={customTo}
+      />
 
       {/* Custom Date Picker Inline Form */}
       {showCustomModal && (
@@ -514,6 +575,16 @@ export const Dashboard = () => {
         </div>
       </div>
 
+      {/* Portfolio Pulse Banner (Summary & Historical What-If Growth Anchor) */}
+      <PortfolioPulseBanner
+        holdingsCount={holdings.length}
+        recentTxCount={recentWeekTxCount}
+        whatIfSeedLabel={whatIfData.seedLabel}
+        whatIfCurrentLabel={whatIfData.currentLabel}
+        totalReturnPercent={whatIfData.totalReturnPercent}
+        inceptionDateLabel={whatIfData.inceptionDateLabel}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Performance Chart */}
         <div className="lg:col-span-2 bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 min-h-[400px]">
@@ -522,16 +593,6 @@ export const Dashboard = () => {
               <h3 className="text-xl font-bold text-white">Performance Overview</h3>
               <p className="text-xs text-[#9898C8] mt-0.5">{getRangeLabel(timeRange)}</p>
             </div>
-            {chartData.length > 1 && (
-              <span className={clsx(
-                "text-xs font-semibold px-2.5 py-1 rounded-full border",
-                displayPnl >= 0 
-                  ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
-                  : "text-rose-400 bg-rose-400/10 border-rose-500/20"
-              )}>
-                {displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl)} ({displayPnl >= 0 ? '+' : ''}{displayPnlPercent.toFixed(2)}%)
-              </span>
-            )}
           </div>
           <div className="w-full h-72 mt-4">
             {chartData.length > 0 ? (
@@ -697,7 +758,7 @@ export const Dashboard = () => {
                   case 'WITHDRAW':
                     return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/25 uppercase font-prompt">WTH</span>;
                   default:
-                    return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-slate-500/15 text-slate-300 border border-slate-500/25 uppercase font-prompt">{tx.type.slice(0, 4)}</span>;
+                    return <span className="text-[12px] font-black px-2 py-0.5 rounded-md bg-slate-500/15 text-slate-300 border border-slate-500/25 uppercase font-prompt">{(tx.type as string)?.slice(0, 4) || 'TX'}</span>;
                 }
               };
 
