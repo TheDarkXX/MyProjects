@@ -200,13 +200,14 @@ export const Dashboard = () => {
     });
     
     const sortedDates = Array.from(dateSet).sort();
+    const validDates = sortedDates.filter(d => !earliestTxDate || d >= earliestTxDate);
     let lastKnownPrices: Record<string, number> = {};
 
     const chronologicalTxs = [...transactions]
-      .filter(t => t.status === 'CONFIRMED')
+      .filter(t => t.status !== 'CANCELLED')
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    return sortedDates.map(date => {
+    return validDates.map(date => {
       let dailyCash = activePortfolio?.initial_cash || 0;
       let dailyHolds: Record<string, number> = {};
 
@@ -227,7 +228,7 @@ export const Dashboard = () => {
           if (isCash) {
             dailyCash -= tx.amount;
           } else {
-            dailyCash -= (tx.amount * tx.price) - (tx.fee || 0);
+            dailyCash += (tx.amount * tx.price) - (tx.fee || 0);
             dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) - tx.amount;
           }
         } else if (tx.type === 'DEPOSIT') {
@@ -257,7 +258,7 @@ export const Dashboard = () => {
         value: dailyCash + dailyStockValue
       };
     });
-  }, [historical, transactions, activePortfolio, activeSymbols]);
+  }, [historical, transactions, activePortfolio, activeSymbols, earliestTxDate]);
 
   // 2. Filtered Chart Data for selected timeRange
   const chartData = useMemo(() => {
@@ -267,43 +268,69 @@ export const Dashboard = () => {
     return allDailyPoints.filter(p => p.date >= startDate && p.date <= endDate);
   }, [allDailyPoints, timeRange, earliestTxDate, customFrom, customTo]);
 
-  // 3. Multi-Period Returns for Strip
-  const periodReturns = useMemo(() => {
-    const returns: Record<string, number> = {
-      '1D': todaysProfitPercent,
-      '1W': 0,
-      '1M': 0,
-      '3M': 0,
-      'YTD': 0,
-      '1Y': 0,
-      'ALL': totalPnlPercent,
+  const periodStartValue = chartData.length > 0 ? chartData[0].value : totalNetWorth;
+  const periodEndValue = chartData.length > 0 ? chartData[chartData.length - 1].value : totalNetWorth;
+  const periodPnl = periodEndValue - periodStartValue;
+  const periodPnlPercent = periodStartValue > 0 ? (periodPnl / periodStartValue) * 100 : 0;
+
+  // 3. Multi-Period Metrics (P&L Amount & Percent) with Cash Flow Adjustment
+  const periodMetrics = useMemo(() => {
+    const metrics: Record<string, { amount: number; percent: number }> = {
+      '1D': { amount: todaysProfit, percent: todaysProfitPercent },
+      '1W': { amount: 0, percent: 0 },
+      '1M': { amount: 0, percent: 0 },
+      '3M': { amount: 0, percent: 0 },
+      'YTD': { amount: 0, percent: 0 },
+      '1Y': { amount: 0, percent: 0 },
+      'ALL': { amount: totalPnl, percent: totalPnlPercent },
+      'CUSTOM': { amount: periodPnl, percent: periodPnlPercent },
     };
 
-    if (allDailyPoints.length === 0) return returns;
+    if (allDailyPoints.length === 0) return metrics;
 
-    const lastPoint = allDailyPoints[allDailyPoints.length - 1];
-    const endVal = lastPoint ? lastPoint.value : totalNetWorth;
+    const validPoints = allDailyPoints.filter(p => p.value > 0);
+    if (validPoints.length === 0) return metrics;
 
-    const calcReturnForStartDate = (startDate: string) => {
-      const startPoint = allDailyPoints.find(p => p.date >= startDate);
-      if (!startPoint || startPoint.value <= 0) return 0;
-      return ((endVal - startPoint.value) / startPoint.value) * 100;
+    const currentPoint = validPoints[validPoints.length - 1];
+
+    const calcMetric = (range: DashboardTimeRange) => {
+      const startDate = getStartDateForRange(range, earliestTxDate);
+      if (startDate <= earliestTxDate) {
+        return { amount: totalPnl, percent: totalPnlPercent };
+      }
+
+      const pointsInRange = validPoints.filter(p => p.date >= startDate);
+      if (pointsInRange.length === 0) {
+        return { amount: 0, percent: 0 };
+      }
+
+      const startPt = pointsInRange[0];
+      const endPt = currentPoint;
+
+      // Net cash flow in period to avoid DCA distortion
+      const netDeposits = transactions
+        .filter(t => t.status !== 'CANCELLED' && t.date && t.date.split('T')[0] >= startPt.date && t.date.split('T')[0] <= endPt.date)
+        .reduce((sum, t) => {
+          if (t.type === 'DEPOSIT') return sum + t.amount;
+          if (t.type === 'WITHDRAW') return sum - t.amount;
+          return sum;
+        }, 0);
+
+      const pnlAmount = (endPt.value - startPt.value) - netDeposits;
+      const capitalBase = startPt.value + (netDeposits > 0 ? netDeposits : 0);
+      const pnlPercent = capitalBase > 0 ? (pnlAmount / capitalBase) * 100 : 0;
+
+      return { amount: pnlAmount, percent: pnlPercent };
     };
 
-    returns['1W'] = calcReturnForStartDate(getStartDateForRange('1W', earliestTxDate));
-    returns['1M'] = calcReturnForStartDate(getStartDateForRange('1M', earliestTxDate));
-    returns['3M'] = calcReturnForStartDate(getStartDateForRange('3M', earliestTxDate));
-    returns['YTD'] = calcReturnForStartDate(getStartDateForRange('YTD', earliestTxDate));
-    returns['1Y'] = calcReturnForStartDate(getStartDateForRange('1Y', earliestTxDate));
+    metrics['1W'] = calcMetric('1W');
+    metrics['1M'] = calcMetric('1M');
+    metrics['3M'] = calcMetric('3M');
+    metrics['YTD'] = calcMetric('YTD');
+    metrics['1Y'] = calcMetric('1Y');
 
-    if (totalPnlPercent !== 0) {
-      returns['ALL'] = totalPnlPercent;
-    } else if (allDailyPoints.length > 0 && allDailyPoints[0].value > 0) {
-      returns['ALL'] = ((endVal - allDailyPoints[0].value) / allDailyPoints[0].value) * 100;
-    }
-
-    return returns;
-  }, [allDailyPoints, todaysProfitPercent, totalPnlPercent, earliestTxDate, totalNetWorth]);
+    return metrics;
+  }, [allDailyPoints, todaysProfit, todaysProfitPercent, totalPnl, totalPnlPercent, earliestTxDate, transactions, periodPnl, periodPnlPercent]);
 
   // 4. Historical What-If Growth Anchor
   const whatIfData = useMemo(() => {
@@ -360,11 +387,6 @@ export const Dashboard = () => {
     } catch {}
     return earliestTxDate;
   }, [earliestTxDate]);
-
-  const periodStartValue = chartData.length > 0 ? chartData[0].value : totalNetWorth;
-  const periodEndValue = chartData.length > 0 ? chartData[chartData.length - 1].value : totalNetWorth;
-  const periodPnl = periodEndValue - periodStartValue;
-  const periodPnlPercent = periodStartValue > 0 ? (periodPnl / periodStartValue) * 100 : 0;
 
   const getRangeLabel = (range: DashboardTimeRange) => {
     switch (range) {
@@ -465,11 +487,11 @@ export const Dashboard = () => {
           setTimeRange(range);
           setShowCustomModal(false);
         }}
-        periodReturns={periodReturns}
+        periodMetrics={periodMetrics}
         displayPnl={displayPnl}
         displayPnlPercent={displayPnlPercent}
         inceptionDate={inceptionDateLabel}
-        formatCurrency={formatCurrency}
+        formatCurrency={formatPrimary}
         onCustomClick={() => setShowCustomModal(!showCustomModal)}
         customFrom={customFrom}
         customTo={customTo}
