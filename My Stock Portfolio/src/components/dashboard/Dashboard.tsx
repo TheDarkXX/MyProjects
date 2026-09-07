@@ -335,14 +335,103 @@ export const Dashboard = () => {
     };
   }, [allDailyPoints, totalPnlPercent, currency, earliestTxDate]);
 
-  // 5. Recent Week Transactions Count
-  const recentWeekTxCount = useMemo(() => {
-    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    return transactions.filter(t => {
+  // 5. Dynamic Period Transactions Stats
+  const periodTransactionStats = useMemo(() => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    let startDate = '';
+    let endDate = customTo || todayStr;
+    let periodLabel = 'All Time';
+
+    switch (timeRange) {
+      case '1D': {
+        startDate = todayStr;
+        periodLabel = 'Today';
+        break;
+      }
+      case '1W': {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        startDate = d.toISOString().split('T')[0];
+        periodLabel = '7D';
+        break;
+      }
+      case '1M': {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        startDate = d.toISOString().split('T')[0];
+        periodLabel = '30D';
+        break;
+      }
+      case '3M': {
+        const d = new Date();
+        d.setDate(d.getDate() - 90);
+        startDate = d.toISOString().split('T')[0];
+        periodLabel = '3M';
+        break;
+      }
+      case 'YTD': {
+        startDate = `${today.getFullYear()}-01-01`;
+        periodLabel = 'YTD';
+        break;
+      }
+      case '1Y': {
+        const d = new Date();
+        d.setFullYear(d.getFullYear() - 1);
+        startDate = d.toISOString().split('T')[0];
+        periodLabel = '1Y';
+        break;
+      }
+      case 'CUSTOM': {
+        startDate = customFrom || earliestTxDate || '2020-01-01';
+        periodLabel = 'Custom';
+        break;
+      }
+      case 'ALL':
+      default: {
+        startDate = earliestTxDate || '2020-01-01';
+        periodLabel = 'All Time';
+        break;
+      }
+    }
+
+    const filtered = transactions.filter(t => {
       if (t.status === 'CANCELLED' || !t.date) return false;
-      return new Date(t.date).getTime() >= oneWeekAgo;
-    }).length;
-  }, [transactions]);
+      if (timeRange === 'ALL') return true;
+      const txDate = t.date.split('T')[0];
+      return txDate >= startDate && txDate <= endDate;
+    });
+
+    // Breakdown count
+    let buyCount = 0;
+    let sellCount = 0;
+    let divCount = 0;
+    let depCount = 0;
+    let withCount = 0;
+
+    filtered.forEach(t => {
+      const type = (t.type || '').toUpperCase();
+      if (type === 'BUY') buyCount++;
+      else if (type === 'SELL') sellCount++;
+      else if (type === 'DIVIDEND' || type === 'INTEREST') divCount++;
+      else if (type === 'DEPOSIT') depCount++;
+      else if (type === 'WITHDRAW') withCount++;
+    });
+
+    const parts: string[] = [];
+    if (buyCount > 0) parts.push(`${buyCount} Buy`);
+    if (sellCount > 0) parts.push(`${sellCount} Sell`);
+    if (divCount > 0) parts.push(`${divCount} Div`);
+    if (depCount > 0) parts.push(`${depCount} Dep`);
+    if (withCount > 0) parts.push(`${withCount} W/D`);
+
+    return {
+      count: filtered.length,
+      label: `Transactions (${periodLabel})`,
+      breakdown: parts.length > 0 ? parts.join(' · ') : (filtered.length === 0 ? 'No activity' : ''),
+    };
+  }, [transactions, timeRange, earliestTxDate, customFrom, customTo]);
 
   // 6. Inception Date formatted string
   const inceptionDateLabel = useMemo(() => {
@@ -564,7 +653,9 @@ export const Dashboard = () => {
       {/* Portfolio Pulse Banner (Summary & Historical What-If Growth Anchor) */}
       <PortfolioPulseBanner
         holdingsCount={holdings.length}
-        recentTxCount={recentWeekTxCount}
+        txCount={periodTransactionStats.count}
+        txLabel={periodTransactionStats.label}
+        txBreakdown={periodTransactionStats.breakdown}
         whatIfSeedLabel={whatIfData.seedLabel}
         whatIfCurrentLabel={whatIfData.currentLabel}
         totalReturnPercent={whatIfData.totalReturnPercent}

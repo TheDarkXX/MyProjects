@@ -4,7 +4,10 @@ import { Layers, Activity, Sparkles, TrendingUp, TrendingDown, ArrowUpRight, Arr
 
 export interface PortfolioPulseBannerProps {
   holdingsCount: number;
-  recentTxCount: number;
+  txCount?: number;
+  txLabel?: string;
+  txBreakdown?: string;
+  recentTxCount?: number;
   whatIfSeedLabel: string;    // e.g. "฿100,000" or "$10,000"
   whatIfCurrentLabel: string; // e.g. "฿181,220" or "$18,122"
   totalReturnPercent: number;
@@ -13,6 +16,9 @@ export interface PortfolioPulseBannerProps {
 
 export const PortfolioPulseBanner: React.FC<PortfolioPulseBannerProps> = ({
   holdingsCount,
+  txCount,
+  txLabel = 'Transactions',
+  txBreakdown,
   recentTxCount,
   whatIfSeedLabel,
   whatIfCurrentLabel,
@@ -20,6 +26,7 @@ export const PortfolioPulseBanner: React.FC<PortfolioPulseBannerProps> = ({
   inceptionDateLabel,
 }) => {
   const isPositive = totalReturnPercent >= 0;
+  const displayTxCount = txCount !== undefined ? txCount : (recentTxCount ?? 0);
 
   return (
     <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-5 md:p-6 shadow-xl relative overflow-hidden">
@@ -35,7 +42,7 @@ export const PortfolioPulseBanner: React.FC<PortfolioPulseBannerProps> = ({
             </div>
             <div>
               <h4 className="text-white font-bold text-base tracking-wide">Portfolio Summary</h4>
-              <p className="text-[13px] text-[#CBD5E1]">Asset composition & weekly activity</p>
+              <p className="text-[13px] text-[#CBD5E1]">Asset composition & period activity</p>
             </div>
           </div>
 
@@ -53,16 +60,23 @@ export const PortfolioPulseBanner: React.FC<PortfolioPulseBannerProps> = ({
               </div>
             </div>
 
-            {/* Weekly Activity Stat Card */}
-            <div className="bg-[#141824] border border-[#2A2E45] rounded-2xl p-4 flex items-center gap-3.5">
+            {/* Dynamic Activity Stat Card */}
+            <div className="bg-[#141824] border border-[#2A2E45] rounded-2xl p-4 flex items-center gap-3.5 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-[#FC2D79]/10 border border-[#FC2D79]/20 flex items-center justify-center text-[#FC2D79] shrink-0">
                 <Activity className="w-5 h-5" />
               </div>
-              <div>
-                <div className="text-2xl font-bold text-white tabular-nums tracking-tight">
-                  {recentTxCount}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="text-2xl font-bold text-white tabular-nums tracking-tight">
+                    {displayTxCount}
+                  </span>
+                  {txBreakdown && (
+                    <span className="text-[13px] font-medium text-[#F472B6] truncate">
+                      {txBreakdown}
+                    </span>
+                  )}
                 </div>
-                <div className="text-[13px] font-semibold text-[#CBD5E1]">Transactions (7D)</div>
+                <div className="text-[13px] font-semibold text-[#CBD5E1] truncate">{txLabel}</div>
               </div>
             </div>
           </div>
