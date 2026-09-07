@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Portfolio, HistoricalDataPoint, ChartApiStatus, FetchProgress, Transaction, DisplayMethod } from '../types';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Brush } from 'recharts';
 import * as XLSX from 'xlsx';
@@ -540,6 +540,46 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
     }, [onForceRefresh, selectedPortfolioId]);
 
     const resetZoom = () => setZoomDomain(null);
+
+    // --- Ctrl + Wheel zoom on chart container ---
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const el = chartContainerRef.current;
+        if (!el) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                if (fullPeriodData.length < 6) return;
+
+                const currentStart = zoomDomain ? zoomDomain.startIndex : 0;
+                const currentEnd = zoomDomain ? zoomDomain.endIndex : fullPeriodData.length - 1;
+                const currentSpan = currentEnd - currentStart;
+                const zoomDelta = Math.max(1, Math.round(currentSpan * 0.12));
+
+                if (e.deltaY < 0) {
+                    // Zoom IN: shrink window
+                    if (currentSpan <= 5) return;
+                    const newStart = Math.min(currentEnd - 5, currentStart + zoomDelta);
+                    const newEnd = Math.max(newStart + 5, currentEnd - zoomDelta);
+                    setZoomDomain({ startIndex: newStart, endIndex: newEnd });
+                } else {
+                    // Zoom OUT: expand window
+                    const newStart = Math.max(0, currentStart - zoomDelta);
+                    const newEnd = Math.min(fullPeriodData.length - 1, currentEnd + zoomDelta);
+                    if (newStart === 0 && newEnd === fullPeriodData.length - 1) {
+                        setZoomDomain(null);
+                    } else {
+                        setZoomDomain({ startIndex: newStart, endIndex: newEnd });
+                    }
+                }
+            }
+        };
+
+        el.addEventListener('wheel', handleWheel, { passive: false });
+        return () => el.removeEventListener('wheel', handleWheel);
+    }, [fullPeriodData, zoomDomain]);
+
     const handleVisibilityChange = (line: keyof typeof visibleLines) => { setVisibleLines(prev => ({ ...prev, [line]: !prev[line] })); };
     const lineColors = { 
         'My Portfolio': '#FFC300', 
@@ -739,8 +779,12 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                                 <span>Export Excel</span>
                             </button>
-                             {zoomDomain && (
-                                <button onClick={resetZoom} className="px-3 py-1 rounded-md text-xs bg-gray-600 hover:bg-gray-500 text-white mr-2">Reset Zoom</button>
+                            <span className="text-[12px] text-gray-400 mr-2 hidden sm:inline-flex items-center gap-1 font-medium">
+                                <span>💡</span>
+                                <span>Ctrl + Scroll to Zoom</span>
+                            </span>
+                            {zoomDomain && (
+                                <button onClick={resetZoom} className="px-3 py-1 rounded-md text-xs bg-amber-600 hover:bg-amber-500 font-bold text-white mr-2 shadow-sm transition-colors cursor-pointer">Reset Zoom</button>
                             )}
                             {(['7D', '14D', '1M', '3M', '6M', '1Y', 'ALL'] as TimeRange[]).map(range => (
                                 <button key={range} onClick={() => setTimeRange(range)} className={`px-3 py-1 rounded-md text-xs transition-colors ${timeRange === range ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(59,130,246,0.7)]' : 'text-gray-400 hover:bg-gray-700'}`}>{range}</button>
@@ -754,7 +798,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                         </div>
                     </div>
 
-                    <div className="bg-[#111827] rounded-lg shadow-2xl p-6 h-[60vh] min-h-[400px]">
+                    <div ref={chartContainerRef} className="bg-[#111827] rounded-lg shadow-2xl p-6 h-[60vh] min-h-[400px]">
                         {isLoading ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400">
                                 <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Transaction } from '../../types';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Layers, Trophy, CheckSquare, Square, Eye, EyeOff, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
@@ -89,6 +89,58 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
   // Selection state (default: Top 5 selected)
   const [selectedSymbols, setSelectedSymbols] = useState<Record<string, boolean>>({});
   const [showPortfolio, setShowPortfolio] = useState<boolean>(true);
+
+  // Zoom state for Ctrl + Scroll
+  const [zoomRange, setZoomRange] = useState<{ startIndex: number; endIndex: number } | null>(null);
+
+  // Reset zoom when timeframe changes
+  useEffect(() => {
+    setZoomRange(null);
+  }, [timeRangeLabel, displayDates[0]]);
+
+  const effectiveDates = useMemo(() => {
+    if (!zoomRange) return displayDates;
+    return displayDates.slice(zoomRange.startIndex, zoomRange.endIndex + 1);
+  }, [displayDates, zoomRange]);
+
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = chartContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (displayDates.length < 6) return;
+
+        const currentStart = zoomRange ? zoomRange.startIndex : 0;
+        const currentEnd = zoomRange ? zoomRange.endIndex : displayDates.length - 1;
+        const currentSpan = currentEnd - currentStart;
+        const zoomDelta = Math.max(1, Math.round(currentSpan * 0.12));
+
+        if (e.deltaY < 0) {
+          // Zoom In: shrink window
+          if (currentSpan <= 5) return;
+          const newStart = Math.min(currentEnd - 5, currentStart + zoomDelta);
+          const newEnd = Math.max(newStart + 5, currentEnd - zoomDelta);
+          setZoomRange({ startIndex: newStart, endIndex: newEnd });
+        } else {
+          // Zoom Out: expand window
+          const newStart = Math.max(0, currentStart - zoomDelta);
+          const newEnd = Math.min(displayDates.length - 1, currentEnd + zoomDelta);
+          if (newStart === 0 && newEnd === displayDates.length - 1) {
+            setZoomRange(null);
+          } else {
+            setZoomRange({ startIndex: newStart, endIndex: newEnd });
+          }
+        }
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [displayDates, zoomRange]);
 
   useEffect(() => {
     if (activeHoldings.length > 0) {
@@ -184,7 +236,31 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     const series: any[] = [];
     const latestReturns: Record<string, number | null> = {};
 
+    // Calculate latest returns across the entire active timeframe
     displayDates.forEach(date => {
+      activeHoldings.forEach(sym => {
+        const firstValidDate = effectiveStartMap[sym];
+        const basePrice = basePriceMap[sym];
+        const prices = priceData[sym] || {};
+
+        if (date >= firstValidDate && basePrice && basePrice > 0) {
+          let currentPrice = prices[date];
+          if (currentPrice === undefined) {
+            const pastDates = Object.keys(prices).filter(d => d <= date && d >= firstValidDate).sort();
+            if (pastDates.length > 0) {
+              currentPrice = prices[pastDates[pastDates.length - 1]];
+            }
+          }
+          if (currentPrice !== undefined && basePrice > 0) {
+            const pct = ((currentPrice - basePrice) / basePrice) * 100;
+            latestReturns[sym] = Number(pct.toFixed(2));
+          }
+        }
+      });
+    });
+
+    // Build chart data slice for effectiveDates (supporting Ctrl + Scroll zoom)
+    effectiveDates.forEach(date => {
       const point: any = { date };
 
       if (portfolioMap.has(date)) {
@@ -212,7 +288,6 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
           if (currentPrice !== undefined && basePrice > 0) {
             const pct = ((currentPrice - basePrice) / basePrice) * 100;
             point[sym] = Number(pct.toFixed(2));
-            latestReturns[sym] = point[sym];
           } else {
             point[sym] = null;
           }
@@ -241,7 +316,18 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       chartData: series,
       leaderboardData: ranking,
     };
-  }, [displayDates, activeHoldings, priceData, firstBuyDates, portfolioReturnData, colorMap]);
+  }, [displayDates, effectiveDates, activeHoldings, priceData, firstBuyDates, portfolioReturnData, colorMap]);
+
+  // Sort holdings by return descending (มาก ไว้หน้า)
+  const sortedHoldingsByReturn = useMemo(() => {
+    return [...activeHoldings].sort((a, b) => {
+      const itemA = leaderboardData.find(d => d.symbol === a);
+      const itemB = leaderboardData.find(d => d.symbol === b);
+      const retA = itemA ? itemA.returnPercent : -999999;
+      const retB = itemB ? itemB.returnPercent : -999999;
+      return retB - retA;
+    });
+  }, [activeHoldings, leaderboardData]);
 
   // Max absolute return for horizontal bar scaling
   const maxAbsReturn = useMemo(() => {
@@ -426,8 +512,8 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
         </div>
       </div>
 
-      {/* Stock Filter Checkboxes Bar */}
-      <div className="bg-[#141824] border border-[#2A2E45] rounded-2xl p-3.5 flex flex-wrap items-center gap-3">
+      {/* Stock Filter Checkboxes Bar (Sorted by % profit descending - มาก ไว้หน้า) */}
+      <div className="bg-[#141824] border border-[#2A2E45] rounded-2xl p-3.5 flex flex-wrap items-center gap-2.5">
         {/* Portfolio Reference Toggle */}
         <button
           onClick={() => setShowPortfolio(!showPortfolio)}
@@ -444,11 +530,14 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
 
         <div className="h-4 w-px bg-gray-700/60 mx-1 hidden sm:block" />
 
-        {/* Individual Stock Toggles */}
-        {activeHoldings.map(sym => {
+        {/* Individual Stock Toggles sorted by return descending (มาก ไว้หน้า) */}
+        {sortedHoldingsByReturn.map(sym => {
           const isSelected = !!selectedSymbols[sym];
           const color = colorMap[sym];
           const isNew = (firstBuyDates[sym] || '') > (displayDates[0] || '');
+          const rankingItem = leaderboardData.find(d => d.symbol === sym);
+          const ret = rankingItem?.returnPercent ?? 0;
+          const isPositive = ret >= 0;
 
           return (
             <button
@@ -471,7 +560,15 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
                   transform: isSelected ? 'scale(1.2)' : 'scale(1)',
                 }}
               />
-              <span className={clsx(isSelected ? "text-white" : "text-gray-400")}>{sym}</span>
+              <span className={clsx(isSelected ? "text-white font-bold" : "text-gray-400")}>{sym}</span>
+              <span
+                className={clsx(
+                  "font-mono text-[11px] font-bold tabular-nums ml-0.5",
+                  isPositive ? "text-emerald-400" : "text-rose-400"
+                )}
+              >
+                {isPositive ? '+' : ''}{ret.toFixed(1)}%
+              </span>
               {isNew && (
                 <span className="text-[10px] font-bold px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 ml-0.5">
                   New
@@ -485,8 +582,8 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       {/* Main Row: 4/5 Line Chart + 1/5 Leaderboard Bar Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left Column (4/5): Holdings Trajectory Line Chart */}
-        <div className="lg:col-span-4 bg-[#111827] border border-[#2A2E45] rounded-3xl p-5 shadow-2xl flex flex-col justify-between min-h-[440px]">
-          <div className="flex items-center justify-between mb-4">
+        <div ref={chartContainerRef} className="lg:col-span-4 bg-[#111827] border border-[#2A2E45] rounded-3xl p-5 shadow-2xl flex flex-col justify-between min-h-[440px]">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div>
               <h4 className="text-white font-bold text-base tracking-wide flex items-center gap-2">
                 Holdings Trajectory ({timeRangeLabel})
@@ -494,6 +591,20 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
               <p className="text-[13px] text-[#CBD5E1]">
                 เส้นกราฟเริ่มนับ 0% ณ วันแรกที่ซื้อเข้าพอร์ตจริง
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] text-gray-400 hidden sm:inline-flex items-center gap-1 font-medium">
+                <span>💡</span>
+                <span>Ctrl + Scroll to Zoom</span>
+              </span>
+              {zoomRange && (
+                <button
+                  onClick={() => setZoomRange(null)}
+                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-sm"
+                >
+                  Reset Zoom
+                </button>
+              )}
             </div>
           </div>
 
