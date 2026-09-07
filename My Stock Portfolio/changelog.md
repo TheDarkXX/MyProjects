@@ -2,7 +2,44 @@
 
 This log tracks all major updates and features added to the application.
 
----
+### [v2.8.0] 4 Pillars of Conviction, Consensus Momentum & Timeout Resilience Date: 2026-09-07T18:25:00Z
+- **🧠 AI Architecture**: Upgraded Stock Verdicts to Institutional-Grade 4 Pillars of Conviction (Core Thesis & Economic Moat, Active Catalysts & Key Risks, Thesis Breaker, Valuation Verdict) with Conviction Score (1-10).
+- **📈 Quant Intelligence**: Implemented Consensus Momentum Engine tracking Wall Street analyst target revisions (UPWARD, DOWNWARD, STABLE, INSUFFICIENT_DATA).
+- **🛡️ Resilience & UX**: Added Auto-Recovery Polling to gracefully recover from Cloudflare 100s proxy timeouts without user disruption, tuned token budget, and fixed UTC-to-localtime display.
+
+### [v2.7.0] Actionable Trade Execution Engine & Technical Intelligence Date: 2026-09-07T14:30:00Z
+- **⚙️ Quant Engine**: Built in-house technical analysis service calculating RSI(14), ATR(14), SMA(20), 20-Day Support/Resistance Pivots, and 2xATR Trailing Stop from 45-day OHLC candles.
+- **📊 Consensus History**: Created SQLite `consensus_history` ledger with daily deduplication (UPSERT) to track historical Wall Street analyst targets.
+- **🎯 Execution Archetypes**: Added 3 distinct trading execution strategies (Conservative 50/50 tranches, Trend Following 30% take-profit + 70% trailing stop, Aggressive 100% market order) with interactive `ExecutionStrategyCard` and 1-click Copy Trade Slip.
+
+### [v2.6.1] Drift Detection Hotfix: Snapshot Injection Date: 2026-09-07T13:28:00Z
+- **✅ Bug Fix**: Injected `_requestSnapshot` into parsed AI analysis results in SQLite backend to eliminate false-positive drift alerts caused by comparing target blueprints against live actual holdings.
+
+### [v2.6.0] Reality-First Dual-Layer Holdings Engine & Intelligent Drift Notes Date: 2026-09-06T20:45:00Z
+- **🧠 Reality-First Engine**: Connected live user holdings (costs, weights, P&L, cash) to the AI Advisor. Dual-layer data model compares actual reality against target blueprints.
+- **⚔️ Orphan Stock Liquidation**: AI detects unmanaged positions outside the blueprint (`is_orphan: true`) and issues ruthless 100% divestment orders to free up capital.
+- **📊 Visual Overhaul**: Before/After donut chart relabeled to "พอร์ตจริงปัจจุบัน (Actual Holdings)" vs "พิมพ์เขียวแนะนำใหม่ (Ideal Blueprint)".
+- **💅 UX Polish**: Removed duplicate "วิเคราะห์ใหม่" buttons, added dynamic pulse button, and implemented intelligent drift remark badges detailing exact additions, removals, and reallocations.
+
+### [v2.5.0] Target Price Range Bar, Crisis Drawdown Dollar Impact & Visual Risk Matrix Date: 2026-09-06T13:30:00Z
+- **📊 Visual Intelligence**: Added Wall Street Target Price Range Bar (Low, Current, Mean, High) and Crisis Drawdown Dollar Impact calculators.
+- **🛡️ Visual Risk Matrix**: Rendered interactive risk scatter/matrix cards mapping Beta, P/E, and market cap classifications.
+
+### [v2.4.0] Executive Investment Cockpit with Segmented Tabs & Ruthless Strategist AI Prompt Date: 2026-09-06T11:30:00Z
+- **🎛️ Cockpit UI**: Introduced 4 segmented executive cockpit tabs (Plan, Stocks, Stress Test, Macro Analysis).
+- **👹 Persona Overhaul**: Upgraded AI system prompt to Hermes GPT-5.6 Terra "จอมมารแห่ง Wall Street" delivering brutally honest, decisive Thai investment analysis.
+
+### [v2.3.0] Forward-Looking AI Strategist with Wall Street Consensus & Stress Testing Date: 2026-09-06T09:15:00Z
+- **📈 Yahoo Fundamentals**: Integrated real-time consensus target prices, analyst recommendations, forward PE, and beta into portfolio stress testing simulations.
+
+### [v2.2.0] AI Portfolio Advisor V2 Date: 2026-09-05T12:00:00Z
+- **🧠 AI Advisor Core**: Launched AI Portfolio Advisor with 5-axis radar chart, diversification scoring, and automated blueprint rebalancing recommendations.
+
+### [v2.1.2] Smart Rebalance ReferenceError & Error Boundary Hotfix Date: 2026-09-04T14:50:00Z
+- **✅ Bug Fix**: Resolved runtime ReferenceError in object shorthand on `SmartRebalancePage` and wrapped lazy-loaded pages in React ErrorBoundary.
+
+### [v2.0.0] Smart Rebalance Core Architecture Overhaul Date: 2026-09-03T18:00:00Z
+- **🚀 Major Overhaul**: Unified allocation planner into an integrated Smart Rebalance dashboard with SQLite cache layer, Finviz treemap, and multi-currency support.
 
 ### [v1.9.4] Default Sort by Day's Performance Date: 2024-11-18T09:00:00Z
 - **🚀 Enhancement**: Changed the default sorting for the "Portfolio Overview" table to prioritize the day's biggest movers.
