@@ -370,7 +370,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     return null;
   };
 
-  // Dynamic anti-collision offsets for line end labels
+  // Pixel-space anti-collision and boundary clamping for end labels
   const lineOffsets = useMemo(() => {
     const lastPoint = chartData.length > 0 ? chartData[chartData.length - 1] : null;
     if (!lastPoint) return {};
@@ -385,36 +385,99 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       }
     });
 
-    active.sort((a, b) => b.val - a.val);
-    const rawOffsets: Record<string, number> = {};
-    if (active.length <= 1) {
-      if (active.length === 1) rawOffsets[active[0].name] = 0;
-      return rawOffsets;
+    if (active.length === 0) return {};
+
+    // Find min and max across all visible points to determine exact Y-domain scale
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    chartData.forEach(p => {
+      if (showPortfolio && typeof p['Portfolio'] === 'number') {
+        if (p['Portfolio'] < minVal) minVal = p['Portfolio'];
+        if (p['Portfolio'] > maxVal) maxVal = p['Portfolio'];
+      }
+      activeHoldings.forEach(sym => {
+        if (selectedSymbols[sym] && typeof p[sym] === 'number') {
+          if (p[sym] < minVal) minVal = p[sym];
+          if (p[sym] > maxVal) maxVal = p[sym];
+        }
+      });
+    });
+
+    if (!isFinite(minVal) || !isFinite(maxVal) || minVal === maxVal) {
+      minVal = 0;
+      maxVal = 100;
     }
 
-    let currentShift = 0;
-    for (let i = 0; i < active.length; i++) {
-      const item = active[i];
-      if (i > 0) {
-        const prev = active[i - 1];
-        const diff = prev.val - item.val;
-        if (diff < 3.2) {
-          currentShift += Math.max(16, Math.round((3.2 - diff) * 8 + 14));
+    const span = Math.max(1, maxVal - minVal);
+    const domainMax = maxVal + span * 0.05;
+    const domainMin = minVal - span * 0.05;
+    const domainSpan = domainMax - domainMin;
+
+    const plotTop = 22;
+    const plotHeight = 275;
+    const minSpacing = 27; // Minimum vertical gap between badges
+    const topSafeY = 24;   // Never clip above top border
+    const bottomSafeY = plotTop + plotHeight - 14; // Never clip below bottom axis
+
+    // Calculate raw pixel Y for each active label
+    const items = active.map(item => {
+      const normalized = (domainMax - item.val) / domainSpan;
+      const rawY = plotTop + Math.max(0, Math.min(plotHeight, normalized * plotHeight));
+      return {
+        name: item.name,
+        val: item.val,
+        rawY,
+        y: rawY,
+      };
+    });
+
+    // Sort ascending by rawY (from top of screen to bottom)
+    items.sort((a, b) => a.rawY - b.rawY);
+
+    if (items.length === 1) {
+      const clampedY = Math.max(topSafeY, Math.min(bottomSafeY, items[0].rawY));
+      return { [items[0].name]: Math.round(clampedY - items[0].rawY) };
+    }
+
+    // Forward pass: ensure minSpacing between adjacent labels
+    for (let i = 0; i < items.length; i++) {
+      if (i === 0) {
+        if (items[i].y < topSafeY) items[i].y = topSafeY;
+      } else {
+        if (items[i].y < items[i - 1].y + minSpacing) {
+          items[i].y = items[i - 1].y + minSpacing;
         }
       }
-      rawOffsets[item.name] = currentShift;
     }
 
-    const total = Object.values(rawOffsets).reduce((a, b) => a + b, 0);
-    const avgShift = total / active.length;
-    const centered: Record<string, number> = {};
-    for (const [k, v] of Object.entries(rawOffsets)) {
-      centered[k] = Math.round(v - avgShift);
+    // Backward pass: if bottom-most label pushed past bottomSafeY, push cluster up
+    if (items[items.length - 1].y > bottomSafeY) {
+      items[items.length - 1].y = bottomSafeY;
+      for (let i = items.length - 2; i >= 0; i--) {
+        if (items[i].y > items[i + 1].y - minSpacing) {
+          items[i].y = items[i + 1].y - minSpacing;
+        }
+      }
     }
-    return centered;
+
+    // Final top clamp guard
+    if (items[0].y < topSafeY) {
+      items[0].y = topSafeY;
+      for (let i = 1; i < items.length; i++) {
+        if (items[i].y < items[i - 1].y + minSpacing) {
+          items[i].y = items[i - 1].y + minSpacing;
+        }
+      }
+    }
+
+    const offsets: Record<string, number> = {};
+    items.forEach(item => {
+      offsets[item.name] = Math.round(item.y - item.rawY);
+    });
+    return offsets;
   }, [chartData, showPortfolio, activeHoldings, selectedSymbols]);
 
-  // Safe EndOfLineLabel component matching main chart style
+  // Safe EndOfLineLabel component matching main chart style with boundary safety
   const EndOfLineLabel = (props: any) => {
     const { index, value, x, y, stroke, yOffset = 0, name } = props;
 
@@ -426,10 +489,13 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     const labelText = isPort ? `${rawPct} - Portfolio` : `${rawPct} - ${name}`;
     const textWidth = Math.max(64, labelText.length * 7 + 16);
     const badgeHeight = isPort ? 24 : 22;
-    const badgeY = isPort ? y - 12 : y - 11;
+
+    // Boundary clamped target Y
+    const targetY = Math.max(22, Math.min(290, y + yOffset));
+    const badgeY = targetY - badgeHeight / 2;
 
     return (
-      <g transform={`translate(0, ${yOffset})`}>
+      <g>
         <rect
           x={x + 8}
           y={badgeY}
@@ -437,16 +503,16 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
           height={badgeHeight}
           fill={isPort ? "#1a1607" : "#0F172A"}
           stroke={isPort ? "#FBBF24" : stroke}
-          strokeOpacity={isPort ? 1 : 0.8}
+          strokeOpacity={isPort ? 1 : 0.85}
           strokeWidth={isPort ? "1.8" : "1.4"}
           rx="5"
           style={{
-            filter: isPort ? 'drop-shadow(0 2px 8px rgba(251,191,36,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+            filter: isPort ? 'drop-shadow(0 2px 8px rgba(251,191,36,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))',
           }}
         />
         <text
           x={x + 8 + textWidth / 2}
-          y={y + 4}
+          y={targetY + 4}
           fill={isPort ? "#FBBF24" : "#FFFFFF"}
           fillOpacity={isPort ? 1 : 0.95}
           fontSize={isPort ? "12px" : "11px"}
