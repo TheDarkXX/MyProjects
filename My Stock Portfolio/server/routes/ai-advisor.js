@@ -460,6 +460,12 @@ ${JSON.stringify(payloadData, null, 2)}
     let parsedResult;
     try {
       parsedResult = JSON.parse(jsonContent);
+
+      // Inject request snapshot for UI drift detection (V2.6.0 Reality-First Drift Fix)
+      parsedResult._requestSnapshot = {
+        blueprints: blueprints.map(b => ({ symbol: b.symbol, target_percent: Number(b.target_percent) || 0 })),
+        holdings: actualHoldings && actualHoldings.items ? actualHoldings.items.map(h => ({ symbol: h.symbol, actualPercent: h.actualPercent })) : []
+      };
     } catch (parseErr) {
       console.error('[AI Advisor] JSON parse error:', parseErr.message, 'Raw content:', jsonContent.slice(0, 300));
       throw new Error(`AI generated invalid response format: ${parseErr.message}`);

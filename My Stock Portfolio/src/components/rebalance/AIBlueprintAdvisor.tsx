@@ -604,62 +604,110 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
   const driftDetails = useMemo(() => {
     if (!aiResult) return null;
 
-    const analyzedSymbolsSet = new Set<string>();
-    const analyzedPercentages: Record<string, number> = {};
-
-    (aiResult.idealBlueprint || []).forEach((item: any) => {
-      if (item.symbol) {
-        const sym = item.symbol.toUpperCase();
-        analyzedSymbolsSet.add(sym);
-        analyzedPercentages[sym] = Number(item.currentPercent ?? 0);
-      }
-    });
-
-    (aiResult.stockVerdicts || []).forEach((item: any) => {
-      if (item.symbol) {
-        analyzedSymbolsSet.add(item.symbol.toUpperCase());
-      }
-    });
-
-    // 1. Current blueprint symbols & percentage changes
-    const currentBpSymbolsSet = new Set<string>();
     const addedBpSymbols: string[] = [];
     const percentChanges: { symbol: string; oldPct: number; newPct: number }[] = [];
-
-    blueprints.forEach((b: any) => {
-      if (!b.symbol) return;
-      const sym = b.symbol.toUpperCase();
-      currentBpSymbolsSet.add(sym);
-
-      if (!analyzedSymbolsSet.has(sym)) {
-        addedBpSymbols.push(b.symbol);
-      } else if (analyzedPercentages[sym] !== undefined) {
-        const currentPct = Number(b.target_percent) || 0;
-        const oldPct = analyzedPercentages[sym];
-        if (Math.abs(currentPct - oldPct) >= 0.5) {
-          percentChanges.push({ symbol: b.symbol, oldPct, newPct: currentPct });
-        }
-      }
-    });
-
-    // 2. Blueprint symbols that were removed
     const removedBpSymbols: string[] = [];
-    analyzedSymbolsSet.forEach(sym => {
-      if (sym !== 'CASH' && !currentBpSymbolsSet.has(sym)) {
-        removedBpSymbols.push(sym);
-      }
-    });
-
-    // 3. Check actual holdings newly added/orphan
     const newHoldingsSymbols: string[] = [];
-    if (hasRealHoldings) {
-      holdings.forEach(h => {
-        if (!h.symbol || h.symbol.toUpperCase() === 'CASH') return;
-        const sym = h.symbol.toUpperCase();
-        if (!analyzedSymbolsSet.has(sym)) {
-          newHoldingsSymbols.push(h.symbol);
+    
+    // If we have a request snapshot from backend (V2.6.0 Reality-First Drift Fix)
+    if (aiResult._requestSnapshot) {
+      const snapBp = aiResult._requestSnapshot.blueprints || [];
+      const snapH = aiResult._requestSnapshot.holdings || [];
+      
+      const snapBpMap = new Map(snapBp.map((b: any) => [b.symbol?.toUpperCase(), b.target_percent]));
+      const snapHMap = new Map(snapH.map((h: any) => [h.symbol?.toUpperCase(), h.actualPercent]));
+      
+      const currentBpSymbolsSet = new Set<string>();
+      
+      // 1. Current blueprint symbols & percentage changes
+      blueprints.forEach((b: any) => {
+        if (!b.symbol) return;
+        const sym = b.symbol.toUpperCase();
+        currentBpSymbolsSet.add(sym);
+        
+        if (!snapBpMap.has(sym)) {
+          addedBpSymbols.push(b.symbol);
+        } else {
+          const currentPct = Number(b.target_percent) || 0;
+          const oldPct = snapBpMap.get(sym) || 0;
+          if (Math.abs(currentPct - oldPct) >= 0.5) {
+            percentChanges.push({ symbol: b.symbol, oldPct, newPct: currentPct });
+          }
         }
       });
+      
+      // 2. Blueprint symbols that were removed
+      snapBpMap.forEach((_, sym) => {
+        if (!currentBpSymbolsSet.has(sym)) {
+          removedBpSymbols.push(sym);
+        }
+      });
+      
+      // 3. Check actual holdings newly added
+      if (hasRealHoldings) {
+        holdings.forEach(h => {
+          if (!h.symbol || h.symbol.toUpperCase() === 'CASH') return;
+          const sym = h.symbol.toUpperCase();
+          if (!snapHMap.has(sym)) {
+             newHoldingsSymbols.push(h.symbol);
+          }
+        });
+      }
+    } else {
+      // Fallback for old cache (legacy behavior)
+      const analyzedSymbolsSet = new Set<string>();
+      const analyzedPercentages: Record<string, number> = {};
+
+      (aiResult.idealBlueprint || []).forEach((item: any) => {
+        if (item.symbol) {
+          const sym = item.symbol.toUpperCase();
+          analyzedSymbolsSet.add(sym);
+          analyzedPercentages[sym] = Number(item.currentPercent ?? 0);
+        }
+      });
+
+      (aiResult.stockVerdicts || []).forEach((item: any) => {
+        if (item.symbol) {
+          analyzedSymbolsSet.add(item.symbol.toUpperCase());
+        }
+      });
+
+      // 1. Current blueprint symbols & percentage changes
+      const currentBpSymbolsSet = new Set<string>();
+
+      blueprints.forEach((b: any) => {
+        if (!b.symbol) return;
+        const sym = b.symbol.toUpperCase();
+        currentBpSymbolsSet.add(sym);
+
+        if (!analyzedSymbolsSet.has(sym)) {
+          addedBpSymbols.push(b.symbol);
+        } else if (analyzedPercentages[sym] !== undefined) {
+          const currentPct = Number(b.target_percent) || 0;
+          const oldPct = analyzedPercentages[sym];
+          if (Math.abs(currentPct - oldPct) >= 0.5) {
+            percentChanges.push({ symbol: b.symbol, oldPct, newPct: currentPct });
+          }
+        }
+      });
+
+      // 2. Blueprint symbols that were removed
+      analyzedSymbolsSet.forEach(sym => {
+        if (sym !== 'CASH' && !currentBpSymbolsSet.has(sym)) {
+          removedBpSymbols.push(sym);
+        }
+      });
+
+      // 3. Check actual holdings newly added/orphan
+      if (hasRealHoldings) {
+        holdings.forEach(h => {
+          if (!h.symbol || h.symbol.toUpperCase() === 'CASH') return;
+          const sym = h.symbol.toUpperCase();
+          if (!analyzedSymbolsSet.has(sym)) {
+            newHoldingsSymbols.push(h.symbol);
+          }
+        });
+      }
     }
 
     const hasDrift = isStale || addedBpSymbols.length > 0 || removedBpSymbols.length > 0 || percentChanges.length > 0 || newHoldingsSymbols.length > 0;
