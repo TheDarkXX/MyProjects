@@ -518,7 +518,7 @@ aiAdvisorRoutes.post('/', async (c) => {
    - **เสาหลักที่ 4: valuationVerdict & Consensus Momentum (ฟันธงความถูกแพง & ทิศทางสถาบัน)**: ฟันธงชัดเจนว่าราคาปัจจุบัน Underpriced, Fair, หรือ Overpriced เมื่อเทียบกับเป้า Consensus และ Forward PE พร้อม Margin of Safety หากมีข้อมูล consensus_momentum ในพอร์ต ให้อ้างอิงว่าสถาบันกำลังปรับเป้าขึ้นหรือลง
    - **convictionScore (1-10)**: ให้คะแนนความเชื่อมั่นรวม (Moat 30%, Catalyst 25%, Thesis Breaker clarity 25%, Valuation gap 20%)
 6. **Free Cash Flow & Moat คือทุกสิ่ง**: ตัวเลขกำไรจริงและกระแสเงินสดคือเกราะกำบัง ถ้ามีแต่กระแสไฮป์แต่เงินสดแห้งแล้ง นั่นคือกับดัก
-7. **ห้ามตอบ Generic กลางๆ**: ทุกคำวิจารณ์ต้องระบุชื่อหุ้น + ตัวเลข P/E, Beta, Growth หรือ Drawdown ประกอบเสมอ
+7. **ห้ามตอบ Generic กลางๆ และไม่ออกน้ำท่วมทุ่ง**: ทุกคำวิจารณ์ต้องระบุชื่อหุ้น + ตัวเลข P/E, Beta, Growth หรือ Drawdown ประกอบเสมอ เขียนให้กระชับ คมคาย ดุดัน ตรงประเด็น ไม่อธิบายเยิ่นเย้อฟุ่มเฟือย เพื่อให้การประมวลผลรวดเร็วระดับ Institutional Desk
 ${isStrategist ? `8. **Actionable Execution Strategies (เฉพาะ Strategist Mode)**:
    - สำหรับ suggestions ที่มีการปรับสัดส่วนสำคัญ (Top-3 suggestions ที่มี percent >= 3% หรือคำสั่ง CUT/REMOVE/ADD สำคัญ) ต้องใส่ฟิลด์ "executionStrategies" โดยสร้าง options 3 แนวทาง (CONSERVATIVE, TREND_FOLLOWING, AGGRESSIVE)
    - เลือกว่า options ตัวไหน The Best ที่สุดผ่าน "recommendedIndex" (0, 1, หรือ 2) และให้เหตุผลใน "justification"
@@ -643,7 +643,7 @@ ${JSON.stringify(payloadData, null, 2)}
             { role: 'system', content: 'You are the Ruthless Investment Strategist (จอมมารแห่ง Wall Street). Output ONLY a single valid raw JSON object matching the requested schema with brutal, decisive, uncompromising Thai analysis. Do not include markdown fences, backticks, or any explanation text outside JSON.' },
             { role: 'user', content: systemPrompt }
           ],
-          max_tokens: isStrategist ? 16000 : 8000
+          max_tokens: isStrategist ? 10000 : 8000
         }),
         signal: AbortSignal.timeout(180000) // 3 minutes timeout for complete 15-section generation
       });

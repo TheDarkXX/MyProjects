@@ -863,6 +863,46 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
     } catch (err: any) {
       if (timerRef.current) clearInterval(timerRef.current);
       console.error('[Advisor UI Error]:', err);
+      const errMsg = String(err?.message || '');
+      const isTimeout = errMsg.includes('524') || errMsg.includes('TIMEOUT') || errMsg.includes('timeout') || errMsg.includes('Failed to fetch');
+
+      if (isTimeout && portfolioId) {
+        // Cloudflare timed out (100s) but server continues processing in background.
+        // Start graceful recovery poller instead of crashing to welcome phase!
+        setLoadingPhase(3);
+        setProgress(95);
+        setStatusMessage('⏳ การวิเคราะห์เชิงลึกใช้เวลาสูงกว่า 100 วินาที เซิร์ฟเวอร์กำลังประมวลผลอยู่เบื้องหลัง กำลังรอรับผลลัพธ์อัตโนมัติ...');
+
+        let pollAttempts = 0;
+        const maxPollAttempts = 15; // 15 * 4s = 60s
+        const recoveryTimer = setInterval(async () => {
+          pollAttempts++;
+          try {
+            const latest = await api.ai.latestAdvisor(portfolioId, blueprints);
+            if (latest && latest.found && latest.result) {
+              clearInterval(recoveryTimer);
+              setAiResult(latest.result);
+              setCachedCreatedAt(latest.createdAt || new Date().toISOString());
+              setCachedModel(latest.modelUsed || 'GPT-5.6 Terra (Deep Analysis)');
+              setIsStale(false);
+              setProgress(100);
+              setStatusMessage('เสร็จสิ้นการวิเคราะห์ กำลังแสดงผล...');
+              setLoadingPhase(4);
+              return;
+            }
+          } catch {
+            // Ignore polling errors
+          }
+
+          if (pollAttempts >= maxPollAttempts) {
+            clearInterval(recoveryTimer);
+            setError('การวิเคราะห์ใช้เวลานานเป็นพิเศษ กรุณากดปุ่ม Refresh หน้าเว็บ (F5) ในอีกสักครู่เพื่อโหลดผลการวิเคราะห์ที่เซิร์ฟเวอร์บันทึกไว้');
+            setLoadingPhase(0);
+          }
+        }, 4000);
+        return;
+      }
+
       setError(err.message || 'การวิเคราะห์ขัดข้อง กรุณาตรวจสอบการเชื่อมต่อและลองใหม่อีกครั้ง');
       setLoadingPhase(0);
     }

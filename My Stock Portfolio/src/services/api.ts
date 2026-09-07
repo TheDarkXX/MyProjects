@@ -27,9 +27,31 @@ async function authFetch(endpoint: string, options: RequestInit = {}) {
     throw new Error('Unauthorized');
   }
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type') || '';
+  let data: any;
+
+  if (contentType.includes('application/json')) {
+    try {
+      data = await response.json();
+    } catch {
+      data = { error: 'Invalid JSON response from server' };
+    }
+  } else {
+    const text = await response.text();
+    if (!response.ok) {
+      if (response.status === 524 || text.includes('524') || text.includes('timeout occurred')) {
+        throw new Error('TIMEOUT_524: Cloudflare Timeout (524) การวิเคราะห์ใช้เวลานานกว่า 100 วินาที ระบบกำลังประมวลผลอยู่เบื้องหลัง');
+      }
+      if (response.status === 504 || response.status === 502) {
+        throw new Error(`GATEWAY_ERROR_${response.status}: เซิร์ฟเวอร์กำลังประมวลผลหรือการเชื่อมต่อขัดข้อง (${response.status})`);
+      }
+      throw new Error(`HTTP Error ${response.status}: ${text.slice(0, 120)}`);
+    }
+    data = { text };
+  }
+
   if (!response.ok) {
-    throw new Error(data.error || 'API Request Failed');
+    throw new Error(data.error || `API Request Failed (${response.status})`);
   }
 
   return data;
