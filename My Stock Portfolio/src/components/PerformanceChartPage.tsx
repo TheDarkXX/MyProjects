@@ -867,6 +867,7 @@ const PerformanceChartPage: React.FC<PerformanceChartPageProps> = () => {
                     priceData={rawPriceDataCache[selectedPortfolioId || ''] || {}}
                     displayDates={displayData.map(d => d.date)}
                     portfolioReturnData={displayData.map(d => ({ date: d.date, value: d['My Portfolio'] }))}
+                    spyReturnData={displayData.map(d => ({ date: d.date, value: d['S&P 500'] }))}
                     timeRangeLabel={timeRange}
                 />
 

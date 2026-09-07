@@ -9,6 +9,7 @@ interface HoldingsPerformanceAttributionProps {
   priceData: Record<string, Record<string, number>>; // symbol -> date -> price
   displayDates: string[]; // dates matching the current active timeRange
   portfolioReturnData?: { date: string; value?: number }[]; // Portfolio TWR %
+  spyReturnData?: { date: string; value?: number }[]; // S&P 500 %
   timeRangeLabel?: string;
 }
 
@@ -28,6 +29,7 @@ const PALETTE = [
 ];
 
 const PORTFOLIO_COLOR = '#FBBF24'; // Golden amber
+const SPY_COLOR = '#A855F7'; // S&P 500 Vibrant Purple
 
 export type AttributionMode = 'inception' | 'tradingview';
 
@@ -36,6 +38,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
   priceData,
   displayDates,
   portfolioReturnData = [],
+  spyReturnData = [],
   timeRangeLabel = 'Period',
 }) => {
   // 1. Calculate active holdings & first buy date
@@ -94,6 +97,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
   // Selection state (default: Top 5 selected)
   const [selectedSymbols, setSelectedSymbols] = useState<Record<string, boolean>>({});
   const [showPortfolio, setShowPortfolio] = useState<boolean>(true);
+  const [showSpy, setShowSpy] = useState<boolean>(true);
 
   // Zoom state for Ctrl + Scroll
   const [zoomRange, setZoomRange] = useState<{ startIndex: number; endIndex: number } | null>(null);
@@ -205,6 +209,15 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
 
     const baselinePortfolio = portfolioMap.get(startDate) ?? 0;
 
+    const spyMap = new Map<string, number>();
+    spyReturnData.forEach(p => {
+      if (p.date && p.value !== undefined) {
+        spyMap.set(p.date, p.value);
+      }
+    });
+
+    const baselineSpy = spyMap.get(startDate) ?? 0;
+
     const basePriceMap: Record<string, number> = {};
     const effectiveStartMap: Record<string, string> = {};
 
@@ -271,6 +284,17 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
         point['Portfolio'] = 0;
       }
 
+      if (spyMap.has(date)) {
+        const rawSpy = spyMap.get(date) ?? 0;
+        if (mode === 'tradingview') {
+          point['S&P 500'] = Number((rawSpy - baselineSpy).toFixed(2));
+        } else {
+          point['S&P 500'] = Number(rawSpy.toFixed(2));
+        }
+      } else if (mode === 'tradingview' && date === startDate) {
+        point['S&P 500'] = 0;
+      }
+
       activeHoldings.forEach(sym => {
         const firstValidDate = effectiveStartMap[sym];
         const basePrice = basePriceMap[sym];
@@ -328,7 +352,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       chartData: series,
       leaderboardData: ranking,
     };
-  }, [mode, displayDates, effectiveDates, activeHoldings, priceData, firstBuyDates, portfolioReturnData, colorMap]);
+  }, [mode, displayDates, effectiveDates, activeHoldings, priceData, firstBuyDates, portfolioReturnData, spyReturnData, colorMap]);
 
   // Sort holdings by return descending (มาก ไว้หน้า)
   const sortedHoldingsByReturn = useMemo(() => {
@@ -360,12 +384,16 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
             {sortedPayload.map((entry: any, index: number) => {
               if (entry.value === null || entry.value === undefined) return null;
               const isPort = entry.name === 'Portfolio';
+              const isSpy = entry.name === 'S&P 500';
               const val = Number(entry.value);
               return (
                 <div key={index} className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                    <span className={clsx("truncate font-medium", isPort ? "text-amber-300 font-bold" : "text-gray-300")}>
+                    <span className={clsx(
+                      "truncate font-medium",
+                      isPort ? "text-amber-300 font-bold" : isSpy ? "text-purple-300 font-bold" : "text-gray-300"
+                    )}>
                       {entry.name}
                     </span>
                   </div>
@@ -391,6 +419,9 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     if (showPortfolio && typeof lastPoint['Portfolio'] === 'number') {
       active.push({ name: 'Portfolio', val: lastPoint['Portfolio'] });
     }
+    if (showSpy && typeof lastPoint['S&P 500'] === 'number') {
+      active.push({ name: 'S&P 500', val: lastPoint['S&P 500'] });
+    }
     activeHoldings.forEach(sym => {
       if (selectedSymbols[sym] && typeof lastPoint[sym] === 'number') {
         active.push({ name: sym, val: lastPoint[sym] });
@@ -406,6 +437,10 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       if (showPortfolio && typeof p['Portfolio'] === 'number') {
         if (p['Portfolio'] < minVal) minVal = p['Portfolio'];
         if (p['Portfolio'] > maxVal) maxVal = p['Portfolio'];
+      }
+      if (showSpy && typeof p['S&P 500'] === 'number') {
+        if (p['S&P 500'] < minVal) minVal = p['S&P 500'];
+        if (p['S&P 500'] > maxVal) maxVal = p['S&P 500'];
       }
       activeHoldings.forEach(sym => {
         if (selectedSymbols[sym] && typeof p[sym] === 'number') {
@@ -487,7 +522,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       offsets[item.name] = Math.round(item.y - item.rawY);
     });
     return offsets;
-  }, [chartData, showPortfolio, activeHoldings, selectedSymbols]);
+  }, [chartData, showPortfolio, showSpy, activeHoldings, selectedSymbols]);
 
   // Safe EndOfLineLabel component matching main chart style with boundary safety
   const EndOfLineLabel = (props: any) => {
@@ -497,14 +532,19 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     if (value === undefined || value === null || !isFinite(value) || typeof y !== 'number') return null;
 
     const isPort = name === 'Portfolio';
+    const isSpy = name === 'S&P 500';
     const rawPct = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-    const labelText = isPort ? `${rawPct} - Portfolio` : `${rawPct} - ${name}`;
+    const labelText = isPort ? `${rawPct} - Portfolio` : isSpy ? `${rawPct} - S&P 500` : `${rawPct} - ${name}`;
     const textWidth = Math.max(64, labelText.length * 7 + 16);
-    const badgeHeight = isPort ? 24 : 22;
+    const badgeHeight = (isPort || isSpy) ? 24 : 22;
 
     // Boundary clamped target Y
     const targetY = Math.max(22, Math.min(290, y + yOffset));
     const badgeY = targetY - badgeHeight / 2;
+
+    const badgeFill = isPort ? "#1a1607" : isSpy ? "#180e29" : "#0F172A";
+    const badgeStroke = isPort ? "#FBBF24" : isSpy ? "#A855F7" : stroke;
+    const textFill = isPort ? "#FBBF24" : isSpy ? "#C084FC" : "#FFFFFF";
 
     return (
       <g>
@@ -513,22 +553,26 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
           y={badgeY}
           width={textWidth}
           height={badgeHeight}
-          fill={isPort ? "#1a1607" : "#0F172A"}
-          stroke={isPort ? "#FBBF24" : stroke}
-          strokeOpacity={isPort ? 1 : 0.85}
-          strokeWidth={isPort ? "1.8" : "1.4"}
+          fill={badgeFill}
+          stroke={badgeStroke}
+          strokeOpacity={1}
+          strokeWidth={(isPort || isSpy) ? "1.8" : "1.4"}
           rx="5"
           style={{
-            filter: isPort ? 'drop-shadow(0 2px 8px rgba(251,191,36,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))',
+            filter: isPort 
+              ? 'drop-shadow(0 2px 8px rgba(251,191,36,0.35))' 
+              : isSpy 
+                ? 'drop-shadow(0 2px 8px rgba(168,85,247,0.35))' 
+                : 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))',
           }}
         />
         <text
           x={x + 8 + textWidth / 2}
           y={targetY + 4}
-          fill={isPort ? "#FBBF24" : "#FFFFFF"}
-          fillOpacity={isPort ? 1 : 0.95}
-          fontSize={isPort ? "12px" : "11px"}
-          fontWeight={isPort ? "bold" : "600"}
+          fill={textFill}
+          fillOpacity={1}
+          fontSize={(isPort || isSpy) ? "12px" : "11px"}
+          fontWeight={(isPort || isSpy) ? "bold" : "600"}
           fontFamily="'Roboto Flex', sans-serif"
           textAnchor="middle"
           style={{
@@ -642,6 +686,20 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
         >
           <span className="w-2.5 h-2.5 rounded-full bg-[#FBBF24]" />
           <span>My Portfolio (TWR)</span>
+        </button>
+
+        {/* S&P 500 Benchmark Toggle */}
+        <button
+          onClick={() => setShowSpy(!showSpy)}
+          className={clsx(
+            "flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer",
+            showSpy
+              ? "bg-[#A855F7]/15 border-[#A855F7] text-[#C084FC] shadow-[0_0_12px_rgba(168,85,247,0.25)]"
+              : "bg-[#1A1D2D] border-[#2A2E45] text-gray-400 opacity-60 hover:opacity-100"
+          )}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-[#A855F7]" />
+          <span>S&P 500 (SPY)</span>
         </button>
 
         <div className="h-4 w-px bg-gray-700/60 mx-1 hidden sm:block" />
@@ -760,10 +818,25 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
                       dataKey="Portfolio"
                       name="Portfolio"
                       stroke={PORTFOLIO_COLOR}
-                      strokeWidth={3}
+                      strokeWidth={2.8}
                       dot={false}
                       connectNulls={false}
                       label={<EndOfLineLabel yOffset={lineOffsets['Portfolio'] || 0} name="Portfolio" />}
+                    />
+                  )}
+
+                  {/* S&P 500 Benchmark Line */}
+                  {showSpy && (
+                    <Line
+                      type="monotone"
+                      dataKey="S&P 500"
+                      name="S&P 500"
+                      stroke={SPY_COLOR}
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      dot={false}
+                      connectNulls={false}
+                      label={<EndOfLineLabel yOffset={lineOffsets['S&P 500'] || 0} name="S&P 500" />}
                     />
                   )}
 
