@@ -13,13 +13,28 @@ const LOCAL_TERRA_MODEL = 'openai-codex/gpt-5.6-terra';
 const FALLBACK_GATEWAY_URL = 'https://brain.doctorbankonline.com/api/ai/chat';
 const FALLBACK_GATEWAY_TOKEN = 'ZIvyWp4BTqcX2Gm1aDHR7lwz0i8PrVqug5KWBX53wqI';
 
-function createBlueprintHash(blueprints) {
+function detectArchetype(portfolioName = '', portfolioDesc = '', actualPortfolio = null) {
+  const text = `${portfolioName || ''} ${portfolioDesc || ''}`.toLowerCase();
+  if (/growth|เติบโต|capital gain|tech heavy|aggressive/i.test(text)) return 'GROWTH_CAPITAL_GAIN';
+  if (/dividend|income|ปันผล|cashflow|yield/i.test(text)) return 'DIVIDEND_INCOME';
+  // Fallback heuristic: If portfolio avg dividend yield < 1.0% and EPS growth > 15% -> GROWTH
+  if (actualPortfolio && Array.isArray(actualPortfolio) && actualPortfolio.length > 0) {
+    const avgDivYield = actualPortfolio.reduce((s, h) => s + (h.div_yield || 0), 0) / actualPortfolio.length;
+    const avgEpsGrowth = actualPortfolio.reduce((s, h) => s + (h.eps_growth_next_year || 0), 0) / actualPortfolio.length;
+    if (avgDivYield < 1.0 && avgEpsGrowth > 15) return 'GROWTH_CAPITAL_GAIN';
+    if (avgDivYield > 2.5) return 'DIVIDEND_INCOME';
+  }
+  return 'BALANCED';
+}
+
+function createBlueprintHash(blueprints, archetype = '') {
   if (!blueprints || !Array.isArray(blueprints)) return '';
   const sorted = blueprints
     .map(b => `${b.symbol}:${b.target_percent}:${b.category}`)
     .sort()
     .join('|');
-  return crypto.createHash('md5').update(sorted).digest('hex').slice(0, 12);
+  const payload = archetype ? `${sorted}#${archetype}` : sorted;
+  return crypto.createHash('md5').update(payload).digest('hex').slice(0, 12);
 }
 
 function getConsensusMomentum(symbol) {
@@ -153,9 +168,7 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
       beta: b.symbol === 'CASH' ? 0 : (f.beta || 1),
       pe_trailing: f.pe_trailing || 0,
       target_mean_price: f.target_mean_price || 0,
-      recommendation_key: f.recommendation_key || '',
       eps_growth_next_year: f.eps_growth_next_year || 0,
-      earnings_beat_streak: f.earnings_beat_streak || 0,
       consensus_momentum: mom ? { direction: mom.direction, changePct: mom.changePct } : null,
       rsi14: tech?.rsi14 ?? null,
       rsiState: tech?.rsiState ?? null
@@ -164,8 +177,14 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
 
   // 2. Actual Portfolio list (if provided)
   let actualPortfolio = null;
+  let capitalFlowSummary = null;
+
   if (hasReal) {
     const totalNetWorth = actualHoldings.totalNetWorth || 0;
+    const cashAvailable = Math.round(actualHoldings.cashBalance || 0);
+    let orphanLiquidation = 0;
+    let trimSurplus = 0;
+
     actualPortfolio = actualHoldings.items.map(item => {
       const sym = (item.symbol || '').toUpperCase();
       const f = fundamentals[item.symbol] || fundamentals[sym] || {};
@@ -179,9 +198,12 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
       
       let actionNeeded = 'HOLD (Balanced)';
       if (item.isOrphan) {
-        actionNeeded = `CUT 100% (~$${Math.round(item.marketValue || 0).toLocaleString()} / ~${(item.quantity || 0).toFixed(1)} shs) [เนื้อร้ายนอกพิมพ์เขียว]`;
+        const estVal = Math.round(item.marketValue || 0);
+        orphanLiquidation += estVal;
+        actionNeeded = `CUT 100% (~$${estVal.toLocaleString()} / ~${(item.quantity || 0).toFixed(1)} shs) [เนื้อร้ายนอกพิมพ์เขียว]`;
       } else if (diffPct > 0.5) {
         const estDollar = (diffPct / 100) * totalNetWorth;
+        trimSurplus += estDollar;
         const estShares = curPrice > 0 ? (estDollar / curPrice).toFixed(1) : '0';
         actionNeeded = `REDUCE ${diffPct}% (~$${Math.round(estDollar).toLocaleString()} / ~${estShares} shs)`;
       } else if (diffPct < -0.5) {
@@ -203,15 +225,13 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
         avg_cost: item.avgCost,
         current_price: curPrice,
         pnl_percent: item.pnlPercent,
-        is_orphan: item.isOrphan || false, // True if held in real portfolio but missing in user's blueprint
+        is_orphan: item.isOrphan || false,
         sector: f.sector || (sym === 'CASH' ? 'Cash' : 'Other'),
         beta: sym === 'CASH' ? 0 : (f.beta || 1),
         pe_trailing: f.pe_trailing || 0,
         div_yield: f.div_yield || 0,
         target_mean_price: f.target_mean_price || 0,
-        recommendation_key: f.recommendation_key || '',
         eps_growth_next_year: f.eps_growth_next_year || 0,
-        earnings_beat_streak: f.earnings_beat_streak || 0,
         consensus_momentum: mom ? { direction: mom.direction, changePct: mom.changePct } : null,
         priceVsSma50,
         priceVsSma200,
@@ -226,6 +246,18 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
         } : null
       };
     }).sort((a, b) => b.actual_percent - a.actual_percent);
+
+    orphanLiquidation = Math.round(orphanLiquidation);
+    trimSurplus = Math.round(trimSurplus);
+    const totalDeployable = cashAvailable + orphanLiquidation + trimSurplus;
+
+    capitalFlowSummary = {
+      cashAvailable,
+      orphanLiquidation,
+      trimSurplus,
+      totalDeployable,
+      dcaNeeded: totalDeployable < 500
+    };
   }
 
   // Summary calculation
@@ -255,7 +287,7 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null, tec
     };
   }
 
-  return { summary, actualPortfolio, targetBlueprint };
+  return { summary, capitalFlowSummary, actualPortfolio, targetBlueprint };
 }
 
 // Check and fetch latest analysis for each mode for a portfolio, detecting if blueprint has changed
@@ -266,7 +298,9 @@ aiAdvisorRoutes.post('/latest', async (c) => {
       return c.json({ error: 'Missing portfolio_id' }, 400);
     }
 
-    const currentHash = createBlueprintHash(blueprints || []);
+    const portRow = db.prepare('SELECT name, description FROM portfolios WHERE id = ?').get(portfolio_id);
+    const archetype = detectArchetype(portRow?.name, portRow?.description);
+    const currentHash = createBlueprintHash(blueprints || [], archetype);
 
     // Fetch the latest entry for each mode in order of hierarchy: strategist > deep > quick
     const modes = ['strategist', 'deep', 'quick'];
@@ -292,7 +326,7 @@ aiAdvisorRoutes.post('/latest', async (c) => {
           console.warn(`[AI Advisor Latest] JSON parse error for mode ${m}:`, e.message);
         }
 
-        const isEmptyDummy = !parsedResult || !parsedResult.portfolioStyle || (m === 'strategist' && (!parsedResult.stockVerdicts || parsedResult.stockVerdicts.length === 0));
+        const isEmptyDummy = !parsedResult || !parsedResult.portfolioStyle || !parsedResult.portfolioArchetype || (m === 'strategist' && (!parsedResult.stockVerdicts || parsedResult.stockVerdicts.length === 0));
 
         const utcCreatedAt = row.created_at 
           ? (row.created_at.includes('T') ? (row.created_at.endsWith('Z') ? row.created_at : row.created_at + 'Z') : row.created_at.replace(' ', 'T') + 'Z') 
@@ -382,7 +416,7 @@ aiAdvisorRoutes.get('/latest/:portfolio_id', async (c) => {
     const row = db.prepare(`
       SELECT * FROM ai_analysis_history 
       WHERE portfolio_id = ? 
-      ORDER BY created_at DESC LIMIT 1
+      ORDER BY id DESC LIMIT 1
     `).get(portfolioId);
 
     if (!row) {
@@ -423,7 +457,9 @@ aiAdvisorRoutes.post('/', async (c) => {
       return c.json({ error: 'Missing required fields' }, 400);
     }
 
-    const hash = createBlueprintHash(blueprints);
+    const portRow = db.prepare('SELECT name, description FROM portfolios WHERE id = ?').get(portfolio_id);
+    const portfolioArchetype = detectArchetype(portRow?.name, portRow?.description, actualHoldings?.items);
+    const hash = createBlueprintHash(blueprints, portfolioArchetype);
 
     // Check DB for existing valid cache (< 6 hours) unless force is requested
     if (!force) {
@@ -431,13 +467,15 @@ aiAdvisorRoutes.post('/', async (c) => {
         const getCached = db.prepare(`
           SELECT * FROM ai_analysis_history 
           WHERE portfolio_id = ? AND blueprint_hash = ? AND mode = ? 
-          ORDER BY created_at DESC LIMIT 1
+          ORDER BY id DESC LIMIT 1
         `);
         const cached = getCached.get(portfolio_id, hash, mode);
         
         if (cached) {
-          // Ignore stale, dummy or old schema cache (must include coreThesis for new 4 Pillars)
+          // Ignore stale, dummy or old schema cache (must include coreThesis and portfolioArchetype)
           const isOldSchema = !cached.result_json.includes('portfolioStyle') ||
+            !cached.result_json.includes('portfolioArchetype') ||
+            !cached.result_json.includes('fundingSource') ||
             (mode === 'strategist' && (
               !cached.result_json.includes('stockVerdicts') || 
               cached.result_json.includes('"stockVerdicts":[]') || 
@@ -490,6 +528,37 @@ aiAdvisorRoutes.post('/', async (c) => {
     
     const isStrategist = mode === 'strategist';
 
+    let archetypeInstruction = '';
+    if (portfolioArchetype === 'GROWTH_CAPITAL_GAIN') {
+      archetypeInstruction = `
+=== โครงสร้างสไตล์พอร์ตโฟลิโอ: เติบโตเน้นส่วนต่างราคา (GROWTH & CAPITAL GAIN) ===
+- วัตถุประสงค์หลัก: เพิ่มพูนมูลค่าพอร์ตสูงสุด (Capital Appreciation), Reinvestment Rate และ EPS Growth ในระยะยาว
+- **กฎเหล็กเรื่องปันผล**: ห้ามตำหนิหรือหักคะแนนพอร์ตเพราะอัตราปันผลต่ำ (Low Dividend Yield)! การที่หุ้นเทค/เติบโตไม่จ่ายปันผลเพราะนำเงินสดไป Reinvest เพื่อขยาย Moat เป็นสิ่งที่ถูกต้องตามแผน
+- **การประเมิน radarData.income**: ให้เปลี่ยนเกณฑ์การให้คะแนน "income" เป็น "Capital Allocation & Reinvestment Efficiency" (การจัดสรรเงินทุนเพื่อสร้าง ROIC/ROE) แทนการมองแค่อัตราจ่ายปันผล
+- **dividendHealth**: ให้เขียนวิเคราะห์เรื่อง "ประสิทธิภาพการลงทุนซ้ำและการรักษาอัตรากำไร (Capital Efficiency & Margin Sustainability)" แทนการมองหาเงินปันผล
+- **เกณฑ์ความเสี่ยงที่ต้องจับตา**: Valuation Multiple Overhype (PE/PS สูงเกินจริง), Thematic Overlap (กระจุกในกลุ่ม AI/Semiconductor มากไป), และ Drawdown Volatility`;
+    } else if (portfolioArchetype === 'DIVIDEND_INCOME') {
+      archetypeInstruction = `
+=== โครงสร้างสไตล์พอร์ตโฟลิโอ: เงินปันผลและกระแสเงินสด (DIVIDEND & CASH FLOW) ===
+- วัตถุประสงค์หลัก: สร้าง Passive Income สม่ำเสมอ, Dividend Safety, Payout Ratio ไม่เกิน 75%, FCF Coverage แน่นหนา
+- **dividendHealth**: เจาะลึกความเสี่ยง Dividend Cut, Yield Trap (ปันผลสูงเพราะราคาดิ่งเหว), และ Dividend Growth Streak
+- **เกณฑ์ความเสี่ยงที่ต้องจับตา**: หุ้นที่มีหนี้สินสูงและกระแสเงินสดไม่พอจ่ายปันผล`;
+    } else {
+      archetypeInstruction = `
+=== โครงสร้างสไตล์พอร์ตโฟลิโอ: สมดุลและยืดหยุ่น (BALANCED & BLENDED) ===
+- วัตถุประสงค์หลัก: สมดุลระหว่าง Capital Gain และกระแสเงินสด ป้องกันความผันผวน`;
+    }
+
+    const capitalFlowText = payloadData.capitalFlowSummary 
+      ? `
+ข้อมูลการหมุนเวียนเงินทุนในพอร์ต (Capital Flow Summary จากระบบจริง):
+- เงินสดคงเหลือพร้อมใช้ (Cash Available): $${payloadData.capitalFlowSummary.cashAvailable.toLocaleString()}
+- ยอดเงินที่จะได้จากการขายหุ้นนอกแผน 100% (Orphan Liquidation): $${payloadData.capitalFlowSummary.orphanLiquidation.toLocaleString()}
+- ยอดเงินที่จะได้จากการตัดขายส่วนเกิน overweight (Trim Surplus): $${payloadData.capitalFlowSummary.trimSurplus.toLocaleString()}
+- ยอดเงินทุนรวมที่ดึงมาหมุนเวียนได้ทั้งหมด (Total Deployable): $${payloadData.capitalFlowSummary.totalDeployable.toLocaleString()}
+- **กฎเหล็กเรื่อง Funding Source**: สำหรับคำสั่ง ADD ทุกตัว ต้องระบุฟิลด์ "fundingSource" โดยอ้างอิงแหล่งเงินจริง (ถ้าขาย orphan หรือ trim ให้ใช้ 'ROTATION', ถ้าใช้เงินสดในพอร์ตให้ใช้ 'CASH_BUFFER', ถ้าเงินไม่พอให้ใช้ 'FRESH_CAPITAL' แนะนำ DCA)`
+      : '';
+
     const systemPrompt = `คุณคือ "จอมมารแห่ง Wall Street (The Ruthless Strategist)" ปรมาจารย์ด้าน Tactical Architecture และการจัดทัพพอร์ตการลงทุนขั้นสูงสุด
 ปรัชญา: ดุ ดิบ ตรง คมกริบ ไร้ความปรานี ฟันธงเด็ดขาด เลือดเย็น 100% ผสมผสานหลักการ Cash Flow & Moat แน่นหนา (Joseph Carlson) กับการตัดสินใจเฉียบขาดไร้เยื่อใย (Shay Booler)
 
@@ -499,6 +568,9 @@ aiAdvisorRoutes.post('/', async (c) => {
 3. **ฟันธงเลือดเย็น**: หุ้นตัวไหนเป็นภาระ ไร้ Moat กำไรถดถอย หรือราคาแพงบ้าคลั่งฟองสบู่ จงชี้หน้าสั่งเชือดทิ้งทันที อย่าให้เหลือพื้นที่ให้ความโลภหรือความเสียดาย
 4. **กฎเรื่องคำสรรพนาม**: **ห้ามใช้คำหยาบคาย และห้ามใช้คำว่า มึง/กู** (ตัดแค่มึงกูออก) ให้ใช้สรรพนามแบบแม่ทัพบัญชาการรบ เช่น "คุณ" หรือขึ้นด้วยคำสั่งการรบตรงๆ ไม่อ้อมค้อม
 5. **ภาษาไทยสละสลวยแต่ดุดันเชือดเฉือน**: เนื้อหาทั้งหมดต้องเขียนเป็นภาษาไทย ยกเว้นชื่อ Ticker หุ้น หรือศัพท์เฉพาะทางเทคนิค
+
+${archetypeInstruction}
+${capitalFlowText}
 
 โครงสร้างข้อมูล 2 มิติที่ได้รับ (ความจริง vs พิมพ์เขียวเป้าหมาย):
 1. **actualPortfolio (ความจริง ณ วินาทีนี้)**: สินทรัพย์ที่ถือจริง สัดส่วนจริง (actual_percent %) ต้นทุนจริง (avg_cost) กำไร/ขาดทุนสะสม (pnl_percent %) เงินสดจริง (CASH) คำสั่งคำนวณเบื้องต้น (action_needed), consensus_momentum (direction, changePct) และข้อมูลเทคนิคอล (technicals: RSI14, ATR14, SMA20, 2xATR Trailing Stop, 20D Support/Resistance Pivots, priceVsSma50, priceVsSma200). หากมีหุ้นที่มี is_orphan = true นั่นคือ "สินทรัพย์นอกแผน" ที่ผู้ใช้ถืออยู่จริงแต่ไม่ได้ใส่อยู่ในพิมพ์เขียวใหม่!
@@ -533,12 +605,13 @@ ${isStrategist ? `8. **Actionable Execution Strategies (เฉพาะ Strategi
    - กลยุทธ์ต้องอ้างอิงระดับราคาจริงจาก technicals (RSI14, ATR14, SMA20, trailingStop2ATR, support20d, resistance20d) และ target_mean_price` : ''}
 
 ข้อมูลพอร์ต:
-${JSON.stringify(payloadData, null, 2)}
+${JSON.stringify(payloadData)}
 
 โหมดการวิเคราะห์: ${mode.toUpperCase()}
 
 จงตอบกลับเป็น Single Valid JSON Object เท่านั้น ห้ามใส่ข้อความอื่นนอก JSON ตามโครงสร้างนี้:
 {
+  "portfolioArchetype": "${portfolioArchetype}",
   "overallGrade": "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C" | "D",
   "radarData": {
     "diversification": number (0-100),
@@ -550,7 +623,7 @@ ${JSON.stringify(payloadData, null, 2)}
   "macroAnalysis": "วิเคราะห์ภาพรวมเศรษฐกิจมหภาค ดอกเบี้ย และธีมเทคโนโลยีแบบมองทะลุ เลือดเย็น ชี้ชัดว่าตลาดกำลังจะลงทัณฑ์กลุ่มไหน และกลุ่มไหนจะเป็นผู้รอดชีวิต (2-4 บรรทัด)",
   "portfolioStyle": "นิยามสันดานของพอร์ตอย่างตรงไปตรงมา เช่น 'ความโลภสูง กระจุกตัวบนยอดดอย' หรือ 'เกราะเหล็ก Cash Flow มั่นคง'",
   "concentrationRisk": "ชี้แผลเน่าของการกระจุกตัวและความเสี่ยง Overlap เตือนสติแบบกระแทกใจ (1-2 บรรทัด)",
-  "dividendHealth": "วินิจฉัยสุขภาพเงินปันผล ชี้หน้า Yield Trap และความยั่งยืนของกระแสเงินสดแบบไม่ไว้หน้า (1-2 บรรทัด)",
+  "dividendHealth": "วินิจฉัยสุขภาพเงินปันผล หรือประสิทธิภาพการลงทุนซ้ำ (ถ้าเป็นพอร์ตเติบโต) แบบไม่ไว้หน้า (1-2 บรรทัด)",
   "strengths": [
     { "title": "หัวข้อจุดแข็งที่แท้จริง", "description": "ระบุขุนพลตัวจริงที่มี Moat หนาแน่น กำไรเติบโตแข็งแกร่ง พร้อมตัวเลขเชิงประจักษ์" }
   ],
@@ -563,7 +636,13 @@ ${JSON.stringify(payloadData, null, 2)}
       "symbol": "TICKER",
       "percent": number,
       "category": "หมวดกลยุทธ์",
-      "reason": "คำสั่งจัดทัพเด็ดขาด ตัดเนื้อร้ายตัวไหน โยกไปเสริมเกราะตัวไหน ทำไมต้องทำทันที"${isStrategist ? `,
+      "reason": "คำสั่งจัดทัพเด็ดขาด ตัดเนื้อร้ายตัวไหน โยกไปเสริมเกราะตัวไหน ทำไมต้องทำทันที",
+      "fundingSource": {
+        "type": "ROTATION" | "CASH_BUFFER" | "FRESH_CAPITAL",
+        "label": "คำอธิบายแหล่งเงินทุนภาษาไทย เช่น 'โยกเงินจากการขายหุ้นนอกแผน ($1,450)' หรือ 'ใช้เงินสดสำรองในพอร์ต ($1,200)' หรือ 'ทยอยสะสมด้วยเงินเติมใหม่รายเดือน (DCA)'",
+        "fromSymbol": "TICKER หรือ null",
+        "amount": number หรือ null
+      }${isStrategist ? `,
       "executionStrategies": {
         "recommendedIndex": 0 | 1 | 2,
         "justification": "เหตุผล 1-2 บรรทัดว่าทำไมกลยุทธ์นี้ถึง The Best สำหรับต้นทุนและสถานะปัจจุบัน",
@@ -729,6 +808,42 @@ ${JSON.stringify(payloadData, null, 2)}
         console.error('[AI Advisor] JSON parse & repair error:', repairErr.message, 'Raw content:', jsonContent.slice(0, 300));
         throw new Error(`AI generated invalid response format: ${repairErr.message}`);
       }
+    }
+
+    // Inject portfolio archetype
+    parsedResult.portfolioArchetype = portfolioArchetype;
+
+    // Ensure each suggestion has a valid fundingSource object
+    if (Array.isArray(parsedResult.suggestions)) {
+      parsedResult.suggestions.forEach(s => {
+        if (!s.fundingSource || typeof s.fundingSource !== 'object') {
+          if (s.action === 'REDUCE' || s.action === 'REMOVE' || s.action === 'CUT') {
+            s.fundingSource = {
+              type: 'ROTATION',
+              label: 'ดึงเงินสดออกเพื่อเพิ่มสภาพคล่อง / เตรียมโยกเงิน',
+              fromSymbol: s.symbol,
+              amount: null
+            };
+          } else if (payloadData.capitalFlowSummary && payloadData.capitalFlowSummary.totalDeployable > 300) {
+            const hasOrphan = (payloadData.capitalFlowSummary.orphanLiquidation || 0) > 0;
+            s.fundingSource = {
+              type: hasOrphan ? 'ROTATION' : 'CASH_BUFFER',
+              label: hasOrphan
+                ? `โยกเงินจากการขายหุ้นนอกแผน ($${payloadData.capitalFlowSummary.orphanLiquidation.toLocaleString()})`
+                : `จัดสรรจากเงินสดสำรองในพอร์ต ($${payloadData.capitalFlowSummary.cashAvailable.toLocaleString()})`,
+              fromSymbol: null,
+              amount: null
+            };
+          } else {
+            s.fundingSource = {
+              type: 'FRESH_CAPITAL',
+              label: 'ทยอยสะสมด้วยเงินเติมใหม่รายเดือน (Fresh Capital DCA)',
+              fromSymbol: null,
+              amount: null
+            };
+          }
+        }
+      });
     }
 
     // Inject request snapshot for UI drift detection (V2.6.0 Reality-First Drift Fix)

@@ -213,7 +213,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
 
   // Map of actual holdings for fast O(1) lookup by symbol
   const actualHoldingsMap = useMemo(() => {
-    const map = new Map<string, { actualPercent: number; pnlPercent: number; marketValue: number; avgCost: number; quantity: number; isOrphan: boolean }>();
+    const map = new Map<string, { actualPercent: number; pnlPercent: number; marketValue: number; avgCost: number; currentPrice: number; quantity: number; isOrphan: boolean }>();
     if (!holdings || holdings.length === 0) return map;
     holdings.forEach(h => {
       const sym = h.symbol?.toUpperCase();
@@ -224,6 +224,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
         pnlPercent: Number(h.totalReturnPercent.toFixed(1)),
         marketValue: Math.round(h.currentValue),
         avgCost: h.avgCost,
+        currentPrice: h.lastPrice,
         quantity: h.quantity,
         isOrphan
       });
@@ -234,6 +235,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
         pnlPercent: 0,
         marketValue: Math.round(cashBalance),
         avgCost: Math.round(cashBalance),
+        currentPrice: 1,
         quantity: 1,
         isOrphan: false
       });
@@ -1111,11 +1113,31 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                   สรุปผลประเมินสุขภาพพอร์ตโดยรวม 5 มิติ และตัวชี้วัดความเสี่ยงสำคัญ
                 </p>
               </div>
-              {aiResult.portfolioStyle && (
-                <div className="px-3 py-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-purple-500/40 rounded-full text-purple-200 text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto shadow-[0_0_12px_rgba(168,85,247,0.25)]">
-                  <span>📊</span> Style: {aiResult.portfolioStyle}
-                </div>
-              )}
+              <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                {aiResult.portfolioArchetype && (
+                  <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border shadow-sm ${
+                    aiResult.portfolioArchetype === 'GROWTH_CAPITAL_GAIN'
+                      ? 'bg-blue-500/20 text-blue-300 border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.25)]'
+                      : aiResult.portfolioArchetype === 'DIVIDEND_INCOME'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
+                      : 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.25)]'
+                  }`}>
+                    <span>{aiResult.portfolioArchetype === 'GROWTH_CAPITAL_GAIN' ? '🚀' : aiResult.portfolioArchetype === 'DIVIDEND_INCOME' ? '💰' : '⚖️'}</span>
+                    <span>
+                      {aiResult.portfolioArchetype === 'GROWTH_CAPITAL_GAIN' 
+                        ? 'Growth & Capital Gain' 
+                        : aiResult.portfolioArchetype === 'DIVIDEND_INCOME' 
+                        ? 'Dividend & Cash Flow' 
+                        : 'Balanced Growth'}
+                    </span>
+                  </div>
+                )}
+                {aiResult.portfolioStyle && (
+                  <div className="px-3 py-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-purple-500/40 rounded-full text-purple-200 text-xs font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.25)]">
+                    <span>📊</span> Style: {aiResult.portfolioStyle}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Cockpit Grid: Grade (col 1) + 5-Axis Radar (col 2-3) */}
@@ -1139,13 +1161,16 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                   <span className="text-[13px] font-bold text-slate-200">5-Axis Portfolio Health Radar</span>
                   <span className="text-xs text-slate-400 font-semibold">คะแนนเต็ม 100</span>
                 </div>
-                <HealthRadar data={aiResult.radarData || {
-                  diversification: 75,
-                  valuation: 70,
-                  growth: 70,
-                  risk: 65,
-                  income: 50
-                }} />
+                <HealthRadar 
+                  data={aiResult.radarData || {
+                    diversification: 75,
+                    valuation: 70,
+                    growth: 70,
+                    risk: 65,
+                    income: 50
+                  }}
+                  archetype={aiResult.portfolioArchetype}
+                />
               </div>
             </div>
 
@@ -1313,10 +1338,22 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                   </div>
                 )}
                 {aiResult.dividendHealth && (
-                  <div className="border border-cyan-500/30 rounded-lg p-3.5 bg-cyan-500/10 flex items-start gap-3">
-                    <span className="text-lg shrink-0 mt-0.5">💰</span>
+                  <div className={`border rounded-lg p-3.5 flex items-start gap-3 ${
+                    aiResult.portfolioArchetype === 'GROWTH_CAPITAL_GAIN'
+                      ? 'border-blue-500/30 bg-blue-500/10'
+                      : 'border-cyan-500/30 bg-cyan-500/10'
+                  }`}>
+                    <span className="text-lg shrink-0 mt-0.5">
+                      {aiResult.portfolioArchetype === 'GROWTH_CAPITAL_GAIN' ? '⚡' : '💰'}
+                    </span>
                     <div>
-                      <h4 className="text-cyan-300 font-bold text-[13px] mb-0.5">Dividend Health</h4>
+                      <h4 className={`font-bold text-[13px] mb-0.5 ${
+                        aiResult.portfolioArchetype === 'GROWTH_CAPITAL_GAIN' ? 'text-blue-300' : 'text-cyan-300'
+                      }`}>
+                        {aiResult.portfolioArchetype === 'GROWTH_CAPITAL_GAIN' 
+                          ? 'Capital Efficiency & Reinvestment (ประสิทธิภาพการลงทุนซ้ำ)' 
+                          : 'Dividend Health & Cash Flow (สุขภาพเงินปันผล)'}
+                      </h4>
                       <p className="text-[13px] text-slate-200 leading-relaxed">{aiResult.dividendHealth}</p>
                     </div>
                   </div>

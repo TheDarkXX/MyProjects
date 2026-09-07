@@ -9,15 +9,17 @@ interface HealthRadarProps {
     risk: number;
     income: number;
   };
+  archetype?: string;
 }
 
-export const HealthRadar: React.FC<HealthRadarProps> = ({ data }) => {
+export const HealthRadar: React.FC<HealthRadarProps> = ({ data, archetype }) => {
+  const isGrowth = archetype === 'GROWTH_CAPITAL_GAIN';
   const chartData = [
     { subject: 'Diversification', A: data.diversification, fullMark: 100 },
     { subject: 'Valuation', A: data.valuation, fullMark: 100 },
     { subject: 'Growth', A: data.growth, fullMark: 100 },
     { subject: 'Risk Mgmt', A: data.risk, fullMark: 100 },
-    { subject: 'Income', A: data.income, fullMark: 100 },
+    { subject: isGrowth ? 'Reinvestment' : 'Income', A: data.income, fullMark: 100 },
   ];
 
   return (
