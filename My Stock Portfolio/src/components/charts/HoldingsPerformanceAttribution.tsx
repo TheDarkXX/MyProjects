@@ -284,6 +284,100 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     return null;
   };
 
+  // Dynamic anti-collision offsets for line end labels
+  const lineOffsets = useMemo(() => {
+    const lastPoint = chartData.length > 0 ? chartData[chartData.length - 1] : null;
+    if (!lastPoint) return {};
+
+    const active: { name: string; val: number }[] = [];
+    if (showPortfolio && typeof lastPoint['Portfolio'] === 'number') {
+      active.push({ name: 'Portfolio', val: lastPoint['Portfolio'] });
+    }
+    activeHoldings.forEach(sym => {
+      if (selectedSymbols[sym] && typeof lastPoint[sym] === 'number') {
+        active.push({ name: sym, val: lastPoint[sym] });
+      }
+    });
+
+    active.sort((a, b) => b.val - a.val);
+    const rawOffsets: Record<string, number> = {};
+    if (active.length <= 1) {
+      if (active.length === 1) rawOffsets[active[0].name] = 0;
+      return rawOffsets;
+    }
+
+    let currentShift = 0;
+    for (let i = 0; i < active.length; i++) {
+      const item = active[i];
+      if (i > 0) {
+        const prev = active[i - 1];
+        const diff = prev.val - item.val;
+        if (diff < 3.2) {
+          currentShift += Math.max(16, Math.round((3.2 - diff) * 8 + 14));
+        }
+      }
+      rawOffsets[item.name] = currentShift;
+    }
+
+    const total = Object.values(rawOffsets).reduce((a, b) => a + b, 0);
+    const avgShift = total / active.length;
+    const centered: Record<string, number> = {};
+    for (const [k, v] of Object.entries(rawOffsets)) {
+      centered[k] = Math.round(v - avgShift);
+    }
+    return centered;
+  }, [chartData, showPortfolio, activeHoldings, selectedSymbols]);
+
+  // Safe EndOfLineLabel component matching main chart style
+  const EndOfLineLabel = (props: any) => {
+    const { index, value, x, y, stroke, yOffset = 0, name } = props;
+
+    if (index !== chartData.length - 1) return null;
+    if (value === undefined || value === null || !isFinite(value) || typeof y !== 'number') return null;
+
+    const isPort = name === 'Portfolio';
+    const rawPct = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+    const labelText = isPort ? `${rawPct} - Portfolio` : `${rawPct} - ${name}`;
+    const textWidth = Math.max(64, labelText.length * 7 + 16);
+    const badgeHeight = isPort ? 24 : 22;
+    const badgeY = isPort ? y - 12 : y - 11;
+
+    return (
+      <g transform={`translate(0, ${yOffset})`}>
+        <rect
+          x={x + 8}
+          y={badgeY}
+          width={textWidth}
+          height={badgeHeight}
+          fill={isPort ? "#1a1607" : "#0F172A"}
+          stroke={isPort ? "#FBBF24" : stroke}
+          strokeOpacity={isPort ? 1 : 0.8}
+          strokeWidth={isPort ? "1.8" : "1.4"}
+          rx="5"
+          style={{
+            filter: isPort ? 'drop-shadow(0 2px 8px rgba(251,191,36,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+          }}
+        />
+        <text
+          x={x + 8 + textWidth / 2}
+          y={y + 4}
+          fill={isPort ? "#FBBF24" : "#FFFFFF"}
+          fillOpacity={isPort ? 1 : 0.95}
+          fontSize={isPort ? "12px" : "11px"}
+          fontWeight={isPort ? "bold" : "600"}
+          fontFamily="'Roboto Flex', sans-serif"
+          textAnchor="middle"
+          style={{
+            fontFeatureSettings: "'tnum'",
+            textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+          }}
+        >
+          {labelText}
+        </text>
+      </g>
+    );
+  };
+
   if (activeHoldings.length === 0) {
     return null;
   }
@@ -313,19 +407,19 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
         <div className="flex items-center gap-2 bg-[#141824] border border-[#2A2E45] p-1 rounded-xl text-xs">
           <button
             onClick={selectTop5}
-            className="px-2.5 py-1 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors"
+            className="px-2.5 py-1 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors cursor-pointer"
           >
             Top 5
           </button>
           <button
             onClick={selectAll}
-            className="px-2.5 py-1 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors"
+            className="px-2.5 py-1 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors cursor-pointer"
           >
             All
           </button>
           <button
             onClick={clearAll}
-            className="px-2.5 py-1 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors"
+            className="px-2.5 py-1 rounded-lg font-medium text-[#CBD5E1] hover:text-white hover:bg-[#1E293B] transition-colors cursor-pointer"
           >
             Clear
           </button>
@@ -338,7 +432,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
         <button
           onClick={() => setShowPortfolio(!showPortfolio)}
           className={clsx(
-            "flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all",
+            "flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer",
             showPortfolio
               ? "bg-[#FBBF24]/15 border-[#FBBF24] text-[#FBBF24] shadow-[0_0_12px_rgba(251,191,36,0.2)]"
               : "bg-[#1A1D2D] border-[#2A2E45] text-gray-400 opacity-60 hover:opacity-100"
@@ -388,10 +482,10 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
         })}
       </div>
 
-      {/* Main Row: 3/4 Line Chart + 1/4 Leaderboard Bar Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Column (3/4): Holdings Trajectory Line Chart */}
-        <div className="lg:col-span-3 bg-[#111827] border border-[#2A2E45] rounded-3xl p-5 shadow-2xl flex flex-col justify-between min-h-[440px]">
+      {/* Main Row: 4/5 Line Chart + 1/5 Leaderboard Bar Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Left Column (4/5): Holdings Trajectory Line Chart */}
+        <div className="lg:col-span-4 bg-[#111827] border border-[#2A2E45] rounded-3xl p-5 shadow-2xl flex flex-col justify-between min-h-[440px]">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h4 className="text-white font-bold text-base tracking-wide flex items-center gap-2">
@@ -406,7 +500,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
           <div className="w-full h-80 flex-1">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 5 }}>
+                <LineChart data={chartData} margin={{ top: 15, right: 155, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.08)" vertical={false} />
                   <XAxis
                     dataKey="date"
@@ -437,6 +531,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
                       strokeWidth={3}
                       dot={false}
                       connectNulls={false}
+                      label={<EndOfLineLabel yOffset={lineOffsets['Portfolio'] || 0} name="Portfolio" />}
                     />
                   )}
 
@@ -453,6 +548,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
                         strokeWidth={2}
                         dot={false}
                         connectNulls={false}
+                        label={<EndOfLineLabel yOffset={lineOffsets[sym] || 0} name={sym} />}
                       />
                     );
                   })}
@@ -466,7 +562,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
           </div>
         </div>
 
-        {/* Right Column (1/4): Leaderboard Bar Chart */}
+        {/* Right Column (1/5): Leaderboard Bar Chart */}
         <div className="lg:col-span-1 bg-[#111827] border border-[#2A2E45] rounded-3xl p-5 shadow-2xl flex flex-col justify-between min-h-[440px]">
           <div>
             <div className="flex items-center gap-2 mb-1">
