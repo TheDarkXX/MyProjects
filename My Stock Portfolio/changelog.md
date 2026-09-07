@@ -2,6 +2,12 @@
 
 This log tracks all major updates and features added to the application.
 
+### [v2.9.0] Human-First Execution Strategies, Capital Funding Engine & Portfolio Archetype Alignment Date: 2026-09-07T20:45:00Z
+- **🎯 Human-First Execution UI**: Redesigned Actionable Execution Cards to focus on clarity and speed: User Cost Basis vs Live Market Price, 4 Plain Action decision blocks (Entry Zone, Stop Loss, Dip Catch, Target), Tranche Step boxes, and a collapsible accordion for technical metrics (RSI, ATR, Trailing Stop).
+- **💰 Capital Funding Engine**: Integrated deterministic funding logic (`capitalFlowSummary`) showing exactly where capital originates for each trade (e.g. 100% orphan stock liquidation, existing cash buffer, or scheduled DCA cash injection).
+- **🧬 Archetype Alignment**: Added intelligent portfolio archetype detection (`GROWTH_CAPITAL_GAIN`, `DIVIDEND_INCOME`, `BALANCED`). Tailored system prompt to avoid penalizing growth portfolios for low dividend yields, and dynamically swapped the Health Radar axis from "Income" to "Reinvestment" for growth portfolios.
+- **🛡️ Quality & Performance**: Fixed SQLite cache ordering to `ORDER BY id DESC LIMIT 1`, enforced `>= 13px` font sizes and `>= 70%` contrast per Iron Rules, and incorporated archetype in cache hashing.
+
 ### [v2.8.0] 4 Pillars of Conviction, Consensus Momentum & Timeout Resilience Date: 2026-09-07T18:25:00Z
 - **🧠 AI Architecture**: Upgraded Stock Verdicts to Institutional-Grade 4 Pillars of Conviction (Core Thesis & Economic Moat, Active Catalysts & Key Risks, Thesis Breaker, Valuation Verdict) with Conviction Score (1-10).
 - **📈 Quant Intelligence**: Implemented Consensus Momentum Engine tracking Wall Street analyst target revisions (UPWARD, DOWNWARD, STABLE, INSUFFICIENT_DATA).
