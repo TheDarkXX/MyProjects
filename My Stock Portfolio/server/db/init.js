@@ -142,6 +142,21 @@ export function initDb() {
         UNIQUE(symbol)
     );
 
+    CREATE TABLE IF NOT EXISTS consensus_history (
+        symbol TEXT NOT NULL,
+        snapshot_date TEXT NOT NULL,
+        target_mean REAL,
+        target_high REAL,
+        target_low REAL,
+        current_price REAL,
+        analyst_count INTEGER,
+        rec_key TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (symbol, snapshot_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_consensus_symbol_date 
+        ON consensus_history(symbol, snapshot_date DESC);
+
     CREATE TABLE IF NOT EXISTS ai_analysis_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         portfolio_id TEXT NOT NULL REFERENCES portfolios(id),

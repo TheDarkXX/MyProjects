@@ -34,6 +34,7 @@ export async function fetchFundamentals(symbol) {
       if (hasForwardData && (Date.now() - fetchedAt < SQLITE_TTL)) {
         // Hydrate memory cache
         memoryCache.set(upper, { timestamp: Date.now(), data: row });
+        snapshotConsensus(upper, row);
         return row;
       }
     }
@@ -213,6 +214,9 @@ export async function fetchFundamentals(symbol) {
       console.error(`[Fundamentals] Error saving SQLite for ${upper}:`, dbErr.message);
     }
 
+    // Snapshot consensus history for accuracy tracking
+    snapshotConsensus(upper, data);
+
     // Save to Tier 1 (Memory)
     memoryCache.set(upper, { timestamp: Date.now(), data });
     return data;
@@ -220,5 +224,50 @@ export async function fetchFundamentals(symbol) {
   } catch (error) {
     console.error(`[Fundamentals] Error fetching Yahoo API for ${upper}:`, error.message);
     return null;
+  }
+}
+
+/**
+ * Snapshot Wall Street consensus target prices into consensus_history table.
+ * Daily deduplicated with PRIMARY KEY (symbol, snapshot_date) and UPSERT.
+ * @param {string} symbol 
+ * @param {Object} data 
+ */
+export function snapshotConsensus(symbol, data) {
+  if (!symbol || !data) return;
+  const upper = symbol.toUpperCase();
+  if (upper.includes('BTC') || upper.includes('ETH') || upper === 'CASH') return;
+
+  const hasConsensus = (data.target_mean_price > 0) || (data.num_analyst_opinions > 0);
+  if (!hasConsensus) return;
+
+  const snapshotDate = new Date().toISOString().split('T')[0];
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO consensus_history (
+        symbol, snapshot_date, target_mean, target_high, target_low,
+        current_price, analyst_count, rec_key, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(symbol, snapshot_date) DO UPDATE SET
+        target_mean = excluded.target_mean,
+        target_high = excluded.target_high,
+        target_low = excluded.target_low,
+        current_price = excluded.current_price,
+        analyst_count = excluded.analyst_count,
+        rec_key = excluded.rec_key,
+        created_at = excluded.created_at
+    `);
+    stmt.run(
+      upper,
+      snapshotDate,
+      data.target_mean_price || 0,
+      data.target_high_price || 0,
+      data.target_low_price || 0,
+      data.current_price || 0,
+      data.num_analyst_opinions || 0,
+      data.recommendation_key || ''
+    );
+  } catch (err) {
+    console.error(`[Consensus] Error snapshotting consensus for ${upper}:`, err.message);
   }
 }

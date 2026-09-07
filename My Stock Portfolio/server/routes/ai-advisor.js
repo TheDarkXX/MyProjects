@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { db } from '../db/init.js';
 import crypto from 'crypto';
+import { fetchTechnicalAnalysis } from '../services/technicalAnalysis.js';
 
 const aiAdvisorRoutes = new Hono();
 
@@ -21,12 +22,20 @@ function createBlueprintHash(blueprints) {
   return crypto.createHash('md5').update(sorted).digest('hex').slice(0, 12);
 }
 
-function compressPromptData(blueprints, fundamentals, actualHoldings = null) {
+function compressPromptData(blueprints, fundamentals, actualHoldings = null, technicalMap = {}) {
   const hasReal = actualHoldings && actualHoldings.hasRealHoldings && Array.isArray(actualHoldings.items) && actualHoldings.items.length > 0;
+
+  // Build blueprint target lookup
+  const blueprintMap = new Map();
+  (blueprints || []).forEach(b => {
+    blueprintMap.set((b.symbol || '').toUpperCase(), Number(b.target_percent) || 0);
+  });
 
   // 1. Target Blueprint list
   const targetBlueprint = blueprints.map(b => {
-    const f = fundamentals[b.symbol] || fundamentals[(b.symbol || '').toUpperCase()] || {};
+    const sym = (b.symbol || '').toUpperCase();
+    const f = fundamentals[b.symbol] || fundamentals[sym] || {};
+    const tech = technicalMap[sym] || null;
     return {
       symbol: b.symbol,
       target_percent: b.target_percent,
@@ -37,23 +46,51 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null) {
       target_mean_price: f.target_mean_price || 0,
       recommendation_key: f.recommendation_key || '',
       eps_growth_next_year: f.eps_growth_next_year || 0,
-      earnings_beat_streak: f.earnings_beat_streak || 0
+      earnings_beat_streak: f.earnings_beat_streak || 0,
+      rsi14: tech?.rsi14 ?? null,
+      rsiState: tech?.rsiState ?? null
     };
   }).sort((a, b) => b.target_percent - a.target_percent);
 
   // 2. Actual Portfolio list (if provided)
   let actualPortfolio = null;
   if (hasReal) {
+    const totalNetWorth = actualHoldings.totalNetWorth || 0;
     actualPortfolio = actualHoldings.items.map(item => {
-      const sym = item.symbol;
-      const f = fundamentals[sym] || fundamentals[(sym || '').toUpperCase()] || {};
+      const sym = (item.symbol || '').toUpperCase();
+      const f = fundamentals[item.symbol] || fundamentals[sym] || {};
+      const tech = technicalMap[sym] || null;
+      const curPrice = item.currentPrice || f.current_price || 0;
+      
+      const targetPct = blueprintMap.get(sym) ?? 0;
+      const actualPct = item.actualPercent || 0;
+      const diffPct = Number((actualPct - targetPct).toFixed(1));
+      
+      let actionNeeded = 'HOLD (Balanced)';
+      if (item.isOrphan) {
+        actionNeeded = `CUT 100% (~$${Math.round(item.marketValue || 0).toLocaleString()} / ~${(item.quantity || 0).toFixed(1)} shs) [เนื้อร้ายนอกพิมพ์เขียว]`;
+      } else if (diffPct > 0.5) {
+        const estDollar = (diffPct / 100) * totalNetWorth;
+        const estShares = curPrice > 0 ? (estDollar / curPrice).toFixed(1) : '0';
+        actionNeeded = `REDUCE ${diffPct}% (~$${Math.round(estDollar).toLocaleString()} / ~${estShares} shs)`;
+      } else if (diffPct < -0.5) {
+        const estDollar = (Math.abs(diffPct) / 100) * totalNetWorth;
+        const estShares = curPrice > 0 ? (estDollar / curPrice).toFixed(1) : '0';
+        actionNeeded = `ADD ${Math.abs(diffPct)}% (~$${Math.round(estDollar).toLocaleString()} / ~${estShares} shs)`;
+      }
+
+      const priceVsSma50 = (f.sma50 && curPrice) ? Number((((curPrice - f.sma50) / f.sma50) * 100).toFixed(1)) : null;
+      const priceVsSma200 = (f.sma200 && curPrice) ? Number((((curPrice - f.sma200) / f.sma200) * 100).toFixed(1)) : null;
+
       return {
-        symbol: sym,
+        symbol: item.symbol,
         actual_percent: item.actualPercent,
+        target_percent: targetPct,
+        action_needed: actionNeeded,
         market_value: item.marketValue,
         quantity: item.quantity,
         avg_cost: item.avgCost,
-        current_price: item.currentPrice || f.current_price || 0,
+        current_price: curPrice,
         pnl_percent: item.pnlPercent,
         is_orphan: item.isOrphan || false, // True if held in real portfolio but missing in user's blueprint
         sector: f.sector || (sym === 'CASH' ? 'Cash' : 'Other'),
@@ -63,7 +100,18 @@ function compressPromptData(blueprints, fundamentals, actualHoldings = null) {
         target_mean_price: f.target_mean_price || 0,
         recommendation_key: f.recommendation_key || '',
         eps_growth_next_year: f.eps_growth_next_year || 0,
-        earnings_beat_streak: f.earnings_beat_streak || 0
+        earnings_beat_streak: f.earnings_beat_streak || 0,
+        priceVsSma50,
+        priceVsSma200,
+        technicals: tech ? {
+          rsi14: tech.rsi14,
+          rsiState: tech.rsiState,
+          sma20: tech.sma20,
+          atr14: tech.atr14,
+          trailingStop2ATR: tech.trailingStop2ATR,
+          support20d: tech.support20d,
+          resistance20d: tech.resistance20d
+        } : null
       };
     }).sort((a, b) => b.actual_percent - a.actual_percent);
   }
@@ -255,7 +303,7 @@ aiAdvisorRoutes.post('/', async (c) => {
         if (cached) {
           // Ignore stale, dummy or old schema cache
           const isOldSchema = !cached.result_json.includes('portfolioStyle') ||
-            (mode === 'strategist' && (!cached.result_json.includes('stockVerdicts') || cached.result_json.includes('"stockVerdicts":[]')));
+            (mode === 'strategist' && (!cached.result_json.includes('stockVerdicts') || cached.result_json.includes('"stockVerdicts":[]') || !cached.result_json.includes('executionStrategies')));
           const isOldMock = cached.result_json.includes('Solid Blueprint Structure') || cached.result_json.includes('Needs Periodic Review');
           const createdTime = new Date(cached.created_at).getTime();
           if (!isOldMock && !isOldSchema && (Date.now() - createdTime < 6 * 60 * 60 * 1000)) {
@@ -267,8 +315,24 @@ aiAdvisorRoutes.post('/', async (c) => {
       }
     }
 
+    // Fetch technical analysis (RSI14, ATR14, SMA20, Pivots) for securities
+    const allSymbols = Array.from(new Set([
+      ...blueprints.map(b => (b.symbol || '').toUpperCase()),
+      ...(actualHoldings?.items || []).map(h => (h.symbol || '').toUpperCase())
+    ])).filter(s => s && s !== 'CASH' && !s.includes('BTC') && !s.includes('ETH'));
+
+    const technicalMap = {};
+    await Promise.all(allSymbols.map(async (sym) => {
+      try {
+        const tech = await fetchTechnicalAnalysis(sym);
+        if (tech) technicalMap[sym] = tech;
+      } catch (err) {
+        console.warn(`[AI Advisor] Technical fetch error for ${sym}:`, err.message);
+      }
+    }));
+
     // Compress data (Reality-First: actual holdings vs target blueprint)
-    const payloadData = compressPromptData(blueprints, fundamentals || {}, actualHoldings);
+    const payloadData = compressPromptData(blueprints, fundamentals || {}, actualHoldings, technicalMap);
     
     const isStrategist = mode === 'strategist';
 
@@ -283,7 +347,7 @@ aiAdvisorRoutes.post('/', async (c) => {
 5. **ภาษาไทยสละสลวยแต่ดุดันเชือดเฉือน**: เนื้อหาทั้งหมดต้องเขียนเป็นภาษาไทย ยกเว้นชื่อ Ticker หุ้น หรือศัพท์เฉพาะทางเทคนิค
 
 โครงสร้างข้อมูล 2 มิติที่ได้รับ (ความจริง vs พิมพ์เขียวเป้าหมาย):
-1. **actualPortfolio (ความจริง ณ วินาทีนี้)**: สินทรัพย์ที่ถือจริง สัดส่วนจริง (actual_percent %) ต้นทุนจริง (avg_cost) กำไร/ขาดทุนสะสม (pnl_percent %) และเงินสดจริง (CASH). หากมีหุ้นที่มี is_orphan = true นั่นคือ "สินทรัพย์นอกแผน" ที่ผู้ใช้ถืออยู่จริงแต่ไม่ได้ใส่อยู่ในพิมพ์เขียวใหม่!
+1. **actualPortfolio (ความจริง ณ วินาทีนี้)**: สินทรัพย์ที่ถือจริง สัดส่วนจริง (actual_percent %) ต้นทุนจริง (avg_cost) กำไร/ขาดทุนสะสม (pnl_percent %) เงินสดจริง (CASH) คำสั่งคำนวณเบื้องต้น (action_needed) และข้อมูลเทคนิคอล (technicals: RSI14, ATR14, SMA20, 2xATR Trailing Stop, 20D Support/Resistance Pivots, priceVsSma50, priceVsSma200). หากมีหุ้นที่มี is_orphan = true นั่นคือ "สินทรัพย์นอกแผน" ที่ผู้ใช้ถืออยู่จริงแต่ไม่ได้ใส่อยู่ในพิมพ์เขียวใหม่!
 2. **targetBlueprint (พิมพ์เขียวเป้าหมายที่ผู้ใช้วางแผนไว้)**: สัดส่วนเป้าหมาย (target_percent %) ที่ผู้ใช้ตั้งใจอยากได้
 
 หลักการพิพากษาและจัดทัพ (Doctrines of Judgment):
@@ -300,6 +364,12 @@ aiAdvisorRoutes.post('/', async (c) => {
    - หากมีหุ้นนอกแผน (is_orphan) ต้องมี verdict ชี้ขาดเสมอ เช่น flag: "CUT", role: "เนื้อร้ายนอกพิมพ์เขียว"
 6. **Free Cash Flow & Moat คือทุกสิ่ง**: ตัวเลขกำไรจริงและกระแสเงินสดคือเกราะกำบัง ถ้ามีแต่กระแสไฮป์แต่เงินสดแห้งแล้ง นั่นคือกับดัก
 7. **ห้ามตอบ Generic กลางๆ**: ทุกคำวิจารณ์ต้องระบุชื่อหุ้น + ตัวเลข P/E, Beta, Growth หรือ Drawdown ประกอบเสมอ
+${isStrategist ? `8. **Actionable Execution Strategies (เฉพาะ Strategist Mode)**:
+   - สำหรับ suggestions ที่มีการปรับสัดส่วนสำคัญ (Top-3 suggestions ที่มี percent >= 3% หรือคำสั่ง CUT/REMOVE/ADD สำคัญ) ต้องใส่ฟิลด์ "executionStrategies" โดยสร้าง options 3 แนวทาง (CONSERVATIVE, TREND_FOLLOWING, AGGRESSIVE)
+   - เลือกว่า options ตัวไหน The Best ที่สุดผ่าน "recommendedIndex" (0, 1, หรือ 2) และให้เหตุผลใน "justification"
+   - หากผู้ใช้มีกำไรสูง (pnl_percent > 30%) และ RSI > 70 ควรแนะนำกลยุทธ์ Trend Following (Trailing Stop) เพื่อปล่อยให้กำไรวิ่งต่อโดยไม่ขายหมู หรือ Scale-Out
+   - หากผู้ใช้ขาดทุนหนัก หรือหุ้นเป็น orphan (is_orphan = true) ควรแนะนำ Hard Cut ทันทีเพื่อหยุดเลือด
+   - กลยุทธ์ต้องอ้างอิงระดับราคาจริงจาก technicals (RSI14, ATR14, SMA20, trailingStop2ATR, support20d, resistance20d) และ target_mean_price` : ''}
 
 ข้อมูลพอร์ต:
 ${JSON.stringify(payloadData, null, 2)}
@@ -332,7 +402,21 @@ ${JSON.stringify(payloadData, null, 2)}
       "symbol": "TICKER",
       "percent": number,
       "category": "หมวดกลยุทธ์",
-      "reason": "คำสั่งจัดทัพเด็ดขาด ตัดเนื้อร้ายตัวไหน โยกไปเสริมเกราะตัวไหน ทำไมต้องทำทันที"
+      "reason": "คำสั่งจัดทัพเด็ดขาด ตัดเนื้อร้ายตัวไหน โยกไปเสริมเกราะตัวไหน ทำไมต้องทำทันที"${isStrategist ? `,
+      "executionStrategies": {
+        "recommendedIndex": 0 | 1 | 2,
+        "justification": "เหตุผล 1-2 บรรทัดว่าทำไมกลยุทธ์นี้ถึง The Best สำหรับต้นทุนและสถานะปัจจุบัน",
+        "options": [
+          {
+            "id": "scale_limit" | "atr_trailing" | "market_flush" | "dca_support" | "breakout_entry" | "hard_cut",
+            "name": "ชื่อกลยุทธ์ เช่น 'Scale-Out Limit' หรือ 'ATR Trailing Stop'",
+            "type": "CONSERVATIVE" | "TREND_FOLLOWING" | "AGGRESSIVE",
+            "description": "คำอธิบายขั้นตอนปฏิบัติการ ระบุเป้าหมายและจุดยกเลิก/คัทลอสชัดเจน",
+            "exitPrice": "ราคาเป้าหมายหรือระดับราคา เช่น '128-132' หรือ 'Market ($125.40)'",
+            "stopLoss": "จุดตัดขาดทุนหรือ Trailing Stop เช่น '2×ATR ($116.10)' หรือ 'หลุด SMA50 ($120)' หรือ 'ไม่มี'"
+          }
+        ]
+      }` : ''}
     }
   ],
   ${isStrategist ? `
@@ -390,7 +474,7 @@ ${JSON.stringify(payloadData, null, 2)}
             { role: 'system', content: 'You are the Ruthless Investment Strategist (จอมมารแห่ง Wall Street). Output ONLY a single valid raw JSON object matching the requested schema with brutal, decisive, uncompromising Thai analysis. Do not include markdown fences, backticks, or any explanation text outside JSON.' },
             { role: 'user', content: systemPrompt }
           ],
-          max_tokens: 8000
+          max_tokens: isStrategist ? 12000 : 8000
         }),
         signal: AbortSignal.timeout(180000) // 3 minutes timeout for complete 15-section generation
       });

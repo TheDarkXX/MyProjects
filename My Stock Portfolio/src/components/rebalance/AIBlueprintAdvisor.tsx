@@ -11,6 +11,7 @@ import { BeforeAfterDonut } from './advisor/BeforeAfterDonut';
 import { StockVerdictCard } from './advisor/StockVerdictCard';
 import { DrawdownMeter } from './advisor/DrawdownMeter';
 import { TimelineStepper } from './advisor/TimelineStepper';
+import { ExecutionStrategyCard } from './advisor/ExecutionStrategyCard';
 
 // Helper: Extract key macro themes dynamically from analysis text
 const extractMacroPills = (text: string) => {
@@ -614,8 +615,8 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       const snapBp = aiResult._requestSnapshot.blueprints || [];
       const snapH = aiResult._requestSnapshot.holdings || [];
       
-      const snapBpMap = new Map(snapBp.map((b: any) => [b.symbol?.toUpperCase(), b.target_percent]));
-      const snapHMap = new Map(snapH.map((h: any) => [h.symbol?.toUpperCase(), h.actualPercent]));
+      const snapBpMap = new Map<string, number>(snapBp.map((b: any) => [b.symbol?.toUpperCase(), Number(b.target_percent) || 0]));
+      const snapHMap = new Map<string, number>(snapH.map((h: any) => [h.symbol?.toUpperCase(), Number(h.actualPercent) || 0]));
       
       const currentBpSymbolsSet = new Set<string>();
       
@@ -1466,37 +1467,40 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                 <TimelineStepper roadmap={aiResult.actionRoadmap} />
               )}
 
-              {/* Actionable Suggestions */}
+              {/* Actionable Execution Strategies */}
               {aiResult.suggestions && aiResult.suggestions.length > 0 && (
                 <div>
-                  <h4 className="text-white font-bold mb-3 text-sm flex items-center gap-2">
-                    <span>🔧</span> คำแนะนำปรับสัดส่วนเพิ่มเติม (Actionable Suggestions)
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {aiResult.suggestions.map((s: any, i: number) => (
-                      <div key={i} className="border border-[#232738] bg-[#12141F] rounded-xl p-4 flex flex-col justify-between hover:border-slate-600 transition-colors shadow-sm">
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded ${
-                              s.action === 'ADD' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
-                              s.action === 'REDUCE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
-                              s.action === 'SWAP' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' :
-                              'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                            }`}>
-                              {s.action}
-                            </span>
-                            <span className="font-bold text-white text-[14px]">{s.symbol} {s.percent}%</span>
-                          </div>
-                          <p className="text-[13px] text-slate-200 mb-4 leading-relaxed font-normal">{s.reason}</p>
-                        </div>
-                        <button 
-                          onClick={() => onApplySuggestion && onApplySuggestion(s)}
-                          className="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 rounded-lg text-[13px] font-bold transition-colors border border-emerald-500/30 cursor-pointer"
-                        >
-                          นำคำแนะนำไปปรับใช้
-                        </button>
-                      </div>
-                    ))}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <div>
+                      <h4 className="text-white font-bold text-sm flex items-center gap-2">
+                        <span>🔧</span> แผนกลยุทธ์คำสั่งเทรดแบบเจาะจง (Actionable Execution Strategies)
+                      </h4>
+                      <p className="text-[13px] text-slate-300 mt-0.5">
+                        คำแนะนำ 3 มิติ (Conservative, Trend Following, Aggressive) พร้อมระดับราคาและจุดตัดขาดทุนจาก Technical Intelligence
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold px-2.5 py-1 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 self-start sm:self-auto">
+                      {aiResult.suggestions.length} คำสั่ง
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {aiResult.suggestions.map((s: any, i: number) => {
+                      const upperSym = (s.symbol || '').toUpperCase();
+                      const altSym = upperSym.includes('.') ? upperSym.replace('.', '-') : upperSym.includes('-') ? upperSym.replace('-', '.') : upperSym;
+                      const funData = fundamentals[upperSym] || fundamentals[altSym] || fundamentals[s.symbol];
+                      const holding = actualHoldingsMap.get(upperSym) || actualHoldingsMap.get(altSym) || null;
+
+                      return (
+                        <ExecutionStrategyCard
+                          key={i}
+                          suggestion={s}
+                          onApplySuggestion={onApplySuggestion}
+                          actualHolding={holding}
+                          fundamentals={funData}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               )}
