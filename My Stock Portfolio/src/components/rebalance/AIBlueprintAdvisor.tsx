@@ -180,6 +180,27 @@ const METRIC_GUIDES: Record<'beta' | 'pe' | 'risk' | 'cash', {
   }
 };
 
+// Helper: Format UTC date from SQLite into Local Thai Date/Time
+function formatAnalysisDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  try {
+    let iso = String(dateStr).trim();
+    if (!iso.includes('Z') && !iso.includes('+')) {
+      iso = iso.includes('T') ? `${iso}Z` : `${iso.replace(' ', 'T')}Z`;
+    }
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return String(dateStr);
+  }
+}
+
 interface AIBlueprintAdvisorProps {
   portfolioId: string;
   blueprints: any[];
@@ -1013,7 +1034,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                 </div>
                 {cachedCreatedAt && (
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 shrink-0 self-start sm:self-auto">
-                    อ้างอิงข้อมูลเดิมเมื่อ {new Date(cachedCreatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    อ้างอิงข้อมูลเดิมเมื่อ {formatAnalysisDate(cachedCreatedAt)}
                   </span>
                 )}
               </div>
@@ -1065,7 +1086,7 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
                   <>
                     <span className="text-slate-500">•</span>
                     <span className="text-slate-300">
-                      เมื่อ {new Date(cachedCreatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      เมื่อ {formatAnalysisDate(cachedCreatedAt)}
                     </span>
                   </>
                 )}

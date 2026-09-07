@@ -277,7 +277,7 @@ aiAdvisorRoutes.post('/latest', async (c) => {
       const row = db.prepare(`
         SELECT * FROM ai_analysis_history 
         WHERE portfolio_id = ? AND mode = ?
-        ORDER BY created_at DESC LIMIT 1
+        ORDER BY id DESC LIMIT 1
       `).get(portfolio_id, m);
 
       if (row) {
@@ -294,6 +294,10 @@ aiAdvisorRoutes.post('/latest', async (c) => {
 
         const isEmptyDummy = !parsedResult || !parsedResult.portfolioStyle || (m === 'strategist' && (!parsedResult.stockVerdicts || parsedResult.stockVerdicts.length === 0));
 
+        const utcCreatedAt = row.created_at 
+          ? (row.created_at.includes('T') ? (row.created_at.endsWith('Z') ? row.created_at : row.created_at + 'Z') : row.created_at.replace(' ', 'T') + 'Z') 
+          : null;
+
         modesSummary[m] = {
           found: !isEmptyDummy,
           isStale: currentHash !== row.blueprint_hash || isEmptyDummy,
@@ -302,7 +306,7 @@ aiAdvisorRoutes.post('/latest', async (c) => {
           overallGrade: row.overall_grade,
           result: parsedResult,
           modelUsed: row.model_used,
-          createdAt: row.created_at
+          createdAt: utcCreatedAt
         };
 
         if (parsedResult && !parsedResult._consensusMomentum && blueprints) {
@@ -401,7 +405,9 @@ aiAdvisorRoutes.get('/latest/:portfolio_id', async (c) => {
       overallGrade: row.overall_grade,
       result: parsed,
       modelUsed: row.model_used,
-      createdAt: row.created_at
+      createdAt: row.created_at 
+        ? (row.created_at.includes('T') ? (row.created_at.endsWith('Z') ? row.created_at : row.created_at + 'Z') : row.created_at.replace(' ', 'T') + 'Z') 
+        : null
     });
   } catch (err) {
     return c.json({ error: err.message }, 500);
