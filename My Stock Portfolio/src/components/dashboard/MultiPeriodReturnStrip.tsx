@@ -93,7 +93,7 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
         </div>
       </div>
 
-      {/* Multi-Period Return Cards Grid (8 columns layout: 1+1+1+1+1+2+1 = 8) */}
+      {/* Multi-Period Return Cards Grid (8 columns: 1+1+1+1+1+2+1 = 8) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
         {periods.map((item) => {
           const isActive = activeRange === item.id;
@@ -107,7 +107,7 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                 type="button"
                 onClick={onCustomClick}
                 className={clsx(
-                  "col-span-1 p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between cursor-pointer select-none group min-h-[76px]",
+                  "col-span-1 p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between cursor-pointer select-none group min-h-[82px]",
                   isActive
                     ? "bg-[#181D2E] border-2 border-[#823AFD] shadow-[0_0_20px_rgba(130,58,253,0.35)] ring-1 ring-[#823AFD]/50"
                     : "bg-[#131624]/90 border border-[#2D334D] hover:border-[#823AFD]/60 hover:bg-[#181C2B] shadow-md"
@@ -123,7 +123,7 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                   </span>
                   <Calendar className={clsx("w-3.5 h-3.5", isActive ? "text-[#FC2D79]" : "text-[#CBD5E1]")} />
                 </div>
-                <div className="text-xs font-semibold text-[#CBD5E1] truncate">
+                <div className="text-xs font-semibold text-[#CBD5E1] truncate mt-auto">
                   {customFrom && customTo ? `${customFrom.slice(5)} ~ ${customTo.slice(5)}` : 'Select range'}
                 </div>
               </button>
@@ -136,7 +136,7 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
               type="button"
               onClick={() => onRangeChange(item.id)}
               className={clsx(
-                "p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between cursor-pointer select-none group relative overflow-hidden min-h-[76px]",
+                "p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between cursor-pointer select-none group relative overflow-hidden min-h-[82px]",
                 item.isTotal ? "col-span-2 sm:col-span-2 xl:col-span-2" : "col-span-1",
                 isActive
                   ? "bg-[#181D2E] border-2 border-[#823AFD] shadow-[0_0_20px_rgba(130,58,253,0.35)] ring-1 ring-[#823AFD]/50"
@@ -148,8 +148,8 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                 <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#FC2D79] to-[#823AFD]" />
               )}
 
-              {/* Top Row: Period Label + Percentage Badge */}
-              <div className="flex items-center justify-between w-full mb-1.5">
+              {/* Top Row: Period Label (Left) + P&L Currency Amount (Right) */}
+              <div className="flex items-center justify-between w-full mb-1">
                 <span
                   className={clsx(
                     "text-xs font-bold uppercase tracking-wider",
@@ -160,35 +160,36 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                 </span>
                 <span
                   className={clsx(
-                    "text-xs font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-0.5 tabular-nums",
+                    "text-xs font-semibold px-1.5 py-0.5 rounded-md border tabular-nums truncate max-w-[55%]",
                     isPositive 
-                      ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/30" 
-                      : "text-rose-400 bg-rose-500/15 border-rose-500/30"
+                      ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/25" 
+                      : "text-rose-400 bg-rose-500/10 border-rose-500/25"
                   )}
+                  title={formatCurrency(metric.amount, true)}
                 >
-                  {isPositive ? '+' : ''}{metric.percent.toFixed(2)}%
+                  {formatCurrency(metric.amount, true)}
                 </span>
               </div>
 
-              {/* Bottom Row: P&L Currency Amount (Dollar/Baht) */}
-              <div className="flex items-baseline justify-between gap-1 w-full mt-0.5">
+              {/* Center / Main Area: Prominent Big Percentage Return */}
+              <div className="flex items-baseline justify-between gap-1 w-full mt-1">
                 <div
                   className={clsx(
-                    "font-extrabold tabular-nums tracking-tight flex items-center gap-1",
-                    item.isTotal ? "text-base md:text-lg" : "text-sm md:text-base",
+                    "font-black tabular-nums tracking-tight flex items-center gap-0.5",
+                    item.isTotal ? "text-xl md:text-2xl" : "text-lg md:text-xl",
                     isPositive ? "text-emerald-400" : "text-rose-400"
                   )}
                 >
                   {isPositive ? (
-                    <ArrowUpRight className="w-3.5 h-3.5 inline-block shrink-0" />
+                    <ArrowUpRight className="w-4 h-4 inline-block shrink-0" />
                   ) : (
-                    <ArrowDownRight className="w-3.5 h-3.5 inline-block shrink-0" />
+                    <ArrowDownRight className="w-4 h-4 inline-block shrink-0" />
                   )}
-                  <span>{formatCurrency(metric.amount, true)}</span>
+                  <span>{isPositive ? '+' : ''}{metric.percent.toFixed(2)}%</span>
                 </div>
 
                 {item.subLabel && (
-                  <span className="text-[12px] text-[#CBD5E1] font-medium truncate shrink-0 ml-1">
+                  <span className="text-[12px] text-[#9898C8] font-medium truncate shrink-0 ml-1">
                     {item.subLabel}
                   </span>
                 )}
