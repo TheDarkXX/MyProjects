@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Transaction } from '../../types';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts';
 import { Layers, Trophy, CheckSquare, Square, Eye, EyeOff, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -183,13 +183,14 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     setSelectedSymbols(updated);
   };
 
-  // 2. Build time series data normalized to Day 0
+  // 2. Build time series data normalized to Day 0 (TradingView style dynamic rebase)
   const { chartData, leaderboardData } = useMemo(() => {
-    if (displayDates.length === 0 || activeHoldings.length === 0) {
+    if (effectiveDates.length === 0 || activeHoldings.length === 0) {
       return { chartData: [], leaderboardData: [] };
     }
 
-    const startDate = displayDates[0];
+    // Dynamic Day 0: The first visible date on the screen (left-most bar)
+    const startDate = effectiveDates[0];
     const portfolioMap = new Map<string, number>();
     portfolioReturnData.forEach(p => {
       if (p.date && p.value !== undefined) {
@@ -197,9 +198,11 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
       }
     });
 
-    // Base price map for each holding
+    const baselinePortfolio = portfolioMap.get(startDate) ?? 0;
+
+    // Base price map for each holding:
     // If firstBuyDate <= startDate -> base is price on or closest before startDate
-    // If firstBuyDate > startDate -> base is price on firstBuyDate
+    // If firstBuyDate > startDate -> base is price on firstBuyDate (starts at 0% when bought)
     const basePriceMap: Record<string, number> = {};
     const effectiveStartMap: Record<string, string> = {};
 
@@ -209,7 +212,6 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
 
       if (firstBuy <= startDate) {
         effectiveStartMap[sym] = startDate;
-        // find price on startDate, or closest preceding date
         if (prices[startDate]) {
           basePriceMap[sym] = prices[startDate];
         } else {
@@ -217,7 +219,6 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
           if (sortedDates.length > 0) {
             basePriceMap[sym] = prices[sortedDates[sortedDates.length - 1]];
           } else {
-            // fallback to first available
             const anyDates = Object.keys(prices).sort();
             basePriceMap[sym] = anyDates.length > 0 ? prices[anyDates[0]] : 0;
           }
@@ -236,35 +237,15 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     const series: any[] = [];
     const latestReturns: Record<string, number | null> = {};
 
-    // Calculate latest returns across the entire active timeframe
-    displayDates.forEach(date => {
-      activeHoldings.forEach(sym => {
-        const firstValidDate = effectiveStartMap[sym];
-        const basePrice = basePriceMap[sym];
-        const prices = priceData[sym] || {};
-
-        if (date >= firstValidDate && basePrice && basePrice > 0) {
-          let currentPrice = prices[date];
-          if (currentPrice === undefined) {
-            const pastDates = Object.keys(prices).filter(d => d <= date && d >= firstValidDate).sort();
-            if (pastDates.length > 0) {
-              currentPrice = prices[pastDates[pastDates.length - 1]];
-            }
-          }
-          if (currentPrice !== undefined && basePrice > 0) {
-            const pct = ((currentPrice - basePrice) / basePrice) * 100;
-            latestReturns[sym] = Number(pct.toFixed(2));
-          }
-        }
-      });
-    });
-
-    // Build chart data slice for effectiveDates (supporting Ctrl + Scroll zoom)
+    // Build chart data slice for effectiveDates (all lines rebased to 0% at startDate)
     effectiveDates.forEach(date => {
       const point: any = { date };
 
       if (portfolioMap.has(date)) {
-        point['Portfolio'] = portfolioMap.get(date);
+        const rawPort = portfolioMap.get(date) ?? 0;
+        point['Portfolio'] = Number((rawPort - baselinePortfolio).toFixed(2));
+      } else if (date === startDate) {
+        point['Portfolio'] = 0;
       }
 
       activeHoldings.forEach(sym => {
@@ -275,11 +256,16 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
         if (date < firstValidDate) {
           // Stock was NOT yet in the portfolio
           point[sym] = null;
+        } else if (date === firstValidDate) {
+          // Exactly Day 0 for this stock -> 0.00%
+          point[sym] = 0;
+          if (latestReturns[sym] === undefined) {
+            latestReturns[sym] = 0;
+          }
         } else if (basePrice && basePrice > 0) {
           let currentPrice = prices[date];
           if (currentPrice === undefined) {
-            // lookup last known price up to date
-            const pastDates = Object.keys(prices).filter(d => d <= date && d >= firstValidDate).sort();
+            const pastDates = Object.keys(prices).filter(d => d <= date).sort();
             if (pastDates.length > 0) {
               currentPrice = prices[pastDates[pastDates.length - 1]];
             }
@@ -288,8 +274,9 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
           if (currentPrice !== undefined && basePrice > 0) {
             const pct = ((currentPrice - basePrice) / basePrice) * 100;
             point[sym] = Number(pct.toFixed(2));
+            latestReturns[sym] = point[sym];
           } else {
-            point[sym] = null;
+            point[sym] = 0;
           }
         } else {
           point[sym] = null;
@@ -550,7 +537,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
               </span>
             </h3>
             <p className="text-[13px] text-[#CBD5E1]">
-              เปรียบเทียบผลตอบแทนหุ้นรายตัวในพอร์ตแข่งกันเอง (วันแรกที่ซื้อ = ฐาน 0%)
+              เปรียบเทียบผลตอบแทนแบบ TradingView (จุดเริ่มต้นซ้ายสุดของจอ = ฐาน 0.00%)
             </p>
           </div>
         </div>
@@ -655,7 +642,7 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
                 Holdings Trajectory ({timeRangeLabel})
               </h4>
               <p className="text-[13px] text-[#CBD5E1]">
-                เส้นกราฟเริ่มนับ 0% ณ วันแรกที่ซื้อเข้าพอร์ตจริง
+                ทุกเส้นเริ่มสตาร์ทที่ 0.00% ณ วันแรกทางซ้ายของจอ (Dynamic Rebase)
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -697,6 +684,9 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
                     domain={['auto', 'auto']}
                   />
                   <Tooltip content={<CustomAttributionTooltip />} />
+
+                  {/* TradingView-style 0.00% Baseline */}
+                  <ReferenceLine y={0} stroke="rgba(255, 255, 255, 0.28)" strokeDasharray="3 3" strokeWidth={1.2} />
 
                   {/* Portfolio Reference Line */}
                   {showPortfolio && (
