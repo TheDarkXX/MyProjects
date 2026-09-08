@@ -93,7 +93,18 @@ const formatDateYYYYMMDD = (dStr?: string) => {
   return clean;
 };
 
-const StatCard = ({ title, value, change, isPositive, subValue, icon: Icon, gradient }: any) => (
+const StatCard = ({ 
+  title, 
+  value, 
+  change, 
+  changeLabel, 
+  badgeColor, 
+  badgeTitle,
+  isPositive, 
+  subValue, 
+  icon: Icon, 
+  gradient 
+}: any) => (
   <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 relative overflow-hidden group">
     <div className={clsx("absolute -top-24 -right-24 w-48 h-48 rounded-full blur-[64px] opacity-20 group-hover:opacity-40 transition-opacity", gradient)}></div>
     <div className="flex justify-between items-start mb-4 relative z-10">
@@ -101,11 +112,19 @@ const StatCard = ({ title, value, change, isPositive, subValue, icon: Icon, grad
         <Icon className={clsx("w-6 h-6", isPositive ? "text-[#FC2D79]" : "text-[#823AFD]")} />
       </div>
       {change !== undefined && (
-        <div className={clsx("flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-lg", 
-          isPositive ? "text-[#FC2D79] bg-[#FC2D79]/10" : "text-[#823AFD] bg-[#823AFD]/10"
-        )}>
-          {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-          <span>{Math.abs(change).toFixed(2)}%</span>
+        <div 
+          className={clsx(
+            "flex items-center gap-1 text-sm font-semibold px-2.5 py-1 rounded-lg border tabular-nums shadow-sm transition-all", 
+            badgeColor 
+              ? badgeColor 
+              : isPositive 
+                ? "text-[#FC2D79] bg-[#FC2D79]/10 border-[#FC2D79]/30" 
+                : "text-[#823AFD] bg-[#823AFD]/10 border-[#823AFD]/30"
+          )}
+          title={badgeTitle}
+        >
+          {isPositive ? <ArrowUpRight className="w-4 h-4 shrink-0" /> : <ArrowDownRight className="w-4 h-4 shrink-0" />}
+          <span>{Math.abs(change).toFixed(2)}%{changeLabel ? ` ${changeLabel}` : ''}</span>
         </div>
       )}
     </div>
@@ -151,7 +170,8 @@ export const Dashboard = () => {
     todaysProfit,
     todaysProfitPercent,
     netInvested,
-    totalDividends
+    totalDividends,
+    dividendYieldOnCost
   } = useHoldings();
 
   const [timeRange, setTimeRange] = useState<DashboardTimeRange>('ALL');
@@ -178,14 +198,25 @@ export const Dashboard = () => {
 
   const activeSymbols = holdings.map(h => h.symbol);
   
+  const symbolsToFetch = useMemo(() => {
+    return Array.from(new Set([...activeSymbols, 'SPY']));
+  }, [activeSymbols]);
+
+  const historyFromDate = useMemo(() => {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+    if (!earliestTxDate) return oneYearAgoStr;
+    return earliestTxDate < oneYearAgoStr ? earliestTxDate : oneYearAgoStr;
+  }, [earliestTxDate]);
+
   useEffect(() => {
-    if (activeSymbols.length > 0) {
-      fetchPrices(activeSymbols);
+    if (symbolsToFetch.length > 0) {
+      fetchPrices(symbolsToFetch);
       const to = new Date().toISOString().split('T')[0];
-      const from = earliestTxDate || '2024-01-01';
-      fetchHistorical(activeSymbols, from, to);
+      fetchHistorical(symbolsToFetch, historyFromDate, to);
     }
-  }, [JSON.stringify(activeSymbols), earliestTxDate, fetchPrices, fetchHistorical]);
+  }, [JSON.stringify(symbolsToFetch), historyFromDate, fetchPrices, fetchHistorical]);
 
   // Recent Txs (new to old)
   const recentTxs = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4);
@@ -273,38 +304,88 @@ export const Dashboard = () => {
   const periodPnl = periodEndValue - periodStartValue;
   const periodPnlPercent = periodStartValue > 0 ? (periodPnl / periodStartValue) * 100 : 0;
 
-  // 3. Multi-Period Metrics (P&L Amount & Percent) - 100% unified with chartData and StatCards
+  // 3. Multi-Period Metrics (P&L Amount & Percent + S&P 500 Benchmark & Alpha)
   const periodMetrics = useMemo(() => {
-    const calcMetric = (range: DashboardTimeRange, customStart?: string, customEnd?: string) => {
-      if (range === 'ALL') {
-        return { amount: totalPnl, percent: totalPnlPercent };
-      }
+    const spyHist = historical['SPY'] || [];
+    const spyLive = prices['SPY'];
+
+    const calcSpyMetric = (range: DashboardTimeRange, customStart?: string, customEnd?: string) => {
+      // 1D: Use live percent change from Yahoo API or latest 2 history points
       if (range === '1D') {
-        return { amount: todaysProfit, percent: todaysProfitPercent };
+        if (spyLive && typeof spyLive.percent_change === 'number') {
+          return spyLive.percent_change;
+        }
+        if (spyHist.length >= 2) {
+          const last = spyHist[spyHist.length - 1].price;
+          const prev = spyHist[spyHist.length - 2].price;
+          return prev > 0 ? ((last - prev) / prev) * 100 : 0;
+        }
+        return 0;
       }
-      const startDate = getStartDateForRange(range, earliestTxDate, customStart);
-      const endDate = customEnd || new Date().toISOString().split('T')[0];
-      const pts = allDailyPoints.filter(p => p.date >= startDate && p.date <= endDate);
-      if (pts.length === 0) return { amount: 0, percent: 0 };
-      
-      const startVal = pts[0].value;
-      const endVal = pts[pts.length - 1].value;
-      const pnl = endVal - startVal;
-      const pct = startVal > 0 ? (pnl / startVal) * 100 : 0;
-      return { amount: pnl, percent: pct };
+
+      if (spyHist.length === 0) return 0;
+
+      let targetStartDate = '';
+      const todayStr = new Date().toISOString().split('T')[0];
+      const targetEndDate = customEnd || todayStr;
+
+      if (range === 'ALL') {
+        targetStartDate = earliestTxDate || spyHist[0].date;
+      } else {
+        targetStartDate = getStartDateForRange(range, earliestTxDate, customStart);
+      }
+
+      // Find point on or immediately after targetStartDate (or earliest available)
+      let startPoint = spyHist.find(p => p.date >= targetStartDate);
+      if (!startPoint) startPoint = spyHist[0];
+
+      // Find point on or immediately before targetEndDate (or latest available)
+      const endFiltered = spyHist.filter(p => p.date <= targetEndDate);
+      const endPoint = endFiltered.length > 0 ? endFiltered[endFiltered.length - 1] : spyHist[spyHist.length - 1];
+
+      if (!startPoint || !endPoint || startPoint.price <= 0) return 0;
+      return ((endPoint.price - startPoint.price) / startPoint.price) * 100;
+    };
+
+    const calcMetric = (range: DashboardTimeRange, customStart?: string, customEnd?: string) => {
+      let amount = 0;
+      let percent = 0;
+
+      if (range === 'ALL') {
+        amount = totalPnl;
+        percent = totalPnlPercent;
+      } else if (range === '1D') {
+        amount = todaysProfit;
+        percent = todaysProfitPercent;
+      } else {
+        const startDate = getStartDateForRange(range, earliestTxDate, customStart);
+        const endDate = customEnd || new Date().toISOString().split('T')[0];
+        const pts = allDailyPoints.filter(p => p.date >= startDate && p.date <= endDate);
+        if (pts.length > 0) {
+          const startVal = pts[0].value;
+          const endVal = pts[pts.length - 1].value;
+          amount = endVal - startVal;
+          percent = startVal > 0 ? (amount / startVal) * 100 : 0;
+        }
+      }
+
+      const spyPercent = calcSpyMetric(range, customStart, customEnd);
+      const alpha = percent - spyPercent;
+
+      return { amount, percent, spyPercent, alpha };
     };
 
     return {
-      '1D': { amount: todaysProfit, percent: todaysProfitPercent },
+      '1D': calcMetric('1D'),
       '1W': calcMetric('1W'),
       '1M': calcMetric('1M'),
       '3M': calcMetric('3M'),
       'YTD': calcMetric('YTD'),
       '1Y': calcMetric('1Y'),
-      'ALL': { amount: totalPnl, percent: totalPnlPercent },
+      'ALL': calcMetric('ALL'),
       'CUSTOM': calcMetric('CUSTOM', customFrom, customTo),
     };
-  }, [allDailyPoints, todaysProfit, todaysProfitPercent, totalPnl, totalPnlPercent, earliestTxDate, customFrom, customTo]);
+  }, [allDailyPoints, todaysProfit, todaysProfitPercent, totalPnl, totalPnlPercent, earliestTxDate, customFrom, customTo, historical, prices]);
 
   // 4. Historical What-If Growth Anchor
   const whatIfData = useMemo(() => {
@@ -615,6 +696,10 @@ export const Dashboard = () => {
           title="Total Dividends" 
           value={formatPrimary(totalDividends)} 
           subValue={formatSecondary(totalDividends)}
+          change={dividendYieldOnCost}
+          changeLabel="YoC"
+          badgeColor="text-amber-300 bg-amber-500/15 border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+          badgeTitle={`Yield on Cost: ${dividendYieldOnCost.toFixed(2)}% of Net Invested`}
           isPositive={true}
           icon={Coins}
           gradient="bg-[#F5A623]"

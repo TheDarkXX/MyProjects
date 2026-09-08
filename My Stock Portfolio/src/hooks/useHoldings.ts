@@ -147,6 +147,8 @@ export function useHoldings() {
     const securitiesReturn = totalSecuritiesValue - totalSecuritiesCost;
     const securitiesReturnPercent = totalSecuritiesCost > 0 ? (securitiesReturn / totalSecuritiesCost) * 100 : 0;
 
+    const dividendYieldOnCost = netInvested > 0 ? (totalDividends / netInvested) * 100 : 0;
+
     // Calculate weights
     holdingsArray.forEach(h => {
       h.weightPercent = totalNetWorth > 0 ? (h.currentValue / totalNetWorth) * 100 : 0;
@@ -168,6 +170,7 @@ export function useHoldings() {
       totalNetWorth,
       netInvested,
       totalDividends,
+      dividendYieldOnCost,
       totalPnl,
       totalPnlPercent,
       cashWeight,
