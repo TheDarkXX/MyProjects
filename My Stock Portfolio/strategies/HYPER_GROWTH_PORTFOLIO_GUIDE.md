@@ -1,6 +1,7 @@
 # 🚀 บทความกลยุทธ์: The Apex Predator — คัมภีร์จัดพอร์ต Hyper-Growth ผูกขาดโลก 35%++
 > **หมวดหมู่:** Portfolio Strategy & High-Conviction Allocation Playbook  
 > **ตำแหน่งไฟล์:** `My Stock Portfolio/strategies/HYPER_GROWTH_PORTFOLIO_GUIDE.md`  
+> **รายงานตรวจสอบตัวเลขสด:** [THE_3_YEAR_DOUBLER_AUDIT.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/THE_3_YEAR_DOUBLER_AUDIT.md) *(รายงานตรวจสุขภาพ 3 ปี 1 เด้ง เจาะลึกด้วย Yahoo Finance API)*  
 > **เป้าหมายผลตอบแทน:** **25% – 30% ต่อปี ทบต้นระยะยาว (Bull-Case Stretch Goal 35%++ CAGR)**  
 > **เกณฑ์คัดกรองขั้นต่ำ (The 3-Year Doubler Rule):** **ต้องมีศักยภาพเติบโตอย่างน้อย 100% (1 เด้ง / 2x Capital Gain) ภายในเวลาไม่เกิน 3 ปี (คิดเป็นผลตอบแทนทบต้น CAGR $\ge$ 26% ต่อปีขึ้นไป)**  
 > **พฤติกรรมพอร์ต:** สำหรับนักลงทุนสายถือยาว ไม่เฝ้าจอ ขี้เกียจดูบ่อย เน้นเติมเงิน DCA / Inflow ตามรอบเทคนิคอล ขายเฉพาะพื้นฐานพัง
@@ -170,7 +171,7 @@
 ## 🏛️ 6. อสูรผูกขาดระดับจักรวาลที่ผ่านเกณฑ์ & ตัวเลือกเสริม (The Strategic Contenders)
 
 จากการสแกนหุ้นระดับโลกที่เข้าข่าย "ผู้ผูกขาดโลก" มาทดสอบกับ **3 เกณฑ์เหล็กของพอร์ต Hyper-Growth**:
-1. **เกณฑ์ 3 ปี 1 เด้ง (The 3-Year Doubler Benchmark):** ต้องมีศักยภาพดันราคาหุ้นเติบโตอย่างน้อย **100% ภายใน 3 ปี (คิดเป็น CAGR $\ge$ 26%++ ต่อปี)** ผ่านการระเบิดของกำไรสุทธิ (EPS Acceleration) และ Operating Leverage ห้ามเป็นเต่าคลานแบบ Google (12-14%) หรือปันผลเนิบช้าแบบ KO
+1. **เกณฑ์ 3 ปี 1 เด้ง (The 3-Year Doubler Benchmark):** ต้องมีศักยภาพดันราคาหุ้นเติบโตอย่างน้อย **100% ภายใน 3 ปี (คิดเป็น CAGR $\ge$ 26%++ ต่อปี)** ผ่านการระเบิดของกำไรสุทธิ (EPS Acceleration) และ Operating Leverage ห้ามเป็นเต่าคลานแบบ Google (12-14%) หรือปันผลเนิบช้าแบบ KO *(ดูผลการตรวจประเมินรายตัวสดจาก Yahoo Finance ได้ที่ [THE_3_YEAR_DOUBLER_AUDIT.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/THE_3_YEAR_DOUBLER_AUDIT.md))*
 2. **กำแพงผูกขาดคอขวด (True Economic Moat):** ไม่มีใครเลียนแบบได้ มาร์จิ้นสูงลิ่ว ย้ายค่ายไม่ได้
 3. **พฤติกรรมสายถือยาว ไม่เฝ้าจอ:** งบดุลกระแสเงินสดระดับป้อมปราการ ไม่ผันผวนจนนอนไม่หลับ
 
