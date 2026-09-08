@@ -347,6 +347,10 @@ export const Dashboard = () => {
       return ((endPoint.price - startPoint.price) / startPoint.price) * 100;
     };
 
+    const chronologicalTxs = transactions
+      .filter(t => t.status !== 'CANCELLED' && t.date)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
     const calcMetric = (range: DashboardTimeRange, customStart?: string, customEnd?: string) => {
       let amount = 0;
       let percent = 0;
@@ -361,11 +365,68 @@ export const Dashboard = () => {
         const startDate = getStartDateForRange(range, earliestTxDate, customStart);
         const endDate = customEnd || new Date().toISOString().split('T')[0];
         const pts = allDailyPoints.filter(p => p.date >= startDate && p.date <= endDate);
+        
         if (pts.length > 0) {
-          const startVal = pts[0].value;
+          const startsBeforeInception = earliestTxDate ? startDate < earliestTxDate : false;
+          const startVal = startsBeforeInception ? 0 : pts[0].value;
           const endVal = pts[pts.length - 1].value;
-          amount = endVal - startVal;
-          percent = startVal > 0 ? (amount / startVal) * 100 : 0;
+
+          // Cash flows: if startsBeforeInception include all up to endDate; else include cash flows occurring AFTER pts[0].date
+          const cashFlowCutoffDate = startsBeforeInception ? startDate : pts[0].date;
+          let periodNetCashFlow = 0;
+
+          for (const tx of chronologicalTxs) {
+            const txDate = tx.date.split('T')[0];
+            const isIncluded = startsBeforeInception 
+              ? (txDate >= cashFlowCutoffDate && txDate <= endDate)
+              : (txDate > cashFlowCutoffDate && txDate <= endDate);
+
+            if (isIncluded) {
+              const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
+              const type = (tx.type || '').toUpperCase();
+              if (type === 'DEPOSIT' || (type === 'BUY' && isCash)) {
+                periodNetCashFlow += tx.amount;
+              } else if (type === 'WITHDRAW' || (type === 'SELL' && isCash)) {
+                periodNetCashFlow -= tx.amount;
+              }
+            }
+          }
+
+          // 1. True Dollar Profit = (End Value - Start Value) - Net External Deposits
+          amount = (endVal - startVal) - periodNetCashFlow;
+
+          // 2. Global Industry-Standard: Daily Time-Weighted Return (TWR)
+          // Isolates investment performance from timing and size of deposits/withdrawals
+          if (pts.length >= 2) {
+            let cumTwr = 1.0;
+            for (let i = 1; i < pts.length; i++) {
+              const prevVal = pts[i - 1].value;
+              const currVal = pts[i].value;
+              const currDate = pts[i].date;
+
+              let dayCf = 0;
+              for (const tx of chronologicalTxs) {
+                if (tx.date.split('T')[0] === currDate) {
+                  const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
+                  const type = (tx.type || '').toUpperCase();
+                  if (type === 'DEPOSIT' || (type === 'BUY' && isCash)) {
+                    dayCf += tx.amount;
+                  } else if (type === 'WITHDRAW' || (type === 'SELL' && isCash)) {
+                    dayCf -= tx.amount;
+                  }
+                }
+              }
+
+              if (prevVal > 0) {
+                const dayReturn = (currVal - dayCf - prevVal) / prevVal;
+                cumTwr *= (1 + dayReturn);
+              }
+            }
+            percent = (cumTwr - 1) * 100;
+          } else {
+            const base = startVal + Math.max(0, periodNetCashFlow);
+            percent = base > 0 ? (amount / base) * 100 : 0;
+          }
         }
       }
 
@@ -385,7 +446,7 @@ export const Dashboard = () => {
       'ALL': calcMetric('ALL'),
       'CUSTOM': calcMetric('CUSTOM', customFrom, customTo),
     };
-  }, [allDailyPoints, todaysProfit, todaysProfitPercent, totalPnl, totalPnlPercent, earliestTxDate, customFrom, customTo, historical, prices]);
+  }, [allDailyPoints, transactions, todaysProfit, todaysProfitPercent, totalPnl, totalPnlPercent, earliestTxDate, customFrom, customTo, historical, prices]);
 
   // 4. Historical What-If Growth Anchor
   const whatIfData = useMemo(() => {

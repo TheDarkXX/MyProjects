@@ -90,7 +90,7 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
               </span>
               {activeMetric.alpha !== undefined && (
                 <span className={clsx(
-                  "font-bold px-1.5 py-0.5 rounded border ml-0.5 text-[11px]", 
+                  "font-bold px-1.5 py-0.5 rounded border ml-0.5 text-xs", 
                   activeMetric.alpha >= 0 
                     ? "text-emerald-300 bg-emerald-500/20 border-emerald-500/40" 
                     : "text-rose-300 bg-rose-500/20 border-rose-500/40"
@@ -244,7 +244,7 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
               {/* Bottom Strip: S&P 500 Benchmark Comparison + Alpha Spread */}
               <div className="mt-2.5 pt-2 border-t border-[#282E47] flex items-center justify-between w-full text-[13px] font-semibold">
                 <div className="flex items-center gap-1.5 text-[#CBD5E1]">
-                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider">
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider">
                     S&P
                   </span>
                   <span className={clsx(
