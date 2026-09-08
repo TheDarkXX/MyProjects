@@ -5,6 +5,9 @@
 > *ห้ามใส่รายละเอียดโค้ดที่นี่ ให้ทำ Link (Absolute path) ไปหาไฟล์ในโฟลเดอร์ `Quick Save/` แทน*
 
 ## 🟢 1. Active Phases (กำลังทำ)
+- **[My Stock Portfolio] Project 2X Autonomous Buy/Sell Notification Cron**: วางแผนและพัฒนาระบบ Cron Trigger แจ้งเตือนหุ้นที่เข้าเงื่อนไข ซื้อ-ขาย ตามยุทธศาสตร์ Project 2X (Sniper Inflow Scenario 1 & 2, Free-Ride +100%, Rebalance Trim, Orphan Rotation) ผ่าน Telegram Bot / Discord Webhook
+  - 📂 **Context File**: [V2.11.3_[design]_strategy_project-2x-execution-playbook-and-selling-protocol.md](file:///c:/My%20Claw/MyProjects/Quick%20Save/Complete/My%20Stock%20Portfolio/V2.11.3_%5Bdesign%5D_strategy_project-2x-execution-playbook-and-selling-protocol.md)
+  - 🎯 **Next Step**: พัฒนา Background Cron Worker บน VPS สแกนราคาและ Banker MCDX ทุกวันหลังตลาดปิด เพื่อส่งสัญญาณ Actionable Signal ซื้อ/ขาย ทันที
 - **[My Stock Portfolio] Production Stabilization & Consensus Momentum Tracking**: ติดตามการสะสมประวัติ Wall Street Consensus รายวันในตาราง SQLite เพื่อปลดล็อกสัญญาณ Momentum ทิศทางสถาบัน และติดตามผลลัพธ์การใช้งานจริงของ Human-First Execution Cards
   - 📂 **Context File**: [V2.9.0_[impl]_advisor_human-first-execution-strategies-capital-funding-engine-and-archetype-alignment.md](file:///c:/My%20Claw/MyProjects/Quick%20Save/Complete/My%20Stock%20Portfolio/V2.9.0_%5Bimpl%5D_advisor_human-first-execution-strategies-capital-funding-engine-and-archetype-alignment.md)
   - 🎯 **Next Step**: รวบรวมข้อมูลสะสม 7+ วัน เพื่อประเมินความแม่นยำของคำแนะนำสถาบันและปรับแต่งกลยุทธ์ Rebalance
