@@ -807,63 +807,58 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               0
             </text>
 
-            {/* Continuous 3-tier stacked histogram: Green Top, Yellow Mid, Red Base */}
+            {/* Continuous 3-tier stacked histogram matching TradingView Super Money MCDX */}
             {sliceCloses.map((_, i) => {
               let bVal = sliceBanker[i] ?? 0;
               let hVal = sliceHotMoney[i] ?? 0;
-              let rVal = sliceRetail[i] ?? 0;
 
-              // Fallback synthesis if hotMoney / retail array is empty
-              if (hVal === 0 && rVal === 0) {
-                if (bVal > 0) {
-                  hVal = Math.min(20 - bVal, Math.max(0, (20 - bVal) * 0.45));
-                  rVal = Math.max(0, 20 - bVal - hVal);
-                } else {
-                  rVal = 20;
-                }
+              // Fallback synthesis if hotMoney array is empty
+              if (hVal === 0 && bVal > 0) {
+                hVal = Math.min(20, bVal * 1.6);
               }
 
               const barX = getX(i, sliceCloses.length);
               const barW = Math.max(2.5, candleBarWidth * 0.88);
 
-              // 1. Red Base (Institutional Banker): 0 to bVal
+              // 1. Red Base (Banker Institutional Flow): 0 to bVal
               const yBase = getBankerY(0);
               const yBanker = getBankerY(bVal);
               const redH = Math.max(0, yBase - yBanker);
 
-              // 2. Yellow Mid (Hot Money): bVal to bVal + hVal
-              const yHot = getBankerY(bVal + hVal);
-              const yellowH = Math.max(0, yBanker - yHot);
+              // 2. Yellow Mid (Hot Money Speculative Flow): bVal to Math.max(bVal, hVal)
+              const topYellow = Math.max(bVal, hVal);
+              const yYellowTop = getBankerY(topYellow);
+              const yellowH = Math.max(0, yBanker - yYellowTop);
 
-              // 3. Green Top (Retail): bVal + hVal to 20
-              const yRetail = getBankerY(Math.min(20, bVal + hVal + rVal));
-              const greenH = Math.max(0, yHot - yRetail);
+              // 3. Green Top (Retail Floating Supply): Math.max(bVal, hVal) to 20
+              const yGreenTop = getBankerY(20);
+              const greenH = Math.max(0, yYellowTop - yGreenTop);
 
               return (
                 <g key={i}>
-                  {/* Green Retail (Top) */}
+                  {/* Green Retail (Top Floating Supply) */}
                   {greenH > 0 && (
                     <rect
                       x={barX - barW / 2}
-                      y={yRetail}
+                      y={yGreenTop}
                       width={barW}
                       height={greenH}
                       fill="#2E7D32"
                       fillOpacity={0.88}
                     />
                   )}
-                  {/* Yellow Hot Money (Mid) */}
+                  {/* Yellow Hot Money (Mid Speculative Flow) */}
                   {yellowH > 0 && (
                     <rect
                       x={barX - barW / 2}
-                      y={yHot}
+                      y={yYellowTop}
                       width={barW}
                       height={yellowH}
                       fill="#FFD600"
                       fillOpacity={0.92}
                     />
                   )}
-                  {/* Red Banker (Base) */}
+                  {/* Red Banker (Base Institutional Flow) */}
                   {redH > 0 && (
                     <rect
                       x={barX - barW / 2}

@@ -92,17 +92,23 @@ export function calcMcdxSeries(closes) {
   for (let i = 20; i < len; i++) {
     const slice = closes.slice(0, i + 1);
     const rsi50 = i >= 50 ? calcRSI(slice, 50) : calcRSI(slice, Math.min(i, 30));
-    const rsi14 = calcRSI(slice, 14);
+    const rsi40 = i >= 40 ? calcRSI(slice, 40) : calcRSI(slice, Math.min(i, 25));
 
+    // Banker (Red): Sensitivity 1.5, Base 50, Period 50
     let b = 0;
     if (rsi50 !== null && rsi50 > 50) {
       b = Math.min(20, Math.max(0, 1.5 * (rsi50 - 50)));
     }
+
+    // Hot Money (Yellow): Sensitivity 0.7, Base 30, Period 40
     let h = 0;
-    if (rsi14 !== null && rsi14 > 35) {
-      h = Math.min(20 - b, Math.max(0, ((rsi14 - 35) / 65) * (20 - b)));
+    if (rsi40 !== null && rsi40 > 30) {
+      h = Math.min(20, Math.max(0, 0.7 * (rsi40 - 30)));
     }
-    const r = Math.max(0, 20 - (b + h));
+
+    // Retailer (Green): Floating supply above Hot Money / Banker up to 20
+    const topCoverage = Math.max(b, h);
+    const r = Math.max(0, 20 - topCoverage);
 
     banker[i] = Number(b.toFixed(2));
     hotMoney[i] = Number(h.toFixed(2));
