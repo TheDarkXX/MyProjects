@@ -609,30 +609,30 @@ export const LWChart: React.FC<LWChartProps> = ({
     }, 0);
     areaSeriesRef.current = areaSeries;
 
-    // 3. EMA 50 (Sky Blue)
+    // 3. EMA 50 (White)
     const ema50Series = chart.addSeries(LineSeries, {
-      color: '#38BDF8',
-      lineWidth: 1,
+      color: '#FFFFFF',
+      lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'EMA 50',
     }, 0);
     ema50SeriesRef.current = ema50Series;
 
-    // 4. EMA 150 (Amber)
+    // 4. EMA 150 (Royal Blue)
     const ema150Series = chart.addSeries(LineSeries, {
-      color: '#F59E0B',
-      lineWidth: 1,
+      color: '#2962FF',
+      lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'EMA 150',
     }, 0);
     ema150SeriesRef.current = ema150Series;
 
-    // 5. EMA 200 (Purple Core Bedrock)
+    // 5. EMA 200 (Amber Gold Core Bedrock)
     const ema200Series = chart.addSeries(LineSeries, {
-      color: '#A855F7',
-      lineWidth: 2,
+      color: '#FFB300',
+      lineWidth: 3,
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'EMA 200',
@@ -1145,17 +1145,17 @@ export const LWChart: React.FC<LWChartProps> = ({
             </span>
             {activeLegend.ema50 && (
               <span className="hidden sm:inline">
-                EMA50: <strong className="text-sky-400">${activeLegend.ema50.toFixed(2)}</strong>
+                EMA50: <strong className="text-white">${activeLegend.ema50.toFixed(2)}</strong>
               </span>
             )}
             {activeLegend.ema150 && (
               <span className="hidden sm:inline">
-                EMA150: <strong className="text-amber-400">${activeLegend.ema150.toFixed(2)}</strong>
+                EMA150: <strong className="text-blue-500">${activeLegend.ema150.toFixed(2)}</strong>
               </span>
             )}
             {activeLegend.ema200 && (
               <span className="hidden sm:inline">
-                EMA200: <strong className="text-purple-400">${activeLegend.ema200.toFixed(2)}</strong>
+                EMA200: <strong className="text-amber-400">${activeLegend.ema200.toFixed(2)}</strong>
               </span>
             )}
             <span className="flex items-center gap-1">
@@ -1167,7 +1167,7 @@ export const LWChart: React.FC<LWChartProps> = ({
               HotMoney: <strong className="text-amber-400">{activeLegend.hotMoney.toFixed(1)}</strong>
             </span>
             <span className="hidden md:inline text-slate-400">
-              Retail: <strong className="text-emerald-400">{activeLegend.retail.toFixed(1)}</strong>
+              Retail: <strong className="text-[#1B5E20]">{activeLegend.retail.toFixed(1)}</strong>
             </span>
           </>
         ) : (

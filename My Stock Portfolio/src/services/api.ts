@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
 
 function getToken() {
   return localStorage.getItem('stock_auth_token');
@@ -125,5 +125,11 @@ export const api = {
     backfillStatus: (portfolioId: string) => authFetch(`/project-2x/backfill-status/${portfolioId}`),
     fundamentals: (portfolioId: string) => authFetch(`/project-2x/fundamentals/${portfolioId}`),
     updateFundamentals: (portfolioId: string, data: { symbol: string; expected_cagr_3y?: number; consecutive_eps_qs?: number }) => authFetch(`/project-2x/fundamentals/${portfolioId}`, { method: 'POST', body: JSON.stringify(data) }),
+  },
+  chart: {
+    get: (symbol: string, days = 3650) => authFetch(`/chart/${encodeURIComponent(symbol)}?days=${days}`),
+  },
+  market: {
+    heatmap: (scope = 'top50') => authFetch(`/market/heatmap?scope=${encodeURIComponent(scope)}`),
   }
 };

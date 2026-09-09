@@ -3,7 +3,8 @@ import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
   LayoutDashboard, ReceiptText, Settings, LogOut, 
-  PieChart, ShieldCheck, Scale, Rocket, ChevronLeft, ChevronRight
+  PieChart, ShieldCheck, Scale, Rocket, ChevronLeft, ChevronRight,
+  CandlestickChart
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -32,6 +33,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'rebalance', label: 'Smart Rebalance', icon: Scale },
       { id: 'project2x', label: 'Project 2X', icon: Rocket },
+      { id: 'xchart', label: 'X-Chart', icon: CandlestickChart },
     ],
   },
   {

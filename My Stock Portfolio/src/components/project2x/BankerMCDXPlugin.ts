@@ -28,7 +28,7 @@ export const defaultBankerMCDXOptions: BankerMCDXOptions = {
   ...customSeriesDefaultOptions,
   bankerColor: '#C62828',    // Deep Crimson Red
   hotMoneyColor: '#FFE600',  // Vibrant Yellow
-  retailColor: '#22C55E',    // Emerald Green
+  retailColor: '#1B5E20',    // Deep Forest Green
   priceFormat: {
     type: 'custom',
     minMove: 1,

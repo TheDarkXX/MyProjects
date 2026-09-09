@@ -146,7 +146,7 @@ export const Project2xPage: React.FC = () => {
     });
     // Save any custom 3Y CAGR overrides for the 12 commander stocks
     for (const [sym, cagr] of Object.entries(stockCagrInputs)) {
-      await updateFundamentalItem(activePortfolioId, sym, { expected_cagr_3y: cagr });
+      await updateFundamentalItem(activePortfolioId, { symbol: sym, expected_cagr_3y: cagr });
     }
     await refreshAll(activePortfolioId);
     setIsConfigModalOpen(false);
@@ -1845,7 +1845,7 @@ export const Project2xPage: React.FC = () => {
                     <div className="flex items-center justify-between text-xs font-bold text-blue-300">
                       <span className="flex items-center gap-1.5">
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        Backfilling in progress: {backfillStatus?.current_symbol || 'Loading...'}
+                        Backfilling in progress: {backfillStatus?.currentSymbol || 'Loading...'}
                       </span>
                       <span>{backfillStatus?.completed || 0} / {backfillStatus?.total || 12} stocks</span>
                     </div>
@@ -1859,7 +1859,7 @@ export const Project2xPage: React.FC = () => {
                 ) : (
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#131722] border border-white/5 flex-wrap gap-3">
                     <div>
-                      <span className="text-slate-200 font-bold block">Status: {backfillStatus?.status === 'COMPLETED' ? '✅ All 12 Stocks Cached' : 'Ready to Backfill'}</span>
+                      <span className="text-slate-200 font-bold block">Status: {(backfillStatus?.completed && backfillStatus.total && backfillStatus.completed >= backfillStatus.total) ? '✅ All 12 Stocks Cached' : 'Ready to Backfill'}</span>
                       <span className="text-xs text-slate-400">
                         {backfillStatus ? `${backfillStatus.completed}/${backfillStatus.total} stocks processed` : 'Full OHLCV 10-year depth in SQLite'}
                       </span>

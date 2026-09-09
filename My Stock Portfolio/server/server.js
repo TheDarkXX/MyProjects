@@ -23,6 +23,8 @@ import { dividendsRoutes } from './routes/dividends.js';
 import { blueprintsRoutes } from './routes/blueprints.js';
 import { aiAdvisorRoutes } from './routes/ai-advisor.js';
 import { project2xRoutes } from './routes/project2x.js';
+import { chartRoutes } from './routes/chart.js';
+import { marketRoutes } from './routes/market.js';
 
 const app = new Hono();
 
@@ -50,6 +52,8 @@ app.route('/api/dividends', dividendsRoutes);
 app.route('/api/blueprints', blueprintsRoutes);
 app.route('/api/ai-advisor', aiAdvisorRoutes);
 app.route('/api/project-2x', project2xRoutes);
+app.route('/api/chart', chartRoutes);
+app.route('/api/market', marketRoutes);
 
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
