@@ -196,10 +196,12 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const lastX = getX(sliceCloses.length - 1, sliceCloses.length);
   const areaPath = `M ${firstX},${padT + priceChartH} L ${pricePoints.join(' L ')} L ${lastX},${padT + priceChartH} Z`;
 
-  // Colors based on user's screenshot:
-  // Bull = Yellow (#FFE600), Bear = Pink (#FF2A6D)
+  // Colors based on user's specification:
+  // Bull = Yellow (#FFE600), Bear = Vivid Red + Dark 30% (#C62828)
+  const bullColor = '#FFE600';
+  const bearColor = '#C62828'; // แดงสด + Dark 30% (Deep Crimson)
   const isUp = sliceCloses[sliceCloses.length - 1] >= sliceCloses[0];
-  const priceColor = isUp ? '#FFE600' : '#FF2A6D';
+  const priceColor = isUp ? bullColor : bearColor;
   const gradId = `tv-grad-${symbol}-${isUp ? 'bull' : 'bear'}`;
 
   // EMA series paths
@@ -325,7 +327,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       yTop,
       yBottom,
       bodyH,
-      candleColor: isBull ? '#FFE600' : '#FF2A6D' // Bull = Yellow, Bear = Hot Pink
+      candleColor: isBull ? bullColor : bearColor
     };
   });
 
@@ -802,7 +804,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             <span>O: <strong className="text-white">${activeOpen.toFixed(2)}</strong></span>
             <span>H: <strong className="text-emerald-400">${activeHigh.toFixed(2)}</strong></span>
             <span>L: <strong className="text-rose-400">${activeLow.toFixed(2)}</strong></span>
-            <span>C: <strong className={activeClose >= activeOpen ? 'text-[#FFE600]' : 'text-[#FF2A6D]'}>${activeClose.toFixed(2)}</strong></span>
+            <span>C: <strong style={{ color: activeClose >= activeOpen ? bullColor : bearColor }}>${activeClose.toFixed(2)}</strong></span>
           </div>
 
           {/* EMA 50 (White) */}
