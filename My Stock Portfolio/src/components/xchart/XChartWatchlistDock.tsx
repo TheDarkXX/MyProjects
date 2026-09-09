@@ -1,301 +1,777 @@
-import React, { useState, useEffect } from 'react';
-import { useXChartStore } from '../../stores/xchartStore';
-import { usePortfolioStore } from '../../stores/portfolioStore';
-import { api } from '../../services/api';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useXChartStore, WatchlistSortColumn } from '../../stores/xchartStore';
 import { 
-  Search, 
   ChevronRight, 
   ChevronLeft, 
-  TrendingUp, 
-  TrendingDown, 
+  ChevronDown, 
+  ChevronUp, 
+  Plus, 
+  Search, 
+  Trash2, 
+  Edit2, 
+  RefreshCw, 
+  FolderPlus, 
+  X, 
+  ArrowUp, 
+  ArrowDown, 
+  ArrowUpDown,
   Coins,
-  Sparkles,
   Flame,
-  Clock
+  Check
 } from 'lucide-react';
 import clsx from 'clsx';
 
-interface WatchlistStockItem {
-  symbol: string;
-  name?: string;
-  price: number;
-  percentChange: number;
-  banker?: number;
-  trafficLight?: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+// Deterministic gradient colors for symbol badges (TradingView style)
+const BADGE_GRADIENTS = [
+  'from-blue-600 to-indigo-600',
+  'from-purple-600 to-pink-600',
+  'from-emerald-600 to-teal-600',
+  'from-amber-500 to-orange-600',
+  'from-rose-600 to-red-600',
+  'from-cyan-600 to-blue-600',
+  'from-fuchsia-600 to-purple-600'
+];
+
+function getSymbolBadgeGradient(sym: string): string {
+  let hash = 0;
+  for (let i = 0; i < sym.length; i++) {
+    hash = sym.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const idx = Math.abs(hash) % BADGE_GRADIENTS.length;
+  return BADGE_GRADIENTS[idx];
 }
 
 export const XChartWatchlistDock: React.FC = () => {
-  const { 
-    tabs, 
-    activeTabId, 
-    watchlistCollapsed, 
-    toggleWatchlist, 
+  const {
+    tabs,
+    activeTabId,
+    watchlistCollapsed,
+    toggleWatchlist,
     changeSymbolOnActiveTab,
-    addTab 
+    addTab,
+    watchlistSections,
+    watchlistPrices,
+    watchlistSortColumn,
+    watchlistSortDir,
+    watchlistDetailSymbol,
+    watchlistDetailCollapsed,
+    watchlistLoading,
+    addSymbolToSection,
+    removeSymbolFromSection,
+    addSection,
+    removeSection,
+    renameSection,
+    toggleSectionCollapse,
+    setWatchlistSort,
+    setWatchlistDetailSymbol,
+    toggleWatchlistDetail,
+    fetchWatchlistQuotes
   } = useXChartStore();
-  const { activePortfolioId } = usePortfolioStore();
 
-  const [stocks, setStocks] = useState<WatchlistStockItem[]>([]);
-  const [usdtRate, setUsdtRate] = useState<number | null>(null);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  // Local UI states
+  const [showAddSymbol, setShowAddSymbol] = useState(false);
+  const [targetSectionId, setTargetSectionId] = useState('');
+  const [symbolInput, setSymbolInput] = useState('');
+  
+  const [showAddSection, setShowAddSection] = useState(false);
+  const [newSectionName, setNewSectionName] = useState('');
 
-  // Identify the currently active tab's symbol
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editingSectionName, setEditingSectionName] = useState('');
+
+  const symbolInputRef = useRef<HTMLInputElement>(null);
+  const sectionInputRef = useRef<HTMLInputElement>(null);
+
+  // Active tab symbol
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activeSymbol = activeTab?.symbol || 'VRT';
+  const detailSymbol = watchlistDetailSymbol || activeSymbol;
+  const detailQuote = watchlistPrices[detailSymbol];
 
+  // Fetch quotes on initial mount and set up 30-sec polling
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // 1. Try fetching Project 2X radar if portfolioId exists
-        if (activePortfolioId) {
-          try {
-            const radarData = await api.project2x.scan(activePortfolioId);
-            if (radarData?.rows && radarData.rows.length > 0) {
-              const mapped = radarData.rows.map((r: any) => ({
-                symbol: r.symbol,
-                name: r.symbol,
-                price: r.currentPrice,
-                percentChange: r.sparkline?.closes && r.sparkline.closes.length > 1
-                  ? Number((((r.currentPrice - r.sparkline.closes[r.sparkline.closes.length - 2]) / r.sparkline.closes[r.sparkline.closes.length - 2]) * 100).toFixed(2))
-                  : 0,
-                banker: r.banker,
-                trafficLight: r.traffic_light
-              }));
-              setStocks(mapped);
-            }
-          } catch (e) {
-            console.warn('[XChartWatchlistDock] Radar fetch failed, falling back to market quotes:', e);
-          }
-        }
+    fetchWatchlistQuotes();
+    const timer = setInterval(() => {
+      fetchWatchlistQuotes();
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [fetchWatchlistQuotes]);
 
-        // 2. Fallback / supplementary from market watchlist
-        if (stocks.length === 0) {
-          const res = await api.market.heatmap('watchlist');
-          if (res?.items && res.items.length > 0) {
-            setStocks(res.items);
-          }
-        }
+  // Focus input when inline add symbol is shown
+  useEffect(() => {
+    if (showAddSymbol) {
+      setTimeout(() => symbolInputRef.current?.focus(), 50);
+    }
+  }, [showAddSymbol]);
 
-        // 3. Fetch USD/THB rate
-        try {
-          const chartRes = await api.chart.get('THB=X', 10);
-          if (chartRes?.currentPrice) {
-            setUsdtRate(chartRes.currentPrice);
-          }
-        } catch {
-          // ignore forex error
-        }
-      } catch (err) {
-        console.warn('[XChartWatchlistDock] Watchlist load error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Focus input when inline add section is shown
+  useEffect(() => {
+    if (showAddSection) {
+      setTimeout(() => sectionInputRef.current?.focus(), 50);
+    }
+  }, [showAddSection]);
 
-    loadData();
-  }, [activePortfolioId]);
-
-  const handleStockClick = (symbol: string, isCurrency = false) => {
+  // Handle symbol row click
+  const handleStockClick = (symbol: string) => {
+    const isCurrency = symbol.includes('=X');
     if (activeTab?.type === 'HEATMAP') {
       addTab({
         type: isCurrency ? 'CURRENCY' : 'STOCK',
         symbol,
-        title: isCurrency ? 'USD/THB' : symbol
+        title: isCurrency && symbol === 'THB=X' ? 'USD/THB' : symbol
       });
     } else {
-      changeSymbolOnActiveTab(symbol, isCurrency ? 'USD/THB' : symbol);
+      changeSymbolOnActiveTab(symbol, isCurrency && symbol === 'THB=X' ? 'USD/THB' : symbol);
     }
+    setWatchlistDetailSymbol(symbol);
   };
 
-  const filteredStocks = stocks.filter((s) =>
-    s.symbol.toLowerCase().includes(search.toLowerCase())
-  );
+  // Add symbol submit
+  const handleAddSymbolSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!symbolInput.trim()) return;
+    const destSecId = targetSectionId || watchlistSections[0]?.id;
+    if (!destSecId) return;
 
-  // Active stock detail summary
-  const activeStockItem = stocks.find((s) => s.symbol === activeSymbol);
+    addSymbolToSection(destSecId, symbolInput.trim().toUpperCase());
+    setSymbolInput('');
+    setShowAddSymbol(false);
+  };
 
+  // Add section submit
+  const handleAddSectionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSectionName.trim()) return;
+    addSection(newSectionName.trim().toUpperCase());
+    setNewSectionName('');
+    setShowAddSection(false);
+  };
+
+  // Save renamed section
+  const handleSaveRenameSection = (secId: string) => {
+    if (editingSectionName.trim()) {
+      renameSection(secId, editingSectionName.trim().toUpperCase());
+    }
+    setEditingSectionId(null);
+  };
+
+  // Total count of symbols
+  const totalSymbolsCount = useMemo(() => {
+    return watchlistSections.reduce((acc, s) => acc + s.symbols.length, 0);
+  }, [watchlistSections]);
+
+  // Render sorting arrow helper
+  const renderSortIndicator = (col: WatchlistSortColumn) => {
+    if (watchlistSortColumn !== col) {
+      return <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-40 group-hover:opacity-100 transition-opacity" />;
+    }
+    return watchlistSortDir === 'asc' ? (
+      <ArrowUp className="w-3 h-3 text-purple-400" />
+    ) : (
+      <ArrowDown className="w-3 h-3 text-purple-400" />
+    );
+  };
+
+  // Helper to calculate slider position percentage (clamped 0 to 100)
+  const calcSliderPercent = (val?: number | null, min?: number | null, max?: number | null): number => {
+    if (val == null || min == null || max == null || max <= min) return 50;
+    const clamped = Math.max(min, Math.min(max, val));
+    return ((clamped - min) / (max - min)) * 100;
+  };
+
+  // If dock is collapsed
   if (watchlistCollapsed) {
     return (
-      <div className="w-12 bg-[#0F111A] border-l border-[#1F2233] flex flex-col items-center py-4 select-none shrink-0 justify-between">
+      <aside className="w-12 bg-[#0F111A] border-l border-[#1F2233] flex flex-col items-center py-3 select-none shrink-0 justify-between">
         <button
           onClick={toggleWatchlist}
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
+          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white transition-all cursor-pointer shadow-sm"
           title="Expand Watchlist Dock"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <div className="rotate-90 text-xs font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap origin-center">
-          Watchlist
+
+        <div className="rotate-90 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-300 whitespace-nowrap origin-center">
+          <span>Watchlist</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] border border-purple-500/30">
+            {totalSymbolsCount}
+          </span>
         </div>
-        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-      </div>
+
+        <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+      </aside>
     );
   }
 
   return (
-    <aside className="w-80 bg-[#0F111A] border-l border-[#1F2233] flex flex-col h-full select-none shrink-0">
-      {/* Dock Header */}
-      <div className="p-3 border-b border-[#1F2233] flex items-center justify-between">
+    <aside className="w-80 lg:w-88 bg-[#0F111A] border-l border-[#1F2233] flex flex-col h-full select-none shrink-0 overflow-hidden font-sans">
+      {/* 1. Dock Top Header */}
+      <div className="h-11 px-3 border-b border-[#1F2233] flex items-center justify-between bg-[#121520] shrink-0">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-white font-heading">Watchlist Dock</h3>
+          <span className="text-sm font-bold text-white font-heading">Watchlist</span>
           <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
-            {stocks.length}
+            {totalSymbolsCount}
           </span>
+          {watchlistLoading && (
+            <RefreshCw className="w-3 h-3 text-purple-400 animate-spin" />
+          )}
         </div>
-        <button
-          onClick={toggleWatchlist}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-          title="Collapse Watchlist"
+
+        <div className="flex items-center gap-1">
+          {/* Add Symbol Button */}
+          <button
+            onClick={() => {
+              setShowAddSymbol((prev) => !prev);
+              setShowAddSection(false);
+              setTargetSectionId(watchlistSections[0]?.id || '');
+            }}
+            className={clsx(
+              "p-1.5 rounded-lg transition-all cursor-pointer",
+              showAddSymbol 
+                ? "bg-purple-600 text-white shadow-sm" 
+                : "text-slate-300 hover:text-white hover:bg-white/10"
+            )}
+            title="Add Symbol to Watchlist (+)"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+
+          {/* Add Section Button */}
+          <button
+            onClick={() => {
+              setShowAddSection((prev) => !prev);
+              setShowAddSymbol(false);
+            }}
+            className={clsx(
+              "p-1.5 rounded-lg transition-all cursor-pointer",
+              showAddSection 
+                ? "bg-purple-600 text-white shadow-sm" 
+                : "text-slate-300 hover:text-white hover:bg-white/10"
+            )}
+            title="Create New Section"
+          >
+            <FolderPlus className="w-4 h-4" />
+          </button>
+
+          {/* Manual Refresh Button */}
+          <button
+            onClick={() => fetchWatchlistQuotes()}
+            disabled={watchlistLoading}
+            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh Quotes"
+          >
+            <RefreshCw className={clsx("w-3.5 h-3.5", watchlistLoading && "animate-spin")} />
+          </button>
+
+          {/* Collapse Dock Button */}
+          <button
+            onClick={toggleWatchlist}
+            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer ml-1"
+            title="Collapse Watchlist"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Inline Add Symbol Bar */}
+      {showAddSymbol && (
+        <form 
+          onSubmit={handleAddSymbolSubmit} 
+          className="p-2.5 bg-[#161A26] border-b border-[#2A2E45] space-y-2 animate-in slide-in-from-top-2 duration-150 shrink-0"
         >
-          <ChevronRight className="w-4 h-4" />
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
+            <span>เพิ่มหุ้นใหม่ (Add Symbol)</span>
+            <button
+              type="button"
+              onClick={() => setShowAddSymbol(false)}
+              className="text-slate-400 hover:text-white cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="flex gap-1.5">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                ref={symbolInputRef}
+                type="text"
+                value={symbolInput}
+                onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
+                placeholder="e.g. NVDA, PLTR, THB=X"
+                className="w-full bg-[#0B1220] border border-[#2A2E45] rounded-lg pl-8 pr-2.5 py-1.5 text-[13px] text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-all font-mono uppercase"
+              />
+            </div>
+
+            <select
+              value={targetSectionId}
+              onChange={(e) => setTargetSectionId(e.target.value)}
+              className="bg-[#0B1220] border border-[#2A2E45] text-xs text-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-purple-500 max-w-[110px] truncate"
+            >
+              {watchlistSections.map((sec) => (
+                <option key={sec.id} value={sec.id} className="bg-[#111418] text-white">
+                  {sec.name}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="submit"
+              disabled={!symbolInput.trim()}
+              className="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-bold text-xs rounded-lg shadow transition-all cursor-pointer shrink-0"
+            >
+              Add
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* 3. Inline Add Section Bar */}
+      {showAddSection && (
+        <form 
+          onSubmit={handleAddSectionSubmit} 
+          className="p-2.5 bg-[#161A26] border-b border-[#2A2E45] space-y-2 animate-in slide-in-from-top-2 duration-150 shrink-0"
+        >
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
+            <span>สร้างหมวดหมู่ใหม่ (New Section)</span>
+            <button
+              type="button"
+              onClick={() => setShowAddSection(false)}
+              className="text-slate-400 hover:text-white cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="flex gap-1.5">
+            <input
+              ref={sectionInputRef}
+              type="text"
+              value={newSectionName}
+              onChange={(e) => setNewSectionName(e.target.value.toUpperCase())}
+              placeholder="e.g. HIGH GROWTH 2X, CRYPTO"
+              className="flex-1 bg-[#0B1220] border border-[#2A2E45] rounded-lg px-2.5 py-1.5 text-[13px] text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-all font-mono uppercase"
+            />
+            <button
+              type="submit"
+              disabled={!newSectionName.trim()}
+              className="px-3 py-1.5 bg-gradient-to-r from-[#823AFD] to-[#FC2D79] hover:opacity-90 disabled:opacity-40 text-white font-bold text-xs rounded-lg shadow transition-all cursor-pointer shrink-0"
+            >
+              Create
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* 4. TradingView Sortable Table Column Headers (Height: 28px) */}
+      <div className="h-7 px-3 bg-[#0B0D14] border-b border-[#1F2233] grid grid-cols-12 items-center text-[11px] font-bold uppercase tracking-wider text-slate-300 shrink-0 select-none">
+        <button
+          onClick={() => setWatchlistSort('symbol')}
+          className="col-span-5 flex items-center gap-1 text-left hover:text-white transition-colors group cursor-pointer"
+        >
+          <span>Symbol</span>
+          {renderSortIndicator('symbol')}
+        </button>
+
+        <button
+          onClick={() => setWatchlistSort('price')}
+          className="col-span-3 flex items-center justify-end gap-1 text-right hover:text-white transition-colors group cursor-pointer pr-1"
+        >
+          <span>Last</span>
+          {renderSortIndicator('price')}
+        </button>
+
+        <button
+          onClick={() => setWatchlistSort('change')}
+          className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors group cursor-pointer"
+        >
+          <span>Chg</span>
+          {renderSortIndicator('change')}
+        </button>
+
+        <button
+          onClick={() => setWatchlistSort('percentChange')}
+          className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors group cursor-pointer"
+        >
+          <span>%</span>
+          {renderSortIndicator('percentChange')}
         </button>
       </div>
 
-      {/* Search Input */}
-      <div className="p-2.5 border-b border-[#1F2233]">
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหาหุ้นในลิสต์..."
-            className="w-full bg-[#0B1220] border border-[#1F2233] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-all"
-          />
-        </div>
-      </div>
+      {/* 5. Scrollable Sections & High-Density Stocks List */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 divide-y divide-[#1F2233]/40">
+        {watchlistSections.map((section) => {
+          // Visual sort of symbols for this section
+          const sortedSymbols = [...section.symbols].sort((a, b) => {
+            if (!watchlistSortColumn) return 0;
+            const quoteA = watchlistPrices[a];
+            const quoteB = watchlistPrices[b];
 
-      {/* Macro & Currency Quick Pin */}
-      <div className="px-3 py-2 bg-[#121622] border-b border-[#1F2233]">
-        <div className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
-          Macro & FX (ค่าเงิน)
-        </div>
-        <div
-          onClick={() => handleStockClick('THB=X', true)}
-          className={clsx(
-            'flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer',
-            activeSymbol === 'THB=X'
-              ? 'bg-purple-600/20 border-purple-500/50 text-white'
-              : 'bg-white/5 border-white/5 hover:bg-white/10 text-slate-200'
-          )}
-        >
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <Coins className="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <div className="text-[13px] font-bold text-white">USD / THB</div>
-              <div className="text-xs text-slate-300">อัตราแลกเปลี่ยนดอลลาร์</div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs font-bold text-white">
-              {usdtRate ? `฿${usdtRate.toFixed(2)}` : '฿35.80'}
-            </div>
-            <div className="text-xs text-amber-300 font-semibold">Live Forex</div>
-          </div>
-        </div>
-      </div>
+            if (watchlistSortColumn === 'symbol') {
+              return watchlistSortDir === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
+            }
 
-      {/* Stock List Scroll Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-[#1F2233]/40">
-        {filteredStocks.map((stock) => {
-          const isSelected = activeSymbol === stock.symbol;
-          const isPositive = stock.percentChange >= 0;
+            const valA = quoteA?.[watchlistSortColumn] ?? -Infinity;
+            const valB = quoteB?.[watchlistSortColumn] ?? -Infinity;
+            return watchlistSortDir === 'asc' ? (valA > valB ? 1 : -1) : (valB > valA ? 1 : -1);
+          });
+
+          const isEditing = editingSectionId === section.id;
 
           return (
-            <div
-              key={stock.symbol}
-              onClick={() => handleStockClick(stock.symbol)}
-              className={clsx(
-                'px-3.5 py-2.5 flex items-center justify-between transition-all cursor-pointer',
-                isSelected
-                  ? 'bg-gradient-to-r from-purple-900/30 via-pink-900/20 to-transparent border-l-4 border-l-purple-500 text-white'
-                  : 'hover:bg-white/5 text-slate-300 hover:text-white'
-              )}
-            >
-              <div className="flex items-center gap-2.5">
-                {/* Traffic light or status dot */}
-                <div
-                  className={clsx(
-                    'w-2 h-2 rounded-full shrink-0',
-                    stock.trafficLight === 'BUY_ZONE'
-                      ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
-                      : stock.trafficLight === 'DANGER'
-                      ? 'bg-rose-400'
-                      : 'bg-amber-400'
+            <div key={section.id} className="bg-[#0F111A]">
+              {/* Section Header Row (Height: ~28px) */}
+              <div className="h-7 px-3 bg-[#131724]/90 border-b border-[#1F2233]/60 flex items-center justify-between text-xs font-bold text-slate-300 hover:text-white group">
+                <div 
+                  onClick={() => toggleSectionCollapse(section.id)}
+                  className="flex items-center gap-1.5 cursor-pointer flex-1 py-1"
+                >
+                  {section.isCollapsed ? (
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors" />
                   )}
-                />
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold font-heading text-white">{stock.symbol}</span>
-                    {stock.banker !== undefined && stock.banker >= 10 && (
-                      <span className="flex items-center text-xs font-bold text-rose-300 bg-rose-500/20 px-1 rounded">
-                        <Flame className="w-2.5 h-2.5 mr-0.5" />
-                        {stock.banker.toFixed(0)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-slate-300 truncate max-w-[120px]">
-                    {stock.trafficLight === 'BUY_ZONE' ? 'Setup พร้อมช้อน' : 'Watchlist'}
-                  </div>
+
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editingSectionName}
+                      onChange={(e) => setEditingSectionName(e.target.value.toUpperCase())}
+                      onBlur={() => handleSaveRenameSection(section.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveRenameSection(section.id);
+                        if (e.key === 'Escape') setEditingSectionId(null);
+                      }}
+                      autoFocus
+                      className="bg-[#0B1220] border border-purple-500 rounded px-1.5 py-0.5 text-xs text-white uppercase font-bold focus:outline-none"
+                    />
+                  ) : (
+                    <span className="tracking-wide uppercase text-slate-200 group-hover:text-white">
+                      {section.name}
+                    </span>
+                  )}
+
+                  <span className="text-[11px] text-slate-400 font-semibold">
+                    ({section.symbols.length})
+                  </span>
+                </div>
+
+                {/* Section Hover Actions */}
+                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTargetSectionId(section.id);
+                      setShowAddSymbol(true);
+                    }}
+                    className="p-0.5 text-slate-400 hover:text-white hover:bg-white/10 rounded cursor-pointer"
+                    title="Add symbol to this section"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSectionId(section.id);
+                      setEditingSectionName(section.name);
+                    }}
+                    className="p-0.5 text-slate-400 hover:text-white hover:bg-white/10 rounded cursor-pointer"
+                    title="Rename section"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </button>
+
+                  {watchlistSections.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`ลบหมวดหมู่ "${section.name}" พร้อมหุ้นในกลุ่มนี้?`)) {
+                          removeSection(section.id);
+                        }
+                      }}
+                      className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer"
+                      title="Delete section"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-sm font-bold text-white font-heading">
-                  ${stock.price?.toFixed(2) || '0.00'}
-                </div>
-                <div
-                  className={clsx(
-                    'text-xs font-semibold flex items-center justify-end gap-0.5',
-                    isPositive ? 'text-emerald-400' : 'text-rose-400'
-                  )}
-                >
-                  {isPositive ? (
-                    <TrendingUp className="w-3 h-3" />
+              {/* High-Density Stock Rows (Height: ~30px per row) */}
+              {!section.isCollapsed && (
+                <div className="divide-y divide-[#1F2233]/25">
+                  {sortedSymbols.length === 0 ? (
+                    <div className="px-6 py-2.5 text-xs text-slate-400 italic text-center">
+                      ไม่มีหุ้นในหมวดนี้ — กด + เพื่อเพิ่ม
+                    </div>
                   ) : (
-                    <TrendingDown className="w-3 h-3" />
+                    sortedSymbols.map((symbol) => {
+                      const quote = watchlistPrices[symbol];
+                      const isSelected = activeSymbol === symbol;
+                      const isDetailSelected = detailSymbol === symbol;
+                      const isCurrency = symbol.includes('=X');
+
+                      const price = quote?.price ?? 0;
+                      const change = quote?.change ?? 0;
+                      const percentChange = quote?.percentChange ?? 0;
+                      const isPositive = percentChange >= 0;
+                      const isZero = percentChange === 0;
+
+                      // Format price according to value scale
+                      let formattedPrice = price.toFixed(2);
+                      if (price > 1000) {
+                        formattedPrice = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      } else if (price < 1 && price > 0) {
+                        formattedPrice = price.toFixed(4);
+                      }
+
+                      return (
+                        <div
+                          key={symbol}
+                          onClick={() => handleStockClick(symbol)}
+                          className={clsx(
+                            'h-[30px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative',
+                            isSelected
+                              ? 'bg-purple-950/40 text-white font-semibold'
+                              : isDetailSelected
+                              ? 'bg-white/5 text-white'
+                              : 'hover:bg-white/5 text-slate-200 hover:text-white'
+                          )}
+                        >
+                          {/* Active Neon Left Border Indicator */}
+                          {isSelected && (
+                            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79]" />
+                          )}
+
+                          {/* Symbol Column: Dot Badge + Ticker */}
+                          <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
+                            {/* TradingView-style circle badge */}
+                            <div
+                              className={clsx(
+                                'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white shrink-0 bg-gradient-to-tr shadow-sm',
+                                isCurrency ? 'from-amber-600 to-yellow-500' : getSymbolBadgeGradient(symbol)
+                              )}
+                            >
+                              {isCurrency ? '$' : symbol.slice(0, 1)}
+                            </div>
+
+                            {/* Ticker Name */}
+                            <span className="text-[13px] font-bold tracking-tight truncate font-mono text-white">
+                              {symbol}
+                            </span>
+                          </div>
+
+                          {/* Last Price Column */}
+                          <div className="col-span-3 text-right font-mono text-[13px] font-semibold text-slate-200 group-hover:text-white pr-1">
+                            {quote ? formattedPrice : '—'}
+                          </div>
+
+                          {/* Change Column */}
+                          <div 
+                            className={clsx(
+                              "col-span-2 text-right font-mono text-[13px] font-medium truncate",
+                              isZero 
+                                ? "text-slate-300" 
+                                : isPositive 
+                                ? "text-emerald-400" 
+                                : "text-rose-400"
+                            )}
+                          >
+                            {quote ? (isPositive && change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2)) : '—'}
+                          </div>
+
+                          {/* Change % Column + Hover Delete Action */}
+                          <div className="col-span-2 text-right relative flex items-center justify-end">
+                            <span 
+                              className={clsx(
+                                "font-mono text-[13px] font-bold group-hover:opacity-20 transition-opacity",
+                                isZero 
+                                  ? "text-slate-300" 
+                                  : isPositive 
+                                  ? "text-emerald-400" 
+                                  : "text-rose-400"
+                              )}
+                            >
+                              {quote ? (isPositive && percentChange > 0 ? `+${percentChange.toFixed(2)}%` : `${percentChange.toFixed(2)}%`) : '—'}
+                            </span>
+
+                            {/* Hover Delete Action Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeSymbolFromSection(section.id, symbol);
+                              }}
+                              className="absolute right-0 opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded transition-all cursor-pointer"
+                              title={`Remove ${symbol}`}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
-                  {isPositive ? `+${stock.percentChange?.toFixed(2)}%` : `${stock.percentChange?.toFixed(2)}%`}
                 </div>
-              </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Bottom Quote Details Card */}
-      {activeStockItem && (
-        <div className="p-3 bg-[#121622] border-t border-[#1F2233] shrink-0 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-200 uppercase tracking-wider font-heading">
-              Active Focus
-            </span>
-            <span className="text-xs text-emerald-300 font-semibold flex items-center gap-1">
-              <Clock className="w-3 h-3" /> Real-time
-            </span>
+      {/* 6. TradingView Instrument Snapshot Detail Widget (Fixed Bottom) */}
+      <div className="bg-[#121522] border-t border-[#1F2233] shrink-0 select-none shadow-lg">
+        {/* Detail Widget Header Bar */}
+        <div 
+          onClick={toggleWatchlistDetail}
+          className="px-3 py-2 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2 overflow-hidden">
+            {/* Symbol Logo Badge */}
+            <div 
+              className={clsx(
+                "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0 bg-gradient-to-tr shadow-sm",
+                detailSymbol.includes('=X') ? 'from-amber-600 to-yellow-500' : getSymbolBadgeGradient(detailSymbol)
+              )}
+            >
+              {detailSymbol.includes('=X') ? '$' : detailSymbol.slice(0, 1)}
+            </div>
+
+            <div className="truncate">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[13px] font-bold text-white font-mono">{detailSymbol}</span>
+                {detailQuote?.exchange && (
+                  <span className="text-xs text-slate-400 uppercase font-semibold">
+                    • {detailQuote.exchange}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-slate-300 truncate max-w-[190px]">
+                {detailQuote?.shortName || (detailSymbol === 'THB=X' ? 'USD / Thai Baht Forex' : detailSymbol)}
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-baseline justify-between">
-            <div className="text-lg font-black text-white font-heading">
-              {activeStockItem.symbol}
-            </div>
-            <div className="text-base font-black text-white font-heading">
-              ${activeStockItem.price?.toFixed(2)}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs font-semibold">
-            <span className="text-slate-400">1D Change:</span>
-            <span className={activeStockItem.percentChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-              {activeStockItem.percentChange >= 0 ? `+${activeStockItem.percentChange}%` : `${activeStockItem.percentChange}%`}
-            </span>
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleWatchlistDetail();
+              }}
+              className="p-1 hover:text-white rounded hover:bg-white/10 transition-colors cursor-pointer"
+              title={watchlistDetailCollapsed ? "Expand Detail Snapshot" : "Minimize Detail Snapshot"}
+            >
+              {watchlistDetailCollapsed ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Detail Widget Body (Expanded) */}
+        {!watchlistDetailCollapsed && (
+          <div className="px-3 pb-3 space-y-2.5 border-t border-[#1F2233]/60 pt-2 animate-in fade-in-50 duration-150">
+            {/* Large Price Row */}
+            <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-white font-mono tracking-tight">
+                  {detailQuote ? (detailQuote.price > 1000 ? detailQuote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : detailQuote.price.toFixed(2)) : '—'}
+                </span>
+                <span className="text-xs font-bold text-slate-300">
+                  {detailSymbol.includes('=X') ? 'THB' : 'USD'}
+                </span>
+              </div>
+
+              {detailQuote && (
+                <div 
+                  className={clsx(
+                    "text-[13px] font-bold font-mono flex items-center gap-1",
+                    detailQuote.percentChange >= 0 ? "text-emerald-400" : "text-rose-400"
+                  )}
+                >
+                  <span>
+                    {detailQuote.change >= 0 ? `+${detailQuote.change.toFixed(2)}` : detailQuote.change.toFixed(2)}
+                  </span>
+                  <span>
+                    ({detailQuote.percentChange >= 0 ? `+${detailQuote.percentChange.toFixed(2)}%` : `${detailQuote.percentChange.toFixed(2)}%`})
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Market Status Capsule */}
+            <div className="flex items-center gap-1.5 text-xs">
+              <span 
+                className={clsx(
+                  "w-2 h-2 rounded-full",
+                  detailQuote?.marketState === 'REGULAR' 
+                    ? "bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse" 
+                    : "bg-slate-500"
+                )} 
+              />
+              <span className={detailQuote?.marketState === 'REGULAR' ? "text-emerald-400 font-semibold" : "text-slate-300"}>
+                {detailQuote?.marketState === 'REGULAR' ? 'Market open' : 'Market closed'}
+              </span>
+            </div>
+
+            {/* Day's Range Slider */}
+            {detailQuote?.dayLow != null && detailQuote?.dayHigh != null && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                  <span className="font-mono text-slate-200">${detailQuote.dayLow.toFixed(2)}</span>
+                  <span className="tracking-wider uppercase text-slate-300">DAY'S RANGE</span>
+                  <span className="font-mono text-slate-200">${detailQuote.dayHigh.toFixed(2)}</span>
+                </div>
+
+                {/* Range Bar with Triangle Indicator */}
+                <div className="relative w-full h-1.5 bg-[#1F2233] rounded-full overflow-visible">
+                  <div 
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 rounded-full opacity-80" 
+                    style={{ width: '100%' }}
+                  />
+                  {/* Indicator Arrow */}
+                  <div 
+                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-300"
+                    style={{ left: `${calcSliderPercent(detailQuote.price, detailQuote.dayLow, detailQuote.dayHigh)}%` }}
+                  >
+                    <div className="w-2.5 h-2.5 bg-white border border-black rounded-full shadow-md" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 52-Week Range Slider */}
+            {detailQuote?.fiftyTwoWeekLow != null && detailQuote?.fiftyTwoWeekHigh != null && (
+              <div className="space-y-1 pt-1">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                  <span className="font-mono text-slate-200">${detailQuote.fiftyTwoWeekLow.toFixed(2)}</span>
+                  <span className="tracking-wider uppercase text-slate-300">52WK RANGE</span>
+                  <span className="font-mono text-slate-200">${detailQuote.fiftyTwoWeekHigh.toFixed(2)}</span>
+                </div>
+
+                {/* Range Bar with Triangle Indicator */}
+                <div className="relative w-full h-1.5 bg-[#1F2233] rounded-full overflow-visible">
+                  <div 
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 rounded-full opacity-80" 
+                    style={{ width: '100%' }}
+                  />
+                  {/* Indicator Arrow */}
+                  <div 
+                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-300"
+                    style={{ left: `${calcSliderPercent(detailQuote.price, detailQuote.fiftyTwoWeekLow, detailQuote.fiftyTwoWeekHigh)}%` }}
+                  >
+                    <div className="w-2.5 h-2.5 bg-white border border-black rounded-full shadow-md" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </aside>
   );
 };

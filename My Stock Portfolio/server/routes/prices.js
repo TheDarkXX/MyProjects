@@ -1,7 +1,12 @@
 import { Hono } from 'hono';
+import YahooFinance from 'yahoo-finance2';
 import { db } from '../db/init.js';
 import { updatePricesInCache } from '../services/finnhub.js';
 import { authMiddleware } from './auth.js';
+
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
+const quoteCache = new Map();
+const QUOTE_CACHE_TTL = 30 * 1000;
 
 const pricesRoutes = new Hono();
 
@@ -161,6 +166,92 @@ pricesRoutes.get('/fundamentals-batch', async (c) => {
   } catch (error) {
     console.error('[Fundamentals Batch] Error:', error);
     return c.json({ error: error.message }, 500);
+  }
+});
+
+// Batch fetch real-time quotes + high/low + 52w range for TradingView Pro Watchlist
+pricesRoutes.post('/quote-batch', async (c) => {
+  try {
+    const body = await c.req.json();
+    const rawSymbols = body.symbols || [];
+    if (!Array.isArray(rawSymbols) || rawSymbols.length === 0) {
+      return c.json({ error: 'Array of symbols is required' }, 400);
+    }
+    const symbols = [...new Set(rawSymbols.map(s => String(s).trim().toUpperCase()))].filter(Boolean);
+    const now = Date.now();
+    const results = {};
+    const missingSymbols = [];
+
+    for (const sym of symbols) {
+      const cached = quoteCache.get(sym);
+      if (cached && (now - cached.timestamp < QUOTE_CACHE_TTL)) {
+        results[sym] = cached.data;
+      } else {
+        missingSymbols.push(sym);
+      }
+    }
+
+    if (missingSymbols.length > 0) {
+      try {
+        const quotes = await yahooFinance.quote(missingSymbols);
+        const quoteArray = Array.isArray(quotes) ? quotes : (quotes ? [quotes] : []);
+        for (const q of quoteArray) {
+          if (!q || !q.symbol) continue;
+          const symKey = q.symbol.toUpperCase();
+          const item = {
+            symbol: symKey,
+            price: Number((q.regularMarketPrice ?? 0).toFixed(4)),
+            change: Number((q.regularMarketChange ?? 0).toFixed(4)),
+            percentChange: Number((q.regularMarketChangePercent ?? 0).toFixed(2)),
+            dayHigh: q.regularMarketDayHigh != null ? Number(q.regularMarketDayHigh.toFixed(4)) : (q.dayHigh != null ? Number(q.dayHigh.toFixed(4)) : null),
+            dayLow: q.regularMarketDayLow != null ? Number(q.regularMarketDayLow.toFixed(4)) : (q.dayLow != null ? Number(q.dayLow.toFixed(4)) : null),
+            fiftyTwoWeekHigh: q.fiftyTwoWeekHigh != null ? Number(q.fiftyTwoWeekHigh.toFixed(4)) : null,
+            fiftyTwoWeekLow: q.fiftyTwoWeekLow != null ? Number(q.fiftyTwoWeekLow.toFixed(4)) : null,
+            shortName: q.shortName || q.longName || symKey,
+            exchange: q.exchange || q.fullExchangeName || '',
+            marketState: q.marketState || 'REGULAR'
+          };
+          quoteCache.set(symKey, { timestamp: now, data: item });
+          results[symKey] = item;
+        }
+      } catch (err) {
+        console.error('[quote-batch] Yahoo quote error:', err.message);
+      }
+    }
+
+    // Fallback for any symbols still missing using latest_prices table
+    for (const sym of symbols) {
+      if (!results[sym]) {
+        const cachedFallback = quoteCache.get(sym);
+        if (cachedFallback) {
+          results[sym] = cachedFallback.data;
+          continue;
+        }
+        try {
+          const row = db.prepare('SELECT price, change, percent_change FROM latest_prices WHERE symbol = ?').get(sym);
+          if (row) {
+            results[sym] = {
+              symbol: sym,
+              price: Number(row.price.toFixed(4)),
+              change: Number((row.change ?? 0).toFixed(4)),
+              percentChange: Number((row.percent_change ?? 0).toFixed(2)),
+              dayHigh: null,
+              dayLow: null,
+              fiftyTwoWeekHigh: null,
+              fiftyTwoWeekLow: null,
+              shortName: sym,
+              exchange: '',
+              marketState: 'CLOSED'
+            };
+          }
+        } catch {}
+      }
+    }
+
+    return c.json(results);
+  } catch (error) {
+    console.error('[quote-batch] Error:', error);
+    return c.json({ error: 'Failed to fetch batch quotes' }, 500);
   }
 });
 

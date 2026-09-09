@@ -83,6 +83,7 @@ export const api = {
     technicals: (symbol: string) => authFetch(`/prices/technicals/${encodeURIComponent(symbol)}`),
     profile: (symbol: string) => authFetch(`/prices/profile/${encodeURIComponent(symbol)}`),
     fundamentalsBatch: (symbols: string[]) => authFetch(`/prices/fundamentals-batch?symbols=${symbols.join(',')}`),
+    quoteBatch: (symbols: string[]) => authFetch('/prices/quote-batch', { method: 'POST', body: JSON.stringify({ symbols }) }),
   },
   metadata: {
     list: (symbols: string[]) => authFetch(`/metadata?symbols=${symbols.join(',')}`),
