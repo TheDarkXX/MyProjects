@@ -653,9 +653,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           {chartStyle === 'AREA' && (
             <>
               <path d={areaPath} fill={`url(#${gradId})`} />
-              {/* EMA 200 (Orange/Gold Dashed) */}
+              {/* EMA 200 (Orange/Gold Dashed Major Support) */}
               {ema200Path && (
-                <path d={ema200Path} fill="none" stroke="#FFB300" strokeWidth="2" strokeDasharray="4 2" opacity="0.9" />
+                <path d={ema200Path} fill="none" stroke="#FFB300" strokeWidth="2.8" strokeDasharray="5 3" opacity="0.95" strokeLinecap="round" />
               )}
               {/* EMA 150 (Electric Blue Solid) */}
               {ema150Path && (
@@ -680,9 +680,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               {ema200LowerPath && (
                 <path d={ema200LowerPath} fill="none" stroke="#FFB300" strokeWidth="1.2" strokeDasharray="3 3" opacity="0.45" />
               )}
-              {/* EMA 200 (Slow - Gold) */}
+              {/* EMA 200 (Slow - Gold Major Support Line) */}
               {ema200Path && (
-                <path d={ema200Path} fill="none" stroke="#FFB300" strokeWidth="2.5" opacity="0.95" />
+                <path d={ema200Path} fill="none" stroke="#FFB300" strokeWidth="3.6" opacity="1.0" strokeLinecap="round" strokeLinejoin="round" />
               )}
               {/* EMA 150 (Medium - Royal Blue) */}
               {ema150Path && (
