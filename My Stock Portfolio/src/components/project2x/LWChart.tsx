@@ -1,0 +1,1284 @@
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import {
+  createChart,
+  IChartApi,
+  ISeriesApi,
+  CandlestickSeries,
+  AreaSeries,
+  LineSeries,
+  createSeriesMarkers,
+  ColorType,
+  CrosshairMode,
+  LineStyle,
+  Time,
+  SeriesMarker,
+} from 'lightweight-charts';
+import {
+  Activity,
+  Zap,
+  RotateCcw,
+  Maximize2,
+  Minimize2,
+  Layers,
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  Check,
+  Flame,
+} from 'lucide-react';
+import { api } from '../../services/api';
+import { BankerMCDXSeriesView, BankerMCDXData } from './BankerMCDXPlugin';
+
+export const TV_FONT_FAMILY = "'Trebuchet MS', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+export interface WatchlistStock {
+  symbol: string;
+  currentPrice: number;
+  percent_change?: number;
+  banker?: number;
+  traffic_light?: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+}
+
+export interface LWChartProps {
+  symbol: string;
+  dates?: string[];
+  closes: number[];
+  opens?: number[];
+  highs?: number[];
+  lows?: number[];
+  volumes?: number[];
+  ema50?: (number | null)[];
+  ema150?: (number | null)[];
+  ema200?: (number | null)[];
+  bankerSeries?: number[];
+  hotMoneySeries?: number[];
+  retailSeries?: number[];
+  bankerMaSeries?: number[];
+  banker?: number;
+  currentPrice: number;
+  scenario?: number;
+  badge?: string;
+  trafficLight?: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+  distEma150?: number;
+  distEma200?: number;
+  className?: string;
+  onAddInflow?: () => void;
+  watchlist?: WatchlistStock[];
+  onSelectSymbol?: (symbol: string) => void;
+}
+
+export type TimeFrame = '7D' | '1M' | '3M' | '6M' | '10M' | '1Y' | '5Y' | 'ALL';
+export type ChartStyle = 'CANDLE' | 'HEIKIN_ASHI' | 'AREA';
+export type Resolution = '1D' | '1W';
+
+interface RawBarItem {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  ema50: number | null;
+  ema150: number | null;
+  ema200: number | null;
+  banker: number;
+  hotMoney: number;
+  retail: number;
+  bankerMa: number;
+}
+
+// US market hours check: Mon-Fri, 9:30 AM to 4:00 PM US Eastern Time (UTC-4 / EDT or UTC-5 / EST)
+const isUsMarketOpen = (): boolean => {
+  try {
+    const now = new Date();
+    const nyTimeStr = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
+    const nyDate = new Date(nyTimeStr);
+    const day = nyDate.getDay(); // 0 = Sun, 6 = Sat
+    if (day === 0 || day === 6) return false;
+    const hours = nyDate.getHours();
+    const minutes = nyDate.getMinutes();
+    const totalMins = hours * 60 + minutes;
+    // 9:30 AM = 570 mins, 4:00 PM = 960 mins
+    return totalMins >= 570 && totalMins <= 960;
+  } catch (e) {
+    return false;
+  }
+};
+
+export const LWChart: React.FC<LWChartProps> = ({
+  symbol,
+  dates = [],
+  closes = [],
+  opens = [],
+  highs = [],
+  lows = [],
+  volumes = [],
+  ema50 = [],
+  ema150 = [],
+  ema200 = [],
+  bankerSeries = [],
+  hotMoneySeries = [],
+  retailSeries = [],
+  bankerMaSeries = [],
+  banker = 0,
+  currentPrice,
+  scenario = 1,
+  badge = 'Setup',
+  trafficLight = 'BUY_ZONE',
+  distEma150 = 0,
+  distEma200 = 0,
+  className = '',
+  onAddInflow,
+  watchlist = [],
+  onSelectSymbol,
+}) => {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+
+  // Series references
+  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const areaSeriesRef = useRef<ISeriesApi<'Area'> | null>(null);
+  const ema50SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const ema150SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const ema200SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const upperEnvSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const lowerEnvSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const mcdxSeriesRef = useRef<ISeriesApi<'Custom'> | null>(null);
+  const bankerMaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const markersPluginRef = useRef<any>(null);
+
+  // States with localStorage persistence
+  const [timeframe, setTimeframe] = useState<TimeFrame>(() => {
+    try {
+      const saved = localStorage.getItem('p2x_lw_timeframe');
+      if (saved && ['7D', '1M', '3M', '6M', '10M', '1Y', '5Y', 'ALL'].includes(saved)) {
+        return saved as TimeFrame;
+      }
+    } catch (e) {}
+    return '10M';
+  });
+
+  const [chartStyle, setChartStyle] = useState<ChartStyle>(() => {
+    try {
+      const saved = localStorage.getItem('p2x_lw_style');
+      if (saved === 'CANDLE' || saved === 'HEIKIN_ASHI' || saved === 'AREA') return saved;
+    } catch (e) {}
+    return 'CANDLE';
+  });
+
+  const [resolution, setResolution] = useState<Resolution>(() => {
+    try {
+      const saved = localStorage.getItem('p2x_lw_resolution');
+      if (saved === '1D' || saved === '1W') return saved;
+    } catch (e) {}
+    return '1D';
+  });
+
+  const [showEnvelope, setShowEnvelope] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('p2x_lw_envelope');
+      if (saved !== null) return saved === 'true';
+    } catch (e) {}
+    return true; // Default ON: EMA 200 Envelope is core bedrock
+  });
+
+  const [showSignals, setShowSignals] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('p2x_lw_signals');
+      if (saved !== null) return saved === 'true';
+    } catch (e) {}
+    return true;
+  });
+
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Live Pulse state
+  const [isLiveActive, setIsLiveActive] = useState<boolean>(false);
+  const [isMarketOpen, setIsMarketOpen] = useState<boolean>(isUsMarketOpen());
+  const [livePrice, setLivePrice] = useState<number>(currentPrice);
+  const [liveChangePercent, setLiveChangePercent] = useState<number>(0);
+
+  // Hover Crosshair Legend data
+  const [hoveredBar, setHoveredBar] = useState<RawBarItem | null>(null);
+
+  // Save state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('p2x_lw_timeframe', timeframe);
+    } catch (e) {}
+  }, [timeframe]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('p2x_lw_style', chartStyle);
+    } catch (e) {}
+  }, [chartStyle]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('p2x_lw_resolution', resolution);
+    } catch (e) {}
+  }, [resolution]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('p2x_lw_envelope', String(showEnvelope));
+    } catch (e) {}
+  }, [showEnvelope]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('p2x_lw_signals', String(showSignals));
+    } catch (e) {}
+  }, [showSignals]);
+
+  // Sync initial livePrice with currentPrice prop
+  useEffect(() => {
+    setLivePrice(currentPrice);
+  }, [currentPrice, symbol]);
+
+  // Keyboard shortcut: F for Fullscreen, ESC to exit
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input or textarea
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        setIsFullscreen(prev => !prev);
+      } else if (e.key === 'Escape' && isFullscreen) {
+        e.preventDefault();
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
+  // Sanitize & build raw clean bars sorted by date ascending
+  const rawCleanBars: RawBarItem[] = useMemo(() => {
+    const total = (closes || []).length;
+    if (total === 0) return [];
+
+    const items: RawBarItem[] = [];
+    const seenDates = new Set<string>();
+
+    for (let i = 0; i < total; i++) {
+      const d = dates[i];
+      if (!d || seenDates.has(d)) continue;
+      seenDates.add(d);
+
+      const c = closes[i];
+      if (typeof c !== 'number' || isNaN(c)) continue;
+
+      let o = opens[i] !== undefined && !isNaN(opens[i]) ? opens[i] : (i > 0 ? closes[i - 1] : c * 0.998);
+      let h = highs[i] !== undefined && !isNaN(highs[i]) ? highs[i] : Math.max(o, c);
+      let l = lows[i] !== undefined && !isNaN(lows[i]) ? lows[i] : Math.min(o, c);
+
+      // Synthesize realistic wicks if DB has only close prices
+      if (h <= l) {
+        const prevC = i > 0 ? closes[i - 1] : c;
+        const spread = Math.max(c * 0.015, Math.abs(c - prevC) * 1.4);
+        h = Math.max(o, c) + spread * 0.6;
+        l = Math.min(o, c) - spread * 0.6;
+      }
+
+      const e50Val = ema50[i] !== undefined && ema50[i] !== null && !isNaN(ema50[i]!) ? ema50[i] : null;
+      const e150Val = ema150[i] !== undefined && ema150[i] !== null && !isNaN(ema150[i]!) ? ema150[i] : null;
+      const e200Val = ema200[i] !== undefined && ema200[i] !== null && !isNaN(ema200[i]!) ? ema200[i] : null;
+
+      const bVal = bankerSeries[i] ?? 0;
+      let hVal = hotMoneySeries[i] ?? 0;
+      if (hVal === 0 && bVal > 0) {
+        hVal = Math.min(20, bVal * 1.6);
+      }
+      const rVal = retailSeries[i] ?? Math.max(0, 20 - Math.max(bVal, hVal));
+      const bMaVal = bankerMaSeries[i] ?? bVal;
+
+      items.push({
+        time: d,
+        open: Number(o.toFixed(2)),
+        high: Number(h.toFixed(2)),
+        low: Number(l.toFixed(2)),
+        close: Number(c.toFixed(2)),
+        volume: volumes[i] || 0,
+        ema50: e50Val !== null ? Number(e50Val.toFixed(2)) : null,
+        ema150: e150Val !== null ? Number(e150Val.toFixed(2)) : null,
+        ema200: e200Val !== null ? Number(e200Val.toFixed(2)) : null,
+        banker: Number(bVal.toFixed(2)),
+        hotMoney: Number(hVal.toFixed(2)),
+        retail: Number(rVal.toFixed(2)),
+        bankerMa: Number(bMaVal.toFixed(2)),
+      });
+    }
+
+    // Ensure sorted ascending by date
+    items.sort((a, b) => a.time.localeCompare(b.time));
+    return items;
+  }, [dates, closes, opens, highs, lows, volumes, ema50, ema150, ema200, bankerSeries, hotMoneySeries, retailSeries, bankerMaSeries]);
+
+  // Aggregate into Weekly bars (if resolution === '1W')
+  const aggregatedBars: RawBarItem[] = useMemo(() => {
+    if (resolution === '1D' || rawCleanBars.length === 0) return rawCleanBars;
+
+    // Group bars by ISO Week (Monday to Friday)
+    const weeksMap = new Map<string, RawBarItem[]>();
+    for (const bar of rawCleanBars) {
+      const d = new Date(bar.time);
+      const day = d.getUTCDay();
+      // Calculate Monday of this week
+      const diffToMon = day === 0 ? -6 : 1 - day;
+      const monday = new Date(d);
+      monday.setUTCDate(d.getUTCDate() + diffToMon);
+      const monStr = monday.toISOString().split('T')[0];
+
+      if (!weeksMap.has(monStr)) {
+        weeksMap.set(monStr, []);
+      }
+      weeksMap.get(monStr)!.push(bar);
+    }
+
+    const weeklyBars: RawBarItem[] = [];
+    for (const [monStr, days] of weeksMap.entries()) {
+      if (days.length === 0) continue;
+      const firstDay = days[0];
+      const lastDay = days[days.length - 1];
+
+      let weekHigh = -Infinity;
+      let weekLow = Infinity;
+      let weekVol = 0;
+
+      for (const day of days) {
+        if (day.high > weekHigh) weekHigh = day.high;
+        if (day.low < weekLow) weekLow = day.low;
+        weekVol += day.volume;
+      }
+
+      weeklyBars.push({
+        time: monStr,
+        open: firstDay.open,
+        high: Number(weekHigh.toFixed(2)),
+        low: Number(weekLow.toFixed(2)),
+        close: lastDay.close,
+        volume: weekVol,
+        ema50: lastDay.ema50,
+        ema150: lastDay.ema150,
+        ema200: lastDay.ema200,
+        banker: lastDay.banker,
+        hotMoney: lastDay.hotMoney,
+        retail: lastDay.retail,
+        bankerMa: lastDay.bankerMa,
+      });
+    }
+
+    weeklyBars.sort((a, b) => a.time.localeCompare(b.time));
+    return weeklyBars;
+  }, [rawCleanBars, resolution]);
+
+  // Compute Heikin-Ashi if selected
+  const displayBars: RawBarItem[] = useMemo(() => {
+    if (chartStyle !== 'HEIKIN_ASHI' || aggregatedBars.length === 0) return aggregatedBars;
+
+    const haResult: RawBarItem[] = [];
+    let prevHaOpen = 0;
+    let prevHaClose = 0;
+
+    for (let i = 0; i < aggregatedBars.length; i++) {
+      const b = aggregatedBars[i];
+      const haClose = (b.open + b.high + b.low + b.close) / 4;
+      const haOpen = i === 0 ? (b.open + b.close) / 2 : (prevHaOpen + prevHaClose) / 2;
+      const haHigh = Math.max(b.high, haOpen, haClose);
+      const haLow = Math.min(b.low, haOpen, haClose);
+
+      prevHaOpen = haOpen;
+      prevHaClose = haClose;
+
+      haResult.push({
+        ...b,
+        open: Number(haOpen.toFixed(2)),
+        high: Number(haHigh.toFixed(2)),
+        low: Number(haLow.toFixed(2)),
+        close: Number(haClose.toFixed(2)),
+      });
+    }
+    return haResult;
+  }, [aggregatedBars, chartStyle]);
+
+  // Map for O(1) hover lookup by date string
+  const rawBarsByDate = useMemo(() => {
+    const map = new Map<string, RawBarItem>();
+    for (const b of aggregatedBars) {
+      map.set(b.time, b);
+    }
+    return map;
+  }, [aggregatedBars]);
+
+  // Calculate 3-Step Super Money Signals markers
+  const calculatedMarkers: SeriesMarker<Time>[] = useMemo(() => {
+    if (!showSignals || aggregatedBars.length < 2) return [];
+
+    const markers: SeriesMarker<Time>[] = [];
+    let lastType: string | null = null;
+    let lastReadyIdx = -100;
+
+    for (let i = 0; i < aggregatedBars.length; i++) {
+      const bar = aggregatedBars[i];
+      const close = bar.close;
+      const e50 = bar.ema50;
+      const e150 = bar.ema150;
+      const e200 = bar.ema200;
+      const bVal = bar.banker;
+      const prevBVal = i > 0 ? aggregatedBars[i - 1].banker : 0;
+      const isBull = bar.close >= bar.open;
+
+      const dist200 = e200 ? ((close - e200) / e200) * 100 : 0;
+      const dist150 = e150 ? ((close - e150) / e150) * 100 : 0;
+      const nearSupport = (e200 && dist200 >= -4 && dist200 <= 3.5) || (e150 && dist150 >= -3 && dist150 <= 3.5);
+
+      // STEP 3: ★ SUPER MONEY (Banker crosses >= 10, in trend) -> White Star below candle
+      if (bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
+        if (lastType !== 'SUPER') {
+          markers.push({
+            time: bar.time as Time,
+            position: 'belowBar',
+            color: '#FFFFFF',
+            shape: 'circle',
+            text: '★ SUPER',
+            size: 1.5,
+          });
+          lastType = 'SUPER';
+          continue;
+        }
+      }
+
+      // STEP 2: ▲ BUY ZONE (At/near EMA support + Banker emerges > 0 on green bar) -> Yellow Triangle below candle
+      if (nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
+        if (lastType !== 'BUY') {
+          markers.push({
+            time: bar.time as Time,
+            position: 'belowBar',
+            color: '#FFE600',
+            shape: 'arrowUp',
+            text: '▲ BUY',
+            size: 1.5,
+          });
+          lastType = 'BUY';
+          continue;
+        }
+      }
+
+      // STEP 1: ••• READY (Near EMA support, Banker = 0, setup forming) -> Amber dots below candle
+      if (nearSupport && bVal === 0) {
+        if (lastType !== 'READY' && lastType !== 'BUY') {
+          if (i - lastReadyIdx >= 8) {
+            markers.push({
+              time: bar.time as Time,
+              position: 'belowBar',
+              color: '#FBBF24',
+              shape: 'circle',
+              text: '••• READY',
+              size: 1.2,
+            });
+            lastType = 'READY';
+            lastReadyIdx = i;
+            continue;
+          }
+        }
+      }
+
+      // EXIT: ▼ DANGER / STOP LOSS (Breakdown below EMA 200 or Banker collapse) -> Crimson Triangle above candle
+      if ((dist200 < -4 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close))) {
+        if (lastType !== 'EXIT') {
+          markers.push({
+            time: bar.time as Time,
+            position: 'aboveBar',
+            color: '#FF1744',
+            shape: 'arrowDown',
+            text: '▼ EXIT',
+            size: 1.5,
+          });
+          lastType = 'EXIT';
+        }
+      }
+    }
+
+    return markers;
+  }, [aggregatedBars, showSignals]);
+
+  // Set timeframe logical range helper
+  const applyTimeframeRange = useCallback((tf: TimeFrame) => {
+    if (!chartRef.current || displayBars.length === 0) return;
+    const total = displayBars.length;
+    let count = total;
+
+    switch (tf) {
+      case '7D': count = resolution === '1W' ? 4 : 7; break;
+      case '1M': count = resolution === '1W' ? 5 : 22; break;
+      case '3M': count = resolution === '1W' ? 14 : 65; break;
+      case '6M': count = resolution === '1W' ? 26 : 130; break;
+      case '10M': count = resolution === '1W' ? 44 : 215; break;
+      case '1Y': count = resolution === '1W' ? 52 : 252; break;
+      case '5Y': count = resolution === '1W' ? 260 : 1260; break;
+      case 'ALL': count = total; break;
+    }
+
+    const from = Math.max(0, total - count);
+    chartRef.current.timeScale().setVisibleLogicalRange({
+      from: from - 0.5,
+      to: total + 6,
+    });
+    setTimeframe(tf);
+  }, [displayBars.length, resolution]);
+
+  // Initialize and build chart instance
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    // Clear old container children
+    chartContainerRef.current.innerHTML = '';
+
+    const chart = createChart(chartContainerRef.current, {
+      autoSize: true,
+      layout: {
+        background: { type: ColorType.Solid, color: '#090D16' },
+        textColor: '#94A3B8',
+        fontFamily: TV_FONT_FAMILY,
+      },
+      grid: {
+        vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
+        horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          color: 'rgba(255, 255, 255, 0.25)',
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: '#1E293B',
+        },
+        horzLine: {
+          color: 'rgba(255, 255, 255, 0.25)',
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: '#1E293B',
+        },
+      },
+      timeScale: {
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        timeVisible: true,
+        secondsVisible: false,
+        barSpacing: 8,
+        minBarSpacing: 1.2,
+        rightOffset: 8,
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.1,
+        },
+      },
+    });
+    chartRef.current = chart;
+
+    // -------------------------------------------------------------
+    // PANE 0: Price Chart Series
+    // -------------------------------------------------------------
+    const isBullTrend = displayBars.length > 1 ? displayBars[displayBars.length - 1].close >= displayBars[0].close : true;
+
+    // 1. Candlestick Series (Bull = Yellow #FFE600, Bear = Crimson #C62828)
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#FFE600',
+      downColor: '#C62828',
+      borderUpColor: '#FFE600',
+      borderDownColor: '#C62828',
+      wickUpColor: '#FFE600',
+      wickDownColor: '#C62828',
+      visible: chartStyle !== 'AREA',
+    }, 0);
+    candleSeriesRef.current = candleSeries;
+
+    // 2. Area Series (for Area Mode)
+    const areaSeries = chart.addSeries(AreaSeries, {
+      topColor: isBullTrend ? 'rgba(255, 230, 0, 0.38)' : 'rgba(198, 40, 40, 0.38)',
+      bottomColor: 'rgba(0, 0, 0, 0.0)',
+      lineColor: isBullTrend ? '#FFE600' : '#C62828',
+      lineWidth: 2,
+      visible: chartStyle === 'AREA',
+    }, 0);
+    areaSeriesRef.current = areaSeries;
+
+    // 3. EMA 50 (Sky Blue)
+    const ema50Series = chart.addSeries(LineSeries, {
+      color: '#38BDF8',
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      title: 'EMA 50',
+    }, 0);
+    ema50SeriesRef.current = ema50Series;
+
+    // 4. EMA 150 (Amber)
+    const ema150Series = chart.addSeries(LineSeries, {
+      color: '#F59E0B',
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      title: 'EMA 150',
+    }, 0);
+    ema150SeriesRef.current = ema150Series;
+
+    // 5. EMA 200 (Purple Core Bedrock)
+    const ema200Series = chart.addSeries(LineSeries, {
+      color: '#A855F7',
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      title: 'EMA 200',
+    }, 0);
+    ema200SeriesRef.current = ema200Series;
+
+    // 6. EMA 200 Envelope (+4% Upper Band)
+    const upperEnvSeries = chart.addSeries(LineSeries, {
+      color: '#C084FC',
+      lineWidth: 1,
+      lineStyle: LineStyle.Dashed,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      title: '+4% Bedrock',
+      visible: showEnvelope,
+    }, 0);
+    upperEnvSeriesRef.current = upperEnvSeries;
+
+    // 7. EMA 200 Envelope (-4% Lower Band)
+    const lowerEnvSeries = chart.addSeries(LineSeries, {
+      color: '#C084FC',
+      lineWidth: 1,
+      lineStyle: LineStyle.Dashed,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      title: '-4% Bedrock',
+      visible: showEnvelope,
+    }, 0);
+    lowerEnvSeriesRef.current = lowerEnvSeries;
+
+    // -------------------------------------------------------------
+    // PANE 1: Banker MCDX Sub-Chart
+    // -------------------------------------------------------------
+    const mcdxSeries = chart.addCustomSeries(
+      new BankerMCDXSeriesView(),
+      {
+        title: 'MCDX',
+        priceFormat: {
+          type: 'custom',
+          minMove: 1,
+          formatter: (val: number) => val.toFixed(0),
+        },
+      },
+      1 // Pane index 1!
+    );
+    mcdxSeriesRef.current = mcdxSeries;
+
+    // Pink Threshold Line (10 Entry Strike)
+    mcdxSeries.createPriceLine({
+      price: 10,
+      color: '#FC2D79',
+      lineStyle: LineStyle.Dashed,
+      lineWidth: 1,
+      axisLabelVisible: true,
+      title: '10 STRIKE',
+    });
+
+    // Banker MA Line (White #FFFFFF, overlaying Pane 1)
+    const bankerMaSeries = chart.addSeries(LineSeries, {
+      color: '#FFFFFF',
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      title: 'Banker MA',
+    }, 1);
+    bankerMaSeriesRef.current = bankerMaSeries;
+
+    // Configure Pane 1 price scale
+    chart.priceScale('right', 1).applyOptions({
+      borderColor: 'rgba(255, 255, 255, 0.12)',
+      scaleMargins: {
+        top: 0.08,
+        bottom: 0.04,
+      },
+    });
+
+    // Adjust Pane 1 Height
+    const panes = chart.panes();
+    if (panes.length > 1) {
+      panes[1].setHeight(135);
+    }
+
+    // Initialize Markers Plugin
+    const markersPlugin = createSeriesMarkers(candleSeries, showSignals ? calculatedMarkers : []);
+    markersPluginRef.current = markersPlugin;
+
+    // Crosshair listener for rich header legend
+    chart.subscribeCrosshairMove(param => {
+      if (!param.point || !param.time) {
+        setHoveredBar(null);
+        return;
+      }
+      const timeStr = String(param.time);
+      const raw = rawBarsByDate.get(timeStr);
+      if (raw) {
+        setHoveredBar(raw);
+      }
+    });
+
+    // Clean up
+    return () => {
+      chart.remove();
+      chartRef.current = null;
+      candleSeriesRef.current = null;
+      areaSeriesRef.current = null;
+      ema50SeriesRef.current = null;
+      ema150SeriesRef.current = null;
+      ema200SeriesRef.current = null;
+      upperEnvSeriesRef.current = null;
+      lowerEnvSeriesRef.current = null;
+      mcdxSeriesRef.current = null;
+      bankerMaSeriesRef.current = null;
+      markersPluginRef.current = null;
+    };
+  }, []); // Run once on mount
+
+  // Update Data when displayBars or calculated markers change
+  useEffect(() => {
+    if (!chartRef.current || displayBars.length === 0) return;
+
+    // Prepare arrays
+    const candleData = displayBars.map(b => ({
+      time: b.time as Time,
+      open: b.open,
+      high: b.high,
+      low: b.low,
+      close: b.close,
+    }));
+
+    const areaData = displayBars.map(b => ({
+      time: b.time as Time,
+      value: b.close,
+    }));
+
+    const e50Data = displayBars
+      .filter(b => b.ema50 !== null)
+      .map(b => ({ time: b.time as Time, value: b.ema50! }));
+
+    const e150Data = displayBars
+      .filter(b => b.ema150 !== null)
+      .map(b => ({ time: b.time as Time, value: b.ema150! }));
+
+    const e200Data = displayBars
+      .filter(b => b.ema200 !== null)
+      .map(b => ({ time: b.time as Time, value: b.ema200! }));
+
+    const upperEnvData = displayBars
+      .filter(b => b.ema200 !== null)
+      .map(b => ({ time: b.time as Time, value: Number((b.ema200! * 1.04).toFixed(2)) }));
+
+    const lowerEnvData = displayBars
+      .filter(b => b.ema200 !== null)
+      .map(b => ({ time: b.time as Time, value: Number((b.ema200! * 0.96).toFixed(2)) }));
+
+    const mcdxData: BankerMCDXData[] = displayBars.map(b => ({
+      time: b.time as Time,
+      banker: b.banker,
+      hotMoney: b.hotMoney,
+      retail: b.retail,
+    }));
+
+    const bMaData = displayBars.map(b => ({
+      time: b.time as Time,
+      value: b.bankerMa,
+    }));
+
+    candleSeriesRef.current?.setData(candleData);
+    areaSeriesRef.current?.setData(areaData);
+    ema50SeriesRef.current?.setData(e50Data);
+    ema150SeriesRef.current?.setData(e150Data);
+    ema200SeriesRef.current?.setData(e200Data);
+    upperEnvSeriesRef.current?.setData(upperEnvData);
+    lowerEnvSeriesRef.current?.setData(lowerEnvData);
+    mcdxSeriesRef.current?.setData(mcdxData as any);
+    bankerMaSeriesRef.current?.setData(bMaData);
+
+    markersPluginRef.current?.setMarkers(showSignals ? calculatedMarkers : []);
+
+    // Apply current timeframe range
+    applyTimeframeRange(timeframe);
+  }, [displayBars, calculatedMarkers, showSignals, applyTimeframeRange, timeframe]);
+
+  // Handle Style Switching
+  useEffect(() => {
+    if (!candleSeriesRef.current || !areaSeriesRef.current) return;
+    if (chartStyle === 'AREA') {
+      candleSeriesRef.current.applyOptions({ visible: false });
+      areaSeriesRef.current.applyOptions({ visible: true });
+    } else {
+      candleSeriesRef.current.applyOptions({ visible: true });
+      areaSeriesRef.current.applyOptions({ visible: false });
+    }
+  }, [chartStyle]);
+
+  // Handle Envelope Visibility
+  useEffect(() => {
+    upperEnvSeriesRef.current?.applyOptions({ visible: showEnvelope });
+    lowerEnvSeriesRef.current?.applyOptions({ visible: showEnvelope });
+  }, [showEnvelope]);
+
+  // Handle Signals Visibility
+  useEffect(() => {
+    markersPluginRef.current?.setMarkers(showSignals ? calculatedMarkers : []);
+  }, [showSignals, calculatedMarkers]);
+
+  // Handle Fullscreen resize trigger
+  useEffect(() => {
+    if (!chartRef.current) return;
+    const timer = setTimeout(() => {
+      chartRef.current?.resize(
+        chartContainerRef.current?.clientWidth || 800,
+        chartContainerRef.current?.clientHeight || 600,
+        true
+      );
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isFullscreen]);
+
+  // -------------------------------------------------------------
+  // Adaptive Heartbeat: Real-time Live Candle Polling
+  // -------------------------------------------------------------
+  useEffect(() => {
+    let isMounted = true;
+    let timer: any = null;
+
+    const pollLiveQuote = async () => {
+      // 1. Check tab visibility
+      if (document.visibilityState !== 'visible') {
+        setIsLiveActive(false);
+        return;
+      }
+
+      // 2. Check US market hours
+      const marketOpen = isUsMarketOpen();
+      setIsMarketOpen(marketOpen);
+
+      if (!marketOpen) {
+        setIsLiveActive(false);
+        return;
+      }
+
+      setIsLiveActive(true);
+
+      try {
+        const res: any = await api.prices.latest([symbol]);
+        const quote = res?.[symbol];
+
+        if (quote && quote.price && isMounted) {
+          const newPrice = Number(quote.price);
+          setLivePrice(newPrice);
+          setLiveChangePercent(quote.percent_change ?? 0);
+
+          // Update the last candle in real-time
+          if (candleSeriesRef.current && displayBars.length > 0) {
+            const lastBar = displayBars[displayBars.length - 1];
+            const updatedHigh = Math.max(lastBar.high, newPrice);
+            const updatedLow = Math.min(lastBar.low, newPrice);
+
+            candleSeriesRef.current.update({
+              time: lastBar.time as Time,
+              open: lastBar.open,
+              high: updatedHigh,
+              low: updatedLow,
+              close: newPrice,
+            });
+
+            if (areaSeriesRef.current) {
+              areaSeriesRef.current.update({
+                time: lastBar.time as Time,
+                value: newPrice,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[LWChart] Live pulse failed:', err);
+      }
+    };
+
+    // Run pulse immediately
+    pollLiveQuote();
+
+    // Heartbeat every 30s
+    timer = setInterval(pollLiveQuote, 30000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        pollLiveQuote();
+      } else {
+        setIsLiveActive(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [symbol, displayBars]);
+
+  // Current active legend data (hovered bar, or latest bar by default)
+  const activeLegend = useMemo(() => {
+    if (hoveredBar) return hoveredBar;
+    if (aggregatedBars.length > 0) return aggregatedBars[aggregatedBars.length - 1];
+    return null;
+  }, [hoveredBar, aggregatedBars]);
+
+  const activePercentChange = useMemo(() => {
+    if (!activeLegend) return 0;
+    if (activeLegend.open > 0) {
+      return ((activeLegend.close - activeLegend.open) / activeLegend.open) * 100;
+    }
+    return 0;
+  }, [activeLegend]);
+
+  return (
+    <div
+      className={`relative flex flex-col bg-[#0A0E17] border border-slate-800/80 rounded-2xl overflow-hidden shadow-2xl transition-all select-none ${
+        isFullscreen
+          ? 'fixed inset-0 z-[100] w-screen h-screen rounded-none border-none p-4'
+          : `w-full ${className}`
+      }`}
+      style={{ fontFamily: TV_FONT_FAMILY }}
+    >
+      {/* ----------------------------------------------------------- */}
+      {/* TOP MASTER CONTROLS BAR                                      */}
+      {/* ----------------------------------------------------------- */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[#0D1322] border-b border-slate-800/80">
+        
+        {/* LEFT: Stock Info + Live Pulse Badge */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-black tracking-wider text-slate-100">{symbol}</span>
+            <span className="text-base font-bold text-amber-400">
+              ${(livePrice || currentPrice).toFixed(2)}
+            </span>
+            <span
+              className={`text-sm font-semibold flex items-center gap-0.5 ${
+                activePercentChange >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              }`}
+            >
+              {activePercentChange >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+              {activePercentChange >= 0 ? '+' : ''}
+              {activePercentChange.toFixed(2)}%
+            </span>
+          </div>
+
+          {/* Live Heartbeat Badge */}
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-bold tracking-wide border transition-all ${
+              isLiveActive && isMarketOpen
+                ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                : 'bg-slate-900 border-slate-700/60 text-slate-400'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isLiveActive && isMarketOpen ? 'bg-emerald-400' : 'bg-slate-500'
+              }`}
+            />
+            {isLiveActive && isMarketOpen ? 'LIVE 30s' : 'CLOSED'}
+          </div>
+
+          {/* Badge & Scenario Pill */}
+          {badge && (
+            <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-md bg-cyan-950/50 border border-cyan-500/30 text-cyan-300 text-[13px] font-bold">
+              {badge}
+            </span>
+          )}
+
+          {trafficLight === 'BUY_ZONE' && (
+            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-[13px] font-bold">
+              <Zap className="w-3.5 h-3.5 text-amber-400" /> BUY ZONE
+            </span>
+          )}
+        </div>
+
+        {/* RIGHT: Switchers & Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          
+          {/* Resolution: 1D | 1W */}
+          <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-700/50">
+            <button
+              onClick={() => setResolution('1D')}
+              className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all ${
+                resolution === '1D'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              1D
+            </button>
+            <button
+              onClick={() => setResolution('1W')}
+              className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all ${
+                resolution === '1W'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              1W
+            </button>
+          </div>
+
+          {/* Chart Style: Candle | Heikin-Ashi | Area */}
+          <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-700/50">
+            <button
+              onClick={() => setChartStyle('CANDLE')}
+              className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all ${
+                chartStyle === 'CANDLE'
+                  ? 'bg-amber-400 text-slate-950 shadow-md'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Candle
+            </button>
+            <button
+              onClick={() => setChartStyle('HEIKIN_ASHI')}
+              className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all ${
+                chartStyle === 'HEIKIN_ASHI'
+                  ? 'bg-amber-400 text-slate-950 shadow-md'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              HA
+            </button>
+            <button
+              onClick={() => setChartStyle('AREA')}
+              className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all ${
+                chartStyle === 'AREA'
+                  ? 'bg-amber-400 text-slate-950 shadow-md'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Area
+            </button>
+          </div>
+
+          {/* EMA 200 Support Envelope Toggle */}
+          <button
+            onClick={() => setShowEnvelope(prev => !prev)}
+            title="EMA 200 Support Envelope (±4% Bedrock Channel)"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold border transition-all ${
+              showEnvelope
+                ? 'bg-purple-950/60 border-purple-500/50 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.25)]'
+                : 'bg-slate-900/60 border-slate-700/50 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            Zone {showEnvelope ? 'ON' : 'OFF'}
+          </button>
+
+          {/* Signals Toggle */}
+          <button
+            onClick={() => setShowSignals(prev => !prev)}
+            title="3-Step Super Money Signals (•••, ▲, ★, ▼)"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold border transition-all ${
+              showSignals
+                ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]'
+                : 'bg-slate-900/60 border-slate-700/50 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            Signals {showSignals ? 'ON' : 'OFF'}
+          </button>
+
+          {/* Reset Zoom */}
+          <button
+            onClick={() => applyTimeframeRange('10M')}
+            title="Reset Zoom to 10M Default"
+            className="p-1.5 rounded-lg bg-slate-900/60 border border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+
+          {/* Fullscreen Button */}
+          <button
+            onClick={() => setIsFullscreen(prev => !prev)}
+            title="Toggle Fullscreen View (Key: F)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/50 border border-cyan-500/40 text-cyan-300 text-[13px] font-bold hover:bg-cyan-900/60 transition-all shadow-md"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            {isFullscreen ? 'Exit [ESC]' : 'Full [F]'}
+          </button>
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------------- */}
+      {/* REAL-TIME FLOATING LEGEND STRIP                             */}
+      {/* ----------------------------------------------------------- */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 bg-[#080C14]/95 border-b border-slate-800/50 text-[13px] text-slate-300">
+        {activeLegend ? (
+          <>
+            <span className="font-bold text-slate-100">{activeLegend.time}</span>
+            <span>
+              O: <strong className="text-slate-200">${activeLegend.open.toFixed(2)}</strong>
+            </span>
+            <span>
+              H: <strong className="text-slate-200">${activeLegend.high.toFixed(2)}</strong>
+            </span>
+            <span>
+              L: <strong className="text-slate-200">${activeLegend.low.toFixed(2)}</strong>
+            </span>
+            <span>
+              C:{' '}
+              <strong className={activePercentChange >= 0 ? 'text-amber-300' : 'text-rose-400'}>
+                ${activeLegend.close.toFixed(2)}
+              </strong>
+            </span>
+            {activeLegend.ema50 && (
+              <span className="hidden sm:inline">
+                EMA50: <strong className="text-sky-400">${activeLegend.ema50.toFixed(2)}</strong>
+              </span>
+            )}
+            {activeLegend.ema150 && (
+              <span className="hidden sm:inline">
+                EMA150: <strong className="text-amber-400">${activeLegend.ema150.toFixed(2)}</strong>
+              </span>
+            )}
+            {activeLegend.ema200 && (
+              <span className="hidden sm:inline">
+                EMA200: <strong className="text-purple-400">${activeLegend.ema200.toFixed(2)}</strong>
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              Banker:{' '}
+              <strong className="text-rose-400 font-extrabold">{activeLegend.banker.toFixed(1)}</strong>
+              /20
+            </span>
+            <span className="hidden md:inline text-slate-400">
+              HotMoney: <strong className="text-amber-400">{activeLegend.hotMoney.toFixed(1)}</strong>
+            </span>
+            <span className="hidden md:inline text-slate-400">
+              Retail: <strong className="text-emerald-400">{activeLegend.retail.toFixed(1)}</strong>
+            </span>
+          </>
+        ) : (
+          <span className="text-slate-400 italic">เลื่อนเมาส์บนกราฟเพื่อดูราคาและ Indicator ย้อนหลัง</span>
+        )}
+      </div>
+
+      {/* ----------------------------------------------------------- */}
+      {/* MAIN BODY: CHART CANVAS + FULLSCREEN WATCHLIST SIDEBAR      */}
+      {/* ----------------------------------------------------------- */}
+      <div className="relative flex-1 flex overflow-hidden min-h-[580px]">
+        {/* Left: Chart Canvas Container */}
+        <div ref={chartContainerRef} className="flex-1 w-full h-full min-h-[580px]" />
+
+        {/* Right: Quick Watchlist Sidebar (Visible in Fullscreen Mode) */}
+        {isFullscreen && watchlist.length > 0 && (
+          <div className="w-72 border-l border-slate-800/80 bg-slate-950/60 backdrop-blur-md p-3 flex flex-col gap-2 overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span className="text-sm font-bold text-slate-200">QUICK WATCHLIST</span>
+              <span className="text-[13px] font-semibold text-slate-400">{watchlist.length} Stocks</span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {watchlist.map((item) => {
+                const isSelected = item.symbol === symbol;
+                const isBuy = item.traffic_light === 'BUY_ZONE';
+
+                return (
+                  <button
+                    key={item.symbol}
+                    onClick={() => onSelectSymbol?.(item.symbol)}
+                    className={`flex items-center justify-between p-2.5 rounded-xl text-left border transition-all ${
+                      isSelected
+                        ? 'bg-cyan-950/60 border-cyan-500/50 shadow-md shadow-cyan-950/40'
+                        : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/50 hover:border-slate-700'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-slate-100 text-sm">{item.symbol}</span>
+                        {isBuy && (
+                          <span className="px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold">
+                            BUY
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[13px] text-slate-300 font-semibold">
+                        ${item.currentPrice.toFixed(2)}
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div
+                        className={`text-xs font-bold ${
+                          (item.percent_change ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                      >
+                        {(item.percent_change ?? 0) >= 0 ? '+' : ''}
+                        {(item.percent_change ?? 0).toFixed(2)}%
+                      </div>
+                      <div className="text-[13px] font-bold text-rose-400">
+                        B: {(item.banker ?? 0).toFixed(1)}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ----------------------------------------------------------- */}
+      {/* BOTTOM TIMEFRAME SELECTOR BAR                               */}
+      {/* ----------------------------------------------------------- */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#0D1322] border-t border-slate-800/80">
+        
+        {/* Left: Timeframe Range Buttons */}
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {(['7D', '1M', '3M', '6M', '10M', '1Y', '5Y', 'ALL'] as TimeFrame[]).map((tf) => (
+            <button
+              key={tf}
+              onClick={() => applyTimeframeRange(tf)}
+              className={`px-3 py-1 rounded-lg text-[13px] font-bold transition-all ${
+                timeframe === tf
+                  ? 'bg-amber-400 text-slate-950 shadow-md font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              {tf}
+            </button>
+          ))}
+        </div>
+
+        {/* Right: Hint or Inflow Button */}
+        <div className="flex items-center gap-3">
+          {onAddInflow && (
+            <button
+              onClick={onAddInflow}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[13px] font-extrabold shadow-md hover:bg-emerald-400 transition-all"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Allocate Inflow
+            </button>
+          )}
+
+          <div className="text-[13px] text-slate-400 hidden sm:inline">
+            Scroll to zoom • Drag to pan • Double click to reset
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -39,6 +39,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { ProgressRing } from './ProgressRing';
 import { MiniSparkline } from './MiniSparkline';
 import { TradingViewChart } from './TradingViewChart';
+import { LWChart } from './LWChart';
 
 type SortKey = 'STATUS' | 'PROGRESS' | 'VALUE' | 'WEIGHT' | 'NAME';
 type SortOrder = 'ASC' | 'DESC';
@@ -767,7 +768,7 @@ export const Project2xPage: React.FC = () => {
             <div className="lg:col-span-8 space-y-4">
               {activeStockRow ? (
                 <>
-                  <TradingViewChart
+                  <LWChart
                     symbol={activeStockRow.symbol}
                     dates={activeStockRow.sparkline?.dates || []}
                     closes={activeStockRow.sparkline?.closes || []}
@@ -789,6 +790,14 @@ export const Project2xPage: React.FC = () => {
                     trafficLight={activeStockRow.traffic_light}
                     distEma150={activeStockRow.distEma150}
                     distEma200={activeStockRow.distEma200}
+                    watchlist={radar?.rows.map(r => ({
+                      symbol: r.symbol,
+                      currentPrice: r.currentPrice,
+                      percent_change: 0,
+                      banker: r.banker,
+                      traffic_light: r.traffic_light,
+                    })) || []}
+                    onSelectSymbol={(sym) => setSelectedStockSymbol(sym)}
                     onAddInflow={() => {
                       setSelectedTab('inflow');
                       if (activePortfolioId) {
