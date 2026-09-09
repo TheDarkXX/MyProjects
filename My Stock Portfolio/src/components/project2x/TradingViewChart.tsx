@@ -1,6 +1,8 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Activity, Zap, ExternalLink, BarChart3, TrendingUp, RotateCcw, MoveHorizontal, ZoomIn } from 'lucide-react';
 
+export const TV_FONT_FAMILY = "-apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif";
+
 interface TradingViewChartProps {
   symbol: string;
   dates?: string[];
@@ -121,6 +123,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const [dragStartX, setDragStartX] = useState<number>(0);
   const [dragStartY, setDragStartY] = useState<number>(0);
   const [dragInitialPriceScale, setDragInitialPriceScale] = useState<number>(1.0);
+  const [dragInitialCenterShift, setDragInitialCenterShift] = useState<number>(0);
   const [dragInitialRange, setDragInitialRange] = useState<{ start: number; end: number } | null>(null);
 
   const rawCloses = useMemo(() => (closes || []).filter(c => typeof c === 'number' && !isNaN(c)), [closes]);
@@ -221,14 +224,6 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const sliceRetail = useMemo(() => (retailSeries || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [retailSeries, activeRange, totalBars]);
   const sliceBankerMa = useMemo(() => (bankerMaSeries || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [bankerMaSeries, activeRange, totalBars]);
 
-  if (sliceCloses.length < 2) {
-    return (
-      <div className={`flex items-center justify-center rounded-3xl border border-white/10 bg-[#131722] text-slate-300 text-sm h-[680px] ${className}`}>
-        Waiting for {symbol} chart data...
-      </div>
-    );
-  }
-
   // Calculate price scale min/max with dynamic priceScale
   let allPriceVals: number[] = [...sliceCloses];
   if (sliceHighs.length > 0) sliceHighs.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allPriceVals.push(v); });
@@ -236,8 +231,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   sliceEma150.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allPriceVals.push(v); });
   sliceEma200.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allPriceVals.push(v); });
 
-  const rawMin = Math.min(...allPriceVals);
-  const rawMax = Math.max(...allPriceVals);
+  const rawMin = allPriceVals.length > 0 ? Math.min(...allPriceVals) : (currentPrice > 0 ? currentPrice * 0.9 : 100);
+  const rawMax = allPriceVals.length > 0 ? Math.max(...allPriceVals) : (currentPrice > 0 ? currentPrice * 1.1 : 110);
   const rawMid = (rawMax + rawMin) / 2;
   const rawHalfSpan = Math.max(1, (rawMax - rawMin) / 2);
   const baseMargin = rawHalfSpan * 0.10;
@@ -285,15 +280,15 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   // Build Price Area & Line
   const pricePoints = sliceCloses.map((c, i) => `${getX(i, sliceCloses.length)},${getPriceY(c)}`);
   const pricePath = `M ${pricePoints.join(' L ')}`;
-  const firstX = getX(0, sliceCloses.length);
-  const lastX = getX(sliceCloses.length - 1, sliceCloses.length);
+  const firstX = sliceCloses.length > 0 ? getX(0, sliceCloses.length) : padL;
+  const lastX = sliceCloses.length > 0 ? getX(sliceCloses.length - 1, sliceCloses.length) : padL + chartW;
   const areaPath = `M ${firstX},${padT + priceChartH} L ${pricePoints.join(' L ')} L ${lastX},${padT + priceChartH} Z`;
 
   // Colors based on user's specification:
   // Bull = Yellow (#FFE600), Bear = Vivid Red + Dark 30% (#C62828)
   const bullColor = '#FFE600';
   const bearColor = '#C62828'; // แดงสด + Dark 30% (Deep Crimson)
-  const isUp = sliceCloses[sliceCloses.length - 1] >= sliceCloses[0];
+  const isUp = sliceCloses.length > 1 ? sliceCloses[sliceCloses.length - 1] >= sliceCloses[0] : true;
   const priceColor = isUp ? bullColor : bearColor;
   const gradId = `tv-grad-${symbol}-${isUp ? 'bull' : 'bear'}`;
 
@@ -727,6 +722,12 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
         }
 
         setCustomRange({ start: newStart, end: newEnd });
+
+        // 2D Pan across all planes (Unfixed all planes! Drag X and Y simultaneously)
+        const deltaY = e.clientY - dragStartY;
+        const pricePerPx = priceRange / Math.max(1, priceChartH);
+        const shiftAmount = (deltaY / rect.height) * vbHeight * pricePerPx * 0.9;
+        setPriceCenterShift(dragInitialCenterShift + shiftAmount);
       }
     };
 
@@ -741,7 +742,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       window.removeEventListener('mousemove', onWindowMouseMove);
       window.removeEventListener('mouseup', onWindowMouseUp);
     };
-  }, [dragMode, dragStartY, dragStartX, dragInitialPriceScale, dragInitialRange, defaultLookback, totalBars]);
+  }, [dragMode, dragStartY, dragStartX, dragInitialPriceScale, dragInitialRange, dragInitialCenterShift, priceRange, priceChartH, vbHeight, defaultLookback, totalBars]);
 
   // Zoom on Wheel (ONLY when Ctrl or Meta is held!) via non-passive listener
   useEffect(() => {
@@ -822,6 +823,14 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   };
 
   const badgeInfo = getTrafficBadge();
+
+  if (sliceCloses.length < 2) {
+    return (
+      <div className={`flex items-center justify-center rounded-3xl border border-white/10 bg-[#131722] text-slate-300 text-sm h-[680px] ${className}`}>
+        Waiting for {symbol} chart data...
+      </div>
+    );
+  }
 
   return (
     <div
@@ -970,7 +979,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
           {/* Banker MCDX Score */}
           <div className="flex items-center gap-1 font-bold">
-            <span className={`w-2 h-2 rounded ${activeBanker >= 10 ? 'bg-[#FF3B30]' : activeBanker >= 5 ? 'bg-[#FFD600]' : 'bg-[#4CAF50]'}`} />
+            <span className={`w-2 h-2 rounded ${activeBanker >= 10 ? 'bg-[#C62828]' : activeBanker >= 5 ? 'bg-[#FFD600]' : 'bg-[#4CAF50]'}`} />
             <span className="text-slate-200">Banker: <strong className="text-white">{activeBanker.toFixed(1)}/20</strong></span>
           </div>
         </div>
@@ -1000,10 +1009,17 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           className="w-full h-full"
           onMouseMove={handleMouseMove}
           onMouseDown={(e) => {
-            // Main chart body pan
+            // Main chart body 2D free pan
             setDragMode('PAN');
             setDragStartX(e.clientX);
+            setDragStartY(e.clientY);
             setDragInitialRange({ ...activeRange });
+            setDragInitialCenterShift(priceCenterShift);
+          }}
+          onDoubleClick={() => {
+            setPriceScale(1.0);
+            setPriceCenterShift(0);
+            setCustomRange(null);
           }}
           onMouseLeave={() => {
             setHoverIdx(null);
@@ -1071,7 +1087,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                 y={g.y + 3.5}
                 fill="#94A3B8"
                 fontSize="10"
-                fontFamily="sans-serif"
+                fontWeight="500"
+                fontFamily={TV_FONT_FAMILY}
+                style={{ fontFeatureSettings: "'tnum' 1" }}
               >
                 ${g.label}
               </text>
@@ -1123,7 +1141,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               fontSize="11"
               fontWeight="bold"
               textAnchor="middle"
-              fontFamily="sans-serif"
+              fontFamily={TV_FONT_FAMILY}
+              style={{ fontFeatureSettings: "'tnum' 1" }}
             >
               ${currentPrice.toFixed(1)}
             </text>
@@ -1202,8 +1221,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               {/* 3-Step Super Money Tactical Signals (Icon-Only, No Text) */}
               {showSignals && signals.map((sig, sIdx) => {
                 const isBelow = sig.position === 'below';
-                // Smart Wick Padding: +10px boost! (28px below lowest wick tip, 24px above highest wick tip)
-                const renderY = isBelow ? sig.y + 28 : sig.y - 24;
+                // Dynamic Proportional Padding: maintains breathing room ratio across all zoom levels
+                const dynamicPadding = Math.max(24, Math.min(38, 22 + slotStep * 0.7));
+                const renderY = isBelow ? sig.y + dynamicPadding : sig.y - (dynamicPadding - 4);
 
                 return (
                   <g key={`sig-${sIdx}`} className="pointer-events-auto cursor-pointer">
@@ -1225,7 +1245,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                       fontWeight="900"
                       textAnchor="middle"
                       dominantBaseline="central"
-                      fontFamily="sans-serif, system-ui"
+                      fontFamily={TV_FONT_FAMILY}
                       style={{
                         filter: 'drop-shadow(0px 2px 5px rgba(0, 0, 0, 0.95))',
                         userSelect: 'none'
@@ -1260,7 +1280,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                 fill={tick.isYear ? '#F8FAFC' : (tick.isMonth ? '#CBD5E1' : '#94A3B8')}
                 fontSize={tick.isYear ? '10.5' : '10'}
                 fontWeight={tick.isYear ? 'bold' : (tick.isMonth ? '600' : 'normal')}
-                fontFamily="sans-serif"
+                fontFamily={TV_FONT_FAMILY}
+                style={{ fontFeatureSettings: "'tnum' 1" }}
                 textAnchor="middle"
               >
                 {tick.label}
@@ -1312,7 +1333,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               fill="#F59E0B"
               fontSize="10"
               fontWeight="bold"
-              fontFamily="sans-serif"
+              fontFamily={TV_FONT_FAMILY}
             >
               BANKER MCDX FLOW (SUPER MONEY) • 20 SCALE
             </text>
@@ -1334,7 +1355,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               fill="#FC2D79"
               fontSize="10"
               fontWeight="bold"
-              fontFamily="sans-serif"
+              fontFamily={TV_FONT_FAMILY}
+              style={{ fontFeatureSettings: "'tnum' 1" }}
             >
               10
             </text>
@@ -1352,7 +1374,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               y={getBankerY(0) + 3}
               fill="#64748B"
               fontSize="10"
-              fontFamily="sans-serif"
+              fontFamily={TV_FONT_FAMILY}
+              style={{ fontFeatureSettings: "'tnum' 1" }}
             >
               0
             </text>
@@ -1408,14 +1431,14 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                       fillOpacity={0.92}
                     />
                   )}
-                  {/* Red Banker (Base Institutional Flow) */}
+                  {/* Red Banker (Base Institutional Flow - Crimson Red #C62828) */}
                   {redH > 0 && (
                     <rect
                       x={barX - barW / 2}
                       y={yBanker}
                       width={barW}
                       height={redH}
-                      fill="#FF3D00"
+                      fill={bearColor}
                       fillOpacity={0.96}
                     />
                   )}
