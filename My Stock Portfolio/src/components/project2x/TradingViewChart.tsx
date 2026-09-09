@@ -140,17 +140,18 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const maxPrice = rawMax + paddingMargin;
   const priceRange = maxPrice - minPrice || 1;
 
-  // ViewBox layout dimensions (Main Chart ~460px + Dates 26px + Banker 110px = 640px Total)
+  // ViewBox layout dimensions (Main Chart ~460px + Dates 26px + Banker 120px = 650px Total)
   const vbWidth = 920;
-  const vbHeight = 640;
+  const vbHeight = 650;
   const padL = 15;
   const padR = 75; // room for right price axis labels
   const padT = 15;
   const dateAxisH = 26; // X-axis date area
-  const bankerPaneH = 110; // Banker sub-pane height
-  const paneGap = 20; // Gap between date axis and banker sub-pane
+  const bankerTitleH = 16; // Header space for MCDX Title
+  const bankerBarsH = 100; // Banker histogram height
+  const paneGap = 16; // Gap between date axis and banker sub-pane
 
-  const priceChartH = vbHeight - padT - dateAxisH - bankerPaneH - paneGap; // ~469px
+  const priceChartH = vbHeight - padT - dateAxisH - bankerTitleH - bankerBarsH - paneGap; // ~477px
   const chartW = vbWidth - padL - padR;
 
   // Coordinate functions
@@ -164,9 +165,10 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   };
 
   const bankerTopY = padT + priceChartH + dateAxisH + paneGap;
+  const bankerBarsTopY = bankerTopY + bankerTitleH;
   const getBankerY = (score: number) => {
     const clamped = Math.max(0, Math.min(20, score));
-    return bankerTopY + bankerPaneH - (clamped / 20) * bankerPaneH;
+    return bankerBarsTopY + bankerBarsH - (clamped / 20) * bankerBarsH;
   };
 
   // Build Price Area & Line
@@ -218,6 +220,14 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   });
 
   const curPriceY = getPriceY(currentPrice);
+
+  // Bar step and width calculations
+  const barStep = chartW / Math.max(1, sliceCloses.length - 1);
+  // Hairline gap matching TradingView histogram (ultra-thin hairline slit ~0.75px)
+  const mcdxBarWidth = Math.max(
+    1.2,
+    barStep >= 8 ? barStep - 1 : (barStep >= 3.5 ? barStep - 0.75 : (barStep >= 2 ? barStep - 0.5 : barStep * 0.95))
+  );
 
   // Candlestick calculation with real wicks and width
   const candleBarWidth = Math.max(3.5, Math.min(18, (chartW / sliceCloses.length) * 0.72));
@@ -748,9 +758,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             {/* Sub-pane divider */}
             <line
               x1={padL}
-              y1={bankerTopY - 8}
+              y1={bankerTopY - 4}
               x2={vbWidth - padR}
-              y2={bankerTopY - 8}
+              y2={bankerTopY - 4}
               stroke="rgba(255,255,255,0.12)"
               strokeWidth="1"
             />
@@ -758,7 +768,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             {/* Sub-pane Title */}
             <text
               x={padL}
-              y={bankerTopY + 12}
+              y={bankerTopY + 10}
               fill="#F59E0B"
               fontSize="10"
               fontWeight="bold"
@@ -818,7 +828,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               }
 
               const barX = getX(i, sliceCloses.length);
-              const barW = Math.max(2.5, candleBarWidth * 0.88);
+              const barW = mcdxBarWidth;
 
               // 1. Red Base (Banker Institutional Flow): 0 to bVal
               const yBase = getBankerY(0);
@@ -897,7 +907,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                 x1={activeX}
                 y1={padT}
                 x2={activeX}
-                y2={bankerTopY + bankerPaneH}
+                y2={bankerBarsTopY + bankerBarsH}
                 stroke="#64748B"
                 strokeDasharray="3 3"
                 strokeWidth="1"
