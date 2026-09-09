@@ -53,22 +53,8 @@ chartRoutes.get('/:symbol', async (c) => {
     const ema150 = calcEMASeries(closes, 150);
     const ema200 = calcEMASeries(closes, 200);
 
-    // Compute MCDX (optimized lookback on 500 recent bars if long series)
-    const mcdxLookback = 500;
-    let mcdxData;
-    if (closes.length > mcdxLookback) {
-      const recentCloses = closes.slice(-mcdxLookback);
-      const recentMcdx = calcMcdxSeries(recentCloses);
-      const padCount = closes.length - mcdxLookback;
-      mcdxData = {
-        banker: new Array(padCount).fill(0).concat(recentMcdx.banker),
-        hotMoney: new Array(padCount).fill(0).concat(recentMcdx.hotMoney),
-        retail: new Array(padCount).fill(20).concat(recentMcdx.retail),
-        bankerMa: new Array(padCount).fill(0).concat(recentMcdx.bankerMa)
-      };
-    } else {
-      mcdxData = calcMcdxSeries(closes);
-    }
+    // Compute MCDX across full series (100% of historical depth)
+    const mcdxData = calcMcdxSeries(closes);
 
     // Latest price & day change
     const latestPriceRow = db.prepare(`

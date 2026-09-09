@@ -700,12 +700,12 @@ export const LWChart: React.FC<LWChartProps> = ({
     }, 1);
     bankerMaSeriesRef.current = bankerMaSeries;
 
-    // Configure Pane 1 price scale
+    // Configure Pane 1 price scale (maximize vertical bar span from base to ceiling)
     chart.priceScale('right', 1).applyOptions({
       borderColor: 'rgba(255, 255, 255, 0.12)',
       scaleMargins: {
-        top: 0.08,
-        bottom: 0.04,
+        top: 0.02,
+        bottom: 0.0,
       },
     });
 
@@ -1163,10 +1163,10 @@ export const LWChart: React.FC<LWChartProps> = ({
               <strong className="text-rose-400 font-extrabold">{activeLegend.banker.toFixed(1)}</strong>
               /20
             </span>
-            <span className="hidden md:inline text-slate-400">
-              HotMoney: <strong className="text-amber-400">{activeLegend.hotMoney.toFixed(1)}</strong>
+            <span className="hidden md:inline text-slate-300">
+              HotMoney: <strong className="text-[#FFF176]">{activeLegend.hotMoney.toFixed(1)}</strong>
             </span>
-            <span className="hidden md:inline text-slate-400">
+            <span className="hidden md:inline text-slate-300">
               Retail: <strong className="text-[#1B5E20]">{activeLegend.retail.toFixed(1)}</strong>
             </span>
           </>

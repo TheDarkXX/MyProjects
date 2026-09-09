@@ -27,7 +27,7 @@ export interface BankerMCDXOptions extends CustomSeriesOptions {
 export const defaultBankerMCDXOptions: BankerMCDXOptions = {
   ...customSeriesDefaultOptions,
   bankerColor: '#C62828',    // Deep Crimson Red
-  hotMoneyColor: '#FFE600',  // Vibrant Yellow
+  hotMoneyColor: '#FFF176',  // Soft Light Yellow
   retailColor: '#1B5E20',    // Deep Forest Green
   priceFormat: {
     type: 'custom',

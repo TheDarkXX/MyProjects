@@ -77,6 +77,44 @@ export function calcBankerSeries(closes) {
 
 /**
  * Calculate full MCDX 3-tier continuous stacked flow (Banker, Hot Money, Retail, Banker MA)
+/**
+ * Fast O(N) Running Wilder's RSI series calculation
+ * @param {number[]} closes 
+ * @param {number} period 
+ * @returns {(number|null)[]}
+ */
+export function calcRSISeries(closes, period = 14) {
+  const len = closes ? closes.length : 0;
+  const rsis = new Array(len).fill(null);
+  if (!closes || len <= period) return rsis;
+
+  let gains = 0;
+  let losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i - 1];
+    if (diff >= 0) gains += diff;
+    else losses += Math.abs(diff);
+  }
+
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  rsis[period] = avgLoss === 0 ? 100 : Number((100 - (100 / (1 + avgGain / avgLoss))).toFixed(1));
+
+  for (let i = period + 1; i < len; i++) {
+    const diff = closes[i] - closes[i - 1];
+    const currentGain = diff >= 0 ? diff : 0;
+    const currentLoss = diff < 0 ? Math.abs(diff) : 0;
+
+    avgGain = (avgGain * (period - 1) + currentGain) / period;
+    avgLoss = (avgLoss * (period - 1) + currentLoss) / period;
+    rsis[i] = avgLoss === 0 ? 100 : Number((100 - (100 / (1 + avgGain / avgLoss))).toFixed(1));
+  }
+
+  return rsis;
+}
+
+/**
+ * Calculate full Banker MCDX multi-series across the entire history (100% full chart, no slicing)
  * Scaled 0 - 20, matching TradingView Super Money MCDX
  * @param {number[]} closes 
  */
@@ -89,10 +127,13 @@ export function calcMcdxSeries(closes) {
   const hotMoney = new Array(len).fill(0);
   const retail = new Array(len).fill(20);
 
-  for (let i = 20; i < len; i++) {
-    const slice = closes.slice(0, i + 1);
-    const rsi50 = i >= 50 ? calcRSI(slice, 50) : calcRSI(slice, Math.min(i, 30));
-    const rsi40 = i >= 40 ? calcRSI(slice, 40) : calcRSI(slice, Math.min(i, 25));
+  // High-performance O(N) RSI series across entire historical series
+  const rsi50Series = calcRSISeries(closes, 50);
+  const rsi40Series = calcRSISeries(closes, 40);
+
+  for (let i = 0; i < len; i++) {
+    const rsi50 = rsi50Series[i];
+    const rsi40 = rsi40Series[i];
 
     // Banker (Red): Sensitivity 1.5, Base 50, Period 50
     let b = 0;
