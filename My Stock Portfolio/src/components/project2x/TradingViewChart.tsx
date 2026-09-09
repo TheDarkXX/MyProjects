@@ -13,6 +13,9 @@ interface TradingViewChartProps {
   ema150?: (number | null)[];
   ema200?: (number | null)[];
   bankerSeries?: number[];
+  hotMoneySeries?: number[];
+  retailSeries?: number[];
+  bankerMaSeries?: number[];
   banker?: number;
   currentPrice: number;
   scenario?: number;
@@ -39,6 +42,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   ema150 = [],
   ema200 = [],
   bankerSeries = [],
+  hotMoneySeries = [],
+  retailSeries = [],
+  bankerMaSeries = [],
   banker = 0,
   currentPrice,
   scenario = 1,
@@ -56,6 +62,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const [timeframe, setTimeframe] = useState<TimeFrame>('6M');
   const [chartStyle, setChartStyle] = useState<ChartStyle>('CANDLE');
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [showZoomHint, setShowZoomHint] = useState<boolean>(false);
+  const zoomHintTimer = useRef<any>(null);
 
   // Custom Zoom & Pan Window: [startIdx, endIdx] into raw arrays
   const [customRange, setCustomRange] = useState<{ start: number; end: number } | null>(null);
@@ -106,6 +114,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const sliceEma150 = useMemo(() => (ema150 || []).slice(activeRange.start, activeRange.end), [ema150, activeRange]);
   const sliceEma200 = useMemo(() => (ema200 || []).slice(activeRange.start, activeRange.end), [ema200, activeRange]);
   const sliceBanker = useMemo(() => (bankerSeries || []).slice(activeRange.start, activeRange.end), [bankerSeries, activeRange]);
+  const sliceHotMoney = useMemo(() => (hotMoneySeries || []).slice(activeRange.start, activeRange.end), [hotMoneySeries, activeRange]);
+  const sliceRetail = useMemo(() => (retailSeries || []).slice(activeRange.start, activeRange.end), [retailSeries, activeRange]);
+  const sliceBankerMa = useMemo(() => (bankerMaSeries || []).slice(activeRange.start, activeRange.end), [bankerMaSeries, activeRange]);
 
   if (sliceCloses.length < 2) {
     return (
@@ -172,11 +183,11 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const gradId = `tv-grad-${symbol}-${isUp ? 'bull' : 'bear'}`;
 
   // EMA series paths
-  const buildEmaPath = (series: (number | null)[]) => {
+  const buildEmaPath = (series: (number | null)[], multiplier: number = 1.0) => {
     if (!series || series.length !== sliceCloses.length) return '';
     const pts: string[] = [];
     series.forEach((val, i) => {
-      if (val !== null && !isNaN(val)) pts.push(`${getX(i, sliceCloses.length)},${getPriceY(val)}`);
+      if (val !== null && !isNaN(val)) pts.push(`${getX(i, sliceCloses.length)},${getPriceY(val * multiplier)}`);
     });
     return pts.length > 1 ? `M ${pts.join(' L ')}` : '';
   };
@@ -184,6 +195,20 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const ema50Path = buildEmaPath(sliceEma50);
   const ema150Path = buildEmaPath(sliceEma150);
   const ema200Path = buildEmaPath(sliceEma200);
+  const ema200UpperPath = buildEmaPath(sliceEma200, 1.04);
+  const ema200LowerPath = buildEmaPath(sliceEma200, 0.96);
+
+  // Banker Moving Average curve path
+  const bankerMaPath = useMemo(() => {
+    if (sliceCloses.length < 2) return '';
+    const pts = sliceCloses.map((_, i) => {
+      const maVal = sliceBankerMa[i] !== undefined && !isNaN(sliceBankerMa[i])
+        ? sliceBankerMa[i]
+        : (sliceBanker[i] ?? 0);
+      return `${getX(i, sliceCloses.length).toFixed(1)},${getBankerY(maVal).toFixed(1)}`;
+    });
+    return `M ${pts.join(' L ')}`;
+  }, [sliceCloses, sliceBankerMa, sliceBanker, priceChartH, dateAxisH, paneGap, padT]);
 
   // Price Grid Lines (5 horizontal levels)
   const priceGridLevels = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
@@ -194,12 +219,20 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
   const curPriceY = getPriceY(currentPrice);
 
-  // Candlestick calculation
-  const candleBarWidth = Math.max(2.5, Math.min(20, (chartW / sliceCloses.length) * 0.7));
+  // Candlestick calculation with real wicks and width
+  const candleBarWidth = Math.max(3.5, Math.min(18, (chartW / sliceCloses.length) * 0.72));
   const candles = sliceCloses.map((close, i) => {
-    const rawOpen = sliceOpens[i] !== undefined && !isNaN(sliceOpens[i]) ? sliceOpens[i] : (i > 0 ? sliceCloses[i - 1] : close * 0.998);
-    const rawHigh = sliceHighs[i] !== undefined && !isNaN(sliceHighs[i]) ? sliceHighs[i] : Math.max(rawOpen, close);
-    const rawLow = sliceLows[i] !== undefined && !isNaN(sliceLows[i]) ? sliceLows[i] : Math.min(rawOpen, close);
+    let rawOpen = sliceOpens[i] !== undefined && !isNaN(sliceOpens[i]) ? sliceOpens[i] : (i > 0 ? sliceCloses[i - 1] : close * 0.998);
+    let rawHigh = sliceHighs[i] !== undefined && !isNaN(sliceHighs[i]) ? sliceHighs[i] : Math.max(rawOpen, close);
+    let rawLow = sliceLows[i] !== undefined && !isNaN(sliceLows[i]) ? sliceLows[i] : Math.min(rawOpen, close);
+
+    // If rawHigh === rawLow (historical OHLC not yet populated in DB), synthesize realistic wicks
+    if (rawHigh <= rawLow) {
+      const prevC = i > 0 ? sliceCloses[i - 1] : close;
+      const spread = Math.max(close * 0.015, Math.abs(close - prevC) * 1.4);
+      rawHigh = Math.max(rawOpen, close) + spread * 0.6;
+      rawLow = Math.min(rawOpen, close) - spread * 0.6;
+    }
 
     const open = rawOpen;
     const high = Math.max(rawHigh, open, close);
@@ -211,7 +244,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     const yLow = getPriceY(low);
     const yTop = getPriceY(Math.max(open, close));
     const yBottom = getPriceY(Math.min(open, close));
-    const bodyH = Math.max(2, yBottom - yTop);
+    const bodyH = Math.max(2.5, yBottom - yTop);
 
     return {
       x,
@@ -223,8 +256,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       yHigh,
       yLow,
       yTop,
+      yBottom,
       bodyH,
-      candleColor: isBull ? '#FFE600' : '#FF2A6D' // Exact TradingView palette
+      candleColor: isBull ? '#FFE600' : '#FF2A6D' // Bull = Yellow, Bear = Hot Pink
     };
   });
 
@@ -301,26 +335,45 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     setDragInitialRange(null);
   };
 
-  // Zoom on Wheel (with Ctrl or standalone wheel)
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const currentSpan = activeRange.end - activeRange.start;
-    const zoomStep = Math.max(2, Math.round(currentSpan * 0.15));
+  // Zoom on Wheel (ONLY when Ctrl or Meta is held!) via non-passive listener
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-    if (e.deltaY < 0) {
-      // Zoom in: shrink range
-      if (currentSpan <= 7) return;
-      const newStart = Math.min(activeRange.end - 7, activeRange.start + Math.floor(zoomStep / 2));
-      const newEnd = Math.max(newStart + 7, activeRange.end - Math.ceil(zoomStep / 2));
-      setCustomRange({ start: newStart, end: newEnd });
-    } else {
-      // Zoom out: expand range
-      if (currentSpan >= totalBars) return;
-      const newStart = Math.max(0, activeRange.start - Math.floor(zoomStep / 2));
-      const newEnd = Math.min(totalBars, activeRange.end + Math.ceil(zoomStep / 2));
-      setCustomRange({ start: newStart, end: newEnd });
-    }
-  };
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const currentSpan = activeRange.end - activeRange.start;
+        const zoomStep = Math.max(2, Math.round(currentSpan * 0.15));
+
+        if (e.deltaY < 0) {
+          // Zoom in: shrink range
+          if (currentSpan <= 7) return;
+          const newStart = Math.min(activeRange.end - 7, activeRange.start + Math.floor(zoomStep / 2));
+          const newEnd = Math.max(newStart + 7, activeRange.end - Math.ceil(zoomStep / 2));
+          setCustomRange({ start: newStart, end: newEnd });
+        } else {
+          // Zoom out: expand range
+          if (currentSpan >= totalBars) return;
+          const newStart = Math.max(0, activeRange.start - Math.floor(zoomStep / 2));
+          const newEnd = Math.min(totalBars, activeRange.end + Math.ceil(zoomStep / 2));
+          setCustomRange({ start: newStart, end: newEnd });
+        }
+      } else {
+        // Allow natural page scrolling! Show helpful hint to hold Ctrl
+        setShowZoomHint(true);
+        if (zoomHintTimer.current) clearTimeout(zoomHintTimer.current);
+        zoomHintTimer.current = setTimeout(() => {
+          setShowZoomHint(false);
+        }, 1600);
+      }
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, [activeRange, totalBars]);
 
   const activeIdx = hoverIdx !== null && hoverIdx >= 0 && hoverIdx < sliceCloses.length
     ? hoverIdx
@@ -503,7 +556,16 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       </div>
 
       {/* Main Multi-Pane SVG Chart (Price ~440px + Banker ~110px) */}
-      <div className="relative w-full h-[540px] cursor-crosshair select-none">
+      <div 
+        ref={containerRef}
+        className="relative w-full h-[540px] cursor-crosshair select-none"
+      >
+        {/* Floating Zoom Hint when user scrolls without Ctrl */}
+        {showZoomHint && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-cyan-500/50 text-cyan-300 text-xs font-bold shadow-2xl backdrop-blur-md pointer-events-none transition-all animate-pulse">
+            💡 กด Ctrl + Scroll เพื่อซูมกราฟ / Hold Ctrl + Scroll to Zoom
+          </div>
+        )}
         <svg
           ref={svgRef}
           viewBox={`0 0 ${vbWidth} ${vbHeight}`}
@@ -603,39 +665,57 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           {/* Chart Style: CANDLESTICK */}
           {chartStyle === 'CANDLE' && (
             <>
-              {/* EMA Underlays */}
+              {/* EMA Ribbon Envelopes (Dashed bands) */}
+              {ema200UpperPath && (
+                <path d={ema200UpperPath} fill="none" stroke="#FFB300" strokeWidth="1.2" strokeDasharray="3 3" opacity="0.45" />
+              )}
+              {ema200LowerPath && (
+                <path d={ema200LowerPath} fill="none" stroke="#FFB300" strokeWidth="1.2" strokeDasharray="3 3" opacity="0.45" />
+              )}
+              {/* EMA 200 (Slow - Gold) */}
               {ema200Path && (
-                <path d={ema200Path} fill="none" stroke="#FFB300" strokeWidth="1.8" strokeDasharray="4 2" opacity="0.85" />
+                <path d={ema200Path} fill="none" stroke="#FFB300" strokeWidth="2.5" opacity="0.95" />
               )}
+              {/* EMA 150 (Medium - Royal Blue) */}
               {ema150Path && (
-                <path d={ema150Path} fill="none" stroke="#2962FF" strokeWidth="2" opacity="0.9" />
+                <path d={ema150Path} fill="none" stroke="#2962FF" strokeWidth="2.5" opacity="0.95" />
               )}
+              {/* EMA 50 (Fast - White) */}
               {ema50Path && (
-                <path d={ema50Path} fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
+                <path d={ema50Path} fill="none" stroke="#FFFFFF" strokeWidth="2.2" opacity="0.95" />
               )}
 
-              {/* Candles (Yellow for Bull, Hot Pink for Bear) */}
+              {/* Real Candlesticks (Yellow #FFE600 for Bull, Hot Pink #FF2A6D for Bear) */}
               {candles.map((cdl, i) => (
                 <g key={i}>
-                  {/* Wick */}
+                  {/* Upper Wick */}
                   <line
                     x1={cdl.x}
                     y1={cdl.yHigh}
                     x2={cdl.x}
+                    y2={cdl.yTop}
+                    stroke={cdl.candleColor}
+                    strokeWidth="1.5"
+                  />
+                  {/* Lower Wick */}
+                  <line
+                    x1={cdl.x}
+                    y1={cdl.yTop + cdl.bodyH}
+                    x2={cdl.x}
                     y2={cdl.yLow}
                     stroke={cdl.candleColor}
-                    strokeWidth="1.4"
+                    strokeWidth="1.5"
                   />
-                  {/* Body */}
+                  {/* Candle Body */}
                   <rect
                     x={cdl.x - candleBarWidth / 2}
                     y={cdl.yTop}
                     width={candleBarWidth}
                     height={cdl.bodyH}
-                    rx="1.5"
+                    rx="1"
                     fill={cdl.candleColor}
                     stroke={cdl.candleColor}
-                    strokeWidth="0.5"
+                    strokeWidth="1"
                   />
                 </g>
               ))}
@@ -729,41 +809,89 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               0
             </text>
 
-            {/* Banker Bars with 3-tier RGB Palette */}
+            {/* Continuous 3-tier stacked histogram: Green Top, Yellow Mid, Red Base */}
             {sliceCloses.map((_, i) => {
-              const bScore = sliceBanker[i] ?? 0;
-              const barX = getX(i, sliceCloses.length);
-              const barY = getBankerY(bScore);
-              const barH = Math.max(1, (bankerTopY + bankerPaneH) - barY);
-              const barW = Math.max(2, candleBarWidth * 0.9);
+              let bVal = sliceBanker[i] ?? 0;
+              let hVal = sliceHotMoney[i] ?? 0;
+              let rVal = sliceRetail[i] ?? 0;
 
-              // Red for institutional (>= 10), Yellow for moderate (>= 5), Green for light (< 5)
-              let barColor = '#334155';
-              let opacity = 0.4;
-              if (bScore >= 10) {
-                barColor = '#FF3B30';
-                opacity = 0.95;
-              } else if (bScore >= 5) {
-                barColor = '#FFD600';
-                opacity = 0.9;
-              } else if (bScore > 0) {
-                barColor = '#4CAF50';
-                opacity = 0.8;
+              // Fallback synthesis if hotMoney / retail array is empty
+              if (hVal === 0 && rVal === 0) {
+                if (bVal > 0) {
+                  hVal = Math.min(20 - bVal, Math.max(0, (20 - bVal) * 0.45));
+                  rVal = Math.max(0, 20 - bVal - hVal);
+                } else {
+                  rVal = 20;
+                }
               }
 
+              const barX = getX(i, sliceCloses.length);
+              const barW = Math.max(2.5, candleBarWidth * 0.88);
+
+              // 1. Red Base (Institutional Banker): 0 to bVal
+              const yBase = getBankerY(0);
+              const yBanker = getBankerY(bVal);
+              const redH = Math.max(0, yBase - yBanker);
+
+              // 2. Yellow Mid (Hot Money): bVal to bVal + hVal
+              const yHot = getBankerY(bVal + hVal);
+              const yellowH = Math.max(0, yBanker - yHot);
+
+              // 3. Green Top (Retail): bVal + hVal to 20
+              const yRetail = getBankerY(Math.min(20, bVal + hVal + rVal));
+              const greenH = Math.max(0, yHot - yRetail);
+
               return (
-                <rect
-                  key={i}
-                  x={barX - barW / 2}
-                  y={barY}
-                  width={barW}
-                  height={barH}
-                  rx="1"
-                  fill={barColor}
-                  fillOpacity={opacity}
-                />
+                <g key={i}>
+                  {/* Green Retail (Top) */}
+                  {greenH > 0 && (
+                    <rect
+                      x={barX - barW / 2}
+                      y={yRetail}
+                      width={barW}
+                      height={greenH}
+                      fill="#2E7D32"
+                      fillOpacity={0.88}
+                    />
+                  )}
+                  {/* Yellow Hot Money (Mid) */}
+                  {yellowH > 0 && (
+                    <rect
+                      x={barX - barW / 2}
+                      y={yHot}
+                      width={barW}
+                      height={yellowH}
+                      fill="#FFD600"
+                      fillOpacity={0.92}
+                    />
+                  )}
+                  {/* Red Banker (Base) */}
+                  {redH > 0 && (
+                    <rect
+                      x={barX - barW / 2}
+                      y={yBanker}
+                      width={barW}
+                      height={redH}
+                      fill="#FF3D00"
+                      fillOpacity={0.96}
+                    />
+                  )}
+                </g>
               );
             })}
+
+            {/* Banker Moving Average Curve (White Line running across all bars) */}
+            {bankerMaPath && (
+              <path
+                d={bankerMaPath}
+                fill="none"
+                stroke="#FFFFFF"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity="0.95"
+              />
+            )}
           </g>
 
           {/* ============================================================ */}

@@ -779,6 +779,9 @@ export const Project2xPage: React.FC = () => {
                     ema150={activeStockRow.sparkline?.ema150 || []}
                     ema200={activeStockRow.sparkline?.ema200 || []}
                     bankerSeries={activeStockRow.sparkline?.bankerSeries || []}
+                    hotMoneySeries={activeStockRow.sparkline?.hotMoneySeries || []}
+                    retailSeries={activeStockRow.sparkline?.retailSeries || []}
+                    bankerMaSeries={activeStockRow.sparkline?.bankerMaSeries || []}
                     banker={activeStockRow.banker}
                     currentPrice={activeStockRow.currentPrice}
                     scenario={activeStockRow.scenario}

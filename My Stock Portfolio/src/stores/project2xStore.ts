@@ -97,9 +97,13 @@ export interface RadarRow {
     highs?: number[];
     lows?: number[];
     volumes?: number[];
+    ema50?: (number | null)[];
     ema150: (number | null)[];
     ema200: (number | null)[];
     bankerSeries?: number[];
+    hotMoneySeries?: number[];
+    retailSeries?: number[];
+    bankerMaSeries?: number[];
   };
   owned_shares: number;
   target_shares: number;

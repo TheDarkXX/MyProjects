@@ -1,6 +1,6 @@
 import { db } from '../db/init.js';
 import { fetchYahooExchangeRate, fetchYahooLatest, fetchYahooHistorical, fetchYahooFundamentals } from './yahoo.js';
-import { calcEMA, calcEMASeries, calcBankerMCDX, calcBankerSeries, calcRSI, syncCandleDelta } from './technicalAnalysis.js';
+import { calcEMA, calcEMASeries, calcBankerMCDX, calcBankerSeries, calcMcdxSeries, calcRSI, syncCandleDelta } from './technicalAnalysis.js';
 
 export const DEFAULT_2X_STOCKS = [
   // Core Commanders (83%)
@@ -551,9 +551,10 @@ export async function scanRadarMatrix(portfolioId) {
     const sparkHighs = candleSeries.map(c => c.high ?? c.price);
     const sparkLows = candleSeries.map(c => c.low ?? c.price);
     const sparkVolumes = candleSeries.map(c => c.volume ?? 0);
+    const ema50Series = calcEMASeries(sparkCloses, 50);
     const ema150Series = calcEMASeries(sparkCloses, 150);
     const ema200Series = calcEMASeries(sparkCloses, 200);
-    const bankerSeries = calcBankerSeries(sparkCloses, sparkCloses.length);
+    const mcdxData = calcMcdxSeries(sparkCloses);
 
     const ownedShares = q.owned_shares || 0;
     const marketValueUsd = ownedShares * currentPrice;
@@ -583,9 +584,13 @@ export async function scanRadarMatrix(portfolioId) {
         highs: sparkHighs,
         lows: sparkLows,
         volumes: sparkVolumes,
+        ema50: ema50Series,
         ema150: ema150Series,
         ema200: ema200Series,
-        bankerSeries
+        bankerSeries: mcdxData.banker,
+        hotMoneySeries: mcdxData.hotMoney,
+        retailSeries: mcdxData.retail,
+        bankerMaSeries: mcdxData.bankerMa
       },
       owned_shares: ownedShares,
       target_shares: q.target_shares,

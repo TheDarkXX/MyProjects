@@ -64,20 +64,65 @@ export function calcBankerMCDX(closes) {
  * @param {number} lookback 
  * @returns {number[]}
  */
-export function calcBankerSeries(closes, lookback = 30) {
-  if (!closes || closes.length < 51) return [];
-  const startIdx = Math.max(50, closes.length - lookback);
-  const result = [];
-  for (let i = startIdx; i < closes.length; i++) {
-    const slice = closes.slice(0, i + 1);
-    const rsi50 = calcRSI(slice, 50);
-    if (rsi50 !== null && rsi50 > 50) {
-      result.push(Number(Math.min(20, Math.max(0, 1.5 * (rsi50 - 50))).toFixed(2)));
-    } else {
-      result.push(0);
-    }
+/**
+ * Calculate Banker MCDX series for the full series (matching closes length)
+ * @param {number[]} closes 
+ * @returns {number[]}
+ */
+export function calcBankerSeries(closes) {
+  if (!closes || closes.length === 0) return [];
+  const mcdx = calcMcdxSeries(closes);
+  return mcdx.banker;
+}
+
+/**
+ * Calculate full MCDX 3-tier continuous stacked flow (Banker, Hot Money, Retail, Banker MA)
+ * Scaled 0 - 20, matching TradingView Super Money MCDX
+ * @param {number[]} closes 
+ */
+export function calcMcdxSeries(closes) {
+  if (!closes || closes.length === 0) {
+    return { banker: [], hotMoney: [], retail: [], bankerMa: [] };
   }
-  return result;
+  const len = closes.length;
+  const banker = new Array(len).fill(0);
+  const hotMoney = new Array(len).fill(0);
+  const retail = new Array(len).fill(20);
+
+  for (let i = 20; i < len; i++) {
+    const slice = closes.slice(0, i + 1);
+    const rsi50 = i >= 50 ? calcRSI(slice, 50) : calcRSI(slice, Math.min(i, 30));
+    const rsi14 = calcRSI(slice, 14);
+
+    let b = 0;
+    if (rsi50 !== null && rsi50 > 50) {
+      b = Math.min(20, Math.max(0, 1.5 * (rsi50 - 50)));
+    }
+    let h = 0;
+    if (rsi14 !== null && rsi14 > 35) {
+      h = Math.min(20 - b, Math.max(0, ((rsi14 - 35) / 65) * (20 - b)));
+    }
+    const r = Math.max(0, 20 - (b + h));
+
+    banker[i] = Number(b.toFixed(2));
+    hotMoney[i] = Number(h.toFixed(2));
+    retail[i] = Number(r.toFixed(2));
+  }
+
+  // Calculate 9-period SMA for banker MA (White line)
+  const bankerMa = new Array(len).fill(0);
+  for (let i = 0; i < len; i++) {
+    const start = Math.max(0, i - 8);
+    let sum = 0;
+    let cnt = 0;
+    for (let j = start; j <= i; j++) {
+      sum += banker[j];
+      cnt++;
+    }
+    bankerMa[i] = Number((sum / cnt).toFixed(2));
+  }
+
+  return { banker, hotMoney, retail, bankerMa };
 }
 
 /**
@@ -85,7 +130,7 @@ export function calcBankerSeries(closes, lookback = 30) {
  * Caches up to 400 calendar days of data to guarantee 250+ trading sessions for EMA200 & RSI50.
  * @param {string} symbol
  * @param {number} minDaysRequired
- * @returns {Promise<Array<{ date: string, price: number }>>}
+ * @returns {Promise<Array<{ date: string, price: number, open: number, high: number, low: number, close: number, volume: number }>>}
  */
 export async function syncCandleDelta(symbol, minDaysRequired = 400) {
   if (!symbol || symbol === 'CASH') return [];
@@ -110,15 +155,19 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
   const isSufficientHistory = minDate && (new Date(minDate).getTime() <= new Date(targetStartDate).getTime() + 20 * 24 * 60 * 60 * 1000);
   const isFresh = diffDays <= 1 || (new Date().getDay() === 0 && diffDays <= 2) || (new Date().getDay() === 1 && diffDays <= 3);
 
-  if (isFresh && count >= 50) {
+  // Check if we already have valid OHLCV (open, high, low are not null, and at least some high > low)
+  const sample = db.prepare('SELECT open, high, low FROM historical_prices WHERE symbol = ? AND open IS NOT NULL AND high > low LIMIT 1').get(upper);
+  const hasValidOhlcv = !!sample;
+
+  if (isFresh && count >= 50 && hasValidOhlcv) {
     const rows = db.prepare('SELECT date, price, open, high, low, close, volume FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
     if (rows.length >= 40) {
       return rows;
     }
   }
 
-  // Delta fetch from Yahoo Finance
-  const fetchFrom = (isSufficientHistory && maxDate) ? maxDate : targetStartDate;
+  // Delta fetch from Yahoo Finance: If hasValidOhlcv is false, force fetch from targetStartDate (full history)
+  const fetchFrom = (hasValidOhlcv && isSufficientHistory && maxDate) ? maxDate : targetStartDate;
   try {
     const freshData = await fetchYahooHistorical(upper, fetchFrom, today);
     if (freshData && freshData.length > 0) {
