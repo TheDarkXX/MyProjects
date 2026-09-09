@@ -29,11 +29,13 @@ import {
 } from 'lucide-react';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useProject2xStore } from '../../stores/project2xStore';
+import { useUiStore } from '../../stores/uiStore';
 import { ProgressRing } from './ProgressRing';
 import { MiniSparkline } from './MiniSparkline';
 
 export const Project2xPage: React.FC = () => {
   const { activePortfolioId } = usePortfolioStore();
+  const { currency } = useUiStore();
   const {
     selectedTab,
     setSelectedTab,
@@ -57,6 +59,8 @@ export const Project2xPage: React.FC = () => {
   const [inflowAmountInput, setInflowAmountInput] = useState<string>('35000');
   const [expandedRadarRow, setExpandedRadarRow] = useState<string | null>(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState<boolean>(false);
+  const [showSimPanel, setShowSimPanel] = useState<boolean>(false);
+  const [simThbInput, setSimThbInput] = useState<string>('35000');
 
   // Config modal state
   const [cfgGoalThb, setCfgGoalThb] = useState<number>(10000000);
@@ -136,7 +140,10 @@ export const Project2xPage: React.FC = () => {
               </span>
             </div>
             <p className="text-[13px] text-slate-300 mt-1 font-body">
-              ภารกิจมุ่งเป้า ฿10,000,000 ใน 5 ปี (CAGR 26%) • กฎสะสมของเล่น 12 แม่ทัพ • Dime! Ecosystem
+              {currency === 'THB'
+                ? 'ภารกิจมุ่งเป้า ฿10,000,000 ใน 5 ปี (CAGR 26%) • กฎสะสมของเล่น 12 แม่ทัพ • Dime! Ecosystem'
+                : `ภารกิจมุ่งเป้า $${Math.round(10000000 / fxRate).toLocaleString()} ใน 5 ปี (CAGR 26%) • กฎสะสมของเล่น 12 แม่ทัพ • Dime! Ecosystem`
+              }
             </p>
           </div>
         </div>
@@ -169,7 +176,7 @@ export const Project2xPage: React.FC = () => {
         
         {/* Card 1: Grand Progress & Goal Ring */}
         <div className="sm:col-span-2 bg-[#1E222D] border border-[#2A2E39] rounded-3xl p-5 relative overflow-hidden group shadow-lg flex flex-col justify-between">
-          <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full blur-[64px] opacity-25 bg-[#26A69A] group-hover:opacity-40 transition-opacity" />
+          <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full blur-[64px] opacity-25 bg-[#FFD740] group-hover:opacity-40 transition-opacity" />
           
           <div className="flex items-center justify-between mb-3 relative z-10">
             <span className="text-slate-300 font-bold text-[14px]">
@@ -192,25 +199,39 @@ export const Project2xPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 relative z-10">
+          <div className="flex items-center gap-5 relative z-10">
             <ProgressRing
               percent={dashboard?.progress_percent || 0}
-              size={76}
-              strokeWidth={7}
-              color="#26A69A"
+              size={92}
+              strokeWidth={8}
+              color="#FFD740"
               bgColor="#131722"
             >
-              <span className="text-base font-black text-white">
-                {(dashboard?.progress_percent || 0).toFixed(1)}%
-              </span>
+              <div className="flex flex-col items-center justify-center">
+                <span className="text-xl sm:text-2xl font-black text-[#FFD740] tracking-tight drop-shadow-[0_0_8px_rgba(255,215,64,0.4)]">
+                  {(dashboard?.progress_percent || 0).toFixed(1)}%
+                </span>
+                <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+                  Done
+                </span>
+              </div>
             </ProgressRing>
 
             <div className="flex-1 min-w-0">
               <div className="text-2xl sm:text-3xl font-black text-white tracking-tight tabular-nums">
-                ฿{(dashboard?.total_val_thb || 0).toLocaleString()}
+                {currency === 'THB'
+                  ? `฿${(dashboard?.total_val_thb || 0).toLocaleString()}`
+                  : `$${(dashboard?.total_val_usd || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                }
               </div>
               <div className="text-[13px] text-slate-400 font-medium mt-0.5">
-                Target: <span className="text-slate-200 font-bold">฿{(dashboard?.goal_val_thb || 10000000).toLocaleString()}</span>
+                Target:{' '}
+                <span className="text-slate-200 font-bold">
+                  {currency === 'THB'
+                    ? `฿${(dashboard?.goal_val_thb || 10000000).toLocaleString()}`
+                    : `$${Math.round((dashboard?.goal_val_thb || 10000000) / fxRate).toLocaleString()}`
+                  }
+                </span>
               </div>
             </div>
           </div>
@@ -238,7 +259,7 @@ export const Project2xPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 3: Portfolio Total Value (USD) */}
+        {/* Card 3: Portfolio Total Value */}
         <div className="bg-[#1E222D] border border-[#2A2E39] rounded-3xl p-5 relative overflow-hidden group shadow-lg flex flex-col justify-between">
           <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full blur-[64px] opacity-20 bg-[#2962FF] group-hover:opacity-40 transition-opacity" />
           <div className="flex justify-between items-start mb-3 relative z-10">
@@ -246,16 +267,22 @@ export const Project2xPage: React.FC = () => {
               <Wallet className="w-5 h-5 text-[#2962FF]" />
             </div>
             <span className="text-[13px] font-bold text-[#2962FF] bg-[#2962FF]/15 px-2 py-0.5 rounded-lg border border-[#2962FF]/30">
-              Live FX
+              {currency} Net Worth
             </span>
           </div>
           <div className="relative z-10">
-            <h3 className="text-slate-300 font-bold text-[13px] mb-1">Total Value (USD)</h3>
+            <h3 className="text-slate-300 font-bold text-[13px] mb-1">Total Value ({currency})</h3>
             <div className="text-2xl xl:text-3xl font-black text-white tracking-tight tabular-nums">
-              ${(dashboard?.total_val_usd || 0).toLocaleString()}
+              {currency === 'USD'
+                ? `$${(dashboard?.total_val_usd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : `฿${(dashboard?.total_val_thb || 0).toLocaleString()}`
+              }
             </div>
             <div className="text-[13px] text-slate-400 mt-1">
-              Rate: <span className="text-slate-200 font-semibold">฿{fxRate.toFixed(2)} / USD</span>
+              {currency === 'USD'
+                ? `≈ ฿${(dashboard?.total_val_thb || 0).toLocaleString()} THB Equivalent`
+                : `≈ $${(dashboard?.total_val_usd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD Equivalent`
+              }
             </div>
           </div>
         </div>
@@ -274,10 +301,16 @@ export const Project2xPage: React.FC = () => {
           <div className="relative z-10">
             <h3 className="text-slate-300 font-bold text-[13px] mb-1">Monthly Inflow</h3>
             <div className="text-2xl xl:text-3xl font-black text-[#26A69A] tracking-tight tabular-nums">
-              ฿{(dashboard?.monthly_inflow_thb || 35000).toLocaleString()}
+              {currency === 'THB'
+                ? `฿${(dashboard?.monthly_inflow_thb || 35000).toLocaleString()}`
+                : `$${Math.round((dashboard?.monthly_inflow_thb || 35000) / fxRate).toLocaleString()}`
+              }
             </div>
             <div className="text-[13px] text-slate-400 mt-1">
-              ≈ ${( (dashboard?.monthly_inflow_thb || 35000) / fxRate ).toFixed(0)} USD / month
+              {currency === 'THB'
+                ? `≈ $${Math.round((dashboard?.monthly_inflow_thb || 35000) / fxRate).toLocaleString()} USD / month`
+                : `≈ ฿${(dashboard?.monthly_inflow_thb || 35000).toLocaleString()} THB / month`
+              }
             </div>
           </div>
         </div>
@@ -289,18 +322,45 @@ export const Project2xPage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-[#131722] border border-[#2A2E39] flex items-center justify-center">
               <Landmark className="w-5 h-5 text-[#FF9800]" />
             </div>
-            <span className="text-[13px] font-bold text-[#26A69A] bg-[#26A69A]/15 px-2 py-0.5 rounded-lg border border-[#26A69A]/30">
-              ~{config?.fcd_yield_pct || 4.5}% APY
-            </span>
+            
+            {/* Tooltip Wrapper */}
+            <div className="relative group/fcd">
+              <div className="text-[13px] font-bold text-[#26A69A] bg-[#26A69A]/15 px-2.5 py-1 rounded-lg border border-[#26A69A]/30 flex items-center gap-1 cursor-help hover:bg-[#26A69A]/25 transition-all">
+                <span>~{config?.fcd_yield_pct || 4.5}% APY</span>
+                <Info className="w-3.5 h-3.5 text-[#26A69A]" />
+              </div>
+
+              {/* Tooltip Content */}
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 p-4 rounded-2xl bg-[#1A1D2D] border border-[#2A2E39] text-slate-200 shadow-2xl z-50 invisible group-hover/fcd:visible opacity-0 group-hover/fcd:opacity-100 transition-all duration-200 pointer-events-none group-hover/fcd:pointer-events-auto">
+                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#2A2E39]">
+                  <Landmark className="w-4 h-4 text-[#FF9800]" />
+                  <span className="font-bold text-white text-[13px]">เงื่อนไขดอกเบี้ย Dime! FCD (USD)</span>
+                </div>
+                <div className="text-[13px] text-slate-300 space-y-1.5 leading-relaxed">
+                  <p>• ดอกเบี้ยสูง <span className="text-[#26A69A] font-bold">~4.50% - 5.00% ต่อปี</span> คำนวณดอกเบี้ยเป็นรายวัน (Daily Accrual)</p>
+                  <p>• จ่ายดอกเบี้ยปีละ 2 ครั้ง (มิถุนายน และ ธันวาคม) โดย ธนาคารเกียรตินาคินภัทร (KKP)</p>
+                  <p>• ไม่มีค่าธรรมเนียมรักษาบัญชี</p>
+                  <p className="text-[#FFD740] font-semibold pt-1 border-t border-[#2A2E39]/60">
+                    💡 หลักการ Zero Idle Cash: พักเงินสด USD ไว้รับผลตอบแทนสูงระหว่างรอจังหวะสไนเปอร์ช้อนซื้อหุ้นตาม Radar
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
           <div className="relative z-10">
             <h3 className="text-slate-300 font-bold text-[13px] mb-1">Dime! Cash / FCD</h3>
             <div className="text-2xl xl:text-3xl font-black text-[#FFD740] tracking-tight tabular-nums flex items-center gap-1.5">
-              ${(dashboard?.dime_cash_usd || 0).toLocaleString()}
+              {currency === 'USD'
+                ? `$${(dashboard?.dime_cash_usd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : `฿${Math.round((dashboard?.dime_cash_usd || 0) * fxRate).toLocaleString()}`
+              }
               <span className="text-base text-[#26A69A]">✓</span>
             </div>
             <div className="text-[13px] text-slate-400 mt-1">
-              Zero Idle Cash (Parked in FCD)
+              {currency === 'USD'
+                ? `≈ ฿${Math.round((dashboard?.dime_cash_usd || 0) * fxRate).toLocaleString()} THB (Parked in FCD)`
+                : `≈ $${(dashboard?.dime_cash_usd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD (Parked in FCD)`
+              }
             </div>
           </div>
         </div>
@@ -400,28 +460,28 @@ export const Project2xPage: React.FC = () => {
       {(selectedTab === 'radar' || selectedTab === 'all') && (
         <div className="space-y-6">
           
-          {/* SELL ALERT BANNERS (IF ANY) */}
+          {/* SELL ALERT BANNERS (IF ANY — 2-COLUMN COMPACT GRID) */}
           {radar?.sellAlerts && radar.sellAlerts.length > 0 && (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {radar.sellAlerts.map((alert, idx) => (
                 <div
                   key={idx}
-                  className="p-4 rounded-2xl bg-[#EF5350]/15 border border-[#EF5350]/40 flex items-start gap-3.5 shadow-xl"
+                  className="p-3.5 sm:p-4 rounded-2xl bg-[#EF5350]/15 border border-[#EF5350]/40 flex items-start gap-3 shadow-lg hover:border-[#EF5350]/70 transition-all"
                 >
                   <AlertTriangle className="w-5 h-5 text-[#EF5350] flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-extrabold text-[#EF5350] text-[14px]">
                         [{alert.layer}] {alert.symbol}
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[13px] font-bold bg-[#EF5350] text-white">
-                        ACTION REQUIRED
+                      <span className="px-2 py-0.5 rounded text-[11px] font-black bg-[#EF5350] text-white uppercase tracking-wider">
+                        Action Required
                       </span>
                     </div>
-                    <p className="text-[13px] text-slate-200 mt-1 font-medium">
+                    <p className="text-[13px] text-slate-200 mt-1 font-medium leading-snug">
                       {alert.message}
                     </p>
-                    <p className="text-[13px] text-slate-300 mt-0.5">
+                    <p className="text-[13px] text-slate-300 mt-0.5 leading-snug">
                       (ไทย: {alert.message_th})
                     </p>
                   </div>
@@ -692,23 +752,162 @@ export const Project2xPage: React.FC = () => {
                   Share Collection Vault (อัลบั้มสะสมของเล่นให้ครบโควต้า)
                 </h2>
                 <p className="text-[13px] text-slate-300 mt-0.5">
-                  สะสมตามจำนวนหุ้นเป้าหมายที่คำนวณจาก $P_{'{base}'}$ คงที่ • สติ๊กเกอร์อัลบั้มเต็ม = พิชิต 10 ล้าน!
+                  สะสมตามจำนวนหุ้นเป้าหมายที่คำนวณจาก $P_{base}$ คงที่ • สติ๊กเกอร์อัลบั้มเต็ม = พิชิต 10 ล้าน!
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                if (activePortfolioId && confirm('Reset quotas to standard 12 Project 2X Commander stocks?')) {
-                  resetQuotas(activePortfolioId);
-                }
-              }}
-              className="px-4 py-2 rounded-xl bg-[#2A2E39] hover:bg-[#363A45] text-slate-200 text-[13px] font-bold transition-all self-start sm:self-auto flex items-center gap-2 cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Reset to 12 Commanders</span>
-            </button>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <button
+                onClick={() => setShowSimPanel(!showSimPanel)}
+                className="px-4 py-2 rounded-xl bg-[#2962FF]/20 hover:bg-[#2962FF]/30 border border-[#2962FF]/40 text-blue-300 text-[13px] font-bold transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span>🧪</span>
+                <span>{showSimPanel ? 'ซ่อนระบบจำลอง' : 'ระบบจำลองการสะสม (Simulator)'}</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (activePortfolioId && confirm('Reset quotas to standard 12 Project 2X Commander stocks?')) {
+                    resetQuotas(activePortfolioId);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-[#2A2E39] hover:bg-[#363A45] text-slate-200 text-[13px] font-bold transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Reset to 12 Commanders</span>
+              </button>
+            </div>
           </div>
+
+          {/* INTERACTIVE SIMULATOR & HOW IT WORKS PANEL */}
+          {showSimPanel && (
+            <div className="p-6 rounded-3xl bg-gradient-to-br from-[#1E222D] via-[#161922] to-[#1E222D] border border-[#2962FF]/40 shadow-2xl space-y-6 animate-fade-in-up">
+              <div className="flex items-center justify-between border-b border-[#2A2E39] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#2962FF]/20 border border-[#2962FF]/40 flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-[#2962FF]" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-white">
+                      🧪 Share Collection Vault Simulator & Mechanics (ระบบนี้ทำงานอย่างไร?)
+                    </h3>
+                    <p className="text-[13px] text-slate-300">
+                      ทำความเข้าใจกฎการสะสมของเล่น 12 ชิ้น + จำลองการเติมเงินเข้าอัลบั้ม
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSimPanel(false)}
+                  className="text-slate-400 hover:text-white text-sm font-bold cursor-pointer"
+                >
+                  ✕ ปิด
+                </button>
+              </div>
+
+              {/* 3 Core Rules Explainers */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-[#131722] border border-[#2A2E39]">
+                  <div className="flex items-center gap-2 text-[#FFD740] font-black text-[14px] mb-2">
+                    <span>1. ล็อกจำนวนหุ้นเป้าหมาย ($P_{base}$)</span>
+                  </div>
+                  <p className="text-[13px] text-slate-300 leading-relaxed">
+                    คำนวณโควต้าจำนวนหุ้นที่ต้องสะสมไว้ตั้งแต่เริ่มโปรเจกต์ เช่น NVDA ต้องเก็บให้ครบ <strong className="text-white">202 หุ้น</strong> ไม่ว่าราคาตลาดจะขึ้นหรือลง จำนวนหุ้นเป้าหมายจะไม่เปลี่ยน ทำให้เหมือนการสะสมของเล่น 12 ชิ้นให้เต็มตู้
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#131722] border border-[#2A2E39]">
+                  <div className="flex items-center gap-2 text-[#26A69A] font-black text-[14px] mb-2">
+                    <span>2. ยิงซื้อเฉพาะตัวเซลล์ (Radar Synergy)</span>
+                  </div>
+                  <p className="text-[13px] text-slate-300 leading-relaxed">
+                    เมื่อมีเงิน Inflow เข้ามา ระบบจะเช็คกับ <strong className="text-[#26A69A]">Signal Radar</strong> ทันที ตัวไหนติดไฟเขียว 🟢 BUY ZONE (ใต้ EMA / สถาบันเข้า) จะได้รับเงินซื้อก่อน ทำให้ได้ของเล่นในราคาเซลล์และดัน Progress ไวกว่าปกติ
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#131722] border border-[#2A2E39]">
+                  <div className="flex items-center gap-2 text-[#823AFD] font-black text-[14px] mb-2">
+                    <span>3. สะสมครบ 100% = LOCKED 🏆</span>
+                  </div>
+                  <p className="text-[13px] text-slate-300 leading-relaxed">
+                    เมื่อของเล่นตัวใดสะสมครบ 100% จะขึ้นสถานะ <strong className="text-[#FFD740]">LOCKED</strong> ระบบจะไม่ซื้อตัวนั้นเพิ่มอีก เงินในรอบถัดไปจะถูกโยกไปเติมตัวที่ยังไม่ครบโดยอัตโนมัติ จนกระทั่งครบทั้ง 12 ตัว!
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Inflow Simulation Box */}
+              <div className="p-5 rounded-2xl bg-[#131722] border border-[#2A2E39]">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                  <div>
+                    <span className="font-extrabold text-white text-[14px] flex items-center gap-2">
+                      <span>🎯 ทดลองจำลองการเติมเงิน (Simulation)</span>
+                    </span>
+                    <span className="text-[13px] text-slate-400 block mt-0.5">
+                      ดูว่าถ้าเติมเงินก้อนนี้ ระบบจะกระจายซื้อหุ้นตัวไหน และผลักดัน Progress ของเล่นกี่ %
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-slate-400 font-medium">ยอดเงินจำลอง:</span>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[13px]">
+                        ฿
+                      </span>
+                      <input
+                        type="number"
+                        value={simThbInput}
+                        onChange={(e) => setSimThbInput(e.target.value)}
+                        className="pl-7 pr-3 py-1.5 w-32 rounded-xl bg-[#1E222D] border border-[#2A2E39] text-white font-black text-sm focus:border-[#2962FF] focus:outline-none"
+                        step={5000}
+                      />
+                    </div>
+                    <span className="text-[13px] text-[#26A69A] font-bold">
+                      ≈ ${( (Number(simThbInput) || 0) / fxRate ).toFixed(0)} USD
+                    </span>
+                  </div>
+                </div>
+
+                {/* Simulation Output Table */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {quotas.slice(0, 4).map((q) => {
+                    const radarItem = radar?.rows.find(r => r.symbol === q.symbol);
+                    const isBuy = radarItem?.traffic_light === 'BUY_ZONE';
+                    const simUsd = (Number(simThbInput) || 35000) / fxRate;
+                    const allocatedUsd = isBuy ? simUsd * 0.35 : simUsd * 0.15;
+                    const price = radarItem?.currentPrice || q.base_price || 100;
+                    const simulatedSharesGained = Number((allocatedUsd / price).toFixed(4));
+                    const newProgress = Math.min(100, Number((((q.owned_shares + simulatedSharesGained) / q.target_shares) * 100).toFixed(1)));
+
+                    return (
+                      <div
+                        key={q.symbol}
+                        className={`p-3.5 rounded-xl border ${
+                          isBuy
+                            ? 'bg-[#26A69A]/10 border-[#26A69A]/40'
+                            : 'bg-[#1E222D] border-[#2A2E39]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-black text-white text-base">{q.symbol}</span>
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
+                            isBuy ? 'bg-[#26A69A] text-white' : 'bg-[#2A2E39] text-slate-300'
+                          }`}>
+                            {isBuy ? '🟢 BUY PRIORITY' : '🟡 SECONDARY'}
+                          </span>
+                        </div>
+                        <div className="mt-2 text-[13px] text-slate-300 space-y-0.5">
+                          <div>ได้หุ้นเพิ่ม: <strong className="text-white">+{simulatedSharesGained}</strong> หุ้น</div>
+                          <div>เงินที่จัดสรร: <strong className="text-[#26A69A]">${allocatedUsd.toFixed(0)}</strong></div>
+                          <div className="pt-1 text-[13px] font-bold text-[#FFD740]">
+                            Progress: {q.progress_percent.toFixed(1)}% ➜ {newProgress}%
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Core Commanders Group */}
           <div>
