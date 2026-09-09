@@ -193,30 +193,33 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     }
   }, [timeframe, totalBars]);
 
-  // Active slice range
+  // Default empty bar buffer on the right (~40-50px breathing room)
+  const defaultEmptyBars = 8;
+
+  // Active slice range: allows extending past totalBars into future space for free dragging
   const activeRange = useMemo(() => {
     if (customRange && customRange.end > customRange.start) {
-      const start = Math.max(0, Math.min(totalBars - 7, customRange.start));
-      const end = Math.max(start + 7, Math.min(totalBars, customRange.end));
+      const start = Math.max(0, customRange.start);
+      const end = Math.max(start + 7, customRange.end);
       return { start, end };
     }
     const count = Math.min(totalBars, defaultLookback);
-    return { start: Math.max(0, totalBars - count), end: totalBars };
-  }, [customRange, defaultLookback, totalBars]);
+    return { start: Math.max(0, totalBars - count), end: totalBars + defaultEmptyBars };
+  }, [customRange, defaultLookback, totalBars, defaultEmptyBars]);
 
-  // Sliced data arrays
-  const sliceCloses = useMemo(() => rawCloses.slice(activeRange.start, activeRange.end), [rawCloses, activeRange]);
-  const sliceOpens = useMemo(() => (opens && opens.length === totalBars) ? opens.slice(activeRange.start, activeRange.end) : [], [opens, totalBars, activeRange]);
-  const sliceHighs = useMemo(() => (highs && highs.length === totalBars) ? highs.slice(activeRange.start, activeRange.end) : [], [highs, totalBars, activeRange]);
-  const sliceLows = useMemo(() => (lows && lows.length === totalBars) ? lows.slice(activeRange.start, activeRange.end) : [], [lows, totalBars, activeRange]);
-  const sliceDates = useMemo(() => (dates || []).slice(activeRange.start, activeRange.end), [dates, activeRange]);
-  const sliceEma50 = useMemo(() => (ema50 || []).slice(activeRange.start, activeRange.end), [ema50, activeRange]);
-  const sliceEma150 = useMemo(() => (ema150 || []).slice(activeRange.start, activeRange.end), [ema150, activeRange]);
-  const sliceEma200 = useMemo(() => (ema200 || []).slice(activeRange.start, activeRange.end), [ema200, activeRange]);
-  const sliceBanker = useMemo(() => (bankerSeries || []).slice(activeRange.start, activeRange.end), [bankerSeries, activeRange]);
-  const sliceHotMoney = useMemo(() => (hotMoneySeries || []).slice(activeRange.start, activeRange.end), [hotMoneySeries, activeRange]);
-  const sliceRetail = useMemo(() => (retailSeries || []).slice(activeRange.start, activeRange.end), [retailSeries, activeRange]);
-  const sliceBankerMa = useMemo(() => (bankerMaSeries || []).slice(activeRange.start, activeRange.end), [bankerMaSeries, activeRange]);
+  // Sliced data arrays (clamped to totalBars so future buffer bars don't cause undefined lookups)
+  const sliceCloses = useMemo(() => rawCloses.slice(activeRange.start, Math.min(totalBars, activeRange.end)), [rawCloses, activeRange, totalBars]);
+  const sliceOpens = useMemo(() => (opens && opens.length === totalBars) ? opens.slice(activeRange.start, Math.min(totalBars, activeRange.end)) : [], [opens, totalBars, activeRange]);
+  const sliceHighs = useMemo(() => (highs && highs.length === totalBars) ? highs.slice(activeRange.start, Math.min(totalBars, activeRange.end)) : [], [highs, totalBars, activeRange]);
+  const sliceLows = useMemo(() => (lows && lows.length === totalBars) ? lows.slice(activeRange.start, Math.min(totalBars, activeRange.end)) : [], [lows, totalBars, activeRange]);
+  const sliceDates = useMemo(() => (dates || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [dates, activeRange, totalBars]);
+  const sliceEma50 = useMemo(() => (ema50 || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [ema50, activeRange, totalBars]);
+  const sliceEma150 = useMemo(() => (ema150 || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [ema150, activeRange, totalBars]);
+  const sliceEma200 = useMemo(() => (ema200 || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [ema200, activeRange, totalBars]);
+  const sliceBanker = useMemo(() => (bankerSeries || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [bankerSeries, activeRange, totalBars]);
+  const sliceHotMoney = useMemo(() => (hotMoneySeries || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [hotMoneySeries, activeRange, totalBars]);
+  const sliceRetail = useMemo(() => (retailSeries || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [retailSeries, activeRange, totalBars]);
+  const sliceBankerMa = useMemo(() => (bankerMaSeries || []).slice(activeRange.start, Math.min(totalBars, activeRange.end)), [bankerMaSeries, activeRange, totalBars]);
 
   if (sliceCloses.length < 2) {
     return (
@@ -259,14 +262,17 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const priceChartH = vbHeight - padT - dateAxisH - bankerTitleH - bankerBarsH - paneGap; // ~557px (+80px taller)
   const chartW = vbWidth - padL - padR;
 
+  // Total horizontal slots for coordinate mapping (including right margin buffer)
+  const totalSlotCount = Math.max(7, activeRange.end - activeRange.start);
+
   // Coordinate functions
   const getPriceY = (val: number) => {
     const norm = (val - minPrice) / priceRange;
     return padT + priceChartH - norm * priceChartH;
   };
 
-  const getX = (idx: number, total: number) => {
-    return padL + (idx / Math.max(1, total - 1)) * chartW;
+  const getX = (idx: number, _total?: number) => {
+    return padL + (idx / Math.max(1, totalSlotCount - 1)) * chartW;
   };
 
   const bankerTopY = padT + priceChartH + dateAxisH + paneGap;
@@ -665,19 +671,23 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       } else if (dragMode === 'PAN' && dragInitialRange && svgRef.current) {
         const rect = svgRef.current.getBoundingClientRect();
         const deltaX = e.clientX - dragStartX;
-        const barsDelta = Math.round((deltaX / rect.width) * (dragInitialRange.end - dragInitialRange.start));
         const rangeSpan = dragInitialRange.end - dragInitialRange.start;
+        const barsDelta = Math.round((deltaX / rect.width) * rangeSpan);
 
         let newStart = dragInitialRange.start - barsDelta;
         let newEnd = dragInitialRange.end - barsDelta;
 
         if (newStart < 0) {
+          newEnd += -newStart;
           newStart = 0;
-          newEnd = rangeSpan;
         }
-        if (newEnd > totalBars) {
-          newEnd = totalBars;
-          newStart = Math.max(0, totalBars - rangeSpan);
+
+        // Unfixed right boundary: allow pulling chart left to reveal future empty space
+        // Allows the last candle to detach and float away from the right border
+        const maxAllowedEnd = totalBars + Math.round(rangeSpan * 0.8);
+        if (newEnd > maxAllowedEnd) {
+          newEnd = maxAllowedEnd;
+          newStart = Math.max(0, newEnd - rangeSpan);
         }
 
         setCustomRange({ start: newStart, end: newEnd });
@@ -1165,8 +1175,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               {/* 3-Step Super Money Tactical Signals (Icon-Only, No Text) */}
               {showSignals && signals.map((sig, sIdx) => {
                 const isBelow = sig.position === 'below';
-                // Smart Wick Padding: 18px below lowest wick tip (yLow), 14px above highest wick tip (yHigh)
-                const renderY = isBelow ? sig.y + 18 : sig.y - 14;
+                // Smart Wick Padding: +10px boost! (28px below lowest wick tip, 24px above highest wick tip)
+                const renderY = isBelow ? sig.y + 28 : sig.y - 24;
 
                 return (
                   <g key={`sig-${sIdx}`} className="pointer-events-auto cursor-pointer">
@@ -1174,10 +1184,10 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                     {/* Subtle micro stem dot connecting to candle wick tip */}
                     <circle
                       cx={sig.x}
-                      cy={isBelow ? sig.y + 4 : sig.y - 4}
-                      r="1.2"
+                      cy={isBelow ? sig.y + 6 : sig.y - 6}
+                      r="1.4"
                       fill={sig.color}
-                      opacity="0.65"
+                      opacity="0.75"
                     />
                     {/* Bold Icon Glyph (+3 size levels: 18px - 20px) */}
                     <text

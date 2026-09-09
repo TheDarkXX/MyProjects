@@ -1,6 +1,7 @@
 # General Behaviors
 
 - **Workspace Priority**: When executing commands (especially `git push`, `git pull`, or file searches), always prioritize the main workspace folder (Main Folder) opened in AG over the directory of the currently active document. The active document might be a file opened from outside the current workspace, so its path should not override the main workspace context unless explicitly requested by the user.
+- **No Browser Subagent Testing Unless Explicitly Commanded**: หลังเขียนโค้ดและดีพลอยเสร็จ ห้ามเปิด browser subagent เพื่อทดสอบหน้าเว็บเองเด็ดขาด ถ้าผู้ใช้ไม่ได้พิมพ์สั่งให้เปิดเบราว์เซอร์เทสอย่างชัดเจน เพราะทำให้เสียเวลาและอาจติดปัญหา auth/rate-limit. ให้ยืนยันความถูกต้องผ่าน `npx tsc --noEmit`, `npm run build`, และ Code Inspection โดยตรงเท่านั้น
 
 # UI & Typography Standards (Iron Rules)
 - **Minimum Font Size**: Text must NEVER be smaller than 13px (`text-[13px]`). Avoid 10px-11px at all costs because it is illegible on high-res / mobile displays. Use `text-sm` (14px) or `text-xs` (12px ONLY for tiny badge pills).
