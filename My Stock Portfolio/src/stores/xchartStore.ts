@@ -71,10 +71,11 @@ interface XChartState {
   setWatchlistDetailSymbol: (symbol: string | null) => void;
   toggleWatchlistDetail: () => void;
   fetchWatchlistQuotes: () => Promise<void>;
+  resetToTVWatchlist: () => void;
 }
 
 const TABS_STORAGE_KEY = 'xchart_tabs_state_v1';
-const WATCHLIST_STORAGE_KEY = 'stock_xchart_watchlist_v2';
+const WATCHLIST_STORAGE_KEY = 'stock_xchart_watchlist_v3';
 const DETAIL_COLLAPSED_KEY = 'stock_xchart_detail_collapsed';
 
 const DEFAULT_TABS: XChartTab[] = [
@@ -108,26 +109,55 @@ const DEFAULT_TABS: XChartTab[] = [
   }
 ];
 
-const DEFAULT_SECTIONS: WatchlistSection[] = [
+export const TRADINGVIEW_WATCHLIST_SECTIONS: WatchlistSection[] = [
+  {
+    id: 'sec-stocks',
+    name: 'STOCKS',
+    isCollapsed: false,
+    symbols: [
+      'WMT', 'VRT', 'DUOL', 'BKNG', 'ELF', 'KLAC', 'GOOGL', 'UBER', 'UNH', 'SPGI',
+      'ASML', 'CEG', 'ETN', 'TSM', 'WM', 'NVO', 'ORLY', 'AAPL', 'APP', 'ELV',
+      'CRM', 'GWW', 'KO', 'APH', 'TTD', 'MA', 'ADBE', 'MSFT', 'CAH', 'V',
+      'PANW', 'RTX', 'LLY', 'ANET', 'TSLA', 'BRK-B', 'JPM', 'INTC', 'ARM', 'FICO',
+      'WFC', 'AMD', 'MRVL', 'NET'
+    ]
+  },
+  {
+    id: 'sec-strong-growth',
+    name: 'STRONG GROWTH',
+    isCollapsed: false,
+    symbols: ['SOFI', 'AVGO', 'NVDA', 'PLTR', 'ALAB']
+  },
+  {
+    id: 'sec-small-cap',
+    name: 'SMALL CAP',
+    isCollapsed: false,
+    symbols: ['ASTS', 'TWST', 'RKLB', 'VKTX', 'ISRG', 'CRDO', 'JMIA', 'DOCN']
+  },
   {
     id: 'sec-waiting',
     name: 'WAITING',
     isCollapsed: false,
-    symbols: ['TMDX', 'COST', 'RBRK', 'NFLX', 'CRWD', 'STRL', 'NBIS', 'OKLO', 'ORCL', 'META']
+    symbols: [
+      'EOSE', 'IREN', 'IONQ', 'CRWV', 'AXON', 'MELI', 'NVTS', 'HIMS', 'GOOG', 'SFM',
+      'AMZN', 'TMDX', 'COST', 'RBRK', 'NFLX', 'CRWD', 'STRL', 'NBIS', 'OKLO', 'ORCL', 'META'
+    ]
   },
   {
-    id: 'sec-project2x',
-    name: 'PROJECT 2X CORE',
+    id: 'sec-exchange',
+    name: 'EXCHANGE',
     isCollapsed: false,
-    symbols: ['VRT', 'NVDA', 'AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
+    symbols: ['SCHD', 'SCHG', '^GSPC', 'QQQ', 'JEPQ', 'THB=X']
   },
   {
-    id: 'sec-macro',
-    name: 'MACRO & FX',
+    id: 'sec-commodities-crypto',
+    name: 'COMMODITIES & CRYPTO',
     isCollapsed: false,
-    symbols: ['THB=X']
+    symbols: ['BTC-USD', 'GC=F', 'CL=F']
   }
 ];
+
+const DEFAULT_SECTIONS: WatchlistSection[] = TRADINGVIEW_WATCHLIST_SECTIONS;
 
 function loadSavedTabs(): { tabs: XChartTab[]; activeTabId: string } {
   if (typeof window === 'undefined') {
@@ -410,5 +440,11 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     } finally {
       set({ watchlistLoading: false });
     }
+  },
+
+  resetToTVWatchlist: () => {
+    set({ watchlistSections: TRADINGVIEW_WATCHLIST_SECTIONS });
+    persistSections(TRADINGVIEW_WATCHLIST_SECTIONS);
+    get().fetchWatchlistQuotes();
   }
 }));

@@ -17,7 +17,8 @@ import {
   ArrowUpDown,
   Coins,
   Flame,
-  Check
+  Check,
+  Sparkles
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -65,7 +66,8 @@ export const XChartWatchlistDock: React.FC = () => {
     setWatchlistSort,
     setWatchlistDetailSymbol,
     toggleWatchlistDetail,
-    fetchWatchlistQuotes
+    fetchWatchlistQuotes,
+    resetToTVWatchlist
   } = useXChartStore();
 
   // Local UI states
@@ -251,6 +253,19 @@ export const XChartWatchlistDock: React.FC = () => {
             title="Create New Section"
           >
             <FolderPlus className="w-4 h-4" />
+          </button>
+
+          {/* Sync / Reset TradingView 87-Stock List Button */}
+          <button
+            onClick={() => {
+              if (window.confirm('ต้องการรีเซ็ตและนำเข้า Watchlist ทั้งหมดจาก TradingView (6 หมวด 87 หุ้น) หรือไม่?')) {
+                resetToTVWatchlist();
+              }
+            }}
+            className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 transition-all cursor-pointer border border-transparent hover:border-amber-500/30"
+            title="นำเข้ารายชื่อหุ้นจาก TradingView doctorbank8989 (6 หมวด 87 หุ้น)"
+          >
+            <Sparkles className="w-4 h-4" />
           </button>
 
           {/* Manual Refresh Button */}
