@@ -81,9 +81,11 @@ export interface RadarRow {
   reason: string;
   reason_th: string;
   sparkline: {
+    dates?: string[];
     closes: number[];
     ema150: (number | null)[];
     ema200: (number | null)[];
+    bankerSeries?: number[];
   };
   owned_shares: number;
   target_shares: number;

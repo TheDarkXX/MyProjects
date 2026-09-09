@@ -82,35 +82,67 @@ export function updateProject2xConfig(portfolioId, updates) {
 }
 
 /**
- * Calculate current holdings from transactions
+ * Calculate current holdings and cash balance from transactions
  */
 export function getPortfolioHoldings(portfolioId) {
+  const port = db.prepare('SELECT initial_cash FROM portfolios WHERE id = ?').get(portfolioId);
+  let cash = port?.initial_cash || 0;
+
   const txs = db.prepare(`
-    SELECT symbol, type, amount, price, fee FROM transactions WHERE portfolio_id = ?
+    SELECT symbol, type, asset, amount, price, fee, status FROM transactions 
+    WHERE portfolio_id = ? AND (status IS NULL OR status != 'CANCELLED')
+    ORDER BY date ASC
   `).all(portfolioId);
 
   const holdings = {};
   for (const t of txs) {
-    const sym = t.symbol.toUpperCase();
-    if (!holdings[sym]) {
-      holdings[sym] = { shares: 0, totalCost: 0 };
-    }
-    if (t.type === 'BUY' || t.type === 'DEPOSIT' || t.type === 'DIVIDEND' || t.type === 'INTEREST') {
-      holdings[sym].shares += Number(t.amount);
-      holdings[sym].totalCost += (Number(t.amount) * Number(t.price)) + (Number(t.fee) || 0);
-    } else if (t.type === 'SELL' || t.type === 'WITHDRAW') {
-      holdings[sym].shares -= Number(t.amount);
-      holdings[sym].totalCost -= (Number(t.amount) * Number(t.price));
+    const sym = (t.symbol || '').toUpperCase();
+    const amount = Number(t.amount) || 0;
+    const price = Number(t.price) || 0;
+    const fee = Number(t.fee) || 0;
+    const isCash = t.asset === 'Cash' || sym === 'CASH';
+
+    if (t.type === 'BUY') {
+      if (isCash) {
+        cash += amount;
+      } else {
+        cash -= (amount * price) + fee;
+        if (!holdings[sym]) holdings[sym] = { shares: 0, totalCost: 0 };
+        holdings[sym].shares += amount;
+        holdings[sym].totalCost += (amount * price) + fee;
+      }
+    } else if (t.type === 'SELL') {
+      if (isCash) {
+        cash -= amount;
+      } else {
+        cash += (amount * price) - fee;
+        if (!holdings[sym]) holdings[sym] = { shares: 0, totalCost: 0 };
+        if (holdings[sym].shares > 0) {
+          const avgCost = holdings[sym].totalCost / holdings[sym].shares;
+          holdings[sym].shares -= amount;
+          holdings[sym].totalCost = Math.max(0, holdings[sym].shares * avgCost);
+        } else {
+          holdings[sym].shares -= amount;
+        }
+      }
+    } else if (t.type === 'DEPOSIT') {
+      cash += amount;
+    } else if (t.type === 'WITHDRAW') {
+      cash -= amount;
+    } else if (t.type === 'DIVIDEND' || t.type === 'INTEREST') {
+      cash += (amount - fee);
     }
   }
 
-  // Cleanup dust
+  // Cleanup dust (< 0.001 shares)
   for (const sym in holdings) {
-    if (Math.abs(holdings[sym].shares) < 0.0001) {
+    if (Math.abs(holdings[sym].shares) < 0.001) {
       holdings[sym].shares = 0;
+      holdings[sym].totalCost = 0;
     }
   }
-  return holdings;
+
+  return { holdings, cash: Math.max(0, Number(cash.toFixed(2))) };
 }
 
 /**
@@ -167,7 +199,7 @@ export async function syncShareQuotas(portfolioId, forceDefault = false) {
 
   // Return full quotas with current holding progress
   const quotas = db.prepare('SELECT * FROM project2x_share_quotas WHERE portfolio_id = ?').all(portfolioId);
-  const holdings = getPortfolioHoldings(portfolioId);
+  const { holdings } = getPortfolioHoldings(portfolioId);
 
   const enriched = [];
   for (const q of quotas) {
@@ -295,12 +327,9 @@ export function classifyScenario({ currentPrice, ema50, ema150, ema200, banker, 
 export async function scanRadarMatrix(portfolioId) {
   const config = getOrCreateConfig(portfolioId);
   const quotas = await syncShareQuotas(portfolioId);
-  const holdings = getPortfolioHoldings(portfolioId);
+  const { holdings, cash } = getPortfolioHoldings(portfolioId);
 
-  // Total portfolio market value in USD
-  let totalPortfolioUsd = 0;
   const stockMarketValues = {};
-
   const radarRows = [];
   const sellAlerts = [];
 
@@ -333,16 +362,18 @@ export async function scanRadarMatrix(portfolioId) {
       rsi14
     });
 
-    // 30-day sparkline data
-    const sparklineDays = 30;
-    const sparkCloses = closes.slice(-sparklineDays);
+    // 90-day sparkline data with dates and banker series for timeframe zoom
+    const sparklineDays = 90;
+    const sparkCandles = candles.slice(-sparklineDays);
+    const sparkCloses = sparkCandles.map(c => c.price);
+    const sparkDates = sparkCandles.map(c => c.date);
     const ema150Series = calcEMASeries(closes, 150).slice(-sparklineDays);
     const ema200Series = calcEMASeries(closes, 200).slice(-sparklineDays);
+    const bankerSeries = calcBankerSeries(closes, sparklineDays);
 
     const ownedShares = q.owned_shares || 0;
     const marketValueUsd = ownedShares * currentPrice;
     stockMarketValues[symbol] = marketValueUsd;
-    totalPortfolioUsd += marketValueUsd;
 
     radarRows.push({
       symbol,
@@ -362,9 +393,11 @@ export async function scanRadarMatrix(portfolioId) {
       reason: classification.reason,
       reason_th: classification.reason_th,
       sparkline: {
+        dates: sparkDates,
         closes: sparkCloses,
         ema150: ema150Series,
-        ema200: ema200Series
+        ema200: ema200Series,
+        bankerSeries
       },
       owned_shares: ownedShares,
       target_shares: q.target_shares,
@@ -373,9 +406,21 @@ export async function scanRadarMatrix(portfolioId) {
     });
   }
 
-  // Include CASH in portfolio value
-  const cashShares = holdings['CASH']?.shares || 0;
-  totalPortfolioUsd += cashShares;
+  // Calculate true total portfolio market value (ALL held securities + actual cash)
+  let totalSecuritiesUsd = 0;
+  for (const sym in holdings) {
+    if (holdings[sym].shares > 0.001) {
+      let curPrice = stockMarketValues[sym] || 0;
+      if (!curPrice) {
+        try {
+          const latest = await fetchYahooLatest(sym);
+          curPrice = latest?.price || 0;
+        } catch (e) {}
+      }
+      totalSecuritiesUsd += holdings[sym].shares * curPrice;
+    }
+  }
+  const totalPortfolioUsd = Number((totalSecuritiesUsd + cash).toFixed(2));
 
   // 3-Layer Sell Signal Detection
   const ceilingPct = config.max_stock_ceiling_pct || 30;
@@ -423,12 +468,12 @@ export async function scanRadarMatrix(portfolioId) {
     }
   }
 
-  // Layer 3: Orphan Holdings Detection (Held stocks not in Quota)
+  // Layer 3: Orphan Holdings Detection (Held stocks not in Quota with real shares > 0.001)
   const quotaSymbols = new Set(radarRows.map(r => r.symbol));
   quotaSymbols.add('CASH');
 
   for (const sym in holdings) {
-    if (!quotaSymbols.has(sym) && holdings[sym].shares > 0.0001) {
+    if (!quotaSymbols.has(sym) && holdings[sym].shares > 0.001) {
       let curPrice = 1;
       try {
         const latest = await fetchYahooLatest(sym);
@@ -449,8 +494,8 @@ export async function scanRadarMatrix(portfolioId) {
   return {
     rows: radarRows,
     sellAlerts,
-    totalPortfolioUsd: Number(totalPortfolioUsd.toFixed(2)),
-    cashUsd: Number(cashShares.toFixed(2))
+    totalPortfolioUsd,
+    cashUsd: cash
   };
 }
 

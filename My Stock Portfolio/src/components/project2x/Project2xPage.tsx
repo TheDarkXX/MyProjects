@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Rocket,
   Target,
@@ -28,7 +28,10 @@ import {
   Award,
   Crown,
   Search,
-  ExternalLink
+  ExternalLink,
+  ArrowDownUp,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useProject2xStore, MilestoneItem } from '../../stores/project2xStore';
@@ -36,6 +39,9 @@ import { useUiStore } from '../../stores/uiStore';
 import { ProgressRing } from './ProgressRing';
 import { MiniSparkline } from './MiniSparkline';
 import { TradingViewChart } from './TradingViewChart';
+
+type SortKey = 'STATUS' | 'PROGRESS' | 'VALUE' | 'WEIGHT' | 'NAME';
+type SortOrder = 'ASC' | 'DESC';
 
 export const Project2xPage: React.FC = () => {
   const { activePortfolioId } = usePortfolioStore();
@@ -62,6 +68,9 @@ export const Project2xPage: React.FC = () => {
   const [selectedBand, setSelectedBand] = useState<'Conservative' | 'Base' | 'Bull' | 'Auto'>('Base');
   const [selectedStockSymbol, setSelectedStockSymbol] = useState<string>('NVDA');
   const [watchlistFilter, setWatchlistFilter] = useState<'ALL' | 'Core' | 'Moonshot'>('ALL');
+  const [sortKey, setSortKey] = useState<SortKey>('STATUS');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('ASC');
+
   const [inflowAmountInput, setInflowAmountInput] = useState<string>('35000');
   const [expandedRadarRow, setExpandedRadarRow] = useState<string | null>(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState<boolean>(false);
@@ -137,10 +146,10 @@ export const Project2xPage: React.FC = () => {
 
   // Milestones
   const defaultMilestones: MilestoneItem[] = [
-    { year: 1, level: 1, icon: '🥚', name: 'Baby Sprout', thTitle: 'เมล็ดพันธุ์ก้าวแรก', target_thb: 539000, target_usd: Math.round(539000 / fxRate), is_unlocked: false, is_current: true },
-    { year: 2, level: 2, icon: '🐣', name: 'Sky Falcon', thTitle: 'เหยี่ยวเวหาติดปีก', target_thb: 1410000, target_usd: Math.round(1410000 / fxRate), is_unlocked: false, is_current: false },
-    { year: 3, level: 3, icon: '🦊', name: 'Cyber Fox', thTitle: 'จิ้งจอกสายฟ้าทบต้น', target_thb: 3100000, target_usd: Math.round(3100000 / fxRate), is_unlocked: false, is_current: false },
-    { year: 4, level: 4, icon: '🐉', name: 'Star Dragon', thTitle: 'มังกรทะยานฟ้า', target_thb: 5960000, target_usd: Math.round(5960000 / fxRate), is_unlocked: false, is_current: false },
+    { year: 1, level: 1, icon: '🥚', name: 'Baby Sprout', thTitle: 'เมล็ดพันธุ์ก้าวแรก', target_thb: 603000, target_usd: Math.round(603000 / fxRate), is_unlocked: false, is_current: true },
+    { year: 2, level: 2, icon: '🐣', name: 'Sky Falcon', thTitle: 'เหยี่ยวเวหาติดปีก', target_thb: 1254000, target_usd: Math.round(1254000 / fxRate), is_unlocked: false, is_current: false },
+    { year: 3, level: 3, icon: '🦊', name: 'Cyber Fox', thTitle: 'จิ้งจอกสายฟ้าทบต้น', target_thb: 2095000, target_usd: Math.round(2095000 / fxRate), is_unlocked: false, is_current: false },
+    { year: 4, level: 4, icon: '🐉', name: 'Star Dragon', thTitle: 'มังกรทะยานฟ้า', target_thb: 3184000, target_usd: Math.round(3184000 / fxRate), is_unlocked: false, is_current: false },
     { year: 5, level: 5, icon: '👑', name: 'Titan King', thTitle: 'ราชาพอร์ตสิบล้าน', target_thb: 10000000, target_usd: Math.round(10000000 / fxRate), is_unlocked: false, is_current: false },
   ];
 
@@ -155,6 +164,7 @@ export const Project2xPage: React.FC = () => {
     : 0;
 
   const currentValThb = dashboard?.total_val_thb || 0;
+  const currentValUsd = dashboard?.total_val_usd || 0;
   const currentLevelRange = Math.max(1, currentMilestone.target_thb - prevMilestoneTarget);
   const currentLevelProgress = Math.max(0, Math.min(100, ((currentValThb - prevMilestoneTarget) / currentLevelRange) * 100));
 
@@ -190,11 +200,35 @@ export const Project2xPage: React.FC = () => {
   const coreQuotas = quotas.filter(q => q.category === 'Core');
   const moonshotQuotas = quotas.filter(q => q.category === 'Moonshot');
 
-  // Filtered watchlist for right panel
-  const watchlistRows = (radar?.rows || []).filter(r => {
-    if (watchlistFilter === 'ALL') return true;
-    return r.category === watchlistFilter;
-  });
+  // Sorted and filtered watchlist rows
+  const sortedWatchlistRows = useMemo(() => {
+    const list = (radar?.rows || []).filter(r => {
+      if (watchlistFilter === 'ALL') return true;
+      return r.category === watchlistFilter;
+    });
+
+    list.sort((a, b) => {
+      let comp = 0;
+      if (sortKey === 'STATUS') {
+        const rank = (tl: string) => tl === 'BUY_ZONE' ? 1 : tl === 'WAIT' ? 2 : 3;
+        comp = rank(a.traffic_light) - rank(b.traffic_light);
+        if (comp === 0) comp = b.progress_percent - a.progress_percent;
+      } else if (sortKey === 'PROGRESS') {
+        comp = b.progress_percent - a.progress_percent;
+      } else if (sortKey === 'VALUE') {
+        const valA = (a.owned_shares || 0) * a.currentPrice;
+        const valB = (b.owned_shares || 0) * b.currentPrice;
+        comp = valB - valA;
+      } else if (sortKey === 'WEIGHT') {
+        comp = b.target_percent - a.target_percent;
+      } else if (sortKey === 'NAME') {
+        comp = a.symbol.localeCompare(b.symbol);
+      }
+      return sortOrder === 'ASC' ? comp : -comp;
+    });
+
+    return list;
+  }, [radar?.rows, watchlistFilter, sortKey, sortOrder]);
 
   return (
     <div className="w-full space-y-8 animate-fade-in-up pb-24 selection:bg-[#00E5FF] selection:text-slate-950 font-sans">
@@ -219,8 +253,8 @@ export const Project2xPage: React.FC = () => {
             </div>
             <p className="text-[13px] text-slate-300 mt-1">
               {currency === 'THB'
-                ? `ภารกิจมุ่งเป้า ฿${(dashboard?.goal_val_thb || 10000000).toLocaleString()} (CAGR ${activeCagrDisplay}) • กฎสะสมของเล่น 12 แม่ทัพ • Dime! Ecosystem`
-                : `ภารกิจมุ่งเป้า $${Math.round((dashboard?.goal_val_thb || 10000000) / fxRate).toLocaleString()} (CAGR ${activeCagrDisplay}) • กฎสะสมของเล่น 12 แม่ทัพ • Dime! Ecosystem`
+                ? `Quest to ฿${(dashboard?.goal_val_thb || 10000000).toLocaleString()} (CAGR ${activeCagrDisplay}) • 12 Commander Stocks • Dime! Ecosystem`
+                : `Quest to $${Math.round((dashboard?.goal_val_thb || 10000000) / fxRate).toLocaleString()} (CAGR ${activeCagrDisplay}) • 12 Commander Stocks • Dime! Ecosystem`
               }
             </p>
           </div>
@@ -251,13 +285,12 @@ export const Project2xPage: React.FC = () => {
       {/* 2. THE GRAND QUEST JOURNEY HERO BANNER */}
       {/* ============================================================ */}
       <div className="relative rounded-3xl border border-white/10 bg-gradient-to-br from-[#1A2744]/90 via-[#131722] to-[#1E1730]/90 p-6 sm:p-8 shadow-2xl overflow-hidden backdrop-blur-2xl">
-        {/* Glow ambient spots */}
         <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full blur-[100px] bg-cyan-500/20 pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-80 h-80 rounded-full blur-[100px] bg-purple-500/20 pointer-events-none" />
 
         <div className="relative z-10 space-y-6">
           
-          {/* Hero Header & Level Progression Status */}
+          {/* Level Header & Status */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-white/10">
             <div>
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-400 mb-1">
@@ -273,19 +306,19 @@ export const Project2xPage: React.FC = () => {
                 </span>
               </div>
               <p className="text-[13px] text-slate-300 mt-1">
-                พอร์ตปัจจุบัน:{' '}
+                Current Net Worth:{' '}
                 <strong className="text-white">
-                  {currency === 'THB' ? `฿${currentValThb.toLocaleString()}` : `$${(dashboard?.total_val_usd || 0).toLocaleString()}`}
+                  {currency === 'THB' ? `฿${currentValThb.toLocaleString()}` : `$${currentValUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
                 </strong>{' '}
-                · เป้าด่านนี้:{' '}
+                · Target:{' '}
                 <strong className="text-cyan-300">
                   {currency === 'THB' ? `฿${currentMilestone.target_thb.toLocaleString()}` : `$${currentMilestone.target_usd.toLocaleString()}`}
                 </strong>{' '}
-                · (เหลืออีก ฿{Math.max(0, currentMilestone.target_thb - currentValThb).toLocaleString()} เพื่อปลดล็อกเลเวลถัดไป!)
+                · (Remaining {currency === 'THB' ? `฿${Math.max(0, currentMilestone.target_thb - currentValThb).toLocaleString()}` : `$${Math.max(0, Math.round((currentMilestone.target_thb - currentValThb) / fxRate)).toLocaleString()}`} to Evolution)
               </p>
             </div>
 
-            {/* Compound Pace Band Switcher */}
+            {/* CAGR Band Selector */}
             <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#0E121B] border border-white/10 self-start lg:self-auto flex-wrap">
               {realizedCagr && (
                 <button
@@ -295,10 +328,10 @@ export const Project2xPage: React.FC = () => {
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 font-black'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
                   }`}
-                  title={`คำนวณจากผลตอบแทนพอร์ตจริง (${realizedCagr.years_investing} ปี, ทุนสุทธิ $${realizedCagr.net_invested_usd})`}
+                  title={`Actual Portfolio Return (${realizedCagr.years_investing} Yrs, Net Invested $${realizedCagr.net_invested_usd})`}
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-300" />
-                  <span>⚡ Auto: {realizedCagr.cagr_pct}% (จริง)</span>
+                  <span>⚡ Auto: {realizedCagr.cagr_pct}% (Actual)</span>
                 </button>
               )}
               {(['Base', 'Bull', 'Conservative'] as const).map((band) => (
@@ -321,11 +354,11 @@ export const Project2xPage: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-slate-300">
               <span className="flex items-center gap-1.5">
-                <span>ด่านที่ {currentMilestone.level} Progress</span>
+                <span>Level {currentMilestone.level} Progress</span>
                 <span className="text-cyan-400 font-extrabold">{currentLevelProgress.toFixed(1)}%</span>
               </span>
               <span>
-                รวมทั้งสิ้น: <strong className="text-amber-300">{(dashboard?.progress_percent || 0).toFixed(1)}%</strong> ของเป้า 10M
+                Total Goal Progress: <strong className="text-amber-300">{(dashboard?.progress_percent || 0).toFixed(1)}%</strong> of 10M
               </span>
             </div>
 
@@ -340,11 +373,18 @@ export const Project2xPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 5-Level Evolution Milestone Cards */}
+          {/* 5-Level Evolution Milestone Cards with Individual XP Bars */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2">
-            {milestones.map((m) => {
+            {milestones.map((m, idx) => {
               const isDone = m.is_unlocked;
               const isCurrent = m.is_current;
+              const prevTgt = idx > 0 ? milestones[idx - 1].target_thb : 0;
+              const range = Math.max(1, m.target_thb - prevTgt);
+              const cardXp = isDone ? 100 : currentValThb <= prevTgt ? 0 : Math.min(100, ((currentValThb - prevTgt) / range) * 100);
+
+              const rangeDisplay = currency === 'THB'
+                ? `฿${(prevTgt / 1000).toFixed(0)}K ➜ ฿${(m.target_thb / 1000).toFixed(0)}K`
+                : `$${Math.round(prevTgt / fxRate / 1000)}K ➜ $${Math.round(m.target_usd / 1000)}K`;
 
               return (
                 <div
@@ -380,8 +420,30 @@ export const Project2xPage: React.FC = () => {
                         : `$${(m.target_usd / 1000).toFixed(1)}K`
                       }
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5 truncate">
-                      {m.thTitle}
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      {rangeDisplay}
+                    </div>
+                  </div>
+
+                  {/* Individual Evolution XP Bar */}
+                  <div className="mt-3 pt-2 border-t border-white/5 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                      <span>XP</span>
+                      <span className={isCurrent ? 'text-cyan-300' : 'text-slate-300'}>
+                        {cardXp.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${
+                          isDone
+                            ? 'bg-amber-400'
+                            : isCurrent
+                            ? 'bg-gradient-to-r from-cyan-400 to-blue-500'
+                            : 'bg-slate-700'
+                        }`}
+                        style={{ width: `${cardXp}%` }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -389,14 +451,14 @@ export const Project2xPage: React.FC = () => {
             })}
           </div>
 
-          {/* Key Metrics Pill Bar */}
+          {/* Key Metrics Pill Bar (Dynamic Currency Toggle) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-white/10 text-xs">
             <div className="p-3 rounded-xl bg-white/5 border border-white/5">
               <span className="text-slate-400 block mb-0.5">Net Worth ({currency})</span>
               <span className="text-base font-black text-white tabular-nums">
                 {currency === 'USD'
-                  ? `$${(dashboard?.total_val_usd || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-                  : `฿${(dashboard?.total_val_thb || 0).toLocaleString()}`
+                  ? `$${currentValUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : `฿${currentValThb.toLocaleString()}`
                 }
               </span>
             </div>
@@ -408,26 +470,32 @@ export const Project2xPage: React.FC = () => {
                   <button
                     onClick={() => setInflowAmountInput(String(dashboard.auto_inflow_thb))}
                     className="text-[11px] font-bold text-cyan-300 hover:underline"
-                    title="คลิกเพื่อใช้ค่าที่ตรวจพบจากประวัติฝากจริง"
+                    title="Use detected average monthly deposit"
                   >
-                    ใช้ค่าจริง
+                    Use Auto
                   </button>
                 )}
               </div>
               <span className="text-base font-black text-cyan-300 tabular-nums">
-                ฿{(dashboard?.monthly_inflow_thb || 35000).toLocaleString()}/mo
+                {currency === 'USD'
+                  ? `$${Math.round((dashboard?.monthly_inflow_thb || 35000) / fxRate).toLocaleString()}/mo`
+                  : `฿${(dashboard?.monthly_inflow_thb || 35000).toLocaleString()}/mo`
+                }
               </span>
               {dashboard?.auto_inflow_thb && (
                 <span className="text-[11px] text-slate-400 block truncate">
-                  ⚡ ประวัติจริง: ฿{dashboard.auto_inflow_thb.toLocaleString()}/mo
+                  ⚡ Auto: {currency === 'USD' ? `$${Math.round(dashboard.auto_inflow_thb / fxRate)}/mo` : `฿${dashboard.auto_inflow_thb.toLocaleString()}/mo`}
                 </span>
               )}
             </div>
 
             <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-slate-400 block mb-0.5">Dime! Cash / FCD</span>
+              <span className="text-slate-400 block mb-0.5">Dime! Cash / FCD ({currency})</span>
               <span className="text-base font-black text-amber-300 tabular-nums">
-                ${(dashboard?.dime_cash_usd || 0).toFixed(2)}
+                {currency === 'USD'
+                  ? `$${(dashboard?.dime_cash_usd || 0).toFixed(2)}`
+                  : `฿${Math.round((dashboard?.dime_cash_usd || 0) * fxRate).toLocaleString()}`
+                }
               </span>
               <span className="text-[11px] text-emerald-400 block">
                 ~{config?.fcd_yield_pct || 4.5}% APY Earned
@@ -482,7 +550,7 @@ export const Project2xPage: React.FC = () => {
             }`}
           >
             <span>🧸</span>
-            <span>Sticker Album (อัลบั้มสติ๊กเกอร์สะสม 12 ตัว)</span>
+            <span>Sticker Album (อัลบั้มสะสมของเล่น 12 ตัว)</span>
             <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-black/40 text-slate-200 font-bold">
               {quotas.length}
             </span>
@@ -519,7 +587,7 @@ export const Project2xPage: React.FC = () => {
         <div className="hidden lg:flex items-center gap-4 text-xs text-slate-300 font-medium bg-[#1A1D2D] px-4 py-2 rounded-xl border border-white/10">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,229,255,0.8)]" />
-            <span className="font-bold text-cyan-300">🔷 BUY ZONE (Cyan)</span>
+            <span className="font-bold text-cyan-300">🔷 BUY ZONE</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
@@ -533,7 +601,7 @@ export const Project2xPage: React.FC = () => {
       </div>
 
       {/* ============================================================ */}
-      {/* 4. QUEST OVERVIEW: LARGE TRADINGVIEW CHART (LEFT) + WATCHLIST (RIGHT) */}
+      {/* 4. QUEST OVERVIEW: LARGE TRADINGVIEW CHART (LEFT) + COMPACT WATCHLIST (RIGHT) */}
       {/* ============================================================ */}
       {(selectedTab === 'radar' || selectedTab === 'all') && (
         <div className="space-y-6">
@@ -571,15 +639,17 @@ export const Project2xPage: React.FC = () => {
           {/* 2-Panel Layout: Chart on LEFT (65%), Watchlist on RIGHT (35%) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
-            {/* LEFT PANEL: Large TradingView Chart */}
+            {/* LEFT PANEL: Upgraded TradingView Chart with Dates & Banker Sub-Pane */}
             <div className="lg:col-span-8 space-y-4">
               {activeStockRow ? (
                 <>
                   <TradingViewChart
                     symbol={activeStockRow.symbol}
+                    dates={activeStockRow.sparkline?.dates || []}
                     closes={activeStockRow.sparkline?.closes || []}
                     ema150={activeStockRow.sparkline?.ema150 || []}
                     ema200={activeStockRow.sparkline?.ema200 || []}
+                    bankerSeries={activeStockRow.sparkline?.bankerSeries || []}
                     banker={activeStockRow.banker}
                     currentPrice={activeStockRow.currentPrice}
                     scenario={activeStockRow.scenario}
@@ -587,7 +657,6 @@ export const Project2xPage: React.FC = () => {
                     trafficLight={activeStockRow.traffic_light}
                     distEma150={activeStockRow.distEma150}
                     distEma200={activeStockRow.distEma200}
-                    height={380}
                     onAddInflow={() => {
                       setSelectedTab('inflow');
                       if (activePortfolioId) {
@@ -600,7 +669,7 @@ export const Project2xPage: React.FC = () => {
                   <div className="p-4 rounded-2xl bg-[#1E222D] border border-white/10 text-xs text-slate-300 space-y-1.5">
                     <div className="flex items-center gap-2 font-bold text-cyan-300">
                       <Info className="w-4 h-4" />
-                      <span>คำแนะนำเชิงยุทธวิธีสำหรับ {activeStockRow.symbol}:</span>
+                      <span>Tactical Playbook for {activeStockRow.symbol}:</span>
                     </div>
                     <p className="text-slate-200 font-medium leading-relaxed">
                       {activeStockRow.reason}
@@ -612,19 +681,19 @@ export const Project2xPage: React.FC = () => {
                 </>
               ) : (
                 <div className="p-12 rounded-3xl bg-[#1E222D] border border-white/10 text-center text-slate-400">
-                  กำลังโหลดข้อมูลกราฟ...
+                  Loading chart data...
                 </div>
               )}
             </div>
 
-            {/* RIGHT PANEL: Interactive Stock Watchlist */}
+            {/* RIGHT PANEL: Compact Single-Row Watchlist + Multi-Sorting Bar */}
             <div className="lg:col-span-4 rounded-3xl border border-white/10 bg-[#1A1D2D] p-4 shadow-xl space-y-3">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-white text-sm">📋 12 Commanders Watchlist</span>
-                </div>
+              
+              {/* Header with Title and Category Filter */}
+              <div className="flex items-center justify-between pb-2.5 border-b border-white/10 flex-wrap gap-2">
+                <span className="font-black text-white text-sm">📋 12 Commanders</span>
 
-                {/* Filter Tabs */}
+                {/* Category Filter Tabs */}
                 <div className="flex items-center gap-1 text-[11px] font-bold">
                   {(['ALL', 'Core', 'Moonshot'] as const).map((cat) => (
                     <button
@@ -642,81 +711,98 @@ export const Project2xPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Scrollable Watchlist List */}
-              <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                {watchlistRows.map((row) => {
+              {/* Multi-Sorting Control Bar */}
+              <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-[#131722] border border-white/5 text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400 font-medium">Sort:</span>
+                  <select
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value as SortKey)}
+                    className="bg-[#1E222D] text-slate-200 rounded-lg px-2 py-1 border border-white/10 font-bold focus:outline-none focus:border-cyan-400 cursor-pointer"
+                  >
+                    <option value="STATUS">Signal Status (Buy first)</option>
+                    <option value="PROGRESS">% Progress</option>
+                    <option value="VALUE">Market Value</option>
+                    <option value="WEIGHT">Target Weight %</option>
+                    <option value="NAME">Symbol Name</option>
+                  </select>
+                </div>
+
+                {/* ASC / DESC Toggle */}
+                <button
+                  onClick={() => setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC')}
+                  className="px-2 py-1 rounded-lg bg-[#1E222D] hover:bg-white/10 text-cyan-300 border border-white/10 font-bold flex items-center gap-1 cursor-pointer"
+                  title="Toggle Ascending / Descending"
+                >
+                  {sortOrder === 'ASC' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                  <span>{sortOrder}</span>
+                </button>
+              </div>
+
+              {/* Single-Row Compact Watchlist Items */}
+              <div className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
+                {sortedWatchlistRows.map((row) => {
                   const isSelected = selectedStockSymbol === row.symbol;
                   const isBuyZone = row.traffic_light === 'BUY_ZONE';
                   const hasAlert = radar?.sellAlerts.some(a => a.symbol === row.symbol);
+                  const ownedVal = (row.owned_shares || 0) * row.currentPrice;
 
                   return (
                     <div
                       key={row.symbol}
                       onClick={() => setSelectedStockSymbol(row.symbol)}
-                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col gap-2 ${
+                      className={`h-12 px-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                         isSelected
-                          ? 'bg-blue-600/20 border-cyan-400 shadow-[0_0_12px_rgba(0,229,255,0.2)]'
+                          ? 'bg-blue-600/20 border-cyan-400 shadow-[0_0_12px_rgba(0,229,255,0.25)]'
                           : 'bg-[#131722]/80 border-white/5 hover:border-white/20 hover:bg-[#1E222D]'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-black text-white text-base">{row.symbol}</span>
-                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${
-                            row.category === 'Core' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-purple-500/20 text-purple-300'
-                          }`}>
-                            {row.category}
+                      {/* Left: Signal Badge + Symbol + Category */}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs" title={row.traffic_light}>
+                          {isBuyZone ? '🔷' : row.traffic_light === 'WAIT' ? '🟡' : '🔴'}
+                        </span>
+                        <span className="font-black text-white text-sm tracking-tight">{row.symbol}</span>
+                        <span className={`text-[10px] font-bold px-1 py-0.2 rounded ${
+                          row.category === 'Core' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-purple-500/20 text-purple-300'
+                        }`}>
+                          {row.category[0]}
+                        </span>
+                        {hasAlert && (
+                          <span className="text-[9px] font-black px-1 py-0.2 rounded bg-rose-500 text-white animate-pulse">
+                            !
                           </span>
-                          {hasAlert && (
-                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-500 text-white animate-pulse">
-                              ALERT
-                            </span>
-                          )}
-                        </div>
+                        )}
+                      </div>
 
-                        {/* Traffic Light Indicator */}
-                        <div className="flex items-center gap-1 text-xs font-bold">
-                          {isBuyZone ? (
-                            <span className="flex items-center gap-1 text-cyan-300 font-extrabold bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-full">
-                              <span>🔷</span>
-                              <span>BUY</span>
-                            </span>
-                          ) : row.traffic_light === 'WAIT' ? (
-                            <span className="flex items-center gap-1 text-amber-300 font-extrabold bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                              <span>🟡</span>
-                              <span>WAIT</span>
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-rose-400 font-extrabold bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full">
-                              <span>🔴</span>
-                              <span>DANGER</span>
-                            </span>
-                          )}
+                      {/* Middle: Progress Bar with % */}
+                      <div className="flex-1 max-w-[120px] hidden sm:flex flex-col gap-0.5">
+                        <div className="flex items-center justify-between text-[10px] text-slate-400">
+                          <span>{row.owned_shares.toFixed(1)} sh</span>
+                          <span className="font-bold text-white">{row.progress_percent}%</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              row.progress_percent >= 100
+                                ? 'bg-amber-400'
+                                : isBuyZone
+                                ? 'bg-gradient-to-r from-cyan-400 to-blue-500'
+                                : 'bg-blue-500'
+                            }`}
+                            style={{ width: `${Math.min(100, row.progress_percent)}%` }}
+                          />
                         </div>
                       </div>
 
-                      {/* Price & Progress Bar */}
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-black text-slate-200 tabular-nums">
-                          ${row.currentPrice.toFixed(2)}
+                      {/* Right: Price & Distance vs EMA */}
+                      <div className="text-right flex flex-col items-end">
+                        <span className="font-black text-slate-100 text-xs tabular-nums">
+                          ${row.currentPrice.toFixed(1)}
                         </span>
-                        <span className="text-slate-400 font-medium">
-                          สะสมแล้ว: <strong className="text-white">{row.progress_percent}%</strong>
+                        <span className={`text-[10px] font-semibold tabular-nums ${row.distEma150 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
+                          {row.distEma150 >= 0 ? `+${row.distEma150}%` : `${row.distEma150}%`}
                         </span>
-                      </div>
-
-                      {/* Mini Progress Bar */}
-                      <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            row.progress_percent >= 100
-                              ? 'bg-amber-400'
-                              : isBuyZone
-                              ? 'bg-gradient-to-r from-cyan-400 to-blue-500'
-                              : 'bg-blue-500'
-                          }`}
-                          style={{ width: `${Math.min(100, row.progress_percent)}%` }}
-                        />
                       </div>
                     </div>
                   );
@@ -729,7 +815,7 @@ export const Project2xPage: React.FC = () => {
       )}
 
       {/* ============================================================ */}
-      {/* 5. STICKER ALBUM (KID-FRIENDLY HOLOGRAPHIC CARD COLLECTION) */}
+      {/* 5. STICKER ALBUM (HOLOGRAPHIC CARD COLLECTION) */}
       {/* ============================================================ */}
       {(selectedTab === 'vault' || selectedTab === 'all') && (
         <div className="space-y-8 pt-4">
@@ -741,7 +827,7 @@ export const Project2xPage: React.FC = () => {
                   Holographic Sticker Album (อัลบั้มสะสมของเล่น 12 ตัว)
                 </h2>
                 <p className="text-[13px] text-slate-300 mt-0.5">
-                  สะสมสติ๊กเกอร์ของเล่น 12 ชิ้นให้เต็มการ์ด • การ์ดที่เต็ม 100% จะเรืองแสงทองคำสายรุ้ง 🏆
+                  Collect all 12 toy cards to 100% quota • 100% completed cards glow with Rainbow Gold Shimmer 🏆
                 </p>
               </div>
             </div>
@@ -765,7 +851,7 @@ export const Project2xPage: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-sm uppercase tracking-wider">
               <Crown className="w-4 h-4" />
-              <span>CORE COMMANDERS (ทัพหลวงผูกขาดโลก 83%)</span>
+              <span>CORE COMMANDERS (83% of Portfolio)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -785,7 +871,6 @@ export const Project2xPage: React.FC = () => {
                         : 'bg-[#1E222D] border-white/10 hover:border-white/30'
                     }`}
                   >
-                    {/* Shimmer overlay on hover */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
 
                     {/* Card Top */}
@@ -800,7 +885,7 @@ export const Project2xPage: React.FC = () => {
                           </span>
                         </div>
                         <span className="text-[13px] text-slate-400 mt-0.5 block">
-                          ราคาตลาด: <strong className="text-slate-200">${(radarMatch?.currentPrice || q.base_price).toFixed(2)}</strong>
+                          Market: <strong className="text-slate-200">${(radarMatch?.currentPrice || q.base_price).toFixed(2)}</strong>
                         </span>
                       </div>
 
@@ -827,7 +912,7 @@ export const Project2xPage: React.FC = () => {
                     {/* Card Center: Energy Capsule Progress */}
                     <div className="my-5 space-y-2 relative z-10">
                       <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-300">ความคืบหน้าสะสม</span>
+                        <span className="text-slate-300">Progress</span>
                         <span className="text-base font-black text-white tabular-nums">
                           {q.progress_percent.toFixed(1)}%
                         </span>
@@ -846,10 +931,10 @@ export const Project2xPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Card Footer: Tooltip with share details */}
+                    {/* Card Footer: Share details */}
                     <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 relative z-10">
                       <span>
-                        สะสมแล้ว: <strong className="text-white">{q.owned_shares.toFixed(1)}</strong> / {q.target_shares} หุ้น
+                        Owned: <strong className="text-white">{q.owned_shares.toFixed(1)}</strong> / {q.target_shares} sh
                       </span>
                       <button
                         onClick={() => {
@@ -860,7 +945,7 @@ export const Project2xPage: React.FC = () => {
                         }}
                         className="text-cyan-400 font-bold hover:underline cursor-pointer"
                       >
-                        + เติมเงิน →
+                        + Inflow →
                       </button>
                     </div>
                   </div>
@@ -873,7 +958,7 @@ export const Project2xPage: React.FC = () => {
           <div className="space-y-4 pt-4">
             <div className="flex items-center gap-2 text-purple-400 font-extrabold text-sm uppercase tracking-wider">
               <Rocket className="w-4 h-4" />
-              <span>MOONSHOT ROCKETS (จรวดตัวคูณ 11%)</span>
+              <span>MOONSHOT ROCKETS (11% of Portfolio)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -904,20 +989,20 @@ export const Project2xPage: React.FC = () => {
                           </span>
                         </div>
                         <span className="text-[13px] text-slate-400 mt-0.5 block">
-                          ราคาตลาด: <strong className="text-slate-200">${(radarMatch?.currentPrice || q.base_price).toFixed(2)}</strong>
+                          Market: <strong className="text-slate-200">${(radarMatch?.currentPrice || q.base_price).toFixed(2)}</strong>
                         </span>
                       </div>
 
                       {isLocked ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-black bg-amber-400 text-slate-950">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-400 text-slate-950">
                           FULL! 🏆
                         </span>
                       ) : isBuyZone ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
                           🔷 BUY
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300">
                           🟡 WAIT
                         </span>
                       )}
@@ -925,7 +1010,7 @@ export const Project2xPage: React.FC = () => {
 
                     <div className="my-5 space-y-2 relative z-10">
                       <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-300">ความคืบหน้า</span>
+                        <span className="text-slate-300">Progress</span>
                         <span className="text-base font-black text-white tabular-nums">
                           {q.progress_percent.toFixed(1)}%
                         </span>
@@ -939,7 +1024,7 @@ export const Project2xPage: React.FC = () => {
                     </div>
 
                     <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 relative z-10">
-                      <span>{q.owned_shares.toFixed(1)} / {q.target_shares} หุ้น</span>
+                      <span>{q.owned_shares.toFixed(1)} / {q.target_shares} sh</span>
                       <button
                         onClick={() => {
                           setSelectedTab('inflow');
@@ -949,7 +1034,7 @@ export const Project2xPage: React.FC = () => {
                         }}
                         className="text-purple-300 font-bold hover:underline cursor-pointer"
                       >
-                        + เติมเงิน →
+                        + Inflow →
                       </button>
                     </div>
                   </div>
@@ -975,7 +1060,7 @@ export const Project2xPage: React.FC = () => {
                   Dime! Inflow Slip & FCD Cash Sweep
                 </h2>
                 <p className="text-[13px] text-slate-300">
-                  ใส่ยอดเงินที่ต้องการเติมเข้าพอร์ตวันนี้ → ระบบจะสแกนหาตัวที่เข้าจุดช้อนซื้อที่ดีที่สุด หรือสั่งพักเงินใน Dime FCD
+                  Enter planned deposit amount → Autonomous Engine recommends Golden Setup or Dime! FCD Sweep
                 </p>
               </div>
             </div>
@@ -991,7 +1076,7 @@ export const Project2xPage: React.FC = () => {
                     onClick={() => setInflowAmountInput(String(dashboard.auto_inflow_thb))}
                     className="text-xs font-bold text-cyan-400 hover:underline flex items-center gap-1"
                   >
-                    <span>⚡ ใช้ประวัติจริง: ฿{dashboard.auto_inflow_thb.toLocaleString()}</span>
+                    <span>⚡ Use Auto: ฿{dashboard.auto_inflow_thb.toLocaleString()}</span>
                   </button>
                 )}
               </div>
@@ -1161,7 +1246,7 @@ export const Project2xPage: React.FC = () => {
                         No Golden Setup Today — Dime! Cash Sweep
                       </h3>
                       <p className="text-[13px] text-slate-300">
-                        หุ้นทุกตัวยังไม่เข้าเงื่อนไขแนวรับ EMA 150/200 • ห้ามไล่ราคาเด็ดขาด
+                        All stocks trading above EMA 150/200 buy zone • Sitting on hands and collecting high yield
                       </p>
                     </div>
                   </div>
@@ -1172,7 +1257,7 @@ export const Project2xPage: React.FC = () => {
                       Park ${recommendation.total_usd?.toFixed(2)} (฿{recommendation.total_thb?.toLocaleString()}) in Dime! FCD
                     </div>
                     <div className="text-[13px] text-slate-300 mt-1">
-                      Earn ~{recommendation.fcd_yield_pct}% APY while sitting on your hands and waiting for the market to give a discount.
+                      Earn ~{recommendation.fcd_yield_pct}% APY while waiting for discounts.
                     </div>
                   </div>
 
@@ -1300,7 +1385,7 @@ export const Project2xPage: React.FC = () => {
                 onClick={() => setShowSimPanel(!showSimPanel)}
                 className="px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200"
               >
-                {showSimPanel ? 'ซ่อนการจำลอง' : 'เปิดการจำลอง'}
+                {showSimPanel ? 'Hide Simulator' : 'Show Simulator'}
               </button>
             </div>
 
@@ -1393,7 +1478,7 @@ export const Project2xPage: React.FC = () => {
                       onClick={() => setCfgInflowThb(dashboard.auto_inflow_thb!)}
                       className="text-xs font-bold text-cyan-400 hover:underline"
                     >
-                      ⚡ ประวัติจริง: ฿{dashboard.auto_inflow_thb.toLocaleString()}
+                      ⚡ Auto: ฿{dashboard.auto_inflow_thb.toLocaleString()}
                     </button>
                   )}
                 </div>
