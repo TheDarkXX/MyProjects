@@ -507,6 +507,160 @@ export function calculateDynamicETA({ currentValThb, goalValThb, monthlyInflowTh
 }
 
 /**
+ * Auto-detect actual monthly inflow from deposit/withdraw transactions
+ */
+export function detectActualMonthlyInflow(portfolioId) {
+  try {
+    const txs = db.prepare(`
+      SELECT date, type, amount FROM transactions 
+      WHERE portfolio_id = ? AND type IN ('DEPOSIT', 'WITHDRAW')
+      ORDER BY date ASC
+    `).all(portfolioId);
+
+    if (!txs || txs.length === 0) {
+      return { avg_monthly_usd: null, months_counted: 0 };
+    }
+
+    const monthTotals = {};
+    for (const t of txs) {
+      if (!t.date) continue;
+      const ym = String(t.date).substring(0, 7);
+      const net = (t.type === 'DEPOSIT' ? 1 : -1) * (Number(t.amount) || 0);
+      monthTotals[ym] = (monthTotals[ym] || 0) + net;
+    }
+
+    const months = Object.keys(monthTotals);
+    if (months.length === 0) {
+      return { avg_monthly_usd: null, months_counted: 0 };
+    }
+
+    const recentMonths = months.slice(-6);
+    const sumUsd = recentMonths.reduce((acc, m) => acc + monthTotals[m], 0);
+    const avgMonthlyUsd = Math.max(0, sumUsd / recentMonths.length);
+
+    return {
+      avg_monthly_usd: Number(avgMonthlyUsd.toFixed(2)),
+      months_counted: recentMonths.length,
+      sample_months: recentMonths
+    };
+  } catch (err) {
+    console.error('[project2x] Error detecting monthly inflow:', err.message);
+    return { avg_monthly_usd: null, months_counted: 0 };
+  }
+}
+
+/**
+ * Auto-calculate actual portfolio CAGR based on historical deposits and current value
+ */
+export function calculatePortfolioRealizedCAGR(portfolioId, currentValUsd) {
+  try {
+    const txs = db.prepare(`
+      SELECT date, type, amount, price, fee FROM transactions 
+      WHERE portfolio_id = ?
+      ORDER BY date ASC
+    `).all(portfolioId);
+
+    if (!txs || txs.length === 0 || !currentValUsd || currentValUsd <= 0) {
+      return null;
+    }
+
+    const firstDateStr = txs[0].date;
+    if (!firstDateStr) return null;
+
+    const startDate = new Date(firstDateStr);
+    const now = new Date();
+    const diffYears = Math.max(0.08, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+
+    let netDeposits = 0;
+    for (const t of txs) {
+      if (t.type === 'DEPOSIT') {
+        netDeposits += Number(t.amount) || 0;
+      } else if (t.type === 'WITHDRAW') {
+        netDeposits -= Number(t.amount) || 0;
+      }
+    }
+
+    if (netDeposits <= 10) {
+      let totalCost = 0;
+      for (const t of txs) {
+        if (t.type === 'BUY') {
+          totalCost += (Number(t.amount) * Number(t.price)) + (Number(t.fee) || 0);
+        } else if (t.type === 'SELL') {
+          totalCost -= (Number(t.amount) * Number(t.price));
+        }
+      }
+      netDeposits = Math.max(10, totalCost);
+    }
+
+    const totalReturnMultiple = currentValUsd / netDeposits;
+    if (totalReturnMultiple <= 0) return null;
+
+    let cagr = Math.pow(totalReturnMultiple, 1 / diffYears) - 1;
+    cagr = Math.max(-0.9, Math.min(3.0, cagr));
+
+    return {
+      cagr: Number(cagr.toFixed(4)),
+      cagr_pct: Number((cagr * 100).toFixed(1)),
+      years_investing: Number(diffYears.toFixed(1)),
+      net_invested_usd: Number(netDeposits.toFixed(2))
+    };
+  } catch (err) {
+    console.error('[project2x] Error calculating realized CAGR:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Dynamic Yearly Milestones (Level 1 to Level 5)
+ */
+export function calculateYearlyMilestones({ currentValThb, goalValThb, monthlyInflowThb, targetCagr, targetYears = 5, fxRate = 35.0 }) {
+  const r = (targetCagr || 0.26) / 12;
+  const pmt = monthlyInflowThb || 35000;
+  const pv = currentValThb || 0;
+  const years = Math.max(1, targetYears || 5);
+
+  const levels = [
+    { level: 1, icon: '🥚', name: 'Baby Sprout', thTitle: 'เมล็ดพันธุ์ก้าวแรก' },
+    { level: 2, icon: '🐣', name: 'Sky Falcon', thTitle: 'เหยี่ยวเวหาติดปีก' },
+    { level: 3, icon: '🦊', name: 'Cyber Fox', thTitle: 'จิ้งจอกสายฟ้าทบต้น' },
+    { level: 4, icon: '🐉', name: 'Star Dragon', thTitle: 'มังกรทะยานฟ้า' },
+    { level: 5, icon: '👑', name: 'Titan King', thTitle: 'ราชาพอร์ตสิบล้าน' },
+  ];
+
+  const milestones = [];
+  for (let year = 1; year <= years; year++) {
+    const n = year * 12;
+    const fv = pv * Math.pow(1 + r, n) + pmt * (Math.pow(1 + r, n) - 1) / r;
+    const targetThb = year === years ? goalValThb : Math.round(Math.min(fv, goalValThb));
+    const targetUsd = Math.round(targetThb / fxRate);
+
+    const info = levels[year - 1] || { level: year, icon: '⭐', name: `Level ${year}`, thTitle: `ด่านที่ ${year}` };
+
+    milestones.push({
+      year,
+      ...info,
+      target_thb: targetThb,
+      target_usd: targetUsd,
+      is_unlocked: currentValThb >= targetThb,
+      is_current: false
+    });
+  }
+
+  let foundCurrent = false;
+  for (let i = 0; i < milestones.length; i++) {
+    if (!milestones[i].is_unlocked && !foundCurrent) {
+      milestones[i].is_current = true;
+      foundCurrent = true;
+    }
+  }
+  if (!foundCurrent && milestones.length > 0) {
+    milestones[milestones.length - 1].is_current = true;
+  }
+
+  return milestones;
+}
+
+/**
  * Master HUD Aggregator
  */
 export async function getDashboardData(portfolioId) {
@@ -527,6 +681,20 @@ export async function getDashboardData(portfolioId) {
     targetCagr: config.target_cagr
   });
 
+  const autoInflow = detectActualMonthlyInflow(portfolioId);
+  const autoInflowThb = autoInflow.avg_monthly_usd ? Math.round(autoInflow.avg_monthly_usd * fxRate) : null;
+  const realizedCagr = calculatePortfolioRealizedCAGR(portfolioId, totalValUsd);
+
+  const effectiveCagr = config.target_cagr || 0.26;
+  const milestones = calculateYearlyMilestones({
+    currentValThb: totalValThb,
+    goalValThb: goalThb,
+    monthlyInflowThb: config.monthly_inflow_thb,
+    targetCagr: effectiveCagr,
+    targetYears: config.target_years || 5,
+    fxRate
+  });
+
   return {
     portfolio_id: portfolioId,
     total_val_thb: Number(totalValThb.toFixed(0)),
@@ -535,6 +703,10 @@ export async function getDashboardData(portfolioId) {
     progress_percent: progressPercent,
     fx_rate: fxRate,
     monthly_inflow_thb: config.monthly_inflow_thb,
+    auto_inflow_thb: autoInflowThb,
+    auto_inflow_usd: autoInflow.avg_monthly_usd,
+    realized_cagr: realizedCagr,
+    milestones,
     dime_cash_usd: radar.cashUsd,
     eta,
     active_sell_alerts_count: radar.sellAlerts.length,

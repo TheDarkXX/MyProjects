@@ -8,6 +8,25 @@ export interface ETAItem {
   cagr: number;
 }
 
+export interface MilestoneItem {
+  year: number;
+  level: number;
+  icon: string;
+  name: string;
+  thTitle: string;
+  target_thb: number;
+  target_usd: number;
+  is_unlocked: boolean;
+  is_current: boolean;
+}
+
+export interface RealizedCagrData {
+  cagr: number;
+  cagr_pct: number;
+  years_investing: number;
+  net_invested_usd: number;
+}
+
 export interface DashboardData {
   portfolio_id: string;
   total_val_thb: number;
@@ -16,6 +35,10 @@ export interface DashboardData {
   progress_percent: number;
   fx_rate: number;
   monthly_inflow_thb: number;
+  auto_inflow_thb?: number | null;
+  auto_inflow_usd?: number | null;
+  realized_cagr?: RealizedCagrData | null;
+  milestones?: MilestoneItem[];
   dime_cash_usd: number;
   eta: {
     Conservative: ETAItem;
