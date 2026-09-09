@@ -65,10 +65,17 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const [showZoomHint, setShowZoomHint] = useState<boolean>(false);
   const zoomHintTimer = useRef<any>(null);
 
-  // Custom Zoom & Pan Window: [startIdx, endIdx] into raw arrays
-  const [customRange, setCustomRange] = useState<{ start: number; end: number } | null>(null);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
+  // Signals Toggle (3-Step Super Money Signals)
+  const [showSignals, setShowSignals] = useState<boolean>(true);
+
+  // Dynamic Scale States (Drag to stretch/compress)
+  const [priceScale, setPriceScale] = useState<number>(1.0); // >1.0 = taller candles, <1.0 = compressed
+  const [priceCenterShift, setPriceCenterShift] = useState<number>(0);
+  type DragMode = 'PAN' | 'Y_AXIS' | 'X_AXIS' | null;
+  const [dragMode, setDragMode] = useState<DragMode>(null);
   const [dragStartX, setDragStartX] = useState<number>(0);
+  const [dragStartY, setDragStartY] = useState<number>(0);
+  const [dragInitialPriceScale, setDragInitialPriceScale] = useState<number>(1.0);
   const [dragInitialRange, setDragInitialRange] = useState<{ start: number; end: number } | null>(null);
 
   const rawCloses = useMemo(() => (closes || []).filter(c => typeof c === 'number' && !isNaN(c)), [closes]);
@@ -88,10 +95,16 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     }
   }, [timeframe, totalBars]);
 
-  // Reset custom range when symbol or timeframe buttons clicked
+  // Reset custom range & price scale when symbol changes
   useEffect(() => {
     setCustomRange(null);
-  }, [timeframe, symbol]);
+    setPriceScale(1.0);
+    setPriceCenterShift(0);
+  }, [symbol]);
+
+  useEffect(() => {
+    setCustomRange(null);
+  }, [timeframe]);
 
   // Active slice range
   const activeRange = useMemo(() => {
@@ -120,13 +133,13 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
   if (sliceCloses.length < 2) {
     return (
-      <div className={`flex items-center justify-center rounded-3xl border border-white/10 bg-[#131722] text-slate-300 text-sm h-[600px] ${className}`}>
+      <div className={`flex items-center justify-center rounded-3xl border border-white/10 bg-[#131722] text-slate-300 text-sm h-[680px] ${className}`}>
         Waiting for {symbol} chart data...
       </div>
     );
   }
 
-  // Calculate price scale min/max
+  // Calculate price scale min/max with dynamic priceScale
   let allPriceVals: number[] = [...sliceCloses];
   if (sliceHighs.length > 0) sliceHighs.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allPriceVals.push(v); });
   if (sliceLows.length > 0) sliceLows.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allPriceVals.push(v); });
@@ -135,14 +148,19 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
   const rawMin = Math.min(...allPriceVals);
   const rawMax = Math.max(...allPriceVals);
-  const paddingMargin = (rawMax - rawMin) * 0.08 || 1;
-  const minPrice = Math.max(0, rawMin - paddingMargin);
-  const maxPrice = rawMax + paddingMargin;
+  const rawMid = (rawMax + rawMin) / 2;
+  const rawHalfSpan = Math.max(1, (rawMax - rawMin) / 2);
+  const baseMargin = rawHalfSpan * 0.10;
+
+  // Apply dynamic priceScale (drag Y-axis to stretch/compress candle height)
+  const effectiveHalfSpan = Math.max(0.5, (rawHalfSpan / priceScale) + baseMargin);
+  const minPrice = Math.max(0, rawMid - effectiveHalfSpan + priceCenterShift);
+  const maxPrice = rawMid + effectiveHalfSpan + priceCenterShift;
   const priceRange = maxPrice - minPrice || 1;
 
-  // ViewBox layout dimensions (Main Chart ~460px + Dates 26px + Banker 120px = 650px Total)
+  // ViewBox layout dimensions (Main Chart ~557px + Dates 26px + Banker 116px = 730px Total)
   const vbWidth = 920;
-  const vbHeight = 650;
+  const vbHeight = 730; // Boosted by +80px for superior vertical candle aspect ratio
   const padL = 15;
   const padR = 75; // room for right price axis labels
   const padT = 15;
@@ -151,7 +169,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const bankerBarsH = 100; // Banker histogram height
   const paneGap = 16; // Gap between date axis and banker sub-pane
 
-  const priceChartH = vbHeight - padT - dateAxisH - bankerTitleH - bankerBarsH - paneGap; // ~477px
+  const priceChartH = vbHeight - padT - dateAxisH - bankerTitleH - bankerBarsH - paneGap; // ~557px (+80px taller)
   const chartW = vbWidth - padL - padR;
 
   // Coordinate functions
@@ -272,6 +290,118 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     };
   });
 
+  // 3-Step Super Money Tactical Signals (••• READY, ▲ BUY, ⭐ SUPER, ▼ EXIT)
+  const signals = useMemo(() => {
+    if (!showSignals || sliceCloses.length < 2) return [];
+
+    const sigList: {
+      index: number;
+      type: 'READY' | 'BUY' | 'SUPER' | 'EXIT';
+      label: string;
+      color: string;
+      x: number;
+      y: number;
+      position: 'above' | 'below';
+    }[] = [];
+
+    let lastType: string | null = null;
+
+    for (let i = 0; i < sliceCloses.length; i++) {
+      const close = sliceCloses[i];
+      const open = sliceOpens[i] !== undefined && !isNaN(sliceOpens[i]) ? sliceOpens[i] : (i > 0 ? sliceCloses[i - 1] : close);
+      const high = sliceHighs[i] !== undefined && !isNaN(sliceHighs[i]) ? sliceHighs[i] : Math.max(open, close);
+      const low = sliceLows[i] !== undefined && !isNaN(sliceLows[i]) ? sliceLows[i] : Math.min(open, close);
+      const isBull = close >= open;
+
+      const e50 = sliceEma50[i];
+      const e150 = sliceEma150[i];
+      const e200 = sliceEma200[i];
+      const bVal = sliceBanker[i] ?? 0;
+      const prevBVal = i > 0 ? (sliceBanker[i - 1] ?? 0) : 0;
+
+      const dist200 = e200 ? ((close - e200) / e200) * 100 : 0;
+      const dist150 = e150 ? ((close - e150) / e150) * 100 : 0;
+      const nearSupport = (e200 && dist200 >= -4 && dist200 <= 3.5) || (e150 && dist150 >= -3 && dist150 <= 3.5);
+
+      const x = getX(i, sliceCloses.length);
+      const yHigh = getPriceY(high);
+      const yLow = getPriceY(low);
+
+      // STEP 3: ⭐ SUPER MONEY (Banker crosses >= 10, in trend)
+      if (bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
+        if (lastType !== 'SUPER') {
+          sigList.push({
+            index: i,
+            type: 'SUPER',
+            label: '⭐ SUPER',
+            color: '#F59E0B',
+            x,
+            y: yHigh - 16,
+            position: 'above'
+          });
+          lastType = 'SUPER';
+          continue;
+        }
+      }
+
+      // STEP 2: 🟢 BUY ZONE (At/near EMA support + Banker emerges > 0 on green bar)
+      if (nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
+        if (lastType !== 'BUY') {
+          sigList.push({
+            index: i,
+            type: 'BUY',
+            label: '▲ BUY',
+            color: '#10B981',
+            x,
+            y: yLow + 16,
+            position: 'below'
+          });
+          lastType = 'BUY';
+          continue;
+        }
+      }
+
+      // STEP 1: 🟡 READY (Near EMA support, Banker = 0, setup forming)
+      if (nearSupport && bVal === 0) {
+        if (lastType !== 'READY' && lastType !== 'BUY') {
+          const lastSame = sigList.filter(s => s.type === 'READY').pop();
+          if (!lastSame || (i - lastSame.index >= 8)) {
+            sigList.push({
+              index: i,
+              type: 'READY',
+              label: '••• READY',
+              color: '#FBBF24',
+              x,
+              y: yLow + 14,
+              position: 'below'
+            });
+            lastType = 'READY';
+            continue;
+          }
+        }
+      }
+
+      // EXIT: 🔴 DANGER / STOP LOSS (Breakdown below EMA 200 or Banker collapse)
+      if ((dist200 < -4 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close))) {
+        if (lastType !== 'EXIT') {
+          sigList.push({
+            index: i,
+            type: 'EXIT',
+            label: '▼ EXIT',
+            color: '#F43F5E',
+            x,
+            y: yHigh - 16,
+            position: 'above'
+          });
+          lastType = 'EXIT';
+          continue;
+        }
+      }
+    }
+
+    return sigList;
+  }, [sliceCloses, sliceOpens, sliceHighs, sliceLows, sliceEma50, sliceEma150, sliceEma200, sliceBanker, showSignals, minPrice, maxPrice, priceChartH, padT, chartW]);
+
   // Date ticks (5-6 evenly spaced)
   const dateTickIndices = useMemo(() => {
     if (sliceDates.length === 0) return [];
@@ -302,7 +432,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     return dateStr;
   };
 
-  // Interactive Mouse Move (Hover Crosshair)
+  // Interactive Mouse Move (Hover Crosshair & Dragging)
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
@@ -310,40 +440,62 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     const normX = (mouseX / rect.width) * vbWidth;
     const relX = Math.max(0, Math.min(chartW, normX - padL));
     const idx = Math.round((relX / chartW) * (sliceCloses.length - 1));
-    setHoverIdx(idx);
-
-    // If dragging to pan
-    if (isDragging && dragInitialRange) {
-      const deltaX = e.clientX - dragStartX;
-      const barsDelta = Math.round((deltaX / rect.width) * (dragInitialRange.end - dragInitialRange.start));
-      const rangeSpan = dragInitialRange.end - dragInitialRange.start;
-
-      let newStart = dragInitialRange.start - barsDelta;
-      let newEnd = dragInitialRange.end - barsDelta;
-
-      if (newStart < 0) {
-        newStart = 0;
-        newEnd = rangeSpan;
-      }
-      if (newEnd > totalBars) {
-        newEnd = totalBars;
-        newStart = Math.max(0, totalBars - rangeSpan);
-      }
-
-      setCustomRange({ start: newStart, end: newEnd });
+    if (!dragMode) {
+      setHoverIdx(idx);
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
-    setIsDragging(true);
-    setDragStartX(e.clientX);
-    setDragInitialRange({ ...activeRange });
-  };
+  // Global window listeners for drag so user can drag outside SVG smoothly
+  useEffect(() => {
+    if (!dragMode) return;
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    setDragInitialRange(null);
-  };
+    const onWindowMouseMove = (e: MouseEvent) => {
+      if (dragMode === 'Y_AXIS') {
+        const deltaY = dragStartY - e.clientY; // dragging up = stretch taller
+        const newScale = Math.max(0.35, Math.min(4.5, dragInitialPriceScale * Math.pow(1.008, deltaY)));
+        setPriceScale(newScale);
+      } else if (dragMode === 'X_AXIS') {
+        const deltaX = e.clientX - dragStartX; // dragging right = stretch bars
+        const currentSpan = dragInitialRange ? (dragInitialRange.end - dragInitialRange.start) : defaultLookback;
+        const scaleFactor = Math.pow(1.005, -deltaX);
+        const newSpan = Math.max(7, Math.min(totalBars, Math.round(currentSpan * scaleFactor)));
+        const anchorEnd = dragInitialRange ? dragInitialRange.end : totalBars;
+        const newStart = Math.max(0, anchorEnd - newSpan);
+        setCustomRange({ start: newStart, end: anchorEnd });
+      } else if (dragMode === 'PAN' && dragInitialRange && svgRef.current) {
+        const rect = svgRef.current.getBoundingClientRect();
+        const deltaX = e.clientX - dragStartX;
+        const barsDelta = Math.round((deltaX / rect.width) * (dragInitialRange.end - dragInitialRange.start));
+        const rangeSpan = dragInitialRange.end - dragInitialRange.start;
+
+        let newStart = dragInitialRange.start - barsDelta;
+        let newEnd = dragInitialRange.end - barsDelta;
+
+        if (newStart < 0) {
+          newStart = 0;
+          newEnd = rangeSpan;
+        }
+        if (newEnd > totalBars) {
+          newEnd = totalBars;
+          newStart = Math.max(0, totalBars - rangeSpan);
+        }
+
+        setCustomRange({ start: newStart, end: newEnd });
+      }
+    };
+
+    const onWindowMouseUp = () => {
+      setDragMode(null);
+      setDragInitialRange(null);
+    };
+
+    window.addEventListener('mousemove', onWindowMouseMove);
+    window.addEventListener('mouseup', onWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onWindowMouseMove);
+      window.removeEventListener('mouseup', onWindowMouseUp);
+    };
+  }, [dragMode, dragStartY, dragStartX, dragInitialPriceScale, dragInitialRange, defaultLookback, totalBars]);
 
   // Zoom on Wheel (ONLY when Ctrl or Meta is held!) via non-passive listener
   useEffect(() => {
@@ -447,23 +599,39 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             {badge}
           </span>
 
-          {customRange && (
+          {(customRange || priceScale !== 1.0) && (
             <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-[11px] font-bold border border-cyan-500/30">
-              Zoom: {sliceCloses.length} bars
+              {customRange ? `${sliceCloses.length} bars` : ''} {priceScale !== 1.0 ? `Scale: ${(priceScale * 100).toFixed(0)}%` : ''}
             </span>
           )}
         </div>
 
         {/* Timeframe & Chart Style Toggles */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Reset Zoom Button */}
+          {/* Signals Toggle Button */}
+          <button
+            onClick={() => setShowSignals(prev => !prev)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              showSignals
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm shadow-amber-500/20'
+                : 'bg-[#1E222D] text-slate-400 border-white/10 hover:text-white'
+            }`}
+            title="Toggle 3-Step Super Money Signals (••• Ready, ▲ Buy, ⭐ Super)"
+          >
+            <Zap className={`w-3.5 h-3.5 ${showSignals ? 'text-amber-400' : 'text-slate-400'}`} />
+            <span>Signals {showSignals ? 'ON' : 'OFF'}</span>
+          </button>
+
+          {/* Reset Zoom & Scale Button */}
           <button
             onClick={() => {
               setTimeframe('6M');
               setCustomRange(null);
+              setPriceScale(1.0);
+              setPriceCenterShift(0);
             }}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1E222D] hover:bg-[#2A2E39] border border-white/10 text-slate-300 hover:text-cyan-300 text-xs font-bold transition-colors cursor-pointer"
-            title="Reset to 6M default timeframe"
+            title="Reset to 6M timeframe and auto-scale"
           >
             <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
             <span>Reset 6M</span>
@@ -563,10 +731,10 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
         )}
       </div>
 
-      {/* Main Multi-Pane SVG Chart (Price ~460px + Banker ~110px) */}
+      {/* Main Multi-Pane SVG Chart (Price ~557px + Banker ~116px = 730px Total) */}
       <div 
         ref={containerRef}
-        className="relative w-full h-[560px] cursor-crosshair select-none"
+        className="relative w-full h-[640px] cursor-crosshair select-none"
       >
         {/* Floating Zoom Hint when user scrolls without Ctrl */}
         {showZoomHint && (
@@ -580,11 +748,14 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           preserveAspectRatio="none"
           className="w-full h-full"
           onMouseMove={handleMouseMove}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
+          onMouseDown={(e) => {
+            // Main chart body pan
+            setDragMode('PAN');
+            setDragStartX(e.clientX);
+            setDragInitialRange({ ...activeRange });
+          }}
           onMouseLeave={() => {
             setHoverIdx(null);
-            setIsDragging(false);
           }}
         >
           <defs>
@@ -621,6 +792,27 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               </text>
             </g>
           ))}
+
+          {/* Interactive Y-Axis Price Drag Surface (Right Scale) */}
+          <rect
+            x={vbWidth - padR}
+            y={padT}
+            width={padR}
+            height={priceChartH}
+            fill="transparent"
+            style={{ cursor: 'ns-resize' }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              setDragMode('Y_AXIS');
+              setDragStartY(e.clientY);
+              setDragInitialPriceScale(priceScale);
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setPriceScale(1.0);
+              setPriceCenterShift(0);
+            }}
+          />
 
           {/* Current Price Reference Line */}
           <line
@@ -727,6 +919,63 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                   />
                 </g>
               ))}
+
+              {/* 3-Step Super Money Tactical Signals Badges */}
+              {showSignals && signals.map((sig, sIdx) => (
+                <g key={`sig-${sIdx}`} className="pointer-events-none transition-all">
+                  {sig.position === 'below' ? (
+                    <g transform={`translate(${sig.x}, ${sig.y})`}>
+                      <line x1="0" y1="-12" x2="0" y2="-4" stroke={sig.color} strokeWidth="1" strokeDasharray="2 2" opacity="0.65" />
+                      <rect
+                        x={sig.type === 'READY' ? -28 : -24}
+                        y="-4"
+                        width={sig.type === 'READY' ? 56 : 48}
+                        height="17"
+                        rx="5"
+                        fill="#0F172A"
+                        stroke={sig.color}
+                        strokeWidth="1.2"
+                      />
+                      <text
+                        x="0"
+                        y="8.5"
+                        fill={sig.color}
+                        fontSize="9.5"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                        fontFamily="sans-serif"
+                      >
+                        {sig.label}
+                      </text>
+                    </g>
+                  ) : (
+                    <g transform={`translate(${sig.x}, ${sig.y})`}>
+                      <line x1="0" y1="4" x2="0" y2="12" stroke={sig.color} strokeWidth="1" strokeDasharray="2 2" opacity="0.65" />
+                      <rect
+                        x={sig.type === 'SUPER' ? -30 : -24}
+                        y="-14"
+                        width={sig.type === 'SUPER' ? 60 : 48}
+                        height="17"
+                        rx="5"
+                        fill="#0F172A"
+                        stroke={sig.color}
+                        strokeWidth="1.2"
+                      />
+                      <text
+                        x="0"
+                        y="-1.5"
+                        fill={sig.color}
+                        fontSize="9.5"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                        fontFamily="sans-serif"
+                      >
+                        {sig.label}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              ))}
             </>
           )}
 
@@ -750,6 +999,26 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               </text>
             );
           })}
+
+          {/* Interactive X-Axis Date Drag Surface (Bottom Date Scale) */}
+          <rect
+            x={padL}
+            y={padT + priceChartH}
+            width={chartW}
+            height={dateAxisH}
+            fill="transparent"
+            style={{ cursor: 'ew-resize' }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              setDragMode('X_AXIS');
+              setDragStartX(e.clientX);
+              setDragInitialRange({ ...activeRange });
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setCustomRange(null);
+            }}
+          />
 
           {/* ============================================================ */}
           {/* PANE 2: BANKER MCDX FLOW SUB-CHART */}
@@ -961,7 +1230,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
         <div className="flex items-center gap-3">
           <span className="text-[11px] text-slate-400">
-            💡 Scroll / Drag to Pan & Zoom
+            💡 ลากแกนราคา (Y) ยืดความสูง • ลากแกนวันที่ (X) ยืดความอ้วน • ดับเบิ้ลคลิกเพื่อ Reset
           </span>
           {onAddInflow && (
             <button
