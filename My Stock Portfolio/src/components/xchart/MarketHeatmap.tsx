@@ -139,11 +139,11 @@ export const MarketHeatmap: React.FC = () => {
             <span className="flex items-center gap-1 text-emerald-400">
               <TrendingUp className="w-3.5 h-3.5" /> {stats.advance}
             </span>
-            <span className="text-slate-500">|</span>
+            <span className="text-slate-400">|</span>
             <span className="flex items-center gap-1 text-rose-400">
               <TrendingDown className="w-3.5 h-3.5" /> {stats.decline}
             </span>
-            <span className="text-slate-500">|</span>
+            <span className="text-slate-400">|</span>
             <span className={stats.avgChg >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
               Avg: {stats.avgChg >= 0 ? `+${stats.avgChg}%` : `${stats.avgChg}%`}
             </span>
