@@ -230,12 +230,51 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     return `M ${pts.join(' L ')}`;
   }, [sliceCloses, sliceBankerMa, sliceBanker, priceChartH, dateAxisH, paneGap, padT]);
 
-  // Price Grid Lines (5 horizontal levels)
-  const priceGridLevels = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
-    const price = minPrice + ratio * priceRange;
-    const y = padT + priceChartH - ratio * priceChartH;
-    return { price, y };
-  });
+  // Dynamic Auto-Adjusting Price Grid Levels (TradingView Nice Numbers Algorithm)
+  const priceGridLevels = useMemo(() => {
+    if (priceRange <= 0) return [];
+
+    // Target vertical spacing ~40-45px for dense professional price scale
+    const targetCount = Math.max(7, Math.min(16, Math.floor(priceChartH / 42)));
+    const rawStep = priceRange / targetCount;
+
+    // Find the nearest "Nice Round Number" (1, 2, 2.5, 5, 10, 20, 25, 50, 100...)
+    const power = Math.floor(Math.log10(rawStep));
+    const magnitude = Math.pow(10, power);
+    const fraction = rawStep / magnitude;
+
+    let niceStep: number;
+    if (fraction < 1.4) {
+      niceStep = 1 * magnitude;
+    } else if (fraction < 2.8) {
+      niceStep = 2 * magnitude;
+    } else if (fraction < 4.5) {
+      niceStep = 2.5 * magnitude;
+    } else if (fraction < 7.5) {
+      niceStep = 5 * magnitude;
+    } else {
+      niceStep = 10 * magnitude;
+    }
+
+    const firstTick = Math.ceil(minPrice / niceStep) * niceStep;
+    const levels: { price: number; y: number; label: string }[] = [];
+
+    // Format based on step precision
+    const decimals = niceStep >= 1 ? 2 : (niceStep >= 0.1 ? 2 : 3);
+
+    for (let p = firstTick; p <= maxPrice + niceStep * 0.01; p += niceStep) {
+      const y = getPriceY(p);
+      if (y >= padT - 2 && y <= padT + priceChartH + 2) {
+        levels.push({
+          price: p,
+          y,
+          label: p.toFixed(decimals)
+        });
+      }
+    }
+
+    return levels;
+  }, [minPrice, maxPrice, priceRange, priceChartH, padT]);
 
   const curPriceY = getPriceY(currentPrice);
 
@@ -402,35 +441,102 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     return sigList;
   }, [sliceCloses, sliceOpens, sliceHighs, sliceLows, sliceEma50, sliceEma150, sliceEma200, sliceBanker, showSignals, minPrice, maxPrice, priceChartH, padT, chartW]);
 
-  // Date ticks (5-6 evenly spaced)
-  const dateTickIndices = useMemo(() => {
+  // Dynamic Auto-Adjusting Date Ticks (TradingView Style ~48px spacing)
+  const dateTicks = useMemo(() => {
     if (sliceDates.length === 0) return [];
-    const count = Math.min(6, sliceDates.length);
-    const step = Math.floor((sliceDates.length - 1) / (count - 1)) || 1;
-    const indices: number[] = [];
-    for (let i = 0; i < sliceDates.length; i += step) {
-      indices.push(i);
-    }
-    if (indices[indices.length - 1] !== sliceDates.length - 1) {
-      indices.push(sliceDates.length - 1);
-    }
-    return indices;
-  }, [sliceDates]);
+    const N = sliceDates.length;
 
-  const formatDateLabel = (dateStr?: string) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length >= 3) {
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const mIdx = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      const yr = parts[0].slice(2);
-      return timeframe === '5Y' || timeframe === 'ALL'
-        ? `${monthNames[mIdx] || ''} '${yr}`
-        : `${monthNames[mIdx] || ''} ${day}`;
+    // Target horizontal pixel spacing between date ticks (~48px)
+    const targetCount = Math.max(8, Math.min(22, Math.floor(chartW / 48)));
+    const step = Math.max(1, Math.round((N - 1) / (targetCount - 1)));
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const ticks: { index: number; x: number; label: string; isYear: boolean; isMonth: boolean }[] = [];
+
+    let prevYear: string | null = null;
+    let prevMonth: string | null = null;
+
+    for (let i = 0; i < N; i += step) {
+      const dateStr = sliceDates[i];
+      if (!dateStr) continue;
+
+      const parts = dateStr.split('-');
+      const yr = parts[0] || '';
+      const mIdx = parts.length >= 2 ? parseInt(parts[1], 10) - 1 : 0;
+      const day = parts.length >= 3 ? parseInt(parts[2], 10) : 0;
+      const monthName = monthNames[mIdx] || '';
+
+      const isNewYear = prevYear !== null && yr !== prevYear;
+      const isNewMonth = prevMonth !== null && parts[1] !== prevMonth;
+
+      let label = '';
+      let isYear = false;
+      let isMonth = false;
+
+      if (timeframe === '5Y' || timeframe === 'ALL' || N > 400) {
+        // Multi-year view: show Year on year boundaries, Month otherwise
+        if (isNewYear || i === 0) {
+          label = yr;
+          isYear = true;
+        } else {
+          label = monthName;
+          isMonth = true;
+        }
+      } else if (timeframe === '1Y' || N > 150) {
+        // 1 Year view: show Month names, Year on year change
+        if (isNewYear) {
+          label = yr;
+          isYear = true;
+        } else {
+          label = monthName;
+          isMonth = true;
+        }
+      } else {
+        // 6M / 3M / 1M daily views: show Month on month change, Day number inside month
+        if (isNewYear) {
+          label = yr;
+          isYear = true;
+        } else if (isNewMonth || i === 0) {
+          label = monthName;
+          isMonth = true;
+        } else {
+          label = `${monthName} ${day}`;
+        }
+      }
+
+      ticks.push({
+        index: i,
+        x: getX(i, N),
+        label,
+        isYear,
+        isMonth
+      });
+
+      prevYear = yr;
+      prevMonth = parts[1] || null;
     }
-    return dateStr;
-  };
+
+    // Always ensure the very last bar has a tick if space permits
+    const lastIdx = N - 1;
+    if (ticks.length > 0 && lastIdx - ticks[ticks.length - 1].index > step * 0.5) {
+      const dateStr = sliceDates[lastIdx];
+      if (dateStr) {
+        const parts = dateStr.split('-');
+        const mIdx = parts.length >= 2 ? parseInt(parts[1], 10) - 1 : 0;
+        const day = parts.length >= 3 ? parseInt(parts[2], 10) : 0;
+        const monthName = monthNames[mIdx] || '';
+        ticks.push({
+          index: lastIdx,
+          x: getX(lastIdx, N),
+          label: (timeframe === '5Y' || timeframe === 'ALL') ? parts[0] : `${monthName} ${day}`,
+          isYear: false,
+          isMonth: true
+        });
+      }
+    }
+
+    return ticks;
+  }, [sliceDates, chartW, timeframe]);
 
   // Interactive Mouse Move (Hover Crosshair & Dragging)
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -770,9 +876,33 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           {/* PANE 1: PRICE CHART AREA */}
           {/* ============================================================ */}
 
-          {/* Price Grid Lines & Right Axis Labels */}
+          {/* Subtle Vertical Grid Lines for Date Ticks */}
+          {dateTicks.map((tick, tIdx) => (
+            <line
+              key={`vgrid-${tIdx}`}
+              x1={tick.x}
+              y1={padT}
+              x2={tick.x}
+              y2={padT + priceChartH}
+              stroke="rgba(255,255,255,0.03)"
+              strokeDasharray="2 3"
+            />
+          ))}
+
+          {/* Right Axis Sidebar Divider Line */}
+          <line
+            x1={vbWidth - padR}
+            y1={padT}
+            x2={vbWidth - padR}
+            y2={padT + priceChartH}
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth="1"
+          />
+
+          {/* Dynamic Auto-Adjusting Price Grid Lines & Right Axis Labels */}
           {priceGridLevels.map((g, i) => (
             <g key={i}>
+              {/* Horizontal Grid Line across chart */}
               <line
                 x1={padL}
                 y1={g.y}
@@ -781,14 +911,24 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                 stroke="rgba(255,255,255,0.06)"
                 strokeDasharray="3 3"
               />
+              {/* Tick Notch on Right Axis */}
+              <line
+                x1={vbWidth - padR}
+                y1={g.y}
+                x2={vbWidth - padR + 4}
+                y2={g.y}
+                stroke="rgba(255,255,255,0.25)"
+                strokeWidth="1"
+              />
+              {/* Price Label */}
               <text
                 x={vbWidth - padR + 8}
-                y={g.y + 4}
+                y={g.y + 3.5}
                 fill="#94A3B8"
-                fontSize="11"
+                fontSize="10"
                 fontFamily="sans-serif"
               >
-                ${g.price.toFixed(1)}
+                ${g.label}
               </text>
             </g>
           ))}
@@ -980,25 +1120,33 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           )}
 
           {/* ============================================================ */}
-          {/* X-AXIS DATE LABELS */}
+          {/* X-AXIS DATE LABELS (TradingView Dense Auto-Adjusting Ticks) */}
           {/* ============================================================ */}
-          {dateTickIndices.map((dIdx) => {
-            const dateX = getX(dIdx, sliceCloses.length);
-            const label = formatDateLabel(sliceDates[dIdx]);
-            return (
+          {dateTicks.map((tick, dIdx) => (
+            <g key={`dtick-${dIdx}`}>
+              {/* Tick Notch */}
+              <line
+                x1={tick.x}
+                y1={padT + priceChartH}
+                x2={tick.x}
+                y2={padT + priceChartH + 4}
+                stroke="rgba(255,255,255,0.2)"
+                strokeWidth="1"
+              />
+              {/* Date Label */}
               <text
-                key={dIdx}
-                x={dateX}
-                y={padT + priceChartH + 18}
-                fill="#94A3B8"
-                fontSize="11"
+                x={tick.x}
+                y={padT + priceChartH + 17}
+                fill={tick.isYear ? '#F8FAFC' : (tick.isMonth ? '#CBD5E1' : '#94A3B8')}
+                fontSize={tick.isYear ? '10.5' : '10'}
+                fontWeight={tick.isYear ? 'bold' : (tick.isMonth ? '600' : 'normal')}
                 fontFamily="sans-serif"
                 textAnchor="middle"
               >
-                {label}
+                {tick.label}
               </text>
-            );
-          })}
+            </g>
+          ))}
 
           {/* Interactive X-Axis Date Drag Surface (Bottom Date Scale) */}
           <rect
