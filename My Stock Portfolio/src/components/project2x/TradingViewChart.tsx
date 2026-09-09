@@ -27,7 +27,7 @@ interface TradingViewChartProps {
   onAddInflow?: () => void;
 }
 
-export type TimeFrame = '7D' | '1M' | '3M' | '6M' | '1Y' | '5Y' | 'ALL';
+export type TimeFrame = '7D' | '1M' | '3M' | '6M' | '10M' | '1Y' | '5Y' | 'ALL';
 export type ChartStyle = 'AREA' | 'CANDLE';
 
 export const TradingViewChart: React.FC<TradingViewChartProps> = ({
@@ -58,8 +58,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Timeframe default is 6M (per explicit user instruction)
-  const [timeframe, setTimeframe] = useState<TimeFrame>('6M');
+  // Timeframe default is 10M (per explicit user instruction)
+  const [timeframe, setTimeframe] = useState<TimeFrame>('10M');
   const [chartStyle, setChartStyle] = useState<ChartStyle>('CANDLE');
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [showZoomHint, setShowZoomHint] = useState<boolean>(false);
@@ -88,10 +88,11 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       case '1M': return 22;
       case '3M': return 65;
       case '6M': return 130;
+      case '10M': return 215; // ~10 months (~21.5 trading days/mo)
       case '1Y': return 252;
       case '5Y': return 1260;
       case 'ALL': return totalBars;
-      default: return 130;
+      default: return 215;
     }
   }, [timeframe, totalBars]);
 
@@ -733,16 +734,16 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           {/* Reset Zoom & Scale Button */}
           <button
             onClick={() => {
-              setTimeframe('6M');
+              setTimeframe('10M');
               setCustomRange(null);
               setPriceScale(1.0);
               setPriceCenterShift(0);
             }}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1E222D] hover:bg-[#2A2E39] border border-white/10 text-slate-300 hover:text-cyan-300 text-xs font-bold transition-colors cursor-pointer"
-            title="Reset to 6M timeframe and auto-scale"
+            title="Reset to 10M timeframe and auto-scale"
           >
             <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Reset 6M</span>
+            <span>Reset 10M</span>
           </button>
 
           {/* Chart Style Toggle */}
@@ -765,9 +766,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             </button>
           </div>
 
-          {/* Timeframe Zoom Buttons: 7D | 1M | 3M | 6M | 1Y | 5Y | ALL */}
+          {/* Timeframe Zoom Buttons: 7D | 1M | 3M | 6M | 10M | 1Y | 5Y | ALL */}
           <div className="flex items-center p-1 rounded-xl bg-[#1E222D] border border-white/10 text-xs">
-            {(['7D', '1M', '3M', '6M', '1Y', '5Y', 'ALL'] as TimeFrame[]).map(tf => (
+            {(['7D', '1M', '3M', '6M', '10M', '1Y', '5Y', 'ALL'] as TimeFrame[]).map(tf => (
               <button
                 key={tf}
                 onClick={() => {
