@@ -19,15 +19,17 @@ export const MiniSparkline: React.FC<MiniSparklineProps> = ({
   showEma = false,
   className = ''
 }) => {
-  if (!closes || closes.length < 2) {
-    return <div className={`h-[${height}px] bg-transparent ${className}`} />;
+  const validCloses = (closes || []).filter(c => typeof c === 'number' && !isNaN(c));
+
+  if (validCloses.length < 2) {
+    return <div style={{ width, height }} className={`bg-transparent ${className}`} />;
   }
 
   // Calculate min and max for scaling
-  let allVals: number[] = [...closes];
+  let allVals: number[] = [...validCloses];
   if (showEma) {
-    ema150.forEach(v => { if (v !== null && v !== undefined) allVals.push(v); });
-    ema200.forEach(v => { if (v !== null && v !== undefined) allVals.push(v); });
+    ema150.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allVals.push(v); });
+    ema200.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allVals.push(v); });
   }
 
   const min = Math.min(...allVals);
@@ -49,14 +51,14 @@ export const MiniSparkline: React.FC<MiniSparklineProps> = ({
   };
 
   // Build Price Path
-  const pricePoints = closes.map((c, i) => `${getX(i, closes.length)},${getY(c)}`);
+  const pricePoints = validCloses.map((c, i) => `${getX(i, validCloses.length)},${getY(c)}`);
   const pricePath = `M ${pricePoints.join(' L ')}`;
 
   // Area fill under price line
-  const areaPath = `M ${getX(0, closes.length)},${vbHeight} L ${pricePoints.join(' L ')} L ${getX(closes.length - 1, closes.length)},${vbHeight} Z`;
+  const areaPath = `M ${getX(0, validCloses.length)},${vbHeight} L ${pricePoints.join(' L ')} L ${getX(validCloses.length - 1, validCloses.length)},${vbHeight} Z`;
 
   // Color determination: Bullish or Bearish over the sparkline period
-  const isUp = closes[closes.length - 1] >= closes[0];
+  const isUp = validCloses[validCloses.length - 1] >= validCloses[0];
   const priceColor = isUp ? '#26A69A' : '#EF5350'; // TradingView Up/Down
   const fillColor = isUp ? 'rgba(38, 166, 154, 0.15)' : 'rgba(239, 83, 80, 0.15)';
 

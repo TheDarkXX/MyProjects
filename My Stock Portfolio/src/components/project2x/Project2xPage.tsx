@@ -426,11 +426,16 @@ export const Project2xPage: React.FC = () => {
                               showEma={true}
                             />
                           </div>
-                        ) : null}
+                        ) : (
+                          <div className="h-8 mb-2 rounded bg-[#131722]/50 animate-pulse" />
+                        )}
 
                         <button
                           onClick={() => {
                             setSelectedTab('inflow');
+                            if (activePortfolioId) {
+                              calculateRecommendation(activePortfolioId, Number(inflowAmountInput) || 35000);
+                            }
                           }}
                           className="w-full py-1.5 rounded-lg bg-[#2A2E39] hover:bg-[#2962FF] text-slate-200 hover:text-white text-[13px] font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         >
@@ -531,11 +536,16 @@ export const Project2xPage: React.FC = () => {
                               showEma={true}
                             />
                           </div>
-                        ) : null}
+                        ) : (
+                          <div className="h-8 mb-2 rounded bg-[#131722]/50 animate-pulse" />
+                        )}
 
                         <button
                           onClick={() => {
                             setSelectedTab('inflow');
+                            if (activePortfolioId) {
+                              calculateRecommendation(activePortfolioId, Number(inflowAmountInput) || 35000);
+                            }
                           }}
                           className="w-full py-1.5 rounded-lg bg-[#2A2E39] hover:bg-[#823AFD] text-slate-200 hover:text-white text-[13px] font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         >

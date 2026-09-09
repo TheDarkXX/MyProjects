@@ -14,6 +14,15 @@ const project2xRoutes = new Hono();
 // Require auth
 project2xRoutes.use('*', authMiddleware);
 
+// Validate portfolioId parameter on all :pid routes
+project2xRoutes.use('/:pid/*', async (c, next) => {
+  const pid = c.req.param('pid');
+  if (!pid || pid === 'undefined' || pid === 'null') {
+    return c.json({ error: 'Valid portfolio ID is required' }, 400);
+  }
+  await next();
+});
+
 /**
  * GET /api/project-2x/dashboard/:pid
  * Master HUD data: Current value (THB/USD), Progress ring %, ETA 3 bands, FX rate, Dime Cash

@@ -19,7 +19,8 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   children,
   showPercentText = false
 }) => {
-  const clampedPercent = Math.min(100, Math.max(0, percent));
+  const validPercent = typeof percent === 'number' && !isNaN(percent) ? percent : 0;
+  const clampedPercent = Math.min(100, Math.max(0, validPercent));
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (clampedPercent / 100) * circumference;

@@ -110,9 +110,9 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
   const isSufficientHistory = minDate && (new Date(minDate).getTime() <= new Date(targetStartDate).getTime() + 20 * 24 * 60 * 60 * 1000);
   const isFresh = diffDays <= 1 || (new Date().getDay() === 0 && diffDays <= 2) || (new Date().getDay() === 1 && diffDays <= 3);
 
-  if (isSufficientHistory && isFresh && count >= 200) {
+  if (isFresh && count >= 50) {
     const rows = db.prepare('SELECT date, price FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
-    if (rows.length >= 180) {
+    if (rows.length >= 40) {
       return rows;
     }
   }
