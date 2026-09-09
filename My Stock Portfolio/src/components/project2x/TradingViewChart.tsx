@@ -58,21 +58,63 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Timeframe default is 10M (per explicit user instruction)
-  const [timeframe, setTimeframe] = useState<TimeFrame>('10M');
-  const [chartStyle, setChartStyle] = useState<ChartStyle>('CANDLE');
+  // Load initial settings from localStorage
+  const [timeframe, setTimeframe] = useState<TimeFrame>(() => {
+    try {
+      const saved = localStorage.getItem('p2x_chart_timeframe');
+      if (saved && ['10M', '1Y', '5Y', 'ALL'].includes(saved)) {
+        return saved as TimeFrame;
+      }
+    } catch (e) {}
+    return '10M';
+  });
+
+  const [chartStyle, setChartStyle] = useState<ChartStyle>(() => {
+    try {
+      const saved = localStorage.getItem('p2x_chart_style');
+      if (saved === 'CANDLE' || saved === 'AREA') return saved;
+    } catch (e) {}
+    return 'CANDLE';
+  });
+
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [showZoomHint, setShowZoomHint] = useState<boolean>(false);
   const zoomHintTimer = useRef<any>(null);
 
   // Custom Zoom & Pan Window: [startIdx, endIdx] into raw arrays
-  const [customRange, setCustomRange] = useState<{ start: number; end: number } | null>(null);
+  const [customRange, setCustomRange] = useState<{ start: number; end: number } | null>(() => {
+    try {
+      const saved = localStorage.getItem(`p2x_chart_range_${symbol}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.start === 'number' && typeof parsed.end === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return null;
+  });
 
   // Signals Toggle (3-Step Super Money Signals)
-  const [showSignals, setShowSignals] = useState<boolean>(true);
+  const [showSignals, setShowSignals] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('p2x_chart_show_signals');
+      if (saved !== null) return saved === 'true';
+    } catch (e) {}
+    return true;
+  });
 
   // Dynamic Scale States (Drag to stretch/compress)
-  const [priceScale, setPriceScale] = useState<number>(1.0); // >1.0 = taller candles, <1.0 = compressed
+  const [priceScale, setPriceScale] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('p2x_chart_price_scale');
+      if (saved) {
+        const val = parseFloat(saved);
+        if (!isNaN(val) && val >= 0.35 && val <= 4.5) return val;
+      }
+    } catch (e) {}
+    return 1.0;
+  });
   const [priceCenterShift, setPriceCenterShift] = useState<number>(0);
   type DragMode = 'PAN' | 'Y_AXIS' | 'X_AXIS' | null;
   const [dragMode, setDragMode] = useState<DragMode>(null);
@@ -84,13 +126,65 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const rawCloses = useMemo(() => (closes || []).filter(c => typeof c === 'number' && !isNaN(c)), [closes]);
   const totalBars = rawCloses.length;
 
-  // Determine lookback based on timeframe
+  // Sync state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('p2x_chart_timeframe', timeframe);
+    } catch (e) {}
+  }, [timeframe]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('p2x_chart_style', chartStyle);
+    } catch (e) {}
+  }, [chartStyle]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('p2x_chart_show_signals', String(showSignals));
+    } catch (e) {}
+  }, [showSignals]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('p2x_chart_price_scale', priceScale.toFixed(3));
+    } catch (e) {}
+  }, [priceScale]);
+
+  useEffect(() => {
+    try {
+      if (customRange) {
+        localStorage.setItem(`p2x_chart_range_${symbol}`, JSON.stringify(customRange));
+      } else {
+        localStorage.removeItem(`p2x_chart_range_${symbol}`);
+      }
+    } catch (e) {}
+  }, [customRange, symbol]);
+
+  // When symbol changes, load range for that symbol or reset to null
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`p2x_chart_range_${symbol}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.start === 'number' && typeof parsed.end === 'number') {
+          setCustomRange(parsed);
+          setPriceCenterShift(0);
+          return;
+        }
+      }
+    } catch (e) {}
+    setCustomRange(null);
+    setPriceCenterShift(0);
+  }, [symbol]);
+
+  useEffect(() => {
+    setCustomRange(null);
+  }, [timeframe]);
+
+  // Determine lookback based on timeframe (Macro compounder focus: 10M, 1Y, 5Y, ALL)
   const defaultLookback = useMemo(() => {
     switch (timeframe) {
-      case '7D': return 7;
-      case '1M': return 22;
-      case '3M': return 65;
-      case '6M': return 130;
       case '10M': return 215; // ~10 months (~21.5 trading days/mo)
       case '1Y': return 252;
       case '5Y': return 1260;
@@ -98,17 +192,6 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       default: return 215;
     }
   }, [timeframe, totalBars]);
-
-  // Reset custom range & price scale when symbol changes
-  useEffect(() => {
-    setCustomRange(null);
-    setPriceScale(1.0);
-    setPriceCenterShift(0);
-  }, [symbol]);
-
-  useEffect(() => {
-    setCustomRange(null);
-  }, [timeframe]);
 
   // Active slice range
   const activeRange = useMemo(() => {
@@ -335,14 +418,15 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     };
   });
 
-  // 3-Step Super Money Tactical Signals (••• READY, ▲ BUY, ⭐ SUPER, ▼ EXIT)
+  // 3-Step Super Money Tactical Signals (••• READY, ▲ BUY, ★ SUPER, ▼ EXIT) - Icon Only, No Text
   const signals = useMemo(() => {
     if (!showSignals || sliceCloses.length < 2) return [];
 
     const sigList: {
       index: number;
       type: 'READY' | 'BUY' | 'SUPER' | 'EXIT';
-      label: string;
+      icon: string;
+      title: string;
       color: string;
       x: number;
       y: number;
@@ -372,33 +456,35 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       const yHigh = getPriceY(high);
       const yLow = getPriceY(low);
 
-      // STEP 3: ⭐ SUPER MONEY (Banker crosses >= 10, in trend)
+      // STEP 3: ★ SUPER MONEY (Banker crosses >= 10, in trend) -> White Star below candle
       if (bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
         if (lastType !== 'SUPER') {
           sigList.push({
             index: i,
             type: 'SUPER',
-            label: '⭐ SUPER',
-            color: '#F59E0B',
+            icon: '★',
+            title: `★ SUPER MONEY ACCELERATION (Banker: ${bVal.toFixed(1)})`,
+            color: '#FFFFFF', // User requested: White color
             x,
-            y: yHigh - 16,
-            position: 'above'
+            y: yLow, // Placed below lowest wick
+            position: 'below'
           });
           lastType = 'SUPER';
           continue;
         }
       }
 
-      // STEP 2: 🟢 BUY ZONE (At/near EMA support + Banker emerges > 0 on green bar)
+      // STEP 2: ▲ BUY ZONE (At/near EMA support + Banker emerges > 0 on green bar) -> Yellow Triangle below candle
       if (nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
         if (lastType !== 'BUY') {
           sigList.push({
             index: i,
             type: 'BUY',
-            label: '▲ BUY',
-            color: '#10B981',
+            icon: '▲',
+            title: `▲ BUY STRIKE (EMA Bedrock Hold + Banker Flow: ${bVal.toFixed(1)})`,
+            color: '#FFE600', // User requested: Yellow color
             x,
-            y: yLow + 16,
+            y: yLow, // Placed below lowest wick
             position: 'below'
           });
           lastType = 'BUY';
@@ -406,7 +492,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
         }
       }
 
-      // STEP 1: 🟡 READY (Near EMA support, Banker = 0, setup forming)
+      // STEP 1: ••• READY (Near EMA support, Banker = 0, setup forming) -> Amber dots below candle
       if (nearSupport && bVal === 0) {
         if (lastType !== 'READY' && lastType !== 'BUY') {
           const lastSame = sigList.filter(s => s.type === 'READY').pop();
@@ -414,10 +500,11 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             sigList.push({
               index: i,
               type: 'READY',
-              label: '••• READY',
+              icon: '•••',
+              title: '••• READY SETUP (EMA Bedrock Test, Banker = 0)',
               color: '#FBBF24',
               x,
-              y: yLow + 14,
+              y: yLow, // Placed below lowest wick
               position: 'below'
             });
             lastType = 'READY';
@@ -426,16 +513,17 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
         }
       }
 
-      // EXIT: 🔴 DANGER / STOP LOSS (Breakdown below EMA 200 or Banker collapse)
+      // EXIT: ▼ DANGER / STOP LOSS (Breakdown below EMA 200 or Banker collapse) -> Red Triangle above candle
       if ((dist200 < -4 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close))) {
         if (lastType !== 'EXIT') {
           sigList.push({
             index: i,
             type: 'EXIT',
-            label: '▼ EXIT',
-            color: '#F43F5E',
+            icon: '▼',
+            title: '▼ EXIT SIGNAL (Bedrock Breakdown or Flow Collapse)',
+            color: '#FF1744',
             x,
-            y: yHigh - 16,
+            y: yHigh, // Placed above highest wick
             position: 'above'
           });
           lastType = 'EXIT';
@@ -741,6 +829,11 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               setCustomRange(null);
               setPriceScale(1.0);
               setPriceCenterShift(0);
+              try {
+                localStorage.setItem('p2x_chart_timeframe', '10M');
+                localStorage.setItem('p2x_chart_price_scale', '1.0');
+                localStorage.removeItem(`p2x_chart_range_${symbol}`);
+              } catch (e) {}
             }}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1E222D] hover:bg-[#2A2E39] border border-white/10 text-slate-300 hover:text-cyan-300 text-xs font-bold transition-colors cursor-pointer"
             title="Reset to 10M timeframe and auto-scale"
@@ -769,9 +862,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             </button>
           </div>
 
-          {/* Timeframe Zoom Buttons: 7D | 1M | 3M | 6M | 10M | 1Y | 5Y | ALL */}
+          {/* Timeframe Zoom Buttons: 10M | 1Y | 5Y | ALL */}
           <div className="flex items-center p-1 rounded-xl bg-[#1E222D] border border-white/10 text-xs">
-            {(['7D', '1M', '3M', '6M', '10M', '1Y', '5Y', 'ALL'] as TimeFrame[]).map(tf => (
+            {(['10M', '1Y', '5Y', 'ALL'] as TimeFrame[]).map(tf => (
               <button
                 key={tf}
                 onClick={() => {
@@ -957,6 +1050,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               e.stopPropagation();
               setPriceScale(1.0);
               setPriceCenterShift(0);
+              try {
+                localStorage.setItem('p2x_chart_price_scale', '1.0');
+              } catch (err) {}
             }}
           />
 
@@ -1066,62 +1162,43 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                 </g>
               ))}
 
-              {/* 3-Step Super Money Tactical Signals Badges */}
-              {showSignals && signals.map((sig, sIdx) => (
-                <g key={`sig-${sIdx}`} className="pointer-events-none transition-all">
-                  {sig.position === 'below' ? (
-                    <g transform={`translate(${sig.x}, ${sig.y})`}>
-                      <line x1="0" y1="-12" x2="0" y2="-4" stroke={sig.color} strokeWidth="1" strokeDasharray="2 2" opacity="0.65" />
-                      <rect
-                        x={sig.type === 'READY' ? -28 : -24}
-                        y="-4"
-                        width={sig.type === 'READY' ? 56 : 48}
-                        height="17"
-                        rx="5"
-                        fill="#0F172A"
-                        stroke={sig.color}
-                        strokeWidth="1.2"
-                      />
-                      <text
-                        x="0"
-                        y="8.5"
-                        fill={sig.color}
-                        fontSize="9.5"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                        fontFamily="sans-serif"
-                      >
-                        {sig.label}
-                      </text>
-                    </g>
-                  ) : (
-                    <g transform={`translate(${sig.x}, ${sig.y})`}>
-                      <line x1="0" y1="4" x2="0" y2="12" stroke={sig.color} strokeWidth="1" strokeDasharray="2 2" opacity="0.65" />
-                      <rect
-                        x={sig.type === 'SUPER' ? -30 : -24}
-                        y="-14"
-                        width={sig.type === 'SUPER' ? 60 : 48}
-                        height="17"
-                        rx="5"
-                        fill="#0F172A"
-                        stroke={sig.color}
-                        strokeWidth="1.2"
-                      />
-                      <text
-                        x="0"
-                        y="-1.5"
-                        fill={sig.color}
-                        fontSize="9.5"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                        fontFamily="sans-serif"
-                      >
-                        {sig.label}
-                      </text>
-                    </g>
-                  )}
-                </g>
-              ))}
+              {/* 3-Step Super Money Tactical Signals (Icon-Only, No Text) */}
+              {showSignals && signals.map((sig, sIdx) => {
+                const isBelow = sig.position === 'below';
+                // Smart Wick Padding: 18px below lowest wick tip (yLow), 14px above highest wick tip (yHigh)
+                const renderY = isBelow ? sig.y + 18 : sig.y - 14;
+
+                return (
+                  <g key={`sig-${sIdx}`} className="pointer-events-auto cursor-pointer">
+                    <title>{sig.title}</title>
+                    {/* Subtle micro stem dot connecting to candle wick tip */}
+                    <circle
+                      cx={sig.x}
+                      cy={isBelow ? sig.y + 4 : sig.y - 4}
+                      r="1.2"
+                      fill={sig.color}
+                      opacity="0.65"
+                    />
+                    {/* Bold Icon Glyph (+3 size levels: 18px - 20px) */}
+                    <text
+                      x={sig.x}
+                      y={renderY}
+                      fill={sig.color}
+                      fontSize={sig.type === 'SUPER' ? '20' : (sig.type === 'READY' ? '15' : '18')}
+                      fontWeight="900"
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontFamily="sans-serif, system-ui"
+                      style={{
+                        filter: 'drop-shadow(0px 2px 5px rgba(0, 0, 0, 0.95))',
+                        userSelect: 'none'
+                      }}
+                    >
+                      {sig.icon}
+                    </text>
+                  </g>
+                );
+              })}
             </>
           )}
 
@@ -1171,6 +1248,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             onDoubleClick={(e) => {
               e.stopPropagation();
               setCustomRange(null);
+              try {
+                localStorage.removeItem(`p2x_chart_range_${symbol}`);
+              } catch (err) {}
             }}
           />
 
