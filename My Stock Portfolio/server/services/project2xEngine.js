@@ -229,7 +229,7 @@ export async function syncShareQuotas(portfolioId, forceDefault = false) {
 /**
  * 5-Scenario Technical Classifier
  */
-export function classifyScenario({ currentPrice, ema50, ema150, ema200, banker, rsi14 }) {
+export function classifyScenario({ currentPrice, ema50, ema150, ema200, banker, rsi14, isLatestBullish = true, consecutiveRedBars = 0 }) {
   if (!currentPrice || !ema150 || !ema200) {
     return {
       scenario: 2,
@@ -269,17 +269,32 @@ export function classifyScenario({ currentPrice, ema50, ema150, ema200, banker, 
     };
   }
 
-  // 3. Golden Setup: Price touching or holding EMA 150/200 (-3% to +3%) AND Banker emerging (1 to 10)
+  // 3. Golden Setup: Price touching or holding EMA 150/200 (-3% to +3%) AND Banker emerging (1 to 12)
   const isNearEma = (distEma200 >= -3 && distEma200 <= 3) || (distEma150 >= -2 && distEma150 <= 3);
   if (isNearEma && banker > 0 && banker <= 12) {
+    // Bullish Reversal Confirmation Guard:
+    // If the stock is currently in heavy downward selloff (consecutive red bars without bounce),
+    // do NOT blindly trigger Golden Setup BUY_ZONE! Instead, mark as Testing Support (WAIT).
+    if (!isLatestBullish && consecutiveRedBars >= 2) {
+      return {
+        scenario: 2,
+        traffic_light: 'WAIT',
+        badge: 'Testing Support',
+        distEma150,
+        distEma200,
+        reason: `Price is pulling back to EMA 150/200 (${distEma200 >= 0 ? '+' : ''}${distEma200}%) with Banker (${banker}/20), but red selling pressure persists (${consecutiveRedBars} red bars). Wait for a green rebound candle.`,
+        reason_th: `ราคากำลังย่อลงมาหาแนวรับ EMA 150/200 (${distEma200 >= 0 ? '+' : ''}${distEma200}%) สถาบันมี (${banker}/20) แต่ยังโดนเทขายแท่งแดง (${consecutiveRedBars} แท่งติด) — รอแท่งเขียวเด้งคอนเฟิร์มก่อนเข้า!`
+      };
+    }
+
     return {
       scenario: 1,
       traffic_light: 'BUY_ZONE',
       badge: 'Golden Setup',
       distEma150,
       distEma200,
-      reason: `Price at EMA 150/200 + Institutional Banker emerging (${banker}/20). Prime buy zone (Deploy 100%).`,
-      reason_th: `ราคาแตะแนวรับเส้น EMA 150/200 + สถาบันเริ่มเข้าสะสม (Banker = ${banker}) — จุดช้อนซื้อที่ดีที่สุดในรอบ จัดเต็ม 100%!`
+      reason: `Price at EMA 150/200 + Institutional Banker emerging (${banker}/20) + Support Holding. Prime buy zone (Deploy 100%).`,
+      reason_th: `ราคายืนแนวรับเส้น EMA 150/200 + สถาบันเริ่มเข้าสะสม (Banker = ${banker}) — จุดช้อนซื้อที่ดีที่สุดในรอบ จัดเต็ม 100%!`
     };
   }
 
@@ -511,32 +526,7 @@ export async function scanRadarMatrix(portfolioId) {
     const symbol = q.symbol;
     const candles = await syncCandleDelta(symbol, 400);
 
-    if (candles.length < 50) {
-      continue;
-    }
-
-    const closes = candles.map(c => c.price);
-    const currentPrice = closes[closes.length - 1];
-
-    const ema50 = calcEMA(closes, 50);
-    const ema150 = calcEMA(closes, 150);
-    const ema200 = calcEMA(closes, 200);
-    const banker = calcBankerMCDX(closes);
-    const rsi14 = calcRSI(closes, 14);
-
-    const distEma150 = ema150 ? Number((((currentPrice - ema150) / ema150) * 100).toFixed(2)) : 0;
-    const distEma200 = ema200 ? Number((((currentPrice - ema200) / ema200) * 100).toFixed(2)) : 0;
-
-    const classification = classifyScenario({
-      currentPrice,
-      ema50,
-      ema150,
-      ema200,
-      banker,
-      rsi14
-    });
-
-    // Fetch all cached historical candles from DB to support full timeframe zoom (up to 10Y)
+    // Fetch all cached historical candles from DB to support full timeframe zoom & accurate EMA convergence (up to 10Y)
     const dbCandles = db.prepare(`
       SELECT date, price, open, high, low, close, volume 
       FROM historical_prices 
@@ -545,15 +535,58 @@ export async function scanRadarMatrix(portfolioId) {
     `).all(symbol);
 
     const candleSeries = dbCandles.length >= 50 ? dbCandles : candles;
+    if (candleSeries.length < 50) {
+      continue;
+    }
+
     const sparkCloses = candleSeries.map(c => c.price);
     const sparkDates = candleSeries.map(c => c.date);
     const sparkOpens = candleSeries.map(c => c.open ?? c.price);
     const sparkHighs = candleSeries.map(c => c.high ?? c.price);
     const sparkLows = candleSeries.map(c => c.low ?? c.price);
     const sparkVolumes = candleSeries.map(c => c.volume ?? 0);
+
+    const currentPrice = sparkCloses[sparkCloses.length - 1];
+
+    // Compute EMAs on the full historical series (2,500+ bars) for mathematical convergence identical to chart
     const ema50Series = calcEMASeries(sparkCloses, 50);
     const ema150Series = calcEMASeries(sparkCloses, 150);
     const ema200Series = calcEMASeries(sparkCloses, 200);
+
+    const ema50 = ema50Series[ema50Series.length - 1] !== null ? Number(ema50Series[ema50Series.length - 1].toFixed(2)) : null;
+    const ema150 = ema150Series[ema150Series.length - 1] !== null ? Number(ema150Series[ema150Series.length - 1].toFixed(2)) : null;
+    const ema200 = ema200Series[ema200Series.length - 1] !== null ? Number(ema200Series[ema200Series.length - 1].toFixed(2)) : null;
+
+    const banker = calcBankerMCDX(sparkCloses);
+    const rsi14 = calcRSI(sparkCloses, 14);
+
+    const distEma150 = ema150 ? Number((((currentPrice - ema150) / ema150) * 100).toFixed(2)) : 0;
+    const distEma200 = ema200 ? Number((((currentPrice - ema200) / ema200) * 100).toFixed(2)) : 0;
+
+    // Detect latest price action & consecutive red bars
+    const lastBar = candleSeries[candleSeries.length - 1];
+    const isLatestBullish = (lastBar.close >= (lastBar.open ?? lastBar.close));
+    let consecutiveRedBars = 0;
+    for (let i = candleSeries.length - 1; i >= 0; i--) {
+      const bar = candleSeries[i];
+      const barOpen = bar.open ?? bar.close;
+      if (bar.close < barOpen) {
+        consecutiveRedBars++;
+      } else {
+        break;
+      }
+    }
+
+    const classification = classifyScenario({
+      currentPrice,
+      ema50,
+      ema150,
+      ema200,
+      banker,
+      rsi14,
+      isLatestBullish,
+      consecutiveRedBars
+    });
 
     // Calculate MCDX on recent 500 bars for blazing performance, zero-pad front to match array length
     const mcdxLookback = 500;
