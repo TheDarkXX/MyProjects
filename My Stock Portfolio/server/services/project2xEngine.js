@@ -554,7 +554,23 @@ export async function scanRadarMatrix(portfolioId) {
     const ema50Series = calcEMASeries(sparkCloses, 50);
     const ema150Series = calcEMASeries(sparkCloses, 150);
     const ema200Series = calcEMASeries(sparkCloses, 200);
-    const mcdxData = calcMcdxSeries(sparkCloses);
+
+    // Calculate MCDX on recent 500 bars for blazing performance, zero-pad front to match array length
+    const mcdxLookback = 500;
+    let mcdxData;
+    if (sparkCloses.length > mcdxLookback) {
+      const recentCloses = sparkCloses.slice(-mcdxLookback);
+      const recentMcdx = calcMcdxSeries(recentCloses);
+      const padCount = sparkCloses.length - mcdxLookback;
+      mcdxData = {
+        banker: new Array(padCount).fill(0).concat(recentMcdx.banker),
+        hotMoney: new Array(padCount).fill(0).concat(recentMcdx.hotMoney),
+        retail: new Array(padCount).fill(20).concat(recentMcdx.retail),
+        bankerMa: new Array(padCount).fill(0).concat(recentMcdx.bankerMa)
+      };
+    } else {
+      mcdxData = calcMcdxSeries(sparkCloses);
+    }
 
     const ownedShares = q.owned_shares || 0;
     const marketValueUsd = ownedShares * currentPrice;

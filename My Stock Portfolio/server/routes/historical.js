@@ -20,7 +20,10 @@ historicalRoutes.post('/', async (c) => {
     
     // For local MVP, we check cache first or fetch.
     const getCached = db.prepare(`SELECT * FROM historical_prices WHERE symbol = ? AND date >= ? AND date <= ? ORDER BY date ASC`);
-    const insertCache = db.prepare(`INSERT OR REPLACE INTO historical_prices (symbol, date, price) VALUES (?, ?, ?)`);
+    const insertCache = db.prepare(`
+      INSERT OR REPLACE INTO historical_prices (symbol, date, price, open, high, low, close, volume)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
     
     for (const symbol of symbols) {
       const cached = getCached.all(symbol, from, to);
@@ -38,7 +41,16 @@ historicalRoutes.post('/', async (c) => {
           // Cache it
           const insertTx = db.transaction((rows) => {
             for (const r of rows) {
-              insertCache.run(r.symbol, r.date, r.price);
+              insertCache.run(
+                r.symbol,
+                r.date,
+                r.price,
+                r.open ?? r.price,
+                r.high ?? r.price,
+                r.low ?? r.price,
+                r.close ?? r.price,
+                r.volume ?? 0
+              );
             }
           });
           insertTx(data);

@@ -165,15 +165,15 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
   const hasNullRows = !!db.prepare('SELECT 1 FROM historical_prices WHERE symbol = ? AND (open IS NULL OR high IS NULL OR high <= low) LIMIT 1').get(upper);
   const hasValidOhlcv = !hasNullRows;
 
-  if (isFresh && count >= 50 && hasValidOhlcv) {
+  if (isFresh && count >= 50 && hasValidOhlcv && isSufficientHistory) {
     const rows = db.prepare('SELECT date, price, open, high, low, close, volume FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
     if (rows.length >= 40) {
       return rows;
     }
   }
 
-  // Delta fetch from Yahoo Finance: If hasValidOhlcv is false, force fetch from minDate or targetStartDate (full history)
-  const fetchFrom = (hasValidOhlcv && isSufficientHistory && maxDate) ? maxDate : (minDate || targetStartDate);
+  // Delta fetch from Yahoo Finance: If hasValidOhlcv is false or history insufficient, force fetch from targetStartDate
+  const fetchFrom = (hasValidOhlcv && isSufficientHistory && maxDate) ? maxDate : targetStartDate;
   try {
     const freshData = await fetchYahooHistorical(upper, fetchFrom, today);
     if (freshData && freshData.length > 0) {
