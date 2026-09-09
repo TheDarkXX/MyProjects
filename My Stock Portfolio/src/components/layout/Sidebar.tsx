@@ -44,27 +44,9 @@ const NAV_SECTIONS: NavSection[] = [
 ];
 
 export const Sidebar = () => {
-  const { activeTab, setActiveTab } = useUiStore();
+  const { activeTab, setActiveTab, sidebarMode, toggleSidebarMode } = useUiStore();
   const logout = useAuthStore((s) => s.logout);
-
-  // Persistent Collapsed State in localStorage
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('stock_sidebar_collapsed') === 'true';
-    } catch (e) {
-      return false;
-    }
-  });
-
-  const toggleCollapse = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('stock_sidebar_collapsed', String(next));
-      } catch (e) {}
-      return next;
-    });
-  };
+  const collapsed = sidebarMode === 'compact';
 
   return (
     <aside
@@ -88,7 +70,7 @@ export const Sidebar = () => {
 
         {/* Show / Hide Toggle Button */}
         <button
-          onClick={toggleCollapse}
+          onClick={toggleSidebarMode}
           className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/5 transition-all cursor-pointer flex items-center justify-center"
           title={collapsed ? "Expand Sidebar (Widescreen OFF)" : "Collapse Sidebar (Widescreen ON)"}
           aria-label="Toggle Sidebar"

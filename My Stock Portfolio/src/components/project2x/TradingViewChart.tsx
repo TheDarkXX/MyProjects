@@ -373,16 +373,35 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
   const curPriceY = getPriceY(currentPrice);
 
-  // Bar step and width calculations
-  const barStep = chartW / Math.max(1, sliceCloses.length - 1);
+  // Bar step and width calculations based on actual slot distance
+  const slotStep = chartW / Math.max(1, totalSlotCount - 1);
+
+  // Dynamic candle geometry matching TradingView precision
+  const candleBarWidth = useMemo(() => {
+    if (slotStep >= 14) return Math.min(18, slotStep * 0.70);
+    if (slotStep >= 8) return Math.min(14, slotStep * 0.72);
+    if (slotStep >= 4.5) return Math.max(2.5, slotStep - 1.4);
+    if (slotStep >= 2.5) return Math.max(1.4, slotStep - 0.8);
+    if (slotStep >= 1.5) return Math.max(1.0, slotStep - 0.4);
+    return Math.max(0.75, slotStep * 0.8);
+  }, [slotStep]);
+
+  const wickWidth = useMemo(() => {
+    if (slotStep >= 6) return 1.4;
+    if (slotStep >= 3) return 1.0;
+    return 0.75;
+  }, [slotStep]);
+
+  const hasCandleStroke = slotStep >= 10;
+  const candleRadius = slotStep >= 10 ? 1 : 0;
+
   // Hairline gap matching TradingView histogram (ultra-thin hairline slit ~0.75px)
   const mcdxBarWidth = Math.max(
-    1.2,
-    barStep >= 8 ? barStep - 1 : (barStep >= 3.5 ? barStep - 0.75 : (barStep >= 2 ? barStep - 0.5 : barStep * 0.95))
+    0.75,
+    slotStep >= 8 ? slotStep - 1 : (slotStep >= 3.5 ? slotStep - 0.75 : (slotStep >= 2 ? slotStep - 0.5 : slotStep * 0.85))
   );
 
   // Candlestick calculation with real wicks and width
-  const candleBarWidth = Math.max(3.5, Math.min(18, (chartW / sliceCloses.length) * 0.72));
   const candles = sliceCloses.map((close, i) => {
     let rawOpen = sliceOpens[i] !== undefined && !isNaN(sliceOpens[i]) ? sliceOpens[i] : (i > 0 ? sliceCloses[i - 1] : close * 0.998);
     let rawHigh = sliceHighs[i] !== undefined && !isNaN(sliceHighs[i]) ? sliceHighs[i] : Math.max(rawOpen, close);
@@ -406,7 +425,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     const yLow = getPriceY(low);
     const yTop = getPriceY(Math.max(open, close));
     const yBottom = getPriceY(Math.min(open, close));
-    const bodyH = Math.max(2.5, yBottom - yTop);
+    // Crisp body height: ensure minimum 1px for visible doji lines
+    const bodyH = Math.max(1, yBottom - yTop);
 
     return {
       x,
@@ -538,7 +558,23 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       }
     }
 
-    return sigList;
+    // Ensure signals don't collide horizontally on screen when zoomed out (min 22px spacing)
+    const minPixelDist = 22;
+    const finalSignals: typeof sigList = [];
+    for (const sig of sigList) {
+      const prevSig = finalSignals[finalSignals.length - 1];
+      if (!prevSig || Math.abs(sig.x - prevSig.x) >= minPixelDist) {
+        finalSignals.push(sig);
+      } else if (sig.type === 'SUPER' || sig.type === 'BUY' || sig.type === 'EXIT') {
+        if (prevSig.type === 'READY') {
+          finalSignals[finalSignals.length - 1] = sig;
+        } else {
+          finalSignals.push(sig);
+        }
+      }
+    }
+
+    return finalSignals;
   }, [sliceCloses, sliceOpens, sliceHighs, sliceLows, sliceEma50, sliceEma150, sliceEma200, sliceBanker, showSignals, minPrice, maxPrice, priceChartH, padT, chartW]);
 
   // Dynamic Auto-Adjusting Date Ticks (TradingView Style ~48px spacing)
@@ -1137,37 +1173,28 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                 <path d={ema50Path} fill="none" stroke="#FFFFFF" strokeWidth="2.2" opacity="0.95" />
               )}
 
-              {/* Real Candlesticks (Yellow #FFE600 for Bull, Hot Pink #FF2A6D for Bear) */}
+              {/* Real Candlesticks (Yellow #FFE600 for Bull, Deep Crimson #C62828 for Bear) */}
               {candles.map((cdl, i) => (
-                <g key={i}>
-                  {/* Upper Wick */}
+                <g key={i} shapeRendering="crispEdges">
+                  {/* Full Central Spine Wick (from yHigh to yLow) */}
                   <line
                     x1={cdl.x}
                     y1={cdl.yHigh}
                     x2={cdl.x}
-                    y2={cdl.yTop}
-                    stroke={cdl.candleColor}
-                    strokeWidth="1.5"
-                  />
-                  {/* Lower Wick */}
-                  <line
-                    x1={cdl.x}
-                    y1={cdl.yTop + cdl.bodyH}
-                    x2={cdl.x}
                     y2={cdl.yLow}
                     stroke={cdl.candleColor}
-                    strokeWidth="1.5"
+                    strokeWidth={wickWidth}
                   />
-                  {/* Candle Body */}
+                  {/* Candle Body (drawn directly over central wick) */}
                   <rect
                     x={cdl.x - candleBarWidth / 2}
                     y={cdl.yTop}
                     width={candleBarWidth}
                     height={cdl.bodyH}
-                    rx="1"
+                    rx={candleRadius}
                     fill={cdl.candleColor}
-                    stroke={cdl.candleColor}
-                    strokeWidth="1"
+                    stroke={hasCandleStroke ? cdl.candleColor : 'none'}
+                    strokeWidth={hasCandleStroke ? 1 : 0}
                   />
                 </g>
               ))}
@@ -1358,7 +1385,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               const greenH = Math.max(0, yYellowTop - yGreenTop);
 
               return (
-                <g key={i}>
+                <g key={i} shapeRendering="crispEdges">
                   {/* Green Retail (Top Floating Supply) */}
                   {greenH > 0 && (
                     <rect

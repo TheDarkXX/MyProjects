@@ -5,15 +5,15 @@ import { usePortfolioStore } from '../../stores/portfolioStore';
 import clsx from 'clsx';
 
 export const SettingPage = () => {
-  const addNotification = useUiStore((s) => s.addNotification);
+  const { addNotification, sidebarMode, setSidebarMode } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
 
   const handleBackup = async () => {
     try {
       // In a real implementation this would call api.backup.create()
-      addNotification({ type: 'success', message: 'Backup generated successfully. (Simulated)' });
+      addNotification?.({ type: 'success', message: 'Backup generated successfully. (Simulated)' });
     } catch (e) {
-      addNotification({ type: 'error', message: 'Failed to generate backup' });
+      addNotification?.({ type: 'error', message: 'Failed to generate backup' });
     }
   };
 
@@ -173,7 +173,7 @@ export const SettingPage = () => {
             <h2 className="text-xl font-bold text-white">Preferences</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="p-5 rounded-2xl bg-[#0B1220] border border-[#2A2E45] flex items-center justify-between">
               <div>
                 <h3 className="text-white font-medium">Theme</h3>
@@ -191,6 +191,48 @@ export const SettingPage = () => {
               </div>
               <div className="px-4 py-2 rounded-lg bg-[#111418] border border-[#2A2E45] text-white font-medium text-sm">
                 USD ($)
+              </div>
+            </div>
+
+            {/* Left Sidebar Layout (Normal vs Compact) */}
+            <div className="p-5 rounded-2xl bg-[#0B1220] border border-[#2A2E45] flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-white font-medium">Left Sidebar</h3>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold">
+                    {sidebarMode === 'normal' ? 'Normal' : 'Compact'}
+                  </span>
+                </div>
+                <p className="text-[#9898C8] text-xs mt-1">
+                  เลือกแสดงผลแบบเต็ม (Normal) หรือย่อเหลือแต่ไอคอน (Compact)
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 p-1 rounded-xl bg-[#111418] border border-[#2A2E45]">
+                <button
+                  type="button"
+                  onClick={() => setSidebarMode('normal')}
+                  className={clsx(
+                    "flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                    sidebarMode === 'normal'
+                      ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md"
+                      : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  Normal (Default)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSidebarMode('compact')}
+                  className={clsx(
+                    "flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                    sidebarMode === 'compact'
+                      ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md"
+                      : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  Compact
+                </button>
               </div>
             </div>
           </div>

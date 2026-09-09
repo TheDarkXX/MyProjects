@@ -3,13 +3,17 @@ import { create } from 'zustand';
 interface UiState {
   darkMode: boolean;
   sidebarOpen: boolean;
+  sidebarMode: 'normal' | 'compact';
   activeTab: string;
   currency: 'USD' | 'THB';
   
   toggleDarkMode: () => void;
   toggleSidebar: () => void;
+  setSidebarMode: (mode: 'normal' | 'compact') => void;
+  toggleSidebarMode: () => void;
   setActiveTab: (tab: string) => void;
   setCurrency: (c: 'USD' | 'THB') => void;
+  addNotification?: (n: { type: 'success' | 'error' | 'info'; message: string }) => void;
 }
 
 const VALID_TABS = ['dashboard', 'scorecard', 'analysis', 'performance', 'risk', 'rebalance', 'transactions', 'snapshots', 'planner', 'settings', 'project2x'];
@@ -30,9 +34,19 @@ const getInitialTab = (): string => {
   return 'dashboard';
 };
 
+const getInitialSidebarMode = (): 'normal' | 'compact' => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('stock_sidebar_mode');
+    if (saved === 'normal' || saved === 'compact') return saved;
+    if (localStorage.getItem('stock_sidebar_collapsed') === 'true') return 'compact';
+  }
+  return 'normal';
+};
+
 export const useUiStore = create<UiState>((set) => ({
   darkMode: localStorage.getItem('theme') !== 'light',
   sidebarOpen: false,
+  sidebarMode: getInitialSidebarMode(),
   activeTab: getInitialTab(),
   currency: (localStorage.getItem('preferred_currency') as 'USD' | 'THB') || 'USD',
 
@@ -45,6 +59,19 @@ export const useUiStore = create<UiState>((set) => ({
   }),
 
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+
+  setSidebarMode: (mode: 'normal' | 'compact') => {
+    localStorage.setItem('stock_sidebar_mode', mode);
+    localStorage.setItem('stock_sidebar_collapsed', String(mode === 'compact'));
+    set({ sidebarMode: mode });
+  },
+
+  toggleSidebarMode: () => set((state) => {
+    const next = state.sidebarMode === 'normal' ? 'compact' : 'normal';
+    localStorage.setItem('stock_sidebar_mode', next);
+    localStorage.setItem('stock_sidebar_collapsed', String(next === 'compact'));
+    return { sidebarMode: next };
+  }),
   
   setActiveTab: (tab: string) => {
     if (VALID_TABS.includes(tab)) {
@@ -59,6 +86,10 @@ export const useUiStore = create<UiState>((set) => ({
   setCurrency: (currency: 'USD' | 'THB') => {
     localStorage.setItem('preferred_currency', currency);
     set({ currency });
+  },
+
+  addNotification: (n) => {
+    console.log('[Notification]', n);
   }
 }));
 
