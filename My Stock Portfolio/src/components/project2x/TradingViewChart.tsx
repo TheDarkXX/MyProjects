@@ -140,17 +140,17 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const maxPrice = rawMax + paddingMargin;
   const priceRange = maxPrice - minPrice || 1;
 
-  // ViewBox layout dimensions (Main Chart 440px + Banker 110px = 620px Total)
+  // ViewBox layout dimensions (Main Chart ~460px + Dates 26px + Banker 110px = 640px Total)
   const vbWidth = 920;
-  const vbHeight = 620;
+  const vbHeight = 640;
   const padL = 15;
   const padR = 75; // room for right price axis labels
   const padT = 15;
-  const dateAxisH = 28; // X-axis date area
+  const dateAxisH = 26; // X-axis date area
   const bankerPaneH = 110; // Banker sub-pane height
-  const paneGap = 20;
+  const paneGap = 20; // Gap between date axis and banker sub-pane
 
-  const priceChartH = vbHeight - padT - dateAxisH - bankerPaneH - paneGap; // ~447px
+  const priceChartH = vbHeight - padT - dateAxisH - bankerPaneH - paneGap; // ~469px
   const chartW = vbWidth - padL - padR;
 
   // Coordinate functions
@@ -163,7 +163,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     return padL + (idx / Math.max(1, total - 1)) * chartW;
   };
 
-  const bankerTopY = padT + priceChartH + paneGap;
+  const bankerTopY = padT + priceChartH + dateAxisH + paneGap;
   const getBankerY = (score: number) => {
     const clamped = Math.max(0, Math.min(20, score));
     return bankerTopY + bankerPaneH - (clamped / 20) * bankerPaneH;
@@ -553,10 +553,10 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
         )}
       </div>
 
-      {/* Main Multi-Pane SVG Chart (Price ~440px + Banker ~110px) */}
+      {/* Main Multi-Pane SVG Chart (Price ~460px + Banker ~110px) */}
       <div 
         ref={containerRef}
-        className="relative w-full h-[540px] cursor-crosshair select-none"
+        className="relative w-full h-[560px] cursor-crosshair select-none"
       >
         {/* Floating Zoom Hint when user scrolls without Ctrl */}
         {showZoomHint && (
