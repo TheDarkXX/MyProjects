@@ -105,13 +105,14 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 }
 
 const MainLayout = () => {
-  const { activeTab } = useUiStore();
+  const { activeTab, xchartHideHeader } = useUiStore();
+  const shouldShowHeader = !(activeTab === 'xchart' && xchartHideHeader);
   
   return (
     <div className="min-h-screen bg-[#0B1220] flex font-sans">
       <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <Header />
+        {shouldShowHeader && <Header />}
         <main className={clsx("flex-1 scroll-smooth", activeTab === 'xchart' ? "p-0 overflow-hidden flex flex-col" : "p-8 overflow-y-auto")}>
           <ErrorBoundary>
             <Suspense fallback={

@@ -5,7 +5,7 @@ import { usePortfolioStore } from '../../stores/portfolioStore';
 import clsx from 'clsx';
 
 export const SettingPage = () => {
-  const { addNotification, sidebarMode, setSidebarMode } = useUiStore();
+  const { addNotification, sidebarMode, setSidebarMode, xchartHideHeader, setXChartHideHeader } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
 
   const handleBackup = async () => {
@@ -232,6 +232,53 @@ export const SettingPage = () => {
                   )}
                 >
                   Compact
+                </button>
+              </div>
+            </div>
+
+            {/* X-Chart Top Bar Auto-Hide */}
+            <div className="p-5 rounded-2xl bg-[#0B1220] border border-[#2A2E45] flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-white font-medium">X-Chart Top Bar</h3>
+                  <span className={clsx(
+                    "text-xs px-2 py-0.5 rounded-full font-semibold border",
+                    xchartHideHeader 
+                      ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                      : "bg-slate-800 text-slate-300 border-slate-700"
+                  )}>
+                    {xchartHideHeader ? 'Hidden (Full Screen)' : 'Visible'}
+                  </span>
+                </div>
+                <p className="text-[#CBD5E1] text-xs mt-1">
+                  ซ่อน Header หลักในหน้า X-Chart เพื่อขยายพื้นที่กราฟเต็มจอ ไม่กินที่แนวตั้ง
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 p-1 rounded-xl bg-[#111418] border border-[#2A2E45]">
+                <button
+                  type="button"
+                  onClick={() => setXChartHideHeader(false)}
+                  className={clsx(
+                    "flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                    !xchartHideHeader
+                      ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md"
+                      : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  แสดง Header
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setXChartHideHeader(true)}
+                  className={clsx(
+                    "flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                    xchartHideHeader
+                      ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md"
+                      : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  ซ่อน (Full Screen)
                 </button>
               </div>
             </div>

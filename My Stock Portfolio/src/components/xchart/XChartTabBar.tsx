@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useXChartStore, XChartTab } from '../../stores/xchartStore';
+import { useUiStore } from '../../stores/uiStore';
+import { usePriceStore } from '../../stores/priceStore';
 import { 
   CandlestickChart, 
   Coins, 
@@ -7,14 +9,43 @@ import {
   X, 
   Plus, 
   Search,
-  Check
+  Check,
+  PanelTopClose,
+  PanelTopOpen
 } from 'lucide-react';
 import clsx from 'clsx';
 
 export const XChartTabBar: React.FC = () => {
   const { tabs, activeTabId, setActiveTabId, closeTab, addTab } = useXChartStore();
+  const { xchartHideHeader, toggleXChartHeader } = useUiStore();
+  const { exchangeRate, lastUpdated, fetchExchangeRate } = usePriceStore();
   const [showAddModal, setShowAddModal] = useState(false);
   const [customTicker, setCustomTicker] = useState('');
+  const [isMarketOpen, setIsMarketOpen] = useState(false);
+
+  useEffect(() => {
+    const checkMarketStatus = () => {
+      const nyTime = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+      const nyDate = new Date(nyTime);
+      const day = nyDate.getDay();
+      const hours = nyDate.getHours();
+      const minutes = nyDate.getMinutes();
+      const isWeekday = day >= 1 && day <= 5;
+      const timeInMinutes = hours * 60 + minutes;
+      const marketOpenMinutes = 9 * 60 + 30; // 9:30 AM
+      const marketCloseMinutes = 16 * 60; // 4:00 PM
+      setIsMarketOpen(isWeekday && timeInMinutes >= marketOpenMinutes && timeInMinutes < marketCloseMinutes);
+    };
+    checkMarketStatus();
+    const interval = setInterval(checkMarketStatus, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!lastUpdated) {
+      fetchExchangeRate('USD', 'THB');
+    }
+  }, [fetchExchangeRate, lastUpdated]);
 
   const handleCreateTab = (type: 'STOCK' | 'CURRENCY' | 'HEATMAP', symbol: string, title?: string) => {
     addTab({ type, symbol, title });
@@ -95,6 +126,60 @@ export const XChartTabBar: React.FC = () => {
           title="Open New Tab (+)"
         >
           <Plus className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Right Controls: Market Status Capsule & Header Toggle */}
+      <div className="flex items-center gap-2.5 ml-auto shrink-0 pb-1.5 pl-3">
+        {/* Floating Status Pills */}
+        <div className="hidden md:flex items-center gap-2.5 bg-[#151926]/90 border border-[#2A2E45] px-3 py-1 rounded-xl shadow-inner">
+          {/* US Market Status */}
+          <div className="flex items-center gap-1.5 text-[13px] font-bold">
+            <span className={`w-2 h-2 rounded-full ${isMarketOpen ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]' : 'bg-slate-500'}`} />
+            <span className={isMarketOpen ? 'text-emerald-400' : 'text-slate-300'}>
+              {isMarketOpen ? 'US LIVE' : 'CLOSED'}
+            </span>
+          </div>
+
+          <div className="w-[1px] h-3.5 bg-slate-700" />
+
+          {/* USD / THB Rate */}
+          <div className="flex items-center gap-1 text-[13px] font-bold text-slate-200">
+            <span className="text-amber-400">💵</span>
+            <span>1 USD = {exchangeRate ? exchangeRate.toFixed(2) : '33.80'} ฿</span>
+          </div>
+
+          <div className="w-[1px] h-3.5 bg-slate-700" />
+
+          {/* Yahoo Sync Indicator */}
+          <div className="flex items-center gap-1 text-[13px] font-semibold text-purple-300">
+            <span className="text-xs">⚡</span>
+            <span>Yahoo API</span>
+          </div>
+        </div>
+
+        {/* Toggle Top Bar Header Button */}
+        <button
+          onClick={toggleXChartHeader}
+          className={clsx(
+            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[13px] font-bold transition-all cursor-pointer",
+            xchartHideHeader
+              ? "bg-purple-950/70 border-purple-500/50 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.2)] hover:bg-purple-900/60"
+              : "bg-slate-900/70 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-800"
+          )}
+          title={xchartHideHeader ? "แสดง Header ด้านบน (Restore Header)" : "ซ่อน Header เพื่อขยายกราฟ (Hide Header)"}
+        >
+          {xchartHideHeader ? (
+            <>
+              <PanelTopOpen className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden sm:inline">Show Header</span>
+            </>
+          ) : (
+            <>
+              <PanelTopClose className="w-3.5 h-3.5 text-slate-400" />
+              <span className="hidden sm:inline">Hide Header</span>
+            </>
+          )}
         </button>
       </div>
 

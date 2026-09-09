@@ -10,14 +10,14 @@ export const XChartPage: React.FC = () => {
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
 
   return (
-    <div className="flex-1 w-full h-full flex flex-col bg-[#0B1220] overflow-hidden select-none">
+    <div className="flex-1 w-full h-full flex flex-col bg-[#0B1220] overflow-hidden select-none min-h-0">
       {/* Top Multi-Tab Bar */}
       <XChartTabBar />
 
       {/* Main Terminal Body */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative min-h-0">
         {/* Main Canvas / Chart / Heatmap Area */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative min-h-0">
           {activeTab ? (
             activeTab.type === 'HEATMAP' ? (
               <MarketHeatmap key={activeTab.id} />

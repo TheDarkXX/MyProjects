@@ -90,7 +90,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId }) => {
   if (!data) return null;
 
   return (
-    <div className="flex-1 w-full h-full flex flex-col overflow-hidden relative bg-[#111418]">
+    <div className="flex-1 w-full h-full flex flex-col overflow-hidden relative bg-[#111418] min-h-0">
       <LWChart
         symbol={data.symbol}
         dates={data.dates}

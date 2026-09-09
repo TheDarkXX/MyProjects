@@ -147,6 +147,8 @@ export const LWChart: React.FC<LWChartProps> = ({
   const mcdxSeriesRef = useRef<ISeriesApi<'Custom'> | null>(null);
   const bankerMaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const markersPluginRef = useRef<any>(null);
+  const isDraggingRef = useRef<boolean>(false);
+  const lastYRef = useRef<number>(0);
 
   // States with localStorage persistence
   const [timeframe, setTimeframe] = useState<TimeFrame>(() => {
@@ -528,6 +530,13 @@ export const LWChart: React.FC<LWChartProps> = ({
       from: from - 0.5,
       to: total + 6,
     });
+
+    // Also reset vertical price scale to autoScale
+    try {
+      const priceScale = candleSeriesRef.current?.priceScale() || chartRef.current.priceScale('right');
+      priceScale?.setAutoScale(true);
+    } catch (e) {}
+
     setTimeframe(tf);
   }, [displayBars.length, resolution]);
 
@@ -732,8 +741,85 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
     });
 
+    // Free 2D Panning (Simultaneous X Time & Y Price Drag)
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return; // Only left click
+      const container = chartContainerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      // If clicked on right price scale axis (last 60px) or bottom time scale axis (last 26px), let native handlers run
+      if (e.clientX > rect.right - 60 || e.clientY > rect.bottom - 26) return;
+
+      isDraggingRef.current = true;
+      lastYRef.current = e.clientY;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const container = chartContainerRef.current;
+      const candleSeries = candleSeriesRef.current;
+      if (!container || !candleSeries) return;
+
+      const deltaY = e.clientY - lastYRef.current;
+      if (Math.abs(deltaY) < 1) return;
+
+      const priceScale = candleSeries.priceScale();
+      const range = priceScale.getVisibleRange();
+      if (!range) return;
+
+      const rect = container.getBoundingClientRect();
+      const relLastY = lastYRef.current - rect.top;
+      const relCurrY = e.clientY - rect.top;
+
+      const p1 = candleSeries.coordinateToPrice(relLastY);
+      const p2 = candleSeries.coordinateToPrice(relCurrY);
+
+      let deltaPrice = 0;
+      if (p1 !== null && p2 !== null && !isNaN(p1) && !isNaN(p2)) {
+        deltaPrice = p1 - p2;
+      } else {
+        const height = Math.max(100, rect.height * 0.7);
+        const priceRange = range.to - range.from;
+        deltaPrice = (deltaY / height) * priceRange;
+      }
+
+      if (!isNaN(deltaPrice) && isFinite(deltaPrice)) {
+        priceScale.setVisibleRange({
+          from: range.from + deltaPrice,
+          to: range.to + deltaPrice,
+        });
+        lastYRef.current = e.clientY;
+      }
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+    };
+
+    const handleDblClick = (e: MouseEvent) => {
+      const container = chartContainerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      if (e.clientX > rect.right - 60 || e.clientY > rect.bottom - 26) return;
+      candleSeriesRef.current?.priceScale().setAutoScale(true);
+    };
+
+    const containerEl = chartContainerRef.current;
+    if (containerEl) {
+      containerEl.addEventListener('mousedown', handleMouseDown);
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      containerEl.addEventListener('dblclick', handleDblClick);
+    }
+
     // Clean up
     return () => {
+      if (containerEl) {
+        containerEl.removeEventListener('mousedown', handleMouseDown);
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        containerEl.removeEventListener('dblclick', handleDblClick);
+      }
       chart.remove();
       chartRef.current = null;
       candleSeriesRef.current = null;
@@ -1100,14 +1186,43 @@ export const LWChart: React.FC<LWChartProps> = ({
             Signals {showSignals ? 'ON' : 'OFF'}
           </button>
 
-          {/* Reset Zoom */}
+          {/* Timeframe Presets: 10M | 1Y | 5Y | ALL */}
+          <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-700/50">
+            {(['10M', '1Y', '5Y', 'ALL'] as TimeFrame[]).map((tf) => (
+              <button
+                key={tf}
+                onClick={() => applyTimeframeRange(tf)}
+                className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all cursor-pointer ${
+                  timeframe === tf
+                    ? 'bg-amber-400 text-slate-950 shadow-md font-black'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+                title={`View ${tf} Range`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+
+          {/* Reset Zoom & Auto-Scale */}
           <button
             onClick={() => applyTimeframeRange('10M')}
-            title="Reset Zoom to 10M Default"
-            className="p-1.5 rounded-lg bg-slate-900/60 border border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+            title="Reset Zoom to 10M Default & Auto-Scale (or Double-Click Chart)"
+            className="p-1.5 rounded-lg bg-slate-900/60 border border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
+
+          {/* Allocate Inflow (Moved to Top Toolbar for Project 2X) */}
+          {onAddInflow && (
+            <button
+              onClick={onAddInflow}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 text-[13px] font-extrabold shadow-md hover:bg-emerald-400 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Allocate Inflow
+            </button>
+          )}
 
           {/* Fullscreen Button */}
           <button
@@ -1171,16 +1286,16 @@ export const LWChart: React.FC<LWChartProps> = ({
             </span>
           </>
         ) : (
-          <span className="text-slate-400 italic">เลื่อนเมาส์บนกราฟเพื่อดูราคาและ Indicator ย้อนหลัง</span>
+          <span className="text-slate-400 italic text-[13px]">Scroll to zoom • Drag anywhere for 2D Pan • Double-click to reset</span>
         )}
       </div>
 
       {/* ----------------------------------------------------------- */}
       {/* MAIN BODY: CHART CANVAS + FULLSCREEN WATCHLIST SIDEBAR      */}
       {/* ----------------------------------------------------------- */}
-      <div className="relative flex-1 flex overflow-hidden min-h-[580px]">
+      <div className="relative flex-1 flex overflow-hidden min-h-0 w-full h-full">
         {/* Left: Chart Canvas Container */}
-        <div ref={chartContainerRef} className="flex-1 w-full h-full min-h-[580px]" />
+        <div ref={chartContainerRef} className="flex-1 w-full h-full min-h-0" />
 
         {/* Right: Quick Watchlist Sidebar (Visible in Fullscreen Mode) */}
         {isFullscreen && watchlist.length > 0 && (
@@ -1238,46 +1353,6 @@ export const LWChart: React.FC<LWChartProps> = ({
             </div>
           </div>
         )}
-      </div>
-
-      {/* ----------------------------------------------------------- */}
-      {/* BOTTOM TIMEFRAME SELECTOR BAR                               */}
-      {/* ----------------------------------------------------------- */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#0D1322] border-t border-slate-800/80">
-        
-        {/* Left: Timeframe Range Buttons */}
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          {(['7D', '1M', '3M', '6M', '10M', '1Y', '5Y', 'ALL'] as TimeFrame[]).map((tf) => (
-            <button
-              key={tf}
-              onClick={() => applyTimeframeRange(tf)}
-              className={`px-3 py-1 rounded-lg text-[13px] font-bold transition-all ${
-                timeframe === tf
-                  ? 'bg-amber-400 text-slate-950 shadow-md font-extrabold'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              {tf}
-            </button>
-          ))}
-        </div>
-
-        {/* Right: Hint or Inflow Button */}
-        <div className="flex items-center gap-3">
-          {onAddInflow && (
-            <button
-              onClick={onAddInflow}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[13px] font-extrabold shadow-md hover:bg-emerald-400 transition-all"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Allocate Inflow
-            </button>
-          )}
-
-          <div className="text-[13px] text-slate-400 hidden sm:inline">
-            Scroll to zoom • Drag to pan • Double click to reset
-          </div>
-        </div>
       </div>
     </div>
   );

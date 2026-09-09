@@ -6,6 +6,7 @@ interface UiState {
   sidebarMode: 'normal' | 'compact';
   activeTab: string;
   currency: 'USD' | 'THB';
+  xchartHideHeader: boolean;
   
   toggleDarkMode: () => void;
   toggleSidebar: () => void;
@@ -13,6 +14,8 @@ interface UiState {
   toggleSidebarMode: () => void;
   setActiveTab: (tab: string) => void;
   setCurrency: (c: 'USD' | 'THB') => void;
+  setXChartHideHeader: (hide: boolean) => void;
+  toggleXChartHeader: () => void;
   addNotification?: (n: { type: 'success' | 'error' | 'info'; message: string }) => void;
 }
 
@@ -49,6 +52,7 @@ export const useUiStore = create<UiState>((set) => ({
   sidebarMode: getInitialSidebarMode(),
   activeTab: getInitialTab(),
   currency: (localStorage.getItem('preferred_currency') as 'USD' | 'THB') || 'USD',
+  xchartHideHeader: typeof window !== 'undefined' ? localStorage.getItem('stock_xchart_hide_header') === 'true' : false,
 
   toggleDarkMode: () => set((state) => {
     const newTheme = !state.darkMode;
@@ -87,6 +91,21 @@ export const useUiStore = create<UiState>((set) => ({
     localStorage.setItem('preferred_currency', currency);
     set({ currency });
   },
+
+  setXChartHideHeader: (hide: boolean) => {
+    try {
+      localStorage.setItem('stock_xchart_hide_header', String(hide));
+    } catch (e) {}
+    set({ xchartHideHeader: hide });
+  },
+
+  toggleXChartHeader: () => set((state) => {
+    const next = !state.xchartHideHeader;
+    try {
+      localStorage.setItem('stock_xchart_hide_header', String(next));
+    } catch (e) {}
+    return { xchartHideHeader: next };
+  }),
 
   addNotification: (n) => {
     console.log('[Notification]', n);
