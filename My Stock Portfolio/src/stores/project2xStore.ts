@@ -113,8 +113,8 @@ export interface Project2xConfig {
 }
 
 interface Project2xStore {
-  selectedTab: 'vault' | 'radar' | 'inflow';
-  setSelectedTab: (tab: 'vault' | 'radar' | 'inflow') => void;
+  selectedTab: 'radar' | 'vault' | 'inflow' | 'all';
+  setSelectedTab: (tab: 'radar' | 'vault' | 'inflow' | 'all') => void;
 
   dashboard: DashboardData | null;
   quotas: ShareQuota[];
@@ -140,7 +140,7 @@ interface Project2xStore {
 }
 
 export const useProject2xStore = create<Project2xStore>((set, get) => ({
-  selectedTab: 'vault',
+  selectedTab: 'radar',
   setSelectedTab: (tab) => set({ selectedTab: tab }),
 
   dashboard: null,
