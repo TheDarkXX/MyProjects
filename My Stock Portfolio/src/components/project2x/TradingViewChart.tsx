@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Activity, Zap, ExternalLink, BarChart3, TrendingUp, RotateCcw, MoveHorizontal, ZoomIn } from 'lucide-react';
 
-export const TV_FONT_FAMILY = "-apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif";
+export const TV_FONT_FAMILY = "'Trebuchet MS', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 interface TradingViewChartProps {
   symbol: string;
@@ -390,11 +390,13 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const hasCandleStroke = slotStep >= 10;
   const candleRadius = slotStep >= 10 ? 1 : 0;
 
-  // Hairline gap matching TradingView histogram (ultra-thin hairline slit ~0.75px)
-  const mcdxBarWidth = Math.max(
-    0.75,
-    slotStep >= 8 ? slotStep - 1 : (slotStep >= 3.5 ? slotStep - 0.75 : (slotStep >= 2 ? slotStep - 0.5 : slotStep * 0.85))
-  );
+  // Solid liquid wave vs individual pillar bars:
+  // When zoomed out (slotStep < 9px, standard daily views), bars seamlessly overlap by 0.35px
+  // eliminating all jagged moiré black slits and rendering a pure, solid liquid flow like TradingView.
+  // When zoomed in (slotStep >= 9px, short spans like 1M or heavy zoom), clean 1.5px gaps separate individual day columns.
+  const mcdxBarWidth = slotStep >= 9 
+    ? Math.max(2, slotStep - 1.5) 
+    : slotStep + 0.35;
 
   // Candlestick calculation with real wicks and width
   const candles = sliceCloses.map((close, i) => {
@@ -834,7 +836,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
   return (
     <div
-      className={`relative flex flex-col rounded-3xl border border-white/10 bg-[#131722] p-5 shadow-2xl overflow-hidden select-none backdrop-blur-2xl ${className}`}
+      className={`tv-chart-font relative flex flex-col rounded-3xl border border-white/10 bg-[#131722] p-5 shadow-2xl overflow-hidden select-none backdrop-blur-2xl ${className}`}
+      style={{ fontFamily: TV_FONT_FAMILY }}
     >
       {/* Top Header Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-white/10">
@@ -1007,6 +1010,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           viewBox={`0 0 ${vbWidth} ${vbHeight}`}
           preserveAspectRatio="none"
           className="w-full h-full"
+          style={{ fontFamily: TV_FONT_FAMILY }}
           onMouseMove={handleMouseMove}
           onMouseDown={(e) => {
             // Main chart body 2D free pan
@@ -1103,7 +1107,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             width={padR}
             height={priceChartH}
             fill="transparent"
-            style={{ cursor: 'ns-resize' }}
+            style={{ cursor: 'ns-resize', fontFamily: TV_FONT_FAMILY }}
             onMouseDown={(e) => {
               e.stopPropagation();
               setDragMode('Y_AXIS');
@@ -1296,7 +1300,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             width={chartW}
             height={dateAxisH}
             fill="transparent"
-            style={{ cursor: 'ew-resize' }}
+            style={{ cursor: 'ew-resize', fontFamily: TV_FONT_FAMILY }}
             onMouseDown={(e) => {
               e.stopPropagation();
               setDragMode('X_AXIS');
@@ -1408,7 +1412,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               const greenH = Math.max(0, yYellowTop - yGreenTop);
 
               return (
-                <g key={i} shapeRendering="crispEdges">
+                <g key={i}>
                   {/* Green Retail (Top Floating Supply) */}
                   {greenH > 0 && (
                     <rect

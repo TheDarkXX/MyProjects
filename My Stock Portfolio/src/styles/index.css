@@ -145,3 +145,9 @@ th {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #823AFD;
 }
+
+/* TradingView Chart Typography System (Signature Trebuchet MS font) */
+.tv-chart-font,
+.tv-chart-font * {
+  font-family: 'Trebuchet MS', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
