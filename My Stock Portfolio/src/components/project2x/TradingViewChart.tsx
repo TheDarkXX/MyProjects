@@ -417,8 +417,6 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
   return (
     <div
-      ref={containerRef}
-      onWheel={handleWheel}
       className={`relative flex flex-col rounded-3xl border border-white/10 bg-[#131722] p-5 shadow-2xl overflow-hidden select-none backdrop-blur-2xl ${className}`}
     >
       {/* Top Header Controls Bar */}
