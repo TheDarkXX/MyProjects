@@ -1,5 +1,5 @@
 import { db } from '../db/init.js';
-import { fetchYahooExchangeRate, fetchYahooLatest } from './yahoo.js';
+import { fetchYahooExchangeRate, fetchYahooLatest, fetchYahooHistorical, fetchYahooFundamentals } from './yahoo.js';
 import { calcEMA, calcEMASeries, calcBankerMCDX, calcBankerSeries, calcRSI, syncCandleDelta } from './technicalAnalysis.js';
 
 export const DEFAULT_2X_STOCKS = [
@@ -322,6 +322,180 @@ export function classifyScenario({ currentPrice, ema50, ema150, ema200, banker, 
 }
 
 /**
+ * Backfill State Tracker
+ */
+const backfillState = {
+  isRunning: false,
+  total: 0,
+  completed: 0,
+  currentSymbol: '',
+  errors: [],
+  symbolStatus: {}
+};
+
+export function getBackfillStatus() {
+  return { ...backfillState };
+}
+
+/**
+ * Backfill historical data for symbols (Staggered Queue: 2 at a time, 3s delay)
+ */
+export async function backfillHistoricalData(symbols = [], years = 10) {
+  if (backfillState.isRunning) {
+    return { message: 'Backfill already in progress', status: getBackfillStatus() };
+  }
+
+  const targetSymbols = symbols.length > 0 ? symbols : DEFAULT_2X_STOCKS.map(s => s.symbol);
+  backfillState.isRunning = true;
+  backfillState.total = targetSymbols.length;
+  backfillState.completed = 0;
+  backfillState.errors = [];
+  backfillState.symbolStatus = {};
+  targetSymbols.forEach(s => { backfillState.symbolStatus[s] = 'PENDING'; });
+
+  // Run in background
+  (async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const fromDate = new Date(Date.now() - years * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const batchSize = 2;
+    for (let i = 0; i < targetSymbols.length; i += batchSize) {
+      const batch = targetSymbols.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (sym) => {
+        backfillState.currentSymbol = sym;
+        backfillState.symbolStatus[sym] = 'FETCHING';
+        try {
+          const freshData = await fetchYahooHistorical(sym, fromDate, today);
+          if (freshData && freshData.length > 0) {
+            const insert = db.prepare(`
+              INSERT OR REPLACE INTO historical_prices (symbol, date, price, open, high, low, close, volume)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `);
+            const insertTx = db.transaction((items) => {
+              for (const item of items) {
+                insert.run(
+                  sym,
+                  item.date,
+                  item.price,
+                  item.open ?? item.price,
+                  item.high ?? item.price,
+                  item.low ?? item.price,
+                  item.close ?? item.price,
+                  item.volume ?? 0
+                );
+              }
+            });
+            insertTx(freshData);
+          }
+          backfillState.symbolStatus[sym] = 'DONE';
+          backfillState.completed++;
+        } catch (err) {
+          console.error(`[backfill] Error on ${sym}:`, err.message);
+          backfillState.symbolStatus[sym] = 'ERROR';
+          backfillState.errors.push({ symbol: sym, error: err.message });
+          backfillState.completed++;
+        }
+      }));
+
+      if (i + batchSize < targetSymbols.length) {
+        await new Promise(res => setTimeout(res, 3000));
+      }
+    }
+    backfillState.isRunning = false;
+    backfillState.currentSymbol = '';
+  })().catch(err => {
+    console.error('[backfill] Fatal error:', err);
+    backfillState.isRunning = false;
+  });
+
+  return { message: 'Backfill started', status: getBackfillStatus() };
+}
+
+/**
+ * Fetch or get cached Fundamentals from SQLite
+ */
+export async function getOrFetchFundamentals(symbol) {
+  if (!symbol || symbol === 'CASH') return null;
+  const upper = symbol.toUpperCase();
+  const row = db.prepare('SELECT * FROM project2x_fundamentals WHERE symbol = ?').get(upper);
+
+  // If cached within 3 days and has PE, use cache
+  if (row && row.updated_at) {
+    const ageMs = Date.now() - new Date(row.updated_at).getTime();
+    if (ageMs < 3 * 24 * 60 * 60 * 1000 && row.pe_trailing !== null) {
+      return row;
+    }
+  }
+
+  // Fetch live from Yahoo
+  try {
+    const live = await fetchYahooFundamentals(upper);
+    if (live) {
+      const existing = row || {};
+      const expectedCagr = existing.expected_cagr_3y !== undefined && existing.expected_cagr_3y !== null
+        ? existing.expected_cagr_3y
+        : 26.0;
+      const epsQs = live.consecutive_eps_qs ?? existing.consecutive_eps_qs ?? 0;
+
+      db.prepare(`
+        INSERT INTO project2x_fundamentals (
+          symbol, pe_trailing, pe_forward, peg_ratio, revenue_cagr_3y, eps_cagr_3y, expected_cagr_3y, consecutive_eps_qs, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(symbol) DO UPDATE SET
+          pe_trailing = excluded.pe_trailing,
+          pe_forward = excluded.pe_forward,
+          peg_ratio = excluded.peg_ratio,
+          revenue_cagr_3y = excluded.revenue_cagr_3y,
+          eps_cagr_3y = excluded.eps_cagr_3y,
+          consecutive_eps_qs = excluded.consecutive_eps_qs,
+          updated_at = datetime('now')
+      `).run(
+        upper,
+        live.pe_trailing,
+        live.pe_forward,
+        live.peg_ratio,
+        live.revenue_growth,
+        live.earnings_growth,
+        expectedCagr,
+        epsQs
+      );
+      return db.prepare('SELECT * FROM project2x_fundamentals WHERE symbol = ?').get(upper);
+    }
+  } catch (err) {
+    console.warn(`[getOrFetchFundamentals] Live fetch error for ${upper}:`, err.message);
+  }
+
+  return row;
+}
+
+/**
+ * Update Manual Overrides for Stock Fundamentals
+ */
+export function updateFundamentalsOverride(symbol, { expected_cagr_3y, consecutive_eps_qs }) {
+  if (!symbol) return null;
+  const upper = symbol.toUpperCase();
+  const existing = db.prepare('SELECT * FROM project2x_fundamentals WHERE symbol = ?').get(upper);
+
+  const expectedCagr = expected_cagr_3y !== undefined ? Number(expected_cagr_3y) : (existing?.expected_cagr_3y ?? 26.0);
+  const epsQs = consecutive_eps_qs !== undefined ? Number(consecutive_eps_qs) : (existing?.consecutive_eps_qs ?? 0);
+
+  db.prepare(`
+    INSERT INTO project2x_fundamentals (symbol, expected_cagr_3y, consecutive_eps_qs, updated_at)
+    VALUES (?, ?, ?, datetime('now'))
+    ON CONFLICT(symbol) DO UPDATE SET
+      expected_cagr_3y = excluded.expected_cagr_3y,
+      consecutive_eps_qs = excluded.consecutive_eps_qs,
+      updated_at = datetime('now')
+  `).run(upper, expectedCagr, epsQs);
+
+  return db.prepare('SELECT * FROM project2x_fundamentals WHERE symbol = ?').get(upper);
+}
+
+export function getAllFundamentals() {
+  return db.prepare('SELECT * FROM project2x_fundamentals ORDER BY symbol ASC').all();
+}
+
+/**
  * Scan all Project 2X stocks and generate Radar Matrix + Sell Alerts
  */
 export async function scanRadarMatrix(portfolioId) {
@@ -362,14 +536,24 @@ export async function scanRadarMatrix(portfolioId) {
       rsi14
     });
 
-    // 90-day sparkline data with dates and banker series for timeframe zoom
-    const sparklineDays = 90;
-    const sparkCandles = candles.slice(-sparklineDays);
-    const sparkCloses = sparkCandles.map(c => c.price);
-    const sparkDates = sparkCandles.map(c => c.date);
-    const ema150Series = calcEMASeries(closes, 150).slice(-sparklineDays);
-    const ema200Series = calcEMASeries(closes, 200).slice(-sparklineDays);
-    const bankerSeries = calcBankerSeries(closes, sparklineDays);
+    // Fetch all cached historical candles from DB to support full timeframe zoom (up to 10Y)
+    const dbCandles = db.prepare(`
+      SELECT date, price, open, high, low, close, volume 
+      FROM historical_prices 
+      WHERE symbol = ? 
+      ORDER BY date ASC
+    `).all(symbol);
+
+    const candleSeries = dbCandles.length >= 50 ? dbCandles : candles;
+    const sparkCloses = candleSeries.map(c => c.price);
+    const sparkDates = candleSeries.map(c => c.date);
+    const sparkOpens = candleSeries.map(c => c.open ?? c.price);
+    const sparkHighs = candleSeries.map(c => c.high ?? c.price);
+    const sparkLows = candleSeries.map(c => c.low ?? c.price);
+    const sparkVolumes = candleSeries.map(c => c.volume ?? 0);
+    const ema150Series = calcEMASeries(sparkCloses, 150);
+    const ema200Series = calcEMASeries(sparkCloses, 200);
+    const bankerSeries = calcBankerSeries(sparkCloses, sparkCloses.length);
 
     const ownedShares = q.owned_shares || 0;
     const marketValueUsd = ownedShares * currentPrice;
@@ -395,6 +579,10 @@ export async function scanRadarMatrix(portfolioId) {
       sparkline: {
         dates: sparkDates,
         closes: sparkCloses,
+        opens: sparkOpens,
+        highs: sparkHighs,
+        lows: sparkLows,
+        volumes: sparkVolumes,
         ema150: ema150Series,
         ema200: ema200Series,
         bankerSeries
@@ -407,20 +595,46 @@ export async function scanRadarMatrix(portfolioId) {
   }
 
   // Calculate true total portfolio market value (ALL held securities + actual cash)
+  // FIX: stockMarketValues[sym] is already (shares * price). Do NOT multiply shares again!
   let totalSecuritiesUsd = 0;
   for (const sym in holdings) {
     if (holdings[sym].shares > 0.001) {
-      let curPrice = stockMarketValues[sym] || 0;
-      if (!curPrice) {
+      if (stockMarketValues[sym] !== undefined) {
+        totalSecuritiesUsd += stockMarketValues[sym];
+      } else {
         try {
           const latest = await fetchYahooLatest(sym);
-          curPrice = latest?.price || 0;
+          const curPrice = latest?.price || 0;
+          const val = holdings[sym].shares * curPrice;
+          stockMarketValues[sym] = val;
+          totalSecuritiesUsd += val;
         } catch (e) {}
       }
-      totalSecuritiesUsd += holdings[sym].shares * curPrice;
     }
   }
   const totalPortfolioUsd = Number((totalSecuritiesUsd + cash).toFixed(2));
+
+  // Attach weights and fundamentals to each row
+  for (const row of radarRows) {
+    const val = stockMarketValues[row.symbol] || 0;
+    row.market_value_usd = Number(val.toFixed(2));
+    row.weight_pct = totalPortfolioUsd > 0 ? Number(((val / totalPortfolioUsd) * 100).toFixed(1)) : 0;
+
+    try {
+      const fund = await getOrFetchFundamentals(row.symbol);
+      row.pe_trailing = fund?.pe_trailing ?? null;
+      row.pe_forward = fund?.pe_forward ?? null;
+      row.peg_ratio = fund?.peg_ratio ?? null;
+      row.expected_cagr = fund?.expected_cagr_3y ?? 26.0;
+      row.consecutive_eps_qs = fund?.consecutive_eps_qs ?? 0;
+    } catch (e) {
+      row.pe_trailing = null;
+      row.pe_forward = null;
+      row.peg_ratio = null;
+      row.expected_cagr = 26.0;
+      row.consecutive_eps_qs = 0;
+    }
+  }
 
   // 3-Layer Sell Signal Detection
   const ceilingPct = config.max_stock_ceiling_pct || 30;
@@ -500,14 +714,19 @@ export async function scanRadarMatrix(portfolioId) {
 }
 
 /**
- * Dynamic ETA Calculator with 3 CAGR Confidence Bands
+ * Dynamic ETA Calculator with Confidence Bands (Conservative, Base, Bull, Auto)
  */
-export function calculateDynamicETA({ currentValThb, goalValThb, monthlyInflowThb, targetCagr }) {
+export function calculateDynamicETA({ currentValThb, goalValThb, monthlyInflowThb, targetCagr, autoCagr }) {
   const bands = [
     { name: 'Conservative', cagr: 0.20 },
     { name: 'Base', cagr: targetCagr || 0.26 },
     { name: 'Bull', cagr: 0.32 }
   ];
+
+  if (autoCagr !== undefined && autoCagr !== null && !isNaN(autoCagr)) {
+    const safeAutoCagr = Math.max(0.05, Math.min(2.0, autoCagr));
+    bands.unshift({ name: 'Auto', cagr: safeAutoCagr });
+  }
 
   const results = {};
 
@@ -595,9 +814,9 @@ export function detectActualMonthlyInflow(portfolioId) {
 }
 
 /**
- * Auto-calculate actual portfolio CAGR based on historical deposits and current value
+ * Dual-Engine Auto CAGR (Historical MWRR + Safety Guard + Forward Holdings CAGR)
  */
-export function calculatePortfolioRealizedCAGR(portfolioId, currentValUsd) {
+export function calculatePortfolioRealizedCAGR(portfolioId, currentValUsd, radarRows = []) {
   try {
     const txs = db.prepare(`
       SELECT date, type, amount, price, fee FROM transactions 
@@ -614,7 +833,8 @@ export function calculatePortfolioRealizedCAGR(portfolioId, currentValUsd) {
 
     const startDate = new Date(firstDateStr);
     const now = new Date();
-    const diffYears = Math.max(0.08, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+    const diffDays = Math.max(1, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const diffYears = Math.max(0.08, diffDays / 365.25);
 
     let netDeposits = 0;
     for (const t of txs) {
@@ -637,17 +857,58 @@ export function calculatePortfolioRealizedCAGR(portfolioId, currentValUsd) {
       netDeposits = Math.max(10, totalCost);
     }
 
-    const totalReturnMultiple = currentValUsd / netDeposits;
-    if (totalReturnMultiple <= 0) return null;
+    // 6-Month Safety Guard
+    const isYoung = diffDays < 180;
+    const rawReturnMultiple = currentValUsd / netDeposits;
+    const rawReturnPct = Number(((rawReturnMultiple - 1) * 100).toFixed(1));
 
-    let cagr = Math.pow(totalReturnMultiple, 1 / diffYears) - 1;
-    cagr = Math.max(-0.9, Math.min(3.0, cagr));
+    let cagr = 0;
+    let cagr_pct = 0;
+    let label = '';
+
+    if (isYoung) {
+      // Show raw return without aggressive compounding
+      cagr = rawReturnPct / 100;
+      cagr_pct = rawReturnPct;
+      label = `Auto CAGR: ${rawReturnPct >= 0 ? '+' : ''}${rawReturnPct}% (raw return • ${Math.round(diffDays / 30 * 10) / 10} mo)`;
+    } else {
+      // Annualized MWRR
+      if (rawReturnMultiple > 0) {
+        cagr = Math.pow(rawReturnMultiple, 1 / diffYears) - 1;
+        cagr = Math.max(-0.9, Math.min(3.0, cagr));
+        cagr_pct = Number((cagr * 100).toFixed(1));
+        label = `Auto CAGR: ${cagr_pct}% (annualized • ${diffYears.toFixed(1)} yrs)`;
+      }
+    }
+
+    // Dimension 2: Forward CAGR of current holdings
+    let forwardWeightedCagr = 0;
+    let totalWeight = 0;
+    if (radarRows && radarRows.length > 0) {
+      for (const row of radarRows) {
+        const wt = row.weight_pct || 0;
+        const exp = row.expected_cagr || 26.0;
+        forwardWeightedCagr += (wt * exp);
+        totalWeight += wt;
+      }
+      if (totalWeight > 0) {
+        forwardWeightedCagr = Number((forwardWeightedCagr / totalWeight).toFixed(1));
+      } else {
+        forwardWeightedCagr = 26.0;
+      }
+    } else {
+      forwardWeightedCagr = 26.0;
+    }
 
     return {
       cagr: Number(cagr.toFixed(4)),
-      cagr_pct: Number((cagr * 100).toFixed(1)),
+      cagr_pct,
       years_investing: Number(diffYears.toFixed(1)),
-      net_invested_usd: Number(netDeposits.toFixed(2))
+      days_investing: Math.round(diffDays),
+      net_invested_usd: Number(netDeposits.toFixed(2)),
+      is_young: isYoung,
+      display_label: label,
+      forward_holdings_cagr: forwardWeightedCagr
     };
   } catch (err) {
     console.error('[project2x] Error calculating realized CAGR:', err.message);
@@ -656,7 +917,7 @@ export function calculatePortfolioRealizedCAGR(portfolioId, currentValUsd) {
 }
 
 /**
- * Dynamic Yearly Milestones (Level 1 to Level 5)
+ * Dynamic Yearly Milestones (Level 1 to Level 5) with RPG Progression Details
  */
 export function calculateYearlyMilestones({ currentValThb, goalValThb, monthlyInflowThb, targetCagr, targetYears = 5, fxRate = 35.0 }) {
   const r = (targetCagr || 0.26) / 12;
@@ -673,6 +934,9 @@ export function calculateYearlyMilestones({ currentValThb, goalValThb, monthlyIn
   ];
 
   const milestones = [];
+  let prevTargetThb = 0;
+  let prevTargetUsd = 0;
+
   for (let year = 1; year <= years; year++) {
     const n = year * 12;
     const fv = pv * Math.pow(1 + r, n) + pmt * (Math.pow(1 + r, n) - 1) / r;
@@ -681,14 +945,31 @@ export function calculateYearlyMilestones({ currentValThb, goalValThb, monthlyIn
 
     const info = levels[year - 1] || { level: year, icon: '⭐', name: `Level ${year}`, thTitle: `ด่านที่ ${year}` };
 
+    const isUnlocked = currentValThb >= targetThb;
+    const spanThb = Math.max(1, targetThb - prevTargetThb);
+    const progressInLevel = isUnlocked
+      ? 100
+      : Math.max(0, Math.min(100, ((currentValThb - prevTargetThb) / spanThb) * 100));
+
+    const remainingToEvolveThb = Math.max(0, targetThb - currentValThb);
+    const remainingToEvolveUsd = Math.round(remainingToEvolveThb / fxRate);
+
     milestones.push({
       year,
       ...info,
       target_thb: targetThb,
       target_usd: targetUsd,
-      is_unlocked: currentValThb >= targetThb,
+      prev_target_thb: prevTargetThb,
+      prev_target_usd: prevTargetUsd,
+      progress_in_level: Number(progressInLevel.toFixed(1)),
+      remaining_to_evolve_thb: remainingToEvolveThb,
+      remaining_to_evolve_usd: remainingToEvolveUsd,
+      is_unlocked: isUnlocked,
       is_current: false
     });
+
+    prevTargetThb = targetThb;
+    prevTargetUsd = targetUsd;
   }
 
   let foundCurrent = false;
@@ -719,16 +1000,19 @@ export async function getDashboardData(portfolioId) {
   const goalThb = config.goal_amount_thb || 10000000;
 
   const progressPercent = Number(Math.min(100, (totalValThb / goalThb) * 100).toFixed(1));
+
+  const autoInflow = detectActualMonthlyInflow(portfolioId);
+  const autoInflowThb = autoInflow.avg_monthly_usd ? Math.round(autoInflow.avg_monthly_usd * fxRate) : null;
+  const realizedCagr = calculatePortfolioRealizedCAGR(portfolioId, totalValUsd, radar.rows);
+
+  const autoCagrVal = realizedCagr?.cagr_pct ? (realizedCagr.cagr_pct / 100) : config.target_cagr;
   const eta = calculateDynamicETA({
     currentValThb: totalValThb,
     goalValThb: goalThb,
     monthlyInflowThb: config.monthly_inflow_thb,
-    targetCagr: config.target_cagr
+    targetCagr: config.target_cagr,
+    autoCagr: autoCagrVal
   });
-
-  const autoInflow = detectActualMonthlyInflow(portfolioId);
-  const autoInflowThb = autoInflow.avg_monthly_usd ? Math.round(autoInflow.avg_monthly_usd * fxRate) : null;
-  const realizedCagr = calculatePortfolioRealizedCAGR(portfolioId, totalValUsd);
 
   const effectiveCagr = config.target_cagr || 0.26;
   const milestones = calculateYearlyMilestones({

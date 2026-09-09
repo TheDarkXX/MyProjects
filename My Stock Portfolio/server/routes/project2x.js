@@ -6,7 +6,11 @@ import {
   syncShareQuotas,
   scanRadarMatrix,
   recommendInflowAllocation,
-  getDashboardData
+  getDashboardData,
+  getBackfillStatus,
+  backfillHistoricalData,
+  getAllFundamentals,
+  updateFundamentalsOverride
 } from '../services/project2xEngine.js';
 
 const project2xRoutes = new Hono();
@@ -128,6 +132,60 @@ project2xRoutes.post('/config/:pid', async (c) => {
   } catch (error) {
     console.error('[Project2X API] Config update error:', error);
     return c.json({ error: error.message || 'Failed to update config' }, 500);
+  }
+});
+
+/**
+ * POST /api/project-2x/backfill/:pid
+ * Start 10Y historical data backfill
+ */
+project2xRoutes.post('/backfill/:pid', async (c) => {
+  const pid = c.req.param('pid');
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const years = Number(body.years) || 10;
+    const symbols = body.symbols || [];
+    const res = await backfillHistoricalData(symbols, years);
+    return c.json(res);
+  } catch (error) {
+    console.error('[Project2X API] Backfill error:', error);
+    return c.json({ error: error.message || 'Failed to start backfill' }, 500);
+  }
+});
+
+/**
+ * GET /api/project-2x/backfill-status/:pid
+ * Check progress of backfill
+ */
+project2xRoutes.get('/backfill-status/:pid', (c) => {
+  return c.json(getBackfillStatus());
+});
+
+/**
+ * GET /api/project-2x/fundamentals/:pid
+ * Get fundamentals list
+ */
+project2xRoutes.get('/fundamentals/:pid', (c) => {
+  try {
+    return c.json(getAllFundamentals());
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+/**
+ * POST /api/project-2x/fundamentals/:pid
+ * Update fundamentals manual override for a symbol
+ */
+project2xRoutes.post('/fundamentals/:pid', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { symbol, expected_cagr_3y, consecutive_eps_qs } = body;
+    if (!symbol) return c.json({ error: 'Symbol required' }, 400);
+    const updated = updateFundamentalsOverride(symbol, { expected_cagr_3y, consecutive_eps_qs });
+    return c.json(updated);
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
   }
 });
 

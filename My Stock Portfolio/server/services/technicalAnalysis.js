@@ -111,7 +111,7 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
   const isFresh = diffDays <= 1 || (new Date().getDay() === 0 && diffDays <= 2) || (new Date().getDay() === 1 && diffDays <= 3);
 
   if (isFresh && count >= 50) {
-    const rows = db.prepare('SELECT date, price FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
+    const rows = db.prepare('SELECT date, price, open, high, low, close, volume FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
     if (rows.length >= 40) {
       return rows;
     }
@@ -122,10 +122,22 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
   try {
     const freshData = await fetchYahooHistorical(upper, fetchFrom, today);
     if (freshData && freshData.length > 0) {
-      const insert = db.prepare('INSERT OR REPLACE INTO historical_prices (symbol, date, price) VALUES (?, ?, ?)');
+      const insert = db.prepare(`
+        INSERT OR REPLACE INTO historical_prices (symbol, date, price, open, high, low, close, volume)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
       const insertTx = db.transaction((items) => {
         for (const item of items) {
-          insert.run(upper, item.date, item.price);
+          insert.run(
+            upper,
+            item.date,
+            item.price,
+            item.open ?? item.price,
+            item.high ?? item.price,
+            item.low ?? item.price,
+            item.close ?? item.price,
+            item.volume ?? 0
+          );
         }
       });
       insertTx(freshData);
@@ -134,7 +146,7 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
     console.warn(`[syncCandleDelta] Delta fetch error for ${upper}:`, err.message);
   }
 
-  return db.prepare('SELECT date, price FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
+  return db.prepare('SELECT date, price, open, high, low, close, volume FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
 }
 
 /**

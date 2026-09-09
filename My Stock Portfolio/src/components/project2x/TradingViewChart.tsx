@@ -1,10 +1,15 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { Activity, Zap, ExternalLink, BarChart3, TrendingUp } from 'lucide-react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { Activity, Zap, ExternalLink, BarChart3, TrendingUp, RotateCcw, MoveHorizontal, ZoomIn } from 'lucide-react';
 
 interface TradingViewChartProps {
   symbol: string;
   dates?: string[];
   closes: number[];
+  opens?: number[];
+  highs?: number[];
+  lows?: number[];
+  volumes?: number[];
+  ema50?: (number | null)[];
   ema150?: (number | null)[];
   ema200?: (number | null)[];
   bankerSeries?: number[];
@@ -19,13 +24,18 @@ interface TradingViewChartProps {
   onAddInflow?: () => void;
 }
 
-type TimeFrame = '7D' | '1M' | '3M' | 'ALL';
-type ChartStyle = 'AREA' | 'CANDLE';
+export type TimeFrame = '7D' | '1M' | '3M' | '6M' | '1Y' | '5Y' | 'ALL';
+export type ChartStyle = 'AREA' | 'CANDLE';
 
 export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   symbol,
   dates = [],
   closes = [],
+  opens = [],
+  highs = [],
+  lows = [],
+  volumes = [],
+  ema50 = [],
   ema150 = [],
   ema200 = [],
   bankerSeries = [],
@@ -40,40 +50,75 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   onAddInflow
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [timeframe, setTimeframe] = useState<TimeFrame>('1M');
-  const [chartStyle, setChartStyle] = useState<ChartStyle>('AREA');
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  // Timeframe default is 6M (per explicit user instruction)
+  const [timeframe, setTimeframe] = useState<TimeFrame>('6M');
+  const [chartStyle, setChartStyle] = useState<ChartStyle>('CANDLE');
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
-  const rawCloses = (closes || []).filter(c => typeof c === 'number' && !isNaN(c));
+  // Custom Zoom & Pan Window: [startIdx, endIdx] into raw arrays
+  const [customRange, setCustomRange] = useState<{ start: number; end: number } | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStartX, setDragStartX] = useState<number>(0);
+  const [dragInitialRange, setDragInitialRange] = useState<{ start: number; end: number } | null>(null);
+
+  const rawCloses = useMemo(() => (closes || []).filter(c => typeof c === 'number' && !isNaN(c)), [closes]);
+  const totalBars = rawCloses.length;
 
   // Determine lookback based on timeframe
-  const lookbackDays = useMemo(() => {
+  const defaultLookback = useMemo(() => {
     switch (timeframe) {
       case '7D': return 7;
-      case '1M': return 30;
-      case '3M': return 60;
-      case 'ALL': return rawCloses.length;
-      default: return 30;
+      case '1M': return 22;
+      case '3M': return 65;
+      case '6M': return 130;
+      case '1Y': return 252;
+      case '5Y': return 1260;
+      case 'ALL': return totalBars;
+      default: return 130;
     }
-  }, [timeframe, rawCloses.length]);
+  }, [timeframe, totalBars]);
 
-  // Slice data based on timeframe
-  const sliceCloses = useMemo(() => rawCloses.slice(-lookbackDays), [rawCloses, lookbackDays]);
-  const sliceDates = useMemo(() => (dates || []).slice(-lookbackDays), [dates, lookbackDays]);
-  const sliceEma150 = useMemo(() => (ema150 || []).slice(-lookbackDays), [ema150, lookbackDays]);
-  const sliceEma200 = useMemo(() => (ema200 || []).slice(-lookbackDays), [ema200, lookbackDays]);
-  const sliceBanker = useMemo(() => (bankerSeries || []).slice(-lookbackDays), [bankerSeries, lookbackDays]);
+  // Reset custom range when symbol or timeframe buttons clicked
+  useEffect(() => {
+    setCustomRange(null);
+  }, [timeframe, symbol]);
+
+  // Active slice range
+  const activeRange = useMemo(() => {
+    if (customRange && customRange.end > customRange.start) {
+      const start = Math.max(0, Math.min(totalBars - 7, customRange.start));
+      const end = Math.max(start + 7, Math.min(totalBars, customRange.end));
+      return { start, end };
+    }
+    const count = Math.min(totalBars, defaultLookback);
+    return { start: Math.max(0, totalBars - count), end: totalBars };
+  }, [customRange, defaultLookback, totalBars]);
+
+  // Sliced data arrays
+  const sliceCloses = useMemo(() => rawCloses.slice(activeRange.start, activeRange.end), [rawCloses, activeRange]);
+  const sliceOpens = useMemo(() => (opens && opens.length === totalBars) ? opens.slice(activeRange.start, activeRange.end) : [], [opens, totalBars, activeRange]);
+  const sliceHighs = useMemo(() => (highs && highs.length === totalBars) ? highs.slice(activeRange.start, activeRange.end) : [], [highs, totalBars, activeRange]);
+  const sliceLows = useMemo(() => (lows && lows.length === totalBars) ? lows.slice(activeRange.start, activeRange.end) : [], [lows, totalBars, activeRange]);
+  const sliceDates = useMemo(() => (dates || []).slice(activeRange.start, activeRange.end), [dates, activeRange]);
+  const sliceEma50 = useMemo(() => (ema50 || []).slice(activeRange.start, activeRange.end), [ema50, activeRange]);
+  const sliceEma150 = useMemo(() => (ema150 || []).slice(activeRange.start, activeRange.end), [ema150, activeRange]);
+  const sliceEma200 = useMemo(() => (ema200 || []).slice(activeRange.start, activeRange.end), [ema200, activeRange]);
+  const sliceBanker = useMemo(() => (bankerSeries || []).slice(activeRange.start, activeRange.end), [bankerSeries, activeRange]);
 
   if (sliceCloses.length < 2) {
     return (
-      <div className={`flex items-center justify-center rounded-3xl border border-white/10 bg-[#131722] text-slate-400 text-sm h-[420px] ${className}`}>
+      <div className={`flex items-center justify-center rounded-3xl border border-white/10 bg-[#131722] text-slate-300 text-sm h-[600px] ${className}`}>
         Waiting for {symbol} chart data...
       </div>
     );
   }
 
-  // Calculate price scale
+  // Calculate price scale min/max
   let allPriceVals: number[] = [...sliceCloses];
+  if (sliceHighs.length > 0) sliceHighs.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allPriceVals.push(v); });
+  if (sliceLows.length > 0) sliceLows.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allPriceVals.push(v); });
   sliceEma150.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allPriceVals.push(v); });
   sliceEma200.forEach(v => { if (typeof v === 'number' && !isNaN(v)) allPriceVals.push(v); });
 
@@ -84,17 +129,17 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const maxPrice = rawMax + paddingMargin;
   const priceRange = maxPrice - minPrice || 1;
 
-  // ViewBox layout dimensions
-  const vbWidth = 840;
-  const vbHeight = 440;
+  // ViewBox layout dimensions (Main Chart 440px + Banker 110px = 620px Total)
+  const vbWidth = 920;
+  const vbHeight = 620;
   const padL = 15;
-  const padR = 65; // room for right price axis labels
+  const padR = 75; // room for right price axis labels
   const padT = 15;
-  const dateAxisH = 25; // X-axis date area
-  const bankerPaneH = 80; // Banker sub-pane height
-  const paneGap = 15;
+  const dateAxisH = 28; // X-axis date area
+  const bankerPaneH = 110; // Banker sub-pane height
+  const paneGap = 20;
 
-  const priceChartH = vbHeight - padT - dateAxisH - bankerPaneH - paneGap;
+  const priceChartH = vbHeight - padT - dateAxisH - bankerPaneH - paneGap; // ~447px
   const chartW = vbWidth - padL - padR;
 
   // Coordinate functions
@@ -113,61 +158,61 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
     return bankerTopY + bankerPaneH - (clamped / 20) * bankerPaneH;
   };
 
-  // Build Price Area & Path
+  // Build Price Area & Line
   const pricePoints = sliceCloses.map((c, i) => `${getX(i, sliceCloses.length)},${getPriceY(c)}`);
   const pricePath = `M ${pricePoints.join(' L ')}`;
   const firstX = getX(0, sliceCloses.length);
   const lastX = getX(sliceCloses.length - 1, sliceCloses.length);
   const areaPath = `M ${firstX},${padT + priceChartH} L ${pricePoints.join(' L ')} L ${lastX},${padT + priceChartH} Z`;
 
-  // Color theme: Bullish vs Bearish
+  // Colors based on user's screenshot:
+  // Bull = Yellow (#FFE600), Bear = Pink (#FF2A6D)
   const isUp = sliceCloses[sliceCloses.length - 1] >= sliceCloses[0];
-  const priceColor = isUp ? '#00E5FF' : '#EF5350';
-  const gradId = `tv-grad-${symbol}-${isUp ? 'up' : 'down'}`;
+  const priceColor = isUp ? '#FFE600' : '#FF2A6D';
+  const gradId = `tv-grad-${symbol}-${isUp ? 'bull' : 'bear'}`;
 
-  // EMA paths
-  let ema150Path = '';
-  if (sliceEma150.length === sliceCloses.length) {
+  // EMA series paths
+  const buildEmaPath = (series: (number | null)[]) => {
+    if (!series || series.length !== sliceCloses.length) return '';
     const pts: string[] = [];
-    sliceEma150.forEach((val, i) => {
+    series.forEach((val, i) => {
       if (val !== null && !isNaN(val)) pts.push(`${getX(i, sliceCloses.length)},${getPriceY(val)}`);
     });
-    if (pts.length > 1) ema150Path = `M ${pts.join(' L ')}`;
-  }
+    return pts.length > 1 ? `M ${pts.join(' L ')}` : '';
+  };
 
-  let ema200Path = '';
-  if (sliceEma200.length === sliceCloses.length) {
-    const pts: string[] = [];
-    sliceEma200.forEach((val, i) => {
-      if (val !== null && !isNaN(val)) pts.push(`${getX(i, sliceCloses.length)},${getPriceY(val)}`);
-    });
-    if (pts.length > 1) ema200Path = `M ${pts.join(' L ')}`;
-  }
+  const ema50Path = buildEmaPath(sliceEma50);
+  const ema150Path = buildEmaPath(sliceEma150);
+  const ema200Path = buildEmaPath(sliceEma200);
 
-  // Price Grid Lines (4 levels)
-  const priceGridLevels = [0, 0.33, 0.66, 1].map(ratio => {
+  // Price Grid Lines (5 horizontal levels)
+  const priceGridLevels = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
     const price = minPrice + ratio * priceRange;
     const y = padT + priceChartH - ratio * priceChartH;
     return { price, y };
   });
 
-  // Current Price Y
   const curPriceY = getPriceY(currentPrice);
 
   // Candlestick calculation
-  const candleBarWidth = Math.max(3, Math.min(18, (chartW / sliceCloses.length) * 0.65));
+  const candleBarWidth = Math.max(2.5, Math.min(20, (chartW / sliceCloses.length) * 0.7));
   const candles = sliceCloses.map((close, i) => {
-    const open = i > 0 ? sliceCloses[i - 1] : close * 0.997;
+    const rawOpen = sliceOpens[i] !== undefined && !isNaN(sliceOpens[i]) ? sliceOpens[i] : (i > 0 ? sliceCloses[i - 1] : close * 0.998);
+    const rawHigh = sliceHighs[i] !== undefined && !isNaN(sliceHighs[i]) ? sliceHighs[i] : Math.max(rawOpen, close);
+    const rawLow = sliceLows[i] !== undefined && !isNaN(sliceLows[i]) ? sliceLows[i] : Math.min(rawOpen, close);
+
+    const open = rawOpen;
+    const high = Math.max(rawHigh, open, close);
+    const low = Math.min(rawLow, open, close);
     const isBull = close >= open;
-    const spread = Math.abs(close - open);
-    const high = Math.max(open, close) + spread * 0.4 + close * 0.001;
-    const low = Math.min(open, close) - spread * 0.4 - close * 0.001;
+
     const x = getX(i, sliceCloses.length);
     const yHigh = getPriceY(high);
     const yLow = getPriceY(low);
     const yTop = getPriceY(Math.max(open, close));
     const yBottom = getPriceY(Math.min(open, close));
     const bodyH = Math.max(2, yBottom - yTop);
+
     return {
       x,
       open,
@@ -178,14 +223,15 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       yHigh,
       yLow,
       yTop,
-      bodyH
+      bodyH,
+      candleColor: isBull ? '#FFE600' : '#FF2A6D' // Exact TradingView palette
     };
   });
 
-  // X-Axis Date ticks (4-5 evenly distributed)
+  // Date ticks (5-6 evenly spaced)
   const dateTickIndices = useMemo(() => {
     if (sliceDates.length === 0) return [];
-    const count = Math.min(5, sliceDates.length);
+    const count = Math.min(6, sliceDates.length);
     const step = Math.floor((sliceDates.length - 1) / (count - 1)) || 1;
     const indices: number[] = [];
     for (let i = 0; i < sliceDates.length; i += step) {
@@ -204,34 +250,94 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const mIdx = parseInt(parts[1], 10) - 1;
       const day = parseInt(parts[2], 10);
-      return `${monthNames[mIdx] || ''} ${day}`;
+      const yr = parts[0].slice(2);
+      return timeframe === '5Y' || timeframe === 'ALL'
+        ? `${monthNames[mIdx] || ''} '${yr}`
+        : `${monthNames[mIdx] || ''} ${day}`;
     }
     return dateStr;
   };
 
-  // Mouse hover calculation
+  // Interactive Mouse Move (Hover Crosshair)
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!containerRef.current) return;
-    const rect = e.currentTarget.getBoundingClientRect();
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const normX = (mouseX / rect.width) * vbWidth;
     const relX = Math.max(0, Math.min(chartW, normX - padL));
     const idx = Math.round((relX / chartW) * (sliceCloses.length - 1));
     setHoverIdx(idx);
+
+    // If dragging to pan
+    if (isDragging && dragInitialRange) {
+      const deltaX = e.clientX - dragStartX;
+      const barsDelta = Math.round((deltaX / rect.width) * (dragInitialRange.end - dragInitialRange.start));
+      const rangeSpan = dragInitialRange.end - dragInitialRange.start;
+
+      let newStart = dragInitialRange.start - barsDelta;
+      let newEnd = dragInitialRange.end - barsDelta;
+
+      if (newStart < 0) {
+        newStart = 0;
+        newEnd = rangeSpan;
+      }
+      if (newEnd > totalBars) {
+        newEnd = totalBars;
+        newStart = Math.max(0, totalBars - rangeSpan);
+      }
+
+      setCustomRange({ start: newStart, end: newEnd });
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+    setDragInitialRange({ ...activeRange });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setDragInitialRange(null);
+  };
+
+  // Zoom on Wheel (with Ctrl or standalone wheel)
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const currentSpan = activeRange.end - activeRange.start;
+    const zoomStep = Math.max(2, Math.round(currentSpan * 0.15));
+
+    if (e.deltaY < 0) {
+      // Zoom in: shrink range
+      if (currentSpan <= 7) return;
+      const newStart = Math.min(activeRange.end - 7, activeRange.start + Math.floor(zoomStep / 2));
+      const newEnd = Math.max(newStart + 7, activeRange.end - Math.ceil(zoomStep / 2));
+      setCustomRange({ start: newStart, end: newEnd });
+    } else {
+      // Zoom out: expand range
+      if (currentSpan >= totalBars) return;
+      const newStart = Math.max(0, activeRange.start - Math.floor(zoomStep / 2));
+      const newEnd = Math.min(totalBars, activeRange.end + Math.ceil(zoomStep / 2));
+      setCustomRange({ start: newStart, end: newEnd });
+    }
   };
 
   const activeIdx = hoverIdx !== null && hoverIdx >= 0 && hoverIdx < sliceCloses.length
     ? hoverIdx
     : sliceCloses.length - 1;
   const activeClose = sliceCloses[activeIdx];
+  const activeOpen = candles[activeIdx]?.open ?? activeClose;
+  const activeHigh = candles[activeIdx]?.high ?? activeClose;
+  const activeLow = candles[activeIdx]?.low ?? activeClose;
   const activeDate = sliceDates[activeIdx] || '';
+  const activeEma50 = sliceEma50[activeIdx];
   const activeEma150 = sliceEma150[activeIdx];
   const activeEma200 = sliceEma200[activeIdx];
   const activeBanker = sliceBanker[activeIdx] ?? banker;
   const activeX = getX(activeIdx, sliceCloses.length);
   const activePriceY = getPriceY(activeClose);
 
-  // Traffic Light Styling (Electric Cyan)
+  // Traffic Light Styling
   const getTrafficBadge = () => {
     if (trafficLight === 'BUY_ZONE') {
       return {
@@ -259,14 +365,15 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative flex flex-col rounded-3xl border border-white/10 bg-[#131722] p-5 shadow-2xl overflow-hidden backdrop-blur-2xl ${className}`}
+      onWheel={handleWheel}
+      className={`relative flex flex-col rounded-3xl border border-white/10 bg-[#131722] p-5 shadow-2xl overflow-hidden select-none backdrop-blur-2xl ${className}`}
     >
-      {/* Top Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+      {/* Top Header Controls Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-white/10">
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <span className="text-2xl font-black tracking-tight text-white">{symbol}</span>
-            <span className="text-xl font-bold text-slate-200 tabular-nums">${currentPrice.toFixed(2)}</span>
+            <span className="text-xl font-black text-slate-100 tabular-nums">${currentPrice.toFixed(2)}</span>
           </div>
 
           {/* Traffic Light Badge */}
@@ -278,38 +385,60 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           <span className="px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs text-slate-300 font-semibold">
             {badge}
           </span>
+
+          {customRange && (
+            <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-[11px] font-bold border border-cyan-500/30">
+              Zoom: {sliceCloses.length} bars
+            </span>
+          )}
         </div>
 
         {/* Timeframe & Chart Style Toggles */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Reset Zoom Button */}
+          <button
+            onClick={() => {
+              setTimeframe('6M');
+              setCustomRange(null);
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1E222D] hover:bg-[#2A2E39] border border-white/10 text-slate-300 hover:text-cyan-300 text-xs font-bold transition-colors cursor-pointer"
+            title="Reset to 6M default timeframe"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Reset 6M</span>
+          </button>
+
           {/* Chart Style Toggle */}
           <div className="flex items-center p-1 rounded-xl bg-[#1E222D] border border-white/10 text-xs">
             <button
-              onClick={() => setChartStyle('AREA')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                chartStyle === 'AREA' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Area
-            </button>
-            <button
               onClick={() => setChartStyle('CANDLE')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                 chartStyle === 'CANDLE' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400 hover:text-white'
               }`}
             >
               Candle
             </button>
+            <button
+              onClick={() => setChartStyle('AREA')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                chartStyle === 'AREA' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Area
+            </button>
           </div>
 
-          {/* Timeframe Zoom Buttons */}
+          {/* Timeframe Zoom Buttons: 7D | 1M | 3M | 6M | 1Y | 5Y | ALL */}
           <div className="flex items-center p-1 rounded-xl bg-[#1E222D] border border-white/10 text-xs">
-            {(['7D', '1M', '3M', 'ALL'] as TimeFrame[]).map(tf => (
+            {(['7D', '1M', '3M', '6M', '1Y', '5Y', 'ALL'] as TimeFrame[]).map(tf => (
               <button
                 key={tf}
-                onClick={() => setTimeframe(tf)}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                  timeframe === tf ? 'bg-blue-600 text-white font-black' : 'text-slate-400 hover:text-white'
+                onClick={() => {
+                  setTimeframe(tf);
+                  setCustomRange(null);
+                }}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  timeframe === tf && !customRange ? 'bg-blue-600 text-white font-black shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 {tf}
@@ -317,59 +446,81 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             ))}
           </div>
 
+          {/* External TradingView Link */}
           <a
             href={`https://www.tradingview.com/chart/?symbol=${symbol}`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1 p-2 rounded-xl bg-[#1E222D] hover:bg-[#2A2E39] border border-white/10 text-slate-400 hover:text-cyan-300 transition-colors"
-            title="Open in TradingView Desktop/Web"
+            title="Open in TradingView Web"
           >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
       </div>
 
-      {/* Interactive Legend Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs text-slate-300">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-0.5 rounded-full bg-[#00E5FF]" />
-            <span>Price: <strong className="text-white">${activeClose.toFixed(2)}</strong></span>
+      {/* Interactive Legend Bar with Real OHLC + EMA Legends */}
+      <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-xs text-slate-300">
+        <div className="flex items-center gap-3.5 flex-wrap">
+          {/* OHLC Pills */}
+          <div className="flex items-center gap-2 text-slate-400">
+            <span>O: <strong className="text-white">${activeOpen.toFixed(2)}</strong></span>
+            <span>H: <strong className="text-emerald-400">${activeHigh.toFixed(2)}</strong></span>
+            <span>L: <strong className="text-rose-400">${activeLow.toFixed(2)}</strong></span>
+            <span>C: <strong className={activeClose >= activeOpen ? 'text-[#FFE600]' : 'text-[#FF2A6D]'}>${activeClose.toFixed(2)}</strong></span>
           </div>
-          <div className="flex items-center gap-1.5 text-blue-400">
+
+          {/* EMA 50 (White) */}
+          <div className="flex items-center gap-1 text-slate-200 font-semibold">
+            <span className="w-2.5 h-0.5 rounded-full bg-white" />
+            <span>EMA 50: <strong>{activeEma50 ? `$${activeEma50.toFixed(1)}` : 'N/A'}</strong></span>
+          </div>
+
+          {/* EMA 150 (Electric Blue) */}
+          <div className="flex items-center gap-1 text-blue-400 font-semibold">
             <span className="w-2.5 h-0.5 rounded-full bg-[#2962FF]" />
             <span>EMA 150: <strong>{activeEma150 ? `$${activeEma150.toFixed(1)}` : 'N/A'}</strong></span>
           </div>
-          <div className="flex items-center gap-1.5 text-amber-300">
-            <span className="w-2.5 h-0.5 rounded-full bg-[#FFD740]" />
+
+          {/* EMA 200 (Orange/Gold) */}
+          <div className="flex items-center gap-1 text-[#FFB300] font-semibold">
+            <span className="w-2.5 h-0.5 rounded-full bg-[#FFB300]" />
             <span>EMA 200: <strong>{activeEma200 ? `$${activeEma200.toFixed(1)}` : 'N/A'}</strong></span>
           </div>
-          <div className="flex items-center gap-1.5 text-amber-400 font-bold">
-            <span className="w-2 h-2 rounded bg-amber-400" />
-            <span>Banker: {activeBanker.toFixed(1)}/20</span>
+
+          {/* Banker MCDX Score */}
+          <div className="flex items-center gap-1 font-bold">
+            <span className={`w-2 h-2 rounded ${activeBanker >= 10 ? 'bg-[#FF3B30]' : activeBanker >= 5 ? 'bg-[#FFD600]' : 'bg-[#4CAF50]'}`} />
+            <span className="text-slate-200">Banker: <strong className="text-white">{activeBanker.toFixed(1)}/20</strong></span>
           </div>
         </div>
 
         {activeDate && (
-          <span className="text-slate-400 font-medium">
+          <div className="text-slate-400 font-medium">
             Date: <strong className="text-slate-200">{activeDate}</strong>
-          </span>
+          </div>
         )}
       </div>
 
-      {/* Main Multi-Pane SVG Chart (Price Area + Banker MCDX) */}
-      <div className="relative w-full h-[380px] cursor-crosshair select-none">
+      {/* Main Multi-Pane SVG Chart (Price ~440px + Banker ~110px) */}
+      <div className="relative w-full h-[540px] cursor-crosshair select-none">
         <svg
+          ref={svgRef}
           viewBox={`0 0 ${vbWidth} ${vbHeight}`}
           preserveAspectRatio="none"
           className="w-full h-full"
           onMouseMove={handleMouseMove}
-          onMouseLeave={() => setHoverIdx(null)}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={() => {
+            setHoverIdx(null);
+            setIsDragging(false);
+          }}
         >
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={priceColor} stopOpacity="0.30" />
-              <stop offset="60%" stopColor={priceColor} stopOpacity="0.06" />
+              <stop offset="0%" stopColor={priceColor} stopOpacity="0.35" />
+              <stop offset="60%" stopColor={priceColor} stopOpacity="0.08" />
               <stop offset="100%" stopColor={priceColor} stopOpacity="0.0" />
             </linearGradient>
           </defs>
@@ -378,7 +529,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           {/* PANE 1: PRICE CHART AREA */}
           {/* ============================================================ */}
 
-          {/* Price Grid lines & Right Y-Axis Scale */}
+          {/* Price Grid Lines & Right Axis Labels */}
           {priceGridLevels.map((g, i) => (
             <g key={i}>
               <line
@@ -393,7 +544,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                 x={vbWidth - padR + 8}
                 y={g.y + 4}
                 fill="#94A3B8"
-                fontSize="10"
+                fontSize="11"
                 fontFamily="sans-serif"
               >
                 ${g.price.toFixed(1)}
@@ -401,7 +552,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             </g>
           ))}
 
-          {/* Current Price Dashed Reference Line */}
+          {/* Current Price Reference Line */}
           <line
             x1={padL}
             y1={curPriceY}
@@ -409,17 +560,17 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             y2={curPriceY}
             stroke={priceColor}
             strokeDasharray="2 2"
-            strokeOpacity="0.6"
+            strokeOpacity="0.65"
           />
 
           {/* Current Price Badge on Right Axis */}
-          <g transform={`translate(${vbWidth - padR + 6}, ${curPriceY - 9})`}>
-            <rect width="54" height="18" rx="4" fill={priceColor} />
+          <g transform={`translate(${vbWidth - padR + 6}, ${curPriceY - 10})`}>
+            <rect width="60" height="20" rx="4" fill={priceColor} />
             <text
-              x="27"
-              y="13"
+              x="30"
+              y="14"
               fill="#0F172A"
-              fontSize="10"
+              fontSize="11"
               fontWeight="bold"
               textAnchor="middle"
               fontFamily="sans-serif"
@@ -432,13 +583,17 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           {chartStyle === 'AREA' && (
             <>
               <path d={areaPath} fill={`url(#${gradId})`} />
-              {/* EMA 200 (Yellow) */}
+              {/* EMA 200 (Orange/Gold Dashed) */}
               {ema200Path && (
-                <path d={ema200Path} fill="none" stroke="#FFD740" strokeWidth="2" strokeDasharray="4 2" opacity="0.9" />
+                <path d={ema200Path} fill="none" stroke="#FFB300" strokeWidth="2" strokeDasharray="4 2" opacity="0.9" />
               )}
-              {/* EMA 150 (Blue) */}
+              {/* EMA 150 (Electric Blue Solid) */}
               {ema150Path && (
                 <path d={ema150Path} fill="none" stroke="#2962FF" strokeWidth="2.2" opacity="0.95" />
+              )}
+              {/* EMA 50 (White Solid) */}
+              {ema50Path && (
+                <path d={ema50Path} fill="none" stroke="#FFFFFF" strokeWidth="1.6" opacity="0.9" />
               )}
               {/* Main Price Line */}
               <path d={pricePath} fill="none" stroke={priceColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -450,13 +605,16 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             <>
               {/* EMA Underlays */}
               {ema200Path && (
-                <path d={ema200Path} fill="none" stroke="#FFD740" strokeWidth="1.8" strokeDasharray="4 2" opacity="0.8" />
+                <path d={ema200Path} fill="none" stroke="#FFB300" strokeWidth="1.8" strokeDasharray="4 2" opacity="0.85" />
               )}
               {ema150Path && (
-                <path d={ema150Path} fill="none" stroke="#2962FF" strokeWidth="2" opacity="0.85" />
+                <path d={ema150Path} fill="none" stroke="#2962FF" strokeWidth="2" opacity="0.9" />
+              )}
+              {ema50Path && (
+                <path d={ema50Path} fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
               )}
 
-              {/* Candles */}
+              {/* Candles (Yellow for Bull, Hot Pink for Bear) */}
               {candles.map((cdl, i) => (
                 <g key={i}>
                   {/* Wick */}
@@ -465,8 +623,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                     y1={cdl.yHigh}
                     x2={cdl.x}
                     y2={cdl.yLow}
-                    stroke={cdl.isBull ? '#00E5FF' : '#EF5350'}
-                    strokeWidth="1.2"
+                    stroke={cdl.candleColor}
+                    strokeWidth="1.4"
                   />
                   {/* Body */}
                   <rect
@@ -475,8 +633,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                     width={candleBarWidth}
                     height={cdl.bodyH}
                     rx="1.5"
-                    fill={cdl.isBull ? '#00E5FF' : '#EF5350'}
-                    fillOpacity={cdl.isBull ? 0.9 : 0.9}
+                    fill={cdl.candleColor}
+                    stroke={cdl.candleColor}
+                    strokeWidth="0.5"
                   />
                 </g>
               ))}
@@ -493,9 +652,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               <text
                 key={dIdx}
                 x={dateX}
-                y={padT + priceChartH + 16}
+                y={padT + priceChartH + 18}
                 fill="#94A3B8"
-                fontSize="10"
+                fontSize="11"
                 fontFamily="sans-serif"
                 textAnchor="middle"
               >
@@ -511,9 +670,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
             {/* Sub-pane divider */}
             <line
               x1={padL}
-              y1={bankerTopY - 6}
+              y1={bankerTopY - 8}
               x2={vbWidth - padR}
-              y2={bankerTopY - 6}
+              y2={bankerTopY - 8}
               stroke="rgba(255,255,255,0.12)"
               strokeWidth="1"
             />
@@ -523,28 +682,30 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               x={padL}
               y={bankerTopY + 12}
               fill="#F59E0B"
-              fontSize="9"
+              fontSize="10"
               fontWeight="bold"
               fontFamily="sans-serif"
             >
-              BANKER MCDX FLOW (SUPER MONEY)
+              BANKER MCDX FLOW (SUPER MONEY) • 20 SCALE
             </text>
 
-            {/* Threshold Line 10 (Banker Entry) */}
+            {/* Threshold Line 10 (Pink #FC2D79 Entry Signal) */}
             <line
               x1={padL}
               y1={getBankerY(10)}
               x2={vbWidth - padR}
               y2={getBankerY(10)}
-              stroke="#F59E0B"
-              strokeDasharray="2 3"
-              strokeOpacity="0.4"
+              stroke="#FC2D79"
+              strokeDasharray="3 3"
+              strokeWidth="1.2"
+              strokeOpacity="0.8"
             />
             <text
               x={vbWidth - padR + 8}
               y={getBankerY(10) + 3}
-              fill="#F59E0B"
-              fontSize="9"
+              fill="#FC2D79"
+              fontSize="10"
+              fontWeight="bold"
               fontFamily="sans-serif"
             >
               10
@@ -556,26 +717,39 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
               y1={getBankerY(0)}
               x2={vbWidth - padR}
               y2={getBankerY(0)}
-              stroke="rgba(255,255,255,0.06)"
+              stroke="rgba(255,255,255,0.08)"
             />
             <text
               x={vbWidth - padR + 8}
               y={getBankerY(0) + 3}
               fill="#64748B"
-              fontSize="9"
+              fontSize="10"
               fontFamily="sans-serif"
             >
               0
             </text>
 
-            {/* Banker Bars */}
+            {/* Banker Bars with 3-tier RGB Palette */}
             {sliceCloses.map((_, i) => {
               const bScore = sliceBanker[i] ?? 0;
               const barX = getX(i, sliceCloses.length);
               const barY = getBankerY(bScore);
               const barH = Math.max(1, (bankerTopY + bankerPaneH) - barY);
-              const isHeavy = bScore >= 10;
               const barW = Math.max(2, candleBarWidth * 0.9);
+
+              // Red for institutional (>= 10), Yellow for moderate (>= 5), Green for light (< 5)
+              let barColor = '#334155';
+              let opacity = 0.4;
+              if (bScore >= 10) {
+                barColor = '#FF3B30';
+                opacity = 0.95;
+              } else if (bScore >= 5) {
+                barColor = '#FFD600';
+                opacity = 0.9;
+              } else if (bScore > 0) {
+                barColor = '#4CAF50';
+                opacity = 0.8;
+              }
 
               return (
                 <rect
@@ -585,8 +759,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
                   width={barW}
                   height={barH}
                   rx="1"
-                  fill={isHeavy ? '#F59E0B' : bScore > 0 ? '#FCD34D' : '#334155'}
-                  fillOpacity={isHeavy ? 0.95 : bScore > 0 ? 0.7 : 0.3}
+                  fill={barColor}
+                  fillOpacity={opacity}
                 />
               );
             })}
@@ -597,7 +771,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           {/* ============================================================ */}
           {hoverIdx !== null && (
             <g>
-              {/* Vertical line through both panes */}
+              {/* Vertical line through all panes */}
               <line
                 x1={activeX}
                 y1={padT}
@@ -631,8 +805,8 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
         </svg>
       </div>
 
-      {/* Footer Info & Action */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10 text-xs text-slate-300">
+      {/* Footer Info, Banker Status & Action */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3.5 border-t border-white/10 text-xs text-slate-300">
         <div className="flex items-center gap-4 flex-wrap">
           <div>
             <span className="text-slate-400">vs EMA 150: </span>
@@ -648,21 +822,26 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-slate-400">Banker Status: </span>
-            <span className="font-extrabold text-amber-300">
-              {banker >= 10 ? '🔥 Institutional Inflow' : banker > 0 ? '🟡 Light Flow' : '⚪ Zero Banker'}
+            <span className="font-black text-amber-300">
+              {banker >= 10 ? '🔥 Institutional Super Money (>=10)' : banker >= 5 ? '🟡 Moderate Momentum' : banker > 0 ? '🟢 Light Flow' : '⚪ Zero Flow'}
             </span>
           </div>
         </div>
 
-        {onAddInflow && (
-          <button
-            onClick={onAddInflow}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer"
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Fill via Inflow Slip →</span>
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] text-slate-400">
+            💡 Scroll / Drag to Pan & Zoom
+          </span>
+          {onAddInflow && (
+            <button
+              onClick={onAddInflow}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Fill via Inflow Slip →</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

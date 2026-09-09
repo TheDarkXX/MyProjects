@@ -28,10 +28,20 @@ export async function fetchYahooHistorical(symbol, from, to) {
       .filter(q => q.close !== null && q.close !== undefined)
       .map(q => {
         const date = new Date(q.date).toISOString().split('T')[0];
+        const close = Number(q.close);
+        const open = q.open !== null && q.open !== undefined ? Number(q.open) : close;
+        const high = q.high !== null && q.high !== undefined ? Number(q.high) : Math.max(open, close);
+        const low = q.low !== null && q.low !== undefined ? Number(q.low) : Math.min(open, close);
+        const volume = q.volume !== null && q.volume !== undefined ? Number(q.volume) : 0;
         return {
           symbol,
           date,
-          price: q.close
+          price: close,
+          open,
+          high,
+          low,
+          close,
+          volume
         };
       });
   } catch (error) {
@@ -252,6 +262,59 @@ export async function fetchYahooTechnicals(symbol) {
     return data;
   } catch (error) {
     console.error(`[Yahoo] Error fetching technicals for ${symbol}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Fetch Fundamental metrics (PE trailing, PE forward, PEG, Revenue Growth, Consecutive EPS beats)
+ * @param {string} symbol
+ */
+export async function fetchYahooFundamentals(symbol) {
+  if (!symbol || symbol === 'CASH') return null;
+  const upper = symbol.toUpperCase();
+  try {
+    const summary = await yahooFinance.quoteSummary(upper, {
+      modules: ['summaryDetail', 'defaultKeyStatistics', 'financialData', 'earningsHistory']
+    }).catch(() => null);
+
+    if (!summary) return null;
+
+    const keyStats = summary.defaultKeyStatistics || {};
+    const detail = summary.summaryDetail || {};
+    const financial = summary.financialData || {};
+    const earningsHistory = summary.earningsHistory?.history || [];
+
+    const pe_trailing = detail.trailingPE || keyStats.trailingPE || null;
+    const pe_forward = detail.forwardPE || keyStats.forwardPE || null;
+    const peg_ratio = keyStats.pegRatio || null;
+    const revenue_growth = financial.revenueGrowth ? Number((financial.revenueGrowth * 100).toFixed(1)) : null;
+    const earnings_growth = financial.earningsGrowth ? Number((financial.earningsGrowth * 100).toFixed(1)) : null;
+
+    // Calculate consecutive earnings beat quarters
+    let consecutive_eps_qs = 0;
+    if (earningsHistory.length > 0) {
+      const sortedHistory = [...earningsHistory].sort((a, b) => new Date(b.quarter).getTime() - new Date(a.quarter).getTime());
+      for (const q of sortedHistory) {
+        if (q.surprisePercent !== null && q.surprisePercent !== undefined && q.surprisePercent > 0) {
+          consecutive_eps_qs++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    return {
+      symbol: upper,
+      pe_trailing: pe_trailing ? Number(pe_trailing.toFixed(2)) : null,
+      pe_forward: pe_forward ? Number(pe_forward.toFixed(2)) : null,
+      peg_ratio: peg_ratio ? Number(peg_ratio.toFixed(2)) : null,
+      revenue_growth,
+      earnings_growth,
+      consecutive_eps_qs
+    };
+  } catch (err) {
+    console.warn(`[Yahoo] fetchYahooFundamentals error for ${upper}:`, err.message);
     return null;
   }
 }

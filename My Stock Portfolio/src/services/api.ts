@@ -121,5 +121,9 @@ export const api = {
     recommend: (portfolioId: string, amount_thb: number) => authFetch(`/project-2x/recommend/${portfolioId}`, { method: 'POST', body: JSON.stringify({ amount_thb }) }),
     config: (portfolioId: string) => authFetch(`/project-2x/config/${portfolioId}`),
     updateConfig: (portfolioId: string, data: any) => authFetch(`/project-2x/config/${portfolioId}`, { method: 'POST', body: JSON.stringify(data) }),
+    backfill: (portfolioId: string, years = 10) => authFetch(`/project-2x/backfill/${portfolioId}`, { method: 'POST', body: JSON.stringify({ years }) }),
+    backfillStatus: (portfolioId: string) => authFetch(`/project-2x/backfill-status/${portfolioId}`),
+    fundamentals: (portfolioId: string) => authFetch(`/project-2x/fundamentals/${portfolioId}`),
+    updateFundamentals: (portfolioId: string, data: { symbol: string; expected_cagr_3y?: number; consecutive_eps_qs?: number }) => authFetch(`/project-2x/fundamentals/${portfolioId}`, { method: 'POST', body: JSON.stringify(data) }),
   }
 };

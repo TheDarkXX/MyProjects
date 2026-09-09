@@ -16,6 +16,11 @@ export interface MilestoneItem {
   thTitle: string;
   target_thb: number;
   target_usd: number;
+  prev_target_thb?: number;
+  prev_target_usd?: number;
+  progress_in_level?: number;
+  remaining_to_evolve_thb?: number;
+  remaining_to_evolve_usd?: number;
   is_unlocked: boolean;
   is_current: boolean;
 }
@@ -24,7 +29,11 @@ export interface RealizedCagrData {
   cagr: number;
   cagr_pct: number;
   years_investing: number;
+  days_investing?: number;
   net_invested_usd: number;
+  is_young?: boolean;
+  display_label?: string;
+  forward_holdings_cagr?: number;
 }
 
 export interface DashboardData {
@@ -44,6 +53,7 @@ export interface DashboardData {
     Conservative: ETAItem;
     Base: ETAItem;
     Bull: ETAItem;
+    Auto?: ETAItem;
   };
   active_sell_alerts_count: number;
   updated_at: string;
@@ -83,6 +93,10 @@ export interface RadarRow {
   sparkline: {
     dates?: string[];
     closes: number[];
+    opens?: number[];
+    highs?: number[];
+    lows?: number[];
+    volumes?: number[];
     ema150: (number | null)[];
     ema200: (number | null)[];
     bankerSeries?: number[];
@@ -91,6 +105,35 @@ export interface RadarRow {
   target_shares: number;
   progress_percent: number;
   status: string;
+  // Fundamental & Allocation Columns
+  weight_pct?: number;
+  market_value_usd?: number;
+  pe_trailing?: number | null;
+  pe_forward?: number | null;
+  peg_ratio?: number | null;
+  expected_cagr?: number;
+  consecutive_eps_qs?: number;
+}
+
+export interface FundamentalItem {
+  symbol: string;
+  pe_trailing: number | null;
+  pe_forward: number | null;
+  peg_ratio: number | null;
+  revenue_cagr_3y: number | null;
+  eps_cagr_3y: number | null;
+  expected_cagr_3y: number;
+  consecutive_eps_qs: number;
+  updated_at: string;
+}
+
+export interface BackfillStatusData {
+  isRunning: boolean;
+  total: number;
+  completed: number;
+  currentSymbol: string;
+  errors: Array<{ symbol: string; error: string }>;
+  symbolStatus: Record<string, 'PENDING' | 'FETCHING' | 'DONE' | 'ERROR'>;
 }
 
 export interface SellAlert {
@@ -152,6 +195,9 @@ interface Project2xStore {
   isLoadingRadar: boolean;
   isLoadingRecommendation: boolean;
   isSavingConfig: boolean;
+  isBackfilling: boolean;
+  backfillStatus: BackfillStatusData | null;
+  fundamentals: FundamentalItem[];
   error: string | null;
 
   fetchDashboard: (portfolioId: string) => Promise<void>;
@@ -161,6 +207,10 @@ interface Project2xStore {
   calculateRecommendation: (portfolioId: string, amountThb: number) => Promise<void>;
   fetchConfig: (portfolioId: string) => Promise<void>;
   updateConfig: (portfolioId: string, updates: Partial<Project2xConfig>) => Promise<void>;
+  triggerBackfill: (portfolioId: string, years?: number) => Promise<void>;
+  checkBackfillStatus: (portfolioId: string) => Promise<void>;
+  fetchFundamentalsList: (portfolioId: string) => Promise<void>;
+  updateFundamentalItem: (portfolioId: string, data: { symbol: string; expected_cagr_3y?: number; consecutive_eps_qs?: number }) => Promise<void>;
   refreshAll: (portfolioId: string) => Promise<void>;
 }
 
@@ -173,12 +223,15 @@ export const useProject2xStore = create<Project2xStore>((set, get) => ({
   radar: null,
   recommendation: null,
   config: null,
+  backfillStatus: null,
+  fundamentals: [],
 
   isLoadingDashboard: false,
   isLoadingQuotas: false,
   isLoadingRadar: false,
   isLoadingRecommendation: false,
   isSavingConfig: false,
+  isBackfilling: false,
   error: null,
 
   fetchDashboard: async (portfolioId: string) => {
@@ -251,12 +304,51 @@ export const useProject2xStore = create<Project2xStore>((set, get) => ({
     }
   },
 
+  triggerBackfill: async (portfolioId: string, years = 10) => {
+    set({ isBackfilling: true, error: null });
+    try {
+      await api.project2x.backfill(portfolioId, years);
+      await get().checkBackfillStatus(portfolioId);
+    } catch (err: any) {
+      set({ error: err.message, isBackfilling: false });
+    }
+  },
+
+  checkBackfillStatus: async (portfolioId: string) => {
+    try {
+      const status = await api.project2x.backfillStatus(portfolioId);
+      set({ backfillStatus: status, isBackfilling: status?.isRunning || false });
+    } catch (err: any) {
+      console.warn('Check backfill status error:', err);
+    }
+  },
+
+  fetchFundamentalsList: async (portfolioId: string) => {
+    try {
+      const data = await api.project2x.fundamentals(portfolioId);
+      set({ fundamentals: data });
+    } catch (err: any) {
+      console.warn('Fetch fundamentals error:', err);
+    }
+  },
+
+  updateFundamentalItem: async (portfolioId: string, data: { symbol: string; expected_cagr_3y?: number; consecutive_eps_qs?: number }) => {
+    try {
+      await api.project2x.updateFundamentals(portfolioId, data);
+      await get().fetchFundamentalsList(portfolioId);
+      await get().fetchRadar(portfolioId);
+    } catch (err: any) {
+      set({ error: err.message });
+    }
+  },
+
   refreshAll: async (portfolioId: string) => {
     await Promise.all([
       get().fetchDashboard(portfolioId),
       get().fetchQuotas(portfolioId),
       get().fetchRadar(portfolioId),
-      get().fetchConfig(portfolioId)
+      get().fetchConfig(portfolioId),
+      get().fetchFundamentalsList(portfolioId)
     ]);
   }
 }));

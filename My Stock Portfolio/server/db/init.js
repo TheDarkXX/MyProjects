@@ -262,8 +262,42 @@ export function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_p2x_signals_port_sym ON project2x_signals(portfolio_id, symbol, date DESC);
 
+    CREATE TABLE IF NOT EXISTS project2x_fundamentals (
+        symbol TEXT PRIMARY KEY,
+        pe_trailing REAL,
+        pe_forward REAL,
+        peg_ratio REAL,
+        revenue_cagr_3y REAL,
+        eps_cagr_3y REAL,
+        expected_cagr_3y REAL DEFAULT 26.0,
+        consecutive_eps_qs INTEGER DEFAULT 0,
+        updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_historical_prices_sym_date ON historical_prices(symbol, date DESC);
   `);
+
+  // Migration for historical_prices OHLCV columns
+  const histCols = [
+    'open REAL',
+    'high REAL',
+    'low REAL',
+    'close REAL',
+    'volume REAL'
+  ];
+  try {
+    const existingHistCols = new Set(
+      db.pragma('table_info(historical_prices)').map(col => col.name)
+    );
+    for (const colDef of histCols) {
+      const colName = colDef.split(' ')[0];
+      if (!existingHistCols.has(colName)) {
+        db.exec(`ALTER TABLE historical_prices ADD COLUMN ${colDef};`);
+      }
+    }
+  } catch (err) {
+    console.error('[DB] Migration error on historical_prices:', err.message);
+  }
 
   // Migration for symbol_fundamentals (Forward-Looking Data for existing DBs)
   const migrationColumns = [
