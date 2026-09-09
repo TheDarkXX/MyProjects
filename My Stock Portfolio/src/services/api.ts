@@ -112,5 +112,14 @@ export const api = {
     deleteTemplate: (portfolioId: string, templateId: string) => authFetch(`/blueprints/${portfolioId}/templates/${templateId}`, { method: 'DELETE' }),
     getLatestSnapshot: (portfolioId: string, source?: string) => authFetch(`/blueprints/${portfolioId}/snapshots/latest${source ? `?source=${source}` : ''}`),
     saveSnapshot: (portfolioId: string, data: any) => authFetch(`/blueprints/${portfolioId}/snapshots`, { method: 'POST', body: JSON.stringify(data) }),
+  },
+  project2x: {
+    dashboard: (portfolioId: string) => authFetch(`/project-2x/dashboard/${portfolioId}`),
+    quotas: (portfolioId: string) => authFetch(`/project-2x/quotas/${portfolioId}`),
+    resetQuotas: (portfolioId: string) => authFetch(`/project-2x/quotas/${portfolioId}/reset`, { method: 'POST' }),
+    scan: (portfolioId: string) => authFetch(`/project-2x/scan/${portfolioId}`),
+    recommend: (portfolioId: string, amount_thb: number) => authFetch(`/project-2x/recommend/${portfolioId}`, { method: 'POST', body: JSON.stringify({ amount_thb }) }),
+    config: (portfolioId: string) => authFetch(`/project-2x/config/${portfolioId}`),
+    updateConfig: (portfolioId: string, data: any) => authFetch(`/project-2x/config/${portfolioId}`, { method: 'POST', body: JSON.stringify(data) }),
   }
 };

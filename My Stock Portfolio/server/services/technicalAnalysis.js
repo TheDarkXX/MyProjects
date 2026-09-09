@@ -1,9 +1,141 @@
 import YahooFinance from 'yahoo-finance2';
+import { db } from '../db/init.js';
+import { fetchYahooHistorical } from './yahoo.js';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 const TECH_CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours in-memory cache
 const technicalCache = new Map();
+
+/**
+ * Calculate Exponential Moving Average (EMA) series
+ * @param {number[]} closes 
+ * @param {number} period 
+ * @returns {Array<number|null>}
+ */
+export function calcEMASeries(closes, period) {
+  if (!closes || closes.length < period) return [];
+  const k = 2 / (period + 1);
+  const result = new Array(closes.length).fill(null);
+
+  // Seed with SMA
+  let sum = 0;
+  for (let i = 0; i < period; i++) {
+    sum += closes[i];
+  }
+  result[period - 1] = sum / period;
+
+  for (let i = period; i < closes.length; i++) {
+    result[i] = closes[i] * k + result[i - 1] * (1 - k);
+  }
+  return result;
+}
+
+/**
+ * Calculate latest Exponential Moving Average (EMA)
+ * @param {number[]} closes 
+ * @param {number} period 
+ * @returns {number|null}
+ */
+export function calcEMA(closes, period) {
+  const series = calcEMASeries(closes, period);
+  if (!series || series.length === 0) return null;
+  const last = series[series.length - 1];
+  return last !== null ? Number(last.toFixed(2)) : null;
+}
+
+/**
+ * Calculate Banker MCDX (Super Money Institutional Flow)
+ * Formula: rsi_Banker = 1.5 * (RSI(50) - 50)
+ * Scaled 0 - 20
+ * @param {number[]} closes 
+ * @returns {number}
+ */
+export function calcBankerMCDX(closes) {
+  if (!closes || closes.length < 51) return 0;
+  const rsi50 = calcRSI(closes, 50);
+  if (rsi50 === null || rsi50 <= 50) return 0;
+  return Number(Math.min(20, Math.max(0, 1.5 * (rsi50 - 50))).toFixed(2));
+}
+
+/**
+ * Calculate Banker MCDX series for the last N bars
+ * @param {number[]} closes 
+ * @param {number} lookback 
+ * @returns {number[]}
+ */
+export function calcBankerSeries(closes, lookback = 30) {
+  if (!closes || closes.length < 51) return [];
+  const startIdx = Math.max(50, closes.length - lookback);
+  const result = [];
+  for (let i = startIdx; i < closes.length; i++) {
+    const slice = closes.slice(0, i + 1);
+    const rsi50 = calcRSI(slice, 50);
+    if (rsi50 !== null && rsi50 > 50) {
+      result.push(Number(Math.min(20, Math.max(0, 1.5 * (rsi50 - 50))).toFixed(2)));
+    } else {
+      result.push(0);
+    }
+  }
+  return result;
+}
+
+/**
+ * Sync daily candles for a symbol using Delta Sync into historical_prices SQLite table.
+ * Caches up to 400 calendar days of data to guarantee 250+ trading sessions for EMA200 & RSI50.
+ * @param {string} symbol
+ * @param {number} minDaysRequired
+ * @returns {Promise<Array<{ date: string, price: number }>>}
+ */
+export async function syncCandleDelta(symbol, minDaysRequired = 400) {
+  if (!symbol || symbol === 'CASH') return [];
+  const upper = symbol.toUpperCase();
+
+  const today = new Date().toISOString().split('T')[0];
+  const targetStartDate = new Date(Date.now() - minDaysRequired * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // Check latest & earliest date in DB
+  const stats = db.prepare(
+    'SELECT MAX(date) as max_date, MIN(date) as min_date, COUNT(*) as count FROM historical_prices WHERE symbol = ?'
+  ).get(upper);
+
+  const maxDate = stats?.max_date;
+  const minDate = stats?.min_date;
+  const count = stats?.count || 0;
+
+  const nowTime = new Date().getTime();
+  const maxDateTime = maxDate ? new Date(maxDate).getTime() : 0;
+  const diffDays = maxDate ? Math.floor((nowTime - maxDateTime) / (24 * 60 * 60 * 1000)) : 999;
+
+  const isSufficientHistory = minDate && (new Date(minDate).getTime() <= new Date(targetStartDate).getTime() + 20 * 24 * 60 * 60 * 1000);
+  const isFresh = diffDays <= 1 || (new Date().getDay() === 0 && diffDays <= 2) || (new Date().getDay() === 1 && diffDays <= 3);
+
+  if (isSufficientHistory && isFresh && count >= 200) {
+    const rows = db.prepare('SELECT date, price FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
+    if (rows.length >= 180) {
+      return rows;
+    }
+  }
+
+  // Delta fetch from Yahoo Finance
+  const fetchFrom = (isSufficientHistory && maxDate) ? maxDate : targetStartDate;
+  try {
+    const freshData = await fetchYahooHistorical(upper, fetchFrom, today);
+    if (freshData && freshData.length > 0) {
+      const insert = db.prepare('INSERT OR REPLACE INTO historical_prices (symbol, date, price) VALUES (?, ?, ?)');
+      const insertTx = db.transaction((items) => {
+        for (const item of items) {
+          insert.run(upper, item.date, item.price);
+        }
+      });
+      insertTx(freshData);
+    }
+  } catch (err) {
+    console.warn(`[syncCandleDelta] Delta fetch error for ${upper}:`, err.message);
+  }
+
+  return db.prepare('SELECT date, price FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
+}
 
 /**
  * Calculate Wilder's Smoothing RSI (14 periods)

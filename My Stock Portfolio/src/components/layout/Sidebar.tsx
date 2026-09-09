@@ -3,7 +3,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
   LayoutDashboard, ReceiptText, Settings, LogOut, 
-  PieChart, ShieldCheck, Scale 
+  PieChart, ShieldCheck, Scale, Rocket 
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -30,6 +30,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     id: 'execution',
     items: [
+      { id: 'project2x', label: 'Project 2X', icon: Rocket },
       { id: 'rebalance', label: 'Smart Rebalance', icon: Scale },
     ],
   },

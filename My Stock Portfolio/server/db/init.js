@@ -214,6 +214,55 @@ export function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_blueprint_snapshots_port 
         ON blueprint_snapshots(portfolio_id, created_at DESC);
+
+    -- Project 2X Autonomous Engine
+    CREATE TABLE IF NOT EXISTS project2x_config (
+        portfolio_id TEXT PRIMARY KEY REFERENCES portfolios(id),
+        goal_amount_thb REAL DEFAULT 10000000,
+        target_cagr REAL DEFAULT 0.26,
+        target_years REAL DEFAULT 5,
+        max_stock_ceiling_pct REAL DEFAULT 30,
+        monthly_inflow_thb REAL DEFAULT 35000,
+        fcd_yield_pct REAL DEFAULT 4.5,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS project2x_share_quotas (
+        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+        portfolio_id TEXT NOT NULL REFERENCES portfolios(id),
+        symbol TEXT NOT NULL,
+        category TEXT DEFAULT 'Core',
+        target_percent REAL NOT NULL DEFAULT 0,
+        base_price REAL NOT NULL DEFAULT 0,
+        split_factor REAL DEFAULT 1.0,
+        target_shares REAL NOT NULL DEFAULT 0,
+        status TEXT DEFAULT 'COLLECTING',
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(portfolio_id, symbol)
+    );
+    CREATE INDEX IF NOT EXISTS idx_p2x_quotas_port ON project2x_share_quotas(portfolio_id);
+
+    CREATE TABLE IF NOT EXISTS project2x_signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        portfolio_id TEXT NOT NULL REFERENCES portfolios(id),
+        symbol TEXT NOT NULL,
+        date TEXT NOT NULL,
+        price REAL NOT NULL,
+        ema50 REAL,
+        ema150 REAL,
+        ema200 REAL,
+        banker_flow REAL,
+        scenario INTEGER,
+        traffic_light TEXT,
+        sell_signal TEXT,
+        action_suggested TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_p2x_signals_port_sym ON project2x_signals(portfolio_id, symbol, date DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_historical_prices_sym_date ON historical_prices(symbol, date DESC);
   `);
 
   // Migration for symbol_fundamentals (Forward-Looking Data for existing DBs)
