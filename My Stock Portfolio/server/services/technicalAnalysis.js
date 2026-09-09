@@ -155,9 +155,9 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
   const isSufficientHistory = minDate && (new Date(minDate).getTime() <= new Date(targetStartDate).getTime() + 20 * 24 * 60 * 60 * 1000);
   const isFresh = diffDays <= 1 || (new Date().getDay() === 0 && diffDays <= 2) || (new Date().getDay() === 1 && diffDays <= 3);
 
-  // Check if we already have valid OHLCV (open, high, low are not null, and at least some high > low)
-  const sample = db.prepare('SELECT open, high, low FROM historical_prices WHERE symbol = ? AND open IS NOT NULL AND high > low LIMIT 1').get(upper);
-  const hasValidOhlcv = !!sample;
+  // Check if ALL rows have valid OHLCV (no NULL open/high/low)
+  const hasNullRows = !!db.prepare('SELECT 1 FROM historical_prices WHERE symbol = ? AND (open IS NULL OR high IS NULL OR high <= low) LIMIT 1').get(upper);
+  const hasValidOhlcv = !hasNullRows;
 
   if (isFresh && count >= 50 && hasValidOhlcv) {
     const rows = db.prepare('SELECT date, price, open, high, low, close, volume FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
@@ -166,8 +166,8 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
     }
   }
 
-  // Delta fetch from Yahoo Finance: If hasValidOhlcv is false, force fetch from targetStartDate (full history)
-  const fetchFrom = (hasValidOhlcv && isSufficientHistory && maxDate) ? maxDate : targetStartDate;
+  // Delta fetch from Yahoo Finance: If hasValidOhlcv is false, force fetch from minDate or targetStartDate (full history)
+  const fetchFrom = (hasValidOhlcv && isSufficientHistory && maxDate) ? maxDate : (minDate || targetStartDate);
   try {
     const freshData = await fetchYahooHistorical(upper, fetchFrom, today);
     if (freshData && freshData.length > 0) {
