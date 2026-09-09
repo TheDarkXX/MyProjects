@@ -65,6 +65,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const [showZoomHint, setShowZoomHint] = useState<boolean>(false);
   const zoomHintTimer = useRef<any>(null);
 
+  // Custom Zoom & Pan Window: [startIdx, endIdx] into raw arrays
+  const [customRange, setCustomRange] = useState<{ start: number; end: number } | null>(null);
+
   // Signals Toggle (3-Step Super Money Signals)
   const [showSignals, setShowSignals] = useState<boolean>(true);
 
