@@ -73,7 +73,7 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
         {/* Live Values */}
         <div className="flex items-center gap-2 mr-2">
           {Object.entries(liveValues).map(([label, { value, color }]) => (
-            <span key={label} className="text-[13px] text-slate-400">
+            <span key={label} className="text-[13px] text-slate-300">
               {label}:{' '}
               <strong className="font-bold" style={{ color }}>
                 {value}
@@ -91,7 +91,7 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
           <button
             onClick={onToggleVisibility}
             title={isVisible ? 'Hide Pane' : 'Show Pane'}
-            className="p-1 rounded hover:bg-slate-700/60 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+            className="p-1 rounded hover:bg-slate-700/60 text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
             {isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
           </button>
@@ -100,7 +100,7 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
           <button
             onClick={onOpenSettings}
             title="Open Settings"
-            className="p-1 rounded hover:bg-slate-700/60 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+            className="p-1 rounded hover:bg-slate-700/60 text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
             <Settings className="w-3.5 h-3.5" />
           </button>
@@ -109,7 +109,7 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
           <button
             onClick={onMoveUp}
             title="Move Pane Up"
-            className="p-1 rounded hover:bg-slate-700/60 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+            className="p-1 rounded hover:bg-slate-700/60 text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
             <ChevronUp className="w-3.5 h-3.5" />
           </button>
@@ -118,7 +118,7 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
           <button
             onClick={onMoveDown}
             title="Move Pane Down"
-            className="p-1 rounded hover:bg-slate-700/60 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+            className="p-1 rounded hover:bg-slate-700/60 text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
@@ -130,7 +130,7 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
             className={`p-1 rounded transition-colors cursor-pointer ${
               isMaximized
                 ? 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30'
-                : 'hover:bg-slate-700/60 text-slate-400 hover:text-slate-100'
+                : 'hover:bg-slate-700/60 text-slate-300 hover:text-white'
             }`}
           >
             {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
@@ -140,7 +140,7 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
           <button
             onClick={onRemove}
             title="Close Pane"
-            className="p-1 rounded hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+            className="p-1 rounded hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>

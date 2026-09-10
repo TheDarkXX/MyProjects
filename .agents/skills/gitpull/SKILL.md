@@ -1,23 +1,27 @@
 ---
 name: gitpull
-description: "Safe Git Sync, Auto-Commit Pending Work, Executive Briefing, and Unfinished Task Hunter"
+description: Safe Git Sync, Auto-Commit Pending Work, Executive Briefing, and Unfinished Task Hunter for MyProjects Umbrella
 ---
 
-# 🔄 Skill: `/gitpull` (Safe Sync & Executive Resume Officer)
+# 🔄 Skill: /gitpull (MyProjects Safe Sync & Executive Resume Officer)
 
 ## Objective
-ทำหน้าที่เป็น **Workspace Synchronizer** และ **Briefing Officer** เมื่อเริ่มงาน:
-1. ป้องกันโค้ดชน/สูญหายโดยการ **Auto-Commit งานที่ค้างอยู่ก่อนดึงโค้ด** (Commit then Pull)
-2. สั่ง **`git pull`** จาก Main Workspace Root อย่างปลอดภัย
-3. วิเคราะห์สิ่งที่มีการเปลี่ยนแปลง และเสิร์ฟ **Clickable Markdown Links (`file:///...`)** ตรงไปยังเอกสารยุทธศาสตร์หรือโค้ดหลักล่าสุด
-4. **ควานหางานที่ค้างอยู่ (WIP / Pending / Next Steps Hunter)** จากเอกสาร Quick Save ล่าสุดและ Codebase เพื่อให้ User และ AI สามารถกระโดดกลับเข้าสู่ Context รบได้ทันทีใน 5 วินาที
+ทำหน้าที่เป็น **Workspace Synchronizer** และ **Briefing Officer** เมื่อเริ่มงานหรือสลับเครื่องบนโปรเจกต์เครือ **MyProjects**:
+1. ป้องกันโค้ดชน/สูญหายโดยการ **Auto-Commit งานที่ค้างอยู่ก่อนดึงโค้ด** (Commit then Pull) พร้อม Pre-Commit Sanity Check
+2. สั่ง **git pull origin master** (หรือ git pull) จาก Main Workspace Root (`C:\My Claw\MyProjects`) อย่างปลอดภัย
+3. วิเคราะห์สิ่งที่มีการเปลี่ยนแปลง และเสิร์ฟ **Clickable Markdown Links (`file:///C:/My%20Claw/MyProjects/...`)** ตรงไปยังเอกสาร Quick Save หรือโค้ดแอปหลักล่าสุด
+4. **ควานหางานที่ค้างอยู่ (WIP / Pending / Next Steps Hunter)** แบบ 2 ขา:
+   - **ขา A:** สแกน `Quick Save/Active/` (ซึ่งครอบคลุมทั้ง HyperCut, My Stock Portfolio, App Builder AI, LazyRead, Airkeys, VVE ฯลฯ)
+   - **ขา B:** สแกน **5-7 ไฟล์ลอยล่าสุด** ที่ Root ของ `Quick Save/Complete/` หรือ subfolder ของแต่ละแอป
+   เพื่อให้ User และ AI สามารถสับสวิตช์กระโดดกลับเข้าสู่ Context ของโปรเจกต์ที่ทำค้างไว้ได้ทันทีใน 5 วินาที
 
 ---
 
 ## ⛔ PRE-FLIGHT CHECKLIST (กฎเหล็กก่อนรัน)
-- **Main Workspace Priority:** คำสั่ง Git ทั้งหมดต้องรันที่ Root Directory เสมอ (`c:\My Claw\MyProjects`) ห้ามรันใน Subfolder ของเอกสารที่เปิดค้างอยู่
+- **Main Workspace Priority (Iron Rule):** คำสั่ง Git ทั้งหมดต้องรันที่ Workspace Root เสมอ (`C:\My Claw\MyProjects`) ห้ามรันใน Subfolder ของแอปย่อย
+- **Target Remote Awareness:** ใน Repo นี้ Remote หลักคือ `origin` (GitHub `https://github.com/TheDarkXX/MyProjects.git`) และมีรีโมตรอง `vps` สำหรับ Stock Portfolio คำสั่งดึงหลักคือ `git pull origin master`
 - **No Blind Overwrite:** หากมีไฟล์ที่ยังไม่ได้ commit ห้ามสั่ง pull ข้ามหัวหรือ stash หายสาบสูญ ให้ทำตามขั้นตอน Phase 1 เสมอ
-- **No Browser Subagent:** ยืนยันผลการซิงก์และการทำงานผ่าน Git/Code Inspection เท่านั้น ห้ามเปิด browser subagent เองเด็ดขาด
+- **Sub-App Build Artifacts:** ระวัง build artifacts ของ Electron, Vite, Node modules ในแอปย่อย (เช่น HyperCut, App Builder) อย่าเผลอกวาดลง Git
 
 ---
 
@@ -28,77 +32,92 @@ description: "Safe Git Sync, Auto-Commit Pending Work, Executive Briefing, and U
    ```powershell
    git status -s
    ```
-2. **เงื่อนไข:**
+2. **เงื่อนไขและการจัดการ:**
    - **กรณี Working Tree สะอาด (Clean):** ข้ามไป Phase 2 ได้ทันที
    - **กรณีมีไฟล์ค้าง (Dirty Tree):**
-     - ให้ทำการ Stage และ Commit งานค้างทันที เพื่อไม่ให้เกิด conflict หรือโค้ดหาย:
+     - **Safety Sanity Check:** ดูรายการไฟล์ใน `git status -s` ก่อน:
+       - หากมีไฟล์ขยะขนาดใหญ่ (เช่น `.mp4`, build output, node_modules, log หนักๆ) ให้เตือนผู้ใช้หรือแยกยกเว้น
+     - Stage และ Commit งานค้างทันที (ใส่ Double Quotes ครอบ Commit Message เสมอ):
        ```powershell
        git add -A
        git commit -m "chore: save local uncommitted changes before git pull [auto]"
        ```
-     - จดบันทึกไว้ในใจว่ามีไฟล์ไหนที่ถูก auto-commit ไปบ้าง เพื่อแจ้งในสรุปตอนท้าย
+     - จดบันทึกรายการไฟล์ที่ถูก auto-commit ไว้เพื่อแจ้งในสรุปตอนท้าย
 
-### Phase 2: Safe Pull & Sync (ดึงข้อมูลล่าสุด)
+### Phase 2: Safe Pull & Sync (ดึงข้อมูลล่าสุด & Conflict Guard)
 1. **รันคำสั่งดึงโค้ด:**
    ```powershell
-   git pull
+   git pull origin master
    ```
+   *(หรือ `git pull` ตาม upstream)*
 2. **ตรวจสอบผลลัพธ์:**
-   - ถ้าขึ้น `Already up to date.` ➔ แปลว่าเครื่องเป็นปัจจุบันแล้ว ไป Phase 3 เพื่อสรุปสถานะล่าสุด
-   - ถ้ามีไฟล์ดาวน์โหลดเข้ามา ➔ เก็บรายการไฟล์ที่ถูกดึง (`git diff --name-status HEAD@{1} HEAD` หรือจาก Output ของ `git pull`)
-   - ถ้าเกิด Git Conflict (ชนกันระดับเนื้อโค้ด) ➔ **หยุดทันที** ระบุไฟล์ที่ชน แจ้งสาเหตุ และเสนอแนวทางแก้ให้ User ตัดสินใจ
+   - **Already up to date:** เครื่องเป็นปัจจุบันแล้ว ข้ามไป Phase 3 เพื่อสรุปสถานะล่าสุด
+   - **Fast-forward / Pulled successfully:** มีไฟล์อัปเดตเข้ามา ➔ เก็บรายการไฟล์ที่ถูกดึงด้วย:
+     ```powershell
+     git diff --name-status HEAD@{1} HEAD
+     ```
+   - **⚠️ Git Conflict (ระวังเป็นพิเศษ!):**
+     - **หยุดทันที!** ห้ามฝืน merge สุ่มสี่สุ่มห้า
+     - แจ้งไฟล์ที่ชน พร้อมคำสั่งกู้คืนความปลอดภัย:
+       ```powershell
+       git merge --abort
+       ```
+     - วิเคราะห์สาเหตุและเสนอทางเลือกให้ User ตัดสินใจ
 
 ### Phase 3: Change Analysis & Document Detection (จับทิศทางงานล่าสุด)
 1. **ตรวจสอบ Git Log ล่าสุด:**
    ```powershell
    git log -n 5 --stat --oneline
    ```
-2. **ค้นหาเอกสารเวอร์ชันล่าสุด (Latest Compiled Truth):**
-   - ตรวจดูในโฟลเดอร์ `Quick Save/Complete/` หรือ `strategies/` หรือ `docs/`
-   - มองหาไฟล์บันทึกที่มีเลข Version สูงสุด (เช่น `V2.15.1_*.md`) หรือไฟล์ที่เพิ่งถูกเพิ่ม/แก้ไขล่าสุด
+2. **ค้นหาเอกสารบริบทล่าสุด (Dual-Scan Strategy):**
+   - **Scan A (`Quick Save/Active/`):** ตรวจสอบไฟล์ใน `Quick Save/Active/` (เช็ค subfolder เช่น `HyperCut/`, `My Stock Portfolio/`, `App Builder AI/` ฯลฯ)
+   - **Scan B (`Quick Save/Complete/`):** สแกนไฟล์ **5-7 ไฟล์ลอยล่าสุด** ในโฟลเดอร์ Complete หรือเอกสารใน `docs/`
 3. **อ่านเนื้อหาไฟล์เอกสารล่าสุด:**
-   - ใช้ `view_file` ส่องดูหัวข้อหลัก, สถาปัตยกรรม, และวัตถุประสงค์ของงานชุดนั้น
+   - ใช้ `view_file` ส่องดูหัวข้อหลัก, สถาปัตยกรรม, และฟังก์ชันของแอปที่กำลังพัฒนา
 
 ### Phase 4: WIP Hunter & Executive Briefing (ล่าสิ่งค้างคา & ชี้เป้าลุยต่อ)
-1. **สแกนหางานค้าง (Pending / Next Steps / TODO):**
-   - ค้นหาในไฟล์ Quick Save ล่าสุดที่อ่าน ในหัวข้อ:
+1. **สแกนหางานค้าง (Pending / Next Steps / Active Tasks):**
+   - ตรวจสอบ YAML Frontmatter ของเอกสารล่าสุด:
+     - `status: active`
+     - `outcome: pending`
+   - ค้นหา Section งานค้างในเอกสาร:
      - `## Next Steps` / `## Future Enhancements`
      - `## Pending Action Items` / `## สิ่งที่ต้องทำต่อ`
      - `## Unfinished / WIP`
-   - ตรวจสอบในโค้ด (ถ้าเกี่ยวข้อง) เช่น มองหา `TODO:`, `FIXME:`, หรือฟังก์ชันจำลอง (Stub / Dummy)
+   - ตรวจสอบในโค้ดของแอปย่อย (ถ้าเกี่ยวข้อง) เช่น `TODO:`, `FIXME:`, หรือ Mock components
 2. **ร่างรายงานสรุปให้ User (Executive Format):**
-   - ต้องใช้สรรพนามตาม Persona (มารบูรพา = มึง/กู ชัดเจน ดุดัน ตรงไปตรงมา)
-   - แปะ **Clickable Markdown Links** รูปแบบ `[ชื่อไฟล์](file:///c:/My%20Claw/MyProjects/...)` (ใช้ Forward Slashes เสมอ)
-   - สรุปผล 4 หมวดหมู่ชัดเจน:
-     1. **🛰️ สถานะการ Sync (Sync Status):** Clean / Auto-committed / Pulled X files
-     2. **📦 งานล่าสุดที่ทำเสร็จไป (Latest Accomplishment):** สรุปสาระ 2-3 บรรทัด + Markdown Links ตรงไปยังเอกสารหลัก
-     3. **🎯 งานที่ค้างอยู่ / ต้องทำต่อ (The Unfinished Agenda):** แปะเป็น Checklist `[ ]` ชัดเจน เพื่อให้ผู้ใช้เคาะสั่งลุยต่อได้ทันที
-     4. **⚡ คำแนะนำเชิงยุทธศาสตร์ถัดไป (Strategic Next Move):** สิ่งที่ควรให้ความสำคัญเป็นอันดับ 1 ในตอนนี้
+   - ใช้สรรพนามตาม Persona ประจำโปรเจกต์ (เช่น มารบูรพา = มึง/กู ชัดเจน ดุดัน ตรงไปตรงมา)
+   - แปะ **Clickable Markdown Links** รูปแบบ `[ชื่อไฟล์](file:///C:/My%20Claw/MyProjects/...)` (ใช้ Forward Slashes และ `%20` เสมอ)
+   - สรุปผล 4 หมวดหมู่ชัดเจน พร้อมเปิด Choice ให้เลือกสั่งลุยต่อได้ทันที
 
 ---
 
 ## 📑 Output Template (โครงสร้างรายงานผล)
 
 ```markdown
-(Anchor First Word ตาม Persona เช่น "กูจัดให้!", "มาดูกัน") ซิงก์โค้ดล่าสุดเรียบร้อยแล้ว!
+(Anchor First Word เช่น กูจัดให้!, มาดูกัน, ฟังนะมึง) ซิงก์ MyProjects ล่าสุดเรียบร้อยแล้ว!
 
 ### 🛰️ 1. สถานะการ Sync
-- **การเปลี่ยนแปลง:** (เช่น ดึงเข้ามา 84 ไฟล์ / Already up to date)
-- **สถานะ Local:** (สะอาดเรียบร้อย / มีการ auto-commit งานค้าง 2 ไฟล์ก่อนดึง)
+- **การเปลี่ยนแปลง:** (เช่น ดึงเข้ามา X ไฟล์ / Already up to date)
+- **สถานะ Local:** (สะอาดเรียบร้อย / มีการ auto-commit งานค้าง X ไฟล์ก่อนดึง)
+- **สถานะ Remote:** origin/master ซิงก์ตรงกัน
 
 ### 📦 2. งานล่าสุดในระบบ (Latest Deployed Context)
-- **เวอร์ชัน:** `V2.15.1` - [ชื่อหัวข้องาน]
-- **สาระสำคัญ:** (สรุปสั้นๆ 2-3 บรรทัดว่าระบบทำอะไรได้แล้วบ้าง)
-- **🔗 แฟ้มเอกสารหลัก:**
-  - [ชื่อไฟล์เอกสารหลัก](file:///c:/My%20Claw/MyProjects/path/to/doc.md)
-  - [ชื่อไฟล์โค้ดหลัก](file:///c:/My%20Claw/MyProjects/path/to/code.tsx)
+- **แอป / โมดูล:** [เช่น HyperCut, My Stock Portfolio, App Builder AI]
+- **เวอร์ชันล่าสุด:** V... - [ชื่อหัวข้องาน]
+- **สาระสำคัญ:** (สรุปสั้นๆ 2-3 บรรทัดว่าฟีเจอร์หรือแอปทำอะไรเสร็จไปแล้วบ้าง)
+- **🔗 แฟ้มเอกสาร & โค้ดหลัก:**
+  - [ชื่อไฟล์เอกสารหลัก](file:///C:/My%20Claw/MyProjects/path/to/doc.md)
+  - [ชื่อไฟล์โค้ดหลัก](file:///C:/My%20Claw/MyProjects/path/to/code.tsx)
 
-### 🎯 3. สิ่งที่ค้างอยู่ / ต้องทำต่อ (Action Items / Next Steps)
-จากที่กูอ่านในเอกสารและโค้ดล่าสุด นี่คืองานที่ค้างอยู่และรอให้ลุยต่อ:
-- [ ] **งานที่ 1:** [รายละเอียดที่สกัดมาจาก Next Steps]
-- [ ] **งานที่ 2:** [รายละเอียด]
-- [ ] **งานที่ 3:** [รายละเอียด]
+### 🎯 3. สิ่งที่ค้างอยู่ / ต้องทำต่อ (The Unfinished Agenda)
+จากที่กูสแกนดูทั้งใน `Quick Save/Active/` และเอกสารล่าสุด นี่คืองานที่ค้างอยู่:
+- [ ] **1. [ชื่องาน 1]:** [รายละเอียดสั้นๆ + แอปที่เกี่ยวข้อง]
+- [ ] **2. [ชื่องาน 2]:** [รายละเอียดสั้นๆ + แอปที่เกี่ยวข้อง]
+- [ ] **3. [ชื่องาน 3]:** [รายละเอียดสั้นๆ + แอปที่เกี่ยวข้อง]
 
-### ⚡ 4. มารบูรพา Recommendation
-[ชี้เป้า 1 ประโยคชัดๆ ว่าควรเริ่มเคาะข้อไหนก่อน] สั่งมาได้เลยว่าจะลุยข้อไหนต่อ!
+### ⚡ 4. คำแนะนำเชิงยุทธศาสตร์ถัดไป (Strategic Next Move)
+👉 **โฟกัสอันดับ 1:** [ชี้เป้า 1 ประโยคชัดๆ ว่าทำไมควรเคาะข้อนี้ก่อน]
+
+มึงจะให้กูลุยแอปไหน ข้อไหน (1, 2, 3) หรือมีไอเดียใหม่อะไร สั่งมาเลย!
 ```

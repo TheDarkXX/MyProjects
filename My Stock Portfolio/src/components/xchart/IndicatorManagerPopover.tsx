@@ -520,7 +520,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                 <div className="flex items-center gap-2.5">
                   {/* Slot Reorder Controls */}
                   <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
-                    <span className="text-[12px] font-bold text-slate-400">Pane</span>
+                    <span className="text-[13px] font-bold text-slate-300">Pane</span>
                     <select
                       value={config.paneLayout?.assignments?.mcdx ?? 1}
                       onChange={(e) => assignIndicatorPane('mcdx', Number(e.target.value))}
@@ -635,7 +635,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                 <div className="flex items-center gap-2.5">
                   {/* Slot Reorder Controls */}
                   <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
-                    <span className="text-[12px] font-bold text-slate-400">Pane</span>
+                    <span className="text-[13px] font-bold text-slate-300">Pane</span>
                     <select
                       value={config.paneLayout?.assignments?.ultimateRsi ?? 2}
                       onChange={(e) => assignIndicatorPane('ultimateRsi', Number(e.target.value))}
