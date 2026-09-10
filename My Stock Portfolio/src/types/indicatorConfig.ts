@@ -18,8 +18,15 @@ export interface EnvelopeConfig {
   lineStyle: LineStyleOption;
 }
 
+export interface SignalMarkersConfig {
+  rebound: boolean;   // xxx READY
+  breakout: boolean;  // ▲ BUY
+  goldenStar: boolean;// ★ SUPER
+  pullback: boolean;  // ▼ EXIT
+}
+
 export interface SignalColorsConfig {
-  rebound: string;   // ••• READY
+  rebound: string;   // xxx READY
   breakout: string;  // ▲ BUY
   goldenStar: string;// ★ SUPER
   pullback: string;  // ▼ EXIT

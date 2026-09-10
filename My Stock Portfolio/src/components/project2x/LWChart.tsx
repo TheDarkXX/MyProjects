@@ -454,10 +454,11 @@ export const LWChart: React.FC<LWChartProps> = ({
       color: string,
       shape: 'circle' | 'arrowUp' | 'arrowDown',
       textLabel: string,
-      sizeMult: number
+      sizeMult: number,
+      textOnly?: string
     ): SeriesMarker<Time> => {
-      const finalSize = Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
-      const text = showText ? textLabel : undefined;
+      const finalSize = textOnly !== undefined ? 0 : Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
+      const text = textOnly !== undefined ? (showText ? `${textOnly} READY` : textOnly) : (showText ? textLabel : undefined);
       if (padding > 0) {
         const barRange = Math.max(barHigh - barLow, barClose * 0.005);
         const offset = barRange * (padding * 0.08);
@@ -507,11 +508,11 @@ export const LWChart: React.FC<LWChartProps> = ({
         }
       }
 
-      // STEP 1: ••• READY (Near EMA support, Banker = 0, setup forming) -> 3 dots (•••) below candle
+      // STEP 1: xxx READY (Near EMA support, Banker = 0, setup forming) -> 'xxx' below candle
       if (rebound && nearSupport && bVal === 0) {
         if (lastType !== 'READY' && lastType !== 'BUY') {
           if (i - lastReadyIdx >= 8) {
-            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.rebound, 'circle', '••• READY', 0.85));
+            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.rebound, 'circle', '', 0, 'xxx'));
             lastType = 'READY';
             lastReadyIdx = i;
             continue;
@@ -576,6 +577,7 @@ export const LWChart: React.FC<LWChartProps> = ({
         background: { type: ColorType.Solid, color: '#090D16' },
         textColor: '#94A3B8',
         fontFamily: TV_FONT_FAMILY,
+        fontSize: 12,
       },
       grid: {
         vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
@@ -1141,7 +1143,7 @@ export const LWChart: React.FC<LWChartProps> = ({
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              1D
+              Day
             </button>
             <button
               onClick={() => setResolution('1W')}
@@ -1151,7 +1153,7 @@ export const LWChart: React.FC<LWChartProps> = ({
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              1W
+              Week
             </button>
           </div>
 
