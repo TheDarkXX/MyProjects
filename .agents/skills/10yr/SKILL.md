@@ -14,7 +14,11 @@ Fast, high-density backfill of 10-year (or Max Lifetime IPO) historical daily OH
 ### Mode 1: Automated Backfill via Node Scripts
 When the user types `/10yr` or `/10yr [symbols...]`:
 
-1. **If no symbols specified (Full Core Sync):**
+1. **If no symbols specified (Full Core & Watchlist Sync):**
+   - Run TradingView Watchlist 87 symbols (Max Lifetime All-Time back to IPO / 1927):
+     ```bash
+     node server/scripts/backfill_watchlist_87.js
+     ```
    - Run Project 2X 13 symbols:
      ```bash
      node server/scripts/backfill_10y.js
@@ -25,13 +29,13 @@ When the user types `/10yr` or `/10yr [symbols...]`:
      ```
 
 2. **If specific symbols specified (e.g. `/10yr TSLA AAPL`):**
-   - Run direct backfill for those symbols starting from `2016-09-01` (or earlier) to today using `fetchYahooHistorical` with batch transaction insertion into SQLite table `historical_prices`.
+   - Run direct backfill for those symbols starting from `1927-01-01` (or IPO) to today using `fetchYahooHistorical` with batch transaction insertion into SQLite table `historical_prices`.
 
 3. **Deploy & Sync to Production VPS:**
-   - SCP updated scripts or DB to VPS:
+   - SCP updated scripts to VPS and execute:
      ```powershell
-     scp server/scripts/backfill_10y.js root@185.250.38.247:/root/stock-portfolio/server/scripts/
-     ssh root@185.250.38.247 "node /root/stock-portfolio/server/scripts/backfill_10y.js"
+     scp server/scripts/backfill_watchlist_87.js root@185.250.38.247:/root/stock-portfolio/server/scripts/
+     ssh root@185.250.38.247 "node /root/stock-portfolio/server/scripts/backfill_watchlist_87.js"
      ```
 
 ---

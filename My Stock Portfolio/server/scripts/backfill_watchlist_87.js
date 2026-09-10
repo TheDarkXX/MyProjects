@@ -27,17 +27,17 @@ const WATCHLIST_87_SYMBOLS = [
   'BTC-USD', 'GC=F', 'CL=F'
 ];
 
-// 10 years + buffer
-const START_DATE = '2016-01-01';
+// Max Lifetime (All-Time back to IPO / earliest available history)
+const START_DATE = '1927-01-01';
 const TODAY = new Date().toISOString().split('T')[0];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function runWatchlistBackfill() {
   console.log('='.repeat(70));
-  console.log('⚡ TRADINGVIEW WATCHLIST: 10-YEAR HISTORICAL PRICE BACKFILL (87 SYMBOLS)');
+  console.log('⚡ TRADINGVIEW WATCHLIST: MAX LIFETIME (ALL-TIME IPO) HISTORICAL PRICE BACKFILL (87 SYMBOLS)');
   console.log(`Target: ${WATCHLIST_87_SYMBOLS.length} symbols`);
-  console.log(`Period: ${START_DATE} -> ${TODAY}`);
+  console.log(`Period: ${START_DATE} (IPO) -> ${TODAY}`);
   console.log('='.repeat(70));
 
   const insertStmt = db.prepare(`

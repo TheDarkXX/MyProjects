@@ -1,26 +1,26 @@
 import { db } from '../db/init.js';
 import { fetchYahooHistorical } from '../services/yahoo.js';
 
-// Target: 5 Reference + 2 Active Portfolio Holdings + 5 Past Holdings = 12 symbols
+// Target: Benchmarks + Active Holdings + Past Holdings + Blueprints
 const TARGET_SYMBOLS = [
-  // 5 Reference / Benchmarks
+  // Benchmarks & Refs
   'SPY', 'QQQ', 'SCHG', 'GLD', 'BTC-USD',
-  // 2 Active Portfolio Holdings (not already in 2X or Ref)
+  // Active Portfolio Holdings
   'META', 'HIMS',
-  // 5 Past Holdings
-  'AMZN', 'COST', 'ISRG', 'ASTS', 'CRWV'
+  // Past & Other Portfolio Holdings
+  'AMZN', 'COST', 'ISRG', 'ASTS', 'CRWV', 'SE', 'SMCI', 'O'
 ];
 
-const START_DATE = '2016-09-01'; // 10 years + buffer
+const START_DATE = '1927-01-01'; // Max Lifetime (All-Time back to IPO / 1927)
 const TODAY = new Date().toISOString().split('T')[0];
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function runBackfill() {
   console.log('='.repeat(65));
-  console.log('⚡ 10-YEAR HISTORICAL PRICE BACKFILL: PORTFOLIO & REFERENCES');
+  console.log('⚡ MAX LIFETIME HISTORICAL PRICE BACKFILL: PORTFOLIO & REFERENCES');
   console.log(`Target: ${TARGET_SYMBOLS.length} symbols: ${TARGET_SYMBOLS.join(', ')}`);
-  console.log(`Period: ${START_DATE} -> ${TODAY}`);
+  console.log(`Period: ${START_DATE} (IPO) -> ${TODAY}`);
   console.log('='.repeat(65));
 
   const insertStmt = db.prepare(`

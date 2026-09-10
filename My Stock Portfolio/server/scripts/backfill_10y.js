@@ -7,16 +7,16 @@ const PROJECT_2X_SYMBOLS = [
   'STRL', 'ALAB', 'PLTR', 'RKLB'
 ];
 
-const START_DATE = '2016-09-01'; // 10 years + buffer
+const START_DATE = '1927-01-01'; // Max Lifetime (All-Time back to IPO / 1927)
 const TODAY = new Date().toISOString().split('T')[0];
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function runBackfill() {
   console.log('='.repeat(60));
-  console.log('⚡ PROJECT 2X: 10-YEAR HISTORICAL PRICE BACKFILL');
+  console.log('⚡ PROJECT 2X: MAX LIFETIME HISTORICAL PRICE BACKFILL');
   console.log(`Target: ${PROJECT_2X_SYMBOLS.length} symbols`);
-  console.log(`Period: ${START_DATE} -> ${TODAY}`);
+  console.log(`Period: ${START_DATE} (IPO) -> ${TODAY}`);
   console.log('='.repeat(60));
 
   const insertStmt = db.prepare(`
