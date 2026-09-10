@@ -244,6 +244,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     assignIndicatorPane,
     moveIndicatorUp,
     moveIndicatorDown,
+    toggleAxisLabels,
     applyPreset,
     resetDefaults,
   } = useIndicatorStore();
@@ -681,6 +682,54 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     <span>Config</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Item 7: Global Display - Right Price Axis Labels */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/50 hover:bg-slate-900/80 border border-slate-800/80 transition-all">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleAxisLabels}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      config.showAxisLabels
+                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                    }`}
+                    title="Toggle Price Axis Labels"
+                  >
+                    {config.showAxisLabels ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+                  <div className="flex flex-col">
+                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                      <BarChart3 className="w-3.5 h-3.5 text-amber-400" />
+                      Right Price Axis Labels
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded font-bold border ${
+                        config.showAxisLabels
+                          ? 'bg-amber-950/80 text-amber-300 border-amber-800/60'
+                          : 'bg-slate-800 text-slate-300 border-slate-700'
+                      }`}>
+                        {config.showAxisLabels ? 'ON' : 'OFF (CLEAN)'}
+                      </span>
+                    </span>
+                    <span className="text-[13px] text-slate-400">
+                      แสดงป้ายชื่ออินดิเคเตอร์และระดับ Threshold บนแกนราคาขวา (ค่าเริ่มต้น: ปิดเพื่อความสะอาดตา)
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={toggleAxisLabels}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                    config.showAxisLabels ? 'bg-amber-500' : 'bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      config.showAxisLabels ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
 

@@ -14,6 +14,7 @@ import {
   Time,
   UTCTimestamp,
   SeriesMarker,
+  IPriceLine,
 } from 'lightweight-charts';
 import {
   Activity,
@@ -180,6 +181,9 @@ export const LWChart: React.FC<LWChartProps> = ({
   const rsiSignalSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const markersPluginRef = useRef<any>(null);
   const rsiMarkersPluginRef = useRef<any>(null);
+  const mcdxStrikeLineRef = useRef<IPriceLine | null>(null);
+  const rsiObLineRef = useRef<IPriceLine | null>(null);
+  const rsiOsLineRef = useRef<IPriceLine | null>(null);
   const isDraggingRef = useRef<boolean>(false);
   const lastYRef = useRef<number>(0);
 
@@ -795,7 +799,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       lineWidth: indicatorConfig.ema1.lineWidth as any,
       lineStyle: getChartLineStyle(indicatorConfig.ema1.lineStyle),
       priceLineVisible: false,
-      lastValueVisible: true,
+      lastValueVisible: indicatorConfig.showAxisLabels,
       title: `EMA ${indicatorConfig.ema1.period}`,
       visible: indicatorConfig.ema1.visible,
     }, 0);
@@ -807,7 +811,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       lineWidth: indicatorConfig.ema2.lineWidth as any,
       lineStyle: getChartLineStyle(indicatorConfig.ema2.lineStyle),
       priceLineVisible: false,
-      lastValueVisible: true,
+      lastValueVisible: indicatorConfig.showAxisLabels,
       title: `EMA ${indicatorConfig.ema2.period}`,
       visible: indicatorConfig.ema2.visible,
     }, 0);
@@ -819,7 +823,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       lineWidth: indicatorConfig.ema3.lineWidth as any,
       lineStyle: getChartLineStyle(indicatorConfig.ema3.lineStyle),
       priceLineVisible: false,
-      lastValueVisible: true,
+      lastValueVisible: indicatorConfig.showAxisLabels,
       title: `EMA ${indicatorConfig.ema3.period}`,
       visible: indicatorConfig.ema3.visible,
     }, 0);
@@ -868,21 +872,22 @@ export const LWChart: React.FC<LWChartProps> = ({
       mcdxSeriesRef.current = mcdxSeries;
 
       // Pink Threshold Line (10 Entry Strike)
-      mcdxSeries.createPriceLine({
+      const strikeLine = mcdxSeries.createPriceLine({
         price: 10,
         color: '#FC2D79',
         lineStyle: LineStyle.Dashed,
         lineWidth: 1,
-        axisLabelVisible: true,
+        axisLabelVisible: indicatorConfig.showAxisLabels,
         title: '10 STRIKE',
       });
+      mcdxStrikeLineRef.current = strikeLine;
 
       // Banker MA Line (White #FFFFFF, overlaying Pane targetPane)
       const bankerMaSeries = chart.addSeries(LineSeries, {
         color: '#FFFFFF',
         lineWidth: 2,
         priceLineVisible: false,
-        lastValueVisible: true,
+        lastValueVisible: indicatorConfig.showAxisLabels,
         title: 'Banker MA',
       }, targetPane);
       bankerMaSeriesRef.current = bankerMaSeries;
@@ -910,7 +915,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           bottomFillColor2: 'rgba(242, 54, 69, 0.32)',
           lineWidth: 2,
           priceLineVisible: false,
-          lastValueVisible: true,
+          lastValueVisible: indicatorConfig.showAxisLabels,
           title: 'ARSI',
           visible: indicatorConfig.ultimateRsi.visible,
         },
@@ -919,14 +924,15 @@ export const LWChart: React.FC<LWChartProps> = ({
       rsiSeriesRef.current = rsiSeries;
 
       // Overbought (80)
-      rsiSeries.createPriceLine({
+      const rsiObLine = rsiSeries.createPriceLine({
         price: indicatorConfig.ultimateRsi.obValue,
         color: indicatorConfig.ultimateRsi.obColor,
         lineStyle: LineStyle.Dashed,
         lineWidth: 1,
-        axisLabelVisible: true,
+        axisLabelVisible: indicatorConfig.showAxisLabels,
         title: '80 OB',
       });
+      rsiObLineRef.current = rsiObLine;
 
       // Midline (50)
       rsiSeries.createPriceLine({
@@ -939,14 +945,15 @@ export const LWChart: React.FC<LWChartProps> = ({
       });
 
       // Oversold (20)
-      rsiSeries.createPriceLine({
+      const rsiOsLine = rsiSeries.createPriceLine({
         price: indicatorConfig.ultimateRsi.osValue,
         color: indicatorConfig.ultimateRsi.osColor,
         lineStyle: LineStyle.Dashed,
         lineWidth: 1,
-        axisLabelVisible: true,
+        axisLabelVisible: indicatorConfig.showAxisLabels,
         title: '20 OS',
       });
+      rsiOsLineRef.current = rsiOsLine;
 
       // Signal Line
       const rsiSignalSeries = chart.addSeries(
@@ -955,7 +962,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           color: indicatorConfig.ultimateRsi.signalColor,
           lineWidth: 2,
           priceLineVisible: false,
-          lastValueVisible: true,
+          lastValueVisible: indicatorConfig.showAxisLabels,
           title: 'Signal',
           visible: indicatorConfig.ultimateRsi.visible,
         },
@@ -1114,6 +1121,9 @@ export const LWChart: React.FC<LWChartProps> = ({
       rsiSignalSeriesRef.current = null;
       markersPluginRef.current = null;
       rsiMarkersPluginRef.current = null;
+      mcdxStrikeLineRef.current = null;
+      rsiObLineRef.current = null;
+      rsiOsLineRef.current = null;
     };
   }, [mcdxPane, rsiPane]); // Rebuild chart when pane layout changes
 
@@ -1221,22 +1231,27 @@ export const LWChart: React.FC<LWChartProps> = ({
     const fSize = sSize <= 0.9 ? 11 : sSize <= 1.2 ? 13 : sSize <= 1.5 ? 15 : 18;
     chartRef.current?.applyOptions({ layout: { fontSize: fSize } });
 
-    ema50SeriesRef.current?.applyOptions({ color: indicatorConfig.ema1.color, lineWidth: indicatorConfig.ema1.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema1.lineStyle), visible: indicatorConfig.ema1.visible, title: `EMA ${indicatorConfig.ema1.period}` });
-    ema150SeriesRef.current?.applyOptions({ color: indicatorConfig.ema2.color, lineWidth: indicatorConfig.ema2.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema2.lineStyle), visible: indicatorConfig.ema2.visible, title: `EMA ${indicatorConfig.ema2.period}` });
-    ema200SeriesRef.current?.applyOptions({ color: indicatorConfig.ema3.color, lineWidth: indicatorConfig.ema3.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema3.lineStyle), visible: indicatorConfig.ema3.visible, title: `EMA ${indicatorConfig.ema3.period}` });
+    ema50SeriesRef.current?.applyOptions({ color: indicatorConfig.ema1.color, lineWidth: indicatorConfig.ema1.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema1.lineStyle), visible: indicatorConfig.ema1.visible, lastValueVisible: indicatorConfig.showAxisLabels, title: `EMA ${indicatorConfig.ema1.period}` });
+    ema150SeriesRef.current?.applyOptions({ color: indicatorConfig.ema2.color, lineWidth: indicatorConfig.ema2.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema2.lineStyle), visible: indicatorConfig.ema2.visible, lastValueVisible: indicatorConfig.showAxisLabels, title: `EMA ${indicatorConfig.ema2.period}` });
+    ema200SeriesRef.current?.applyOptions({ color: indicatorConfig.ema3.color, lineWidth: indicatorConfig.ema3.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema3.lineStyle), visible: indicatorConfig.ema3.visible, lastValueVisible: indicatorConfig.showAxisLabels, title: `EMA ${indicatorConfig.ema3.period}` });
     upperEnvSeriesRef.current?.applyOptions({ color: indicatorConfig.envelope.color, lineWidth: indicatorConfig.envelope.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.envelope.lineStyle), visible: indicatorConfig.envelope.visible, title: `+${indicatorConfig.envelope.percent}% Bedrock` });
     lowerEnvSeriesRef.current?.applyOptions({ color: indicatorConfig.envelope.color, lineWidth: indicatorConfig.envelope.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.envelope.lineStyle), visible: indicatorConfig.envelope.visible, title: `-${indicatorConfig.envelope.percent}% Bedrock` });
     mcdxSeriesRef.current?.applyOptions({ visible: indicatorConfig.mcdx.visible });
-    bankerMaSeriesRef.current?.applyOptions({ visible: indicatorConfig.mcdx.visible });
+    bankerMaSeriesRef.current?.applyOptions({ visible: indicatorConfig.mcdx.visible, lastValueVisible: indicatorConfig.showAxisLabels });
     rsiSeriesRef.current?.applyOptions({
       visible: indicatorConfig.ultimateRsi.visible,
       topLineColor: indicatorConfig.ultimateRsi.obColor,
       bottomLineColor: indicatorConfig.ultimateRsi.osColor,
+      lastValueVisible: indicatorConfig.showAxisLabels,
     });
     rsiSignalSeriesRef.current?.applyOptions({
       visible: indicatorConfig.ultimateRsi.visible,
       color: indicatorConfig.ultimateRsi.signalColor,
+      lastValueVisible: indicatorConfig.showAxisLabels,
     });
+    mcdxStrikeLineRef.current?.applyOptions({ axisLabelVisible: indicatorConfig.showAxisLabels });
+    rsiObLineRef.current?.applyOptions({ axisLabelVisible: indicatorConfig.showAxisLabels });
+    rsiOsLineRef.current?.applyOptions({ axisLabelVisible: indicatorConfig.showAxisLabels });
     markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
     rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
 

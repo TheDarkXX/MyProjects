@@ -12,6 +12,7 @@
 | `/fail` | fail | บันทึกข้อผิดพลาดของสกิลต่างๆ เพื่อนำไปปรับปรุง |
 | `/gitpull` | `.agents/skills/gitpull/SKILL.md` | Auto-commit งานค้าง, Safe pull ซิงก์โค้ดล่าสุด, สรุปงานล่าสุดพร้อม link และสแกนหางานค้าง |
 | `/junk` | junk | ตรวจสอบและจัดการไฟล์ขยะหรือโค้ดที่ไม่ได้ใช้ |
+| `/kbg` | kbg | Kill Background Tasks: สั่งสอยและเคลียร์ Background Tasks ใน IDE และโปรเซสค้าง |
 | `/mu` | mu | สกิลเฉพาะทางสำหรับจัดการระบบย่อย |
 | `/newpj` | newpj | สร้างโครงสร้างโปรเจกต์ใหม่ (Scaffolding) พร้อมใช้งาน |
 | `/piggyback` | piggyback | ดึงโค้ดหรือฟีเจอร์จากโปรเจกต์อื่นมาต่อยอด |

@@ -54,39 +54,33 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
       style={{ top: `${top}px` }}
     >
       <div
-        className="pointer-events-auto inline-flex items-center gap-1 mx-1 mt-1 px-2 py-1 rounded-lg"
-        style={{
-          background: 'rgba(13, 19, 34, 0.82)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          border: '1px solid rgba(148, 163, 184, 0.12)',
-        }}
+        className="pointer-events-auto inline-flex items-center gap-1 mx-1 mt-0.5 px-2 py-1 rounded-lg border border-transparent hover:border-slate-700/60 bg-transparent hover:bg-[#0B101B]/90 hover:backdrop-blur-md hover:shadow-xl transition-all duration-200 group"
       >
         {/* Title + Pane Badge */}
-        <span className="text-[13px] font-extrabold text-slate-200 tracking-wide mr-1.5">
+        <span className="text-[13px] font-black text-slate-100 tracking-wide mr-1.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
           {title}
         </span>
-        <span className="px-1.5 py-0.5 rounded bg-slate-700/80 text-[11px] font-bold text-cyan-300 leading-none mr-2">
+        <span className="px-1.5 py-0.5 rounded bg-slate-800/80 text-[11px] font-bold text-cyan-300 border border-slate-700/60 leading-none mr-2 drop-shadow-sm">
           P{paneIndex}
         </span>
 
-        {/* Live Values */}
-        <div className="flex items-center gap-2 mr-2">
+        {/* Live Values (Always crisp & visible with subtle shadow) */}
+        <div className="flex items-center gap-2 mr-1">
           {Object.entries(liveValues).map(([label, { value, color }]) => (
-            <span key={label} className="text-[13px] text-slate-300">
+            <span key={label} className="text-[13px] text-slate-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
               {label}:{' '}
-              <strong className="font-bold" style={{ color }}>
+              <strong className="font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" style={{ color }}>
                 {value}
               </strong>
             </span>
           ))}
         </div>
 
-        {/* Separator */}
-        <div className="w-px h-4 bg-slate-700/60 mx-1" />
+        {/* Separator (Fades in on Hover) */}
+        <div className="w-px h-3.5 bg-slate-700/60 mx-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-0.5">
+        {/* Action Buttons (Stealth mode: Only revealed on Hover like TradingView) */}
+        <div className="flex items-center gap-0.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200">
           {/* Toggle Visibility */}
           <button
             onClick={onToggleVisibility}

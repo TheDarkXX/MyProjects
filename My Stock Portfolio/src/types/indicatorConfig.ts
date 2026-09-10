@@ -107,6 +107,7 @@ export interface IndicatorSettings {
   activePreset: PresetType;
   customColors: string[];
   paneLayout: PaneLayout;
+  showAxisLabels: boolean;
   ema1: EMALineConfig;
   ema2: EMALineConfig;
   ema3: EMALineConfig;
@@ -129,6 +130,7 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
   activePreset: 'full',
   customColors: DEFAULT_CUSTOM_COLORS,
   paneLayout: DEFAULT_PANE_LAYOUT,
+  showAxisLabels: false,
   ema1: {
     id: 'ema1',
     name: 'EMA 1',

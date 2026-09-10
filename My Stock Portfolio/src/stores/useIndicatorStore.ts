@@ -65,6 +65,7 @@ function loadSavedConfig(): IndicatorSettings {
           ...(parsed.ultimateRsi?.signals || {}),
         },
       },
+      showAxisLabels: typeof parsed.showAxisLabels === 'boolean' ? parsed.showAxisLabels : DEFAULT_INDICATOR_SETTINGS.showAxisLabels,
     };
   } catch (e) {
     return DEFAULT_INDICATOR_SETTINGS;
@@ -100,6 +101,8 @@ interface IndicatorState {
   assignIndicatorPane: (id: SubPaneIndicatorId, targetPane: number) => void;
   moveIndicatorUp: (id: SubPaneIndicatorId) => void;
   moveIndicatorDown: (id: SubPaneIndicatorId) => void;
+  toggleAxisLabels: () => void;
+  setShowAxisLabels: (show: boolean) => void;
   applyPreset: (preset: PresetType) => void;
   resetDefaults: () => void;
 }
@@ -437,6 +440,26 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
         return;
     }
 
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleAxisLabels: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      showAxisLabels: !prev.showAxisLabels,
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  setShowAxisLabels: (show: boolean) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      showAxisLabels: show,
+    };
     saveConfig(next);
     set({ config: next });
   },
