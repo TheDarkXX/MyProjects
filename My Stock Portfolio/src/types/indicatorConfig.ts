@@ -18,12 +18,19 @@ export interface EnvelopeConfig {
   lineStyle: LineStyleOption;
 }
 
-export interface SignalMarkersConfig {
-  rebound: boolean;   // ••• READY
-  breakout: boolean;  // ▲ BUY
-  goldenStar: boolean;// ★ SUPER
-  pullback: boolean;  // ▼ EXIT
+export interface SignalColorsConfig {
+  rebound: string;   // ••• READY
+  breakout: string;  // ▲ BUY
+  goldenStar: string;// ★ SUPER
+  pullback: string;  // ▼ EXIT
 }
+
+export const DEFAULT_SIGNAL_COLORS: SignalColorsConfig = {
+  rebound: '#FBBF24',
+  breakout: '#FFE600',
+  goldenStar: '#FFFFFF',
+  pullback: '#FF1744',
+};
 
 export interface SignalConfig {
   visible: boolean;
@@ -31,6 +38,7 @@ export interface SignalConfig {
   size: number;
   padding: number;
   markers: SignalMarkersConfig;
+  colors: SignalColorsConfig;
 }
 
 export interface MCDXConfig {
@@ -110,13 +118,14 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     visible: true,
     showText: true,
     size: 1.2,
-    padding: 1,
+    padding: 0,
     markers: {
       rebound: true,
       breakout: true,
       goldenStar: true,
       pullback: true,
     },
+    colors: DEFAULT_SIGNAL_COLORS,
   },
   mcdx: {
     visible: true,

@@ -35,7 +35,7 @@ import { computeEMA } from '../../utils/computeEMA';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { LineStyleOption } from '../../types/indicatorConfig';
 
-export const TV_FONT_FAMILY = "'Trebuchet MS', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+export const TV_FONT_FAMILY = "'Trebuchet MS', 'Segoe UI Symbol', 'Segoe UI Emoji', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 const getChartLineStyle = (opt: LineStyleOption): LineStyle => {
   switch (opt) {
@@ -437,7 +437,13 @@ export const LWChart: React.FC<LWChartProps> = ({
     const { rebound, breakout, goldenStar, pullback } = indicatorConfig.signals.markers;
     const showText = indicatorConfig.signals.showText !== false;
     const userSize = indicatorConfig.signals.size ?? 1.2;
-    const padding = indicatorConfig.signals.padding ?? 1;
+    const padding = indicatorConfig.signals.padding ?? 0;
+    const sigColors = indicatorConfig.signals.colors || {
+      rebound: '#FBBF24',
+      breakout: '#FFE600',
+      goldenStar: '#FFFFFF',
+      pullback: '#FF1744',
+    };
 
     const makeMarker = (
       time: Time,
@@ -450,12 +456,12 @@ export const LWChart: React.FC<LWChartProps> = ({
       textLabel: string,
       sizeMult: number
     ): SeriesMarker<Time> => {
-      const finalSize = Math.round(userSize * sizeMult * 10) / 10;
+      const finalSize = Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
       const text = showText ? textLabel : undefined;
 
-      if (padding > 1) {
-        const barRange = Math.max(barHigh - barLow, barClose * 0.006);
-        const offset = barRange * (padding - 1) * 0.45;
+      if (padding > 0) {
+        const barRange = Math.max(barHigh - barLow, barClose * 0.005);
+        const offset = barRange * (padding * 0.08);
         if (pos === 'below') {
           return {
             time,
@@ -503,10 +509,10 @@ export const LWChart: React.FC<LWChartProps> = ({
       const dist150 = e150 ? ((close - e150) / e150) * 100 : 0;
       const nearSupport = (e200 && dist200 >= -4 && dist200 <= 3.5) || (e150 && dist150 >= -3 && dist150 <= 3.5);
 
-      // STEP 3: ★ SUPER MONEY (Banker crosses >= 10, in trend) -> White Star below candle
+      // STEP 3: ★ SUPER MONEY (Banker crosses >= 10, in trend) -> Upward arrow + White Star
       if (goldenStar && bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
         if (lastType !== 'SUPER') {
-          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, '#FFFFFF', 'circle', '★ SUPER', 1.25));
+          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.goldenStar, 'arrowUp', '★ SUPER', 1.35));
           lastType = 'SUPER';
           continue;
         }
@@ -515,17 +521,17 @@ export const LWChart: React.FC<LWChartProps> = ({
       // STEP 2: ▲ BUY ZONE (At/near EMA support + Banker emerges > 0 on green bar) -> Yellow Triangle below candle
       if (breakout && nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
         if (lastType !== 'BUY') {
-          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, '#FFE600', 'arrowUp', '▲ BUY', 1.15));
+          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.breakout, 'arrowUp', '▲ BUY', 1.15));
           lastType = 'BUY';
           continue;
         }
       }
 
-      // STEP 1: ••• READY (Near EMA support, Banker = 0, setup forming) -> Amber dots below candle
+      // STEP 1: ••• READY (Near EMA support, Banker = 0, setup forming) -> 3 dots (•••) below candle
       if (rebound && nearSupport && bVal === 0) {
         if (lastType !== 'READY' && lastType !== 'BUY') {
           if (i - lastReadyIdx >= 8) {
-            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, '#FBBF24', 'circle', '••• READY', 0.95));
+            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.rebound, 'circle', '••• READY', 0.85));
             lastType = 'READY';
             lastReadyIdx = i;
             continue;
@@ -536,7 +542,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       // EXIT: ▼ DANGER / STOP LOSS (Breakdown below EMA 200 or Banker collapse) -> Crimson Triangle above candle
       if (pullback && ((dist200 < -4 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close)))) {
         if (lastType !== 'EXIT') {
-          markers.push(makeMarker(bar.time as Time, 'above', bar.high, bar.low, bar.close, '#FF1744', 'arrowDown', '▼ EXIT', 1.15));
+          markers.push(makeMarker(bar.time as Time, 'above', bar.high, bar.low, bar.close, sigColors.pullback, 'arrowDown', '▼ EXIT', 1.15));
           lastType = 'EXIT';
         }
       }

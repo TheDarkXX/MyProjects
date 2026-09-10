@@ -6,6 +6,7 @@ import {
   EnvelopeConfig,
   SignalConfig,
   SignalMarkersConfig,
+  SignalColorsConfig,
   MCDXConfig,
   VolumeConfig,
   PresetType,
@@ -38,6 +39,10 @@ function loadSavedConfig(): IndicatorSettings {
           ...DEFAULT_INDICATOR_SETTINGS.signals.markers,
           ...(parsed.signals?.markers || {}),
         },
+        colors: {
+          ...DEFAULT_INDICATOR_SETTINGS.signals.colors,
+          ...(parsed.signals?.colors || {}),
+        },
       },
       mcdx: { ...DEFAULT_INDICATOR_SETTINGS.mcdx, ...(parsed.mcdx || {}) },
       volume: { ...DEFAULT_INDICATOR_SETTINGS.volume, ...(parsed.volume || {}) },
@@ -63,6 +68,7 @@ interface IndicatorState {
   updateEnvelope: (partial: Partial<EnvelopeConfig>) => void;
   toggleEnvelope: () => void;
   updateSignals: (partial: Partial<SignalConfig>) => void;
+  updateSignalColor: (signalKey: keyof SignalColorsConfig, color: string) => void;
   toggleSignals: () => void;
   toggleSignalMarker: (markerKey: keyof SignalMarkersConfig) => void;
   updateMCDX: (partial: Partial<MCDXConfig>) => void;
@@ -164,6 +170,23 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       ...prev,
       activePreset: 'custom',
       signals: { ...prev.signals, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateSignalColor: (signalKey, color) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      signals: {
+        ...prev.signals,
+        colors: {
+          ...prev.signals.colors,
+          [signalKey]: color,
+        },
+      },
     };
     saveConfig(next);
     set({ config: next });
