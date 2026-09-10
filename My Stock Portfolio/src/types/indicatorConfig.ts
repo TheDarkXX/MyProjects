@@ -484,7 +484,7 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     showReadySignal: true,
     readySignalColor: '#FFFFFF',
     readySignalShape: 'arrowUp',
-    readySignalLocation: 'bottom',
+    readySignalLocation: 'belowBar',
     showBuySignal: true,
     buySignalColor: '#FFE600',
     buySignalShape: 'arrowUp',

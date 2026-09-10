@@ -1028,7 +1028,7 @@ export const LWChart: React.FC<LWChartProps> = ({
         if (cfg.showReadySignal && superMoneySignalResult.readySignals[i]) {
           list.push({
             time: t,
-            position: cfg.readySignalLocation === 'bottom' ? 'atPriceBottom' : 'belowBar',
+            position: 'belowBar',
             color: cfg.readySignalColor ?? '#FFFFFF',
             shape: (cfg.readySignalShape ?? 'arrowUp') as any,
             text: 'READY',
