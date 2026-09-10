@@ -141,6 +141,25 @@ const isUsMarketOpen = (): boolean => {
   }
 };
 
+function hexToRgba(hex: string, alpha: number): string {
+  if (!hex) return `rgba(0, 0, 0, ${alpha})`;
+  if (hex.startsWith('rgba') || hex.startsWith('rgb')) return hex;
+  const clean = hex.replace('#', '');
+  if (clean.length === 3) {
+    const r = parseInt(clean[0] + clean[0], 16);
+    const g = parseInt(clean[1] + clean[1], 16);
+    const b = parseInt(clean[2] + clean[2], 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  if (clean.length >= 6) {
+    const r = parseInt(clean.substring(0, 2), 16);
+    const g = parseInt(clean.substring(2, 4), 16);
+    const b = parseInt(clean.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return hex;
+}
+
 export const LWChart: React.FC<LWChartProps> = ({
   symbol,
   dates = [],
@@ -1021,18 +1040,19 @@ export const LWChart: React.FC<LWChartProps> = ({
     };
 
     const createRSIPane = (targetPane: number) => {
-      const arsiLineColor = indicatorConfig.ultimateRsi.rsiColor || '#FFFFFF';
       const isRsiVisible = indicatorConfig.ultimateRsi.visible && indicatorConfig.ultimateRsi.rsiVisible !== false;
       const isSigVisible = indicatorConfig.ultimateRsi.visible && indicatorConfig.ultimateRsi.signalVisible !== false;
       const showArea = indicatorConfig.ultimateRsi.showArea !== false;
+      const obColor = indicatorConfig.ultimateRsi.obColor || '#089981';
+      const osColor = indicatorConfig.ultimateRsi.osColor || '#F23645';
 
-      // Upper Cloud (Teal Gradient above 80)
+      // Upper Cloud (Gradient above Overbought level, e.g. 80)
       const rsiUpperBandSeries = chart.addSeries(
         BaselineSeries,
         {
           baseValue: { type: 'price', price: indicatorConfig.ultimateRsi.obValue },
-          topFillColor1: 'rgba(38, 166, 154, 0.38)',
-          topFillColor2: 'rgba(38, 166, 154, 0.04)',
+          topFillColor1: hexToRgba(obColor, 0.38),
+          topFillColor2: hexToRgba(obColor, 0.04),
           bottomFillColor1: 'transparent',
           bottomFillColor2: 'transparent',
           topLineColor: 'transparent',
@@ -1046,15 +1066,15 @@ export const LWChart: React.FC<LWChartProps> = ({
       );
       rsiUpperBandSeriesRef.current = rsiUpperBandSeries;
 
-      // Lower Cloud (Red Gradient below 20)
+      // Lower Cloud (Gradient below Oversold level, e.g. 20)
       const rsiLowerBandSeries = chart.addSeries(
         BaselineSeries,
         {
           baseValue: { type: 'price', price: indicatorConfig.ultimateRsi.osValue },
           topFillColor1: 'transparent',
           topFillColor2: 'transparent',
-          bottomFillColor1: 'rgba(239, 83, 80, 0.04)',
-          bottomFillColor2: 'rgba(239, 83, 80, 0.38)',
+          bottomFillColor1: hexToRgba(osColor, 0.04),
+          bottomFillColor2: hexToRgba(osColor, 0.38),
           topLineColor: 'transparent',
           bottomLineColor: 'transparent',
           lineWidth: 1,
@@ -1070,7 +1090,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       const rsiSeries = chart.addSeries(
         LineSeries,
         {
-          color: arsiLineColor,
+          color: obColor,
           lineWidth: 2,
           priceLineVisible: false,
           lastValueVisible: showLabels,
@@ -1353,7 +1373,9 @@ export const LWChart: React.FC<LWChartProps> = ({
       const sigData: any[] = [];
       const obVal = indicatorConfig.ultimateRsi.obValue;
       const osVal = indicatorConfig.ultimateRsi.osValue;
-      const arsiColor = indicatorConfig.ultimateRsi.rsiColor || '#FFFFFF';
+      const obColor = indicatorConfig.ultimateRsi.obColor || '#089981';
+      const osColor = indicatorConfig.ultimateRsi.osColor || '#F23645';
+      const rsiColor = indicatorConfig.ultimateRsi.rsiColor || '#FFFFFF';
       const autoColor = indicatorConfig.ultimateRsi.autoColor !== false;
 
       for (let i = 0; i < displayBars.length; i++) {
@@ -1365,19 +1387,33 @@ export const LWChart: React.FC<LWChartProps> = ({
           arsiRawData.push({ time: t, value: aVal });
 
           if (!autoColor) {
-            arsiData.push({ time: t, value: aVal, color: arsiColor });
+            arsiData.push({ time: t, value: aVal, color: rsiColor });
           } else {
             // TradingView Style: ARSI only renders when in extreme zones (> obValue or < osValue)
-            const isCurrExtreme = aVal > obVal || aVal < osVal;
+            // Above obValue -> uses Overbought color (obColor)
+            // Below osValue -> uses Oversold color (osColor)
+            const isCurrOb = aVal > obVal;
+            const isCurrOs = aVal < osVal;
+            const isCurrExtreme = isCurrOb || isCurrOs;
+
             const prevVal = i > 0 ? ultimateRSIResult.arsi[i - 1] : null;
-            const isPrevExtreme = prevVal !== null && (prevVal > obVal || prevVal < osVal);
+            const isPrevOb = prevVal !== null && prevVal > obVal;
+            const isPrevOs = prevVal !== null && prevVal < osVal;
+            const isPrevExtreme = isPrevOb || isPrevOs;
+
+            let pointColor = 'transparent';
+            if (isCurrOb || isPrevOb) {
+              pointColor = obColor;
+            } else if (isCurrOs || isPrevOs) {
+              pointColor = osColor;
+            }
 
             // Connect smoothly into and out of extreme zones
             const showLine = isCurrExtreme || isPrevExtreme;
             arsiData.push({
               time: t,
               value: aVal,
-              color: showLine ? arsiColor : 'transparent',
+              color: showLine ? pointColor : 'transparent',
             });
           }
         }
@@ -1406,6 +1442,8 @@ export const LWChart: React.FC<LWChartProps> = ({
     indicatorConfig.ultimateRsi.autoColor,
     indicatorConfig.ultimateRsi.obValue,
     indicatorConfig.ultimateRsi.osValue,
+    indicatorConfig.ultimateRsi.obColor,
+    indicatorConfig.ultimateRsi.osColor,
     indicatorConfig.ultimateRsi.rsiColor,
     indicatorConfig.ultimateRsi.showArea,
     indicatorConfig.envelope.percent,
@@ -1485,7 +1523,8 @@ export const LWChart: React.FC<LWChartProps> = ({
       title: showLabels ? 'Banker MA' : '',
       priceLineVisible: false,
     });
-    const arsiLineColor = indicatorConfig.ultimateRsi.rsiColor || '#FFFFFF';
+    const obColor = indicatorConfig.ultimateRsi.obColor || '#089981';
+    const osColor = indicatorConfig.ultimateRsi.osColor || '#F23645';
     const isRsiVisible = indicatorConfig.ultimateRsi.visible && indicatorConfig.ultimateRsi.rsiVisible !== false;
     const isSigVisible = indicatorConfig.ultimateRsi.visible && indicatorConfig.ultimateRsi.signalVisible !== false;
     const showArea = indicatorConfig.ultimateRsi.showArea !== false;
@@ -1495,15 +1534,18 @@ export const LWChart: React.FC<LWChartProps> = ({
 
     rsiUpperBandSeriesRef.current?.applyOptions({
       baseValue: { type: 'price', price: indicatorConfig.ultimateRsi.obValue },
+      topFillColor1: hexToRgba(obColor, 0.38),
+      topFillColor2: hexToRgba(obColor, 0.04),
       visible: isRsiVisible && showArea,
     });
     rsiLowerBandSeriesRef.current?.applyOptions({
       baseValue: { type: 'price', price: indicatorConfig.ultimateRsi.osValue },
+      bottomFillColor1: hexToRgba(osColor, 0.04),
+      bottomFillColor2: hexToRgba(osColor, 0.38),
       visible: isRsiVisible && showArea,
     });
     rsiSeriesRef.current?.applyOptions({
       visible: isRsiVisible,
-      color: arsiLineColor,
       lastValueVisible: showLabels,
       title: showLabels ? 'ARSI (Extremes)' : '',
       priceLineVisible: false,
@@ -1521,7 +1563,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     });
     rsiObLineRef.current?.applyOptions({
       price: indicatorConfig.ultimateRsi.obValue,
-      color: isObVisible ? indicatorConfig.ultimateRsi.obColor : 'transparent',
+      color: isObVisible ? obColor : 'transparent',
       axisLabelVisible: showLabels && isObVisible,
       title: showLabels && isObVisible ? `${indicatorConfig.ultimateRsi.obValue} OB` : '',
     });
@@ -1533,7 +1575,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     });
     rsiOsLineRef.current?.applyOptions({
       price: indicatorConfig.ultimateRsi.osValue,
-      color: isOsVisible ? indicatorConfig.ultimateRsi.osColor : 'transparent',
+      color: isOsVisible ? osColor : 'transparent',
       axisLabelVisible: showLabels && isOsVisible,
       title: showLabels && isOsVisible ? `${indicatorConfig.ultimateRsi.osValue} OS` : '',
     });
