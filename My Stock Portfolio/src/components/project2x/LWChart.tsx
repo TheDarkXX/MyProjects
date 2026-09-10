@@ -248,6 +248,55 @@ export const LWChart: React.FC<LWChartProps> = ({
   const [paneOffsets, setPaneOffsets] = useState<Record<number, { top: number; height: number }>>({});
   const [indicatorInitialView, setIndicatorInitialView] = useState<'list' | 'mcdx' | 'ultimateRsi'>('list');
 
+  // Synchronized multi-pane stretch layout calculation
+  const applyPaneLayoutHeights = useCallback((
+    chartInstance: any,
+    cfg: IndicatorSettings,
+    maximized: number | null
+  ) => {
+    if (!chartInstance) return;
+    const panes = chartInstance.panes?.();
+    if (!panes || panes.length < 2) return;
+
+    const containerH = chartContainerRef.current?.clientHeight || 650;
+
+    if (maximized !== null) {
+      // Maximized mode: target subpane takes most of the height, main chart keeps 60px
+      const mainH = 60;
+      const subMaxH = Math.max(200, containerH - mainH);
+      if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
+      if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
+        panes[mcdxPane].setStretchFactor(maximized === mcdxPane ? subMaxH : 28);
+      }
+      if (panes.length > rsiPane && panes[rsiPane]?.setStretchFactor) {
+        panes[rsiPane].setStretchFactor(maximized === rsiPane ? subMaxH : 28);
+      }
+    } else {
+      // Normal / Collapsed mode
+      const mcdxTargetH = cfg.mcdx.visible ? Math.max(80, cfg.paneHeights?.mcdx || 140) : 28;
+      const rsiTargetH = cfg.ultimateRsi.visible ? Math.max(80, cfg.paneHeights?.ultimateRsi || 140) : 28;
+
+      if (mcdxPane === rsiPane) {
+        // Both sharing the same subpane
+        const sharedH = (cfg.mcdx.visible || cfg.ultimateRsi.visible) ? Math.max(80, cfg.paneHeights?.mcdx || 140) : 28;
+        const mainH = Math.max(120, containerH - sharedH);
+        if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
+        if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
+          panes[mcdxPane].setStretchFactor(sharedH);
+        }
+      } else {
+        const mainH = Math.max(120, containerH - mcdxTargetH - rsiTargetH);
+        if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
+        if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
+          panes[mcdxPane].setStretchFactor(mcdxTargetH);
+        }
+        if (panes.length > rsiPane && panes[rsiPane]?.setStretchFactor) {
+          panes[rsiPane].setStretchFactor(rsiTargetH);
+        }
+      }
+    }
+  }, [mcdxPane, rsiPane]);
+
   // Live Pulse state
   const [isLiveActive, setIsLiveActive] = useState<boolean>(false);
   const [isMarketOpen, setIsMarketOpen] = useState<boolean>(isUsMarketOpen());
@@ -990,15 +1039,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
 
     // Adjust Sub-Panes Heights according to assigned pane layout & saved state
-    const mcdxSavedH = indicatorConfig.paneHeights?.mcdx || 140;
-    const rsiSavedH = indicatorConfig.paneHeights?.ultimateRsi || 140;
-    const panes = chart.panes();
-    if (panes.length > mcdxPane) {
-      panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? mcdxSavedH : 28);
-    }
-    if (panes.length > rsiPane) {
-      panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? rsiSavedH : 28);
-    }
+    applyPaneLayoutHeights(chart, indicatorConfig, maximizedPane);
 
     // Initialize Markers Plugin for Pane 0 (Candles) and RSI Pane
     const markersPlugin = createSeriesMarkers(candleSeries, indicatorConfig.signals.visible ? calculatedMarkers : []);
@@ -1257,52 +1298,30 @@ export const LWChart: React.FC<LWChartProps> = ({
     markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
     rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
 
-    const panes = chartRef.current?.panes();
-    if (panes) {
-      // Maximize mode: maximized pane gets most of the space
-      if (maximizedPane !== null) {
-        const containerH = chartContainerRef.current?.clientHeight || 600;
-        const mainPaneMinH = 60; // leave 60px for main chart
-        const maxH = Math.max(200, containerH - mainPaneMinH);
+    applyPaneLayoutHeights(chartRef.current, indicatorConfig, maximizedPane);
 
-        if (panes.length > mcdxPane) {
-          panes[mcdxPane].setHeight(maximizedPane === mcdxPane ? maxH : 0);
-        }
-        if (panes.length > rsiPane) {
-          panes[rsiPane].setHeight(maximizedPane === rsiPane ? maxH : 0);
-        }
-      } else {
-        // Normal mode (restore saved height or 28px for collapsed dock)
-        const mcdxH = indicatorConfig.paneHeights?.mcdx || 140;
-        const rsiH = indicatorConfig.paneHeights?.ultimateRsi || 140;
-        if (panes.length > mcdxPane) {
-          panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? mcdxH : 28);
-        }
-        if (panes.length > rsiPane) {
-          panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? rsiH : 28);
-        }
+    // Update pane offsets for floating toolbar positioning after layout paint
+    requestAnimationFrame(() => {
+      const container = chartContainerRef.current;
+      const panes = chartRef.current?.panes();
+      if (!container || !panes) return;
+      const containerRect = container.getBoundingClientRect();
+      const newOffsets: Record<number, { top: number; height: number }> = {};
+      for (let i = 1; i < panes.length; i++) {
+        try {
+          const el = panes[i].getHTMLElement();
+          if (el) {
+            const paneRect = el.getBoundingClientRect();
+            newOffsets[i] = {
+              top: Math.max(0, paneRect.top - containerRect.top),
+              height: paneRect.height,
+            };
+          }
+        } catch (e) {}
       }
-
-      // Update pane offsets for floating toolbar positioning
-      const containerRect = chartContainerRef.current?.getBoundingClientRect();
-      if (containerRect) {
-        const newOffsets: Record<number, { top: number; height: number }> = {};
-        for (let i = 1; i < panes.length; i++) {
-          try {
-            const el = panes[i].getHTMLElement();
-            if (el) {
-              const paneRect = el.getBoundingClientRect();
-              newOffsets[i] = {
-                top: Math.max(0, paneRect.top - containerRect.top),
-                height: paneRect.height,
-              };
-            }
-          } catch (e) {}
-        }
-        setPaneOffsets(newOffsets);
-      }
-    }
-  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, mcdxPane, rsiPane, maximizedPane]);
+      setPaneOffsets(newOffsets);
+    });
+  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, mcdxPane, rsiPane, maximizedPane, applyPaneLayoutHeights]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {
@@ -1359,26 +1378,43 @@ export const LWChart: React.FC<LWChartProps> = ({
       });
     }
 
-    // Save pane height changes on user mouseup/pointerup after dragging splitters
+    // Flag to ensure we ONLY save height when user was actually dragging a splitter
+    let isDraggingSplitter = false;
+
+    const handleSplitterGrab = (e: MouseEvent | PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const cursor = target.style?.cursor || window.getComputedStyle(target).cursor;
+      if (cursor === 'row-resize' || target.closest('tr')?.style?.height === '1px') {
+        isDraggingSplitter = true;
+      }
+    };
+
+    // Save pane height changes on user mouseup/pointerup ONLY after dragging splitters
     const handleSplitterRelease = () => {
+      if (!isDraggingSplitter) return;
+      isDraggingSplitter = false;
+
       const currentPanes = chartRef.current?.panes();
       if (!currentPanes || maximizedPane !== null) return;
 
       if (indicatorConfig.mcdx.visible && currentPanes.length > mcdxPane) {
         const h = currentPanes[mcdxPane].getHTMLElement?.()?.clientHeight;
-        if (h && h >= 40 && Math.abs(h - (indicatorConfig.paneHeights?.mcdx || 140)) > 4) {
+        if (h && h >= 80 && Math.abs(h - (indicatorConfig.paneHeights?.mcdx || 140)) > 4) {
           useIndicatorStore.getState().setPaneHeight('mcdx', h);
         }
       }
       if (indicatorConfig.ultimateRsi.visible && currentPanes.length > rsiPane) {
         const h = currentPanes[rsiPane].getHTMLElement?.()?.clientHeight;
-        if (h && h >= 40 && Math.abs(h - (indicatorConfig.paneHeights?.ultimateRsi || 140)) > 4) {
+        if (h && h >= 80 && Math.abs(h - (indicatorConfig.paneHeights?.ultimateRsi || 140)) > 4) {
           useIndicatorStore.getState().setPaneHeight('ultimateRsi', h);
         }
       }
       requestAnimationFrame(updateOffsets);
     };
 
+    container.addEventListener('mousedown', handleSplitterGrab, true);
+    container.addEventListener('pointerdown', handleSplitterGrab, true);
     window.addEventListener('mouseup', handleSplitterRelease);
     window.addEventListener('pointerup', handleSplitterRelease);
 
@@ -1387,6 +1423,8 @@ export const LWChart: React.FC<LWChartProps> = ({
 
     return () => {
       ro.disconnect();
+      container.removeEventListener('mousedown', handleSplitterGrab, true);
+      container.removeEventListener('pointerdown', handleSplitterGrab, true);
       window.removeEventListener('mouseup', handleSplitterRelease);
       window.removeEventListener('pointerup', handleSplitterRelease);
     };

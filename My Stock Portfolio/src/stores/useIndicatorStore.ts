@@ -67,10 +67,10 @@ function loadSavedConfig(): IndicatorSettings {
       },
       showAxisLabels: typeof parsed.showAxisLabels === 'boolean' ? parsed.showAxisLabels : DEFAULT_INDICATOR_SETTINGS.showAxisLabels,
       paneHeights: {
-        mcdx: typeof parsed.paneHeights?.mcdx === 'number' && parsed.paneHeights.mcdx >= 28
+        mcdx: typeof parsed.paneHeights?.mcdx === 'number' && parsed.paneHeights.mcdx >= 80
           ? parsed.paneHeights.mcdx
           : DEFAULT_INDICATOR_SETTINGS.paneHeights.mcdx,
-        ultimateRsi: typeof parsed.paneHeights?.ultimateRsi === 'number' && parsed.paneHeights.ultimateRsi >= 28
+        ultimateRsi: typeof parsed.paneHeights?.ultimateRsi === 'number' && parsed.paneHeights.ultimateRsi >= 80
           ? parsed.paneHeights.ultimateRsi
           : DEFAULT_INDICATOR_SETTINGS.paneHeights.ultimateRsi,
       },
@@ -475,11 +475,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   setPaneHeight: (id: SubPaneIndicatorId, height: number) => {
     const prev = get().config;
+    // Enforce floor >= 80px so collapsed state (28px) never overwrites normal height
+    const cleanHeight = Math.max(80, Math.min(800, Math.round(height)));
     const next: IndicatorSettings = {
       ...prev,
       paneHeights: {
         ...prev.paneHeights,
-        [id]: Math.max(28, Math.round(height)),
+        [id]: cleanHeight,
       },
     };
     saveConfig(next);
