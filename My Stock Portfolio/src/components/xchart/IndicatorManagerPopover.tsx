@@ -1607,6 +1607,38 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     </div>
                   </div>
 
+                  {/* Sub-options: Extremes Only & Cloud Gradient */}
+                  {config.ultimateRsi.rsiVisible !== false && (
+                    <div className="ml-7 flex flex-col gap-1.5 py-1">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none text-[13px] text-slate-300 hover:text-slate-100 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={config.ultimateRsi.autoColor !== false}
+                          onChange={() =>
+                            updateUltimateRSI({
+                              autoColor: config.ultimateRsi.autoColor === false,
+                            })
+                          }
+                          className="w-3.5 h-3.5 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>โชว์เฉพาะช่วง Overbought/Oversold (&gt;{config.ultimateRsi.obValue} / &lt;{config.ultimateRsi.osValue})</span>
+                      </label>
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none text-[13px] text-slate-300 hover:text-slate-100 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={config.ultimateRsi.showArea !== false}
+                          onChange={() =>
+                            updateUltimateRSI({
+                              showArea: config.ultimateRsi.showArea === false,
+                            })
+                          }
+                          className="w-3.5 h-3.5 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>แถบสีเมฆ Extreme Cloud Gradient</span>
+                      </label>
+                    </div>
+                  )}
+
                   {/* Row 2: Signal Line */}
                   <div className="flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
                     <label className="flex items-center gap-3 cursor-pointer select-none">
