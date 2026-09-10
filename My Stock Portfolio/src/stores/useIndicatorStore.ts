@@ -15,6 +15,7 @@ import {
   TrendSpeedConfig,
   SMCLiteConfig,
   AnchoredVWAPConfig,
+  SuperMoneySignalConfig,
   SubPaneIndicatorId,
   PaneLayout,
   DEFAULT_PANE_LAYOUT,
@@ -80,6 +81,10 @@ function loadSavedConfig(): IndicatorSettings {
         ...DEFAULT_INDICATOR_SETTINGS.anchoredVwap,
         ...(parsed.anchoredVwap || {}),
       },
+      superMoneySignal: {
+        ...DEFAULT_INDICATOR_SETTINGS.superMoneySignal,
+        ...(parsed.superMoneySignal || {}),
+      },
       showAxisLabels: typeof parsed.showAxisLabels === 'boolean' ? parsed.showAxisLabels : DEFAULT_INDICATOR_SETTINGS.showAxisLabels,
       paneHeights: {
         mcdx: typeof parsed.paneHeights?.mcdx === 'number' && parsed.paneHeights.mcdx >= 80
@@ -131,6 +136,8 @@ interface IndicatorState {
   toggleSMCLite: () => void;
   updateAnchoredVWAP: (partial: Partial<AnchoredVWAPConfig>) => void;
   toggleAnchoredVWAP: () => void;
+  updateSuperMoneySignal: (partial: Partial<SuperMoneySignalConfig>) => void;
+  toggleSuperMoneySignal: () => void;
   assignIndicatorPane: (id: SubPaneIndicatorId, targetPane: number) => void;
   moveIndicatorUp: (id: SubPaneIndicatorId) => void;
   moveIndicatorDown: (id: SubPaneIndicatorId) => void;
@@ -443,6 +450,28 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       ...prev,
       activePreset: 'custom',
       anchoredVwap: { ...prev.anchoredVwap, visible: !prev.anchoredVwap.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateSuperMoneySignal: (partial: Partial<SuperMoneySignalConfig>) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      superMoneySignal: { ...prev.superMoneySignal, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleSuperMoneySignal: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      superMoneySignal: { ...prev.superMoneySignal, visible: !prev.superMoneySignal.visible },
     };
     saveConfig(next);
     set({ config: next });

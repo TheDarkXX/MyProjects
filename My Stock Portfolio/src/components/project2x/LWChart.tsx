@@ -43,6 +43,7 @@ import { computeTrendSpeed, TrendSpeedResult } from '../../utils/indicators/tren
 import { computeSMCLite, SMCResult } from '../../utils/indicators/smcLite';
 import { SMCPrimitive } from '../../utils/indicators/smcPrimitive';
 import { computeAnchoredVWAP, AnchoredVWAPResult } from '../../utils/indicators/anchoredVWAP';
+import { computeSuperMoneySignal, SuperMoneySignalResult } from '../../utils/indicators/superMoneySignal';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { SubPaneHeaderToolbar } from '../xchart/panes/SubPaneHeaderToolbar';
 import {
@@ -734,6 +735,12 @@ export const LWChart: React.FC<LWChartProps> = ({
     return computeAnchoredVWAP(aggregatedBars, indicatorConfig.anchoredVwap);
   }, [aggregatedBars, indicatorConfig.anchoredVwap]);
 
+  // Compute Super Money Signal V3
+  const superMoneySignalResult: SuperMoneySignalResult | null = useMemo(() => {
+    if (aggregatedBars.length === 0 || !indicatorConfig.superMoneySignal?.visible) return null;
+    return computeSuperMoneySignal(aggregatedBars, indicatorConfig.superMoneySignal);
+  }, [aggregatedBars, indicatorConfig.superMoneySignal]);
+
   // Helper to map RSI marker shape to SeriesMarkerShape & text
   // IMPORTANT: For text-based symbols ('diamond', 'cross'), size MUST be 0 so Lightweight Charts does NOT draw a shape above the text!
   // For shape-based symbols ('circle', 'square', etc.), text MUST be undefined so it does NOT draw a text label below the shape!
@@ -1014,9 +1021,45 @@ export const LWChart: React.FC<LWChartProps> = ({
         size: 1.5,
       });
     }
+    if (indicatorConfig.superMoneySignal?.visible && superMoneySignalResult) {
+      const cfg = indicatorConfig.superMoneySignal;
+      for (let i = 0; i < aggregatedBars.length; i++) {
+        const t = formatBarTime(aggregatedBars[i].time);
+        if (cfg.showReadySignal && superMoneySignalResult.readySignals[i]) {
+          list.push({
+            time: t,
+            position: cfg.readySignalLocation === 'bottom' ? 'atPriceBottom' : 'belowBar',
+            color: cfg.readySignalColor ?? '#FFFFFF',
+            shape: (cfg.readySignalShape ?? 'arrowUp') as any,
+            text: 'READY',
+            size: 1.2,
+          });
+        }
+        if (cfg.showBuySignal && superMoneySignalResult.buySignals[i]) {
+          list.push({
+            time: t,
+            position: 'belowBar',
+            color: cfg.buySignalColor ?? '#FFE600',
+            shape: (cfg.buySignalShape ?? 'arrowUp') as any,
+            text: 'BUY',
+            size: 1.4,
+          });
+        }
+        if (cfg.showNoSignal && superMoneySignalResult.noSignals[i]) {
+          list.push({
+            time: t,
+            position: 'belowBar',
+            color: cfg.noSignalColor ?? '#800000',
+            shape: (cfg.noSignalShape ?? 'cross') as any,
+            text: 'NO SIGNAL',
+            size: 1.1,
+          });
+        }
+      }
+    }
     list.sort((a, b) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0));
     return list;
-  }, [indicatorConfig.signals.visible, calculatedMarkers, indicatorConfig.smcLite, smcLiteResult, indicatorConfig.anchoredVwap?.visible, anchoredVWAPResult]);
+  }, [indicatorConfig.signals.visible, calculatedMarkers, indicatorConfig.smcLite, smcLiteResult, indicatorConfig.anchoredVwap?.visible, anchoredVWAPResult, indicatorConfig.superMoneySignal, superMoneySignalResult]);
 
   // Initialize and build chart instance
   useEffect(() => {
@@ -2093,7 +2136,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
       setPaneOffsets(newOffsets);
     });
-  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, pane0Markers, smcLiteResult, anchoredVWAPResult, activeSubPanes, maximizedPane, applyPaneLayoutHeights]);
+  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, pane0Markers, smcLiteResult, anchoredVWAPResult, superMoneySignalResult, activeSubPanes, maximizedPane, applyPaneLayoutHeights]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {
@@ -2570,6 +2613,22 @@ export const LWChart: React.FC<LWChartProps> = ({
             {indicatorConfig.ema3.visible && activeLegend.ema200 && (
               <span className="hidden sm:inline">
                 EMA{indicatorConfig.ema3.period}: <strong style={{ color: indicatorConfig.ema3.color }}>${activeLegend.ema200.toFixed(2)}</strong>
+              </span>
+            )}
+            {indicatorConfig.superMoneySignal?.visible && superMoneySignalResult && indicatorConfig.superMoneySignal?.showPaneLabels && (
+              <span className="flex items-center gap-1.5 border-l border-slate-700 pl-3">
+                <span className="text-slate-400">Signal:</span>
+                <span className={`px-2 py-0.5 rounded text-[11px] font-extrabold shadow-sm ${
+                  superMoneySignalResult.currentDirection === 1
+                    ? 'bg-white text-slate-950 font-black'
+                    : superMoneySignalResult.currentDirection === 2
+                    ? 'bg-amber-400 text-slate-950 font-black'
+                    : superMoneySignalResult.currentDirection === -1
+                    ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                    : 'bg-slate-800 text-slate-300'
+                }`}>
+                  {superMoneySignalResult.currentStatusText}
+                </span>
               </span>
             )}
             <span className="flex items-center gap-1">

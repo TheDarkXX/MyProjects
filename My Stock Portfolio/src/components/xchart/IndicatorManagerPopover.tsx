@@ -334,7 +334,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ location, onChange 
   );
 };
 
-type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap';
+type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal';
 
 interface IndicatorManagerPopoverProps {
   onClose: () => void;
@@ -349,6 +349,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
   const [trendSpeedTab, setTrendSpeedTab] = useState<'inputs' | 'style'>('inputs');
   const [smcTab, setSmcTab] = useState<'inputs' | 'style'>('inputs');
   const [anchoredVwapTab, setAnchoredVwapTab] = useState<'inputs' | 'style'>('inputs');
+  const [superMoneySignalTab, setSuperMoneySignalTab] = useState<'inputs' | 'style'>('inputs');
 
   const {
     config,
@@ -374,6 +375,8 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     toggleSMCLite,
     updateAnchoredVWAP,
     toggleAnchoredVWAP,
+    updateSuperMoneySignal,
+    toggleSuperMoneySignal,
     assignIndicatorPane,
     moveIndicatorUp,
     moveIndicatorDown,
@@ -709,6 +712,54 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                   <button
                     type="button"
                     onClick={() => setActiveView('anchoredVwap')}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
+                    <span>Config</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Item 3.7: Super Money Signal V3 */}
+              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleSuperMoneySignal}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      config.superMoneySignal?.visible
+                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                    }`}
+                    title="Toggle Super Money Signal V3"
+                  >
+                    {config.superMoneySignal?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+
+                  <div className="flex flex-col">
+                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      Super Money Signal V3
+                      <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-amber-950/80 text-amber-300 border-amber-800/60">
+                        Pane 0 Overlay
+                      </span>
+                    </span>
+                    <span className="text-[13px] text-slate-400">
+                      2-Stage Institutional Entry System (Ready & Buy)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.superMoneySignal?.readySignalColor ?? '#FFFFFF' }} title="Ready (White)" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.superMoneySignal?.buySignalColor ?? '#FFE600' }} title="Buy (Yellow)" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.superMoneySignal?.bankerColor ?? '#ff0000' }} title="Banker (Red)" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('superMoneySignal')}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
                   >
                     <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
@@ -3402,6 +3453,483 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
               <button
                 type="button"
                 onClick={() => updateAnchoredVWAP(DEFAULT_INDICATOR_SETTINGS.anchoredVwap)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-slate-800 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Defaults</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('list')}
+                  className="px-4 py-1.5 rounded-lg text-[13px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 border border-slate-700 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-1.5 rounded-lg text-[13px] font-extrabold bg-white text-slate-950 hover:bg-slate-100 shadow-md transition-all cursor-pointer"
+                >
+                  Ok
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ========================================================= */}
+        {/* VIEW 10: SUPER MONEY SIGNAL V3 CONFIG (Inputs & Style 1:1) */}
+        {/* ========================================================= */}
+        {activeView === 'superMoneySignal' && (
+          <>
+            {/* Sub-Header */}
+            <div className="flex items-center justify-between px-5 py-3 bg-[#0E1526] border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('list')}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-[13px] font-bold transition-all cursor-pointer border border-slate-700/60 mr-1"
+                >
+                  <ArrowLeft className="w-4 h-4 text-amber-400" />
+                  <span>Back</span>
+                </button>
+                <span className="text-[15px] font-black tracking-wide text-slate-100 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  Super Money Signal V3
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* TradingView-style Tab Navigation */}
+            <div className="flex items-center gap-6 px-5 border-b border-slate-800 bg-[#0B101B] text-[14px] font-bold">
+              <button
+                type="button"
+                onClick={() => setSuperMoneySignalTab('inputs')}
+                className={`py-2.5 relative transition-colors cursor-pointer ${
+                  superMoneySignalTab === 'inputs' ? 'text-white font-extrabold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Inputs
+                {superMoneySignalTab === 'inputs' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSuperMoneySignalTab('style')}
+                className={`py-2.5 relative transition-colors cursor-pointer ${
+                  superMoneySignalTab === 'style' ? 'text-white font-extrabold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Style
+                {superMoneySignalTab === 'style' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                disabled
+                className="py-2.5 text-slate-600 cursor-not-allowed opacity-60"
+                title="Visible on all chart resolutions"
+              >
+                Visibility
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="flex-1 overflow-y-auto p-5">
+              {/* TAB 1: INPUTS */}
+              {superMoneySignalTab === 'inputs' && (
+                <div className="space-y-6">
+                  {/* Group: SUPER MONEY */}
+                  <div className="space-y-3.5">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Super Money
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-medium text-slate-200">Banker Base</span>
+                      <input
+                        type="number"
+                        value={config.superMoneySignal?.bankerBase ?? 50}
+                        onChange={(e) => updateSuperMoneySignal({ bankerBase: parseInt(e.target.value, 10) || 50 })}
+                        className="w-24 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-medium text-slate-200">Banker RSI Period</span>
+                      <input
+                        type="number"
+                        value={config.superMoneySignal?.bankerRsiPeriod ?? 50}
+                        onChange={(e) => updateSuperMoneySignal({ bankerRsiPeriod: parseInt(e.target.value, 10) || 50 })}
+                        className="w-24 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-medium text-slate-200">Hot Money RSI Base</span>
+                      <input
+                        type="number"
+                        value={config.superMoneySignal?.hotMoneyRsiBase ?? 30}
+                        onChange={(e) => updateSuperMoneySignal({ hotMoneyRsiBase: parseInt(e.target.value, 10) || 30 })}
+                        className="w-24 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-medium text-slate-200">Hot Money RSI Period</span>
+                      <input
+                        type="number"
+                        value={config.superMoneySignal?.hotMoneyRsiPeriod ?? 40}
+                        onChange={(e) => updateSuperMoneySignal({ hotMoneyRsiPeriod: parseInt(e.target.value, 10) || 40 })}
+                        className="w-24 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-medium text-slate-200">Sensitivity Banker</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={config.superMoneySignal?.sensitivityBanker ?? 1.5}
+                        onChange={(e) => updateSuperMoneySignal({ sensitivityBanker: parseFloat(e.target.value) || 1.5 })}
+                        className="w-24 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-medium text-slate-200">Sensitivity Hot Money</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={config.superMoneySignal?.sensitivityHotMoney ?? 0.7}
+                        onChange={(e) => updateSuperMoneySignal({ sensitivityHotMoney: parseFloat(e.target.value) || 0.7 })}
+                        className="w-24 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.superMoneySignal?.hideRsi ?? true}
+                        onChange={(e) => updateSuperMoneySignal({ hideRsi: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">
+                        Hide RSI Graphs, Lines, Bars, and Labels
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Group: TRIGGER SETTINGS */}
+                  <div className="space-y-3.5 pt-4 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Trigger Settings
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-medium text-slate-200">Days for Ready Signal</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={config.superMoneySignal?.readyDays ?? 3}
+                        onChange={(e) => updateSuperMoneySignal({ readyDays: parseInt(e.target.value, 10) || 3 })}
+                        className="w-24 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-medium text-slate-200">Days for Buy Signal</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={config.superMoneySignal?.buyDays ?? 5}
+                        onChange={(e) => updateSuperMoneySignal({ buyDays: parseInt(e.target.value, 10) || 5 })}
+                        className="w-24 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-medium text-slate-200">Days for No Signal</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={config.superMoneySignal?.noSignalDays ?? 3}
+                        onChange={(e) => updateSuperMoneySignal({ noSignalDays: parseInt(e.target.value, 10) || 3 })}
+                        className="w-24 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Group: ALERTS */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Alerts
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.superMoneySignal?.alertReady ?? true}
+                        onChange={(e) => updateSuperMoneySignal({ alertReady: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Alert on Ready Signal</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.superMoneySignal?.alertBuy ?? true}
+                        onChange={(e) => updateSuperMoneySignal({ alertBuy: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Alert on Buy Signal</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: STYLE */}
+              {superMoneySignalTab === 'style' && (
+                <div className="space-y-3.5">
+                  {/* Retailer */}
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-[14px] font-medium text-slate-200">Retailer</span>
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.superMoneySignal?.retailerColor ?? '#005e07'}
+                        onChange={(c) => updateSuperMoneySignal({ retailerColor: c })}
+                        label="Retailer Color"
+                      />
+                      <span className="text-[12px] font-semibold text-slate-400">Columns</span>
+                    </div>
+                  </div>
+
+                  {/* Hot Money */}
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-[14px] font-medium text-slate-200">Hot Money</span>
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.superMoneySignal?.hotMoneyColor ?? '#d8c200'}
+                        onChange={(c) => updateSuperMoneySignal({ hotMoneyColor: c })}
+                        label="Hot Money Color"
+                      />
+                      <span className="text-[12px] font-semibold text-slate-400">Columns</span>
+                    </div>
+                  </div>
+
+                  {/* Banker */}
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-[14px] font-medium text-slate-200">Banker</span>
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.superMoneySignal?.bankerColor ?? '#ff0000'}
+                        onChange={(c) => updateSuperMoneySignal({ bankerColor: c })}
+                        label="Banker Color"
+                      />
+                      <span className="text-[12px] font-semibold text-slate-400">Columns</span>
+                    </div>
+                  </div>
+
+                  {/* Super Money */}
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-[14px] font-medium text-slate-200">Super Money</span>
+                    <ColorPickerDropdown
+                      color={config.superMoneySignal?.superMoneyColor ?? '#00E5FF'}
+                      onChange={(c) => updateSuperMoneySignal({ superMoneyColor: c })}
+                      label="Super Money Line Color"
+                    />
+                  </div>
+
+                  {/* Banker MA */}
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-[14px] font-medium text-slate-200">Banker MA</span>
+                    <ColorPickerDropdown
+                      color={config.superMoneySignal?.bankerMaColor ?? '#0DAABF'}
+                      onChange={(c) => updateSuperMoneySignal({ bankerMaColor: c })}
+                      label="Banker MA Line Color"
+                    />
+                  </div>
+
+                  <div className="border-t border-slate-800/80 my-2" />
+
+                  {/* Ready Signal */}
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/40 border border-slate-800">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.superMoneySignal?.showReadySignal ?? true}
+                        onChange={(e) => updateSuperMoneySignal({ showReadySignal: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-white focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">Ready Signal</span>
+                    </label>
+
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.superMoneySignal?.readySignalColor ?? '#FFFFFF'}
+                        onChange={(c) => updateSuperMoneySignal({ readySignalColor: c })}
+                        label="Ready Signal Color"
+                      />
+                      <select
+                        value={config.superMoneySignal?.readySignalLocation ?? 'bottom'}
+                        onChange={(e) => updateSuperMoneySignal({ readySignalLocation: e.target.value as any })}
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                      >
+                        <option value="bottom">Bottom</option>
+                        <option value="belowBar">Below bar</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Buy Signal */}
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/40 border border-slate-800">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.superMoneySignal?.showBuySignal ?? true}
+                        onChange={(e) => updateSuperMoneySignal({ showBuySignal: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-400 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">Buy Signal</span>
+                    </label>
+
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.superMoneySignal?.buySignalColor ?? '#FFE600'}
+                        onChange={(c) => updateSuperMoneySignal({ buySignalColor: c })}
+                        label="Buy Signal Color"
+                      />
+                      <select
+                        value={config.superMoneySignal?.buySignalLocation ?? 'belowBar'}
+                        onChange={(e) => updateSuperMoneySignal({ buySignalLocation: e.target.value as any })}
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                      >
+                        <option value="belowBar">Below bar</option>
+                        <option value="bottom">Bottom</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* No Signal */}
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/40 border border-slate-800">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.superMoneySignal?.showNoSignal ?? false}
+                        onChange={(e) => updateSuperMoneySignal({ showNoSignal: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-rose-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">No Signal</span>
+                    </label>
+
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.superMoneySignal?.noSignalColor ?? '#800000'}
+                        onChange={(c) => updateSuperMoneySignal({ noSignalColor: c })}
+                        label="No Signal Color"
+                      />
+                      <select
+                        value={config.superMoneySignal?.noSignalLocation ?? 'belowBar'}
+                        onChange={(e) => updateSuperMoneySignal({ noSignalLocation: e.target.value as any })}
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                      >
+                        <option value="belowBar">Below bar</option>
+                        <option value="bottom">Bottom</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Group: GRAPHIC OBJECTS */}
+                  <div className="space-y-2 pt-3 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Graphic Objects
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.superMoneySignal?.showPaneLabels ?? true}
+                        onChange={(e) => updateSuperMoneySignal({ showPaneLabels: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Pane labels (Screener status)</span>
+                    </label>
+                  </div>
+
+                  {/* Group: OUTPUT VALUES */}
+                  <div className="space-y-2 pt-3 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Output Values
+                    </div>
+
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">Precision</span>
+                      <select
+                        disabled
+                        className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-[13px] font-bold text-slate-300 opacity-80"
+                      >
+                        <option>Default</option>
+                      </select>
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.showAxisLabels}
+                        onChange={toggleAxisLabels}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Labels on price scale</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Values in status line</span>
+                    </label>
+                  </div>
+
+                  {/* Group: INPUT VALUES */}
+                  <div className="space-y-2 pt-3 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Input Values
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Inputs in status line</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer matching TradingView [Defaults v] [Cancel] [Ok] */}
+            <div className="p-3.5 bg-[#080D18] border-t border-slate-800 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => updateSuperMoneySignal(DEFAULT_INDICATOR_SETTINGS.superMoneySignal)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-slate-800 transition-all cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />

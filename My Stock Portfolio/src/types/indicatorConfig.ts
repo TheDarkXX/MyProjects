@@ -191,6 +191,44 @@ export interface AnchoredVWAPConfig {
   lowerBandLineStyle: LineStyleOption;
 }
 
+export interface SuperMoneySignalConfig {
+  visible: boolean;
+  // Super Money Settings
+  bankerBase: number;
+  bankerRsiPeriod: number;
+  hotMoneyRsiBase: number;
+  hotMoneyRsiPeriod: number;
+  sensitivityBanker: number;
+  sensitivityHotMoney: number;
+  hideRsi: boolean;
+  // Trigger Settings
+  readyDays: number;
+  buyDays: number;
+  noSignalDays: number;
+  // Alerts
+  alertReady: boolean;
+  alertBuy: boolean;
+  // Style
+  retailerColor: string;
+  hotMoneyColor: string;
+  bankerColor: string;
+  superMoneyColor: string;
+  bankerMaColor: string;
+  showReadySignal: boolean;
+  readySignalColor: string;
+  readySignalShape: RSIMarkerShape;
+  readySignalLocation: 'bottom' | 'belowBar';
+  showBuySignal: boolean;
+  buySignalColor: string;
+  buySignalShape: RSIMarkerShape;
+  buySignalLocation: 'belowBar';
+  showNoSignal: boolean;
+  noSignalColor: string;
+  noSignalShape: RSIMarkerShape;
+  noSignalLocation: 'belowBar';
+  showPaneLabels: boolean;
+}
+
 export type SubPaneIndicatorId = 'mcdx' | 'ultimateRsi' | 'trendSpeed';
 
 export interface PaneLayout {
@@ -236,6 +274,7 @@ export interface IndicatorSettings {
   trendSpeed: TrendSpeedConfig;
   smcLite: SMCLiteConfig;
   anchoredVwap: AnchoredVWAPConfig;
+  superMoneySignal: SuperMoneySignalConfig;
 }
 
 export const DEFAULT_CUSTOM_COLORS: string[] = [
@@ -422,5 +461,38 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     lowerBandColor: '#94A3B8',
     lowerBandLineWidth: 2,
     lowerBandLineStyle: 'Dashed',
+  },
+  superMoneySignal: {
+    visible: true,
+    bankerBase: 50,
+    bankerRsiPeriod: 50,
+    hotMoneyRsiBase: 30,
+    hotMoneyRsiPeriod: 40,
+    sensitivityBanker: 1.5,
+    sensitivityHotMoney: 0.7,
+    hideRsi: true,
+    readyDays: 3,
+    buyDays: 5,
+    noSignalDays: 3,
+    alertReady: true,
+    alertBuy: true,
+    retailerColor: '#005e07',
+    hotMoneyColor: '#d8c200',
+    bankerColor: '#ff0000',
+    superMoneyColor: '#00E5FF',
+    bankerMaColor: '#0DAABF',
+    showReadySignal: true,
+    readySignalColor: '#FFFFFF',
+    readySignalShape: 'arrowUp',
+    readySignalLocation: 'bottom',
+    showBuySignal: true,
+    buySignalColor: '#FFE600',
+    buySignalShape: 'arrowUp',
+    buySignalLocation: 'belowBar',
+    showNoSignal: false,
+    noSignalColor: '#800000',
+    noSignalShape: 'cross',
+    noSignalLocation: 'belowBar',
+    showPaneLabels: true,
   },
 };
