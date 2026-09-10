@@ -7,6 +7,7 @@ interface UiState {
   activeTab: string;
   currency: 'USD' | 'THB';
   xchartHideHeader: boolean;
+  xchartEnable4HForex: boolean;
   
   toggleDarkMode: () => void;
   toggleSidebar: () => void;
@@ -16,6 +17,7 @@ interface UiState {
   setCurrency: (c: 'USD' | 'THB') => void;
   setXChartHideHeader: (hide: boolean) => void;
   toggleXChartHeader: () => void;
+  setXChartEnable4HForex: (enable: boolean) => void;
   addNotification?: (n: { type: 'success' | 'error' | 'info'; message: string }) => void;
 }
 
@@ -53,6 +55,7 @@ export const useUiStore = create<UiState>((set) => ({
   activeTab: getInitialTab(),
   currency: (localStorage.getItem('preferred_currency') as 'USD' | 'THB') || 'USD',
   xchartHideHeader: typeof window !== 'undefined' ? localStorage.getItem('stock_xchart_hide_header') === 'true' : false,
+  xchartEnable4HForex: typeof window !== 'undefined' ? localStorage.getItem('stock_xchart_enable_4h_forex') !== 'false' : true,
 
   toggleDarkMode: () => set((state) => {
     const newTheme = !state.darkMode;
@@ -105,6 +108,13 @@ export const useUiStore = create<UiState>((set) => ({
       localStorage.setItem('stock_xchart_hide_header', String(next));
     } catch (e) {}
     return { xchartHideHeader: next };
+  }),
+
+  setXChartEnable4HForex: (enable: boolean) => set(() => {
+    try {
+      localStorage.setItem('stock_xchart_enable_4h_forex', String(enable));
+    } catch (e) {}
+    return { xchartEnable4HForex: enable };
   }),
 
   addNotification: (n) => {

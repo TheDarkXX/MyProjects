@@ -11,6 +11,7 @@ import {
   CrosshairMode,
   LineStyle,
   Time,
+  UTCTimestamp,
   SeriesMarker,
 } from 'lightweight-charts';
 import {
@@ -31,6 +32,7 @@ import {
 import { api } from '../../services/api';
 import { BankerMCDXSeriesView, BankerMCDXData } from './BankerMCDXPlugin';
 import { useIndicatorStore } from '../../stores/useIndicatorStore';
+import { useUiStore } from '../../stores/uiStore';
 import { computeEMA } from '../../utils/computeEMA';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { LineStyleOption } from '../../types/indicatorConfig';
@@ -44,6 +46,13 @@ const getChartLineStyle = (opt: LineStyleOption): LineStyle => {
     case 'Solid':
     default: return LineStyle.Solid;
   }
+};
+
+const formatBarTime = (t: string): Time => {
+  if (t && t.includes('T')) {
+    return Math.floor(new Date(t).getTime() / 1000) as UTCTimestamp;
+  }
+  return t as Time;
 };
 
 export interface WatchlistStock {
@@ -80,11 +89,13 @@ export interface LWChartProps {
   onAddInflow?: () => void;
   watchlist?: WatchlistStock[];
   onSelectSymbol?: (symbol: string) => void;
+  resolution?: Resolution;
+  onResolutionChange?: (res: Resolution) => void;
 }
 
 export type TimeFrame = '7D' | '1M' | '3M' | '6M' | '10M' | '1Y' | '5Y' | 'ALL';
 export type ChartStyle = 'CANDLE' | 'HEIKIN_ASHI' | 'AREA';
-export type Resolution = '1D' | '1W';
+export type Resolution = '4H' | '1D' | '1W';
 
 interface RawBarItem {
   time: string;
@@ -146,6 +157,8 @@ export const LWChart: React.FC<LWChartProps> = ({
   onAddInflow,
   watchlist = [],
   onSelectSymbol,
+  resolution: propResolution,
+  onResolutionChange,
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -183,13 +196,36 @@ export const LWChart: React.FC<LWChartProps> = ({
     return 'CANDLE';
   });
 
-  const [resolution, setResolution] = useState<Resolution>(() => {
+  const { xchartEnable4HForex } = useUiStore();
+  const isForex = symbol === 'THB=X' || symbol.endsWith('=X') || symbol.includes('USD/THB');
+  const canShow4H = isForex && xchartEnable4HForex;
+
+  const [internalResolution, setInternalResolution] = useState<Resolution>(() => {
     try {
       const saved = localStorage.getItem('p2x_lw_resolution');
-      if (saved === '1D' || saved === '1W') return saved;
+      if (saved === '4H' || saved === '1D' || saved === '1W') return saved as Resolution;
     } catch (e) {}
     return '1D';
   });
+
+  const resolution: Resolution = propResolution !== undefined ? propResolution : internalResolution;
+  const setResolution = (newRes: Resolution) => {
+    if (onResolutionChange) {
+      onResolutionChange(newRes);
+    } else {
+      setInternalResolution(newRes);
+    }
+    try {
+      localStorage.setItem('p2x_lw_resolution', newRes);
+    } catch (e) {}
+  };
+
+  // Fallback: if resolution is 4H but 4H is disabled or asset is not forex
+  useEffect(() => {
+    if (resolution === '4H' && !canShow4H) {
+      setResolution('1D');
+    }
+  }, [resolution, canShow4H]);
 
   const [isIndicatorOpen, setIsIndicatorOpen] = useState<boolean>(false);
   const indicatorConfig = useIndicatorStore((s) => s.config);
@@ -333,7 +369,7 @@ export const LWChart: React.FC<LWChartProps> = ({
 
   // Aggregate into Weekly bars (if resolution === '1W')
   const aggregatedBars: RawBarItem[] = useMemo(() => {
-    if (resolution === '1D' || rawCleanBars.length === 0) return rawCleanBars;
+    if (resolution === '1D' || resolution === '4H' || rawCleanBars.length === 0) return rawCleanBars;
 
     // Group bars by ISO Week (Monday to Friday)
     const weeksMap = new Map<string, RawBarItem[]>();
@@ -418,11 +454,15 @@ export const LWChart: React.FC<LWChartProps> = ({
     return haResult;
   }, [aggregatedBars, chartStyle]);
 
-  // Map for O(1) hover lookup by date string
+  // Map for O(1) hover lookup by date string or unix timestamp seconds
   const rawBarsByDate = useMemo(() => {
     const map = new Map<string, RawBarItem>();
     for (const b of aggregatedBars) {
       map.set(b.time, b);
+      if (b.time && b.time.includes('T')) {
+        const sec = Math.floor(new Date(b.time).getTime() / 1000);
+        map.set(String(sec), b);
+      }
     }
     return map;
   }, [aggregatedBars]);
@@ -485,7 +525,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       // STEP 3: ★ SUPER MONEY (Banker crosses >= 10, in trend) -> Upward arrow + White Star
       if (goldenStar && bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
         if (lastType !== 'SUPER') {
-          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, sigColors.goldenStar, 'arrowUp', '★ SUPER', 1.35));
+          markers.push(makeMarker(formatBarTime(bar.time), 'below', bar.high, bar.low, sigColors.goldenStar, 'arrowUp', '★ SUPER', 1.35));
           lastType = 'SUPER';
           continue;
         }
@@ -494,7 +534,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       // STEP 2: ▲ BUY ZONE (At/near EMA support + Banker emerges > 0 on green bar) -> Yellow Triangle below candle
       if (breakout && nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
         if (lastType !== 'BUY') {
-          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, sigColors.breakout, 'arrowUp', '▲ BUY', 1.15));
+          markers.push(makeMarker(formatBarTime(bar.time), 'below', bar.high, bar.low, sigColors.breakout, 'arrowUp', '▲ BUY', 1.15));
           lastType = 'BUY';
           continue;
         }
@@ -504,7 +544,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       if (rebound && nearSupport && bVal === 0) {
         if (lastType !== 'READY' && lastType !== 'BUY' && lastType !== 'SUPER') {
           if (i - lastReadyIdx >= 14) {
-            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, sigColors.rebound, 'circle', '', 0, '● ● ●'));
+            markers.push(makeMarker(formatBarTime(bar.time), 'below', bar.high, bar.low, sigColors.rebound, 'circle', '', 0, '● ● ●'));
             lastType = 'READY';
             lastReadyIdx = i;
             continue;
@@ -520,7 +560,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       // EXIT: ▼ DANGER / STOP LOSS (Only fires when in a BUY/SUPER position)
       const inPosition = lastType === 'BUY' || lastType === 'SUPER';
       if (pullback && inPosition && ((dist200 < -5.0 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close)))) {
-        markers.push(makeMarker(bar.time as Time, 'above', bar.high, bar.low, sigColors.pullback, 'arrowDown', '▼ EXIT', 1.15));
+        markers.push(makeMarker(formatBarTime(bar.time), 'above', bar.high, bar.low, sigColors.pullback, 'arrowDown', '▼ EXIT', 1.15));
         lastType = null; // Position exited, back to cash
       }
     }
@@ -871,7 +911,7 @@ export const LWChart: React.FC<LWChartProps> = ({
 
     // Prepare arrays
     const candleData = displayBars.map(b => ({
-      time: b.time as Time,
+      time: formatBarTime(b.time),
       open: b.open,
       high: b.high,
       low: b.low,
@@ -879,40 +919,40 @@ export const LWChart: React.FC<LWChartProps> = ({
     }));
 
     const areaData = displayBars.map(b => ({
-      time: b.time as Time,
+      time: formatBarTime(b.time),
       value: b.close,
     }));
 
     const e50Data = displayBars
       .filter(b => b.ema50 !== null)
-      .map(b => ({ time: b.time as Time, value: b.ema50! }));
+      .map(b => ({ time: formatBarTime(b.time), value: b.ema50! }));
 
     const e150Data = displayBars
       .filter(b => b.ema150 !== null)
-      .map(b => ({ time: b.time as Time, value: b.ema150! }));
+      .map(b => ({ time: formatBarTime(b.time), value: b.ema150! }));
 
     const e200Data = displayBars
       .filter(b => b.ema200 !== null)
-      .map(b => ({ time: b.time as Time, value: b.ema200! }));
+      .map(b => ({ time: formatBarTime(b.time), value: b.ema200! }));
 
     const envPct = (indicatorConfig.envelope.percent || 4.0) / 100;
     const upperEnvData = displayBars
       .filter(b => b.ema200 !== null)
-      .map(b => ({ time: b.time as Time, value: Number((b.ema200! * (1 + envPct)).toFixed(2)) }));
+      .map(b => ({ time: formatBarTime(b.time), value: Number((b.ema200! * (1 + envPct)).toFixed(2)) }));
 
     const lowerEnvData = displayBars
       .filter(b => b.ema200 !== null)
-      .map(b => ({ time: b.time as Time, value: Number((b.ema200! * (1 - envPct)).toFixed(2)) }));
+      .map(b => ({ time: formatBarTime(b.time), value: Number((b.ema200! * (1 - envPct)).toFixed(2)) }));
 
     const mcdxData: BankerMCDXData[] = displayBars.map(b => ({
-      time: b.time as Time,
+      time: formatBarTime(b.time),
       banker: b.banker,
       hotMoney: b.hotMoney,
       retail: b.retail,
     }));
 
     const bMaData = displayBars.map(b => ({
-      time: b.time as Time,
+      time: formatBarTime(b.time),
       value: b.bankerMa,
     }));
 
@@ -1136,13 +1176,26 @@ export const LWChart: React.FC<LWChartProps> = ({
         {/* RIGHT: Switchers & Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           
-          {/* Resolution: 1D | 1W */}
+          {/* Resolution: 4H | 1D | 1W */}
           <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-700/50">
+            {canShow4H && (
+              <button
+                onClick={() => setResolution('4H')}
+                className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all cursor-pointer ${
+                  resolution === '4H'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md font-black'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+                title="4-Hour Intraday Candles (USD/THB)"
+              >
+                4H
+              </button>
+            )}
             <button
               onClick={() => setResolution('1D')}
-              className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all cursor-pointer ${
                 resolution === '1D'
-                  ? 'bg-cyan-500 text-slate-950 shadow-md'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md font-black'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -1150,9 +1203,9 @@ export const LWChart: React.FC<LWChartProps> = ({
             </button>
             <button
               onClick={() => setResolution('1W')}
-              className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-md text-[13px] font-bold transition-all cursor-pointer ${
                 resolution === '1W'
-                  ? 'bg-cyan-500 text-slate-950 shadow-md'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md font-black'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -1282,7 +1335,9 @@ export const LWChart: React.FC<LWChartProps> = ({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 bg-[#080C14]/95 border-b border-slate-800/50 text-[13px] text-slate-300">
         {activeLegend ? (
           <>
-            <span className="font-bold text-slate-100">{activeLegend.time}</span>
+            <span className="font-bold text-slate-100">
+              {activeLegend.time.includes('T') ? activeLegend.time.replace('T', ' ').slice(0, 16) + ' UTC' : activeLegend.time}
+            </span>
             <span>
               O: <strong className="text-slate-200">${activeLegend.open.toFixed(2)}</strong>
             </span>

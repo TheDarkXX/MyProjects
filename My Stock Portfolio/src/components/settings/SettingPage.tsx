@@ -5,7 +5,15 @@ import { usePortfolioStore } from '../../stores/portfolioStore';
 import clsx from 'clsx';
 
 export const SettingPage = () => {
-  const { addNotification, sidebarMode, setSidebarMode, xchartHideHeader, setXChartHideHeader } = useUiStore();
+  const { 
+    addNotification, 
+    sidebarMode, 
+    setSidebarMode, 
+    xchartHideHeader, 
+    setXChartHideHeader,
+    xchartEnable4HForex,
+    setXChartEnable4HForex
+  } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
 
   const handleBackup = async () => {
@@ -279,6 +287,53 @@ export const SettingPage = () => {
                   )}
                 >
                   ซ่อน (Full Screen)
+                </button>
+              </div>
+            </div>
+
+            {/* USD/THB 4-Hour Timeframe Toggle */}
+            <div className="p-5 rounded-2xl bg-[#0B1220] border border-[#2A2E45] flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-white font-medium">USD/THB 4H Timeframe</h3>
+                  <span className={clsx(
+                    "text-xs px-2 py-0.5 rounded-full font-semibold border",
+                    xchartEnable4HForex 
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      : "bg-slate-800 text-slate-300 border-slate-700"
+                  )}>
+                    {xchartEnable4HForex ? 'Enabled (Active)' : 'Disabled'}
+                  </span>
+                </div>
+                <p className="text-[#CBD5E1] text-[13px] mt-1 leading-relaxed">
+                  เปิด/ปิดปุ่มและชุดข้อมูลแท่งเทียน 4H ย้อนหลัง 2 ปี บนกราฟคู่เงิน USD/THB (THB=X)
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 p-1 rounded-xl bg-[#111418] border border-[#2A2E45]">
+                <button
+                  type="button"
+                  onClick={() => setXChartEnable4HForex(true)}
+                  className={clsx(
+                    "flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                    xchartEnable4HForex
+                      ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md"
+                      : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  เปิดใช้งาน (4H)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setXChartEnable4HForex(false)}
+                  className={clsx(
+                    "flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                    !xchartEnable4HForex
+                      ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-md"
+                      : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  ปิดใช้งาน
                 </button>
               </div>
             </div>

@@ -10,7 +10,7 @@ export interface XChartTab {
   title: string;
   timeframe?: '7D' | '1M' | '3M' | '6M' | '10M' | '1Y' | 'ALL';
   chartStyle?: 'CANDLE' | 'HEIKIN_ASHI' | 'AREA';
-  resolution?: '1D' | '1W';
+  resolution?: '1D' | '1W' | '4H';
   showEnvelope?: boolean;
   showSignals?: boolean;
 }

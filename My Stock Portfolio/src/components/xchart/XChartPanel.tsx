@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../../services/api';
-import { LWChart } from '../project2x/LWChart';
+import { LWChart, Resolution } from '../project2x/LWChart';
 import { useXChartStore } from '../../stores/xchartStore';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 
@@ -11,6 +11,7 @@ interface XChartPanelProps {
 
 interface ChartApiResponse {
   symbol: string;
+  resolution?: string;
   dates: string[];
   opens: number[];
   highs: number[];
@@ -31,44 +32,69 @@ interface ChartApiResponse {
 }
 
 export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId }) => {
-  const { changeSymbolOnActiveTab } = useXChartStore();
-  const [data, setData] = useState<ChartApiResponse | null>(null);
+  const { changeSymbolOnActiveTab, tabs, updateTab } = useXChartStore();
+  const currentTab = tabs.find(t => t.id === tabId);
+  const activeResolution: Resolution = (currentTab?.resolution as Resolution) || '1D';
+
+  const [cacheByRes, setCacheByRes] = useState<Record<string, ChartApiResponse>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchChartData = useCallback(async (sym: string) => {
+  const fetchKey = `${symbol}_${activeResolution === '4H' ? '4H' : '1D'}`;
+  const currentData = cacheByRes[fetchKey] || null;
+
+  const fetchChartData = useCallback(async (sym: string, res: Resolution) => {
     if (!sym) return;
+    const reqRes = res === '4H' ? '4H' : '1D';
+    const key = `${sym}_${reqRes}`;
+
+    // If already in local cache, no need to show loading
+    if (cacheByRes[key]) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const res = await api.chart.get(sym, 36500);
-      setData(res);
+      const result = await api.chart.get(sym, 36500, reqRes);
+      setCacheByRes(prev => ({ ...prev, [key]: result }));
     } catch (err: any) {
-      console.error(`[XChartPanel] Failed to load chart data for ${sym}:`, err);
+      console.error(`[XChartPanel] Failed to load chart data for ${sym} (${reqRes}):`, err);
       setError(err.message || `Failed to load chart data for ${sym}`);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cacheByRes]);
 
   useEffect(() => {
-    fetchChartData(symbol);
-  }, [symbol, fetchChartData]);
+    fetchChartData(symbol, activeResolution);
+  }, [symbol, activeResolution, fetchChartData]);
 
-  if (loading && !data) {
+  const handleResolutionChange = (newRes: Resolution) => {
+    updateTab(tabId, { resolution: newRes });
+  };
+
+  if (loading && !currentData) {
     return (
       <div className="flex-1 w-full h-full bg-[#111418] flex flex-col items-center justify-center p-8 select-none">
         <div className="relative flex items-center justify-center">
           <div className="w-12 h-12 rounded-full border-2 border-[#1F2233] border-t-purple-500 animate-spin" />
           <div className="absolute font-bold text-xs text-purple-400 font-heading">XC</div>
         </div>
-        <div className="mt-4 text-sm font-semibold text-slate-200">กำลังโหลดข้อมูลกราฟ {symbol}...</div>
-        <div className="text-xs text-slate-400 mt-1">OHLCV Max Lifetime (All-Time IPO) + EMA Ribbon + MCDX Indicators</div>
+        <div className="mt-4 text-sm font-semibold text-slate-200">
+          กำลังโหลดข้อมูลกราฟ {symbol} ({activeResolution})...
+        </div>
+        <div className="text-xs text-slate-400 mt-1">
+          {activeResolution === '4H'
+            ? 'OHLCV 4-Hour (2-Year Lookback) + EMA Ribbon + MCDX'
+            : 'OHLCV Max Lifetime (All-Time IPO) + EMA Ribbon + MCDX Indicators'}
+        </div>
       </div>
     );
   }
 
-  if (error && !data) {
+  if (error && !currentData) {
     return (
       <div className="flex-1 w-full h-full bg-[#111418] flex flex-col items-center justify-center p-8 select-none">
         <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 mb-3">
@@ -77,7 +103,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId }) => {
         <div className="text-base font-bold text-white mb-1">ไม่สามารถโหลดข้อมูล {symbol} ได้</div>
         <div className="text-xs text-slate-300 max-w-md text-center mb-4">{error}</div>
         <button
-          onClick={() => fetchChartData(symbol)}
+          onClick={() => fetchChartData(symbol, activeResolution)}
           className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-xs font-bold rounded-xl border border-white/10 transition-all cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
@@ -87,26 +113,28 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId }) => {
     );
   }
 
-  if (!data) return null;
+  if (!currentData) return null;
 
   return (
     <div className="flex-1 w-full h-full flex flex-col overflow-hidden relative bg-[#111418] min-h-0">
       <LWChart
-        symbol={data.symbol}
-        dates={data.dates}
-        opens={data.opens}
-        highs={data.highs}
-        lows={data.lows}
-        closes={data.closes}
-        volumes={data.volumes}
-        ema50={data.ema50}
-        ema150={data.ema150}
-        ema200={data.ema200}
-        bankerSeries={data.bankerSeries}
-        hotMoneySeries={data.hotMoneySeries}
-        retailSeries={data.retailSeries}
-        bankerMaSeries={data.bankerMaSeries}
-        currentPrice={data.currentPrice}
+        symbol={currentData.symbol}
+        dates={currentData.dates}
+        opens={currentData.opens}
+        highs={currentData.highs}
+        lows={currentData.lows}
+        closes={currentData.closes}
+        volumes={currentData.volumes}
+        ema50={currentData.ema50}
+        ema150={currentData.ema150}
+        ema200={currentData.ema200}
+        bankerSeries={currentData.bankerSeries}
+        hotMoneySeries={currentData.hotMoneySeries}
+        retailSeries={currentData.retailSeries}
+        bankerMaSeries={currentData.bankerMaSeries}
+        currentPrice={currentData.currentPrice}
+        resolution={activeResolution}
+        onResolutionChange={handleResolutionChange}
         className="w-full h-full flex-1"
         onSelectSymbol={(newSym) => changeSymbolOnActiveTab(newSym)}
       />

@@ -454,3 +454,109 @@ export async function fetchTechnicalAnalysis(symbol) {
     return null;
   }
 }
+
+/**
+ * Synchronize and aggregate 4-Hour (4H) candles from Yahoo Finance 1h data (up to 720 days).
+ * Caches directly into SQLite intraday_prices table.
+ * @param {string} symbol - e.g. 'THB=X'
+ * @returns {Promise<Array<{ time: string, price: number, open: number, high: number, low: number, close: number, volume: number }>>}
+ */
+export async function sync4HCandles(symbol) {
+  if (!symbol || symbol === 'CASH') return [];
+  const upper = symbol.toUpperCase();
+
+  // 1. Check existing 4H candles in SQLite
+  const stats = db.prepare(
+    'SELECT MAX(time) as max_time, MIN(time) as min_time, COUNT(*) as count FROM intraday_prices WHERE symbol = ? AND resolution = ?'
+  ).get(upper, '4H');
+
+  const maxTime = stats?.max_time;
+  const count = stats?.count || 0;
+  const now = Date.now();
+  const maxDateTime = maxTime ? new Date(maxTime).getTime() : 0;
+  const diffHours = (now - maxDateTime) / (1000 * 60 * 60);
+
+  // If count >= 500 and data was fetched within 2 hours, return from DB immediately (0ms hit)
+  if (count >= 500 && diffHours < 2) {
+    return db.prepare(
+      'SELECT time, price, open, high, low, close, volume FROM intraday_prices WHERE symbol = ? AND resolution = ? ORDER BY time ASC'
+    ).all(upper, '4H');
+  }
+
+  // 2. Fetch 1h candles from Yahoo Finance
+  // Lookback: 720 days (~2 years max allowed by Yahoo Finance)
+  try {
+    const p1 = new Date(now - 720 * 24 * 60 * 60 * 1000);
+    const res = await yahooFinance.chart(upper, { interval: '1h', period1: p1 });
+
+    if (res && res.quotes && res.quotes.length > 0) {
+      // Aggregate into 4h bars aligned to UTC 00:00, 04:00, 08:00, 12:00, 16:00, 20:00
+      const map4h = new Map();
+      for (const q of res.quotes) {
+        if (q.close === null || q.close === undefined || isNaN(q.close)) continue;
+        const d = new Date(q.date);
+        const blockHour = Math.floor(d.getUTCHours() / 4) * 4;
+        d.setUTCHours(blockHour, 0, 0, 0);
+        const key = d.toISOString();
+
+        const close = Number(q.close);
+        const open = q.open !== null && q.open !== undefined ? Number(q.open) : close;
+        const high = q.high !== null && q.high !== undefined ? Number(q.high) : Math.max(open, close);
+        const low = q.low !== null && q.low !== undefined ? Number(q.low) : Math.min(open, close);
+        const volume = q.volume !== null && q.volume !== undefined ? Number(q.volume) : 0;
+
+        if (!map4h.has(key)) {
+          map4h.set(key, {
+            symbol: upper,
+            resolution: '4H',
+            time: key,
+            price: close,
+            open,
+            high,
+            low,
+            close,
+            volume
+          });
+        } else {
+          const bar = map4h.get(key);
+          bar.high = Math.max(bar.high, high);
+          bar.low = Math.min(bar.low, low);
+          bar.close = close;
+          bar.price = close;
+          bar.volume += volume;
+        }
+      }
+
+      const bars = Array.from(map4h.values()).sort((a, b) => a.time.localeCompare(b.time));
+
+      if (bars.length > 0) {
+        const insert = db.prepare(`
+          INSERT OR REPLACE INTO intraday_prices (symbol, resolution, time, price, open, high, low, close, volume)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const insertTx = db.transaction((items) => {
+          for (const item of items) {
+            insert.run(
+              item.symbol,
+              item.resolution,
+              item.time,
+              item.price,
+              item.open,
+              item.high,
+              item.low,
+              item.close,
+              item.volume
+            );
+          }
+        });
+        insertTx(bars);
+      }
+    }
+  } catch (err) {
+    console.warn(`[sync4HCandles] Error fetching 1h data for ${upper}:`, err.message);
+  }
+
+  return db.prepare(
+    'SELECT time, price, open, high, low, close, volume FROM intraday_prices WHERE symbol = ? AND resolution = ? ORDER BY time ASC'
+  ).all(upper, '4H');
+}

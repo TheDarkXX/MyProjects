@@ -128,7 +128,8 @@ export const api = {
     updateFundamentals: (portfolioId: string, data: { symbol: string; expected_cagr_3y?: number; consecutive_eps_qs?: number }) => authFetch(`/project-2x/fundamentals/${portfolioId}`, { method: 'POST', body: JSON.stringify(data) }),
   },
   chart: {
-    get: (symbol: string, days = 36500) => authFetch(`/chart/${encodeURIComponent(symbol)}?days=${days}`),
+    get: (symbol: string, days = 36500, resolution = '1D') => 
+      authFetch(`/chart/${encodeURIComponent(symbol)}?days=${days}&resolution=${encodeURIComponent(resolution)}`),
   },
   market: {
     heatmap: (scope = 'sp100') => authFetch(`/market/heatmap?scope=${encodeURIComponent(scope)}`),

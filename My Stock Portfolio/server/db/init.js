@@ -62,6 +62,19 @@ export function initDb() {
         PRIMARY KEY (symbol, date)
     );
 
+    CREATE TABLE IF NOT EXISTS intraday_prices (
+        symbol TEXT NOT NULL,
+        resolution TEXT NOT NULL,
+        time TEXT NOT NULL,
+        price REAL NOT NULL,
+        open REAL NOT NULL,
+        high REAL NOT NULL,
+        low REAL NOT NULL,
+        close REAL NOT NULL,
+        volume REAL DEFAULT 0,
+        PRIMARY KEY (symbol, resolution, time)
+    );
+
     -- Metadata Cache
     CREATE TABLE IF NOT EXISTS stock_metadata (
         symbol TEXT PRIMARY KEY,
