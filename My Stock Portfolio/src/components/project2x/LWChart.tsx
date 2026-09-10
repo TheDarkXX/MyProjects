@@ -458,40 +458,20 @@ export const LWChart: React.FC<LWChartProps> = ({
     ): SeriesMarker<Time> => {
       const finalSize = Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
       const text = showText ? textLabel : undefined;
-
       if (padding > 0) {
         const barRange = Math.max(barHigh - barLow, barClose * 0.005);
         const offset = barRange * (padding * 0.08);
-        if (pos === 'below') {
-          return {
-            time,
-            position: 'atPriceBottom',
-            price: barLow - offset,
-            color,
-            shape,
-            text,
-            size: finalSize,
-          };
-        } else {
-          return {
-            time,
-            position: 'atPriceTop',
-            price: barHigh + offset,
-            color,
-            shape,
-            text,
-            size: finalSize,
-          };
-        }
+        return {
+          time,
+          position: pos === 'below' ? 'atPriceBottom' : 'atPriceTop',
+          price: pos === 'below' ? barLow - offset : barHigh + offset,
+          color, shape, text, size: finalSize,
+        };
       }
-
       return {
         time,
         position: pos === 'below' ? 'belowBar' : 'aboveBar',
-        color,
-        shape,
-        text,
-        size: finalSize,
+        color, shape, text, size: finalSize,
       };
     };
 
