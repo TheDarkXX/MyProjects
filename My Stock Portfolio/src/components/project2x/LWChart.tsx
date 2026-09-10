@@ -26,11 +26,25 @@ import {
   Clock,
   Check,
   Flame,
+  Sliders,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { BankerMCDXSeriesView, BankerMCDXData } from './BankerMCDXPlugin';
+import { useIndicatorStore } from '../../stores/useIndicatorStore';
+import { computeEMA } from '../../utils/computeEMA';
+import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
+import { LineStyleOption } from '../../types/indicatorConfig';
 
 export const TV_FONT_FAMILY = "'Trebuchet MS', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+const getChartLineStyle = (opt: LineStyleOption): LineStyle => {
+  switch (opt) {
+    case 'Dashed': return LineStyle.Dashed;
+    case 'Dotted': return LineStyle.Dotted;
+    case 'Solid':
+    default: return LineStyle.Solid;
+  }
+};
 
 export interface WatchlistStock {
   symbol: string;
@@ -177,21 +191,8 @@ export const LWChart: React.FC<LWChartProps> = ({
     return '1D';
   });
 
-  const [showEnvelope, setShowEnvelope] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('p2x_lw_envelope');
-      if (saved !== null) return saved === 'true';
-    } catch (e) {}
-    return true; // Default ON: EMA 200 Envelope is core bedrock
-  });
-
-  const [showSignals, setShowSignals] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('p2x_lw_signals');
-      if (saved !== null) return saved === 'true';
-    } catch (e) {}
-    return true;
-  });
+  const [isIndicatorOpen, setIsIndicatorOpen] = useState<boolean>(false);
+  const indicatorConfig = useIndicatorStore((s) => s.config);
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
@@ -223,18 +224,6 @@ export const LWChart: React.FC<LWChartProps> = ({
     } catch (e) {}
   }, [resolution]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('p2x_lw_envelope', String(showEnvelope));
-    } catch (e) {}
-  }, [showEnvelope]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('p2x_lw_signals', String(showSignals));
-    } catch (e) {}
-  }, [showSignals]);
-
   // Sync initial livePrice with currentPrice prop
   useEffect(() => {
     setLivePrice(currentPrice);
@@ -257,6 +246,28 @@ export const LWChart: React.FC<LWChartProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen]);
+
+  // Dynamic client-side EMA recalculation with server fallback
+  const activeEma1 = useMemo(() => {
+    if (indicatorConfig.ema1.period === 50 && ema50 && ema50.length === closes.length) {
+      return ema50;
+    }
+    return computeEMA(closes, indicatorConfig.ema1.period);
+  }, [closes, ema50, indicatorConfig.ema1.period]);
+
+  const activeEma2 = useMemo(() => {
+    if (indicatorConfig.ema2.period === 150 && ema150 && ema150.length === closes.length) {
+      return ema150;
+    }
+    return computeEMA(closes, indicatorConfig.ema2.period);
+  }, [closes, ema150, indicatorConfig.ema2.period]);
+
+  const activeEma3 = useMemo(() => {
+    if (indicatorConfig.ema3.period === 200 && ema200 && ema200.length === closes.length) {
+      return ema200;
+    }
+    return computeEMA(closes, indicatorConfig.ema3.period);
+  }, [closes, ema200, indicatorConfig.ema3.period]);
 
   // Sanitize & build raw clean bars sorted by date ascending
   const rawCleanBars: RawBarItem[] = useMemo(() => {
@@ -286,9 +297,9 @@ export const LWChart: React.FC<LWChartProps> = ({
         l = Math.min(o, c) - spread * 0.6;
       }
 
-      const e50Val = ema50[i] !== undefined && ema50[i] !== null && !isNaN(ema50[i]!) ? ema50[i] : null;
-      const e150Val = ema150[i] !== undefined && ema150[i] !== null && !isNaN(ema150[i]!) ? ema150[i] : null;
-      const e200Val = ema200[i] !== undefined && ema200[i] !== null && !isNaN(ema200[i]!) ? ema200[i] : null;
+      const e50Val = activeEma1[i] !== undefined && activeEma1[i] !== null && !isNaN(activeEma1[i]!) ? activeEma1[i] : null;
+      const e150Val = activeEma2[i] !== undefined && activeEma2[i] !== null && !isNaN(activeEma2[i]!) ? activeEma2[i] : null;
+      const e200Val = activeEma3[i] !== undefined && activeEma3[i] !== null && !isNaN(activeEma3[i]!) ? activeEma3[i] : null;
 
       const bVal = bankerSeries[i] ?? 0;
       let hVal = hotMoneySeries[i] ?? 0;
@@ -318,7 +329,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     // Ensure sorted ascending by date
     items.sort((a, b) => a.time.localeCompare(b.time));
     return items;
-  }, [dates, closes, opens, highs, lows, volumes, ema50, ema150, ema200, bankerSeries, hotMoneySeries, retailSeries, bankerMaSeries]);
+  }, [dates, closes, opens, highs, lows, volumes, activeEma1, activeEma2, activeEma3, bankerSeries, hotMoneySeries, retailSeries, bankerMaSeries]);
 
   // Aggregate into Weekly bars (if resolution === '1W')
   const aggregatedBars: RawBarItem[] = useMemo(() => {
@@ -416,13 +427,14 @@ export const LWChart: React.FC<LWChartProps> = ({
     return map;
   }, [aggregatedBars]);
 
-  // Calculate 3-Step Super Money Signals markers
+  // Calculate 3-Step Super Money Signals markers with individual sub-toggles
   const calculatedMarkers: SeriesMarker<Time>[] = useMemo(() => {
-    if (!showSignals || aggregatedBars.length < 2) return [];
+    if (!indicatorConfig.signals.visible || aggregatedBars.length < 2) return [];
 
     const markers: SeriesMarker<Time>[] = [];
     let lastType: string | null = null;
     let lastReadyIdx = -100;
+    const { rebound, breakout, goldenStar, pullback } = indicatorConfig.signals.markers;
 
     for (let i = 0; i < aggregatedBars.length; i++) {
       const bar = aggregatedBars[i];
@@ -439,7 +451,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       const nearSupport = (e200 && dist200 >= -4 && dist200 <= 3.5) || (e150 && dist150 >= -3 && dist150 <= 3.5);
 
       // STEP 3: ★ SUPER MONEY (Banker crosses >= 10, in trend) -> White Star below candle
-      if (bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
+      if (goldenStar && bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
         if (lastType !== 'SUPER') {
           markers.push({
             time: bar.time as Time,
@@ -455,7 +467,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
 
       // STEP 2: ▲ BUY ZONE (At/near EMA support + Banker emerges > 0 on green bar) -> Yellow Triangle below candle
-      if (nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
+      if (breakout && nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
         if (lastType !== 'BUY') {
           markers.push({
             time: bar.time as Time,
@@ -471,7 +483,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
 
       // STEP 1: ••• READY (Near EMA support, Banker = 0, setup forming) -> Amber dots below candle
-      if (nearSupport && bVal === 0) {
+      if (rebound && nearSupport && bVal === 0) {
         if (lastType !== 'READY' && lastType !== 'BUY') {
           if (i - lastReadyIdx >= 8) {
             markers.push({
@@ -490,7 +502,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
 
       // EXIT: ▼ DANGER / STOP LOSS (Breakdown below EMA 200 or Banker collapse) -> Crimson Triangle above candle
-      if ((dist200 < -4 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close))) {
+      if (pullback && ((dist200 < -4 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close)))) {
         if (lastType !== 'EXIT') {
           markers.push({
             time: bar.time as Time,
@@ -506,7 +518,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
 
     return markers;
-  }, [aggregatedBars, showSignals]);
+  }, [aggregatedBars, indicatorConfig.signals]);
 
   // Set timeframe logical range helper
   const applyTimeframeRange = useCallback((tf: TimeFrame) => {
@@ -618,57 +630,63 @@ export const LWChart: React.FC<LWChartProps> = ({
     }, 0);
     areaSeriesRef.current = areaSeries;
 
-    // 3. EMA 50 (White)
+    // 3. EMA 1 (Customizable)
     const ema50Series = chart.addSeries(LineSeries, {
-      color: '#FFFFFF',
-      lineWidth: 2,
+      color: indicatorConfig.ema1.color,
+      lineWidth: indicatorConfig.ema1.lineWidth as any,
+      lineStyle: getChartLineStyle(indicatorConfig.ema1.lineStyle),
       priceLineVisible: false,
       lastValueVisible: true,
-      title: 'EMA 50',
+      title: `EMA ${indicatorConfig.ema1.period}`,
+      visible: indicatorConfig.ema1.visible,
     }, 0);
     ema50SeriesRef.current = ema50Series;
 
-    // 4. EMA 150 (Royal Blue)
+    // 4. EMA 2 (Customizable)
     const ema150Series = chart.addSeries(LineSeries, {
-      color: '#2962FF',
-      lineWidth: 2,
+      color: indicatorConfig.ema2.color,
+      lineWidth: indicatorConfig.ema2.lineWidth as any,
+      lineStyle: getChartLineStyle(indicatorConfig.ema2.lineStyle),
       priceLineVisible: false,
       lastValueVisible: true,
-      title: 'EMA 150',
+      title: `EMA ${indicatorConfig.ema2.period}`,
+      visible: indicatorConfig.ema2.visible,
     }, 0);
     ema150SeriesRef.current = ema150Series;
 
-    // 5. EMA 200 (Amber Gold Core Bedrock)
+    // 5. EMA 3 (Customizable Core Bedrock)
     const ema200Series = chart.addSeries(LineSeries, {
-      color: '#FFB300',
-      lineWidth: 3,
+      color: indicatorConfig.ema3.color,
+      lineWidth: indicatorConfig.ema3.lineWidth as any,
+      lineStyle: getChartLineStyle(indicatorConfig.ema3.lineStyle),
       priceLineVisible: false,
       lastValueVisible: true,
-      title: 'EMA 200',
+      title: `EMA ${indicatorConfig.ema3.period}`,
+      visible: indicatorConfig.ema3.visible,
     }, 0);
     ema200SeriesRef.current = ema200Series;
 
-    // 6. EMA 200 Envelope (+4% Upper Band)
+    // 6. Bedrock Envelope (+% Upper Band)
     const upperEnvSeries = chart.addSeries(LineSeries, {
-      color: '#C084FC',
-      lineWidth: 1,
-      lineStyle: LineStyle.Dashed,
+      color: indicatorConfig.envelope.color,
+      lineWidth: indicatorConfig.envelope.lineWidth as any,
+      lineStyle: getChartLineStyle(indicatorConfig.envelope.lineStyle),
       priceLineVisible: false,
       lastValueVisible: false,
-      title: '+4% Bedrock',
-      visible: showEnvelope,
+      title: `+${indicatorConfig.envelope.percent}% Bedrock`,
+      visible: indicatorConfig.envelope.visible,
     }, 0);
     upperEnvSeriesRef.current = upperEnvSeries;
 
-    // 7. EMA 200 Envelope (-4% Lower Band)
+    // 7. Bedrock Envelope (-% Lower Band)
     const lowerEnvSeries = chart.addSeries(LineSeries, {
-      color: '#C084FC',
-      lineWidth: 1,
-      lineStyle: LineStyle.Dashed,
+      color: indicatorConfig.envelope.color,
+      lineWidth: indicatorConfig.envelope.lineWidth as any,
+      lineStyle: getChartLineStyle(indicatorConfig.envelope.lineStyle),
       priceLineVisible: false,
       lastValueVisible: false,
-      title: '-4% Bedrock',
-      visible: showEnvelope,
+      title: `-${indicatorConfig.envelope.percent}% Bedrock`,
+      visible: indicatorConfig.envelope.visible,
     }, 0);
     lowerEnvSeriesRef.current = lowerEnvSeries;
 
@@ -725,7 +743,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
 
     // Initialize Markers Plugin
-    const markersPlugin = createSeriesMarkers(candleSeries, showSignals ? calculatedMarkers : []);
+    const markersPlugin = createSeriesMarkers(candleSeries, indicatorConfig.signals.visible ? calculatedMarkers : []);
     markersPluginRef.current = markersPlugin;
 
     // Crosshair listener for rich header legend
@@ -865,13 +883,14 @@ export const LWChart: React.FC<LWChartProps> = ({
       .filter(b => b.ema200 !== null)
       .map(b => ({ time: b.time as Time, value: b.ema200! }));
 
+    const envPct = (indicatorConfig.envelope.percent || 4.0) / 100;
     const upperEnvData = displayBars
       .filter(b => b.ema200 !== null)
-      .map(b => ({ time: b.time as Time, value: Number((b.ema200! * 1.04).toFixed(2)) }));
+      .map(b => ({ time: b.time as Time, value: Number((b.ema200! * (1 + envPct)).toFixed(2)) }));
 
     const lowerEnvData = displayBars
       .filter(b => b.ema200 !== null)
-      .map(b => ({ time: b.time as Time, value: Number((b.ema200! * 0.96).toFixed(2)) }));
+      .map(b => ({ time: b.time as Time, value: Number((b.ema200! * (1 - envPct)).toFixed(2)) }));
 
     const mcdxData: BankerMCDXData[] = displayBars.map(b => ({
       time: b.time as Time,
@@ -895,11 +914,11 @@ export const LWChart: React.FC<LWChartProps> = ({
     mcdxSeriesRef.current?.setData(mcdxData as any);
     bankerMaSeriesRef.current?.setData(bMaData);
 
-    markersPluginRef.current?.setMarkers(showSignals ? calculatedMarkers : []);
+    markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
 
     // Apply current timeframe range
     applyTimeframeRange(timeframe);
-  }, [displayBars, calculatedMarkers, showSignals, applyTimeframeRange, timeframe]);
+  }, [displayBars, calculatedMarkers, indicatorConfig.signals.visible, indicatorConfig.envelope.percent, applyTimeframeRange, timeframe]);
 
   // Handle Style Switching
   useEffect(() => {
@@ -913,16 +932,17 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
   }, [chartStyle]);
 
-  // Handle Envelope Visibility
+  // Synchronize dynamic series options when indicatorConfig changes
   useEffect(() => {
-    upperEnvSeriesRef.current?.applyOptions({ visible: showEnvelope });
-    lowerEnvSeriesRef.current?.applyOptions({ visible: showEnvelope });
-  }, [showEnvelope]);
-
-  // Handle Signals Visibility
-  useEffect(() => {
-    markersPluginRef.current?.setMarkers(showSignals ? calculatedMarkers : []);
-  }, [showSignals, calculatedMarkers]);
+    ema50SeriesRef.current?.applyOptions({ color: indicatorConfig.ema1.color, lineWidth: indicatorConfig.ema1.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema1.lineStyle), visible: indicatorConfig.ema1.visible, title: `EMA ${indicatorConfig.ema1.period}` });
+    ema150SeriesRef.current?.applyOptions({ color: indicatorConfig.ema2.color, lineWidth: indicatorConfig.ema2.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema2.lineStyle), visible: indicatorConfig.ema2.visible, title: `EMA ${indicatorConfig.ema2.period}` });
+    ema200SeriesRef.current?.applyOptions({ color: indicatorConfig.ema3.color, lineWidth: indicatorConfig.ema3.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema3.lineStyle), visible: indicatorConfig.ema3.visible, title: `EMA ${indicatorConfig.ema3.period}` });
+    upperEnvSeriesRef.current?.applyOptions({ color: indicatorConfig.envelope.color, lineWidth: indicatorConfig.envelope.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.envelope.lineStyle), visible: indicatorConfig.envelope.visible, title: `+${indicatorConfig.envelope.percent}% Bedrock` });
+    lowerEnvSeriesRef.current?.applyOptions({ color: indicatorConfig.envelope.color, lineWidth: indicatorConfig.envelope.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.envelope.lineStyle), visible: indicatorConfig.envelope.visible, title: `-${indicatorConfig.envelope.percent}% Bedrock` });
+    mcdxSeriesRef.current?.applyOptions({ visible: indicatorConfig.mcdx.visible });
+    bankerMaSeriesRef.current?.applyOptions({ visible: indicatorConfig.mcdx.visible });
+    markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
+  }, [indicatorConfig, calculatedMarkers]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {
@@ -1158,33 +1178,36 @@ export const LWChart: React.FC<LWChartProps> = ({
             </button>
           </div>
 
-          {/* EMA 200 Support Envelope Toggle */}
-          <button
-            onClick={() => setShowEnvelope(prev => !prev)}
-            title="EMA 200 Support Envelope (±4% Bedrock Channel)"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold border transition-all ${
-              showEnvelope
-                ? 'bg-purple-950/60 border-purple-500/50 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.25)]'
-                : 'bg-slate-900/60 border-slate-700/50 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            Zone {showEnvelope ? 'ON' : 'OFF'}
-          </button>
+          {/* Indicators Dropdown Menu (TradingView Style) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsIndicatorOpen(prev => !prev)}
+              title="Indicator Manager & Custom Settings"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold border transition-all cursor-pointer ${
+                isIndicatorOpen
+                  ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.35)] font-extrabold'
+                  : 'bg-slate-900/80 border-slate-700/60 text-slate-200 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Indicators</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-amber-400 text-[11px] font-black">
+                {[
+                  indicatorConfig.ema1.visible,
+                  indicatorConfig.ema2.visible,
+                  indicatorConfig.ema3.visible,
+                  indicatorConfig.envelope.visible,
+                  indicatorConfig.signals.visible,
+                  indicatorConfig.mcdx.visible,
+                ].filter(Boolean).length}
+              </span>
+            </button>
 
-          {/* Signals Toggle */}
-          <button
-            onClick={() => setShowSignals(prev => !prev)}
-            title="3-Step Super Money Signals (•••, ▲, ★, ▼)"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold border transition-all ${
-              showSignals
-                ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]'
-                : 'bg-slate-900/60 border-slate-700/50 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            Signals {showSignals ? 'ON' : 'OFF'}
-          </button>
+            {isIndicatorOpen && (
+              <IndicatorManagerPopover onClose={() => setIsIndicatorOpen(false)} />
+            )}
+          </div>
 
           {/* Timeframe Presets: 10M | 1Y | 5Y | ALL */}
           <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-700/50">
@@ -1258,19 +1281,19 @@ export const LWChart: React.FC<LWChartProps> = ({
                 ${activeLegend.close.toFixed(2)}
               </strong>
             </span>
-            {activeLegend.ema50 && (
+            {indicatorConfig.ema1.visible && activeLegend.ema50 && (
               <span className="hidden sm:inline">
-                EMA50: <strong className="text-white">${activeLegend.ema50.toFixed(2)}</strong>
+                EMA{indicatorConfig.ema1.period}: <strong style={{ color: indicatorConfig.ema1.color }}>${activeLegend.ema50.toFixed(2)}</strong>
               </span>
             )}
-            {activeLegend.ema150 && (
+            {indicatorConfig.ema2.visible && activeLegend.ema150 && (
               <span className="hidden sm:inline">
-                EMA150: <strong className="text-blue-500">${activeLegend.ema150.toFixed(2)}</strong>
+                EMA{indicatorConfig.ema2.period}: <strong style={{ color: indicatorConfig.ema2.color }}>${activeLegend.ema150.toFixed(2)}</strong>
               </span>
             )}
-            {activeLegend.ema200 && (
+            {indicatorConfig.ema3.visible && activeLegend.ema200 && (
               <span className="hidden sm:inline">
-                EMA200: <strong className="text-amber-400">${activeLegend.ema200.toFixed(2)}</strong>
+                EMA{indicatorConfig.ema3.period}: <strong style={{ color: indicatorConfig.ema3.color }}>${activeLegend.ema200.toFixed(2)}</strong>
               </span>
             )}
             <span className="flex items-center gap-1">

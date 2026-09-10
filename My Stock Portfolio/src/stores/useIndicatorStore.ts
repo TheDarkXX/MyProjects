@@ -1,0 +1,277 @@
+import { create } from 'zustand';
+import {
+  IndicatorSettings,
+  DEFAULT_INDICATOR_SETTINGS,
+  EMALineConfig,
+  EnvelopeConfig,
+  SignalConfig,
+  SignalMarkersConfig,
+  MCDXConfig,
+  VolumeConfig,
+  PresetType,
+} from '../types/indicatorConfig';
+
+const STORAGE_KEY = 'xchart_indicators_v1';
+
+function loadSavedConfig(): IndicatorSettings {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULT_INDICATOR_SETTINGS;
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_INDICATOR_SETTINGS,
+      ...parsed,
+      ema1: { ...DEFAULT_INDICATOR_SETTINGS.ema1, ...(parsed.ema1 || {}) },
+      ema2: { ...DEFAULT_INDICATOR_SETTINGS.ema2, ...(parsed.ema2 || {}) },
+      ema3: { ...DEFAULT_INDICATOR_SETTINGS.ema3, ...(parsed.ema3 || {}) },
+      envelope: { ...DEFAULT_INDICATOR_SETTINGS.envelope, ...(parsed.envelope || {}) },
+      signals: {
+        ...DEFAULT_INDICATOR_SETTINGS.signals,
+        ...(parsed.signals || {}),
+        markers: {
+          ...DEFAULT_INDICATOR_SETTINGS.signals.markers,
+          ...(parsed.signals?.markers || {}),
+        },
+      },
+      mcdx: { ...DEFAULT_INDICATOR_SETTINGS.mcdx, ...(parsed.mcdx || {}) },
+      volume: { ...DEFAULT_INDICATOR_SETTINGS.volume, ...(parsed.volume || {}) },
+    };
+  } catch (e) {
+    return DEFAULT_INDICATOR_SETTINGS;
+  }
+}
+
+function saveConfig(config: IndicatorSettings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  } catch (e) {}
+}
+
+interface IndicatorState {
+  config: IndicatorSettings;
+  updateEMA: (id: 'ema1' | 'ema2' | 'ema3', partial: Partial<EMALineConfig>) => void;
+  toggleEMA: (id: 'ema1' | 'ema2' | 'ema3') => void;
+  toggleAllEMA: (visible: boolean) => void;
+  updateEnvelope: (partial: Partial<EnvelopeConfig>) => void;
+  toggleEnvelope: () => void;
+  updateSignals: (partial: Partial<SignalConfig>) => void;
+  toggleSignals: () => void;
+  toggleSignalMarker: (markerKey: keyof SignalMarkersConfig) => void;
+  updateMCDX: (partial: Partial<MCDXConfig>) => void;
+  toggleMCDX: () => void;
+  updateVolume: (partial: Partial<VolumeConfig>) => void;
+  toggleVolume: () => void;
+  applyPreset: (preset: PresetType) => void;
+  resetDefaults: () => void;
+}
+
+export const useIndicatorStore = create<IndicatorState>((set, get) => ({
+  config: loadSavedConfig(),
+
+  updateEMA: (id, partial) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      [id]: { ...prev[id], ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleEMA: (id) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      [id]: { ...prev[id], visible: !prev[id].visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleAllEMA: (visible) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      ema1: { ...prev.ema1, visible },
+      ema2: { ...prev.ema2, visible },
+      ema3: { ...prev.ema3, visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateEnvelope: (partial) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      envelope: { ...prev.envelope, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleEnvelope: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      envelope: { ...prev.envelope, visible: !prev.envelope.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateSignals: (partial) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      signals: { ...prev.signals, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleSignals: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      signals: { ...prev.signals, visible: !prev.signals.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleSignalMarker: (markerKey) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      signals: {
+        ...prev.signals,
+        markers: {
+          ...prev.signals.markers,
+          [markerKey]: !prev.signals.markers[markerKey],
+        },
+      },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateMCDX: (partial) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      mcdx: { ...prev.mcdx, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleMCDX: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      mcdx: { ...prev.mcdx, visible: !prev.mcdx.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateVolume: (partial) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      volume: { ...prev.volume, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleVolume: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      volume: { ...prev.volume, visible: !prev.volume.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  applyPreset: (preset) => {
+    const current = get().config;
+    let next: IndicatorSettings;
+
+    switch (preset) {
+      case 'full':
+        next = {
+          ...DEFAULT_INDICATOR_SETTINGS,
+          activePreset: 'full',
+        };
+        break;
+
+      case 'clean':
+        next = {
+          ...current,
+          activePreset: 'clean',
+          ema1: { ...current.ema1, visible: false },
+          ema2: { ...current.ema2, visible: false },
+          ema3: { ...current.ema3, visible: true },
+          envelope: { ...current.envelope, visible: false },
+          signals: { ...current.signals, visible: false },
+          mcdx: { ...current.mcdx, visible: false },
+          volume: { ...current.volume, visible: false },
+        };
+        break;
+
+      case 'banker':
+        next = {
+          ...current,
+          activePreset: 'banker',
+          ema1: { ...current.ema1, visible: false },
+          ema2: { ...current.ema2, visible: false },
+          ema3: { ...current.ema3, visible: false },
+          envelope: { ...current.envelope, visible: false },
+          signals: { ...current.signals, visible: true },
+          mcdx: { ...current.mcdx, visible: true },
+          volume: { ...current.volume, visible: true },
+        };
+        break;
+
+      case 'triple_ema':
+        next = {
+          ...current,
+          activePreset: 'triple_ema',
+          ema1: { ...current.ema1, visible: true },
+          ema2: { ...current.ema2, visible: true },
+          ema3: { ...current.ema3, visible: true },
+          envelope: { ...current.envelope, visible: false },
+          signals: { ...current.signals, visible: false },
+          mcdx: { ...current.mcdx, visible: false },
+          volume: { ...current.volume, visible: true },
+        };
+        break;
+
+      default:
+        return;
+    }
+
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  resetDefaults: () => {
+    saveConfig(DEFAULT_INDICATOR_SETTINGS);
+    set({ config: DEFAULT_INDICATOR_SETTINGS });
+  },
+}));
