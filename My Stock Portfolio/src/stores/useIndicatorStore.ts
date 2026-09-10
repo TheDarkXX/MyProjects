@@ -14,6 +14,7 @@ import {
   UltimateRSISignalsConfig,
   TrendSpeedConfig,
   SMCLiteConfig,
+  AnchoredVWAPConfig,
   SubPaneIndicatorId,
   PaneLayout,
   DEFAULT_PANE_LAYOUT,
@@ -71,6 +72,14 @@ function loadSavedConfig(): IndicatorSettings {
         ...DEFAULT_INDICATOR_SETTINGS.trendSpeed,
         ...(parsed.trendSpeed || {}),
       },
+      smcLite: {
+        ...DEFAULT_INDICATOR_SETTINGS.smcLite,
+        ...(parsed.smcLite || {}),
+      },
+      anchoredVwap: {
+        ...DEFAULT_INDICATOR_SETTINGS.anchoredVwap,
+        ...(parsed.anchoredVwap || {}),
+      },
       showAxisLabels: typeof parsed.showAxisLabels === 'boolean' ? parsed.showAxisLabels : DEFAULT_INDICATOR_SETTINGS.showAxisLabels,
       paneHeights: {
         mcdx: typeof parsed.paneHeights?.mcdx === 'number' && parsed.paneHeights.mcdx >= 80
@@ -120,6 +129,8 @@ interface IndicatorState {
   toggleTrendSpeed: () => void;
   updateSMCLite: (partial: Partial<SMCLiteConfig>) => void;
   toggleSMCLite: () => void;
+  updateAnchoredVWAP: (partial: Partial<AnchoredVWAPConfig>) => void;
+  toggleAnchoredVWAP: () => void;
   assignIndicatorPane: (id: SubPaneIndicatorId, targetPane: number) => void;
   moveIndicatorUp: (id: SubPaneIndicatorId) => void;
   moveIndicatorDown: (id: SubPaneIndicatorId) => void;
@@ -410,6 +421,28 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       ...prev,
       activePreset: 'custom',
       smcLite: { ...prev.smcLite, visible: !prev.smcLite.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateAnchoredVWAP: (partial: Partial<AnchoredVWAPConfig>) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      anchoredVwap: { ...prev.anchoredVwap, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleAnchoredVWAP: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      anchoredVwap: { ...prev.anchoredVwap, visible: !prev.anchoredVwap.visible },
     };
     saveConfig(next);
     set({ config: next });

@@ -42,6 +42,7 @@ import { computeUltimateRSI } from '../../utils/indicators/ultimateRSI';
 import { computeTrendSpeed, TrendSpeedResult } from '../../utils/indicators/trendSpeed';
 import { computeSMCLite, SMCResult } from '../../utils/indicators/smcLite';
 import { SMCPrimitive } from '../../utils/indicators/smcPrimitive';
+import { computeAnchoredVWAP, AnchoredVWAPResult } from '../../utils/indicators/anchoredVWAP';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { SubPaneHeaderToolbar } from '../xchart/panes/SubPaneHeaderToolbar';
 import {
@@ -215,6 +216,9 @@ export const LWChart: React.FC<LWChartProps> = ({
   const smcFastSmaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const smcSlowSmaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const smcPrimitiveRef = useRef<SMCPrimitive | null>(null);
+  const anchoredVwapSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const anchoredUpperBandSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const anchoredLowerBandSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const markersPluginRef = useRef<any>(null);
   const rsiMarkersPluginRef = useRef<any>(null);
   const mcdxStrikeLineRef = useRef<IPriceLine | null>(null);
@@ -724,6 +728,12 @@ export const LWChart: React.FC<LWChartProps> = ({
     return computeSMCLite(aggregatedBars, indicatorConfig.smcLite);
   }, [aggregatedBars, indicatorConfig.smcLite]);
 
+  // Compute Anchored VWAP
+  const anchoredVWAPResult: AnchoredVWAPResult | null = useMemo(() => {
+    if (aggregatedBars.length === 0 || !indicatorConfig.anchoredVwap?.visible) return null;
+    return computeAnchoredVWAP(aggregatedBars, indicatorConfig.anchoredVwap);
+  }, [aggregatedBars, indicatorConfig.anchoredVwap]);
+
   // Helper to map RSI marker shape to SeriesMarkerShape & text
   // IMPORTANT: For text-based symbols ('diamond', 'cross'), size MUST be 0 so Lightweight Charts does NOT draw a shape above the text!
   // For shape-based symbols ('circle', 'square', etc.), text MUST be undefined so it does NOT draw a text label below the shape!
@@ -994,9 +1004,19 @@ export const LWChart: React.FC<LWChartProps> = ({
         }
       }
     }
+    if (indicatorConfig.anchoredVwap?.visible && anchoredVWAPResult?.anchorTime) {
+      list.push({
+        time: formatBarTime(anchoredVWAPResult.anchorTime),
+        position: 'belowBar',
+        color: '#FFE600',
+        shape: 'arrowUp',
+        text: 'ANCHOR',
+        size: 1.5,
+      });
+    }
     list.sort((a, b) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0));
     return list;
-  }, [indicatorConfig.signals.visible, calculatedMarkers, indicatorConfig.smcLite, smcLiteResult]);
+  }, [indicatorConfig.signals.visible, calculatedMarkers, indicatorConfig.smcLite, smcLiteResult, indicatorConfig.anchoredVwap?.visible, anchoredVWAPResult]);
 
   // Initialize and build chart instance
   useEffect(() => {
@@ -1183,6 +1203,43 @@ export const LWChart: React.FC<LWChartProps> = ({
     const smcPrimitive = new SMCPrimitive();
     candleSeries.attachPrimitive(smcPrimitive);
     smcPrimitiveRef.current = smcPrimitive;
+
+    // 12. Anchored VWAP (Pane 0)
+    const isAvwapVisible = indicatorConfig.anchoredVwap?.visible;
+    const anchoredVwapSeries = chart.addSeries(LineSeries, {
+      color: indicatorConfig.anchoredVwap?.vwapColor ?? '#FFFFFF',
+      lineWidth: (indicatorConfig.anchoredVwap?.vwapLineWidth ?? 3) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.anchoredVwap?.vwapLineStyle ?? 'Solid'),
+      priceLineVisible: false,
+      lastValueVisible: showLabels,
+      title: showLabels ? 'VWAP' : '',
+      visible: isAvwapVisible && (indicatorConfig.anchoredVwap?.vwapVisible ?? true),
+    }, 0);
+    anchoredVwapSeriesRef.current = anchoredVwapSeries;
+
+    // 13. Anchored VWAP Upper Band (Pane 0)
+    const anchoredUpperBandSeries = chart.addSeries(LineSeries, {
+      color: indicatorConfig.anchoredVwap?.upperBandColor ?? '#94A3B8',
+      lineWidth: (indicatorConfig.anchoredVwap?.upperBandLineWidth ?? 2) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.anchoredVwap?.upperBandLineStyle ?? 'Dashed'),
+      priceLineVisible: false,
+      lastValueVisible: showLabels,
+      title: showLabels ? 'Upper Band' : '',
+      visible: isAvwapVisible && (indicatorConfig.anchoredVwap?.showBands ?? true) && (indicatorConfig.anchoredVwap?.upperBandVisible ?? false),
+    }, 0);
+    anchoredUpperBandSeriesRef.current = anchoredUpperBandSeries;
+
+    // 14. Anchored VWAP Lower Band (Pane 0)
+    const anchoredLowerBandSeries = chart.addSeries(LineSeries, {
+      color: indicatorConfig.anchoredVwap?.lowerBandColor ?? '#94A3B8',
+      lineWidth: (indicatorConfig.anchoredVwap?.lowerBandLineWidth ?? 2) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.anchoredVwap?.lowerBandLineStyle ?? 'Dashed'),
+      priceLineVisible: false,
+      lastValueVisible: showLabels,
+      title: showLabels ? 'Lower Band' : '',
+      visible: isAvwapVisible && (indicatorConfig.anchoredVwap?.showBands ?? true) && (indicatorConfig.anchoredVwap?.lowerBandVisible ?? false),
+    }, 0);
+    anchoredLowerBandSeriesRef.current = anchoredLowerBandSeries;
 
     // -------------------------------------------------------------
     // Dynamic Sub-Panes Construction (Ordered by Pane Index)
@@ -1528,6 +1585,9 @@ export const LWChart: React.FC<LWChartProps> = ({
       smcPrimitiveRef.current = null;
       smcFastSmaSeriesRef.current = null;
       smcSlowSmaSeriesRef.current = null;
+      anchoredVwapSeriesRef.current = null;
+      anchoredUpperBandSeriesRef.current = null;
+      anchoredLowerBandSeriesRef.current = null;
       mcdxSeriesRef.current = null;
       bankerMaSeriesRef.current = null;
       rsiAreaSeriesRef.current = null;
@@ -1752,6 +1812,29 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
     }
 
+    // Anchored VWAP Data Feed
+    if (anchoredVWAPResult && indicatorConfig.anchoredVwap?.visible) {
+      const vwapData: any[] = [];
+      const upperData: any[] = [];
+      const lowerData: any[] = [];
+      for (let i = 0; i < displayBars.length; i++) {
+        const t = formatBarTime(displayBars[i].time);
+        const v = anchoredVWAPResult.vwap[i];
+        const ub = anchoredVWAPResult.upperBand[i];
+        const lb = anchoredVWAPResult.lowerBand[i];
+        if (v !== null && !isNaN(v)) vwapData.push({ time: t, value: v });
+        if (ub !== null && !isNaN(ub)) upperData.push({ time: t, value: ub });
+        if (lb !== null && !isNaN(lb)) lowerData.push({ time: t, value: lb });
+      }
+      anchoredVwapSeriesRef.current?.setData(vwapData);
+      anchoredUpperBandSeriesRef.current?.setData(upperData);
+      anchoredLowerBandSeriesRef.current?.setData(lowerData);
+    } else {
+      anchoredVwapSeriesRef.current?.setData([]);
+      anchoredUpperBandSeriesRef.current?.setData([]);
+      anchoredLowerBandSeriesRef.current?.setData([]);
+    }
+
     markersPluginRef.current?.setMarkers(pane0Markers);
 
     // Apply current timeframe range
@@ -1955,6 +2038,35 @@ export const LWChart: React.FC<LWChartProps> = ({
       );
     }
 
+    // Update Anchored VWAP options
+    const isAvwapVisible = indicatorConfig.anchoredVwap?.visible;
+    anchoredVwapSeriesRef.current?.applyOptions({
+      visible: isAvwapVisible && (indicatorConfig.anchoredVwap?.vwapVisible ?? true),
+      color: indicatorConfig.anchoredVwap?.vwapColor ?? '#FFFFFF',
+      lineWidth: (indicatorConfig.anchoredVwap?.vwapLineWidth ?? 3) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.anchoredVwap?.vwapLineStyle ?? 'Solid'),
+      lastValueVisible: showLabels,
+      title: showLabels ? 'VWAP' : '',
+    });
+
+    anchoredUpperBandSeriesRef.current?.applyOptions({
+      visible: isAvwapVisible && (indicatorConfig.anchoredVwap?.showBands ?? true) && (indicatorConfig.anchoredVwap?.upperBandVisible ?? false),
+      color: indicatorConfig.anchoredVwap?.upperBandColor ?? '#94A3B8',
+      lineWidth: (indicatorConfig.anchoredVwap?.upperBandLineWidth ?? 2) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.anchoredVwap?.upperBandLineStyle ?? 'Dashed'),
+      lastValueVisible: showLabels,
+      title: showLabels ? 'Upper Band' : '',
+    });
+
+    anchoredLowerBandSeriesRef.current?.applyOptions({
+      visible: isAvwapVisible && (indicatorConfig.anchoredVwap?.showBands ?? true) && (indicatorConfig.anchoredVwap?.lowerBandVisible ?? false),
+      color: indicatorConfig.anchoredVwap?.lowerBandColor ?? '#94A3B8',
+      lineWidth: (indicatorConfig.anchoredVwap?.lowerBandLineWidth ?? 2) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.anchoredVwap?.lowerBandLineStyle ?? 'Dashed'),
+      lastValueVisible: showLabels,
+      title: showLabels ? 'Lower Band' : '',
+    });
+
     markersPluginRef.current?.setMarkers(pane0Markers);
     rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
 
@@ -1981,7 +2093,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
       setPaneOffsets(newOffsets);
     });
-  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, pane0Markers, smcLiteResult, activeSubPanes, maximizedPane, applyPaneLayoutHeights]);
+  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, pane0Markers, smcLiteResult, anchoredVWAPResult, activeSubPanes, maximizedPane, applyPaneLayoutHeights]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {

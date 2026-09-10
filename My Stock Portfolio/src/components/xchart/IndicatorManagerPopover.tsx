@@ -19,6 +19,8 @@ import {
   ChevronUp,
   ChevronDown,
   Flame,
+  Calendar,
+  Clock,
 } from 'lucide-react';
 import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import {
@@ -26,6 +28,7 @@ import {
   PresetType,
   RSIMarkerShape,
   RSIMarkerLocation,
+  DEFAULT_INDICATOR_SETTINGS,
 } from '../../types/indicatorConfig';
 
 // Curated 12-color TradingView-inspired palette
@@ -331,7 +334,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ location, onChange 
   );
 };
 
-type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite';
+type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap';
 
 interface IndicatorManagerPopoverProps {
   onClose: () => void;
@@ -345,6 +348,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
   const [rsiTab, setRsiTab] = useState<'inputs' | 'style'>('style');
   const [trendSpeedTab, setTrendSpeedTab] = useState<'inputs' | 'style'>('inputs');
   const [smcTab, setSmcTab] = useState<'inputs' | 'style'>('inputs');
+  const [anchoredVwapTab, setAnchoredVwapTab] = useState<'inputs' | 'style'>('inputs');
 
   const {
     config,
@@ -368,6 +372,8 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     toggleTrendSpeed,
     updateSMCLite,
     toggleSMCLite,
+    updateAnchoredVWAP,
+    toggleAnchoredVWAP,
     assignIndicatorPane,
     moveIndicatorUp,
     moveIndicatorDown,
@@ -658,6 +664,54 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
                   >
                     <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-400 transition-colors" />
+                    <span>Config</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Item 3.6: Anchored VWAP */}
+              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleAnchoredVWAP}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      config.anchoredVwap?.visible
+                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                    }`}
+                    title="Toggle Anchored VWAP"
+                  >
+                    {config.anchoredVwap?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+
+                  <div className="flex flex-col">
+                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5 text-amber-400" />
+                      Anchored VWAP
+                      <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-amber-950/80 text-amber-300 border-amber-800/60">
+                        Pane 0 Overlay
+                      </span>
+                    </span>
+                    <span className="text-[13px] text-slate-400">
+                      Volume Weighted Average Price & StDev Bands
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.anchoredVwap?.vwapColor ?? '#FFFFFF' }} title="VWAP" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.anchoredVwap?.upperBandColor ?? '#94A3B8' }} title="Upper Band" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.anchoredVwap?.lowerBandColor ?? '#94A3B8' }} title="Lower Band" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('anchoredVwap')}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
                     <span>Config</span>
                   </button>
                 </div>
@@ -2922,6 +2976,454 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
               >
                 Done
               </button>
+            </div>
+          </>
+        )}
+
+        {/* ========================================================= */}
+        {/* VIEW 9: ANCHORED VWAP CONFIG (Inputs & Style 1:1)          */}
+        {/* ========================================================= */}
+        {activeView === 'anchoredVwap' && (
+          <>
+            {/* Sub-Header */}
+            <div className="flex items-center justify-between px-5 py-3 bg-[#0E1526] border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('list')}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-[13px] font-bold transition-all cursor-pointer border border-slate-700/60 mr-1"
+                >
+                  <ArrowLeft className="w-4 h-4 text-amber-400" />
+                  <span>Back</span>
+                </button>
+                <span className="text-[15px] font-black tracking-wide text-slate-100 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-amber-400" />
+                  Anchored VWAP
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* TradingView-style Tab Navigation */}
+            <div className="flex items-center gap-6 px-5 border-b border-slate-800 bg-[#0B101B] text-[14px] font-bold">
+              <button
+                type="button"
+                onClick={() => setAnchoredVwapTab('inputs')}
+                className={`py-2.5 relative transition-colors cursor-pointer ${
+                  anchoredVwapTab === 'inputs' ? 'text-white font-extrabold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Inputs
+                {anchoredVwapTab === 'inputs' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAnchoredVwapTab('style')}
+                className={`py-2.5 relative transition-colors cursor-pointer ${
+                  anchoredVwapTab === 'style' ? 'text-white font-extrabold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Style
+                {anchoredVwapTab === 'style' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                disabled
+                className="py-2.5 text-slate-600 cursor-not-allowed opacity-60"
+                title="Visible on all chart resolutions"
+              >
+                Visibility
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="flex-1 overflow-y-auto p-5">
+              {/* TAB 1: INPUTS */}
+              {anchoredVwapTab === 'inputs' && (
+                <div className="flex flex-col gap-5">
+                  {/* Source */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[14px] font-semibold text-slate-200">Source</span>
+                    <select
+                      value={config.anchoredVwap?.source ?? 'hlc3'}
+                      onChange={(e) => updateAnchoredVWAP({ source: e.target.value as any })}
+                      className="bg-[#131722] border border-slate-700/80 rounded-lg px-3 py-1.5 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer min-w-[140px]"
+                    >
+                      <option value="hlc3">(H + L + C) / 3</option>
+                      <option value="close">Close</option>
+                      <option value="hl2">(H + L) / 2</option>
+                      <option value="ohlc4">(O + H + L + C) / 4</option>
+                      <option value="open">Open</option>
+                      <option value="high">High</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+
+                  {/* Start Calculation */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-semibold text-slate-200">Start Calculation</span>
+                      <div className="flex items-center gap-2">
+                        {/* Date Picker */}
+                        <div className="relative flex items-center">
+                          <input
+                            type="date"
+                            value={config.anchoredVwap?.startDate || ''}
+                            onChange={(e) => updateAnchoredVWAP({ startDate: e.target.value })}
+                            className="bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer"
+                          />
+                        </div>
+                        {/* Time Picker */}
+                        <div className="relative flex items-center">
+                          <input
+                            type="time"
+                            value={config.anchoredVwap?.startTime || '00:00'}
+                            onChange={(e) => updateAnchoredVWAP({ startTime: e.target.value })}
+                            className="bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Anchor Presets */}
+                    <div className="flex items-center justify-end gap-1.5 pt-0.5">
+                      <span className="text-[12px] text-slate-400 mr-1">Preset:</span>
+                      <button
+                        type="button"
+                        onClick={() => updateAnchoredVWAP({ startDate: '', startTime: '00:00' })}
+                        className={`px-2 py-0.5 rounded text-[12px] font-semibold border transition-all cursor-pointer ${
+                          !config.anchoredVwap?.startDate
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                        }`}
+                        title="Auto-anchor to lowest swing low in last 60 bars"
+                      >
+                        Lowest Swing Low (Auto)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() - 30);
+                          updateAnchoredVWAP({ startDate: d.toISOString().split('T')[0], startTime: '00:00' });
+                        }}
+                        className="px-2 py-0.5 rounded text-[12px] font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition-all cursor-pointer"
+                      >
+                        30D Ago
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() - 90);
+                          updateAnchoredVWAP({ startDate: d.toISOString().split('T')[0], startTime: '00:00' });
+                        }}
+                        className="px-2 py-0.5 rounded text-[12px] font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition-all cursor-pointer"
+                      >
+                        90D Ago
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Show Bands */}
+                  <div className="flex items-center justify-between py-1">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.anchoredVwap?.showBands ?? true}
+                        onChange={(e) => updateAnchoredVWAP({ showBands: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-semibold">Show Bands</span>
+                    </label>
+                  </div>
+
+                  {/* Band Multiplier */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[14px] font-semibold text-slate-200">Band Multiplier</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        max="10"
+                        value={config.anchoredVwap?.bandMultiplier ?? 0.5}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val > 0) {
+                            updateAnchoredVWAP({ bandMultiplier: val });
+                          }
+                        }}
+                        className="w-20 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                      <div className="flex items-center gap-1">
+                        {[0.5, 1.0, 1.5, 2.0].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => updateAnchoredVWAP({ bandMultiplier: m })}
+                            className={`px-1.5 py-1 rounded text-[12px] font-semibold border transition-all cursor-pointer ${
+                              config.anchoredVwap?.bandMultiplier === m
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            {m}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: STYLE */}
+              {anchoredVwapTab === 'style' && (
+                <div className="flex flex-col gap-4">
+                  {/* VWAP */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-slate-800">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.anchoredVwap?.vwapVisible ?? true}
+                        onChange={(e) => updateAnchoredVWAP({ vwapVisible: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-white focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">VWAP</span>
+                    </label>
+
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.anchoredVwap?.vwapColor ?? '#FFFFFF'}
+                        onChange={(c) => updateAnchoredVWAP({ vwapColor: c })}
+                        label="VWAP Line Color"
+                      />
+
+                      {/* Line Width */}
+                      <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                        {[1, 2, 3, 4].map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => updateAnchoredVWAP({ vwapLineWidth: w })}
+                            className={`w-6 py-0.5 rounded text-[12px] font-extrabold transition-all cursor-pointer ${
+                              (config.anchoredVwap?.vwapLineWidth ?? 3) === w
+                                ? 'bg-white text-slate-950 shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Line Style */}
+                      <select
+                        value={config.anchoredVwap?.vwapLineStyle ?? 'Solid'}
+                        onChange={(e) => updateAnchoredVWAP({ vwapLineStyle: e.target.value as LineStyleOption })}
+                        className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                      >
+                        {lineStyles.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Upper Band */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-slate-800">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.anchoredVwap?.upperBandVisible ?? false}
+                        onChange={(e) => updateAnchoredVWAP({ upperBandVisible: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-slate-400 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">Upper Band</span>
+                    </label>
+
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.anchoredVwap?.upperBandColor ?? '#94A3B8'}
+                        onChange={(c) => updateAnchoredVWAP({ upperBandColor: c })}
+                        label="Upper Band Color"
+                      />
+
+                      {/* Line Width */}
+                      <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                        {[1, 2, 3, 4].map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => updateAnchoredVWAP({ upperBandLineWidth: w })}
+                            className={`w-6 py-0.5 rounded text-[12px] font-extrabold transition-all cursor-pointer ${
+                              (config.anchoredVwap?.upperBandLineWidth ?? 2) === w
+                                ? 'bg-slate-300 text-slate-950 shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Line Style */}
+                      <select
+                        value={config.anchoredVwap?.upperBandLineStyle ?? 'Dashed'}
+                        onChange={(e) => updateAnchoredVWAP({ upperBandLineStyle: e.target.value as LineStyleOption })}
+                        className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                      >
+                        {lineStyles.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Lower Band */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-slate-800">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.anchoredVwap?.lowerBandVisible ?? false}
+                        onChange={(e) => updateAnchoredVWAP({ lowerBandVisible: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-slate-400 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">Lower Band</span>
+                    </label>
+
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.anchoredVwap?.lowerBandColor ?? '#94A3B8'}
+                        onChange={(c) => updateAnchoredVWAP({ lowerBandColor: c })}
+                        label="Lower Band Color"
+                      />
+
+                      {/* Line Width */}
+                      <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                        {[1, 2, 3, 4].map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => updateAnchoredVWAP({ lowerBandLineWidth: w })}
+                            className={`w-6 py-0.5 rounded text-[12px] font-extrabold transition-all cursor-pointer ${
+                              (config.anchoredVwap?.lowerBandLineWidth ?? 2) === w
+                                ? 'bg-slate-300 text-slate-950 shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Line Style */}
+                      <select
+                        value={config.anchoredVwap?.lowerBandLineStyle ?? 'Dashed'}
+                        onChange={(e) => updateAnchoredVWAP({ lowerBandLineStyle: e.target.value as LineStyleOption })}
+                        className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                      >
+                        {lineStyles.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Section: OUTPUT VALUES */}
+                  <div className="space-y-2.5 pt-3 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Output Values
+                    </div>
+
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">Precision</span>
+                      <select
+                        disabled
+                        className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-[13px] font-bold text-slate-300 opacity-80"
+                      >
+                        <option>Default</option>
+                      </select>
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.showAxisLabels}
+                        onChange={toggleAxisLabels}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Labels on price scale</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Values in status line</span>
+                    </label>
+                  </div>
+
+                  {/* Section: INPUT VALUES */}
+                  <div className="space-y-2.5 pt-3 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Input Values
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Inputs in status line</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer matching TradingView [Defaults v] [Cancel] [Ok] */}
+            <div className="p-3.5 bg-[#080D18] border-t border-slate-800 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => updateAnchoredVWAP(DEFAULT_INDICATOR_SETTINGS.anchoredVwap)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-slate-800 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Defaults</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('list')}
+                  className="px-4 py-1.5 rounded-lg text-[13px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 border border-slate-700 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-1.5 rounded-lg text-[13px] font-extrabold bg-white text-slate-950 hover:bg-slate-100 shadow-md transition-all cursor-pointer"
+                >
+                  Ok
+                </button>
+              </div>
             </div>
           </>
         )}

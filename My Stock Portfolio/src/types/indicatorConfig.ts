@@ -169,6 +169,28 @@ export interface SMCLiteConfig {
   showPaneLabels: boolean;
 }
 
+export interface AnchoredVWAPConfig {
+  visible: boolean;
+  source: 'close' | 'hl2' | 'hlc3' | 'ohlc4' | 'open' | 'high' | 'low';
+  startDate: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  showBands: boolean;
+  bandMultiplier: number;
+  // Style
+  vwapVisible: boolean;
+  vwapColor: string;
+  vwapLineWidth: number;
+  vwapLineStyle: LineStyleOption;
+  upperBandVisible: boolean;
+  upperBandColor: string;
+  upperBandLineWidth: number;
+  upperBandLineStyle: LineStyleOption;
+  lowerBandVisible: boolean;
+  lowerBandColor: string;
+  lowerBandLineWidth: number;
+  lowerBandLineStyle: LineStyleOption;
+}
+
 export type SubPaneIndicatorId = 'mcdx' | 'ultimateRsi' | 'trendSpeed';
 
 export interface PaneLayout {
@@ -213,6 +235,7 @@ export interface IndicatorSettings {
   ultimateRsi: UltimateRSIConfig;
   trendSpeed: TrendSpeedConfig;
   smcLite: SMCLiteConfig;
+  anchoredVwap: AnchoredVWAPConfig;
 }
 
 export const DEFAULT_CUSTOM_COLORS: string[] = [
@@ -379,5 +402,25 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     showBoxes: true,
     showLines: true,
     showPaneLabels: false,
+  },
+  anchoredVwap: {
+    visible: true,
+    source: 'hlc3',
+    startDate: '',
+    startTime: '00:00',
+    showBands: true,
+    bandMultiplier: 0.5,
+    vwapVisible: true,
+    vwapColor: '#FFFFFF',
+    vwapLineWidth: 3,
+    vwapLineStyle: 'Solid',
+    upperBandVisible: false,
+    upperBandColor: '#94A3B8',
+    upperBandLineWidth: 2,
+    upperBandLineStyle: 'Dashed',
+    lowerBandVisible: false,
+    lowerBandColor: '#94A3B8',
+    lowerBandLineWidth: 2,
+    lowerBandLineStyle: 'Dashed',
   },
 };
