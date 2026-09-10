@@ -24,9 +24,9 @@ chartRoutes.get('/:symbol', async (c) => {
       return c.json({ error: 'Symbol is required' }, 400);
     }
     const symbol = rawSymbol.trim().toUpperCase();
-    const days = parseInt(c.req.query('days') || '3650', 10);
+    const days = parseInt(c.req.query('days') || '36500', 10);
 
-    // Delta sync candles (defaults to up to 10 years / 3650 days)
+    // Delta sync candles (defaults to Max Lifetime / All-time IPO / 36500 days)
     await syncCandleDelta(symbol, days);
 
     // Fetch all available candles for maximum historical depth and smooth EMA convergence

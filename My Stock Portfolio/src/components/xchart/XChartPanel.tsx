@@ -41,7 +41,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.chart.get(sym, 3650);
+      const res = await api.chart.get(sym, 36500);
       setData(res);
     } catch (err: any) {
       console.error(`[XChartPanel] Failed to load chart data for ${sym}:`, err);
@@ -63,7 +63,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId }) => {
           <div className="absolute font-bold text-xs text-purple-400 font-heading">XC</div>
         </div>
         <div className="mt-4 text-sm font-semibold text-slate-200">กำลังโหลดข้อมูลกราฟ {symbol}...</div>
-        <div className="text-xs text-slate-400 mt-1">OHLCV 10 ปี + EMA Ribbon + MCDX Indicators</div>
+        <div className="text-xs text-slate-400 mt-1">OHLCV Max Lifetime (All-Time IPO) + EMA Ribbon + MCDX Indicators</div>
       </div>
     );
   }

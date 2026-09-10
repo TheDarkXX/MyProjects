@@ -174,17 +174,18 @@ export function calcMcdxSeries(closes) {
 
 /**
  * Sync daily candles for a symbol using Delta Sync into historical_prices SQLite table.
- * Caches up to 400 calendar days of data to guarantee 250+ trading sessions for EMA200 & RSI50.
+ * - If symbol has no rows or corrupted data, automatically backfills Max Lifetime (from 1927-01-01 / IPO).
+ * - If symbol already exists and is fresh, returns instantly from SQLite (0ms latency).
+ * - If symbol has new sessions, fetches only the incremental delta (maxDate -> today).
  * @param {string} symbol
  * @param {number} minDaysRequired
  * @returns {Promise<Array<{ date: string, price: number, open: number, high: number, low: number, close: number, volume: number }>>}
  */
-export async function syncCandleDelta(symbol, minDaysRequired = 400) {
+export async function syncCandleDelta(symbol, minDaysRequired = 36500) {
   if (!symbol || symbol === 'CASH') return [];
   const upper = symbol.toUpperCase();
 
   const today = new Date().toISOString().split('T')[0];
-  const targetStartDate = new Date(Date.now() - minDaysRequired * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   // Check latest & earliest date in DB
   const stats = db.prepare(
@@ -199,22 +200,26 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
   const maxDateTime = maxDate ? new Date(maxDate).getTime() : 0;
   const diffDays = maxDate ? Math.floor((nowTime - maxDateTime) / (24 * 60 * 60 * 1000)) : 999;
 
-  const isSufficientHistory = minDate && (new Date(minDate).getTime() <= new Date(targetStartDate).getTime() + 20 * 24 * 60 * 60 * 1000);
   const isFresh = diffDays <= 1 || (new Date().getDay() === 0 && diffDays <= 2) || (new Date().getDay() === 1 && diffDays <= 3);
 
   // Check if ALL rows have valid OHLCV (no NULL open/high/low)
   const hasNullRows = !!db.prepare('SELECT 1 FROM historical_prices WHERE symbol = ? AND (open IS NULL OR high IS NULL OR high <= low) LIMIT 1').get(upper);
   const hasValidOhlcv = !hasNullRows;
 
-  if (isFresh && count >= 50 && hasValidOhlcv && isSufficientHistory) {
-    const rows = db.prepare('SELECT date, price, open, high, low, close, volume FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
+  // 1. FAST CACHE HIT: If data is fresh, count >= 40, and valid OHLCV -> 0ms return from SQLite
+  if (isFresh && count >= 40 && hasValidOhlcv) {
+    const rows = db.prepare('SELECT date, price, open, high, low, close, volume FROM historical_prices WHERE symbol = ? ORDER BY date ASC').all(upper);
     if (rows.length >= 40) {
       return rows;
     }
   }
 
-  // Delta fetch from Yahoo Finance: If hasValidOhlcv is false or history insufficient, force fetch from targetStartDate
-  const fetchFrom = (hasValidOhlcv && isSufficientHistory && maxDate) ? maxDate : targetStartDate;
+  // 2. SMART FETCH STRATEGY:
+  // - If brand new symbol (count === 0) or corrupted data (hasNullRows): Auto fetch MAX LIFETIME from 1927-01-01 (All-Time IPO)
+  // - If existing symbol in DB: Only fetch incremental DELTA from maxDate to today (fast 1-2 bars)
+  const isBrandNew = count === 0 || !hasValidOhlcv;
+  const fetchFrom = isBrandNew ? '1927-01-01' : maxDate;
+
   try {
     const freshData = await fetchYahooHistorical(upper, fetchFrom, today);
     if (freshData && freshData.length > 0) {
@@ -242,7 +247,7 @@ export async function syncCandleDelta(symbol, minDaysRequired = 400) {
     console.warn(`[syncCandleDelta] Delta fetch error for ${upper}:`, err.message);
   }
 
-  return db.prepare('SELECT date, price, open, high, low, close, volume FROM historical_prices WHERE symbol = ? AND date >= ? ORDER BY date ASC').all(upper, targetStartDate);
+  return db.prepare('SELECT date, price, open, high, low, close, volume FROM historical_prices WHERE symbol = ? ORDER BY date ASC').all(upper);
 }
 
 /**
