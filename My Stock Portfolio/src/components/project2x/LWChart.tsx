@@ -1454,9 +1454,108 @@ export const LWChart: React.FC<LWChartProps> = ({
       const target = e.target as HTMLElement | null;
       if (!target) return;
       const cursor = target.style?.cursor || window.getComputedStyle(target).cursor;
-      if (cursor === 'row-resize' || target.closest('tr')?.style?.height === '1px') {
+      const isSplitter = cursor === 'row-resize' || !!target.closest('tr')?.style?.height.includes('1px');
+      if (!isSplitter) return;
+
+      const currentPanes = chartRef.current?.panes();
+      if (!currentPanes || currentPanes.length < 3 || maximizedPane !== null) {
         isDraggingSplitter = true;
+        return;
       }
+
+      const mcdxVis = indicatorConfig.mcdx.visible;
+      const rsiVis = indicatorConfig.ultimateRsi.visible;
+
+      // Special Case 1: P1 is collapsed, user drags splitter above P2 to resize P2 against Pane 0
+      if (!mcdxVis && rsiVis) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const startY = e.clientY;
+        const containerH = chartContainerRef.current?.clientHeight || 650;
+        const startRsiH = currentPanes[rsiPane]?.getHTMLElement?.()?.clientHeight || (indicatorConfig.paneHeights?.ultimateRsi || 140);
+        let lastTargetRsiH = startRsiH;
+
+        const onMouseMove = (moveEvt: MouseEvent | PointerEvent) => {
+          moveEvt.preventDefault();
+          const deltaY = moveEvt.clientY - startY;
+          // Dragging UP (deltaY < 0) makes P2 taller
+          const targetRsiH = Math.max(80, Math.min(containerH - 120 - 28, Math.round(startRsiH - deltaY)));
+          lastTargetRsiH = targetRsiH;
+          const targetMainH = Math.max(100, containerH - 28 - targetRsiH);
+
+          currentPanes[0]?.setStretchFactor?.(targetMainH);
+          currentPanes[mcdxPane]?.setStretchFactor?.(28);
+          currentPanes[rsiPane]?.setStretchFactor?.(targetRsiH);
+          updateOffsets();
+        };
+
+        const onMouseUp = () => {
+          window.removeEventListener('mousemove', onMouseMove, true);
+          window.removeEventListener('mouseup', onMouseUp, true);
+          window.removeEventListener('pointermove', onMouseMove, true);
+          window.removeEventListener('pointerup', onMouseUp, true);
+          if (lastTargetRsiH >= 80) {
+            useIndicatorStore.getState().setPaneHeight('ultimateRsi', lastTargetRsiH);
+          }
+          requestAnimationFrame(updateOffsets);
+        };
+
+        window.addEventListener('mousemove', onMouseMove, true);
+        window.addEventListener('mouseup', onMouseUp, true);
+        window.addEventListener('pointermove', onMouseMove, true);
+        window.addEventListener('pointerup', onMouseUp, true);
+        return;
+      }
+
+      // Special Case 2: P2 is collapsed, user drags splitter between P1 and P2 to resize P1 against Pane 0
+      if (mcdxVis && !rsiVis) {
+        const allSeparators = Array.from(container.querySelectorAll('tr')).filter(tr => tr.style.height.includes('1px'));
+        const sepIdx = allSeparators.findIndex(tr => tr.contains(target));
+        if (sepIdx === 1 || sepIdx === -1) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const startY = e.clientY;
+          const containerH = chartContainerRef.current?.clientHeight || 650;
+          const startMcdxH = currentPanes[mcdxPane]?.getHTMLElement?.()?.clientHeight || (indicatorConfig.paneHeights?.mcdx || 140);
+          let lastTargetMcdxH = startMcdxH;
+
+          const onMouseMove = (moveEvt: MouseEvent | PointerEvent) => {
+            moveEvt.preventDefault();
+            const deltaY = moveEvt.clientY - startY;
+            // Dragging DOWN (deltaY > 0) makes P1 taller
+            const targetMcdxH = Math.max(80, Math.min(containerH - 120 - 28, Math.round(startMcdxH + deltaY)));
+            lastTargetMcdxH = targetMcdxH;
+            const targetMainH = Math.max(100, containerH - 28 - targetMcdxH);
+
+            currentPanes[0]?.setStretchFactor?.(targetMainH);
+            currentPanes[mcdxPane]?.setStretchFactor?.(targetMcdxH);
+            currentPanes[rsiPane]?.setStretchFactor?.(28);
+            updateOffsets();
+          };
+
+          const onMouseUp = () => {
+            window.removeEventListener('mousemove', onMouseMove, true);
+            window.removeEventListener('mouseup', onMouseUp, true);
+            window.removeEventListener('pointermove', onMouseMove, true);
+            window.removeEventListener('pointerup', onMouseUp, true);
+            if (lastTargetMcdxH >= 80) {
+              useIndicatorStore.getState().setPaneHeight('mcdx', lastTargetMcdxH);
+            }
+            requestAnimationFrame(updateOffsets);
+          };
+
+          window.addEventListener('mousemove', onMouseMove, true);
+          window.addEventListener('mouseup', onMouseUp, true);
+          window.addEventListener('pointermove', onMouseMove, true);
+          window.addEventListener('pointerup', onMouseUp, true);
+          return;
+        }
+      }
+
+      // Normal Case: Both visible
+      isDraggingSplitter = true;
     };
 
     // Save pane height changes on user mouseup/pointerup ONLY after dragging splitters
