@@ -131,6 +131,6 @@ export const api = {
     get: (symbol: string, days = 36500) => authFetch(`/chart/${encodeURIComponent(symbol)}?days=${days}`),
   },
   market: {
-    heatmap: (scope = 'top50') => authFetch(`/market/heatmap?scope=${encodeURIComponent(scope)}`),
+    heatmap: (scope = 'sp100') => authFetch(`/market/heatmap?scope=${encodeURIComponent(scope)}`),
   }
 };

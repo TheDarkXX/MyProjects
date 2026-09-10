@@ -1,0 +1,2786 @@
+[
+  {
+    "symbol": "NVDA",
+    "name": "NVIDIA Corporation",
+    "sector": "Electronic technology",
+    "domain": "nvidia.com"
+  },
+  {
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "sector": "Electronic technology",
+    "domain": "apple.com"
+  },
+  {
+    "symbol": "MSFT",
+    "name": "Microsoft Corporation",
+    "sector": "Technology services",
+    "domain": "microsoft.com"
+  },
+  {
+    "symbol": "AMZN",
+    "name": "Amazon.com Inc.",
+    "sector": "Retail trade",
+    "domain": "amazon.com"
+  },
+  {
+    "symbol": "GOOGL",
+    "name": "Alphabet Inc. Class A",
+    "sector": "Technology services",
+    "domain": "google.com"
+  },
+  {
+    "symbol": "META",
+    "name": "Meta Platforms Inc.",
+    "sector": "Technology services",
+    "domain": "meta.com"
+  },
+  {
+    "symbol": "AVGO",
+    "name": "Broadcom Inc.",
+    "sector": "Electronic technology",
+    "domain": "broadcom.com"
+  },
+  {
+    "symbol": "BRK-B",
+    "name": "Berkshire Hathaway Inc.",
+    "sector": "Finance",
+    "domain": "berkshirehathaway.com"
+  },
+  {
+    "symbol": "TSLA",
+    "name": "Tesla Inc.",
+    "sector": "Consumer services",
+    "domain": "tesla.com"
+  },
+  {
+    "symbol": "LLY",
+    "name": "Eli Lilly and Company",
+    "sector": "Health technology",
+    "domain": "lilly.com"
+  },
+  {
+    "symbol": "JPM",
+    "name": "JPMorgan Chase & Co.",
+    "sector": "Finance",
+    "domain": "jpmorganchase.com"
+  },
+  {
+    "symbol": "WMT",
+    "name": "Walmart Inc.",
+    "sector": "Retail trade",
+    "domain": "walmart.com"
+  },
+  {
+    "symbol": "V",
+    "name": "Visa Inc.",
+    "sector": "Finance",
+    "domain": "visa.com"
+  },
+  {
+    "symbol": "XOM",
+    "name": "Exxon Mobil Corporation",
+    "sector": "Energy minerals",
+    "domain": "exxonmobil.com"
+  },
+  {
+    "symbol": "UNH",
+    "name": "UnitedHealth Group Inc.",
+    "sector": "Health technology",
+    "domain": "unitedhealthgroup.com"
+  },
+  {
+    "symbol": "ORCL",
+    "name": "Oracle Corporation",
+    "sector": "Technology services",
+    "domain": "oracle.com"
+  },
+  {
+    "symbol": "MA",
+    "name": "Mastercard Incorporated",
+    "sector": "Finance",
+    "domain": "mastercard.com"
+  },
+  {
+    "symbol": "COST",
+    "name": "Costco Wholesale Corporation",
+    "sector": "Retail trade",
+    "domain": "costco.com"
+  },
+  {
+    "symbol": "HD",
+    "name": "The Home Depot Inc.",
+    "sector": "Retail trade",
+    "domain": "homedepot.com"
+  },
+  {
+    "symbol": "PG",
+    "name": "The Procter & Gamble Company",
+    "sector": "Consumer non-durables",
+    "domain": "pg.com"
+  },
+  {
+    "symbol": "JNJ",
+    "name": "Johnson & Johnson",
+    "sector": "Health technology",
+    "domain": "jnj.com"
+  },
+  {
+    "symbol": "BAC",
+    "name": "Bank of America Corp.",
+    "sector": "Finance",
+    "domain": "bankofamerica.com"
+  },
+  {
+    "symbol": "ABBV",
+    "name": "AbbVie Inc.",
+    "sector": "Health technology",
+    "domain": "abbvie.com"
+  },
+  {
+    "symbol": "NFLX",
+    "name": "Netflix Inc.",
+    "sector": "Consumer services",
+    "domain": "netflix.com"
+  },
+  {
+    "symbol": "KO",
+    "name": "The Coca-Cola Company",
+    "sector": "Consumer non-durables",
+    "domain": "coca-colacompany.com"
+  },
+  {
+    "symbol": "CRM",
+    "name": "Salesforce Inc.",
+    "sector": "Technology services",
+    "domain": "salesforce.com"
+  },
+  {
+    "symbol": "AMD",
+    "name": "Advanced Micro Devices Inc.",
+    "sector": "Electronic technology",
+    "domain": "amd.com"
+  },
+  {
+    "symbol": "CVX",
+    "name": "Chevron Corporation",
+    "sector": "Energy minerals",
+    "domain": "chevron.com"
+  },
+  {
+    "symbol": "MRK",
+    "name": "Merck & Co. Inc.",
+    "sector": "Health technology",
+    "domain": "merck.com"
+  },
+  {
+    "symbol": "PEP",
+    "name": "PepsiCo Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "pepsico.com"
+  },
+  {
+    "symbol": "LIN",
+    "name": "Linde plc",
+    "sector": "Non-energy minerals",
+    "domain": "linde.com"
+  },
+  {
+    "symbol": "ADBE",
+    "name": "Adobe Inc.",
+    "sector": "Technology services",
+    "domain": "adobe.com"
+  },
+  {
+    "symbol": "TMO",
+    "name": "Thermo Fisher Scientific Inc.",
+    "sector": "Health technology",
+    "domain": "thermofisher.com"
+  },
+  {
+    "symbol": "WFC",
+    "name": "Wells Fargo & Company",
+    "sector": "Finance",
+    "domain": "wellsfargo.com"
+  },
+  {
+    "symbol": "QCOM",
+    "name": "QUALCOMM Inc.",
+    "sector": "Electronic technology",
+    "domain": "qualcomm.com"
+  },
+  {
+    "symbol": "CSCO",
+    "name": "Cisco Systems Inc.",
+    "sector": "Technology services",
+    "domain": "cisco.com"
+  },
+  {
+    "symbol": "MCD",
+    "name": "McDonald's Corporation",
+    "sector": "Consumer services",
+    "domain": "mcdonalds.com"
+  },
+  {
+    "symbol": "ABT",
+    "name": "Abbott Laboratories",
+    "sector": "Health technology",
+    "domain": "abbott.com"
+  },
+  {
+    "symbol": "GE",
+    "name": "GE Aerospace",
+    "sector": "Producer manufacturing",
+    "domain": "ge.com"
+  },
+  {
+    "symbol": "CAT",
+    "name": "Caterpillar Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "caterpillar.com"
+  },
+  {
+    "symbol": "TXN",
+    "name": "Texas Instruments Inc.",
+    "sector": "Electronic technology",
+    "domain": "ti.com"
+  },
+  {
+    "symbol": "IBM",
+    "name": "International Business Machines",
+    "sector": "Technology services",
+    "domain": "ibm.com"
+  },
+  {
+    "symbol": "NOW",
+    "name": "ServiceNow Inc.",
+    "sector": "Technology services",
+    "domain": "servicenow.com"
+  },
+  {
+    "symbol": "INTU",
+    "name": "Intuit Inc.",
+    "sector": "Technology services",
+    "domain": "intuit.com"
+  },
+  {
+    "symbol": "ISRG",
+    "name": "Intuitive Surgical Inc.",
+    "sector": "Health technology",
+    "domain": "intuitive.com"
+  },
+  {
+    "symbol": "AMAT",
+    "name": "Applied Materials Inc.",
+    "sector": "Electronic technology",
+    "domain": "appliedmaterials.com"
+  },
+  {
+    "symbol": "RTX",
+    "name": "RTX Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "rtx.com"
+  },
+  {
+    "symbol": "MS",
+    "name": "Morgan Stanley",
+    "sector": "Finance",
+    "domain": "morganstanley.com"
+  },
+  {
+    "symbol": "GS",
+    "name": "The Goldman Sachs Group Inc.",
+    "sector": "Finance",
+    "domain": "goldmansachs.com"
+  },
+  {
+    "symbol": "PLTR",
+    "name": "Palantir Technologies Inc.",
+    "sector": "Technology services",
+    "domain": "palantir.com"
+  },
+  {
+    "symbol": "DIS",
+    "name": "The Walt Disney Company",
+    "sector": "Consumer services",
+    "domain": "thewaltdisneycompany.com"
+  },
+  {
+    "symbol": "PM",
+    "name": "Philip Morris International Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "pmi.com"
+  },
+  {
+    "symbol": "SPGI",
+    "name": "S&P Global Inc.",
+    "sector": "Finance",
+    "domain": "spglobal.com"
+  },
+  {
+    "symbol": "HON",
+    "name": "Honeywell International Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "honeywell.com"
+  },
+  {
+    "symbol": "BLK",
+    "name": "BlackRock Inc.",
+    "sector": "Finance",
+    "domain": "blackrock.com"
+  },
+  {
+    "symbol": "UBER",
+    "name": "Uber Technologies Inc.",
+    "sector": "Consumer services",
+    "domain": "uber.com"
+  },
+  {
+    "symbol": "PFE",
+    "name": "Pfizer Inc.",
+    "sector": "Health technology",
+    "domain": "pfizer.com"
+  },
+  {
+    "symbol": "CMCSA",
+    "name": "Comcast Corporation",
+    "sector": "Consumer services",
+    "domain": "corporate.comcast.com"
+  },
+  {
+    "symbol": "AXP",
+    "name": "American Express Company",
+    "sector": "Finance",
+    "domain": "americanexpress.com"
+  },
+  {
+    "symbol": "BKNG",
+    "name": "Booking Holdings Inc.",
+    "sector": "Consumer services",
+    "domain": "bookingholdings.com"
+  },
+  {
+    "symbol": "T",
+    "name": "AT&T Inc.",
+    "sector": "Communications",
+    "domain": "att.com"
+  },
+  {
+    "symbol": "LOW",
+    "name": "Lowe's Companies Inc.",
+    "sector": "Retail trade",
+    "domain": "lowes.com"
+  },
+  {
+    "symbol": "AMGN",
+    "name": "Amgen Inc.",
+    "sector": "Health technology",
+    "domain": "amgen.com"
+  },
+  {
+    "symbol": "COP",
+    "name": "ConocoPhillips",
+    "sector": "Energy minerals",
+    "domain": "conocophillips.com"
+  },
+  {
+    "symbol": "UNP",
+    "name": "Union Pacific Corporation",
+    "sector": "Transportation",
+    "domain": "up.com"
+  },
+  {
+    "symbol": "DHR",
+    "name": "Danaher Corporation",
+    "sector": "Health technology",
+    "domain": "danaher.com"
+  },
+  {
+    "symbol": "SYK",
+    "name": "Stryker Corporation",
+    "sector": "Health technology",
+    "domain": "stryker.com"
+  },
+  {
+    "symbol": "TJX",
+    "name": "The TJX Companies Inc.",
+    "sector": "Retail trade",
+    "domain": "tjx.com"
+  },
+  {
+    "symbol": "BSX",
+    "name": "Boston Scientific Corporation",
+    "sector": "Health technology",
+    "domain": "bostonscientific.com"
+  },
+  {
+    "symbol": "PANW",
+    "name": "Palo Alto Networks Inc.",
+    "sector": "Technology services",
+    "domain": "paloaltonetworks.com"
+  },
+  {
+    "symbol": "PGR",
+    "name": "The Progressive Corporation",
+    "sector": "Finance",
+    "domain": "progressive.com"
+  },
+  {
+    "symbol": "SCHW",
+    "name": "The Charles Schwab Corporation",
+    "sector": "Finance",
+    "domain": "schwab.com"
+  },
+  {
+    "symbol": "ETN",
+    "name": "Eaton Corporation plc",
+    "sector": "Producer manufacturing",
+    "domain": "eaton.com"
+  },
+  {
+    "symbol": "DE",
+    "name": "Deere & Company",
+    "sector": "Producer manufacturing",
+    "domain": "deere.com"
+  },
+  {
+    "symbol": "BMY",
+    "name": "Bristol-Myers Squibb Company",
+    "sector": "Health technology",
+    "domain": "bms.com"
+  },
+  {
+    "symbol": "FI",
+    "name": "FI",
+    "sector": "Other",
+    "domain": "fi.com"
+  },
+  {
+    "symbol": "BA",
+    "name": "The Boeing Company",
+    "sector": "Producer manufacturing",
+    "domain": "boeing.com"
+  },
+  {
+    "symbol": "MDT",
+    "name": "Medtronic plc",
+    "sector": "Health technology",
+    "domain": "medtronic.com"
+  },
+  {
+    "symbol": "VRTX",
+    "name": "Vertex Pharmaceuticals Inc.",
+    "sector": "Health technology",
+    "domain": "vrtx.com"
+  },
+  {
+    "symbol": "LMT",
+    "name": "Lockheed Martin Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "lockheedmartin.com"
+  },
+  {
+    "symbol": "CB",
+    "name": "Chubb Limited",
+    "sector": "Finance",
+    "domain": "chubb.com"
+  },
+  {
+    "symbol": "GILD",
+    "name": "Gilead Sciences Inc.",
+    "sector": "Health technology",
+    "domain": "gilead.com"
+  },
+  {
+    "symbol": "UPS",
+    "name": "United Parcel Service Inc.",
+    "sector": "Transportation",
+    "domain": "ups.com"
+  },
+  {
+    "symbol": "ADI",
+    "name": "Analog Devices Inc.",
+    "sector": "Electronic technology",
+    "domain": "analog.com"
+  },
+  {
+    "symbol": "NEE",
+    "name": "NextEra Energy Inc.",
+    "sector": "Utilities",
+    "domain": "nexteraenergy.com"
+  },
+  {
+    "symbol": "MMC",
+    "name": "Marsh & McLennan Companies Inc.",
+    "sector": "Finance",
+    "domain": "marshmclennan.com"
+  },
+  {
+    "symbol": "SBUX",
+    "name": "Starbucks Corporation",
+    "sector": "Consumer services",
+    "domain": "starbucks.com"
+  },
+  {
+    "symbol": "MU",
+    "name": "Micron Technology Inc.",
+    "sector": "Electronic technology",
+    "domain": "micron.com"
+  },
+  {
+    "symbol": "LRCX",
+    "name": "Lam Research Corporation",
+    "sector": "Electronic technology",
+    "domain": "lamresearch.com"
+  },
+  {
+    "symbol": "C",
+    "name": "Citigroup Inc.",
+    "sector": "Finance",
+    "domain": "citigroup.com"
+  },
+  {
+    "symbol": "REGN",
+    "name": "Regeneron Pharmaceuticals Inc.",
+    "sector": "Health technology",
+    "domain": "regeneron.com"
+  },
+  {
+    "symbol": "MDLZ",
+    "name": "Mondelez International Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "mondelezinternational.com"
+  },
+  {
+    "symbol": "CI",
+    "name": "The Cigna Group",
+    "sector": "Health technology",
+    "domain": "cigna.com"
+  },
+  {
+    "symbol": "ELV",
+    "name": "Elevance Health Inc.",
+    "sector": "Health technology",
+    "domain": "elevancehealth.com"
+  },
+  {
+    "symbol": "MO",
+    "name": "Altria Group Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "altria.com"
+  },
+  {
+    "symbol": "SO",
+    "name": "The Southern Company",
+    "sector": "Utilities",
+    "domain": "southerncompany.com"
+  },
+  {
+    "symbol": "KLAC",
+    "name": "KLA Corporation",
+    "sector": "Electronic technology",
+    "domain": "kla.com"
+  },
+  {
+    "symbol": "DUK",
+    "name": "Duke Energy Corporation",
+    "sector": "Utilities",
+    "domain": "duke-energy.com"
+  },
+  {
+    "symbol": "ICE",
+    "name": "Intercontinental Exchange Inc.",
+    "sector": "Finance",
+    "domain": "theice.com"
+  },
+  {
+    "symbol": "CME",
+    "name": "CME Group Inc.",
+    "sector": "Finance",
+    "domain": "cmegroup.com"
+  },
+  {
+    "symbol": "INTC",
+    "name": "Intel Corporation",
+    "sector": "Electronic technology",
+    "domain": "intel.com"
+  },
+  {
+    "symbol": "MRVL",
+    "name": "Marvell Technology Inc.",
+    "sector": "Electronic technology",
+    "domain": "marvell.com"
+  },
+  {
+    "symbol": "NXPI",
+    "name": "NXP Semiconductors N.V.",
+    "sector": "Electronic technology",
+    "domain": "nxp.com"
+  },
+  {
+    "symbol": "MCHP",
+    "name": "Microchip Technology Inc.",
+    "sector": "Electronic technology",
+    "domain": "microchip.com"
+  },
+  {
+    "symbol": "ON",
+    "name": "ON Semiconductor Corp.",
+    "sector": "Electronic technology",
+    "domain": "onsemi.com"
+  },
+  {
+    "symbol": "MPWR",
+    "name": "Monolithic Power Systems Inc.",
+    "sector": "Electronic technology",
+    "domain": "monolithicpower.com"
+  },
+  {
+    "symbol": "CDNS",
+    "name": "Cadence Design Systems Inc.",
+    "sector": "Electronic technology",
+    "domain": "cadence.com"
+  },
+  {
+    "symbol": "SNPS",
+    "name": "Synopsys Inc.",
+    "sector": "Electronic technology",
+    "domain": "synopsys.com"
+  },
+  {
+    "symbol": "FTNT",
+    "name": "Fortinet Inc.",
+    "sector": "Electronic technology",
+    "domain": "fortinet.com"
+  },
+  {
+    "symbol": "ARM",
+    "name": "Arm Holdings plc",
+    "sector": "Electronic technology",
+    "domain": "arm.com"
+  },
+  {
+    "symbol": "ASML",
+    "name": "ASML Holding N.V.",
+    "sector": "Electronic technology",
+    "domain": "asml.com"
+  },
+  {
+    "symbol": "TSM",
+    "name": "Taiwan Semiconductor Manufacturing Co.",
+    "sector": "Electronic technology",
+    "domain": "tsmc.com"
+  },
+  {
+    "symbol": "TER",
+    "name": "Teradyne Inc.",
+    "sector": "Electronic technology",
+    "domain": "teradyne.com"
+  },
+  {
+    "symbol": "ENTG",
+    "name": "Entegris Inc.",
+    "sector": "Electronic technology",
+    "domain": "entegris.com"
+  },
+  {
+    "symbol": "SWKS",
+    "name": "Skyworks Solutions Inc.",
+    "sector": "Electronic technology",
+    "domain": "skyworksinc.com"
+  },
+  {
+    "symbol": "QRVO",
+    "name": "Qorvo Inc.",
+    "sector": "Electronic technology",
+    "domain": "qorvo.com"
+  },
+  {
+    "symbol": "WDC",
+    "name": "Western Digital Corporation",
+    "sector": "Electronic technology",
+    "domain": "westerndigital.com"
+  },
+  {
+    "symbol": "STX",
+    "name": "Seagate Technology Holdings plc",
+    "sector": "Electronic technology",
+    "domain": "seagate.com"
+  },
+  {
+    "symbol": "GLW",
+    "name": "Corning Inc.",
+    "sector": "Electronic technology",
+    "domain": "corning.com"
+  },
+  {
+    "symbol": "TEL",
+    "name": "TE Connectivity Ltd.",
+    "sector": "Electronic technology",
+    "domain": "te.com"
+  },
+  {
+    "symbol": "APH",
+    "name": "Amphenol Corporation",
+    "sector": "Electronic technology",
+    "domain": "amphenol.com"
+  },
+  {
+    "symbol": "GOOG",
+    "name": "Alphabet Inc. Class C",
+    "sector": "Technology services",
+    "domain": "google.com"
+  },
+  {
+    "symbol": "ACN",
+    "name": "Accenture plc",
+    "sector": "Technology services",
+    "domain": "accenture.com"
+  },
+  {
+    "symbol": "CRWD",
+    "name": "CrowdStrike Holdings Inc.",
+    "sector": "Technology services",
+    "domain": "crowdstrike.com"
+  },
+  {
+    "symbol": "ANET",
+    "name": "Arista Networks Inc.",
+    "sector": "Technology services",
+    "domain": "arista.com"
+  },
+  {
+    "symbol": "WDAY",
+    "name": "Workday Inc.",
+    "sector": "Technology services",
+    "domain": "workday.com"
+  },
+  {
+    "symbol": "SNOW",
+    "name": "Snowflake Inc.",
+    "sector": "Technology services",
+    "domain": "snowflake.com"
+  },
+  {
+    "symbol": "DDOG",
+    "name": "Datadog Inc.",
+    "sector": "Technology services",
+    "domain": "datadoghq.com"
+  },
+  {
+    "symbol": "TEAM",
+    "name": "Atlassian Corporation",
+    "sector": "Technology services",
+    "domain": "atlassian.com"
+  },
+  {
+    "symbol": "ZS",
+    "name": "Zscaler Inc.",
+    "sector": "Technology services",
+    "domain": "zscaler.com"
+  },
+  {
+    "symbol": "MDB",
+    "name": "MongoDB Inc.",
+    "sector": "Technology services",
+    "domain": "mongodb.com"
+  },
+  {
+    "symbol": "NET",
+    "name": "Cloudflare Inc.",
+    "sector": "Technology services",
+    "domain": "cloudflare.com"
+  },
+  {
+    "symbol": "ROP",
+    "name": "Roper Technologies Inc.",
+    "sector": "Technology services",
+    "domain": "ropertech.com"
+  },
+  {
+    "symbol": "ADSK",
+    "name": "Autodesk Inc.",
+    "sector": "Technology services",
+    "domain": "autodesk.com"
+  },
+  {
+    "symbol": "ANSS",
+    "name": "ANSYS Inc.",
+    "sector": "Technology services",
+    "domain": "ansys.com"
+  },
+  {
+    "symbol": "CTSH",
+    "name": "Cognizant Technology Solutions",
+    "sector": "Technology services",
+    "domain": "cognizant.com"
+  },
+  {
+    "symbol": "IT",
+    "name": "Gartner Inc.",
+    "sector": "Technology services",
+    "domain": "gartner.com"
+  },
+  {
+    "symbol": "PTC",
+    "name": "PTC Inc.",
+    "sector": "Technology services",
+    "domain": "ptc.com"
+  },
+  {
+    "symbol": "TYL",
+    "name": "Tyler Technologies Inc.",
+    "sector": "Technology services",
+    "domain": "tylertech.com"
+  },
+  {
+    "symbol": "VRSN",
+    "name": "VeriSign Inc.",
+    "sector": "Technology services",
+    "domain": "verisign.com"
+  },
+  {
+    "symbol": "AKAM",
+    "name": "Akamai Technologies Inc.",
+    "sector": "Technology services",
+    "domain": "akamai.com"
+  },
+  {
+    "symbol": "FFIV",
+    "name": "F5 Inc.",
+    "sector": "Technology services",
+    "domain": "f5.com"
+  },
+  {
+    "symbol": "GEN",
+    "name": "Gen Digital Inc.",
+    "sector": "Technology services",
+    "domain": "gendigital.com"
+  },
+  {
+    "symbol": "EPAM",
+    "name": "EPAM Systems Inc.",
+    "sector": "Technology services",
+    "domain": "epam.com"
+  },
+  {
+    "symbol": "TGT",
+    "name": "Target Corporation",
+    "sector": "Retail trade",
+    "domain": "target.com"
+  },
+  {
+    "symbol": "ROST",
+    "name": "Ross Stores Inc.",
+    "sector": "Retail trade",
+    "domain": "rossstores.com"
+  },
+  {
+    "symbol": "ORLY",
+    "name": "O'Reilly Automotive Inc.",
+    "sector": "Retail trade",
+    "domain": "oreillyauto.com"
+  },
+  {
+    "symbol": "AZO",
+    "name": "AutoZone Inc.",
+    "sector": "Retail trade",
+    "domain": "autozone.com"
+  },
+  {
+    "symbol": "DG",
+    "name": "Dollar General Corporation",
+    "sector": "Retail trade",
+    "domain": "dollargeneral.com"
+  },
+  {
+    "symbol": "DLTR",
+    "name": "Dollar Tree Inc.",
+    "sector": "Retail trade",
+    "domain": "dollartree.com"
+  },
+  {
+    "symbol": "BBY",
+    "name": "Best Buy Co. Inc.",
+    "sector": "Retail trade",
+    "domain": "bestbuy.com"
+  },
+  {
+    "symbol": "EBAY",
+    "name": "eBay Inc.",
+    "sector": "Retail trade",
+    "domain": "ebay.com"
+  },
+  {
+    "symbol": "ULTA",
+    "name": "Ulta Beauty Inc.",
+    "sector": "Retail trade",
+    "domain": "ulta.com"
+  },
+  {
+    "symbol": "TSCO",
+    "name": "Tractor Supply Company",
+    "sector": "Retail trade",
+    "domain": "tractorsupply.com"
+  },
+  {
+    "symbol": "KMX",
+    "name": "CarMax Inc.",
+    "sector": "Retail trade",
+    "domain": "carmax.com"
+  },
+  {
+    "symbol": "GPC",
+    "name": "Genuine Parts Company",
+    "sector": "Retail trade",
+    "domain": "genpt.com"
+  },
+  {
+    "symbol": "MCO",
+    "name": "Moody's Corporation",
+    "sector": "Finance",
+    "domain": "moodys.com"
+  },
+  {
+    "symbol": "AON",
+    "name": "Aon plc",
+    "sector": "Finance",
+    "domain": "aon.com"
+  },
+  {
+    "symbol": "PYPL",
+    "name": "PayPal Holdings Inc.",
+    "sector": "Finance",
+    "domain": "paypal.com"
+  },
+  {
+    "symbol": "COIN",
+    "name": "Coinbase Global Inc.",
+    "sector": "Finance",
+    "domain": "coinbase.com"
+  },
+  {
+    "symbol": "USB",
+    "name": "U.S. Bancorp",
+    "sector": "Finance",
+    "domain": "usbank.com"
+  },
+  {
+    "symbol": "PNC",
+    "name": "The PNC Financial Services Group",
+    "sector": "Finance",
+    "domain": "pnc.com"
+  },
+  {
+    "symbol": "TFC",
+    "name": "Truist Financial Corporation",
+    "sector": "Finance",
+    "domain": "truist.com"
+  },
+  {
+    "symbol": "BK",
+    "name": "The Bank of New York Mellon Corp.",
+    "sector": "Finance",
+    "domain": "bny.com"
+  },
+  {
+    "symbol": "AFL",
+    "name": "Aflac Incorporated",
+    "sector": "Finance",
+    "domain": "aflac.com"
+  },
+  {
+    "symbol": "MET",
+    "name": "MetLife Inc.",
+    "sector": "Finance",
+    "domain": "metlife.com"
+  },
+  {
+    "symbol": "PRU",
+    "name": "Prudential Financial Inc.",
+    "sector": "Finance",
+    "domain": "prudential.com"
+  },
+  {
+    "symbol": "TRV",
+    "name": "The Travelers Companies Inc.",
+    "sector": "Finance",
+    "domain": "travelers.com"
+  },
+  {
+    "symbol": "ALL",
+    "name": "The Allstate Corporation",
+    "sector": "Finance",
+    "domain": "allstate.com"
+  },
+  {
+    "symbol": "AIG",
+    "name": "American International Group Inc.",
+    "sector": "Finance",
+    "domain": "aig.com"
+  },
+  {
+    "symbol": "AJG",
+    "name": "Arthur J. Gallagher & Co.",
+    "sector": "Finance",
+    "domain": "ajg.com"
+  },
+  {
+    "symbol": "AMP",
+    "name": "Ameriprise Financial Inc.",
+    "sector": "Finance",
+    "domain": "ameriprise.com"
+  },
+  {
+    "symbol": "DFS",
+    "name": "Discover Financial Services",
+    "sector": "Finance",
+    "domain": "discover.com"
+  },
+  {
+    "symbol": "COF",
+    "name": "Capital One Financial Corp.",
+    "sector": "Finance",
+    "domain": "capitalone.com"
+  },
+  {
+    "symbol": "MSCI",
+    "name": "MSCI Inc.",
+    "sector": "Finance",
+    "domain": "msci.com"
+  },
+  {
+    "symbol": "NDAQ",
+    "name": "Nasdaq Inc.",
+    "sector": "Finance",
+    "domain": "nasdaq.com"
+  },
+  {
+    "symbol": "CBOE",
+    "name": "Cboe Global Markets Inc.",
+    "sector": "Finance",
+    "domain": "cboe.com"
+  },
+  {
+    "symbol": "FISP",
+    "name": "Fidelity National Information Services",
+    "sector": "Finance",
+    "domain": "fisglobal.com"
+  },
+  {
+    "symbol": "FISV",
+    "name": "Fiserv Inc.",
+    "sector": "Finance",
+    "domain": "fiserv.com"
+  },
+  {
+    "symbol": "HUM",
+    "name": "Humana Inc.",
+    "sector": "Health technology",
+    "domain": "humana.com"
+  },
+  {
+    "symbol": "ZTS",
+    "name": "Zoetis Inc.",
+    "sector": "Health technology",
+    "domain": "zoetis.com"
+  },
+  {
+    "symbol": "BDX",
+    "name": "Becton, Dickinson and Company",
+    "sector": "Health technology",
+    "domain": "bd.com"
+  },
+  {
+    "symbol": "EW",
+    "name": "Edwards Lifesciences Corporation",
+    "sector": "Health technology",
+    "domain": "edwards.com"
+  },
+  {
+    "symbol": "MCK",
+    "name": "McKesson Corporation",
+    "sector": "Health technology",
+    "domain": "mckesson.com"
+  },
+  {
+    "symbol": "COR",
+    "name": "Cencora Inc.",
+    "sector": "Health technology",
+    "domain": "cencora.com"
+  },
+  {
+    "symbol": "CAH",
+    "name": "Cardinal Health Inc.",
+    "sector": "Health technology",
+    "domain": "cardinalhealth.com"
+  },
+  {
+    "symbol": "CVS",
+    "name": "CVS Health Corporation",
+    "sector": "Health technology",
+    "domain": "cvshealth.com"
+  },
+  {
+    "symbol": "IDXX",
+    "name": "IDEXX Laboratories Inc.",
+    "sector": "Health technology",
+    "domain": "idexx.com"
+  },
+  {
+    "symbol": "IQV",
+    "name": "IQVIA Holdings Inc.",
+    "sector": "Health technology",
+    "domain": "iqvia.com"
+  },
+  {
+    "symbol": "RMD",
+    "name": "ResMed Inc.",
+    "sector": "Health technology",
+    "domain": "resmed.com"
+  },
+  {
+    "symbol": "DXCM",
+    "name": "DexCom Inc.",
+    "sector": "Health technology",
+    "domain": "dexcom.com"
+  },
+  {
+    "symbol": "MTD",
+    "name": "Mettler-Toledo International Inc.",
+    "sector": "Health technology",
+    "domain": "mt.com"
+  },
+  {
+    "symbol": "A",
+    "name": "Agilent Technologies Inc.",
+    "sector": "Health technology",
+    "domain": "agilent.com"
+  },
+  {
+    "symbol": "BIIB",
+    "name": "Biogen Inc.",
+    "sector": "Health technology",
+    "domain": "biogen.com"
+  },
+  {
+    "symbol": "MRNA",
+    "name": "Moderna Inc.",
+    "sector": "Health technology",
+    "domain": "modernatx.com"
+  },
+  {
+    "symbol": "ILMN",
+    "name": "Illumina Inc.",
+    "sector": "Health technology",
+    "domain": "illumina.com"
+  },
+  {
+    "symbol": "ALNY",
+    "name": "Alnylam Pharmaceuticals Inc.",
+    "sector": "Health technology",
+    "domain": "alnylam.com"
+  },
+  {
+    "symbol": "CL",
+    "name": "Colgate-Palmolive Company",
+    "sector": "Consumer non-durables",
+    "domain": "colgatepalmolive.com"
+  },
+  {
+    "symbol": "KMB",
+    "name": "Kimberly-Clark Corporation",
+    "sector": "Consumer non-durables",
+    "domain": "kimberly-clark.com"
+  },
+  {
+    "symbol": "GIS",
+    "name": "General Mills Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "generalmills.com"
+  },
+  {
+    "symbol": "HSY",
+    "name": "The Hershey Company",
+    "sector": "Consumer non-durables",
+    "domain": "thehersheycompany.com"
+  },
+  {
+    "symbol": "STZ",
+    "name": "Constellation Brands Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "cbrands.com"
+  },
+  {
+    "symbol": "MNST",
+    "name": "Monster Beverage Corporation",
+    "sector": "Consumer non-durables",
+    "domain": "monsterbevcorp.com"
+  },
+  {
+    "symbol": "K",
+    "name": "Kellanova",
+    "sector": "Consumer non-durables",
+    "domain": "kellanova.com"
+  },
+  {
+    "symbol": "KHC",
+    "name": "The Kraft Heinz Company",
+    "sector": "Consumer non-durables",
+    "domain": "kraftheinzcompany.com"
+  },
+  {
+    "symbol": "NKE",
+    "name": "NIKE Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "nike.com"
+  },
+  {
+    "symbol": "EL",
+    "name": "The Estée Lauder Companies Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "elcompanies.com"
+  },
+  {
+    "symbol": "ADM",
+    "name": "Archer-Daniels-Midland Company",
+    "sector": "Consumer non-durables",
+    "domain": "adm.com"
+  },
+  {
+    "symbol": "TSN",
+    "name": "Tyson Foods Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "tysonfoods.com"
+  },
+  {
+    "symbol": "CAG",
+    "name": "Conagra Brands Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "conagrabrands.com"
+  },
+  {
+    "symbol": "SJM",
+    "name": "The J. M. Smucker Company",
+    "sector": "Consumer non-durables",
+    "domain": "jmsmucker.com"
+  },
+  {
+    "symbol": "ABNB",
+    "name": "Airbnb Inc.",
+    "sector": "Consumer services",
+    "domain": "airbnb.com"
+  },
+  {
+    "symbol": "MAR",
+    "name": "Marriott International Inc.",
+    "sector": "Consumer services",
+    "domain": "marriott.com"
+  },
+  {
+    "symbol": "HLT",
+    "name": "Hilton Worldwide Holdings Inc.",
+    "sector": "Consumer services",
+    "domain": "hilton.com"
+  },
+  {
+    "symbol": "CHTR",
+    "name": "Charter Communications Inc.",
+    "sector": "Consumer services",
+    "domain": "charter.com"
+  },
+  {
+    "symbol": "YUM",
+    "name": "Yum! Brands Inc.",
+    "sector": "Consumer services",
+    "domain": "yum.com"
+  },
+  {
+    "symbol": "CMG",
+    "name": "Chipotle Mexican Grill Inc.",
+    "sector": "Consumer services",
+    "domain": "chipotle.com"
+  },
+  {
+    "symbol": "LVS",
+    "name": "Las Vegas Sands Corp.",
+    "sector": "Consumer services",
+    "domain": "sands.com"
+  },
+  {
+    "symbol": "DRI",
+    "name": "Darden Restaurants Inc.",
+    "sector": "Consumer services",
+    "domain": "darden.com"
+  },
+  {
+    "symbol": "EXPE",
+    "name": "Expedia Group Inc.",
+    "sector": "Consumer services",
+    "domain": "expediagroup.com"
+  },
+  {
+    "symbol": "RCL",
+    "name": "Royal Caribbean Group",
+    "sector": "Consumer services",
+    "domain": "rclcorporate.com"
+  },
+  {
+    "symbol": "CCL",
+    "name": "Carnival Corporation & plc",
+    "sector": "Consumer services",
+    "domain": "carnivalcorp.com"
+  },
+  {
+    "symbol": "NCLH",
+    "name": "Norwegian Cruise Line Holdings",
+    "sector": "Consumer services",
+    "domain": "nclhltd.com"
+  },
+  {
+    "symbol": "WYNN",
+    "name": "Wynn Resorts Limited",
+    "sector": "Consumer services",
+    "domain": "wynnresorts.com"
+  },
+  {
+    "symbol": "MGM",
+    "name": "MGM Resorts International",
+    "sector": "Consumer services",
+    "domain": "mgmresorts.com"
+  },
+  {
+    "symbol": "DASH",
+    "name": "DoorDash Inc.",
+    "sector": "Consumer services",
+    "domain": "doordash.com"
+  },
+  {
+    "symbol": "SLB",
+    "name": "SLB (Schlumberger Limited)",
+    "sector": "Energy minerals",
+    "domain": "slb.com"
+  },
+  {
+    "symbol": "EOG",
+    "name": "EOG Resources Inc.",
+    "sector": "Energy minerals",
+    "domain": "eogresources.com"
+  },
+  {
+    "symbol": "MPC",
+    "name": "Marathon Petroleum Corporation",
+    "sector": "Energy minerals",
+    "domain": "marathonpetroleum.com"
+  },
+  {
+    "symbol": "PSX",
+    "name": "Phillips 66",
+    "sector": "Energy minerals",
+    "domain": "phillips66.com"
+  },
+  {
+    "symbol": "VLO",
+    "name": "Valero Energy Corporation",
+    "sector": "Energy minerals",
+    "domain": "valero.com"
+  },
+  {
+    "symbol": "OXY",
+    "name": "Occidental Petroleum Corporation",
+    "sector": "Energy minerals",
+    "domain": "oxy.com"
+  },
+  {
+    "symbol": "HES",
+    "name": "Hess Corporation",
+    "sector": "Energy minerals",
+    "domain": "hess.com"
+  },
+  {
+    "symbol": "KMI",
+    "name": "Kinder Morgan Inc.",
+    "sector": "Energy minerals",
+    "domain": "kindermorgan.com"
+  },
+  {
+    "symbol": "WMB",
+    "name": "The Williams Companies Inc.",
+    "sector": "Energy minerals",
+    "domain": "williams.com"
+  },
+  {
+    "symbol": "OKE",
+    "name": "ONEOK Inc.",
+    "sector": "Energy minerals",
+    "domain": "oneok.com"
+  },
+  {
+    "symbol": "HAL",
+    "name": "Halliburton Company",
+    "sector": "Energy minerals",
+    "domain": "halliburton.com"
+  },
+  {
+    "symbol": "BKR",
+    "name": "Baker Hughes Company",
+    "sector": "Energy minerals",
+    "domain": "bakerhughes.com"
+  },
+  {
+    "symbol": "DVN",
+    "name": "Devon Energy Corporation",
+    "sector": "Energy minerals",
+    "domain": "devonenergy.com"
+  },
+  {
+    "symbol": "FANG",
+    "name": "Diamondback Energy Inc.",
+    "sector": "Energy minerals",
+    "domain": "diamondbackenergy.com"
+  },
+  {
+    "symbol": "TRGP",
+    "name": "Targa Resources Corp.",
+    "sector": "Energy minerals",
+    "domain": "targaresources.com"
+  },
+  {
+    "symbol": "EQT",
+    "name": "EQT Corporation",
+    "sector": "Energy minerals",
+    "domain": "eqt.com"
+  },
+  {
+    "symbol": "ITW",
+    "name": "Illinois Tool Works Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "itw.com"
+  },
+  {
+    "symbol": "EMR",
+    "name": "Emerson Electric Co.",
+    "sector": "Producer manufacturing",
+    "domain": "emerson.com"
+  },
+  {
+    "symbol": "PH",
+    "name": "Parker-Hannifin Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "parker.com"
+  },
+  {
+    "symbol": "GD",
+    "name": "General Dynamics Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "gd.com"
+  },
+  {
+    "symbol": "NOC",
+    "name": "Northrop Grumman Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "northropgrumman.com"
+  },
+  {
+    "symbol": "TDG",
+    "name": "TransDigm Group Incorporated",
+    "sector": "Producer manufacturing",
+    "domain": "transdigm.com"
+  },
+  {
+    "symbol": "PCAR",
+    "name": "PACCAR Inc",
+    "sector": "Producer manufacturing",
+    "domain": "paccar.com"
+  },
+  {
+    "symbol": "CMI",
+    "name": "Cummins Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "cummins.com"
+  },
+  {
+    "symbol": "ROK",
+    "name": "Rockwell Automation Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "rockwellautomation.com"
+  },
+  {
+    "symbol": "AME",
+    "name": "AMETEK Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "ametek.com"
+  },
+  {
+    "symbol": "OTIS",
+    "name": "Otis Worldwide Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "otis.com"
+  },
+  {
+    "symbol": "CARR",
+    "name": "Carrier Global Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "carrier.com"
+  },
+  {
+    "symbol": "JCI",
+    "name": "Johnson Controls International",
+    "sector": "Producer manufacturing",
+    "domain": "johnsoncontrols.com"
+  },
+  {
+    "symbol": "TT",
+    "name": "Trane Technologies plc",
+    "sector": "Producer manufacturing",
+    "domain": "tranetechnologies.com"
+  },
+  {
+    "symbol": "HWM",
+    "name": "Howmet Aerospace Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "howmet.com"
+  },
+  {
+    "symbol": "IR",
+    "name": "Ingersoll Rand Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "ingersollrand.com"
+  },
+  {
+    "symbol": "XYL",
+    "name": "Xylem Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "xylem.com"
+  },
+  {
+    "symbol": "FAST",
+    "name": "Fastenal Company",
+    "sector": "Producer manufacturing",
+    "domain": "fastenal.com"
+  },
+  {
+    "symbol": "GWW",
+    "name": "W.W. Grainger Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "grainger.com"
+  },
+  {
+    "symbol": "SWK",
+    "name": "Stanley Black & Decker Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "stanleyblackanddecker.com"
+  },
+  {
+    "symbol": "SRE",
+    "name": "Sempra",
+    "sector": "Utilities",
+    "domain": "sempra.com"
+  },
+  {
+    "symbol": "AEP",
+    "name": "American Electric Power Company",
+    "sector": "Utilities",
+    "domain": "aep.com"
+  },
+  {
+    "symbol": "D",
+    "name": "Dominion Energy Inc.",
+    "sector": "Utilities",
+    "domain": "dominionenergy.com"
+  },
+  {
+    "symbol": "PEG",
+    "name": "Public Service Enterprise Group",
+    "sector": "Utilities",
+    "domain": "pseg.com"
+  },
+  {
+    "symbol": "EXC",
+    "name": "Exelon Corporation",
+    "sector": "Utilities",
+    "domain": "exeloncorp.com"
+  },
+  {
+    "symbol": "XEL",
+    "name": "Xcel Energy Inc.",
+    "sector": "Utilities",
+    "domain": "xcelenergy.com"
+  },
+  {
+    "symbol": "ED",
+    "name": "Consolidated Edison Inc.",
+    "sector": "Utilities",
+    "domain": "conedison.com"
+  },
+  {
+    "symbol": "CEG",
+    "name": "Constellation Energy Corporation",
+    "sector": "Utilities",
+    "domain": "constellationenergy.com"
+  },
+  {
+    "symbol": "VST",
+    "name": "Vistra Corp.",
+    "sector": "Utilities",
+    "domain": "vistracorp.com"
+  },
+  {
+    "symbol": "WEC",
+    "name": "WEC Energy Group Inc.",
+    "sector": "Utilities",
+    "domain": "wecenergygroup.com"
+  },
+  {
+    "symbol": "ES",
+    "name": "Eversource Energy",
+    "sector": "Utilities",
+    "domain": "eversource.com"
+  },
+  {
+    "symbol": "AWK",
+    "name": "American Water Works Company",
+    "sector": "Utilities",
+    "domain": "amwater.com"
+  },
+  {
+    "symbol": "DTE",
+    "name": "DTE Energy Company",
+    "sector": "Utilities",
+    "domain": "dteenergy.com"
+  },
+  {
+    "symbol": "FE",
+    "name": "FirstEnergy Corp.",
+    "sector": "Utilities",
+    "domain": "firstenergycorp.com"
+  },
+  {
+    "symbol": "PPL",
+    "name": "PPL Corporation",
+    "sector": "Utilities",
+    "domain": "pplweb.com"
+  },
+  {
+    "symbol": "AEE",
+    "name": "Ameren Corporation",
+    "sector": "Utilities",
+    "domain": "ameren.com"
+  },
+  {
+    "symbol": "CMS",
+    "name": "CMS Energy Corporation",
+    "sector": "Utilities",
+    "domain": "cmsenergy.com"
+  },
+  {
+    "symbol": "FCX",
+    "name": "Freeport-McMoRan Inc.",
+    "sector": "Non-energy minerals",
+    "domain": "fcx.com"
+  },
+  {
+    "symbol": "NEM",
+    "name": "Newmont Corporation",
+    "sector": "Non-energy minerals",
+    "domain": "newmont.com"
+  },
+  {
+    "symbol": "APD",
+    "name": "Air Products and Chemicals Inc.",
+    "sector": "Non-energy minerals",
+    "domain": "airproducts.com"
+  },
+  {
+    "symbol": "SHW",
+    "name": "The Sherwin-Williams Company",
+    "sector": "Non-energy minerals",
+    "domain": "sherwin-williams.com"
+  },
+  {
+    "symbol": "ECL",
+    "name": "Ecolab Inc.",
+    "sector": "Non-energy minerals",
+    "domain": "ecolab.com"
+  },
+  {
+    "symbol": "CTVA",
+    "name": "Corteva Inc.",
+    "sector": "Non-energy minerals",
+    "domain": "corteva.com"
+  },
+  {
+    "symbol": "DOW",
+    "name": "Dow Inc.",
+    "sector": "Non-energy minerals",
+    "domain": "dow.com"
+  },
+  {
+    "symbol": "NUE",
+    "name": "Nucor Corporation",
+    "sector": "Non-energy minerals",
+    "domain": "nucor.com"
+  },
+  {
+    "symbol": "PPG",
+    "name": "PPG Industries Inc.",
+    "sector": "Non-energy minerals",
+    "domain": "ppg.com"
+  },
+  {
+    "symbol": "ALB",
+    "name": "Albemarle Corporation",
+    "sector": "Non-energy minerals",
+    "domain": "albemarle.com"
+  },
+  {
+    "symbol": "FMC",
+    "name": "FMC Corporation",
+    "sector": "Non-energy minerals",
+    "domain": "fmc.com"
+  },
+  {
+    "symbol": "IP",
+    "name": "International Paper Company",
+    "sector": "Non-energy minerals",
+    "domain": "internationalpaper.com"
+  },
+  {
+    "symbol": "PKG",
+    "name": "Packaging Corporation of America",
+    "sector": "Non-energy minerals",
+    "domain": "packagingcorp.com"
+  },
+  {
+    "symbol": "VMC",
+    "name": "Vulcan Materials Company",
+    "sector": "Non-energy minerals",
+    "domain": "vulcanmaterials.com"
+  },
+  {
+    "symbol": "MLM",
+    "name": "Martin Marietta Materials Inc.",
+    "sector": "Non-energy minerals",
+    "domain": "martinmarietta.com"
+  },
+  {
+    "symbol": "CF",
+    "name": "CF Industries Holdings Inc.",
+    "sector": "Non-energy minerals",
+    "domain": "cfindustries.com"
+  },
+  {
+    "symbol": "MOS",
+    "name": "The Mosaic Company",
+    "sector": "Non-energy minerals",
+    "domain": "mosaicco.com"
+  },
+  {
+    "symbol": "BALL",
+    "name": "Ball Corporation",
+    "sector": "Non-energy minerals",
+    "domain": "ball.com"
+  },
+  {
+    "symbol": "AMCR",
+    "name": "Amcor plc",
+    "sector": "Non-energy minerals",
+    "domain": "amcor.com"
+  },
+  {
+    "symbol": "FDX",
+    "name": "FedEx Corporation",
+    "sector": "Transportation",
+    "domain": "fedex.com"
+  },
+  {
+    "symbol": "CSX",
+    "name": "CSX Corporation",
+    "sector": "Transportation",
+    "domain": "csx.com"
+  },
+  {
+    "symbol": "NSC",
+    "name": "Norfolk Southern Corporation",
+    "sector": "Transportation",
+    "domain": "nscorp.com"
+  },
+  {
+    "symbol": "DAL",
+    "name": "Delta Air Lines Inc.",
+    "sector": "Transportation",
+    "domain": "delta.com"
+  },
+  {
+    "symbol": "UAL",
+    "name": "United Airlines Holdings Inc.",
+    "sector": "Transportation",
+    "domain": "united.com"
+  },
+  {
+    "symbol": "LUV",
+    "name": "Southwest Airlines Co.",
+    "sector": "Transportation",
+    "domain": "southwest.com"
+  },
+  {
+    "symbol": "ODFL",
+    "name": "Old Dominion Freight Line Inc.",
+    "sector": "Transportation",
+    "domain": "odfl.com"
+  },
+  {
+    "symbol": "JBHT",
+    "name": "J.B. Hunt Transport Services Inc.",
+    "sector": "Transportation",
+    "domain": "jbhunt.com"
+  },
+  {
+    "symbol": "EXPD",
+    "name": "Expeditors International of Washington",
+    "sector": "Transportation",
+    "domain": "expeditors.com"
+  },
+  {
+    "symbol": "CHRW",
+    "name": "C.H. Robinson Worldwide Inc.",
+    "sector": "Transportation",
+    "domain": "chrobinson.com"
+  },
+  {
+    "symbol": "VZ",
+    "name": "Verizon Communications Inc.",
+    "sector": "Communications",
+    "domain": "verizon.com"
+  },
+  {
+    "symbol": "TMUS",
+    "name": "T-Mobile US Inc.",
+    "sector": "Communications",
+    "domain": "t-mobile.com"
+  },
+  {
+    "symbol": "PLD",
+    "name": "Prologis Inc.",
+    "sector": "Real estate",
+    "domain": "prologis.com"
+  },
+  {
+    "symbol": "AMT",
+    "name": "American Tower Corporation",
+    "sector": "Real estate",
+    "domain": "americantower.com"
+  },
+  {
+    "symbol": "EQIX",
+    "name": "Equinix Inc.",
+    "sector": "Real estate",
+    "domain": "equinix.com"
+  },
+  {
+    "symbol": "PSA",
+    "name": "Public Storage",
+    "sector": "Real estate",
+    "domain": "publicstorage.com"
+  },
+  {
+    "symbol": "CCI",
+    "name": "Crown Castle Inc.",
+    "sector": "Real estate",
+    "domain": "crowncastle.com"
+  },
+  {
+    "symbol": "SPG",
+    "name": "Simon Property Group Inc.",
+    "sector": "Real estate",
+    "domain": "simon.com"
+  },
+  {
+    "symbol": "WELL",
+    "name": "Welltower Inc.",
+    "sector": "Real estate",
+    "domain": "welltower.com"
+  },
+  {
+    "symbol": "DLR",
+    "name": "Digital Realty Trust Inc.",
+    "sector": "Real estate",
+    "domain": "digitalrealty.com"
+  },
+  {
+    "symbol": "O",
+    "name": "Realty Income Corporation",
+    "sector": "Real estate",
+    "domain": "realtyincome.com"
+  },
+  {
+    "symbol": "SBAC",
+    "name": "SBA Communications Corp.",
+    "sector": "Real estate",
+    "domain": "sbasite.com"
+  },
+  {
+    "symbol": "CBRE",
+    "name": "CBRE Group Inc.",
+    "sector": "Real estate",
+    "domain": "cbre.com"
+  },
+  {
+    "symbol": "WY",
+    "name": "Weyerhaeuser Company",
+    "sector": "Real estate",
+    "domain": "weyerhaeuser.com"
+  },
+  {
+    "symbol": "AVB",
+    "name": "AvalonBay Communities Inc.",
+    "sector": "Real estate",
+    "domain": "avalonbay.com"
+  },
+  {
+    "symbol": "EQR",
+    "name": "Equity Residential",
+    "sector": "Real estate",
+    "domain": "equityapartments.com"
+  },
+  {
+    "symbol": "VICI",
+    "name": "VICI Properties Inc.",
+    "sector": "Real estate",
+    "domain": "vici.com"
+  },
+  {
+    "symbol": "EXR",
+    "name": "Extra Space Storage Inc.",
+    "sector": "Real estate",
+    "domain": "extraspace.com"
+  },
+  {
+    "symbol": "INVH",
+    "name": "Invitation Homes Inc.",
+    "sector": "Real estate",
+    "domain": "invitationhomes.com"
+  },
+  {
+    "symbol": "MAA",
+    "name": "Mid-America Apartment Communities",
+    "sector": "Real estate",
+    "domain": "maac.com"
+  },
+  {
+    "symbol": "ESS",
+    "name": "Essex Property Trust Inc.",
+    "sector": "Real estate",
+    "domain": "essexapartmenthomes.com"
+  },
+  {
+    "symbol": "UDR",
+    "name": "UDR Inc.",
+    "sector": "Real estate",
+    "domain": "udr.com"
+  },
+  {
+    "symbol": "WM",
+    "name": "Waste Management Inc.",
+    "sector": "Commercial services",
+    "domain": "wm.com"
+  },
+  {
+    "symbol": "RSG",
+    "name": "Republic Services Inc.",
+    "sector": "Commercial services",
+    "domain": "republicservices.com"
+  },
+  {
+    "symbol": "CTAS",
+    "name": "Cintas Corporation",
+    "sector": "Commercial services",
+    "domain": "cintas.com"
+  },
+  {
+    "symbol": "PAYX",
+    "name": "Paychex Inc.",
+    "sector": "Commercial services",
+    "domain": "paychex.com"
+  },
+  {
+    "symbol": "VRSK",
+    "name": "Verisk Analytics Inc.",
+    "sector": "Commercial services",
+    "domain": "verisk.com"
+  },
+  {
+    "symbol": "CPRT",
+    "name": "Copart Inc.",
+    "sector": "Commercial services",
+    "domain": "copart.com"
+  },
+  {
+    "symbol": "EFX",
+    "name": "Equifax Inc.",
+    "sector": "Commercial services",
+    "domain": "equifax.com"
+  },
+  {
+    "symbol": "URI",
+    "name": "United Rentals Inc.",
+    "sector": "Commercial services",
+    "domain": "unitedrentals.com"
+  },
+  {
+    "symbol": "GFL",
+    "name": "GFL Environmental Inc.",
+    "sector": "Commercial services",
+    "domain": "gflenv.com"
+  },
+  {
+    "symbol": "ACGL",
+    "name": "Arch Capital Group Ltd.",
+    "sector": "Finance",
+    "domain": "archgroup.com"
+  },
+  {
+    "symbol": "AES",
+    "name": "The AES Corporation",
+    "sector": "Utilities",
+    "domain": "aes.com"
+  },
+  {
+    "symbol": "AIZ",
+    "name": "Assurant Inc.",
+    "sector": "Finance",
+    "domain": "assurant.com"
+  },
+  {
+    "symbol": "ALLE",
+    "name": "Allegion plc",
+    "sector": "Producer manufacturing",
+    "domain": "allegion.com"
+  },
+  {
+    "symbol": "AOS",
+    "name": "A. O. Smith Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "aosmith.com"
+  },
+  {
+    "symbol": "APA",
+    "name": "APA Corporation",
+    "sector": "Energy minerals",
+    "domain": "apacorp.com"
+  },
+  {
+    "symbol": "ARE",
+    "name": "Alexandria Real Estate Equities",
+    "sector": "Real estate",
+    "domain": "are.com"
+  },
+  {
+    "symbol": "ATO",
+    "name": "Atmos Energy Corporation",
+    "sector": "Utilities",
+    "domain": "atmosenergy.com"
+  },
+  {
+    "symbol": "BBWI",
+    "name": "Bath & Body Works Inc.",
+    "sector": "Retail trade",
+    "domain": "bbwinc.com"
+  },
+  {
+    "symbol": "BG",
+    "name": "Bunge Global SA",
+    "sector": "Consumer non-durables",
+    "domain": "bunge.com"
+  },
+  {
+    "symbol": "BXP",
+    "name": "BXP Inc.",
+    "sector": "Real estate",
+    "domain": "bxp.com"
+  },
+  {
+    "symbol": "CDW",
+    "name": "CDW Corporation",
+    "sector": "Technology services",
+    "domain": "cdw.com"
+  },
+  {
+    "symbol": "CE",
+    "name": "Celanese Corporation",
+    "sector": "Non-energy minerals",
+    "domain": "celanese.com"
+  },
+  {
+    "symbol": "CFG",
+    "name": "Citizens Financial Group",
+    "sector": "Finance",
+    "domain": "citizensbank.com"
+  },
+  {
+    "symbol": "CINF",
+    "name": "Cincinnati Financial Corp.",
+    "sector": "Finance",
+    "domain": "cinfin.com"
+  },
+  {
+    "symbol": "CLX",
+    "name": "The Clorox Company",
+    "sector": "Consumer non-durables",
+    "domain": "thecloroxcompany.com"
+  },
+  {
+    "symbol": "CMA",
+    "name": "Comerica Incorporated",
+    "sector": "Finance",
+    "domain": "comerica.com"
+  },
+  {
+    "symbol": "CNP",
+    "name": "CenterPoint Energy Inc.",
+    "sector": "Utilities",
+    "domain": "centerpointenergy.com"
+  },
+  {
+    "symbol": "COO",
+    "name": "The Cooper Companies Inc.",
+    "sector": "Health technology",
+    "domain": "coopercos.com"
+  },
+  {
+    "symbol": "CPB",
+    "name": "Campbell Soup Company",
+    "sector": "Consumer non-durables",
+    "domain": "campbellsoupcompany.com"
+  },
+  {
+    "symbol": "CPT",
+    "name": "Camden Property Trust",
+    "sector": "Real estate",
+    "domain": "camdenliving.com"
+  },
+  {
+    "symbol": "CRL",
+    "name": "Charles River Laboratories",
+    "sector": "Health technology",
+    "domain": "criver.com"
+  },
+  {
+    "symbol": "CTLT",
+    "name": "Catalent Inc.",
+    "sector": "Health technology",
+    "domain": "catalent.com"
+  },
+  {
+    "symbol": "CZR",
+    "name": "Caesars Entertainment Inc.",
+    "sector": "Consumer services",
+    "domain": "caesars.com"
+  },
+  {
+    "symbol": "DAY",
+    "name": "Dayforce Inc.",
+    "sector": "Technology services",
+    "domain": "dayforce.com"
+  },
+  {
+    "symbol": "DGX",
+    "name": "Quest Diagnostics Inc.",
+    "sector": "Health services",
+    "domain": "questdiagnostics.com"
+  },
+  {
+    "symbol": "DHI",
+    "name": "D.R. Horton Inc.",
+    "sector": "Consumer services",
+    "domain": "drhorton.com"
+  },
+  {
+    "symbol": "DOV",
+    "name": "Dover Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "dovercorporation.com"
+  },
+  {
+    "symbol": "DPZ",
+    "name": "Domino's Pizza Inc.",
+    "sector": "Consumer services",
+    "domain": "dominos.com"
+  },
+  {
+    "symbol": "EG",
+    "name": "Everest Group Ltd.",
+    "sector": "Finance",
+    "domain": "everestglobal.com"
+  },
+  {
+    "symbol": "EMN",
+    "name": "Eastman Chemical Company",
+    "sector": "Non-energy minerals",
+    "domain": "eastman.com"
+  },
+  {
+    "symbol": "EIX",
+    "name": "Edison International",
+    "sector": "Utilities",
+    "domain": "edison.com"
+  },
+  {
+    "symbol": "ERIE",
+    "name": "Erie Indemnity Company",
+    "sector": "Finance",
+    "domain": "erieinsurance.com"
+  },
+  {
+    "symbol": "EVRG",
+    "name": "Evergy Inc.",
+    "sector": "Utilities",
+    "domain": "evergy.com"
+  },
+  {
+    "symbol": "F",
+    "name": "Ford Motor Company",
+    "sector": "Consumer services",
+    "domain": "ford.com"
+  },
+  {
+    "symbol": "FITB",
+    "name": "Fifth Third Bancorp",
+    "sector": "Finance",
+    "domain": "53.com"
+  },
+  {
+    "symbol": "FOXA",
+    "name": "Fox Corporation Class A",
+    "sector": "Consumer services",
+    "domain": "foxcorporation.com"
+  },
+  {
+    "symbol": "FOX",
+    "name": "Fox Corporation Class B",
+    "sector": "Consumer services",
+    "domain": "foxcorporation.com"
+  },
+  {
+    "symbol": "FRT",
+    "name": "Federal Realty Investment Trust",
+    "sector": "Real estate",
+    "domain": "federalrealty.com"
+  },
+  {
+    "symbol": "FSLR",
+    "name": "First Solar Inc.",
+    "sector": "Electronic technology",
+    "domain": "firstsolar.com"
+  },
+  {
+    "symbol": "GL",
+    "name": "Globe Life Inc.",
+    "sector": "Finance",
+    "domain": "globelifeinsurance.com"
+  },
+  {
+    "symbol": "GM",
+    "name": "General Motors Company",
+    "sector": "Consumer services",
+    "domain": "gm.com"
+  },
+  {
+    "symbol": "GNRC",
+    "name": "Generac Holdings Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "generac.com"
+  },
+  {
+    "symbol": "GRMN",
+    "name": "Garmin Ltd.",
+    "sector": "Electronic technology",
+    "domain": "garmin.com"
+  },
+  {
+    "symbol": "HAS",
+    "name": "Hasbro Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "hasbro.com"
+  },
+  {
+    "symbol": "HBAN",
+    "name": "Huntington Bancshares Inc.",
+    "sector": "Finance",
+    "domain": "huntington.com"
+  },
+  {
+    "symbol": "HIG",
+    "name": "The Hartford Financial Services Group",
+    "sector": "Finance",
+    "domain": "thehartford.com"
+  },
+  {
+    "symbol": "HII",
+    "name": "Huntington Ingalls Industries",
+    "sector": "Producer manufacturing",
+    "domain": "hii.com"
+  },
+  {
+    "symbol": "HOLX",
+    "name": "Hologic Inc.",
+    "sector": "Health technology",
+    "domain": "hologic.com"
+  },
+  {
+    "symbol": "HPE",
+    "name": "Hewlett Packard Enterprise Co.",
+    "sector": "Electronic technology",
+    "domain": "hpe.com"
+  },
+  {
+    "symbol": "HPQ",
+    "name": "HP Inc.",
+    "sector": "Electronic technology",
+    "domain": "hp.com"
+  },
+  {
+    "symbol": "HRL",
+    "name": "Hormel Foods Corporation",
+    "sector": "Consumer non-durables",
+    "domain": "hormelfoods.com"
+  },
+  {
+    "symbol": "HST",
+    "name": "Host Hotels & Resorts Inc.",
+    "sector": "Real estate",
+    "domain": "hosthotels.com"
+  },
+  {
+    "symbol": "HUBB",
+    "name": "Hubbell Incorporated",
+    "sector": "Producer manufacturing",
+    "domain": "hubbell.com"
+  },
+  {
+    "symbol": "INCY",
+    "name": "Incyte Corporation",
+    "sector": "Health technology",
+    "domain": "incyte.com"
+  },
+  {
+    "symbol": "IPG",
+    "name": "The Interpublic Group of Companies",
+    "sector": "Commercial services",
+    "domain": "interpublic.com"
+  },
+  {
+    "symbol": "IRM",
+    "name": "Iron Mountain Incorporated",
+    "sector": "Real estate",
+    "domain": "ironmountain.com"
+  },
+  {
+    "symbol": "JKHY",
+    "name": "Jack Henry & Associates Inc.",
+    "sector": "Technology services",
+    "domain": "jackhenry.com"
+  },
+  {
+    "symbol": "JNPR",
+    "name": "Juniper Networks Inc.",
+    "sector": "Electronic technology",
+    "domain": "juniper.net"
+  },
+  {
+    "symbol": "KDP",
+    "name": "Keurig Dr Pepper Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "keurigdrpepper.com"
+  },
+  {
+    "symbol": "KEY",
+    "name": "KeyCorp",
+    "sector": "Finance",
+    "domain": "key.com"
+  },
+  {
+    "symbol": "KEYS",
+    "name": "Keysight Technologies Inc.",
+    "sector": "Electronic technology",
+    "domain": "keysight.com"
+  },
+  {
+    "symbol": "KIM",
+    "name": "Kimco Realty Corporation",
+    "sector": "Real estate",
+    "domain": "kimcorealty.com"
+  },
+  {
+    "symbol": "KKR",
+    "name": "KKR & Co. Inc.",
+    "sector": "Finance",
+    "domain": "kkr.com"
+  },
+  {
+    "symbol": "KR",
+    "name": "The Kroger Co.",
+    "sector": "Retail trade",
+    "domain": "thekrogerco.com"
+  },
+  {
+    "symbol": "KVUE",
+    "name": "Kenvue Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "kenvue.com"
+  },
+  {
+    "symbol": "LEN",
+    "name": "Lennar Corporation",
+    "sector": "Consumer services",
+    "domain": "lennar.com"
+  },
+  {
+    "symbol": "LH",
+    "name": "Laboratory Corporation of America",
+    "sector": "Health services",
+    "domain": "labcorp.com"
+  },
+  {
+    "symbol": "LHX",
+    "name": "L3Harris Technologies Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "l3harris.com"
+  },
+  {
+    "symbol": "LKQ",
+    "name": "LKQ Corporation",
+    "sector": "Retail trade",
+    "domain": "lkqcorp.com"
+  },
+  {
+    "symbol": "LNT",
+    "name": "Alliant Energy Corporation",
+    "sector": "Utilities",
+    "domain": "alliantenergy.com"
+  },
+  {
+    "symbol": "LULU",
+    "name": "Lululemon Athletica Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "lululemon.com"
+  },
+  {
+    "symbol": "LYB",
+    "name": "LyondellBasell Industries N.V.",
+    "sector": "Non-energy minerals",
+    "domain": "lyondellbasell.com"
+  },
+  {
+    "symbol": "LYV",
+    "name": "Live Nation Entertainment Inc.",
+    "sector": "Consumer services",
+    "domain": "livenationentertainment.com"
+  },
+  {
+    "symbol": "MAS",
+    "name": "Masco Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "masco.com"
+  },
+  {
+    "symbol": "MHK",
+    "name": "Mohawk Industries Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "mohawkind.com"
+  },
+  {
+    "symbol": "MKC",
+    "name": "McCormick & Company Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "mccormickcorporation.com"
+  },
+  {
+    "symbol": "MKTX",
+    "name": "MarketAxess Holdings Inc.",
+    "sector": "Finance",
+    "domain": "marketaxess.com"
+  },
+  {
+    "symbol": "MOH",
+    "name": "Molina Healthcare Inc.",
+    "sector": "Health services",
+    "domain": "molinahealthcare.com"
+  },
+  {
+    "symbol": "MSI",
+    "name": "Motorola Solutions Inc.",
+    "sector": "Electronic technology",
+    "domain": "motorolasolutions.com"
+  },
+  {
+    "symbol": "MTB",
+    "name": "M&T Bank Corporation",
+    "sector": "Finance",
+    "domain": "mtb.com"
+  },
+  {
+    "symbol": "MTCH",
+    "name": "Match Group Inc.",
+    "sector": "Technology services",
+    "domain": "mtch.com"
+  },
+  {
+    "symbol": "NDSN",
+    "name": "Nordson Corporation",
+    "sector": "Producer manufacturing",
+    "domain": "nordson.com"
+  },
+  {
+    "symbol": "NI",
+    "name": "NiSource Inc.",
+    "sector": "Utilities",
+    "domain": "nisource.com"
+  },
+  {
+    "symbol": "NRG",
+    "name": "NRG Energy Inc.",
+    "sector": "Utilities",
+    "domain": "nrg.com"
+  },
+  {
+    "symbol": "NVR",
+    "name": "NVR Inc.",
+    "sector": "Consumer services",
+    "domain": "nvrinc.com"
+  },
+  {
+    "symbol": "NWL",
+    "name": "Newell Brands Inc.",
+    "sector": "Consumer non-durables",
+    "domain": "newellbrands.com"
+  },
+  {
+    "symbol": "NWS",
+    "name": "News Corporation Class B",
+    "sector": "Consumer services",
+    "domain": "newscorp.com"
+  },
+  {
+    "symbol": "NWSA",
+    "name": "News Corporation Class A",
+    "sector": "Consumer services",
+    "domain": "newscorp.com"
+  },
+  {
+    "symbol": "OMC",
+    "name": "Omnicom Group Inc.",
+    "sector": "Commercial services",
+    "domain": "omnicomgroup.com"
+  },
+  {
+    "symbol": "PARA",
+    "name": "Paramount Global",
+    "sector": "Consumer services",
+    "domain": "paramount.com"
+  },
+  {
+    "symbol": "PAYC",
+    "name": "Paycom Software Inc.",
+    "sector": "Technology services",
+    "domain": "paycom.com"
+  },
+  {
+    "symbol": "PCG",
+    "name": "PG&E Corporation",
+    "sector": "Utilities",
+    "domain": "pgecorp.com"
+  },
+  {
+    "symbol": "PFG",
+    "name": "Principal Financial Group",
+    "sector": "Finance",
+    "domain": "principal.com"
+  },
+  {
+    "symbol": "PHM",
+    "name": "PulteGroup Inc.",
+    "sector": "Consumer services",
+    "domain": "pultegroup.com"
+  },
+  {
+    "symbol": "POOL",
+    "name": "Pool Corporation",
+    "sector": "Retail trade",
+    "domain": "poolcorp.com"
+  },
+  {
+    "symbol": "PWR",
+    "name": "Quanta Services Inc.",
+    "sector": "Producer manufacturing",
+    "domain": "quantaservices.com"
+  },
+  {
+    "symbol": "REG",
+    "name": "Regency Centers Corporation",
+    "sector": "Real estate",
+    "domain": "regencycenters.com"
+  },
+  {
+    "symbol": "RF",
+    "name": "Regions Financial Corp.",
+    "sector": "Finance",
+    "domain": "regions.com"
+  },
+  {
+    "symbol": "RL",
+    "name": "Ralph Lauren Corporation",
+    "sector": "Consumer non-durables",
+    "domain": "ralphlauren.com"
+  },
+  {
+    "symbol": "ROL",
+    "name": "Rollins Inc.",
+    "sector": "Commercial services",
+    "domain": "rollins.com"
+  },
+  {
+    "symbol": "SEDG",
+    "name": "SolarEdge Technologies",
+    "sector": "Electronic technology",
+    "domain": "solaredge.com"
+  },
+  {
+    "symbol": "SEE",
+    "name": "Sealed Air Corporation",
+    "sector": "Non-energy minerals",
+    "domain": "sealedair.com"
+  },
+  {
+    "symbol": "SNA",
+    "name": "Snap-on Incorporated",
+    "sector": "Producer manufacturing",
+    "domain": "snapon.com"
+  },
+  {
+    "symbol": "STE",
+    "name": "STERIS plc",
+    "sector": "Health technology",
+    "domain": "steris.com"
+  },
+  {
+    "symbol": "STLD",
+    "name": "Steel Dynamics Inc.",
+    "sector": "Non-energy minerals",
+    "domain": "steeldynamics.com"
+  },
+  {
+    "symbol": "STT",
+    "name": "State Street Corporation",
+    "sector": "Finance",
+    "domain": "statestreet.com"
+  },
+  {
+    "symbol": "SYF",
+    "name": "Synchrony Financial",
+    "sector": "Finance",
+    "domain": "synchrony.com"
+  },
+  {
+    "symbol": "TAP",
+    "name": "Molson Coors Beverage Co.",
+    "sector": "Consumer non-durables",
+    "domain": "molsoncoors.com"
+  },
+  {
+    "symbol": "TDY",
+    "name": "Teledyne Technologies Inc.",
+    "sector": "Electronic technology",
+    "domain": "teledyne.com"
+  },
+  {
+    "symbol": "TECH",
+    "name": "Bio-Techne Corporation",
+    "sector": "Health technology",
+    "domain": "bio-techne.com"
+  },
+  {
+    "symbol": "TFX",
+    "name": "Teleflex Incorporated",
+    "sector": "Health technology",
+    "domain": "teleflex.com"
+  },
+  {
+    "symbol": "TROW",
+    "name": "T. Rowe Price Group Inc.",
+    "sector": "Finance",
+    "domain": "troweprice.com"
+  },
+  {
+    "symbol": "TTWO",
+    "name": "Take-Two Interactive Software",
+    "sector": "Technology services",
+    "domain": "take2games.com"
+  },
+  {
+    "symbol": "UHS",
+    "name": "Universal Health Services",
+    "sector": "Health services",
+    "domain": "uhs.com"
+  },
+  {
+    "symbol": "VFC",
+    "name": "V.F. Corporation",
+    "sector": "Consumer non-durables",
+    "domain": "vfc.com"
+  },
+  {
+    "symbol": "VTR",
+    "name": "Ventas Inc.",
+    "sector": "Real estate",
+    "domain": "ventasreit.com"
+  },
+  {
+    "symbol": "WAB",
+    "name": "Westinghouse Air Brake Technologies",
+    "sector": "Producer manufacturing",
+    "domain": "wabteccorp.com"
+  },
+  {
+    "symbol": "WAT",
+    "name": "Waters Corporation",
+    "sector": "Health technology",
+    "domain": "waters.com"
+  },
+  {
+    "symbol": "WHR",
+    "name": "Whirlpool Corporation",
+    "sector": "Consumer non-durables",
+    "domain": "whirlpoolcorp.com"
+  },
+  {
+    "symbol": "WRB",
+    "name": "W. R. Berkley Corporation",
+    "sector": "Finance",
+    "domain": "berkley.com"
+  },
+  {
+    "symbol": "WST",
+    "name": "West Pharmaceutical Services",
+    "sector": "Health technology",
+    "domain": "westpharma.com"
+  },
+  {
+    "symbol": "WTW",
+    "name": "Willis Towers Watson",
+    "sector": "Finance",
+    "domain": "wtwco.com"
+  },
+  {
+    "symbol": "ZBH",
+    "name": "Zimmer Biomet Holdings Inc.",
+    "sector": "Health technology",
+    "domain": "zimmerbiomet.com"
+  },
+  {
+    "symbol": "ZBRA",
+    "name": "Zebra Technologies Corporation",
+    "sector": "Electronic technology",
+    "domain": "zebra.com"
+  }
+]

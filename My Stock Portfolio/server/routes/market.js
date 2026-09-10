@@ -18,16 +18,45 @@ marketRoutes.use('*', authMiddleware);
 
 // In-memory cache for heatmap data
 const heatmapCaches = new Map();
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL
+
+// Scope-specific TTLs
+const SCOPE_TTLS = {
+  sp100: 120 * 1000,     // 2 minutes
+  sp500: 180 * 1000,     // 3 minutes
+  nasdaq100: 60 * 1000,  // 1 minute
+  watchlist: 30 * 1000,  // 30 seconds
+  default: 60 * 1000
+};
 
 /**
- * Load S&P Top 50 constituents from JSON
+ * Load constituents based on scope
  */
-function getTop50Constituents() {
-  const jsonPath = path.join(__dirname, '../data/sp500_top50.json');
+function getConstituentsForScope(scope) {
+  let filename = 'sp500_top100.json';
+  if (scope === 'sp500') {
+    filename = 'sp500_full.json';
+  } else if (scope === 'nasdaq100') {
+    filename = 'nasdaq100.json';
+  } else if (scope === 'sp100' || scope === 'top50') {
+    filename = 'sp500_top100.json';
+  }
+
+  const jsonPath = path.join(__dirname, `../data/${filename}`);
   if (fs.existsSync(jsonPath)) {
-    const raw = fs.readFileSync(jsonPath, 'utf8');
-    return JSON.parse(raw);
+    try {
+      const raw = fs.readFileSync(jsonPath, 'utf8');
+      return JSON.parse(raw);
+    } catch (err) {
+      console.error(`[marketRoutes] Failed to parse ${filename}:`, err);
+    }
+  }
+
+  // Fallback to top50 legacy if top100 not found
+  const legacyPath = path.join(__dirname, '../data/sp500_top50.json');
+  if (fs.existsSync(legacyPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(legacyPath, 'utf8'));
+    } catch {}
   }
   return [];
 }
@@ -54,35 +83,81 @@ function getWatchlistSymbols() {
 }
 
 /**
- * GET /api/market/heatmap?scope=top50|watchlist
+ * Determine US market state (REGULAR, PRE, POST, CLOSED)
+ */
+function determineMarketState(sampleQuote) {
+  if (sampleQuote?.marketState) {
+    return sampleQuote.marketState;
+  }
+  // Calculate from current ET time
+  const now = new Date();
+  const etStr = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
+  const etDate = new Date(etStr);
+  const day = etDate.getDay(); // 0 = Sun, 6 = Sat
+  if (day === 0 || day === 6) return 'CLOSED';
+
+  const hours = etDate.getHours();
+  const minutes = etDate.getMinutes();
+  const totalMins = hours * 60 + minutes;
+
+  if (totalMins >= 4 * 60 && totalMins < 9 * 60 + 30) return 'PRE';
+  if (totalMins >= 9 * 60 + 30 && totalMins < 16 * 60) return 'REGULAR';
+  if (totalMins >= 16 * 60 && totalMins < 20 * 60) return 'POST';
+  return 'CLOSED';
+}
+
+/**
+ * Split array into chunks
+ */
+function chunkArray(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * GET /api/market/heatmap?scope=sp100|sp500|nasdaq100|watchlist
  */
 marketRoutes.get('/heatmap', async (c) => {
-  const scope = (c.req.query('scope') || 'top50').toLowerCase();
+  let scope = (c.req.query('scope') || 'sp100').toLowerCase();
+  // Normalize legacy scope 'top50' to 'sp100'
+  if (scope === 'top50') scope = 'sp100';
+
   const now = Date.now();
+  const ttl = SCOPE_TTLS[scope] || SCOPE_TTLS.default;
 
   const cached = heatmapCaches.get(scope);
-  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+  if (cached && now - cached.timestamp < ttl) {
     return c.json({
       scope,
       cached: true,
       cacheAgeSeconds: Math.floor((now - cached.timestamp) / 1000),
       lastUpdated: new Date(cached.timestamp).toISOString(),
+      marketState: cached.marketState || 'CLOSED',
       items: cached.data
     });
   }
 
   try {
-    let constituentMap = new Map();
+    const constituentMap = new Map();
     let symbols = [];
 
     if (scope === 'watchlist') {
       symbols = getWatchlistSymbols();
       for (const s of symbols) {
-        constituentMap.set(s, { symbol: s, name: s, sector: 'Watchlist' });
+        constituentMap.set(s, {
+          symbol: s,
+          name: s,
+          sector: 'Watchlist',
+          domain: `${s.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`
+        });
       }
     } else {
-      // Default top 50
-      const list = getTop50Constituents();
+      const list = getConstituentsForScope(scope);
       for (const item of list) {
         constituentMap.set(item.symbol, item);
         symbols.push(item.symbol);
@@ -90,17 +165,41 @@ marketRoutes.get('/heatmap', async (c) => {
     }
 
     if (symbols.length === 0) {
-      return c.json({ scope, cached: false, items: [] });
+      return c.json({ scope, cached: false, marketState: 'CLOSED', items: [] });
     }
 
-    // Single batch quote call to Yahoo Finance (up to 100 symbols per request)
-    const quotes = await yahooFinance.quote(symbols);
-    const quoteArray = Array.isArray(quotes) ? quotes : [quotes];
+    // Chunk symbols into batches of 100 to avoid API timeouts
+    const chunks = chunkArray(symbols, 100);
+    const allQuotes = [];
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      try {
+        const quotes = await yahooFinance.quote(chunk);
+        const quoteArray = Array.isArray(quotes) ? quotes : [quotes];
+        allQuotes.push(...quoteArray);
+      } catch (chunkErr) {
+        console.warn(`[marketRoutes] Error fetching chunk ${i + 1}/${chunks.length} for ${scope}:`, chunkErr.message);
+      }
+      // Small delay between chunks if multiple chunks
+      if (i < chunks.length - 1) {
+        await sleep(200);
+      }
+    }
 
     const items = [];
-    for (const q of quoteArray) {
+    let detectedMarketState = null;
+
+    for (const q of allQuotes) {
       if (!q || !q.symbol) continue;
-      const meta = constituentMap.get(q.symbol) || { name: q.shortName || q.symbol, sector: 'Other' };
+      if (!detectedMarketState && q.marketState) {
+        detectedMarketState = q.marketState;
+      }
+      const meta = constituentMap.get(q.symbol) || {
+        name: q.shortName || q.symbol,
+        sector: 'Other',
+        domain: `${q.symbol.toLowerCase()}.com`
+      };
       const price = q.regularMarketPrice ?? 0;
       const change = q.regularMarketChange ?? 0;
       const percentChange = q.regularMarketChangePercent ?? 0;
@@ -110,6 +209,7 @@ marketRoutes.get('/heatmap', async (c) => {
         symbol: q.symbol,
         name: meta.name || q.shortName || q.symbol,
         sector: meta.sector || 'Other',
+        domain: meta.domain || `${q.symbol.toLowerCase()}.com`,
         price: Number(price.toFixed(2)),
         change: Number(change.toFixed(2)),
         percentChange: Number(percentChange.toFixed(2)),
@@ -120,9 +220,12 @@ marketRoutes.get('/heatmap', async (c) => {
     // Sort items by marketCap descending
     items.sort((a, b) => b.marketCap - a.marketCap);
 
+    const finalMarketState = detectedMarketState || determineMarketState(allQuotes[0]);
+
     // Save to in-memory cache
     heatmapCaches.set(scope, {
       timestamp: now,
+      marketState: finalMarketState,
       data: items
     });
 
@@ -131,6 +234,7 @@ marketRoutes.get('/heatmap', async (c) => {
       cached: false,
       cacheAgeSeconds: 0,
       lastUpdated: new Date(now).toISOString(),
+      marketState: finalMarketState,
       items
     });
   } catch (error) {
@@ -143,6 +247,7 @@ marketRoutes.get('/heatmap', async (c) => {
         stale: true,
         cacheAgeSeconds: Math.floor((now - cached.timestamp) / 1000),
         lastUpdated: new Date(cached.timestamp).toISOString(),
+        marketState: cached.marketState || 'CLOSED',
         items: cached.data
       });
     }

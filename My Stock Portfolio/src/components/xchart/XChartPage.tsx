@@ -2,7 +2,7 @@ import React from 'react';
 import { useXChartStore } from '../../stores/xchartStore';
 import { XChartTabBar } from './XChartTabBar';
 import { XChartPanel } from './XChartPanel';
-import { MarketHeatmap } from './MarketHeatmap';
+import { MarketHeatmap } from './heatmap/MarketHeatmap';
 import { XChartWatchlistDock } from './XChartWatchlistDock';
 
 export const XChartPage: React.FC = () => {
