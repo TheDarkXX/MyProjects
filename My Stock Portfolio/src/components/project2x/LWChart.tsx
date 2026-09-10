@@ -249,6 +249,9 @@ export const LWChart: React.FC<LWChartProps> = ({
   const [paneOffsets, setPaneOffsets] = useState<Record<number, { top: number; height: number }>>({});
   const [indicatorInitialView, setIndicatorInitialView] = useState<'list' | 'mcdx' | 'ultimateRsi'>('list');
 
+  // Constant for collapsed subpane height (35% reduction from 28px -> 18px)
+  const COLLAPSED_PANE_HEIGHT = 18;
+
   // Synchronized multi-pane stretch layout calculation
   const applyPaneLayoutHeights = useCallback((
     chartInstance: any,
@@ -267,19 +270,19 @@ export const LWChart: React.FC<LWChartProps> = ({
       const subMaxH = Math.max(200, containerH - mainH);
       if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
       if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
-        panes[mcdxPane].setStretchFactor(maximized === mcdxPane ? subMaxH : 28);
+        panes[mcdxPane].setStretchFactor(maximized === mcdxPane ? subMaxH : COLLAPSED_PANE_HEIGHT);
       }
       if (panes.length > rsiPane && panes[rsiPane]?.setStretchFactor) {
-        panes[rsiPane].setStretchFactor(maximized === rsiPane ? subMaxH : 28);
+        panes[rsiPane].setStretchFactor(maximized === rsiPane ? subMaxH : COLLAPSED_PANE_HEIGHT);
       }
     } else {
       // Normal / Collapsed mode
-      const mcdxTargetH = cfg.mcdx.visible ? Math.max(80, cfg.paneHeights?.mcdx || 140) : 28;
-      const rsiTargetH = cfg.ultimateRsi.visible ? Math.max(80, cfg.paneHeights?.ultimateRsi || 140) : 28;
+      const mcdxTargetH = cfg.mcdx.visible ? Math.max(80, cfg.paneHeights?.mcdx || 140) : COLLAPSED_PANE_HEIGHT;
+      const rsiTargetH = cfg.ultimateRsi.visible ? Math.max(80, cfg.paneHeights?.ultimateRsi || 140) : COLLAPSED_PANE_HEIGHT;
 
       if (mcdxPane === rsiPane) {
         // Both sharing the same subpane
-        const sharedH = (cfg.mcdx.visible || cfg.ultimateRsi.visible) ? Math.max(80, cfg.paneHeights?.mcdx || 140) : 28;
+        const sharedH = (cfg.mcdx.visible || cfg.ultimateRsi.visible) ? Math.max(80, cfg.paneHeights?.mcdx || 140) : COLLAPSED_PANE_HEIGHT;
         const mainH = Math.max(120, containerH - sharedH);
         if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
         if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
@@ -580,53 +583,36 @@ export const LWChart: React.FC<LWChartProps> = ({
     return map;
   }, [aggregatedBars, ultimateRSIResult]);
 
-  // Calculate Ultimate RSI buy signals markers (Diamond BUY, Circle REV, Square/Cross BUY ZONE)
+  // Calculate Ultimate RSI buy signals markers (Clean horizontal markers locked at Oversold line 20 matching TradingView 1:1)
   const calculatedRsiMarkers: SeriesMarker<Time>[] = useMemo(() => {
     if (!ultimateRSIResult || !indicatorConfig.ultimateRsi.visible) return [];
     const markers: SeriesMarker<Time>[] = [];
     const sigs = indicatorConfig.ultimateRsi.signals;
+    const osPrice = indicatorConfig.ultimateRsi.osValue ?? 20;
 
     for (let i = 0; i < aggregatedBars.length; i++) {
       const bar = aggregatedBars[i];
       const t = formatBarTime(bar.time);
 
-      // 1. Buy Signal (Diamond White + 'BUY')
-      if (sigs.buyCross && ultimateRSIResult.bullishCrossLow[i]) {
-        markers.push({
-          time: t,
-          position: 'belowBar',
-          color: '#FFFFFF',
-          shape: 'arrowUp',
-          text: 'BUY',
-          size: 1.2,
-        });
-      }
+      // Buy Zone / Bullish Signals: Lock markers in a clean horizontal row on OS line 20 (Matching TradingView 1:1)
+      const isSignalActive =
+        (sigs.buyZone && ultimateRSIResult.buyZone[i]) ||
+        (sigs.buyCross && ultimateRSIResult.bullishCrossLow[i]) ||
+        (sigs.reversal && ultimateRSIResult.bullishReversal[i]);
 
-      // 2. Bullish Reversal (Yellow Circle)
-      if (sigs.reversal && ultimateRSIResult.bullishReversal[i]) {
+      if (isSignalActive) {
         markers.push({
           time: t,
-          position: 'belowBar',
-          color: '#FFE600',
+          position: 'atPriceMiddle',
+          price: osPrice,
+          color: '#22c55e',
           shape: 'circle',
-          text: 'REV',
-          size: 1,
-        });
-      }
-
-      // 3. Buy Zone (Neon Yellow-Green Square)
-      if (sigs.buyZone && ultimateRSIResult.buyZone[i]) {
-        markers.push({
-          time: t,
-          position: 'belowBar',
-          color: '#D0FF00',
-          shape: 'square',
-          size: 0.8,
+          size: 0.7,
         });
       }
     }
     return markers;
-  }, [aggregatedBars, ultimateRSIResult, indicatorConfig.ultimateRsi.visible, indicatorConfig.ultimateRsi.signals]);
+  }, [aggregatedBars, ultimateRSIResult, indicatorConfig.ultimateRsi.visible, indicatorConfig.ultimateRsi.signals, indicatorConfig.ultimateRsi.osValue]);
 
   // Calculate 3-Step Super Money Signals markers with individual sub-toggles
   const calculatedMarkers: SeriesMarker<Time>[] = useMemo(() => {
@@ -957,16 +943,17 @@ export const LWChart: React.FC<LWChartProps> = ({
     };
 
     const createRSIPane = (targetPane: number) => {
+      const arsiLineColor = indicatorConfig.ultimateRsi.rsiColor || '#26A69A';
       const rsiSeries = chart.addSeries(
         BaselineSeries,
         {
           baseValue: { type: 'price', price: 50 },
-          topLineColor: indicatorConfig.ultimateRsi.obColor,
-          bottomLineColor: indicatorConfig.ultimateRsi.osColor,
-          topFillColor1: 'rgba(8, 153, 129, 0.32)',
-          topFillColor2: 'rgba(8, 153, 129, 0.02)',
-          bottomFillColor1: 'rgba(242, 54, 69, 0.02)',
-          bottomFillColor2: 'rgba(242, 54, 69, 0.32)',
+          topLineColor: arsiLineColor,
+          bottomLineColor: arsiLineColor,
+          topFillColor1: 'rgba(38, 166, 154, 0.28)',
+          topFillColor2: 'rgba(38, 166, 154, 0.02)',
+          bottomFillColor1: 'rgba(239, 83, 80, 0.02)',
+          bottomFillColor2: 'rgba(239, 83, 80, 0.28)',
           lineWidth: 2,
           priceLineVisible: false,
           lastValueVisible: showLabels,
@@ -1333,10 +1320,11 @@ export const LWChart: React.FC<LWChartProps> = ({
       title: showLabels ? 'Banker MA' : '',
       priceLineVisible: false,
     });
+    const arsiLineColor = indicatorConfig.ultimateRsi.rsiColor || '#26A69A';
     rsiSeriesRef.current?.applyOptions({
       visible: indicatorConfig.ultimateRsi.visible,
-      topLineColor: indicatorConfig.ultimateRsi.obColor,
-      bottomLineColor: indicatorConfig.ultimateRsi.osColor,
+      topLineColor: arsiLineColor,
+      bottomLineColor: arsiLineColor,
       lastValueVisible: showLabels,
       title: showLabels ? 'ARSI' : '',
       priceLineVisible: false,
@@ -1480,12 +1468,12 @@ export const LWChart: React.FC<LWChartProps> = ({
           moveEvt.preventDefault();
           const deltaY = moveEvt.clientY - startY;
           // Dragging UP (deltaY < 0) makes P2 taller
-          const targetRsiH = Math.max(80, Math.min(containerH - 120 - 28, Math.round(startRsiH - deltaY)));
+          const targetRsiH = Math.max(80, Math.min(containerH - 120 - COLLAPSED_PANE_HEIGHT, Math.round(startRsiH - deltaY)));
           lastTargetRsiH = targetRsiH;
-          const targetMainH = Math.max(100, containerH - 28 - targetRsiH);
+          const targetMainH = Math.max(100, containerH - COLLAPSED_PANE_HEIGHT - targetRsiH);
 
           currentPanes[0]?.setStretchFactor?.(targetMainH);
-          currentPanes[mcdxPane]?.setStretchFactor?.(28);
+          currentPanes[mcdxPane]?.setStretchFactor?.(COLLAPSED_PANE_HEIGHT);
           currentPanes[rsiPane]?.setStretchFactor?.(targetRsiH);
           updateOffsets();
         };
@@ -1525,13 +1513,13 @@ export const LWChart: React.FC<LWChartProps> = ({
             moveEvt.preventDefault();
             const deltaY = moveEvt.clientY - startY;
             // Dragging DOWN (deltaY > 0) makes P1 taller
-            const targetMcdxH = Math.max(80, Math.min(containerH - 120 - 28, Math.round(startMcdxH + deltaY)));
+            const targetMcdxH = Math.max(80, Math.min(containerH - 120 - COLLAPSED_PANE_HEIGHT, Math.round(startMcdxH + deltaY)));
             lastTargetMcdxH = targetMcdxH;
-            const targetMainH = Math.max(100, containerH - 28 - targetMcdxH);
+            const targetMainH = Math.max(100, containerH - COLLAPSED_PANE_HEIGHT - targetMcdxH);
 
             currentPanes[0]?.setStretchFactor?.(targetMainH);
             currentPanes[mcdxPane]?.setStretchFactor?.(targetMcdxH);
-            currentPanes[rsiPane]?.setStretchFactor?.(28);
+            currentPanes[rsiPane]?.setStretchFactor?.(COLLAPSED_PANE_HEIGHT);
             updateOffsets();
           };
 
@@ -2027,7 +2015,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           <div ref={chartContainerRef} className="w-full h-full min-h-0" />
 
           {/* MCDX Floating Toolbar (Supports both Normal & Collapsed Dock Bar) */}
-          {paneOffsets[mcdxPane] && paneOffsets[mcdxPane].height >= 20 && (
+          {paneOffsets[mcdxPane] && paneOffsets[mcdxPane].height >= 14 && (
             <SubPaneHeaderToolbar
               paneIndex={mcdxPane}
               title="MCDX"
@@ -2057,7 +2045,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           )}
 
           {/* Ultimate RSI Floating Toolbar (Supports both Normal & Collapsed Dock Bar) */}
-          {paneOffsets[rsiPane] && paneOffsets[rsiPane].height >= 20 && (
+          {paneOffsets[rsiPane] && paneOffsets[rsiPane].height >= 14 && (
             <SubPaneHeaderToolbar
               paneIndex={rsiPane}
               title="Ultimate RSI"
@@ -2074,7 +2062,7 @@ export const LWChart: React.FC<LWChartProps> = ({
                             ? indicatorConfig.ultimateRsi.obColor
                             : hoveredRsi.arsi !== null && hoveredRsi.arsi <= indicatorConfig.ultimateRsi.osValue
                             ? indicatorConfig.ultimateRsi.osColor
-                            : '#E2E8F0',
+                            : indicatorConfig.ultimateRsi.rsiColor || '#26A69A',
                       },
                       Sig: {
                         value: hoveredRsi.signal !== null ? hoveredRsi.signal.toFixed(2) : '--',

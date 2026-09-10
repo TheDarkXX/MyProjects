@@ -213,7 +213,7 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     osValue: 20,
     obColor: '#089981',
     osColor: '#F23645',
-    rsiColor: '#E2E8F0',
+    rsiColor: '#26A69A',
     signalColor: '#FF5D00',
     autoColor: true,
     showArea: true,
