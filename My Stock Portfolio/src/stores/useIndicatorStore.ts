@@ -12,6 +12,9 @@ import {
   PresetType,
   UltimateRSIConfig,
   UltimateRSISignalsConfig,
+  SubPaneIndicatorId,
+  PaneLayout,
+  DEFAULT_PANE_LAYOUT,
 } from '../types/indicatorConfig';
 
 const STORAGE_KEY = 'xchart_indicators_v1';
@@ -27,6 +30,12 @@ function loadSavedConfig(): IndicatorSettings {
       customColors: Array.isArray(parsed.customColors) && parsed.customColors.length > 0
         ? parsed.customColors.slice(0, 5)
         : DEFAULT_INDICATOR_SETTINGS.customColors,
+      paneLayout: {
+        assignments: {
+          ...DEFAULT_PANE_LAYOUT.assignments,
+          ...(parsed.paneLayout?.assignments || {}),
+        },
+      },
       ema1: { ...DEFAULT_INDICATOR_SETTINGS.ema1, ...(parsed.ema1 || {}) },
       ema2: { ...DEFAULT_INDICATOR_SETTINGS.ema2, ...(parsed.ema2 || {}) },
       ema3: { ...DEFAULT_INDICATOR_SETTINGS.ema3, ...(parsed.ema3 || {}) },
@@ -88,6 +97,9 @@ interface IndicatorState {
   updateUltimateRSI: (partial: Partial<UltimateRSIConfig>) => void;
   toggleUltimateRSI: () => void;
   toggleUltimateRSISignal: (signalKey: keyof UltimateRSISignalsConfig) => void;
+  assignIndicatorPane: (id: SubPaneIndicatorId, targetPane: number) => void;
+  moveIndicatorUp: (id: SubPaneIndicatorId) => void;
+  moveIndicatorDown: (id: SubPaneIndicatorId) => void;
   applyPreset: (preset: PresetType) => void;
   resetDefaults: () => void;
 }
@@ -314,6 +326,50 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
     };
     saveConfig(next);
     set({ config: next });
+  },
+
+  assignIndicatorPane: (id: SubPaneIndicatorId, targetPane: number) => {
+    const prev = get().config;
+    const currentAssignments = { ...prev.paneLayout.assignments };
+    const currentPane = currentAssignments[id];
+    if (currentPane === targetPane) return;
+
+    // Auto-swap: find if another indicator occupies targetPane
+    const occupant = (Object.keys(currentAssignments) as SubPaneIndicatorId[]).find(
+      k => k !== id && currentAssignments[k] === targetPane
+    );
+
+    if (occupant) {
+      currentAssignments[occupant] = currentPane;
+    }
+    currentAssignments[id] = targetPane;
+
+    const next: IndicatorSettings = {
+      ...prev,
+      paneLayout: {
+        assignments: currentAssignments,
+      },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  moveIndicatorUp: (id: SubPaneIndicatorId) => {
+    const prev = get().config;
+    const currentPane = prev.paneLayout.assignments[id] ?? 1;
+    // Pane 1 is at the top of sub-panes. Moving UP means targetPane = currentPane - 1
+    if (currentPane <= 1) return;
+    get().assignIndicatorPane(id, currentPane - 1);
+  },
+
+  moveIndicatorDown: (id: SubPaneIndicatorId) => {
+    const prev = get().config;
+    const currentAssignments = prev.paneLayout.assignments;
+    const currentPane = currentAssignments[id] ?? 1;
+    const maxPane = Math.max(2, ...Object.values(currentAssignments));
+    // Pane 2 is lower. Moving DOWN means targetPane = currentPane + 1
+    if (currentPane >= maxPane) return;
+    get().assignIndicatorPane(id, currentPane + 1);
   },
 
   applyPreset: (preset) => {

@@ -88,11 +88,25 @@ export interface UltimateRSIConfig {
   signals: UltimateRSISignalsConfig;
 }
 
+export type SubPaneIndicatorId = 'mcdx' | 'ultimateRsi';
+
+export interface PaneLayout {
+  assignments: Record<SubPaneIndicatorId, number>;
+}
+
+export const DEFAULT_PANE_LAYOUT: PaneLayout = {
+  assignments: {
+    mcdx: 1,
+    ultimateRsi: 2,
+  },
+};
+
 export type PresetType = 'full' | 'clean' | 'banker' | 'triple_ema' | 'custom';
 
 export interface IndicatorSettings {
   activePreset: PresetType;
   customColors: string[];
+  paneLayout: PaneLayout;
   ema1: EMALineConfig;
   ema2: EMALineConfig;
   ema3: EMALineConfig;
@@ -114,6 +128,7 @@ export const DEFAULT_CUSTOM_COLORS: string[] = [
 export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
   activePreset: 'full',
   customColors: DEFAULT_CUSTOM_COLORS,
+  paneLayout: DEFAULT_PANE_LAYOUT,
   ema1: {
     id: 'ema1',
     name: 'EMA 1',

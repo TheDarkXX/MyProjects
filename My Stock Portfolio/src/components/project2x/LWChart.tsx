@@ -234,6 +234,9 @@ export const LWChart: React.FC<LWChartProps> = ({
 
   const [isIndicatorOpen, setIsIndicatorOpen] = useState<boolean>(false);
   const indicatorConfig = useIndicatorStore((s) => s.config);
+  const paneLayout = indicatorConfig.paneLayout || { assignments: { mcdx: 1, ultimateRsi: 2 } };
+  const mcdxPane = paneLayout.assignments.mcdx ?? 1;
+  const rsiPane = paneLayout.assignments.ultimateRsi ?? 2;
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
@@ -841,143 +844,155 @@ export const LWChart: React.FC<LWChartProps> = ({
     lowerEnvSeriesRef.current = lowerEnvSeries;
 
     // -------------------------------------------------------------
-    // PANE 1: Banker MCDX Sub-Chart
+    // Dynamic Sub-Panes Construction (Ordered by Pane Index)
     // -------------------------------------------------------------
-    const mcdxSeries = chart.addCustomSeries(
-      new BankerMCDXSeriesView(),
-      {
-        title: 'MCDX',
-        priceFormat: {
-          type: 'custom',
-          minMove: 1,
-          formatter: (val: number) => val.toFixed(0),
+    const createMCDXPane = (targetPane: number) => {
+      const mcdxSeries = chart.addCustomSeries(
+        new BankerMCDXSeriesView(),
+        {
+          title: 'MCDX',
+          priceFormat: {
+            type: 'custom',
+            minMove: 1,
+            formatter: (val: number) => val.toFixed(0),
+          },
         },
-      },
-      1 // Pane index 1!
-    );
-    mcdxSeriesRef.current = mcdxSeries;
+        targetPane
+      );
+      mcdxSeriesRef.current = mcdxSeries;
 
-    // Pink Threshold Line (10 Entry Strike)
-    mcdxSeries.createPriceLine({
-      price: 10,
-      color: '#FC2D79',
-      lineStyle: LineStyle.Dashed,
-      lineWidth: 1,
-      axisLabelVisible: true,
-      title: '10 STRIKE',
-    });
+      // Pink Threshold Line (10 Entry Strike)
+      mcdxSeries.createPriceLine({
+        price: 10,
+        color: '#FC2D79',
+        lineStyle: LineStyle.Dashed,
+        lineWidth: 1,
+        axisLabelVisible: true,
+        title: '10 STRIKE',
+      });
 
-    // Banker MA Line (White #FFFFFF, overlaying Pane 1)
-    const bankerMaSeries = chart.addSeries(LineSeries, {
-      color: '#FFFFFF',
-      lineWidth: 2,
-      priceLineVisible: false,
-      lastValueVisible: true,
-      title: 'Banker MA',
-    }, 1);
-    bankerMaSeriesRef.current = bankerMaSeries;
-
-    // Configure Pane 1 price scale (maximize vertical bar span from base to ceiling)
-    chart.priceScale('right', 1).applyOptions({
-      borderColor: 'rgba(255, 255, 255, 0.12)',
-      scaleMargins: {
-        top: 0.02,
-        bottom: 0.0,
-      },
-    });
-
-    // -------------------------------------------------------------
-    // PANE 2: My Ultimate RSI (DoctorBank ARSI + Signal + OB/OS)
-    // -------------------------------------------------------------
-    const rsiSeries = chart.addSeries(
-      BaselineSeries,
-      {
-        baseValue: { type: 'price', price: 50 },
-        topLineColor: indicatorConfig.ultimateRsi.obColor,
-        bottomLineColor: indicatorConfig.ultimateRsi.osColor,
-        topFillColor1: 'rgba(8, 153, 129, 0.32)',
-        topFillColor2: 'rgba(8, 153, 129, 0.02)',
-        bottomFillColor1: 'rgba(242, 54, 69, 0.02)',
-        bottomFillColor2: 'rgba(242, 54, 69, 0.32)',
+      // Banker MA Line (White #FFFFFF, overlaying Pane targetPane)
+      const bankerMaSeries = chart.addSeries(LineSeries, {
+        color: '#FFFFFF',
         lineWidth: 2,
         priceLineVisible: false,
         lastValueVisible: true,
-        title: 'ARSI',
-        visible: indicatorConfig.ultimateRsi.visible,
-      },
-      2 // Pane index 2!
-    );
-    rsiSeriesRef.current = rsiSeries;
+        title: 'Banker MA',
+      }, targetPane);
+      bankerMaSeriesRef.current = bankerMaSeries;
 
-    // Overbought (80)
-    rsiSeries.createPriceLine({
-      price: indicatorConfig.ultimateRsi.obValue,
-      color: indicatorConfig.ultimateRsi.obColor,
-      lineStyle: LineStyle.Dashed,
-      lineWidth: 1,
-      axisLabelVisible: true,
-      title: '80 OB',
-    });
+      // Configure Pane price scale
+      chart.priceScale('right', targetPane).applyOptions({
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        scaleMargins: {
+          top: 0.02,
+          bottom: 0.0,
+        },
+      });
+    };
 
-    // Midline (50)
-    rsiSeries.createPriceLine({
-      price: 50,
-      color: 'rgba(255, 255, 255, 0.25)',
-      lineStyle: LineStyle.Dotted,
-      lineWidth: 1,
-      axisLabelVisible: false,
-      title: '50 MID',
-    });
+    const createRSIPane = (targetPane: number) => {
+      const rsiSeries = chart.addSeries(
+        BaselineSeries,
+        {
+          baseValue: { type: 'price', price: 50 },
+          topLineColor: indicatorConfig.ultimateRsi.obColor,
+          bottomLineColor: indicatorConfig.ultimateRsi.osColor,
+          topFillColor1: 'rgba(8, 153, 129, 0.32)',
+          topFillColor2: 'rgba(8, 153, 129, 0.02)',
+          bottomFillColor1: 'rgba(242, 54, 69, 0.02)',
+          bottomFillColor2: 'rgba(242, 54, 69, 0.32)',
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          title: 'ARSI',
+          visible: indicatorConfig.ultimateRsi.visible,
+        },
+        targetPane
+      );
+      rsiSeriesRef.current = rsiSeries;
 
-    // Oversold (20)
-    rsiSeries.createPriceLine({
-      price: indicatorConfig.ultimateRsi.osValue,
-      color: indicatorConfig.ultimateRsi.osColor,
-      lineStyle: LineStyle.Dashed,
-      lineWidth: 1,
-      axisLabelVisible: true,
-      title: '20 OS',
-    });
+      // Overbought (80)
+      rsiSeries.createPriceLine({
+        price: indicatorConfig.ultimateRsi.obValue,
+        color: indicatorConfig.ultimateRsi.obColor,
+        lineStyle: LineStyle.Dashed,
+        lineWidth: 1,
+        axisLabelVisible: true,
+        title: '80 OB',
+      });
 
-    // Signal Line (Pane 2)
-    const rsiSignalSeries = chart.addSeries(
-      LineSeries,
-      {
-        color: indicatorConfig.ultimateRsi.signalColor,
-        lineWidth: 2,
-        priceLineVisible: false,
-        lastValueVisible: true,
-        title: 'Signal',
-        visible: indicatorConfig.ultimateRsi.visible,
-      },
-      2
-    );
-    rsiSignalSeriesRef.current = rsiSignalSeries;
+      // Midline (50)
+      rsiSeries.createPriceLine({
+        price: 50,
+        color: 'rgba(255, 255, 255, 0.25)',
+        lineStyle: LineStyle.Dotted,
+        lineWidth: 1,
+        axisLabelVisible: false,
+        title: '50 MID',
+      });
 
-    // Configure Pane 2 scale
-    chart.priceScale('right', 2).applyOptions({
-      borderColor: 'rgba(255, 255, 255, 0.12)',
-      scaleMargins: {
-        top: 0.08,
-        bottom: 0.08,
-      },
-    });
+      // Oversold (20)
+      rsiSeries.createPriceLine({
+        price: indicatorConfig.ultimateRsi.osValue,
+        color: indicatorConfig.ultimateRsi.osColor,
+        lineStyle: LineStyle.Dashed,
+        lineWidth: 1,
+        axisLabelVisible: true,
+        title: '20 OS',
+      });
 
-    // Adjust Sub-Panes Heights
+      // Signal Line
+      const rsiSignalSeries = chart.addSeries(
+        LineSeries,
+        {
+          color: indicatorConfig.ultimateRsi.signalColor,
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          title: 'Signal',
+          visible: indicatorConfig.ultimateRsi.visible,
+        },
+        targetPane
+      );
+      rsiSignalSeriesRef.current = rsiSignalSeries;
+
+      // Configure Pane scale
+      chart.priceScale('right', targetPane).applyOptions({
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        scaleMargins: {
+          top: 0.08,
+          bottom: 0.08,
+        },
+      });
+    };
+
+    // Sequentially build sub-panes in ascending pane order
+    if (mcdxPane <= rsiPane) {
+      createMCDXPane(mcdxPane);
+      createRSIPane(rsiPane);
+    } else {
+      createRSIPane(rsiPane);
+      createMCDXPane(mcdxPane);
+    }
+
+    // Adjust Sub-Panes Heights according to assigned pane layout
     const panes = chart.panes();
-    if (panes.length > 1) {
-      panes[1].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
+    if (panes.length > mcdxPane) {
+      panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
     }
-    if (panes.length > 2) {
-      panes[2].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
+    if (panes.length > rsiPane) {
+      panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
     }
 
-    // Initialize Markers Plugin for Pane 0 (Candles) and Pane 2 (RSI)
+    // Initialize Markers Plugin for Pane 0 (Candles) and RSI Pane
     const markersPlugin = createSeriesMarkers(candleSeries, indicatorConfig.signals.visible ? calculatedMarkers : []);
     markersPluginRef.current = markersPlugin;
 
-    const rsiMarkersPlugin = createSeriesMarkers(rsiSeries, indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
-    rsiMarkersPluginRef.current = rsiMarkersPlugin;
+    if (rsiSeriesRef.current) {
+      const rsiMarkersPlugin = createSeriesMarkers(rsiSeriesRef.current, indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
+      rsiMarkersPluginRef.current = rsiMarkersPlugin;
+    }
 
     // Crosshair listener for rich header legend
     chart.subscribeCrosshairMove(param => {
@@ -1087,7 +1102,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       markersPluginRef.current = null;
       rsiMarkersPluginRef.current = null;
     };
-  }, []); // Run once on mount
+  }, [mcdxPane, rsiPane]); // Rebuild chart when pane layout changes
 
   // Update Data when displayBars or calculated markers change
   useEffect(() => {
@@ -1173,7 +1188,7 @@ export const LWChart: React.FC<LWChartProps> = ({
 
     // Apply current timeframe range
     applyTimeframeRange(timeframe);
-  }, [displayBars, calculatedMarkers, calculatedRsiMarkers, ultimateRSIResult, indicatorConfig.signals.visible, indicatorConfig.ultimateRsi.visible, indicatorConfig.envelope.percent, applyTimeframeRange, timeframe]);
+  }, [displayBars, calculatedMarkers, calculatedRsiMarkers, ultimateRSIResult, indicatorConfig.signals.visible, indicatorConfig.ultimateRsi.visible, indicatorConfig.envelope.percent, applyTimeframeRange, timeframe, mcdxPane, rsiPane]);
 
   // Handle Style Switching
   useEffect(() => {
@@ -1213,13 +1228,13 @@ export const LWChart: React.FC<LWChartProps> = ({
     rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
 
     const panes = chartRef.current?.panes();
-    if (panes && panes.length > 1) {
-      panes[1].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
+    if (panes && panes.length > mcdxPane) {
+      panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
     }
-    if (panes && panes.length > 2) {
-      panes[2].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
+    if (panes && panes.length > rsiPane) {
+      panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
     }
-  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers]);
+  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, mcdxPane, rsiPane]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {

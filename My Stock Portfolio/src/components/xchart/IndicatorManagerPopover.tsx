@@ -16,6 +16,8 @@ import {
   Settings,
   Volume2,
   Minus,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import {
@@ -237,6 +239,9 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     updateUltimateRSI,
     toggleUltimateRSI,
     toggleUltimateRSISignal,
+    assignIndicatorPane,
+    moveIndicatorUp,
+    moveIndicatorDown,
     applyPreset,
     resetDefaults,
   } = useIndicatorStore();
@@ -500,6 +505,9 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
                       <BarChart3 className="w-3.5 h-3.5 text-rose-400" />
                       Banker MCDX Flow
+                      <span className="text-[12px] px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/50 font-bold">
+                        PANE {config.paneLayout?.assignments?.mcdx ?? 1}
+                      </span>
                     </span>
                     <span className="text-[13px] text-slate-400">
                       Banker, Hot Money, Retail (MA {config.mcdx.maPeriod})
@@ -508,6 +516,39 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                 </div>
 
                 <div className="flex items-center gap-2.5">
+                  {/* Slot Reorder Controls */}
+                  <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
+                    <span className="text-[12px] font-bold text-slate-400">Pane</span>
+                    <select
+                      value={config.paneLayout?.assignments?.mcdx ?? 1}
+                      onChange={(e) => assignIndicatorPane('mcdx', Number(e.target.value))}
+                      className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[13px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-rose-500 cursor-pointer"
+                    >
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                    </select>
+                    <div className="flex flex-col">
+                      <button
+                        type="button"
+                        onClick={() => moveIndicatorUp('mcdx')}
+                        disabled={(config.paneLayout?.assignments?.mcdx ?? 1) <= 1}
+                        title="Move Pane Up"
+                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveIndicatorDown('mcdx')}
+                        disabled={(config.paneLayout?.assignments?.mcdx ?? 1) >= 2}
+                        title="Move Pane Down"
+                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.mcdx.bankerColor }} title="Banker" />
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.mcdx.hotMoneyColor }} title="Hot Money" />
@@ -579,8 +620,8 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
                       <Activity className="w-3.5 h-3.5 text-teal-400" />
                       My Ultimate RSI
-                      <span className="text-[11px] px-1.5 py-0.2 rounded bg-teal-950/80 text-teal-300 border border-teal-800/50 font-bold">
-                        PANE 2
+                      <span className="text-[12px] px-2 py-0.5 rounded bg-teal-950/80 text-teal-300 border border-teal-800/50 font-bold">
+                        PANE {config.paneLayout?.assignments?.ultimateRsi ?? 2}
                       </span>
                     </span>
                     <span className="text-[13px] text-slate-400">
@@ -590,6 +631,39 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                 </div>
 
                 <div className="flex items-center gap-2.5">
+                  {/* Slot Reorder Controls */}
+                  <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
+                    <span className="text-[12px] font-bold text-slate-400">Pane</span>
+                    <select
+                      value={config.paneLayout?.assignments?.ultimateRsi ?? 2}
+                      onChange={(e) => assignIndicatorPane('ultimateRsi', Number(e.target.value))}
+                      className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[13px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                    </select>
+                    <div className="flex flex-col">
+                      <button
+                        type="button"
+                        onClick={() => moveIndicatorUp('ultimateRsi')}
+                        disabled={(config.paneLayout?.assignments?.ultimateRsi ?? 2) <= 1}
+                        title="Move Pane Up"
+                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveIndicatorDown('ultimateRsi')}
+                        disabled={(config.paneLayout?.assignments?.ultimateRsi ?? 2) >= 2}
+                        title="Move Pane Down"
+                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.obColor }} title="Overbought" />
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.signalColor }} title="Signal Line" />
