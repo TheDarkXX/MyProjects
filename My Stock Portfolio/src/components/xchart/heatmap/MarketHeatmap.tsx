@@ -426,63 +426,98 @@ export const MarketHeatmap: React.FC = () => {
                     backgroundColor: color
                   }}
                 >
-                  {/* XL Tier: Logo + Symbol + Percent (TradingView Standard) */}
-                  {tier === 'XL' && (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-center gap-1 pointer-events-none">
-                      <StockLogo symbol={item.symbol} domain={item.domain} size={28} />
-                      <span className="font-bold text-[14px] text-white tracking-wide leading-tight drop-shadow">
-                        {item.symbol}
-                      </span>
-                      <span className="font-bold text-[13px] text-white leading-tight drop-shadow">
-                        {formatPercent(pct)}
-                      </span>
-                    </div>
-                  )}
+                  {/* Dynamic Proportional Rendering (TradingView 1:1 Scale) */}
+                  {(() => {
+                    const minDim = Math.min(w, h);
 
-                  {/* L Tier: Logo + Symbol + Percent */}
-                  {tier === 'L' && (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-center gap-0.5 pointer-events-none">
-                      <StockLogo symbol={item.symbol} domain={item.domain} size={20} />
-                      <span className="font-bold text-[13px] text-white tracking-wide leading-tight drop-shadow">
-                        {item.symbol}
-                      </span>
-                      <span className="font-bold text-[13px] text-white leading-tight drop-shadow">
-                        {formatPercent(pct)}
-                      </span>
-                    </div>
-                  )}
+                    // 1. Giant / Massive Tiles (NVDA, AAPL, GOOGL, MSFT, TSLA, WMT, etc.)
+                    if (minDim >= 130 && w >= 100 && h >= 90) {
+                      const logoSize = Math.min(56, Math.max(46, Math.round(minDim * 0.24)));
+                      const isExtraBig = minDim >= 180;
+                      return (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-center gap-1.5 pointer-events-none p-1">
+                          <StockLogo symbol={item.symbol} domain={item.domain} size={logoSize} />
+                          <span className={`font-bold ${isExtraBig ? 'text-[24px]' : 'text-[22px]'} text-white tracking-wide leading-tight drop-shadow`}>
+                            {item.symbol}
+                          </span>
+                          <span className={`font-bold ${isExtraBig ? 'text-[18px]' : 'text-[16px]'} text-white leading-tight drop-shadow`}>
+                            {formatPercent(pct)}
+                          </span>
+                        </div>
+                      );
+                    }
 
-                  {/* M Tier: Symbol + Percent */}
-                  {tier === 'M' && (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-center gap-0.5 pointer-events-none">
-                      <span className="font-bold text-[13px] text-white tracking-wide leading-none drop-shadow">
-                        {item.symbol}
-                      </span>
-                      <span className="font-semibold text-[13px] text-white leading-none drop-shadow">
-                        {formatPercent(pct)}
-                      </span>
-                    </div>
-                  )}
+                    // 2. Large Tiles (AVGO, AMD, COST, UNH, XOM, etc.)
+                    if (minDim >= 85 && w >= 70 && h >= 65) {
+                      const logoSize = Math.min(38, Math.max(30, Math.round(minDim * 0.28)));
+                      return (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-center gap-1 pointer-events-none p-0.5">
+                          <StockLogo symbol={item.symbol} domain={item.domain} size={logoSize} />
+                          <span className="font-bold text-[16px] text-white tracking-wide leading-tight drop-shadow">
+                            {item.symbol}
+                          </span>
+                          <span className="font-semibold text-[14px] text-white leading-tight drop-shadow">
+                            {formatPercent(pct)}
+                          </span>
+                        </div>
+                      );
+                    }
 
-                  {/* S Tier: Symbol Only */}
-                  {tier === 'S' && (
-                    <div className="w-full h-full flex items-center justify-center text-center pointer-events-none">
-                      <span className="font-bold text-[13px] text-white tracking-wide leading-none drop-shadow truncate px-0.5">
-                        {item.symbol}
-                      </span>
-                    </div>
-                  )}
+                    // 3. Medium Tiles (ORCL, CSCO, PLTR, CRM, IBM, NFLX, UBER, KO, PG, WFC, CAT, RTX, GE, etc.)
+                    if (w >= 48 && h >= 46) {
+                      const logoSize = Math.min(26, Math.max(20, Math.round(minDim * 0.32)));
+                      return (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-center gap-0.5 pointer-events-none p-0.5">
+                          <StockLogo symbol={item.symbol} domain={item.domain} size={logoSize} />
+                          <span className="font-bold text-[13px] text-white tracking-wide leading-none drop-shadow truncate max-w-full px-0.5">
+                            {item.symbol}
+                          </span>
+                          <span className="font-semibold text-[12px] text-white leading-none drop-shadow">
+                            {formatPercent(pct)}
+                          </span>
+                        </div>
+                      );
+                    }
 
-                  {/* XS Tier: Compact Tile */}
-                  {tier === 'XS' && (
-                    <div className="w-full h-full flex items-center justify-center pointer-events-none">
-                      {w >= 28 && h >= 16 && (
-                        <span className="font-bold text-[13px] text-white leading-none truncate opacity-90 drop-shadow">
-                          {item.symbol.slice(0, 3)}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    // 4. Small Tiles (PANW, CRWD, FTNT, ADBE, INTU, AMGN, VRTX, ISRG, GILD, LRCX, AMAT, etc.)
+                    if (w >= 34 && h >= 34) {
+                      const logoSize = Math.min(18, Math.max(15, Math.round(minDim * 0.36)));
+                      if (h >= 40) {
+                        return (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-center gap-0.5 pointer-events-none p-0.5">
+                            <StockLogo symbol={item.symbol} domain={item.domain} size={logoSize} />
+                            <span className="font-bold text-[12px] text-white leading-none drop-shadow truncate max-w-full">
+                              {item.symbol}
+                            </span>
+                            <span className="font-semibold text-[11px] text-white leading-none drop-shadow">
+                              {formatPercent(pct)}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-center gap-0.5 pointer-events-none p-0.5">
+                          <StockLogo symbol={item.symbol} domain={item.domain} size={logoSize} />
+                          <span className="font-bold text-[12px] text-white leading-none drop-shadow truncate max-w-full">
+                            {item.symbol}
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    // 5. Compact / Micro Tiles (BSX, CI, SYK, MDT, or narrow strips)
+                    return (
+                      <div className="w-full h-full flex items-center justify-center text-center pointer-events-none p-0.5">
+                        {w >= 26 && h >= 26 ? (
+                          <StockLogo symbol={item.symbol} domain={item.domain} size={16} />
+                        ) : w >= 22 && h >= 16 ? (
+                          <span className="font-bold text-[12px] text-white leading-none truncate opacity-90 drop-shadow">
+                            {item.symbol.slice(0, 3)}
+                          </span>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
