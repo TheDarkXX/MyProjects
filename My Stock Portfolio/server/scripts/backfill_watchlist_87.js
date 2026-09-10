@@ -1,5 +1,6 @@
 import { db } from '../db/init.js';
 import { fetchYahooHistorical } from '../services/yahoo.js';
+import { saveHistoricalIndexFiles } from './generate_historical_index.js';
 
 // All 87 symbols from doctorbank8989 TradingView Watchlist (6 Sections)
 const WATCHLIST_87_SYMBOLS = [
@@ -99,6 +100,9 @@ async function runWatchlistBackfill() {
   console.log('\n' + '='.repeat(70));
   console.log(`🎯 BACKFILL SUMMARY: ${totalRowsInserted.toLocaleString()} total historical bars saved`);
   console.log('='.repeat(70));
+
+  // Automatically refresh HISTORICAL_INDEX.md
+  saveHistoricalIndexFiles();
 }
 
 runWatchlistBackfill().catch((err) => {

@@ -1,6 +1,7 @@
 import YahooFinance from 'yahoo-finance2';
 import { db } from '../db/init.js';
 import { fetchYahooHistorical } from './yahoo.js';
+import { saveHistoricalIndexFiles } from '../scripts/generate_historical_index.js';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
@@ -242,6 +243,17 @@ export async function syncCandleDelta(symbol, minDaysRequired = 36500) {
         }
       });
       insertTx(freshData);
+
+      // Auto-update HISTORICAL_INDEX.md in background if a brand new symbol was just backfilled
+      if (isBrandNew) {
+        setTimeout(() => {
+          try {
+            saveHistoricalIndexFiles();
+          } catch (e) {
+            console.warn('[HistoricalIndex] Auto-update failed:', e.message);
+          }
+        }, 100);
+      }
     }
   } catch (err) {
     console.warn(`[syncCandleDelta] Delta fetch error for ${upper}:`, err.message);

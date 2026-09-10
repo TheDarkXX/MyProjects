@@ -1,5 +1,6 @@
 import { db } from '../db/init.js';
 import { fetchYahooHistorical } from '../services/yahoo.js';
+import { saveHistoricalIndexFiles } from './generate_historical_index.js';
 
 // Target: Benchmarks + Active Holdings + Past Holdings + Blueprints
 const TARGET_SYMBOLS = [
@@ -111,6 +112,9 @@ async function runBackfill() {
   console.log(`🎯 Total Rows in DB for this Batch: ${totalRows.toLocaleString()}`);
   console.log(`🛡️ Total Invalid/NULL OHLCV Rows: ${totalNulls} (Must be 0)`);
   console.log('='.repeat(65));
+
+  // Automatically refresh HISTORICAL_INDEX.md
+  saveHistoricalIndexFiles();
 }
 
 runBackfill()

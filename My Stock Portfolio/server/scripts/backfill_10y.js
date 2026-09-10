@@ -1,5 +1,6 @@
 import { db } from '../db/init.js';
 import { fetchYahooHistorical } from '../services/yahoo.js';
+import { saveHistoricalIndexFiles } from './generate_historical_index.js';
 
 // Project 2X Scope Only: 9 Core + 4 Moonshot
 const PROJECT_2X_SYMBOLS = [
@@ -109,10 +110,13 @@ async function runBackfill() {
   console.log('='.repeat(60));
 
   if (totalNulls === 0 && totalRows > 20000) {
-    console.log('🎉 10-YEAR BACKFILL COMPLETED SUCCESSFULLY!');
+    console.log('🎉 MAX LIFETIME BACKFILL COMPLETED SUCCESSFULLY!');
   } else {
     console.log('⚠️ Backfill finished with warnings. Review table above.');
   }
+
+  // Automatically refresh HISTORICAL_INDEX.md
+  saveHistoricalIndexFiles();
 }
 
 runBackfill()
