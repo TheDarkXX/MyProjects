@@ -14,6 +14,7 @@ import {
   Time,
   UTCTimestamp,
   SeriesMarker,
+  SeriesMarkerShape,
   IPriceLine,
 } from 'lightweight-charts';
 import {
@@ -39,7 +40,12 @@ import { computeEMA } from '../../utils/computeEMA';
 import { computeUltimateRSI } from '../../utils/indicators/ultimateRSI';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { SubPaneHeaderToolbar } from '../xchart/panes/SubPaneHeaderToolbar';
-import { LineStyleOption } from '../../types/indicatorConfig';
+import {
+  LineStyleOption,
+  RSIMarkerShape,
+  RSIMarkerLocation,
+  IndicatorSettings,
+} from '../../types/indicatorConfig';
 
 export const TV_FONT_FAMILY = "'Trebuchet MS', 'Segoe UI Symbol', 'Segoe UI Emoji', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
@@ -583,7 +589,28 @@ export const LWChart: React.FC<LWChartProps> = ({
     return map;
   }, [aggregatedBars, ultimateRSIResult]);
 
-  // Calculate Ultimate RSI buy signals markers (Clean horizontal markers locked at Oversold line 20 matching TradingView 1:1)
+  // Helper to map RSI marker shape to SeriesMarkerShape & text
+  const getRsiMarkerProps = (
+    shape: RSIMarkerShape = 'circle'
+  ): { shape: SeriesMarkerShape; text?: string; size: number } => {
+    switch (shape) {
+      case 'diamond':
+        return { shape: 'square', text: '◇', size: 0.8 };
+      case 'cross':
+        return { shape: 'circle', text: '+', size: 0.7 };
+      case 'square':
+        return { shape: 'square', size: 0.7 };
+      case 'arrowUp':
+        return { shape: 'arrowUp', size: 0.8 };
+      case 'arrowDown':
+        return { shape: 'arrowDown', size: 0.8 };
+      case 'circle':
+      default:
+        return { shape: 'circle', size: 0.7 };
+    }
+  };
+
+  // Calculate Ultimate RSI buy signals markers with individual shape, color, and location settings
   const calculatedRsiMarkers: SeriesMarker<Time>[] = useMemo(() => {
     if (!ultimateRSIResult || !indicatorConfig.ultimateRsi.visible) return [];
     const markers: SeriesMarker<Time>[] = [];
@@ -593,26 +620,94 @@ export const LWChart: React.FC<LWChartProps> = ({
     for (let i = 0; i < aggregatedBars.length; i++) {
       const bar = aggregatedBars[i];
       const t = formatBarTime(bar.time);
+      const arsiVal = ultimateRSIResult.arsi[i];
 
-      // Buy Zone / Bullish Signals: Lock markers in a clean horizontal row on OS line 20 (Matching TradingView 1:1)
-      const isSignalActive =
-        (sigs.buyZone && ultimateRSIResult.buyZone[i]) ||
-        (sigs.buyCross && ultimateRSIResult.bullishCrossLow[i]) ||
-        (sigs.reversal && ultimateRSIResult.bullishReversal[i]);
+      // 1. Buy Signal (Momentum Cross)
+      if (sigs.buyCross && ultimateRSIResult.bullishCrossLow[i]) {
+        const isBottom = (sigs.buyCrossLocation || 'bottom') === 'bottom';
+        const props = getRsiMarkerProps(sigs.buyCrossShape || 'diamond');
+        if (isBottom) {
+          markers.push({
+            time: t,
+            position: 'atPriceMiddle',
+            price: osPrice,
+            color: sigs.buyCrossColor || '#FFFFFF',
+            shape: props.shape,
+            text: props.text,
+            size: props.size,
+          });
+        } else {
+          markers.push({
+            time: t,
+            position: 'belowBar',
+            color: sigs.buyCrossColor || '#FFFFFF',
+            shape: props.shape,
+            text: props.text,
+            size: props.size,
+          });
+        }
+      }
 
-      if (isSignalActive) {
-        markers.push({
-          time: t,
-          position: 'atPriceMiddle',
-          price: osPrice,
-          color: '#22c55e',
-          shape: 'circle',
-          size: 0.7,
-        });
+      // 2. Bullish Reversal Dot
+      if (sigs.reversal && ultimateRSIResult.bullishReversal[i]) {
+        const isBottom = (sigs.reversalLocation || 'bottom') === 'bottom';
+        const props = getRsiMarkerProps(sigs.reversalShape || 'circle');
+        if (isBottom) {
+          markers.push({
+            time: t,
+            position: 'atPriceMiddle',
+            price: osPrice,
+            color: sigs.reversalColor || '#FFE600',
+            shape: props.shape,
+            text: props.text,
+            size: props.size,
+          });
+        } else {
+          markers.push({
+            time: t,
+            position: 'belowBar',
+            color: sigs.reversalColor || '#FFE600',
+            shape: props.shape,
+            text: props.text,
+            size: props.size,
+          });
+        }
+      }
+
+      // 3. Buy Zone Accumulation
+      if (sigs.buyZone && ultimateRSIResult.buyZone[i]) {
+        const isBottom = (sigs.buyZoneLocation || 'bottom') === 'bottom';
+        const props = getRsiMarkerProps(sigs.buyZoneShape || 'cross');
+        if (isBottom) {
+          markers.push({
+            time: t,
+            position: 'atPriceMiddle',
+            price: osPrice,
+            color: sigs.buyZoneColor || '#22c55e',
+            shape: props.shape,
+            text: props.text,
+            size: props.size,
+          });
+        } else {
+          markers.push({
+            time: t,
+            position: 'belowBar',
+            color: sigs.buyZoneColor || '#22c55e',
+            shape: props.shape,
+            text: props.text,
+            size: props.size,
+          });
+        }
       }
     }
     return markers;
-  }, [aggregatedBars, ultimateRSIResult, indicatorConfig.ultimateRsi.visible, indicatorConfig.ultimateRsi.signals, indicatorConfig.ultimateRsi.osValue]);
+  }, [
+    aggregatedBars,
+    ultimateRSIResult,
+    indicatorConfig.ultimateRsi.visible,
+    indicatorConfig.ultimateRsi.signals,
+    indicatorConfig.ultimateRsi.osValue,
+  ]);
 
   // Calculate 3-Step Super Money Signals markers with individual sub-toggles
   const calculatedMarkers: SeriesMarker<Time>[] = useMemo(() => {
@@ -944,10 +1039,13 @@ export const LWChart: React.FC<LWChartProps> = ({
 
     const createRSIPane = (targetPane: number) => {
       const arsiLineColor = indicatorConfig.ultimateRsi.rsiColor || '#26A69A';
+      const isRsiVisible = indicatorConfig.ultimateRsi.visible && indicatorConfig.ultimateRsi.rsiVisible !== false;
+      const isSigVisible = indicatorConfig.ultimateRsi.visible && indicatorConfig.ultimateRsi.signalVisible !== false;
+
       const rsiSeries = chart.addSeries(
         BaselineSeries,
         {
-          baseValue: { type: 'price', price: 50 },
+          baseValue: { type: 'price', price: indicatorConfig.ultimateRsi.midValue ?? 50 },
           topLineColor: arsiLineColor,
           bottomLineColor: arsiLineColor,
           topFillColor1: 'rgba(38, 166, 154, 0.28)',
@@ -958,42 +1056,45 @@ export const LWChart: React.FC<LWChartProps> = ({
           priceLineVisible: false,
           lastValueVisible: showLabels,
           title: showLabels ? 'ARSI' : '',
-          visible: indicatorConfig.ultimateRsi.visible,
+          visible: isRsiVisible,
         },
         targetPane
       );
       rsiSeriesRef.current = rsiSeries;
 
       // Overbought (80)
+      const isObVisible = indicatorConfig.ultimateRsi.obVisible !== false;
       const rsiObLine = rsiSeries.createPriceLine({
         price: indicatorConfig.ultimateRsi.obValue,
-        color: indicatorConfig.ultimateRsi.obColor,
+        color: isObVisible ? indicatorConfig.ultimateRsi.obColor : 'transparent',
         lineStyle: LineStyle.Dashed,
         lineWidth: 1,
-        axisLabelVisible: showLabels,
-        title: showLabels ? '80 OB' : '',
+        axisLabelVisible: showLabels && isObVisible,
+        title: showLabels && isObVisible ? `${indicatorConfig.ultimateRsi.obValue} OB` : '',
       });
       rsiObLineRef.current = rsiObLine;
 
       // Midline (50)
+      const isMidVisible = indicatorConfig.ultimateRsi.midVisible !== false;
       const rsiMidLine = rsiSeries.createPriceLine({
-        price: 50,
-        color: 'rgba(255, 255, 255, 0.25)',
+        price: indicatorConfig.ultimateRsi.midValue ?? 50,
+        color: isMidVisible ? (indicatorConfig.ultimateRsi.midColor || 'rgba(255, 255, 255, 0.25)') : 'transparent',
         lineStyle: LineStyle.Dotted,
         lineWidth: 1,
         axisLabelVisible: false,
-        title: showLabels ? '50 MID' : '',
+        title: showLabels && isMidVisible ? `${indicatorConfig.ultimateRsi.midValue ?? 50} MID` : '',
       });
       rsiMidLineRef.current = rsiMidLine;
 
       // Oversold (20)
+      const isOsVisible = indicatorConfig.ultimateRsi.osVisible !== false;
       const rsiOsLine = rsiSeries.createPriceLine({
         price: indicatorConfig.ultimateRsi.osValue,
-        color: indicatorConfig.ultimateRsi.osColor,
+        color: isOsVisible ? indicatorConfig.ultimateRsi.osColor : 'transparent',
         lineStyle: LineStyle.Dashed,
         lineWidth: 1,
-        axisLabelVisible: showLabels,
-        title: showLabels ? '20 OS' : '',
+        axisLabelVisible: showLabels && isOsVisible,
+        title: showLabels && isOsVisible ? `${indicatorConfig.ultimateRsi.osValue} OS` : '',
       });
       rsiOsLineRef.current = rsiOsLine;
 
@@ -1006,7 +1107,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           priceLineVisible: false,
           lastValueVisible: showLabels,
           title: showLabels ? 'Signal' : '',
-          visible: indicatorConfig.ultimateRsi.visible,
+          visible: isSigVisible,
         },
         targetPane
       );
@@ -1321,8 +1422,14 @@ export const LWChart: React.FC<LWChartProps> = ({
       priceLineVisible: false,
     });
     const arsiLineColor = indicatorConfig.ultimateRsi.rsiColor || '#26A69A';
+    const isRsiVisible = indicatorConfig.ultimateRsi.visible && indicatorConfig.ultimateRsi.rsiVisible !== false;
+    const isSigVisible = indicatorConfig.ultimateRsi.visible && indicatorConfig.ultimateRsi.signalVisible !== false;
+    const isObVisible = indicatorConfig.ultimateRsi.obVisible !== false;
+    const isMidVisible = indicatorConfig.ultimateRsi.midVisible !== false;
+    const isOsVisible = indicatorConfig.ultimateRsi.osVisible !== false;
+
     rsiSeriesRef.current?.applyOptions({
-      visible: indicatorConfig.ultimateRsi.visible,
+      visible: isRsiVisible,
       topLineColor: arsiLineColor,
       bottomLineColor: arsiLineColor,
       lastValueVisible: showLabels,
@@ -1330,7 +1437,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       priceLineVisible: false,
     });
     rsiSignalSeriesRef.current?.applyOptions({
-      visible: indicatorConfig.ultimateRsi.visible,
+      visible: isSigVisible,
       color: indicatorConfig.ultimateRsi.signalColor,
       lastValueVisible: showLabels,
       title: showLabels ? 'Signal' : '',
@@ -1341,16 +1448,22 @@ export const LWChart: React.FC<LWChartProps> = ({
       title: showLabels ? '10 STRIKE' : '',
     });
     rsiObLineRef.current?.applyOptions({
-      axisLabelVisible: showLabels,
-      title: showLabels ? '80 OB' : '',
+      price: indicatorConfig.ultimateRsi.obValue,
+      color: isObVisible ? indicatorConfig.ultimateRsi.obColor : 'transparent',
+      axisLabelVisible: showLabels && isObVisible,
+      title: showLabels && isObVisible ? `${indicatorConfig.ultimateRsi.obValue} OB` : '',
     });
     rsiMidLineRef.current?.applyOptions({
+      price: indicatorConfig.ultimateRsi.midValue ?? 50,
+      color: isMidVisible ? (indicatorConfig.ultimateRsi.midColor || 'rgba(255, 255, 255, 0.25)') : 'transparent',
       axisLabelVisible: false,
-      title: showLabels ? '50 MID' : '',
+      title: showLabels && isMidVisible ? `${indicatorConfig.ultimateRsi.midValue ?? 50} MID` : '',
     });
     rsiOsLineRef.current?.applyOptions({
-      axisLabelVisible: showLabels,
-      title: showLabels ? '20 OS' : '',
+      price: indicatorConfig.ultimateRsi.osValue,
+      color: isOsVisible ? indicatorConfig.ultimateRsi.osColor : 'transparent',
+      axisLabelVisible: showLabels && isOsVisible,
+      title: showLabels && isOsVisible ? `${indicatorConfig.ultimateRsi.osValue} OS` : '',
     });
     markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
     rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);

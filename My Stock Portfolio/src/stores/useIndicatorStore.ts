@@ -106,6 +106,7 @@ interface IndicatorState {
   updateUltimateRSI: (partial: Partial<UltimateRSIConfig>) => void;
   toggleUltimateRSI: () => void;
   toggleUltimateRSISignal: (signalKey: keyof UltimateRSISignalsConfig) => void;
+  updateUltimateRSISignals: (partial: Partial<UltimateRSISignalsConfig>) => void;
   assignIndicatorPane: (id: SubPaneIndicatorId, targetPane: number) => void;
   moveIndicatorUp: (id: SubPaneIndicatorId) => void;
   moveIndicatorDown: (id: SubPaneIndicatorId) => void;
@@ -333,6 +334,23 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
         signals: {
           ...prev.ultimateRsi.signals,
           [signalKey]: !prev.ultimateRsi.signals[signalKey],
+        },
+      },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateUltimateRSISignals: (partial) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      ultimateRsi: {
+        ...prev.ultimateRsi,
+        signals: {
+          ...prev.ultimateRsi.signals,
+          ...partial,
         },
       },
     };

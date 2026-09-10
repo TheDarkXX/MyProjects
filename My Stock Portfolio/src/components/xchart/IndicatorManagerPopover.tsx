@@ -23,6 +23,8 @@ import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import {
   LineStyleOption,
   PresetType,
+  RSIMarkerShape,
+  RSIMarkerLocation,
 } from '../../types/indicatorConfig';
 
 // Curated 12-color TradingView-inspired palette
@@ -212,6 +214,122 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
   );
 };
 
+const SHAPE_OPTIONS: { id: RSIMarkerShape; label: string; icon: string }[] = [
+  { id: 'diamond', label: 'Diamond', icon: '◇' },
+  { id: 'circle', label: 'Circle', icon: '○' },
+  { id: 'cross', label: 'Cross', icon: '+' },
+  { id: 'square', label: 'Square', icon: '□' },
+  { id: 'arrowUp', label: 'Arrow Up', icon: '▲' },
+  { id: 'arrowDown', label: 'Arrow Down', icon: '▼' },
+];
+
+interface ShapePickerDropdownProps {
+  shape: RSIMarkerShape;
+  color: string;
+  onShapeChange: (shape: RSIMarkerShape) => void;
+  onColorChange: (color: string) => void;
+}
+
+const ShapePickerDropdown: React.FC<ShapePickerDropdownProps> = ({
+  shape,
+  color,
+  onShapeChange,
+  onColorChange,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const currentShapeObj = SHAPE_OPTIONS.find((s) => s.id === shape) || SHAPE_OPTIONS[0];
+
+  return (
+    <div className="relative inline-flex items-center gap-1.5" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 hover:border-slate-500 flex items-center justify-center transition-all cursor-pointer shadow-sm group"
+        title={`Shape: ${currentShapeObj.label} (Click to change)`}
+      >
+        <span
+          className="text-[17px] font-black group-hover:scale-110 transition-transform select-none"
+          style={{ color }}
+        >
+          {currentShapeObj.icon}
+        </span>
+      </button>
+
+      {/* Direct color picker swatch beside the shape */}
+      <ColorPickerDropdown
+        color={color}
+        onChange={onColorChange}
+        label="Signal Color"
+      />
+
+      {isOpen && (
+        <div className="absolute top-10 left-0 z-50 p-2.5 bg-[#0B101B]/98 border border-slate-700 rounded-xl shadow-2xl w-44 backdrop-blur-md flex flex-col gap-1 animate-in fade-in duration-100">
+          <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
+            Marker Shape
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {SHAPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  onShapeChange(opt.id);
+                  setIsOpen(false);
+                }}
+                className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] font-semibold transition-all cursor-pointer text-left ${
+                  shape === opt.id
+                    ? 'bg-slate-800 text-cyan-400'
+                    : 'text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <span className="w-5 text-center text-[15px] font-bold select-none" style={{ color }}>
+                  {opt.icon}
+                </span>
+                <span>{opt.label}</span>
+                {shape === opt.id && <Check className="w-3.5 h-3.5 ml-auto text-cyan-400" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface LocationDropdownProps {
+  location: RSIMarkerLocation;
+  onChange: (loc: RSIMarkerLocation) => void;
+}
+
+const LocationDropdown: React.FC<LocationDropdownProps> = ({ location, onChange }) => {
+  return (
+    <div className="relative">
+      <select
+        value={location}
+        onChange={(e) => onChange(e.target.value as RSIMarkerLocation)}
+        className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-[13px] font-bold text-slate-200 hover:border-slate-500 focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
+      >
+        <option value="bottom">Bottom</option>
+        <option value="onCurve">On Curve</option>
+      </select>
+    </div>
+  );
+};
+
 type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi';
 
 interface IndicatorManagerPopoverProps {
@@ -223,6 +341,7 @@ interface IndicatorManagerPopoverProps {
 export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = ({ onClose, initialView }) => {
   const modalCardRef = useRef<HTMLDivElement>(null);
   const [activeView, setActiveView] = useState<ActiveView>(initialView || 'list');
+  const [rsiTab, setRsiTab] = useState<'inputs' | 'style'>('style');
 
   const {
     config,
@@ -241,6 +360,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     updateUltimateRSI,
     toggleUltimateRSI,
     toggleUltimateRSISignal,
+    updateUltimateRSISignals,
     assignIndicatorPane,
     moveIndicatorUp,
     moveIndicatorDown,
@@ -1399,11 +1519,11 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
         )}
 
         {/* ========================================================= */}
-        {/* VIEW 6: MY ULTIMATE RSI CONFIG (DOCTORBANK)               */}
+        {/* VIEW 6: MY ULTIMATE RSI CONFIG (TRADINGVIEW STYLE 1:1)    */}
         {/* ========================================================= */}
         {activeView === 'ultimateRsi' && (
           <>
-            {/* Sub-Header */}
+            {/* Header with Title & Back Button */}
             <div className="flex items-center justify-between px-5 py-3.5 bg-[#0E1526] border-b border-slate-800">
               <button
                 type="button"
@@ -1415,7 +1535,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
               </button>
               <span className="text-[15px] font-black tracking-wide text-slate-100 flex items-center gap-2">
                 <Activity className="w-4 h-4 text-teal-400" />
-                My Ultimate RSI Settings
+                My Ultimate RSI
               </span>
               <button
                 type="button"
@@ -1426,126 +1546,205 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
               </button>
             </div>
 
+            {/* TradingView Top Tabs (Inputs vs Style) */}
+            <div className="flex items-center gap-2 px-5 pt-3 border-b border-slate-800 bg-[#0B101B]">
+              <button
+                type="button"
+                onClick={() => setRsiTab('inputs')}
+                className={`pb-2 px-2 text-[14px] font-extrabold border-b-2 transition-all cursor-pointer ${
+                  rsiTab === 'inputs'
+                    ? 'border-teal-400 text-teal-300'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Inputs
+              </button>
+              <button
+                type="button"
+                onClick={() => setRsiTab('style')}
+                className={`pb-2 px-2 text-[14px] font-extrabold border-b-2 transition-all cursor-pointer ${
+                  rsiTab === 'style'
+                    ? 'border-teal-400 text-teal-300'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Style
+              </button>
+            </div>
+
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-              {/* Section 1: ARSI Core Calculation */}
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
-                <div className="text-[13px] font-extrabold text-teal-300 uppercase tracking-wider">
-                  ARSI Calculation
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[12px] font-bold text-slate-400">ARSI Length</label>
-                    <input
-                      type="number"
-                      min="2"
-                      max="100"
-                      value={config.ultimateRsi.length}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val >= 2 && val <= 100) {
-                          updateUltimateRSI({ length: val });
+              {/* TAB 1: STYLE (MATCHING TRADINGVIEW 1:1) */}
+              {rsiTab === 'style' && (
+                <div className="flex flex-col gap-1">
+                  {/* Row 1: Ultimate RSI Line */}
+                  <div className="flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.ultimateRsi.rsiVisible !== false}
+                        onChange={() =>
+                          updateUltimateRSI({
+                            rsiVisible: config.ultimateRsi.rsiVisible === false,
+                          })
                         }
-                      }}
-                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-teal-500"
-                    />
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-semibold text-slate-200">
+                        Ultimate RSI
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-8 h-1 rounded-full shrink-0"
+                        style={{ backgroundColor: config.ultimateRsi.rsiColor }}
+                      />
+                      <ColorPickerDropdown
+                        color={config.ultimateRsi.rsiColor}
+                        onChange={(c) => updateUltimateRSI({ rsiColor: c })}
+                        label="ARSI Color"
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[12px] font-bold text-slate-400">Smoothing Method</label>
-                    <select
-                      value={config.ultimateRsi.smoType1}
-                      onChange={(e) => updateUltimateRSI({ smoType1: e.target.value as any })}
-                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-teal-500 cursor-pointer"
-                    >
-                      <option value="RMA">RMA (Wilder's)</option>
-                      <option value="EMA">EMA</option>
-                      <option value="SMA">SMA</option>
-                      <option value="TMA">TMA (Triangular)</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[12px] font-bold text-slate-400">Source</label>
-                    <select
-                      value={config.ultimateRsi.source}
-                      onChange={(e) => updateUltimateRSI({ source: e.target.value as any })}
-                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-teal-500 cursor-pointer"
-                    >
-                      <option value="close">Close</option>
-                      <option value="hl2">HL2 ((High+Low)/2)</option>
-                      <option value="hlc3">HLC3 ((H+L+C)/3)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 2: Signal Line */}
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
-                <div className="text-[13px] font-extrabold text-orange-400 uppercase tracking-wider">
-                  Signal Line
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[12px] font-bold text-slate-400">Signal Length</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={config.ultimateRsi.smooth}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val >= 1 && val <= 100) {
-                          updateUltimateRSI({ smooth: val });
+                  {/* Row 2: Signal Line */}
+                  <div className="flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.ultimateRsi.signalVisible !== false}
+                        onChange={() =>
+                          updateUltimateRSI({
+                            signalVisible: config.ultimateRsi.signalVisible === false,
+                          })
                         }
-                      }}
-                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[12px] font-bold text-slate-400">Signal Method</label>
-                    <select
-                      value={config.ultimateRsi.smoType2}
-                      onChange={(e) => updateUltimateRSI({ smoType2: e.target.value as any })}
-                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-orange-500 cursor-pointer"
-                    >
-                      <option value="EMA">EMA</option>
-                      <option value="SMA">SMA</option>
-                      <option value="RMA">RMA</option>
-                      <option value="TMA">TMA</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[12px] font-bold text-slate-400">Signal Color</label>
-                    <div className="flex items-center gap-2 pt-1">
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-semibold text-slate-200">
+                        Signal Line
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-8 h-1 rounded-full shrink-0"
+                        style={{ backgroundColor: config.ultimateRsi.signalColor }}
+                      />
                       <ColorPickerDropdown
                         color={config.ultimateRsi.signalColor}
                         onChange={(c) => updateUltimateRSI({ signalColor: c })}
                         label="Signal Color"
                       />
-                      <span className="text-[13px] font-mono text-slate-300">
-                        {config.ultimateRsi.signalColor}
-                      </span>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Section 3: Overbought & Oversold Levels */}
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
-                <div className="text-[13px] font-extrabold text-slate-200 uppercase tracking-wider">
-                  Overbought / Oversold Levels & Colors
-                </div>
+                  <div className="border-t border-slate-800/80 my-1" />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Overbought */}
-                  <div className="p-3 rounded-lg bg-slate-950/60 border border-emerald-900/40 flex items-center justify-between">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[13px] font-bold text-emerald-400">Overbought Level</span>
+                  {/* Row 3: Buy Signal (Cross) */}
+                  <div className="flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.ultimateRsi.signals.buyCross}
+                        onChange={() => toggleUltimateRSISignal('buyCross')}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-semibold text-slate-200">
+                        Buy Signal
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      <ShapePickerDropdown
+                        shape={config.ultimateRsi.signals.buyCrossShape || 'diamond'}
+                        color={config.ultimateRsi.signals.buyCrossColor || '#FFFFFF'}
+                        onShapeChange={(s) => updateUltimateRSISignals({ buyCrossShape: s })}
+                        onColorChange={(c) => updateUltimateRSISignals({ buyCrossColor: c })}
+                      />
+                      <LocationDropdown
+                        location={config.ultimateRsi.signals.buyCrossLocation || 'bottom'}
+                        onChange={(loc) => updateUltimateRSISignals({ buyCrossLocation: loc })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 4: Bullish Reversal */}
+                  <div className="flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.ultimateRsi.signals.reversal}
+                        onChange={() => toggleUltimateRSISignal('reversal')}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-semibold text-slate-200">
+                        Bullish Reversal
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      <ShapePickerDropdown
+                        shape={config.ultimateRsi.signals.reversalShape || 'circle'}
+                        color={config.ultimateRsi.signals.reversalColor || '#FFE600'}
+                        onShapeChange={(s) => updateUltimateRSISignals({ reversalShape: s })}
+                        onColorChange={(c) => updateUltimateRSISignals({ reversalColor: c })}
+                      />
+                      <LocationDropdown
+                        location={config.ultimateRsi.signals.reversalLocation || 'bottom'}
+                        onChange={(loc) => updateUltimateRSISignals({ reversalLocation: loc })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 5: Buy Zone */}
+                  <div className="flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.ultimateRsi.signals.buyZone}
+                        onChange={() => toggleUltimateRSISignal('buyZone')}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-semibold text-slate-200">
+                        Buy Zone
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      <ShapePickerDropdown
+                        shape={config.ultimateRsi.signals.buyZoneShape || 'cross'}
+                        color={config.ultimateRsi.signals.buyZoneColor || '#22c55e'}
+                        onShapeChange={(s) => updateUltimateRSISignals({ buyZoneShape: s })}
+                        onColorChange={(c) => updateUltimateRSISignals({ buyZoneColor: c })}
+                      />
+                      <LocationDropdown
+                        location={config.ultimateRsi.signals.buyZoneLocation || 'bottom'}
+                        onChange={(loc) => updateUltimateRSISignals({ buyZoneLocation: loc })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-800/80 my-1" />
+
+                  {/* Row 6: Overbought Level */}
+                  <div className="flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.ultimateRsi.obVisible !== false}
+                        onChange={() =>
+                          updateUltimateRSI({
+                            obVisible: config.ultimateRsi.obVisible === false,
+                          })
+                        }
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-semibold text-slate-200">
+                        Overbought
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      <ColorPickerDropdown
+                        color={config.ultimateRsi.obColor}
+                        onChange={(c) => updateUltimateRSI({ obColor: c })}
+                        label="Overbought Color"
+                      />
                       <input
                         type="number"
                         min="50"
@@ -1557,20 +1756,73 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                             updateUltimateRSI({ obValue: val });
                           }
                         }}
-                        className="w-20 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none"
+                        className="w-20 px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[13px] font-bold text-slate-100 text-center focus:outline-none focus:border-teal-500"
                       />
                     </div>
-                    <ColorPickerDropdown
-                      color={config.ultimateRsi.obColor}
-                      onChange={(c) => updateUltimateRSI({ obColor: c })}
-                      label="Overbought Color"
-                    />
                   </div>
 
-                  {/* Oversold */}
-                  <div className="p-3 rounded-lg bg-slate-950/60 border border-rose-900/40 flex items-center justify-between">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[13px] font-bold text-rose-400">Oversold Level</span>
+                  {/* Row 7: Midline Level */}
+                  <div className="flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.ultimateRsi.midVisible !== false}
+                        onChange={() =>
+                          updateUltimateRSI({
+                            midVisible: config.ultimateRsi.midVisible === false,
+                          })
+                        }
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-semibold text-slate-200">
+                        Midline
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      <ColorPickerDropdown
+                        color={config.ultimateRsi.midColor || '#787B86'}
+                        onChange={(c) => updateUltimateRSI({ midColor: c })}
+                        label="Midline Color"
+                      />
+                      <input
+                        type="number"
+                        min="30"
+                        max="70"
+                        value={config.ultimateRsi.midValue ?? 50}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val >= 30 && val <= 70) {
+                            updateUltimateRSI({ midValue: val });
+                          }
+                        }}
+                        className="w-20 px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[13px] font-bold text-slate-100 text-center focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 8: Oversold Level */}
+                  <div className="flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.ultimateRsi.osVisible !== false}
+                        onChange={() =>
+                          updateUltimateRSI({
+                            osVisible: config.ultimateRsi.osVisible === false,
+                          })
+                        }
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-semibold text-slate-200">
+                        Oversold
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      <ColorPickerDropdown
+                        color={config.ultimateRsi.osColor}
+                        onChange={(c) => updateUltimateRSI({ osColor: c })}
+                        label="Oversold Color"
+                      />
                       <input
                         type="number"
                         min="1"
@@ -1582,91 +1834,110 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                             updateUltimateRSI({ osValue: val });
                           }
                         }}
-                        className="w-20 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none"
+                        className="w-20 px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[13px] font-bold text-slate-100 text-center focus:outline-none focus:border-teal-500"
                       />
                     </div>
-                    <ColorPickerDropdown
-                      color={config.ultimateRsi.osColor}
-                      onChange={(c) => updateUltimateRSI({ osColor: c })}
-                      label="Oversold Color"
-                    />
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Section 4: Buy Signals & Markers */}
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
-                <div className="text-[13px] font-extrabold text-amber-400 uppercase tracking-wider">
-                  Sniper Buy Signals & Markers
+              {/* TAB 2: INPUTS */}
+              {rsiTab === 'inputs' && (
+                <div className="flex flex-col gap-4">
+                  {/* ARSI Core Calculation */}
+                  <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                    <div className="text-[13px] font-extrabold text-teal-300 uppercase tracking-wider">
+                      ARSI Calculation
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[12px] font-bold text-slate-400">Length</label>
+                        <input
+                          type="number"
+                          min="2"
+                          max="100"
+                          value={config.ultimateRsi.length}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val >= 2 && val <= 100) {
+                              updateUltimateRSI({ length: val });
+                            }
+                          }}
+                          className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[12px] font-bold text-slate-400">Smoothing Method</label>
+                        <select
+                          value={config.ultimateRsi.smoType1}
+                          onChange={(e) => updateUltimateRSI({ smoType1: e.target.value as any })}
+                          className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-teal-500 cursor-pointer"
+                        >
+                          <option value="RMA">RMA (Wilder's)</option>
+                          <option value="EMA">EMA</option>
+                          <option value="SMA">SMA</option>
+                          <option value="TMA">TMA (Triangular)</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[12px] font-bold text-slate-400">Source</label>
+                        <select
+                          value={config.ultimateRsi.source}
+                          onChange={(e) => updateUltimateRSI({ source: e.target.value as any })}
+                          className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-teal-500 cursor-pointer"
+                        >
+                          <option value="close">Close</option>
+                          <option value="hl2">HL2 ((High+Low)/2)</option>
+                          <option value="hlc3">HLC3 ((H+L+C)/3)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Signal Line */}
+                  <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                    <div className="text-[13px] font-extrabold text-orange-400 uppercase tracking-wider">
+                      Signal Line Calculation
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[12px] font-bold text-slate-400">Signal Length</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={config.ultimateRsi.smooth}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val >= 1 && val <= 100) {
+                              updateUltimateRSI({ smooth: val });
+                            }
+                          }}
+                          className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[12px] font-bold text-slate-400">Signal Method</label>
+                        <select
+                          value={config.ultimateRsi.smoType2}
+                          onChange={(e) => updateUltimateRSI({ smoType2: e.target.value as any })}
+                          className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-orange-500 cursor-pointer"
+                        >
+                          <option value="EMA">EMA</option>
+                          <option value="SMA">SMA</option>
+                          <option value="RMA">RMA</option>
+                          <option value="TMA">TMA</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="flex flex-col gap-2.5">
-                  {/* Signal 1: Buy Cross */}
-                  <div
-                    onClick={() => toggleUltimateRSISignal('buyCross')}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-5 h-5 rounded flex items-center justify-center bg-white text-slate-950 text-[11px] font-black">
-                        BUY
-                      </span>
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-slate-200">
-                          1. Momentum Buy Cross
-                        </span>
-                        <span className="text-[11px] text-slate-400">
-                          ARSI crosses over Signal line below 30
-                        </span>
-                      </div>
-                    </div>
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${config.ultimateRsi.signals.buyCross ? 'bg-teal-500 border-teal-400 text-slate-950' : 'border-slate-600'}`}>
-                      {config.ultimateRsi.signals.buyCross && <Check className="w-3 h-3" />}
-                    </div>
-                  </div>
-
-                  {/* Signal 2: Bullish Reversal */}
-                  <div
-                    onClick={() => toggleUltimateRSISignal('reversal')}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-3.5 h-3.5 rounded-full bg-[#FFE600]" />
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-slate-200">
-                          2. Bullish Reversal Dot
-                        </span>
-                        <span className="text-[11px] text-slate-400">
-                          ARSI & Signal recover from &lt; 20 into 20–30 zone
-                        </span>
-                      </div>
-                    </div>
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${config.ultimateRsi.signals.reversal ? 'bg-teal-500 border-teal-400 text-slate-950' : 'border-slate-600'}`}>
-                      {config.ultimateRsi.signals.reversal && <Check className="w-3 h-3" />}
-                    </div>
-                  </div>
-
-                  {/* Signal 3: Buy Zone */}
-                  <div
-                    onClick={() => toggleUltimateRSISignal('buyZone')}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-3.5 h-3.5 rounded-sm bg-[#D0FF00]" />
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-slate-200">
-                          3. Buy Zone Accumulation
-                        </span>
-                        <span className="text-[11px] text-slate-400">
-                          Within 10 bars after cross, both ARSI & Signal in 20–40 zone
-                        </span>
-                      </div>
-                    </div>
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${config.ultimateRsi.signals.buyZone ? 'bg-teal-500 border-teal-400 text-slate-950' : 'border-slate-600'}`}>
-                      {config.ultimateRsi.signals.buyZone && <Check className="w-3 h-3" />}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Footer */}

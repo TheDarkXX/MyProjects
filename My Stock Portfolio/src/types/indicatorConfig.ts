@@ -64,10 +64,22 @@ export interface VolumeConfig {
 
 export type MAMethod = 'RMA' | 'EMA' | 'SMA' | 'TMA';
 
+export type RSIMarkerShape = 'diamond' | 'circle' | 'cross' | 'square' | 'arrowUp' | 'arrowDown';
+export type RSIMarkerLocation = 'bottom' | 'onCurve';
+
 export interface UltimateRSISignalsConfig {
   buyCross: boolean;    // arsi < 30 and crossover
   reversal: boolean;    // arsi[1] < 20 and signal[1] < 20 and arsi >= 20 and arsi < 30
   buyZone: boolean;     // barssince(cross) < 10 and arsi in [20,40] and signal in [20,40]
+  buyCrossShape?: RSIMarkerShape;
+  buyCrossLocation?: RSIMarkerLocation;
+  buyCrossColor?: string;
+  reversalShape?: RSIMarkerShape;
+  reversalLocation?: RSIMarkerLocation;
+  reversalColor?: string;
+  buyZoneShape?: RSIMarkerShape;
+  buyZoneLocation?: RSIMarkerLocation;
+  buyZoneColor?: string;
 }
 
 export interface UltimateRSIConfig {
@@ -78,11 +90,18 @@ export interface UltimateRSIConfig {
   smoType2: MAMethod;
   source: 'close' | 'hl2' | 'hlc3';
   obValue: number;
+  midValue?: number;
   osValue: number;
   obColor: string;
+  midColor?: string;
   osColor: string;
   rsiColor: string;
   signalColor: string;
+  rsiVisible?: boolean;
+  signalVisible?: boolean;
+  obVisible?: boolean;
+  midVisible?: boolean;
+  osVisible?: boolean;
   autoColor: boolean;
   showArea: boolean;
   signals: UltimateRSISignalsConfig;
@@ -210,17 +229,33 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     smoType2: 'EMA',
     source: 'close',
     obValue: 80,
+    midValue: 50,
     osValue: 20,
     obColor: '#089981',
+    midColor: '#787B86',
     osColor: '#F23645',
     rsiColor: '#26A69A',
     signalColor: '#FF5D00',
+    rsiVisible: true,
+    signalVisible: true,
+    obVisible: true,
+    midVisible: true,
+    osVisible: true,
     autoColor: true,
     showArea: true,
     signals: {
       buyCross: true,
+      buyCrossShape: 'diamond',
+      buyCrossLocation: 'bottom',
+      buyCrossColor: '#FFFFFF',
       reversal: true,
+      reversalShape: 'circle',
+      reversalLocation: 'bottom',
+      reversalColor: '#FFE600',
       buyZone: true,
+      buyZoneShape: 'cross',
+      buyZoneLocation: 'bottom',
+      buyZoneColor: '#22c55e',
     },
   },
 };
