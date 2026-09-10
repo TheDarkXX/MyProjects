@@ -40,6 +40,8 @@ import { useUiStore } from '../../stores/uiStore';
 import { computeEMA } from '../../utils/computeEMA';
 import { computeUltimateRSI } from '../../utils/indicators/ultimateRSI';
 import { computeTrendSpeed, TrendSpeedResult } from '../../utils/indicators/trendSpeed';
+import { computeSMCLite, SMCResult } from '../../utils/indicators/smcLite';
+import { SMCPrimitive } from '../../utils/indicators/smcPrimitive';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { SubPaneHeaderToolbar } from '../xchart/panes/SubPaneHeaderToolbar';
 import {
@@ -47,6 +49,7 @@ import {
   RSIMarkerShape,
   RSIMarkerLocation,
   IndicatorSettings,
+  SubPaneIndicatorId,
 } from '../../types/indicatorConfig';
 
 export const TV_FONT_FAMILY = "'Trebuchet MS', 'Segoe UI Symbol', 'Segoe UI Emoji', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -209,6 +212,9 @@ export const LWChart: React.FC<LWChartProps> = ({
   const rsiSignalSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const dynTrendSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const trendSpeedHistSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const smcFastSmaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const smcSlowSmaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const smcPrimitiveRef = useRef<SMCPrimitive | null>(null);
   const markersPluginRef = useRef<any>(null);
   const rsiMarkersPluginRef = useRef<any>(null);
   const mcdxStrikeLineRef = useRef<IPriceLine | null>(null);
@@ -712,6 +718,12 @@ export const LWChart: React.FC<LWChartProps> = ({
     return map;
   }, [aggregatedBars, trendSpeedResult]);
 
+  // Compute FluidTrades - SMC Lite (Smart Money Concepts Lite)
+  const smcLiteResult: SMCResult | null = useMemo(() => {
+    if (aggregatedBars.length === 0 || !indicatorConfig.smcLite?.visible) return null;
+    return computeSMCLite(aggregatedBars, indicatorConfig.smcLite);
+  }, [aggregatedBars, indicatorConfig.smcLite]);
+
   // Helper to map RSI marker shape to SeriesMarkerShape & text
   // IMPORTANT: For text-based symbols ('diamond', 'cross'), size MUST be 0 so Lightweight Charts does NOT draw a shape above the text!
   // For shape-based symbols ('circle', 'square', etc.), text MUST be undefined so it does NOT draw a text label below the shape!
@@ -946,6 +958,46 @@ export const LWChart: React.FC<LWChartProps> = ({
     setTimeframe(tf);
   }, [displayBars.length, resolution]);
 
+  // Combined Pane 0 Markers: Super Money Signals + SMC Lite Signals
+  const pane0Markers: SeriesMarker<Time>[] = useMemo(() => {
+    const list: SeriesMarker<Time>[] = [];
+    if (indicatorConfig.signals.visible) {
+      list.push(...calculatedMarkers);
+    }
+    if (
+      indicatorConfig.smcLite?.visible &&
+      indicatorConfig.smcLite?.showArrows &&
+      smcLiteResult?.signals &&
+      smcLiteResult.signals.length > 0
+    ) {
+      const showBuy = indicatorConfig.smcLite.showBuySignal;
+      const showSell = indicatorConfig.smcLite.showSellSignal;
+      for (const sig of smcLiteResult.signals) {
+        if (sig.type === 'BUY' && showBuy) {
+          list.push({
+            time: formatBarTime(sig.time),
+            position: 'belowBar',
+            color: '#10B981',
+            shape: 'arrowUp',
+            text: sig.text,
+            size: 1.5,
+          });
+        } else if (sig.type === 'SELL' && showSell) {
+          list.push({
+            time: formatBarTime(sig.time),
+            position: 'aboveBar',
+            color: '#EF4444',
+            shape: 'arrowDown',
+            text: sig.text,
+            size: 1.5,
+          });
+        }
+      }
+    }
+    list.sort((a, b) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0));
+    return list;
+  }, [indicatorConfig.signals.visible, calculatedMarkers, indicatorConfig.smcLite, smcLiteResult]);
+
   // Initialize and build chart instance
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -1101,6 +1153,36 @@ export const LWChart: React.FC<LWChartProps> = ({
       visible: isDynTrendVisible,
     }, 0);
     dynTrendSeriesRef.current = dynTrendSeries;
+
+    // 9. SMC Lite Fast SMA (Pane 0)
+    const isSmcVisible = indicatorConfig.smcLite?.visible;
+    const isSmcFastVisible = isSmcVisible && (indicatorConfig.smcLite?.showFastSMA ?? false) && (indicatorConfig.smcLite?.showSMA ?? true);
+    const smcFastSmaSeries = chart.addSeries(LineSeries, {
+      color: indicatorConfig.smcLite?.fastSMAColor ?? '#3B82F6',
+      lineWidth: (indicatorConfig.smcLite?.fastLineWidth ?? 1) as any,
+      priceLineVisible: false,
+      lastValueVisible: showLabels,
+      title: showLabels ? `SMA ${indicatorConfig.smcLite?.smaFastLen ?? 15}` : '',
+      visible: isSmcFastVisible,
+    }, 0);
+    smcFastSmaSeriesRef.current = smcFastSmaSeries;
+
+    // 10. SMC Lite Slow SMA (Pane 0)
+    const isSmcSlowVisible = isSmcVisible && (indicatorConfig.smcLite?.showSlowSMA ?? true) && (indicatorConfig.smcLite?.showSMA ?? true);
+    const smcSlowSmaSeries = chart.addSeries(LineSeries, {
+      color: indicatorConfig.smcLite?.slowSMAColor ?? '#F59E0B',
+      lineWidth: (indicatorConfig.smcLite?.slowLineWidth ?? 2) as any,
+      priceLineVisible: false,
+      lastValueVisible: showLabels,
+      title: showLabels ? `SMA ${indicatorConfig.smcLite?.smaSlowLen ?? 200}` : '',
+      visible: isSmcSlowVisible,
+    }, 0);
+    smcSlowSmaSeriesRef.current = smcSlowSmaSeries;
+
+    // 11. SMC Lite Custom Primitive (Pane 0: Supply/Demand Boxes, BOS, Zigzag, Labels)
+    const smcPrimitive = new SMCPrimitive();
+    candleSeries.attachPrimitive(smcPrimitive);
+    smcPrimitiveRef.current = smcPrimitive;
 
     // -------------------------------------------------------------
     // Dynamic Sub-Panes Construction (Ordered by Pane Index)
@@ -1309,7 +1391,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     applyPaneLayoutHeights(chart, indicatorConfig, maximizedPane);
 
     // Initialize Markers Plugin for Pane 0 (Candles) and RSI Pane
-    const markersPlugin = createSeriesMarkers(candleSeries, indicatorConfig.signals.visible ? calculatedMarkers : []);
+    const markersPlugin = createSeriesMarkers(candleSeries, pane0Markers);
     markersPluginRef.current = markersPlugin;
 
     if (rsiSignalSeriesRef.current) {
@@ -1438,6 +1520,14 @@ export const LWChart: React.FC<LWChartProps> = ({
       upperEnvSeriesRef.current = null;
       lowerEnvSeriesRef.current = null;
       dynTrendSeriesRef.current = null;
+      if (smcPrimitiveRef.current && candleSeriesRef.current) {
+        try {
+          candleSeriesRef.current.detachPrimitive(smcPrimitiveRef.current);
+        } catch (_) {}
+      }
+      smcPrimitiveRef.current = null;
+      smcFastSmaSeriesRef.current = null;
+      smcSlowSmaSeriesRef.current = null;
       mcdxSeriesRef.current = null;
       bankerMaSeriesRef.current = null;
       rsiAreaSeriesRef.current = null;
@@ -1619,7 +1709,50 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
     }
 
-    markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
+    // SMC Lite Data Feed (Fast SMA, Slow SMA, and Primitive Canvas)
+    if (smcLiteResult && indicatorConfig.smcLite?.visible) {
+      if (smcFastSmaSeriesRef.current) {
+        const fastData: any[] = [];
+        for (let i = 0; i < displayBars.length; i++) {
+          const val = smcLiteResult.fastSMA[i];
+          if (val !== null && !isNaN(val)) {
+            fastData.push({ time: formatBarTime(displayBars[i].time), value: val });
+          }
+        }
+        smcFastSmaSeriesRef.current.setData(fastData);
+      }
+      if (smcSlowSmaSeriesRef.current) {
+        const slowData: any[] = [];
+        for (let i = 0; i < displayBars.length; i++) {
+          const val = smcLiteResult.slowSMA[i];
+          if (val !== null && !isNaN(val)) {
+            slowData.push({ time: formatBarTime(displayBars[i].time), value: val });
+          }
+        }
+        smcSlowSmaSeriesRef.current.setData(slowData);
+      }
+      smcPrimitiveRef.current?.setData(smcLiteResult, indicatorConfig.smcLite);
+    } else {
+      smcFastSmaSeriesRef.current?.setData([]);
+      smcSlowSmaSeriesRef.current?.setData([]);
+      if (smcPrimitiveRef.current && indicatorConfig.smcLite) {
+        smcPrimitiveRef.current.setData(
+          {
+            activeSupplyZones: [],
+            activeDemandZones: [],
+            bosLines: [],
+            zigzagPoints: [],
+            priceActionLabels: [],
+            fastSMA: [],
+            slowSMA: [],
+            signals: [],
+          },
+          indicatorConfig.smcLite
+        );
+      }
+    }
+
+    markersPluginRef.current?.setMarkers(pane0Markers);
 
     // Apply current timeframe range
     applyTimeframeRange(timeframe);
@@ -1786,7 +1919,43 @@ export const LWChart: React.FC<LWChartProps> = ({
       title: showLabels ? 'Trend Speed' : '',
     });
 
-    markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
+    // Update SMC Lite SMAs and Primitive
+    const isSmcVisible = indicatorConfig.smcLite?.visible;
+    const isSmcFastVisible = isSmcVisible && (indicatorConfig.smcLite?.showFastSMA ?? false) && (indicatorConfig.smcLite?.showSMA ?? true);
+    smcFastSmaSeriesRef.current?.applyOptions({
+      visible: isSmcFastVisible,
+      color: indicatorConfig.smcLite?.fastSMAColor ?? '#3B82F6',
+      lineWidth: (indicatorConfig.smcLite?.fastLineWidth ?? 1) as any,
+      lastValueVisible: showLabels,
+      title: showLabels ? `SMA ${indicatorConfig.smcLite?.smaFastLen ?? 15}` : '',
+    });
+
+    const isSmcSlowVisible = isSmcVisible && (indicatorConfig.smcLite?.showSlowSMA ?? true) && (indicatorConfig.smcLite?.showSMA ?? true);
+    smcSlowSmaSeriesRef.current?.applyOptions({
+      visible: isSmcSlowVisible,
+      color: indicatorConfig.smcLite?.slowSMAColor ?? '#F59E0B',
+      lineWidth: (indicatorConfig.smcLite?.slowLineWidth ?? 2) as any,
+      lastValueVisible: showLabels,
+      title: showLabels ? `SMA ${indicatorConfig.smcLite?.smaSlowLen ?? 200}` : '',
+    });
+
+    if (smcPrimitiveRef.current && indicatorConfig.smcLite) {
+      smcPrimitiveRef.current.setData(
+        smcLiteResult || {
+          activeSupplyZones: [],
+          activeDemandZones: [],
+          bosLines: [],
+          zigzagPoints: [],
+          priceActionLabels: [],
+          fastSMA: [],
+          slowSMA: [],
+          signals: [],
+        },
+        indicatorConfig.smcLite
+      );
+    }
+
+    markersPluginRef.current?.setMarkers(pane0Markers);
     rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
 
     applyPaneLayoutHeights(chartRef.current, indicatorConfig, maximizedPane);
@@ -1812,7 +1981,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
       setPaneOffsets(newOffsets);
     });
-  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, activeSubPanes, maximizedPane, applyPaneLayoutHeights]);
+  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, pane0Markers, smcLiteResult, activeSubPanes, maximizedPane, applyPaneLayoutHeights]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {

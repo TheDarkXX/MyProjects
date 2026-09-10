@@ -128,6 +128,47 @@ export interface TrendSpeedConfig {
   tableVisible: boolean;
 }
 
+export interface SMCLiteConfig {
+  visible: boolean;
+  // Settings
+  swingLength: number;
+  boxWidth: number;
+  historyToKeep: number;
+  // Visual Settings
+  showZigzag: boolean;
+  showPriceActionLabels: boolean;
+  supplyColor: string;
+  supplyOutlineColor: string;
+  demandColor: string;
+  demandOutlineColor: string;
+  bosLabelColor: string;
+  poiLabelColor: string;
+  swingTypeColor: string;
+  zigzagColor: string;
+  // Display Options
+  showSMA: boolean;
+  showArrows: boolean;
+  showLabels: boolean;
+  showPriceOnly: boolean;
+  labelPosition: 'Outside' | 'Inside';
+  labelDistance: number;
+  // SMA Settings
+  smaFastLen: number;
+  smaSlowLen: number;
+  fastLineWidth: number;
+  slowLineWidth: number;
+  fastSMAColor: string;
+  slowSMAColor: string;
+  // Style Tab Toggles
+  showFastSMA: boolean;
+  showSlowSMA: boolean;
+  showBuySignal: boolean;
+  showSellSignal: boolean;
+  showBoxes: boolean;
+  showLines: boolean;
+  showPaneLabels: boolean;
+}
+
 export type SubPaneIndicatorId = 'mcdx' | 'ultimateRsi' | 'trendSpeed';
 
 export interface PaneLayout {
@@ -171,6 +212,7 @@ export interface IndicatorSettings {
   volume: VolumeConfig;
   ultimateRsi: UltimateRSIConfig;
   trendSpeed: TrendSpeedConfig;
+  smcLite: SMCLiteConfig;
 }
 
 export const DEFAULT_CUSTOM_COLORS: string[] = [
@@ -302,5 +344,40 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     trendSpeedVisible: true,
     plotCandleVisible: true,
     tableVisible: true,
+  },
+  smcLite: {
+    visible: true,
+    swingLength: 10,
+    boxWidth: 2.5,
+    historyToKeep: 20,
+    showZigzag: false,
+    showPriceActionLabels: false,
+    supplyColor: 'rgba(30, 58, 95, 0.45)',
+    supplyOutlineColor: 'rgba(255, 255, 255, 0.25)',
+    demandColor: 'rgba(180, 83, 9, 0.45)',
+    demandOutlineColor: 'rgba(255, 255, 255, 0.25)',
+    bosLabelColor: '#FFFFFF',
+    poiLabelColor: '#FFFFFF',
+    swingTypeColor: '#000000',
+    zigzagColor: '#000000',
+    showSMA: true,
+    showArrows: true,
+    showLabels: true,
+    showPriceOnly: false,
+    labelPosition: 'Outside',
+    labelDistance: 1.5,
+    smaFastLen: 15,
+    smaSlowLen: 200,
+    fastLineWidth: 1,
+    slowLineWidth: 2,
+    fastSMAColor: '#3B82F6',
+    slowSMAColor: '#F59E0B',
+    showFastSMA: false,
+    showSlowSMA: true,
+    showBuySignal: false,
+    showSellSignal: false,
+    showBoxes: true,
+    showLines: true,
+    showPaneLabels: false,
   },
 };

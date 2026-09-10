@@ -13,6 +13,7 @@ import {
   UltimateRSIConfig,
   UltimateRSISignalsConfig,
   TrendSpeedConfig,
+  SMCLiteConfig,
   SubPaneIndicatorId,
   PaneLayout,
   DEFAULT_PANE_LAYOUT,
@@ -117,6 +118,8 @@ interface IndicatorState {
   updateUltimateRSISignals: (partial: Partial<UltimateRSISignalsConfig>) => void;
   updateTrendSpeed: (partial: Partial<TrendSpeedConfig>) => void;
   toggleTrendSpeed: () => void;
+  updateSMCLite: (partial: Partial<SMCLiteConfig>) => void;
+  toggleSMCLite: () => void;
   assignIndicatorPane: (id: SubPaneIndicatorId, targetPane: number) => void;
   moveIndicatorUp: (id: SubPaneIndicatorId) => void;
   moveIndicatorDown: (id: SubPaneIndicatorId) => void;
@@ -385,6 +388,28 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       ...prev,
       activePreset: 'custom',
       trendSpeed: { ...prev.trendSpeed, visible: !prev.trendSpeed.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateSMCLite: (partial: Partial<SMCLiteConfig>) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      smcLite: { ...prev.smcLite, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleSMCLite: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      smcLite: { ...prev.smcLite, visible: !prev.smcLite.visible },
     };
     saveConfig(next);
     set({ config: next });

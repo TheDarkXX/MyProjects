@@ -331,7 +331,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ location, onChange 
   );
 };
 
-type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed';
+type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite';
 
 interface IndicatorManagerPopoverProps {
   onClose: () => void;
@@ -344,6 +344,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
   const [activeView, setActiveView] = useState<ActiveView>(initialView || 'list');
   const [rsiTab, setRsiTab] = useState<'inputs' | 'style'>('style');
   const [trendSpeedTab, setTrendSpeedTab] = useState<'inputs' | 'style'>('inputs');
+  const [smcTab, setSmcTab] = useState<'inputs' | 'style'>('inputs');
 
   const {
     config,
@@ -365,6 +366,8 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     updateUltimateRSISignals,
     updateTrendSpeed,
     toggleTrendSpeed,
+    updateSMCLite,
+    toggleSMCLite,
     assignIndicatorPane,
     moveIndicatorUp,
     moveIndicatorDown,
@@ -607,6 +610,54 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/40 text-[13px] font-bold transition-all cursor-pointer"
                   >
                     <Settings className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Config</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Item 3.5: FluidTrades - SMC Lite */}
+              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleSMCLite}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      config.smcLite?.visible
+                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                    }`}
+                    title="Toggle FluidTrades SMC Lite"
+                  >
+                    {config.smcLite?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+
+                  <div className="flex flex-col">
+                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5 text-sky-400" />
+                      FluidTrades - SMC Lite
+                      <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-sky-950/80 text-sky-300 border-sky-800/60">
+                        Pane 0 Overlay
+                      </span>
+                    </span>
+                    <span className="text-[13px] text-slate-400">
+                      Supply/Demand Zones, BOS, Dual SMA, Signals
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.smcLite?.supplyColor ?? '#1e3a5f' }} title="Supply" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.smcLite?.demandColor ?? '#5c4a18' }} title="Demand" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.smcLite?.slowSMAColor ?? '#F59E0B' }} title="Slow SMA" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('smcLite')}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-400 transition-colors" />
                     <span>Config</span>
                   </button>
                 </div>
@@ -2472,6 +2523,402 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                 type="button"
                 onClick={onClose}
                 className="px-5 py-1.5 rounded-lg text-[13px] font-extrabold bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-md transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* VIEW: FluidTrades - SMC Lite Dedicated Config */}
+        {activeView === 'smcLite' && (
+          <>
+            {/* Header with Title & Back Button */}
+            <div className="flex items-center justify-between px-5 py-3.5 bg-[#0E1526] border-b border-slate-800">
+              <button
+                type="button"
+                onClick={() => setActiveView('list')}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-[13px] font-bold transition-all cursor-pointer border border-slate-700/60"
+              >
+                <ArrowLeft className="w-4 h-4 text-sky-400" />
+                <span>Back</span>
+              </button>
+              <span className="text-[15px] font-black tracking-wide text-slate-100 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-sky-400" />
+                FluidTrades - SMC Lite
+              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* TradingView-Style Tabs */}
+            <div className="flex border-b border-slate-800 px-5 pt-2 bg-[#090D16]">
+              <button
+                type="button"
+                onClick={() => setSmcTab('inputs')}
+                className={`pb-2.5 px-4 text-[13px] font-bold transition-all relative cursor-pointer ${
+                  smcTab === 'inputs'
+                    ? 'text-sky-400 border-b-2 border-sky-400'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Inputs
+              </button>
+              <button
+                type="button"
+                onClick={() => setSmcTab('style')}
+                className={`pb-2.5 px-4 text-[13px] font-bold transition-all relative cursor-pointer ${
+                  smcTab === 'style'
+                    ? 'text-sky-400 border-b-2 border-sky-400'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Style
+              </button>
+              <div className="pb-2.5 px-4 text-[13px] font-bold text-slate-600 select-none">
+                Visibility
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-5 max-h-[480px] overflow-y-auto space-y-6 bg-[#090D16]">
+              {smcTab === 'inputs' ? (
+                <div className="space-y-6">
+                  {/* SETTINGS */}
+                  <div className="space-y-3">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Settings
+                    </div>
+
+                    {/* Swing High/Low Length */}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">Swing High/Low Length</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={config.smcLite?.swingLength ?? 10}
+                        onChange={(e) => updateSMCLite({ swingLength: Math.max(1, Math.min(50, Number(e.target.value) || 10)) })}
+                        className="w-20 px-3 py-1.5 bg-slate-950 border border-slate-700/80 rounded-lg text-[14px] text-slate-100 text-center font-bold focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+
+                    {/* Supply/Demand Box Width */}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">Supply/Demand Box Width</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={10}
+                        step={0.5}
+                        value={config.smcLite?.boxWidth ?? 2.5}
+                        onChange={(e) => updateSMCLite({ boxWidth: Math.max(0.5, Math.min(10, Number(e.target.value) || 2.5)) })}
+                        className="w-20 px-3 py-1.5 bg-slate-950 border border-slate-700/80 rounded-lg text-[14px] text-slate-100 text-center font-bold focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+
+                    {/* History To Keep */}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">History To Keep</span>
+                      <input
+                        type="number"
+                        min={5}
+                        max={50}
+                        value={config.smcLite?.historyToKeep ?? 20}
+                        onChange={(e) => updateSMCLite({ historyToKeep: Math.max(5, Math.min(50, Number(e.target.value) || 20)) })}
+                        className="w-20 px-3 py-1.5 bg-slate-950 border border-slate-700/80 rounded-lg text-[14px] text-slate-100 text-center font-bold focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* VISUAL SETTINGS */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Visual Settings
+                    </div>
+
+                    {/* Show Zig Zag */}
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showZigzag ?? false}
+                        onChange={(e) => updateSMCLite({ showZigzag: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Show Zig Zag</span>
+                    </label>
+
+                    {/* Show Price Action Labels */}
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showPriceActionLabels ?? false}
+                        onChange={(e) => updateSMCLite({ showPriceActionLabels: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Show Price Action Labels</span>
+                    </label>
+
+                    {/* Supply & Outline */}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">Supply</span>
+                      <div className="flex items-center gap-4">
+                        <ColorPickerDropdown
+                          color={config.smcLite?.supplyColor ?? '#1e3a5f'}
+                          onChange={(c) => updateSMCLite({ supplyColor: c })}
+                          label="Supply Color"
+                        />
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] text-slate-400">Outline</span>
+                          <ColorPickerDropdown
+                            color={config.smcLite?.supplyOutlineColor ?? '#ffffff'}
+                            onChange={(c) => updateSMCLite({ supplyOutlineColor: c })}
+                            label="Supply Outline Color"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Demand & Outline */}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">Demand</span>
+                      <div className="flex items-center gap-4">
+                        <ColorPickerDropdown
+                          color={config.smcLite?.demandColor ?? '#5c4a18'}
+                          onChange={(c) => updateSMCLite({ demandColor: c })}
+                          label="Demand Color"
+                        />
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] text-slate-400">Outline</span>
+                          <ColorPickerDropdown
+                            color={config.smcLite?.demandOutlineColor ?? '#ffffff'}
+                            onChange={(c) => updateSMCLite({ demandOutlineColor: c })}
+                            label="Demand Outline Color"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* BOS Label */}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">BOS Label</span>
+                      <ColorPickerDropdown
+                        color={config.smcLite?.bosLabelColor ?? '#FFFFFF'}
+                        onChange={(c) => updateSMCLite({ bosLabelColor: c })}
+                        label="BOS Label Color"
+                      />
+                    </div>
+
+                    {/* POI Label */}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">POI Label</span>
+                      <ColorPickerDropdown
+                        color={config.smcLite?.poiLabelColor ?? '#FFFFFF'}
+                        onChange={(c) => updateSMCLite({ poiLabelColor: c })}
+                        label="POI Label Color"
+                      />
+                    </div>
+
+                    {/* Price Action Label */}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">Price Action Label</span>
+                      <ColorPickerDropdown
+                        color={config.smcLite?.swingTypeColor ?? '#94A3B8'}
+                        onChange={(c) => updateSMCLite({ swingTypeColor: c })}
+                        label="Price Action Label Color"
+                      />
+                    </div>
+
+                    {/* Zig Zag */}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[14px] font-medium text-slate-200">Zig Zag</span>
+                      <ColorPickerDropdown
+                        color={config.smcLite?.zigzagColor ?? '#EAB308'}
+                        onChange={(c) => updateSMCLite({ zigzagColor: c })}
+                        label="Zig Zag Color"
+                      />
+                    </div>
+                  </div>
+
+                  {/* DISPLAY OPTIONS */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Display Options
+                    </div>
+
+                    {/* Show SMA Lines */}
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showSMA ?? true}
+                        onChange={(e) => updateSMCLite({ showSMA: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Show SMA Lines</span>
+                    </label>
+
+                    {/* Show Signal Arrows */}
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showArrows ?? true}
+                        onChange={(e) => updateSMCLite({ showArrows: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Show Signal Arrows</span>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Fast SMA */}
+                  <div className="flex items-center justify-between py-1">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showFastSMA ?? false}
+                        onChange={(e) => updateSMCLite({ showFastSMA: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">Fast SMA ({config.smcLite?.smaFastLen ?? 15})</span>
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.smcLite?.fastSMAColor ?? '#3B82F6'}
+                        onChange={(c) => updateSMCLite({ fastSMAColor: c })}
+                        label="Fast SMA Color"
+                      />
+                      <select
+                        value={config.smcLite?.fastLineWidth ?? 1}
+                        onChange={(e) => updateSMCLite({ fastLineWidth: Number(e.target.value) })}
+                        className="px-2 py-1 bg-slate-950 border border-slate-700 rounded text-[13px] text-slate-200 font-bold focus:outline-none"
+                      >
+                        <option value={1}>1px</option>
+                        <option value={2}>2px</option>
+                        <option value={3}>3px</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Slow SMA */}
+                  <div className="flex items-center justify-between py-1">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showSlowSMA ?? true}
+                        onChange={(e) => updateSMCLite({ showSlowSMA: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">Slow SMA ({config.smcLite?.smaSlowLen ?? 200})</span>
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.smcLite?.slowSMAColor ?? '#F59E0B'}
+                        onChange={(c) => updateSMCLite({ slowSMAColor: c })}
+                        label="Slow SMA Color"
+                      />
+                      <select
+                        value={config.smcLite?.slowLineWidth ?? 2}
+                        onChange={(e) => updateSMCLite({ slowLineWidth: Number(e.target.value) })}
+                        className="px-2 py-1 bg-slate-950 border border-slate-700 rounded text-[13px] text-slate-200 font-bold focus:outline-none"
+                      >
+                        <option value={1}>1px</option>
+                        <option value={2}>2px</option>
+                        <option value={3}>3px</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Buy Signal */}
+                  <div className="flex items-center justify-between py-1">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showBuySignal ?? false}
+                        onChange={(e) => updateSMCLite({ showBuySignal: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold flex items-center gap-2">
+                        <span className="text-emerald-400">▲</span> Buy Signal
+                      </span>
+                    </label>
+                    <span className="text-[12px] font-semibold text-slate-400">Below Bar</span>
+                  </div>
+
+                  {/* Sell Signal */}
+                  <div className="flex items-center justify-between py-1">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showSellSignal ?? false}
+                        onChange={(e) => updateSMCLite({ showSellSignal: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold flex items-center gap-2">
+                        <span className="text-rose-400">▼</span> Sell Signal
+                      </span>
+                    </label>
+                    <span className="text-[12px] font-semibold text-slate-400">Above Bar</span>
+                  </div>
+
+                  {/* GRAPHIC OBJECTS */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800/80">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Graphic Objects
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showBoxes ?? true}
+                        onChange={(e) => updateSMCLite({ showBoxes: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Boxes (Supply & Demand)</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showPaneLabels ?? false}
+                        onChange={(e) => updateSMCLite({ showPaneLabels: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Pane labels</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={config.smcLite?.showLines ?? true}
+                        onChange={(e) => updateSMCLite({ showLines: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-medium">Lines (POI Midline & BOS)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3.5 bg-[#080D18] border-t border-slate-800 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setActiveView('list')}
+                className="px-3 py-1.5 rounded-lg text-[13px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-slate-800 transition-all cursor-pointer"
+              >
+                Back to Indicators
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-1.5 rounded-lg text-[13px] font-extrabold bg-sky-400 text-slate-950 hover:bg-sky-300 shadow-md transition-all cursor-pointer"
               >
                 Done
               </button>
