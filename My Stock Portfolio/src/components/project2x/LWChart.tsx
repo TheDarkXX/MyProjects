@@ -345,7 +345,12 @@ export const LWChart: React.FC<LWChartProps> = ({
   // Hover RSI values for sub-pane toolbar
   const [hoveredRsi, setHoveredRsi] = useState<{ arsi: number | null; signal: number | null } | null>(null);
   // Hover Trend Speed values for sub-pane toolbar
-  const [hoveredTrendSpeed, setHoveredTrendSpeed] = useState<{ speed: number | null; color: string } | null>(null);
+  const [hoveredTrendSpeed, setHoveredTrendSpeed] = useState<{
+    speed: number | null;
+    color: string;
+    dynEma: number | null;
+    dynColor: string;
+  } | null>(null);
 
   // Save state to localStorage
   useEffect(() => {
@@ -623,7 +628,9 @@ export const LWChart: React.FC<LWChartProps> = ({
     if (aggregatedBars.length === 0) return null;
     const c = aggregatedBars.map(b => b.close);
     const o = aggregatedBars.map(b => b.open);
-    return computeTrendSpeed(c, o, {
+    const h = aggregatedBars.map(b => b.high);
+    const l = aggregatedBars.map(b => b.low);
+    return computeTrendSpeed(c, o, h, l, {
       maxLength: indicatorConfig.trendSpeed?.maxLength ?? 50,
       accelMultiplier: indicatorConfig.trendSpeed?.accelMultiplier ?? 0.01,
       enableTable: indicatorConfig.trendSpeed?.enableTable ?? true,
@@ -1232,8 +1239,8 @@ export const LWChart: React.FC<LWChartProps> = ({
           visible: isVisible,
           priceFormat: {
             type: 'custom',
-            minMove: 0.01,
-            formatter: (val: number) => val.toFixed(2),
+            minMove: 0.001,
+            formatter: (val: number) => val.toFixed(3),
           },
         },
         targetPane
@@ -1301,7 +1308,12 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
       const ts = trendSpeedDataByDate.get(timeStr);
       if (ts) {
-        setHoveredTrendSpeed({ speed: ts.speed, color: ts.color });
+        setHoveredTrendSpeed({
+          speed: ts.speed,
+          color: ts.color,
+          dynEma: ts.dynEma,
+          dynColor: ts.dynColor,
+        });
       } else {
         setHoveredTrendSpeed(null);
       }
@@ -2512,27 +2524,33 @@ export const LWChart: React.FC<LWChartProps> = ({
           {paneOffsets[trendSpeedPane] && paneOffsets[trendSpeedPane].height >= 14 && (
             <SubPaneHeaderToolbar
               paneIndex={trendSpeedPane}
-              title="Trend Speed"
+              title="Trend Speed Analyzer (Zeiierman)"
+              subtitle={`${indicatorConfig.trendSpeed?.maxLength ?? 50} ${indicatorConfig.trendSpeed?.accelMultiplier ?? 0.01} ${indicatorConfig.trendSpeed?.lookbackPeriod ?? 150} ${indicatorConfig.trendSpeed?.collectionPeriod ?? 100} From start`}
               top={paneOffsets[trendSpeedPane].top}
               isVisible={indicatorConfig.trendSpeed?.visible ?? true}
               isMaximized={maximizedPane === trendSpeedPane}
-              liveValues={
-                hoveredTrendSpeed
-                  ? {
-                      Speed: {
-                        value: hoveredTrendSpeed.speed !== null ? hoveredTrendSpeed.speed.toFixed(2) : '--',
-                        color: hoveredTrendSpeed.color,
-                      },
-                    }
-                  : activeLegend && trendSpeedDataByDate.get(activeLegend.time)
-                  ? {
-                      Speed: {
-                        value: (trendSpeedDataByDate.get(activeLegend.time)!.speed ?? 0).toFixed(2),
-                        color: trendSpeedDataByDate.get(activeLegend.time)!.color,
-                      },
-                    }
-                  : {}
-              }
+              hideLabels={true}
+              liveValues={(() => {
+                const tsData = hoveredTrendSpeed || (activeLegend ? trendSpeedDataByDate.get(activeLegend.time) : null);
+                const bar = hoveredBar || activeLegend;
+                if (!tsData || !bar) return {};
+
+                const dynVal = tsData.dynEma !== null && tsData.dynEma !== undefined
+                  ? tsData.dynEma.toFixed(3)
+                  : '--';
+                const speedVal = tsData.speed !== null && tsData.speed !== undefined
+                  ? tsData.speed.toFixed(3)
+                  : '--';
+
+                return {
+                  dynEma: { value: dynVal, color: tsData.dynColor || '#F7D02C' },
+                  speed: { value: speedVal, color: tsData.color || '#F7D02C' },
+                  open: { value: bar.open.toFixed(3), color: tsData.color || '#F7D02C' },
+                  high: { value: bar.high.toFixed(3), color: tsData.color || '#F7D02C' },
+                  low: { value: bar.low.toFixed(3), color: tsData.color || '#F7D02C' },
+                  close: { value: bar.close.toFixed(3), color: tsData.color || '#F7D02C' },
+                };
+              })()}
               onToggleVisibility={() => useIndicatorStore.getState().toggleTrendSpeed()}
               onOpenSettings={() => {
                 setIndicatorInitialView('trendSpeed');
@@ -2555,12 +2573,12 @@ export const LWChart: React.FC<LWChartProps> = ({
                 style={{ fontFamily: TV_FONT_FAMILY }}
               >
                 <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1">
-                  <span className="text-[12px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                  <span className="text-[13px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
                     <Flame className="w-3.5 h-3.5 text-amber-400" />
                     Dominance Wave
                   </span>
                   <span
-                    className="text-[12px] font-black px-1.5 py-0.2 rounded"
+                    className="text-[13px] font-black px-1.5 py-0.5 rounded"
                     style={{
                       color: trendSpeedResult.stats.dominanceAvgColor,
                       backgroundColor: hexToRgba(trendSpeedResult.stats.dominanceAvgColor, 0.15),
@@ -2571,7 +2589,7 @@ export const LWChart: React.FC<LWChartProps> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[13px]">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-slate-400">Bull Avg:</span>
                     <strong className="text-emerald-400">{trendSpeedResult.stats.bullAvg.toFixed(1)}</strong>

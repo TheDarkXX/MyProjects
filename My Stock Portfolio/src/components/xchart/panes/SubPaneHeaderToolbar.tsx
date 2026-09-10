@@ -11,10 +11,12 @@ import {
 } from 'lucide-react';
 
 export interface SubPaneHeaderToolbarProps {
-  /** Pane index (1 or 2) */
+  /** Pane index (1, 2, or 3) */
   paneIndex: number;
-  /** Label e.g. "MCDX" or "Ultimate RSI" */
+  /** Label e.g. "MCDX" or "Trend Speed Analyzer (Zeiierman)" */
   title: string;
+  /** Optional subtitle e.g. "50 0.01 150 100 From start" */
+  subtitle?: string;
   /** Absolute Y offset from the top of the chart container */
   top: number;
   /** Whether this pane is currently visible */
@@ -23,6 +25,8 @@ export interface SubPaneHeaderToolbarProps {
   isMaximized: boolean;
   /** Live values to display, keyed by label. e.g. { "Banker": 12.3, "HotMoney": 5.1 } */
   liveValues: Record<string, { value: string; color: string }>;
+  /** If true, don't show "Label: ", just show values with their colors (TradingView style) */
+  hideLabels?: boolean;
 
   onToggleVisibility: () => void;
   onOpenSettings: () => void;
@@ -35,10 +39,12 @@ export interface SubPaneHeaderToolbarProps {
 export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
   paneIndex,
   title,
+  subtitle,
   top,
   isVisible,
   isMaximized,
   liveValues,
+  hideLabels = false,
   onToggleVisibility,
   onOpenSettings,
   onMoveUp,
@@ -79,10 +85,15 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
       <div
         className="pointer-events-auto inline-flex items-center gap-1 mx-1 mt-0.5 px-2 py-1 rounded-lg border border-transparent hover:border-slate-700/60 bg-transparent hover:bg-[#0B101B]/90 hover:backdrop-blur-md hover:shadow-xl transition-all duration-200 group"
       >
-        {/* Title + Pane Badge */}
-        <span className="text-[13px] font-black text-slate-100 tracking-wide mr-1.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+        {/* Title + Subtitle + Pane Badge */}
+        <span className="text-[13px] font-black text-slate-100 tracking-wide mr-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
           {title}
         </span>
+        {subtitle && (
+          <span className="text-[13px] font-normal text-slate-400 mr-1.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] select-none">
+            {subtitle}
+          </span>
+        )}
         <span className="px-1.5 py-0.5 rounded bg-slate-800/80 text-[11px] font-bold text-cyan-300 border border-slate-700/60 leading-none mr-2 drop-shadow-sm">
           P{paneIndex}
         </span>
@@ -91,8 +102,8 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
         <div className="flex items-center gap-2 mr-1">
           {Object.entries(liveValues).map(([label, { value, color }]) => (
             <span key={label} className="text-[13px] text-slate-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-              {label}:{' '}
-              <strong className="font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" style={{ color }}>
+              {!hideLabels && `${label}: `}
+              <strong className="font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] font-mono" style={{ color }}>
                 {value}
               </strong>
             </span>

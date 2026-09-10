@@ -12,6 +12,7 @@ import {
   PresetType,
   UltimateRSIConfig,
   UltimateRSISignalsConfig,
+  TrendSpeedConfig,
   SubPaneIndicatorId,
   PaneLayout,
   DEFAULT_PANE_LAYOUT,

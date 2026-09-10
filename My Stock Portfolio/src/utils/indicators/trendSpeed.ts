@@ -274,9 +274,8 @@ export function computeTrendSpeed(
         bullishWaves.unshift(highestSpeed);
         x1 = i;
         speed = diff;
-      } else {
-        speed += diff;
       }
+      speed += diff;
     } else {
       speed += diff;
     }
