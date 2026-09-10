@@ -37,6 +37,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { computeEMA } from '../../utils/computeEMA';
 import { computeUltimateRSI } from '../../utils/indicators/ultimateRSI';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
+import { SubPaneHeaderToolbar } from '../xchart/panes/SubPaneHeaderToolbar';
 import { LineStyleOption } from '../../types/indicatorConfig';
 
 export const TV_FONT_FAMILY = "'Trebuchet MS', 'Segoe UI Symbol', 'Segoe UI Emoji', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -239,6 +240,9 @@ export const LWChart: React.FC<LWChartProps> = ({
   const rsiPane = paneLayout.assignments.ultimateRsi ?? 2;
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [maximizedPane, setMaximizedPane] = useState<number | null>(null);
+  const [paneOffsets, setPaneOffsets] = useState<Record<number, { top: number; height: number }>>({});
+  const [indicatorInitialView, setIndicatorInitialView] = useState<'list' | 'mcdx' | 'ultimateRsi'>('list');
 
   // Live Pulse state
   const [isLiveActive, setIsLiveActive] = useState<boolean>(false);
@@ -248,6 +252,8 @@ export const LWChart: React.FC<LWChartProps> = ({
 
   // Hover Crosshair Legend data
   const [hoveredBar, setHoveredBar] = useState<RawBarItem | null>(null);
+  // Hover RSI values for sub-pane toolbar
+  const [hoveredRsi, setHoveredRsi] = useState<{ arsi: number | null; signal: number | null } | null>(null);
 
   // Save state to localStorage
   useEffect(() => {
@@ -994,16 +1000,23 @@ export const LWChart: React.FC<LWChartProps> = ({
       rsiMarkersPluginRef.current = rsiMarkersPlugin;
     }
 
-    // Crosshair listener for rich header legend
+    // Crosshair listener for rich header legend + sub-pane live values
     chart.subscribeCrosshairMove(param => {
       if (!param.point || !param.time) {
         setHoveredBar(null);
+        setHoveredRsi(null);
         return;
       }
       const timeStr = String(param.time);
       const raw = rawBarsByDate.get(timeStr);
       if (raw) {
         setHoveredBar(raw);
+      }
+      const rsi = rsiDataByDate.get(timeStr);
+      if (rsi) {
+        setHoveredRsi({ arsi: rsi.arsi, signal: rsi.signal });
+      } else {
+        setHoveredRsi(null);
       }
     });
 
@@ -1228,13 +1241,49 @@ export const LWChart: React.FC<LWChartProps> = ({
     rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
 
     const panes = chartRef.current?.panes();
-    if (panes && panes.length > mcdxPane) {
-      panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
+    if (panes) {
+      // Maximize mode: maximized pane gets most of the space
+      if (maximizedPane !== null) {
+        const containerH = chartContainerRef.current?.clientHeight || 600;
+        const mainPaneMinH = 60; // leave 60px for main chart
+        const maxH = Math.max(200, containerH - mainPaneMinH);
+
+        if (panes.length > mcdxPane) {
+          panes[mcdxPane].setHeight(maximizedPane === mcdxPane ? maxH : 0);
+        }
+        if (panes.length > rsiPane) {
+          panes[rsiPane].setHeight(maximizedPane === rsiPane ? maxH : 0);
+        }
+      } else {
+        // Normal mode
+        if (panes.length > mcdxPane) {
+          panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
+        }
+        if (panes.length > rsiPane) {
+          panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
+        }
+      }
+
+      // Update pane offsets for floating toolbar positioning
+      const containerRect = chartContainerRef.current?.getBoundingClientRect();
+      if (containerRect) {
+        const newOffsets: Record<number, { top: number; height: number }> = {};
+        for (let i = 1; i < panes.length; i++) {
+          try {
+            const el = panes[i].getHTMLElement();
+            if (el) {
+              const paneRect = el.getBoundingClientRect();
+              newOffsets[i] = {
+                top: paneRect.top - containerRect.top,
+                height: paneRect.height,
+              };
+            }
+          } catch (e) {}
+        }
+        setPaneOffsets(newOffsets);
+      }
     }
-    if (panes && panes.length > rsiPane) {
-      panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
-    }
-  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, mcdxPane, rsiPane]);
+  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, mcdxPane, rsiPane, maximizedPane]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {
@@ -1248,6 +1297,43 @@ export const LWChart: React.FC<LWChartProps> = ({
     }, 50);
     return () => clearTimeout(timer);
   }, [isFullscreen]);
+
+  // ResizeObserver: recalculate pane offsets when container resizes
+  useEffect(() => {
+    const container = chartContainerRef.current;
+    if (!container || !chartRef.current) return;
+
+    const updateOffsets = () => {
+      const panes = chartRef.current?.panes();
+      const containerRect = container.getBoundingClientRect();
+      if (!panes || !containerRect) return;
+
+      const newOffsets: Record<number, { top: number; height: number }> = {};
+      for (let i = 1; i < panes.length; i++) {
+        try {
+          const el = panes[i].getHTMLElement();
+          if (el) {
+            const paneRect = el.getBoundingClientRect();
+            newOffsets[i] = {
+              top: paneRect.top - containerRect.top,
+              height: paneRect.height,
+            };
+          }
+        } catch (e) {}
+      }
+      setPaneOffsets(newOffsets);
+    };
+
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(updateOffsets);
+    });
+    ro.observe(container);
+
+    // Initial offset calculation
+    requestAnimationFrame(updateOffsets);
+
+    return () => ro.disconnect();
+  }, [mcdxPane, rsiPane, maximizedPane]);
 
   // -------------------------------------------------------------
   // Adaptive Heartbeat: Real-time Live Candle Polling
@@ -1512,7 +1598,13 @@ export const LWChart: React.FC<LWChartProps> = ({
             </button>
 
             {isIndicatorOpen && (
-              <IndicatorManagerPopover onClose={() => setIsIndicatorOpen(false)} />
+              <IndicatorManagerPopover
+                initialView={indicatorInitialView}
+                onClose={() => {
+                  setIsIndicatorOpen(false);
+                  setIndicatorInitialView('list');
+                }}
+              />
             )}
           </div>
 
@@ -1667,8 +1759,79 @@ export const LWChart: React.FC<LWChartProps> = ({
       {/* MAIN BODY: CHART CANVAS + FULLSCREEN WATCHLIST SIDEBAR      */}
       {/* ----------------------------------------------------------- */}
       <div className="relative flex-1 flex overflow-hidden min-h-0 w-full h-full">
-        {/* Left: Chart Canvas Container */}
-        <div ref={chartContainerRef} className="flex-1 w-full h-full min-h-0" />
+        {/* Left: Chart Canvas Container + Floating Pane Toolbars */}
+        <div className="relative flex-1 w-full h-full min-h-0">
+          <div ref={chartContainerRef} className="w-full h-full min-h-0" />
+
+          {/* MCDX Floating Toolbar */}
+          {indicatorConfig.mcdx.visible && paneOffsets[mcdxPane] && paneOffsets[mcdxPane].height > 10 && (
+            <SubPaneHeaderToolbar
+              paneIndex={mcdxPane}
+              title="MCDX"
+              top={paneOffsets[mcdxPane].top}
+              isVisible={indicatorConfig.mcdx.visible}
+              isMaximized={maximizedPane === mcdxPane}
+              liveValues={
+                activeLegend
+                  ? {
+                      Banker: { value: activeLegend.banker.toFixed(1), color: '#F87171' },
+                      Hot: { value: activeLegend.hotMoney.toFixed(1), color: '#FFF176' },
+                      Retail: { value: activeLegend.retail.toFixed(1), color: '#66BB6A' },
+                      'B.MA': { value: activeLegend.bankerMa.toFixed(1), color: '#FFFFFF' },
+                    }
+                  : {}
+              }
+              onToggleVisibility={() => useIndicatorStore.getState().toggleMCDX()}
+              onOpenSettings={() => {
+                setIndicatorInitialView('mcdx');
+                setIsIndicatorOpen(true);
+              }}
+              onMoveUp={() => useIndicatorStore.getState().moveIndicatorUp('mcdx')}
+              onMoveDown={() => useIndicatorStore.getState().moveIndicatorDown('mcdx')}
+              onToggleMaximize={() => setMaximizedPane(prev => prev === mcdxPane ? null : mcdxPane)}
+              onRemove={() => useIndicatorStore.getState().toggleMCDX()}
+            />
+          )}
+
+          {/* Ultimate RSI Floating Toolbar */}
+          {indicatorConfig.ultimateRsi.visible && paneOffsets[rsiPane] && paneOffsets[rsiPane].height > 10 && (
+            <SubPaneHeaderToolbar
+              paneIndex={rsiPane}
+              title="Ultimate RSI"
+              top={paneOffsets[rsiPane].top}
+              isVisible={indicatorConfig.ultimateRsi.visible}
+              isMaximized={maximizedPane === rsiPane}
+              liveValues={
+                hoveredRsi
+                  ? {
+                      ARSI: {
+                        value: hoveredRsi.arsi !== null ? hoveredRsi.arsi.toFixed(2) : '--',
+                        color:
+                          hoveredRsi.arsi !== null && hoveredRsi.arsi >= indicatorConfig.ultimateRsi.obValue
+                            ? indicatorConfig.ultimateRsi.obColor
+                            : hoveredRsi.arsi !== null && hoveredRsi.arsi <= indicatorConfig.ultimateRsi.osValue
+                            ? indicatorConfig.ultimateRsi.osColor
+                            : '#E2E8F0',
+                      },
+                      Sig: {
+                        value: hoveredRsi.signal !== null ? hoveredRsi.signal.toFixed(2) : '--',
+                        color: indicatorConfig.ultimateRsi.signalColor,
+                      },
+                    }
+                  : {}
+              }
+              onToggleVisibility={() => useIndicatorStore.getState().toggleUltimateRSI()}
+              onOpenSettings={() => {
+                setIndicatorInitialView('ultimateRsi');
+                setIsIndicatorOpen(true);
+              }}
+              onMoveUp={() => useIndicatorStore.getState().moveIndicatorUp('ultimateRsi')}
+              onMoveDown={() => useIndicatorStore.getState().moveIndicatorDown('ultimateRsi')}
+              onToggleMaximize={() => setMaximizedPane(prev => prev === rsiPane ? null : rsiPane)}
+              onRemove={() => useIndicatorStore.getState().toggleUltimateRSI()}
+            />
+          )}
+        </div>
 
         {/* Right: Quick Watchlist Sidebar (Visible in Fullscreen Mode) */}
         {isFullscreen && watchlist.length > 0 && (

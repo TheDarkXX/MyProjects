@@ -216,11 +216,13 @@ type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRs
 
 interface IndicatorManagerPopoverProps {
   onClose: () => void;
+  /** If provided, start on this view instead of 'list' */
+  initialView?: ActiveView;
 }
 
-export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = ({ onClose }) => {
+export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = ({ onClose, initialView }) => {
   const modalCardRef = useRef<HTMLDivElement>(null);
-  const [activeView, setActiveView] = useState<ActiveView>('list');
+  const [activeView, setActiveView] = useState<ActiveView>(initialView || 'list');
 
   const {
     config,
