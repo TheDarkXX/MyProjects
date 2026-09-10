@@ -207,16 +207,17 @@ export const MarketHeatmap: React.FC = () => {
   // Market state color and label
   const marketState = data?.marketState || 'CLOSED';
   const getMarketStateBadge = () => {
-    switch (marketState) {
-      case 'REGULAR':
-        return { label: 'Market Open', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' };
-      case 'PRE':
-        return { label: 'Pre-Market', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' };
-      case 'POST':
-        return { label: 'After-Hours', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' };
-      default:
-        return { label: 'Market Closed', color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' };
+    const s = String(marketState || '').toUpperCase();
+    if (s.includes('REGULAR') || s === 'OPEN') {
+      return { label: 'Market Open', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' };
     }
+    if (s.includes('PRE')) {
+      return { label: 'Pre-Market', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' };
+    }
+    if (s.includes('POST')) {
+      return { label: 'After-Hours', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' };
+    }
+    return { label: 'Market Closed', color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' };
   };
   const marketBadge = getMarketStateBadge();
 

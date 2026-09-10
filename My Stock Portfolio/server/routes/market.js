@@ -83,11 +83,23 @@ function getWatchlistSymbols() {
 }
 
 /**
+ * Normalize market state to standard 4 states
+ */
+function normalizeMarketState(state) {
+  if (!state) return 'CLOSED';
+  const s = String(state).toUpperCase();
+  if (s.includes('REGULAR')) return 'REGULAR';
+  if (s.includes('PRE')) return 'PRE';
+  if (s.includes('POST')) return 'POST';
+  return 'CLOSED';
+}
+
+/**
  * Determine US market state (REGULAR, PRE, POST, CLOSED)
  */
 function determineMarketState(sampleQuote) {
   if (sampleQuote?.marketState) {
-    return sampleQuote.marketState;
+    return normalizeMarketState(sampleQuote.marketState);
   }
   // Calculate from current ET time
   const now = new Date();
@@ -220,7 +232,7 @@ marketRoutes.get('/heatmap', async (c) => {
     // Sort items by marketCap descending
     items.sort((a, b) => b.marketCap - a.marketCap);
 
-    const finalMarketState = detectedMarketState || determineMarketState(allQuotes[0]);
+    const finalMarketState = normalizeMarketState(detectedMarketState || determineMarketState(allQuotes[0]));
 
     // Save to in-memory cache
     heatmapCaches.set(scope, {
