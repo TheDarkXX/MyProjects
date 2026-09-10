@@ -201,7 +201,7 @@ export const MarketHeatmap: React.FC = () => {
   };
 
   const handleTileClick = (symbol: string) => {
-    addTab({ type: 'CHART', symbol, title: symbol });
+    addTab({ type: 'STOCK', symbol, title: symbol });
   };
 
   // Market state color and label
@@ -391,13 +391,13 @@ export const MarketHeatmap: React.FC = () => {
             }}
           >
             {/* Sector Breadcrumb Header (when grouped and big enough) */}
-            {groupBy === 'sector' && sector.height >= 40 && (
+            {groupBy === 'sector' && sector.height >= 36 && sector.width >= 40 && (
               <div 
-                className="h-[22px] px-2 flex items-center text-[13px] font-semibold text-slate-400 tracking-wide select-none truncate hover:text-white transition-colors"
+                className="absolute top-0 left-0 right-0 h-[22px] px-2 flex items-center text-[13px] font-semibold text-slate-300 tracking-wide select-none truncate hover:text-white transition-colors z-10 cursor-default"
                 title={sector.name}
               >
                 <span className="truncate">{sector.name}</span>
-                <ChevronRight className="w-3.5 h-3.5 ml-0.5 text-slate-500 flex-shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 ml-0.5 text-slate-400 flex-shrink-0" />
               </div>
             )}
 
@@ -426,17 +426,14 @@ export const MarketHeatmap: React.FC = () => {
                     backgroundColor: color
                   }}
                 >
-                  {/* XL Tier: Logo + Symbol + Price + Percent */}
+                  {/* XL Tier: Logo + Symbol + Percent (TradingView Standard) */}
                   {tier === 'XL' && (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-center gap-0.5 pointer-events-none">
-                      <StockLogo symbol={item.symbol} domain={item.domain} size={22} />
-                      <span className="font-bold text-[14px] text-white tracking-wide leading-none drop-shadow">
+                    <div className="w-full h-full flex flex-col items-center justify-center text-center gap-1 pointer-events-none">
+                      <StockLogo symbol={item.symbol} domain={item.domain} size={28} />
+                      <span className="font-bold text-[14px] text-white tracking-wide leading-tight drop-shadow">
                         {item.symbol}
                       </span>
-                      <span className="text-[13px] font-medium text-white/90 leading-none drop-shadow">
-                        {formatPrice(item.price)}
-                      </span>
-                      <span className="font-bold text-[13px] text-white leading-none drop-shadow">
+                      <span className="font-bold text-[13px] text-white leading-tight drop-shadow">
                         {formatPercent(pct)}
                       </span>
                     </div>
@@ -444,12 +441,12 @@ export const MarketHeatmap: React.FC = () => {
 
                   {/* L Tier: Logo + Symbol + Percent */}
                   {tier === 'L' && (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-center gap-1 pointer-events-none">
-                      <StockLogo symbol={item.symbol} domain={item.domain} size={18} />
-                      <span className="font-bold text-[13px] text-white tracking-wide leading-none drop-shadow">
+                    <div className="w-full h-full flex flex-col items-center justify-center text-center gap-0.5 pointer-events-none">
+                      <StockLogo symbol={item.symbol} domain={item.domain} size={20} />
+                      <span className="font-bold text-[13px] text-white tracking-wide leading-tight drop-shadow">
                         {item.symbol}
                       </span>
-                      <span className="font-bold text-[13px] text-white leading-none drop-shadow">
+                      <span className="font-bold text-[13px] text-white leading-tight drop-shadow">
                         {formatPercent(pct)}
                       </span>
                     </div>

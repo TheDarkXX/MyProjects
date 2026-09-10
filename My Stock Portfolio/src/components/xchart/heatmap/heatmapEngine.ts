@@ -169,9 +169,9 @@ export function computeTreemapLayout(
   const treemapLayout = d3.treemap<any>()
     .size([width, height])
     .tile(d3.treemapSquarify.ratio(1.618))
-    .paddingTop(26)      // Space for sector breadcrumb header
-    .paddingInner(2)     // Tile gap
-    .paddingOuter(3)     // Sector container gap
+    .paddingOuter(2)                                    // Outer gap around sectors
+    .paddingTop((node) => (node.depth === 1 ? 24 : 2))   // 24px space for sector header at depth 1
+    .paddingInner(2)                                    // Gap between tiles
     .round(true);
 
   const rectRoot = treemapLayout(root) as d3.HierarchyRectangularNode<any>;
