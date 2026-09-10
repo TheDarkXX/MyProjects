@@ -438,19 +438,14 @@ export const LWChart: React.FC<LWChartProps> = ({
     const showText = indicatorConfig.signals.showText !== false;
     const userSize = indicatorConfig.signals.size ?? 1.2;
     const padding = indicatorConfig.signals.padding ?? 0;
-    const sigColors = indicatorConfig.signals.colors || {
-      rebound: '#FBBF24',
-      breakout: '#FFE600',
-      goldenStar: '#FFFFFF',
-      pullback: '#FF1744',
-    };
+    const sigColors = indicatorConfig.signals.colors || { rebound: '#FBBF24', breakout: '#FFE600', goldenStar: '#FFFFFF', pullback: '#FF1744' };
+    const avgRange = aggregatedBars.length > 0 ? aggregatedBars.reduce((acc, b) => acc + (b.high - b.low), 0) / aggregatedBars.length : 1;
 
     const makeMarker = (
       time: Time,
       pos: 'below' | 'above',
       barHigh: number,
       barLow: number,
-      barClose: number,
       color: string,
       shape: 'circle' | 'arrowUp' | 'arrowDown',
       textLabel: string,
@@ -460,8 +455,8 @@ export const LWChart: React.FC<LWChartProps> = ({
       const finalSize = textOnly !== undefined ? 0 : Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
       const text = textOnly !== undefined ? (showText ? `${textOnly} READY` : textOnly) : (showText ? textLabel : undefined);
       if (padding > 0) {
-        const barRange = Math.max(barHigh - barLow, barClose * 0.005);
-        const offset = barRange * (padding * 0.08);
+        // Uniform offset measured directly from wick tips (barHigh / barLow)
+        const offset = avgRange * (padding * 0.12);
         return {
           time,
           position: pos === 'below' ? 'atPriceBottom' : 'atPriceTop',
@@ -469,11 +464,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           color, shape, text, size: finalSize,
         };
       }
-      return {
-        time,
-        position: pos === 'below' ? 'belowBar' : 'aboveBar',
-        color, shape, text, size: finalSize,
-      };
+      return { time, position: pos === 'below' ? 'belowBar' : 'aboveBar', color, shape, text, size: finalSize };
     };
 
     for (let i = 0; i < aggregatedBars.length; i++) {
@@ -488,12 +479,13 @@ export const LWChart: React.FC<LWChartProps> = ({
 
       const dist200 = e200 ? ((close - e200) / e200) * 100 : 0;
       const dist150 = e150 ? ((close - e150) / e150) * 100 : 0;
-      const nearSupport = (e200 && dist200 >= -4 && dist200 <= 3.5) || (e150 && dist150 >= -3 && dist150 <= 3.5);
+      // Buffer zone: -3.0% to +2.5% near support
+      const nearSupport = (e200 && dist200 >= -3.0 && dist200 <= 2.5) || (e150 && dist150 >= -2.5 && dist150 <= 2.5);
 
       // STEP 3: ★ SUPER MONEY (Banker crosses >= 10, in trend) -> Upward arrow + White Star
       if (goldenStar && bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
         if (lastType !== 'SUPER') {
-          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.goldenStar, 'arrowUp', '★ SUPER', 1.35));
+          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, sigColors.goldenStar, 'arrowUp', '★ SUPER', 1.35));
           lastType = 'SUPER';
           continue;
         }
@@ -502,7 +494,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       // STEP 2: ▲ BUY ZONE (At/near EMA support + Banker emerges > 0 on green bar) -> Yellow Triangle below candle
       if (breakout && nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
         if (lastType !== 'BUY') {
-          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.breakout, 'arrowUp', '▲ BUY', 1.15));
+          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, sigColors.breakout, 'arrowUp', '▲ BUY', 1.15));
           lastType = 'BUY';
           continue;
         }
@@ -510,9 +502,9 @@ export const LWChart: React.FC<LWChartProps> = ({
 
       // STEP 1: ● ● ● READY (Near EMA support, Banker = 0, setup forming) -> 3 dots (● ● ●) below candle
       if (rebound && nearSupport && bVal === 0) {
-        if (lastType !== 'READY' && lastType !== 'BUY') {
-          if (i - lastReadyIdx >= 8) {
-            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.rebound, 'circle', '', 0, '● ● ●'));
+        if (lastType !== 'READY' && lastType !== 'BUY' && lastType !== 'SUPER') {
+          if (i - lastReadyIdx >= 14) {
+            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, sigColors.rebound, 'circle', '', 0, '● ● ●'));
             lastType = 'READY';
             lastReadyIdx = i;
             continue;
@@ -520,12 +512,16 @@ export const LWChart: React.FC<LWChartProps> = ({
         }
       }
 
-      // EXIT: ▼ DANGER / STOP LOSS (Breakdown below EMA 200 or Banker collapse) -> Crimson Triangle above candle
-      if (pullback && ((dist200 < -4 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close)))) {
-        if (lastType !== 'EXIT') {
-          markers.push(makeMarker(bar.time as Time, 'above', bar.high, bar.low, bar.close, sigColors.pullback, 'arrowDown', '▼ EXIT', 1.15));
-          lastType = 'EXIT';
-        }
+      // If in READY state and price breaks support below -4%, quietly cancel setup
+      if (lastType === 'READY' && dist200 < -4) {
+        lastType = null;
+      }
+
+      // EXIT: ▼ DANGER / STOP LOSS (Only fires when in a BUY/SUPER position)
+      const inPosition = lastType === 'BUY' || lastType === 'SUPER';
+      if (pullback && inPosition && ((dist200 < -5.0 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close)))) {
+        markers.push(makeMarker(bar.time as Time, 'above', bar.high, bar.low, sigColors.pullback, 'arrowDown', '▼ EXIT', 1.15));
+        lastType = null; // Position exited, back to cash
       }
     }
 
