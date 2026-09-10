@@ -620,84 +620,63 @@ export const LWChart: React.FC<LWChartProps> = ({
     for (let i = 0; i < aggregatedBars.length; i++) {
       const bar = aggregatedBars[i];
       const t = formatBarTime(bar.time);
-      const arsiVal = ultimateRSIResult.arsi[i];
 
-      // 1. Buy Signal (Momentum Cross)
+      // Determine single active signal for this bar using Priority Hierarchy (Matching TradingView single-row layout):
+      // Priority 1: Buy Signal (Momentum crossover) -> จุดตัดสำคัญที่สุด
+      // Priority 2: Bullish Reversal (Oversold bounce dot) -> จุดกลับตัว
+      // Priority 3: Buy Zone (Post-cross accumulation zone) -> โซนสะสม
+      let signalType: 'buyCross' | 'reversal' | 'buyZone' | null = null;
+
       if (sigs.buyCross && ultimateRSIResult.bullishCrossLow[i]) {
-        const isBottom = (sigs.buyCrossLocation || 'bottom') === 'bottom';
-        const props = getRsiMarkerProps(sigs.buyCrossShape || 'diamond');
-        if (isBottom) {
-          markers.push({
-            time: t,
-            position: 'atPriceMiddle',
-            price: osPrice,
-            color: sigs.buyCrossColor || '#FFFFFF',
-            shape: props.shape,
-            text: props.text,
-            size: props.size,
-          });
-        } else {
-          markers.push({
-            time: t,
-            position: 'belowBar',
-            color: sigs.buyCrossColor || '#FFFFFF',
-            shape: props.shape,
-            text: props.text,
-            size: props.size,
-          });
-        }
+        signalType = 'buyCross';
+      } else if (sigs.reversal && ultimateRSIResult.bullishReversal[i]) {
+        signalType = 'reversal';
+      } else if (sigs.buyZone && ultimateRSIResult.buyZone[i]) {
+        signalType = 'buyZone';
       }
 
-      // 2. Bullish Reversal Dot
-      if (sigs.reversal && ultimateRSIResult.bullishReversal[i]) {
-        const isBottom = (sigs.reversalLocation || 'bottom') === 'bottom';
-        const props = getRsiMarkerProps(sigs.reversalShape || 'circle');
-        if (isBottom) {
-          markers.push({
-            time: t,
-            position: 'atPriceMiddle',
-            price: osPrice,
-            color: sigs.reversalColor || '#FFE600',
-            shape: props.shape,
-            text: props.text,
-            size: props.size,
-          });
-        } else {
-          markers.push({
-            time: t,
-            position: 'belowBar',
-            color: sigs.reversalColor || '#FFE600',
-            shape: props.shape,
-            text: props.text,
-            size: props.size,
-          });
-        }
+      if (!signalType) continue;
+
+      let shape: RSIMarkerShape;
+      let color: string;
+      let location: RSIMarkerLocation;
+
+      if (signalType === 'buyCross') {
+        shape = sigs.buyCrossShape || 'diamond';
+        color = sigs.buyCrossColor || '#FFFFFF';
+        location = sigs.buyCrossLocation || 'bottom';
+      } else if (signalType === 'reversal') {
+        shape = sigs.reversalShape || 'circle';
+        color = sigs.reversalColor || '#FFE600';
+        location = sigs.reversalLocation || 'bottom';
+      } else {
+        shape = sigs.buyZoneShape || 'cross';
+        color = sigs.buyZoneColor || '#22c55e';
+        location = sigs.buyZoneLocation || 'bottom';
       }
 
-      // 3. Buy Zone Accumulation
-      if (sigs.buyZone && ultimateRSIResult.buyZone[i]) {
-        const isBottom = (sigs.buyZoneLocation || 'bottom') === 'bottom';
-        const props = getRsiMarkerProps(sigs.buyZoneShape || 'cross');
-        if (isBottom) {
-          markers.push({
-            time: t,
-            position: 'atPriceMiddle',
-            price: osPrice,
-            color: sigs.buyZoneColor || '#22c55e',
-            shape: props.shape,
-            text: props.text,
-            size: props.size,
-          });
-        } else {
-          markers.push({
-            time: t,
-            position: 'belowBar',
-            color: sigs.buyZoneColor || '#22c55e',
-            shape: props.shape,
-            text: props.text,
-            size: props.size,
-          });
-        }
+      const props = getRsiMarkerProps(shape);
+      const isBottom = location === 'bottom';
+
+      if (isBottom) {
+        markers.push({
+          time: t,
+          position: 'atPriceMiddle',
+          price: osPrice,
+          color,
+          shape: props.shape,
+          text: props.text,
+          size: props.size,
+        });
+      } else {
+        markers.push({
+          time: t,
+          position: 'belowBar',
+          color,
+          shape: props.shape,
+          text: props.text,
+          size: props.size,
+        });
       }
     }
     return markers;
