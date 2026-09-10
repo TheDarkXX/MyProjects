@@ -870,8 +870,10 @@ export const LWChart: React.FC<LWChartProps> = ({
       const finalSize = textOnly !== undefined ? 0 : Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
       const text = textOnly !== undefined ? (showText ? `${textOnly} READY` : textOnly) : (showText ? textLabel : undefined);
       if (padding > 0) {
-        // Uniform offset measured directly from wick tips (barHigh / barLow)
-        const offset = avgRange * (padding * 0.12);
+        // Uniform offset measured directly from wick tips (barHigh / barLow) with base clearance
+        const baseWickOffset = avgRange * 0.45;
+        const extraPadding = avgRange * (padding * 0.15);
+        const offset = baseWickOffset + extraPadding;
         return {
           time,
           position: pos === 'below' ? 'atPriceBottom' : 'atPriceTop',
@@ -1028,39 +1030,99 @@ export const LWChart: React.FC<LWChartProps> = ({
       const padding = cfg.padding ?? 0;
       const avgRange = aggregatedBars.length > 0 ? aggregatedBars.reduce((acc, b) => acc + (b.high - b.low), 0) / aggregatedBars.length : 1;
 
+      // Rich Unicode symbol dictionary for 20+ symbols
+      const GLYPH_MAP: Record<string, string> = {
+        arrowUp: '▲',
+        arrowDown: '▼',
+        arrowRight: '►',
+        arrowDoubleUp: '⇈',
+        circle: '●',
+        circleOutline: '○',
+        square: '■',
+        squareOutline: '□',
+        diamond: '◆',
+        diamondOutline: '◇',
+        triangle: '▲',
+        triangleOutline: '△',
+        triangleDown: '▼',
+        hexagon: '⬡',
+        star: '★',
+        starOutline: '☆',
+        sparkle: '✦',
+        cross: '✚',
+        xMark: '✖',
+        check: '✔',
+        bolt: '⚡',
+        target: '🎯',
+        fire: '🔥',
+        flag: '⚑',
+        dollar: '💲',
+      };
+
+      const resolveSuperVisual = (
+        symbolKey: string,
+        sizeMultiplier: number,
+        label: string
+      ): { shape: SeriesMarkerShape; size: number; text?: string } => {
+        const scaledSize = Math.max(0.5, Math.round(userSize * sizeMultiplier * 10) / 10);
+
+        // Native Lightweight Charts shapes
+        if (symbolKey === 'arrowUp') {
+          return { shape: 'arrowUp', size: scaledSize, text: showText ? label : undefined };
+        }
+        if (symbolKey === 'arrowDown') {
+          return { shape: 'arrowDown', size: scaledSize, text: showText ? label : undefined };
+        }
+        if (symbolKey === 'circle') {
+          return { shape: 'circle', size: scaledSize, text: showText ? label : undefined };
+        }
+        if (symbolKey === 'square') {
+          return { shape: 'square', size: scaledSize, text: showText ? label : undefined };
+        }
+
+        // Custom rich Unicode glyph
+        const glyph = GLYPH_MAP[symbolKey] || '▲';
+        const text = showText ? `${glyph} ${label}` : glyph;
+        return {
+          shape: 'circle',
+          size: 0,
+          text,
+        };
+      };
+
       const makeSuperMarker = (
         time: Time,
         bar: any,
         color: string,
-        shape: string,
+        shapeKey: string,
         label: string,
         sizeMult: number
       ): SeriesMarker<Time> => {
-        const finalSize = Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
-        const text = showText ? label : undefined;
-        // Map any unsupported shape like 'cross' to 'circle' for Lightweight Charts
-        const safeShape = (shape === 'cross' ? 'circle' : (shape as SeriesMarkerShape)) || 'arrowUp';
+        const visual = resolveSuperVisual(shapeKey, sizeMult, label);
 
         if (padding > 0) {
-          const offset = avgRange * (padding * 0.12);
+          // Uniform offset measured directly from wick tips with base clearance matching V1
+          const baseWickOffset = avgRange * 0.45;
+          const extraPadding = avgRange * (padding * 0.15);
+          const offset = baseWickOffset + extraPadding;
           const safePrice = typeof bar.low === 'number' && !isNaN(bar.low) ? bar.low - offset : 0;
           return {
             time,
             position: 'atPriceBottom',
             price: safePrice,
             color,
-            shape: safeShape,
-            text,
-            size: finalSize,
+            shape: visual.shape,
+            text: visual.text,
+            size: visual.size,
           };
         }
         return {
           time,
           position: 'belowBar',
           color,
-          shape: safeShape,
-          text,
-          size: finalSize,
+          shape: visual.shape,
+          text: visual.text,
+          size: visual.size,
         };
       };
 
@@ -1102,6 +1164,13 @@ export const LWChart: React.FC<LWChartProps> = ({
     list.sort((a, b) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0));
     return list;
   }, [indicatorConfig.signals.visible, calculatedMarkers, indicatorConfig.smcLite, smcLiteResult, indicatorConfig.anchoredVwap?.visible, anchoredVWAPResult, indicatorConfig.superMoneySignal, superMoneySignalResult]);
+
+  // Instant reactive update for Pane 0 markers whenever pane0Markers recomputes (padding, size, symbols)
+  useEffect(() => {
+    if (markersPluginRef.current) {
+      markersPluginRef.current.setMarkers(pane0Markers);
+    }
+  }, [pane0Markers]);
 
   // Initialize and build chart instance
   useEffect(() => {

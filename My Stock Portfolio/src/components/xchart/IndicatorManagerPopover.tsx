@@ -47,6 +47,55 @@ const TV_COLOR_PALETTE = [
   '#EC4899', // Pink
 ];
 
+// Rich Symbol Catalog for Overlay Markers
+const RICH_SYMBOL_OPTIONS = [
+  {
+    group: 'Arrows & Pointers',
+    items: [
+      { value: 'arrowUp', label: '▲ Arrow Up' },
+      { value: 'arrowDown', label: '▼ Arrow Down' },
+      { value: 'arrowRight', label: '► Pointer Right' },
+      { value: 'arrowDoubleUp', label: '⇈ Double Up' },
+    ],
+  },
+  {
+    group: 'Classic Shapes',
+    items: [
+      { value: 'circle', label: '● Circle (Solid)' },
+      { value: 'circleOutline', label: '○ Circle (Hollow)' },
+      { value: 'square', label: '■ Square (Solid)' },
+      { value: 'squareOutline', label: '□ Square (Hollow)' },
+      { value: 'diamond', label: '◆ Diamond (Solid)' },
+      { value: 'diamondOutline', label: '◇ Diamond (Hollow)' },
+      { value: 'triangle', label: '▲ Triangle (Solid)' },
+      { value: 'triangleOutline', label: '△ Triangle (Hollow)' },
+      { value: 'triangleDown', label: '▼ Triangle Down' },
+      { value: 'hexagon', label: '⬡ Hexagon' },
+    ],
+  },
+  {
+    group: 'Stars & Sparkles',
+    items: [
+      { value: 'star', label: '★ Star (Solid)' },
+      { value: 'starOutline', label: '☆ Star (Hollow)' },
+      { value: 'sparkle', label: '✦ Sparkle Star' },
+    ],
+  },
+  {
+    group: 'Badges & Indicators',
+    items: [
+      { value: 'cross', label: '✚ Plus Cross' },
+      { value: 'xMark', label: '✖ Multiply / X' },
+      { value: 'check', label: '✔ Checkmark' },
+      { value: 'bolt', label: '⚡ Lightning Bolt' },
+      { value: 'target', label: '🎯 Target' },
+      { value: 'fire', label: '🔥 Momentum Fire' },
+      { value: 'flag', label: '⚑ Flag Marker' },
+      { value: 'dollar', label: '💲 Dollar Flow' },
+    ],
+  },
+];
+
 interface ColorPickerDropdownProps {
   color: string;
   onChange: (color: string) => void;
@@ -3787,13 +3836,18 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                       <select
                         value={config.superMoneySignal?.readySignalShape ?? 'arrowUp'}
                         onChange={(e) => updateSuperMoneySignal({ readySignalShape: e.target.value as any })}
-                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer max-w-[150px]"
                         title="Symbol Shape"
                       >
-                        <option value="arrowUp">Arrow Up (▲)</option>
-                        <option value="circle">Circle (●)</option>
-                        <option value="square">Square (■)</option>
-                        <option value="arrowDown">Arrow Down (▼)</option>
+                        {RICH_SYMBOL_OPTIONS.map((grp) => (
+                          <optgroup key={grp.group} label={grp.group} className="bg-slate-900 text-amber-400 font-bold">
+                            {grp.items.map((item) => (
+                              <option key={item.value} value={item.value} className="bg-slate-950 text-slate-200 font-medium">
+                                {item.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -3819,13 +3873,18 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                       <select
                         value={config.superMoneySignal?.buySignalShape ?? 'arrowUp'}
                         onChange={(e) => updateSuperMoneySignal({ buySignalShape: e.target.value as any })}
-                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer max-w-[150px]"
                         title="Symbol Shape"
                       >
-                        <option value="arrowUp">Arrow Up (▲)</option>
-                        <option value="circle">Circle (●)</option>
-                        <option value="square">Square (■)</option>
-                        <option value="arrowDown">Arrow Down (▼)</option>
+                        {RICH_SYMBOL_OPTIONS.map((grp) => (
+                          <optgroup key={grp.group} label={grp.group} className="bg-slate-900 text-amber-400 font-bold">
+                            {grp.items.map((item) => (
+                              <option key={item.value} value={item.value} className="bg-slate-950 text-slate-200 font-medium">
+                                {item.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -3851,13 +3910,18 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                       <select
                         value={config.superMoneySignal?.noSignalShape ?? 'arrowDown'}
                         onChange={(e) => updateSuperMoneySignal({ noSignalShape: e.target.value as any })}
-                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer max-w-[150px]"
                         title="Symbol Shape"
                       >
-                        <option value="arrowDown">Arrow Down (▼)</option>
-                        <option value="circle">Circle (●)</option>
-                        <option value="square">Square (■)</option>
-                        <option value="arrowUp">Arrow Up (▲)</option>
+                        {RICH_SYMBOL_OPTIONS.map((grp) => (
+                          <optgroup key={grp.group} label={grp.group} className="bg-slate-900 text-amber-400 font-bold">
+                            {grp.items.map((item) => (
+                              <option key={item.value} value={item.value} className="bg-slate-950 text-slate-200 font-medium">
+                                {item.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
                       </select>
                     </div>
                   </div>

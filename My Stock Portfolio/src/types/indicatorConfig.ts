@@ -67,6 +67,32 @@ export type MAMethod = 'RMA' | 'EMA' | 'SMA' | 'TMA';
 export type RSIMarkerShape = 'diamond' | 'circle' | 'cross' | 'square' | 'arrowUp' | 'arrowDown';
 export type RSIMarkerLocation = 'bottom' | 'onCurve';
 
+export type MarkerSymbolType =
+  | 'arrowUp'
+  | 'arrowDown'
+  | 'arrowRight'
+  | 'arrowDoubleUp'
+  | 'circle'
+  | 'circleOutline'
+  | 'square'
+  | 'squareOutline'
+  | 'diamond'
+  | 'diamondOutline'
+  | 'triangle'
+  | 'triangleOutline'
+  | 'star'
+  | 'starOutline'
+  | 'sparkle'
+  | 'cross'
+  | 'xMark'
+  | 'check'
+  | 'bolt'
+  | 'target'
+  | 'fire'
+  | 'flag'
+  | 'dollar'
+  | string;
+
 export interface UltimateRSISignalsConfig {
   buyCross: boolean;    // arsi < 30 and crossover
   reversal: boolean;    // arsi[1] < 20 and signal[1] < 20 and arsi >= 20 and arsi < 30
@@ -216,15 +242,15 @@ export interface SuperMoneySignalConfig {
   bankerMaColor: string;
   showReadySignal: boolean;
   readySignalColor: string;
-  readySignalShape: RSIMarkerShape;
+  readySignalShape: MarkerSymbolType;
   readySignalLocation: 'bottom' | 'belowBar';
   showBuySignal: boolean;
   buySignalColor: string;
-  buySignalShape: RSIMarkerShape;
+  buySignalShape: MarkerSymbolType;
   buySignalLocation: 'belowBar';
   showNoSignal: boolean;
   noSignalColor: string;
-  noSignalShape: RSIMarkerShape;
+  noSignalShape: MarkerSymbolType;
   noSignalLocation: 'belowBar';
   showPaneLabels: boolean;
   showText: boolean;
