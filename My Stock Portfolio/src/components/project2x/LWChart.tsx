@@ -590,23 +590,25 @@ export const LWChart: React.FC<LWChartProps> = ({
   }, [aggregatedBars, ultimateRSIResult]);
 
   // Helper to map RSI marker shape to SeriesMarkerShape & text
+  // IMPORTANT: For text-based symbols ('diamond', 'cross'), size MUST be 0 so Lightweight Charts does NOT draw a shape above the text!
+  // For shape-based symbols ('circle', 'square', etc.), text MUST be undefined so it does NOT draw a text label below the shape!
   const getRsiMarkerProps = (
     shape: RSIMarkerShape = 'circle'
   ): { shape: SeriesMarkerShape; text?: string; size: number } => {
     switch (shape) {
       case 'diamond':
-        return { shape: 'square', text: '◇', size: 0.8 };
+        return { shape: 'circle', text: '◇', size: 0 };
       case 'cross':
-        return { shape: 'circle', text: '+', size: 0.7 };
+        return { shape: 'circle', text: '+', size: 0 };
       case 'square':
-        return { shape: 'square', size: 0.7 };
+        return { shape: 'square', text: undefined, size: 0.7 };
       case 'arrowUp':
-        return { shape: 'arrowUp', size: 0.8 };
+        return { shape: 'arrowUp', text: undefined, size: 0.8 };
       case 'arrowDown':
-        return { shape: 'arrowDown', size: 0.8 };
+        return { shape: 'arrowDown', text: undefined, size: 0.8 };
       case 'circle':
       default:
-        return { shape: 'circle', size: 0.7 };
+        return { shape: 'circle', text: undefined, size: 0.7 };
     }
   };
 
