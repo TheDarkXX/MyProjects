@@ -7,6 +7,8 @@ description: "10-Year & Max Lifetime Historical OHLCV Price Backfill for My Stoc
 ## Objective
 Fast, high-density backfill of 10-year (or Max Lifetime IPO) historical daily OHLCV candlestick data for any stock, ETF, crypto, or benchmark in My Stock Portfolio.
 
+> 📖 **Check Index First:** Always check [INDEX.md](file:///c:/My%20Claw/MyProjects/.agents/skills/10yr/INDEX.md) (or [HISTORICAL_INDEX.md](file:///c:/My%20Claw/MyProjects/My%20Stock%20Portfolio/HISTORICAL_INDEX.md)) before backfilling to avoid duplicate runs. Currently **92 symbols (558,189 bars)** are already backfilled to Max Lifetime IPO!
+
 ---
 
 ## 🚀 How to Execute
