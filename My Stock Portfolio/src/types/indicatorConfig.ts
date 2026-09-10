@@ -101,12 +101,23 @@ export const DEFAULT_PANE_LAYOUT: PaneLayout = {
   },
 };
 
+export interface PaneHeights {
+  mcdx: number;
+  ultimateRsi: number;
+}
+
+export const DEFAULT_PANE_HEIGHTS: PaneHeights = {
+  mcdx: 140,
+  ultimateRsi: 140,
+};
+
 export type PresetType = 'full' | 'clean' | 'banker' | 'triple_ema' | 'custom';
 
 export interface IndicatorSettings {
   activePreset: PresetType;
   customColors: string[];
   paneLayout: PaneLayout;
+  paneHeights: PaneHeights;
   showAxisLabels: boolean;
   ema1: EMALineConfig;
   ema2: EMALineConfig;
@@ -130,6 +141,7 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
   activePreset: 'full',
   customColors: DEFAULT_CUSTOM_COLORS,
   paneLayout: DEFAULT_PANE_LAYOUT,
+  paneHeights: DEFAULT_PANE_HEIGHTS,
   showAxisLabels: false,
   ema1: {
     id: 'ema1',

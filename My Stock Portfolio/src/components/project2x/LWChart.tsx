@@ -989,13 +989,15 @@ export const LWChart: React.FC<LWChartProps> = ({
       createMCDXPane(mcdxPane);
     }
 
-    // Adjust Sub-Panes Heights according to assigned pane layout
+    // Adjust Sub-Panes Heights according to assigned pane layout & saved state
+    const mcdxSavedH = indicatorConfig.paneHeights?.mcdx || 140;
+    const rsiSavedH = indicatorConfig.paneHeights?.ultimateRsi || 140;
     const panes = chart.panes();
     if (panes.length > mcdxPane) {
-      panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
+      panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? mcdxSavedH : 28);
     }
     if (panes.length > rsiPane) {
-      panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
+      panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? rsiSavedH : 28);
     }
 
     // Initialize Markers Plugin for Pane 0 (Candles) and RSI Pane
@@ -1270,12 +1272,14 @@ export const LWChart: React.FC<LWChartProps> = ({
           panes[rsiPane].setHeight(maximizedPane === rsiPane ? maxH : 0);
         }
       } else {
-        // Normal mode
+        // Normal mode (restore saved height or 28px for collapsed dock)
+        const mcdxH = indicatorConfig.paneHeights?.mcdx || 140;
+        const rsiH = indicatorConfig.paneHeights?.ultimateRsi || 140;
         if (panes.length > mcdxPane) {
-          panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
+          panes[mcdxPane].setHeight(indicatorConfig.mcdx.visible ? mcdxH : 28);
         }
         if (panes.length > rsiPane) {
-          panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
+          panes[rsiPane].setHeight(indicatorConfig.ultimateRsi.visible ? rsiH : 28);
         }
       }
 
@@ -1289,7 +1293,7 @@ export const LWChart: React.FC<LWChartProps> = ({
             if (el) {
               const paneRect = el.getBoundingClientRect();
               newOffsets[i] = {
-                top: paneRect.top - containerRect.top,
+                top: Math.max(0, paneRect.top - containerRect.top),
                 height: paneRect.height,
               };
             }
@@ -1344,11 +1348,49 @@ export const LWChart: React.FC<LWChartProps> = ({
     });
     ro.observe(container);
 
+    // CRITICAL: Observe EACH individual pane element so dragging pane splitters immediately updates toolbar positions!
+    const panes = chartRef.current?.panes();
+    if (panes) {
+      panes.forEach(p => {
+        try {
+          const el = p.getHTMLElement?.();
+          if (el) ro.observe(el);
+        } catch (e) {}
+      });
+    }
+
+    // Save pane height changes on user mouseup/pointerup after dragging splitters
+    const handleSplitterRelease = () => {
+      const currentPanes = chartRef.current?.panes();
+      if (!currentPanes || maximizedPane !== null) return;
+
+      if (indicatorConfig.mcdx.visible && currentPanes.length > mcdxPane) {
+        const h = currentPanes[mcdxPane].getHTMLElement?.()?.clientHeight;
+        if (h && h >= 40 && Math.abs(h - (indicatorConfig.paneHeights?.mcdx || 140)) > 4) {
+          useIndicatorStore.getState().setPaneHeight('mcdx', h);
+        }
+      }
+      if (indicatorConfig.ultimateRsi.visible && currentPanes.length > rsiPane) {
+        const h = currentPanes[rsiPane].getHTMLElement?.()?.clientHeight;
+        if (h && h >= 40 && Math.abs(h - (indicatorConfig.paneHeights?.ultimateRsi || 140)) > 4) {
+          useIndicatorStore.getState().setPaneHeight('ultimateRsi', h);
+        }
+      }
+      requestAnimationFrame(updateOffsets);
+    };
+
+    window.addEventListener('mouseup', handleSplitterRelease);
+    window.addEventListener('pointerup', handleSplitterRelease);
+
     // Initial offset calculation
     requestAnimationFrame(updateOffsets);
 
-    return () => ro.disconnect();
-  }, [mcdxPane, rsiPane, maximizedPane]);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('mouseup', handleSplitterRelease);
+      window.removeEventListener('pointerup', handleSplitterRelease);
+    };
+  }, [mcdxPane, rsiPane, maximizedPane, indicatorConfig.mcdx.visible, indicatorConfig.ultimateRsi.visible]);
 
   // -------------------------------------------------------------
   // Adaptive Heartbeat: Real-time Live Candle Polling
@@ -1778,8 +1820,8 @@ export const LWChart: React.FC<LWChartProps> = ({
         <div className="relative flex-1 w-full h-full min-h-0">
           <div ref={chartContainerRef} className="w-full h-full min-h-0" />
 
-          {/* MCDX Floating Toolbar */}
-          {indicatorConfig.mcdx.visible && paneOffsets[mcdxPane] && paneOffsets[mcdxPane].height > 10 && (
+          {/* MCDX Floating Toolbar (Supports both Normal & Collapsed Dock Bar) */}
+          {paneOffsets[mcdxPane] && paneOffsets[mcdxPane].height >= 20 && (
             <SubPaneHeaderToolbar
               paneIndex={mcdxPane}
               title="MCDX"
@@ -1808,8 +1850,8 @@ export const LWChart: React.FC<LWChartProps> = ({
             />
           )}
 
-          {/* Ultimate RSI Floating Toolbar */}
-          {indicatorConfig.ultimateRsi.visible && paneOffsets[rsiPane] && paneOffsets[rsiPane].height > 10 && (
+          {/* Ultimate RSI Floating Toolbar (Supports both Normal & Collapsed Dock Bar) */}
+          {paneOffsets[rsiPane] && paneOffsets[rsiPane].height >= 20 && (
             <SubPaneHeaderToolbar
               paneIndex={rsiPane}
               title="Ultimate RSI"

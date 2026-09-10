@@ -66,6 +66,14 @@ function loadSavedConfig(): IndicatorSettings {
         },
       },
       showAxisLabels: typeof parsed.showAxisLabels === 'boolean' ? parsed.showAxisLabels : DEFAULT_INDICATOR_SETTINGS.showAxisLabels,
+      paneHeights: {
+        mcdx: typeof parsed.paneHeights?.mcdx === 'number' && parsed.paneHeights.mcdx >= 28
+          ? parsed.paneHeights.mcdx
+          : DEFAULT_INDICATOR_SETTINGS.paneHeights.mcdx,
+        ultimateRsi: typeof parsed.paneHeights?.ultimateRsi === 'number' && parsed.paneHeights.ultimateRsi >= 28
+          ? parsed.paneHeights.ultimateRsi
+          : DEFAULT_INDICATOR_SETTINGS.paneHeights.ultimateRsi,
+      },
     };
   } catch (e) {
     return DEFAULT_INDICATOR_SETTINGS;
@@ -103,6 +111,7 @@ interface IndicatorState {
   moveIndicatorDown: (id: SubPaneIndicatorId) => void;
   toggleAxisLabels: () => void;
   setShowAxisLabels: (show: boolean) => void;
+  setPaneHeight: (id: SubPaneIndicatorId, height: number) => void;
   applyPreset: (preset: PresetType) => void;
   resetDefaults: () => void;
 }
@@ -459,6 +468,19 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
     const next: IndicatorSettings = {
       ...prev,
       showAxisLabels: show,
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  setPaneHeight: (id: SubPaneIndicatorId, height: number) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      paneHeights: {
+        ...prev.paneHeights,
+        [id]: Math.max(28, Math.round(height)),
+      },
     };
     saveConfig(next);
     set({ config: next });
