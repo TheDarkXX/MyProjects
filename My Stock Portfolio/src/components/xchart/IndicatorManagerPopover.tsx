@@ -3785,12 +3785,15 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                         label="Ready Signal Color"
                       />
                       <select
-                        value={config.superMoneySignal?.readySignalLocation ?? 'bottom'}
-                        onChange={(e) => updateSuperMoneySignal({ readySignalLocation: e.target.value as any })}
+                        value={config.superMoneySignal?.readySignalShape ?? 'arrowUp'}
+                        onChange={(e) => updateSuperMoneySignal({ readySignalShape: e.target.value as any })}
                         className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                        title="Symbol Shape"
                       >
-                        <option value="bottom">Bottom</option>
-                        <option value="belowBar">Below bar</option>
+                        <option value="arrowUp">Arrow Up (▲)</option>
+                        <option value="circle">Circle (●)</option>
+                        <option value="square">Square (■)</option>
+                        <option value="arrowDown">Arrow Down (▼)</option>
                       </select>
                     </div>
                   </div>
@@ -3814,12 +3817,15 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                         label="Buy Signal Color"
                       />
                       <select
-                        value={config.superMoneySignal?.buySignalLocation ?? 'belowBar'}
-                        onChange={(e) => updateSuperMoneySignal({ buySignalLocation: e.target.value as any })}
+                        value={config.superMoneySignal?.buySignalShape ?? 'arrowUp'}
+                        onChange={(e) => updateSuperMoneySignal({ buySignalShape: e.target.value as any })}
                         className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                        title="Symbol Shape"
                       >
-                        <option value="belowBar">Below bar</option>
-                        <option value="bottom">Bottom</option>
+                        <option value="arrowUp">Arrow Up (▲)</option>
+                        <option value="circle">Circle (●)</option>
+                        <option value="square">Square (■)</option>
+                        <option value="arrowDown">Arrow Down (▼)</option>
                       </select>
                     </div>
                   </div>
@@ -3843,13 +3849,146 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                         label="No Signal Color"
                       />
                       <select
-                        value={config.superMoneySignal?.noSignalLocation ?? 'belowBar'}
-                        onChange={(e) => updateSuperMoneySignal({ noSignalLocation: e.target.value as any })}
+                        value={config.superMoneySignal?.noSignalShape ?? 'arrowDown'}
+                        onChange={(e) => updateSuperMoneySignal({ noSignalShape: e.target.value as any })}
                         className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-[12px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                        title="Symbol Shape"
                       >
-                        <option value="belowBar">Below bar</option>
-                        <option value="bottom">Bottom</option>
+                        <option value="arrowDown">Arrow Down (▼)</option>
+                        <option value="circle">Circle (●)</option>
+                        <option value="square">Square (■)</option>
+                        <option value="arrowUp">Arrow Up (▲)</option>
                       </select>
+                    </div>
+                  </div>
+
+                  {/* Display & Positioning (V1 Parity) */}
+                  <div className="flex flex-col gap-3 bg-slate-900/60 border border-slate-800 p-3 rounded-xl mt-2">
+                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider px-0.5">
+                      Display & Positioning
+                    </div>
+
+                    {/* Text Labels Switch */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Type className="w-4 h-4 text-amber-400" />
+                        <span className="text-[13px] font-bold text-slate-200">
+                          Show Signal Text Labels (READY, BUY, NO SIGNAL)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateSuperMoneySignal({ showText: !(config.superMoneySignal?.showText ?? true) })}
+                        className={`px-3 py-1 rounded-md text-[13px] font-extrabold transition-all cursor-pointer border ${
+                          (config.superMoneySignal?.showText ?? true)
+                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm'
+                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        {(config.superMoneySignal?.showText ?? true) ? 'SHOW' : 'HIDE'}
+                      </button>
+                    </div>
+
+                    {/* Marker Size */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
+                      <span className="text-[13px] font-bold text-slate-200">
+                        Marker Size Scale:
+                      </span>
+                      <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg p-0.5">
+                        {[
+                          { label: 'S', val: 0.9 },
+                          { label: 'M', val: 1.2 },
+                          { label: 'L', val: 1.5 },
+                          { label: 'XL', val: 2.0 },
+                        ].map((s) => (
+                          <button
+                            key={s.label}
+                            type="button"
+                            onClick={() => updateSuperMoneySignal({ size: s.val })}
+                            className={`px-2.5 py-1 rounded text-[13px] font-bold transition-all cursor-pointer ${
+                              (config.superMoneySignal?.size ?? 1.2) === s.val
+                                ? 'bg-amber-400 text-slate-950 shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Spacing / Padding (Custom Numeric px Input) */}
+                    <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[13px] font-bold text-slate-200">
+                          Vertical Spacing (Padding):
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = config.superMoneySignal?.padding ?? 0;
+                              updateSuperMoneySignal({ padding: Math.max(0, cur - 2) });
+                            }}
+                            className="w-7 h-7 rounded-md bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+                            title="Decrease Padding"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+
+                          <div className="flex items-center bg-slate-900 border border-slate-700 rounded-md px-2 py-0.5">
+                            <input
+                              type="number"
+                              min="0"
+                              max="50"
+                              value={config.superMoneySignal?.padding ?? 0}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val >= 0 && val <= 50) {
+                                  updateSuperMoneySignal({ padding: val });
+                                }
+                              }}
+                              className="w-10 bg-transparent text-center text-[13px] font-bold text-slate-100 focus:outline-none"
+                            />
+                            <span className="text-[12px] font-bold text-cyan-400">px</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = config.superMoneySignal?.padding ?? 0;
+                              updateSuperMoneySignal({ padding: Math.min(50, cur + 2) });
+                            }}
+                            className="w-7 h-7 rounded-md bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+                            title="Increase Padding"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Quick Preset Padding Buttons */}
+                      <div className="flex items-center gap-1.5 pt-1">
+                        {[
+                          { label: 'Snug (0px)', val: 0 },
+                          { label: '8px', val: 8 },
+                          { label: '14px', val: 14 },
+                          { label: '20px', val: 20 },
+                        ].map((btn) => (
+                          <button
+                            key={btn.val}
+                            type="button"
+                            onClick={() => updateSuperMoneySignal({ padding: btn.val })}
+                            className={`px-2 py-0.5 rounded text-[12px] font-semibold border transition-all cursor-pointer ${
+                              (config.superMoneySignal?.padding ?? 0) === btn.val
+                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            {btn.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 

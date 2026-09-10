@@ -227,6 +227,9 @@ export interface SuperMoneySignalConfig {
   noSignalShape: RSIMarkerShape;
   noSignalLocation: 'belowBar';
   showPaneLabels: boolean;
+  showText: boolean;
+  size: number;
+  padding: number;
 }
 
 export type SubPaneIndicatorId = 'mcdx' | 'ultimateRsi' | 'trendSpeed';
@@ -491,8 +494,11 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     buySignalLocation: 'belowBar',
     showNoSignal: false,
     noSignalColor: '#800000',
-    noSignalShape: 'cross',
+    noSignalShape: 'arrowDown',
     noSignalLocation: 'belowBar',
     showPaneLabels: true,
+    showText: true,
+    size: 1.2,
+    padding: 0,
   },
 };

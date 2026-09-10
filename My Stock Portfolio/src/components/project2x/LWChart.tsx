@@ -1023,37 +1023,79 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
     if (indicatorConfig.superMoneySignal?.visible && superMoneySignalResult) {
       const cfg = indicatorConfig.superMoneySignal;
+      const showText = cfg.showText !== false;
+      const userSize = cfg.size ?? 1.2;
+      const padding = cfg.padding ?? 0;
+      const avgRange = aggregatedBars.length > 0 ? aggregatedBars.reduce((acc, b) => acc + (b.high - b.low), 0) / aggregatedBars.length : 1;
+
+      const makeSuperMarker = (
+        time: Time,
+        bar: any,
+        color: string,
+        shape: string,
+        label: string,
+        sizeMult: number
+      ): SeriesMarker<Time> => {
+        const finalSize = Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
+        const text = showText ? label : undefined;
+        // Map any unsupported shape like 'cross' to 'circle' for Lightweight Charts
+        const safeShape = (shape === 'cross' ? 'circle' : (shape as SeriesMarkerShape)) || 'arrowUp';
+
+        if (padding > 0) {
+          const offset = avgRange * (padding * 0.12);
+          const safePrice = typeof bar.low === 'number' && !isNaN(bar.low) ? bar.low - offset : 0;
+          return {
+            time,
+            position: 'atPriceBottom',
+            price: safePrice,
+            color,
+            shape: safeShape,
+            text,
+            size: finalSize,
+          };
+        }
+        return {
+          time,
+          position: 'belowBar',
+          color,
+          shape: safeShape,
+          text,
+          size: finalSize,
+        };
+      };
+
       for (let i = 0; i < aggregatedBars.length; i++) {
-        const t = formatBarTime(aggregatedBars[i].time);
+        const bar = aggregatedBars[i];
+        const t = formatBarTime(bar.time);
         if (cfg.showReadySignal && superMoneySignalResult.readySignals[i]) {
-          list.push({
-            time: t,
-            position: 'belowBar',
-            color: cfg.readySignalColor ?? '#FFFFFF',
-            shape: (cfg.readySignalShape ?? 'arrowUp') as any,
-            text: 'READY',
-            size: 1.2,
-          });
+          list.push(makeSuperMarker(
+            t,
+            bar,
+            cfg.readySignalColor ?? '#FFFFFF',
+            cfg.readySignalShape ?? 'arrowUp',
+            'READY',
+            1.0
+          ));
         }
         if (cfg.showBuySignal && superMoneySignalResult.buySignals[i]) {
-          list.push({
-            time: t,
-            position: 'belowBar',
-            color: cfg.buySignalColor ?? '#FFE600',
-            shape: (cfg.buySignalShape ?? 'arrowUp') as any,
-            text: 'BUY',
-            size: 1.4,
-          });
+          list.push(makeSuperMarker(
+            t,
+            bar,
+            cfg.buySignalColor ?? '#FFE600',
+            cfg.buySignalShape ?? 'arrowUp',
+            'BUY',
+            1.2
+          ));
         }
         if (cfg.showNoSignal && superMoneySignalResult.noSignals[i]) {
-          list.push({
-            time: t,
-            position: 'belowBar',
-            color: cfg.noSignalColor ?? '#800000',
-            shape: (cfg.noSignalShape ?? 'cross') as any,
-            text: 'NO SIGNAL',
-            size: 1.1,
-          });
+          list.push(makeSuperMarker(
+            t,
+            bar,
+            cfg.noSignalColor ?? '#800000',
+            cfg.noSignalShape ?? 'arrowDown',
+            'NO SIGNAL',
+            1.0
+          ));
         }
       }
     }
