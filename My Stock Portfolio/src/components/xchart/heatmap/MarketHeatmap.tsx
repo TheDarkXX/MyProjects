@@ -222,29 +222,29 @@ export const MarketHeatmap: React.FC = () => {
   const marketBadge = getMarketStateBadge();
 
   return (
-    <div className="flex-1 w-full h-full flex flex-col bg-[#131722] select-none min-h-0 overflow-hidden text-slate-200">
+    <div className="flex-1 w-full h-full flex flex-col bg-[#000000] select-none min-h-0 overflow-hidden text-slate-200">
       {/* TradingView-Style Main Heatmap Header Toolbar */}
-      <div className="h-12 px-3 border-b border-[#2A2E39] bg-[#1E222D] flex items-center justify-between gap-3 flex-shrink-0 z-30">
+      <div className="h-12 px-3 border-b border-[#1E1E1E] bg-[#0A0A0A] flex items-center justify-between gap-3 flex-shrink-0 z-30">
         {/* Left: Dropdowns & Controls */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {/* Scope Selector */}
-          <div className="flex items-center gap-1.5 bg-[#131722] px-2.5 py-1.5 rounded-lg border border-[#2A2E39]">
+          <div className="flex items-center gap-1.5 bg-[#141414] px-2.5 py-1.5 rounded-lg border border-[#222222]">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={scope}
               onChange={(e) => setScope(e.target.value as HeatmapScope)}
               className="bg-transparent text-[13px] font-semibold text-white focus:outline-none cursor-pointer pr-1"
             >
-              <option value="sp100" className="bg-[#1E222D] text-white">S&P 500 (Top 100)</option>
-              <option value="sp500" className="bg-[#1E222D] text-white">S&P 500 (All 503)</option>
-              <option value="nasdaq100" className="bg-[#1E222D] text-white">Nasdaq 100</option>
-              <option value="portfolio" className="bg-[#1E222D] text-white">My Portfolio</option>
-              <option value="watchlist" className="bg-[#1E222D] text-white">Watchlist</option>
+              <option value="sp100" className="bg-[#141414] text-white">S&P 500 (Top 100)</option>
+              <option value="sp500" className="bg-[#141414] text-white">S&P 500 (All 503)</option>
+              <option value="nasdaq100" className="bg-[#141414] text-white">Nasdaq 100</option>
+              <option value="portfolio" className="bg-[#141414] text-white">My Portfolio</option>
+              <option value="watchlist" className="bg-[#141414] text-white">Watchlist</option>
             </select>
           </div>
 
           {/* Size By Metric */}
-          <div className="flex items-center gap-1.5 bg-[#131722] px-2.5 py-1.5 rounded-lg border border-[#2A2E39]">
+          <div className="flex items-center gap-1.5 bg-[#141414] px-2.5 py-1.5 rounded-lg border border-[#222222]">
             <BarChart3 className="w-3.5 h-3.5 text-slate-400" />
             <span className="text-[13px] text-slate-400">Size:</span>
             <select
@@ -254,35 +254,35 @@ export const MarketHeatmap: React.FC = () => {
             >
               {scope === 'portfolio' ? (
                 <>
-                  <option value="portfolioValue" className="bg-[#1E222D] text-white">Portfolio Value</option>
-                  <option value="equal" className="bg-[#1E222D] text-white">Equal Weight</option>
+                  <option value="portfolioValue" className="bg-[#141414] text-white">Portfolio Value</option>
+                  <option value="equal" className="bg-[#141414] text-white">Equal Weight</option>
                 </>
               ) : (
                 <>
-                  <option value="marketCap" className="bg-[#1E222D] text-white">Market Cap</option>
-                  <option value="equal" className="bg-[#1E222D] text-white">Equal Weight</option>
+                  <option value="marketCap" className="bg-[#141414] text-white">Market Cap</option>
+                  <option value="equal" className="bg-[#141414] text-white">Equal Weight</option>
                 </>
               )}
             </select>
           </div>
 
           {/* Color By Metric */}
-          <div className="flex items-center gap-1.5 bg-[#131722] px-2.5 py-1.5 rounded-lg border border-[#2A2E39]">
+          <div className="flex items-center gap-1.5 bg-[#141414] px-2.5 py-1.5 rounded-lg border border-[#222222]">
             <span className="text-[13px] text-slate-400">Color:</span>
             <select
               value={colorMetric}
               onChange={(e) => setColorMetric(e.target.value as ColorMetric)}
               className="bg-transparent text-[13px] font-semibold text-white focus:outline-none cursor-pointer pr-1"
             >
-              <option value="perf_1d" className="bg-[#1E222D] text-white">Performance (1D)</option>
+              <option value="perf_1d" className="bg-[#141414] text-white">Performance (1D)</option>
               {scope === 'portfolio' && (
-                <option value="perf_total" className="bg-[#1E222D] text-white">Total Return</option>
+                <option value="perf_total" className="bg-[#141414] text-white">Total Return</option>
               )}
             </select>
           </div>
 
           {/* Grouping Toggle */}
-          <div className="flex items-center gap-1.5 bg-[#131722] px-2 py-1 rounded-lg border border-[#2A2E39]">
+          <div className="flex items-center gap-1.5 bg-[#141414] px-2 py-1 rounded-lg border border-[#222222]">
             <Layers className="w-3.5 h-3.5 text-slate-400" />
             <button
               onClick={() => setGroupBy(groupBy === 'sector' ? 'none' : 'sector')}
@@ -323,7 +323,7 @@ export const MarketHeatmap: React.FC = () => {
               onClick={() => fetchHeatmap(scope)}
               disabled={loading}
               title={`Cache age: ${data?.cacheAgeSeconds ?? 0}s. Click to refresh.`}
-              className="p-1.5 rounded-lg bg-[#131722] border border-[#2A2E39] text-slate-300 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-50"
+              className="p-1.5 rounded-lg bg-[#141414] border border-[#222222] text-slate-300 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
             </button>
@@ -333,7 +333,7 @@ export const MarketHeatmap: React.FC = () => {
           <button
             onClick={handleScreenshot}
             title="Take Screenshot"
-            className="p-1.5 rounded-lg bg-[#131722] border border-[#2A2E39] text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+            className="p-1.5 rounded-lg bg-[#141414] border border-[#222222] text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
           >
             <Camera className="w-4 h-4" />
           </button>
@@ -342,7 +342,7 @@ export const MarketHeatmap: React.FC = () => {
           <button
             onClick={toggleFullscreen}
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-            className="p-1.5 rounded-lg bg-[#131722] border border-[#2A2E39] text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+            className="p-1.5 rounded-lg bg-[#141414] border border-[#222222] text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -352,7 +352,7 @@ export const MarketHeatmap: React.FC = () => {
       {/* Main Canvas Area */}
       <div 
         ref={containerRef}
-        className="flex-1 w-full h-full relative overflow-hidden bg-[#131722] p-1 select-none"
+        className="flex-1 w-full h-full relative overflow-hidden bg-[#000000] p-1 select-none"
       >
         {/* Error Notification */}
         {error && (
@@ -364,7 +364,7 @@ export const MarketHeatmap: React.FC = () => {
 
         {/* Loading Overlay */}
         {loading && rawItems.length === 0 && (
-          <div className="absolute inset-0 z-30 bg-[#131722]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+          <div className="absolute inset-0 z-30 bg-[#000000]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
             <RefreshCw className="w-8 h-8 animate-spin text-cyan-400" />
             <span className="text-[14px] font-medium text-slate-300">Loading {scope.toUpperCase()} Heatmap...</span>
           </div>
@@ -382,7 +382,7 @@ export const MarketHeatmap: React.FC = () => {
         {sectors.map((sector) => (
           <div
             key={sector.name}
-            className="absolute rounded border border-[#2A2E39]/90 bg-[#161B26]/60 overflow-hidden"
+            className="absolute rounded-[2px] border border-[#222222] bg-[#000000] overflow-hidden"
             style={{
               left: sector.x0,
               top: sector.y0,
@@ -393,11 +393,11 @@ export const MarketHeatmap: React.FC = () => {
             {/* Sector Breadcrumb Header (when grouped and big enough) */}
             {groupBy === 'sector' && sector.height >= 40 && (
               <div 
-                className="h-[24px] px-2 flex items-center text-[13px] font-semibold text-slate-300 tracking-wide select-none truncate hover:text-white transition-colors"
+                className="h-[22px] px-2 flex items-center text-[13px] font-semibold text-slate-400 tracking-wide select-none truncate hover:text-white transition-colors"
                 title={sector.name}
               >
                 <span className="truncate">{sector.name}</span>
-                <ChevronRight className="w-3.5 h-3.5 ml-0.5 text-slate-400 flex-shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 ml-0.5 text-slate-500 flex-shrink-0" />
               </div>
             )}
 
@@ -417,7 +417,7 @@ export const MarketHeatmap: React.FC = () => {
                   onClick={() => handleTileClick(item.symbol)}
                   onMouseMove={(e) => handleTileMouseMove(e, item)}
                   onMouseLeave={handleTileMouseLeave}
-                  className="absolute cursor-pointer flex flex-col items-center justify-center p-1 rounded-[3px] border border-black/20 hover:ring-2 hover:ring-white/90 hover:brightness-110 hover:z-20 transition-all duration-75 overflow-hidden select-none"
+                  className="absolute cursor-pointer flex flex-col items-center justify-center p-1 rounded-[2px] border border-black hover:ring-2 hover:ring-white/90 hover:brightness-110 hover:z-20 transition-all duration-75 overflow-hidden select-none"
                   style={{
                     left: tileLeft,
                     top: tileTop,
@@ -499,8 +499,8 @@ export const MarketHeatmap: React.FC = () => {
         />
       </div>
 
-      {/* TradingView-Style Exact 9-Step Bottom Legend Bar */}
-      <div className="h-9 px-4 border-t border-[#2A2E39] bg-[#1E222D] flex items-center justify-between text-[13px] text-slate-300 flex-shrink-0 z-20 select-none">
+      {/* TradingView-Style Exact 7-Step Bottom Legend Bar */}
+      <div className="h-11 px-4 border-t border-[#1E1E1E] bg-[#0A0A0A] flex items-center justify-between text-[13px] text-slate-300 flex-shrink-0 z-20 select-none">
         {/* Stats summary */}
         <div className="flex items-center gap-3">
           <span className="font-semibold text-slate-200">
@@ -513,21 +513,28 @@ export const MarketHeatmap: React.FC = () => {
           )}
         </div>
 
-        {/* 9-Step Color Ramp Legend */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-slate-400 text-[12px] font-medium">-3%</span>
-          <div className="flex items-center h-3.5 rounded overflow-hidden shadow-inner border border-black/30">
-            <div className="w-4 h-full bg-[#F23645]" title="-3% and below" />
-            <div className="w-4 h-full bg-[#DA333E]" title="-2% to -3%" />
-            <div className="w-4 h-full bg-[#B92E38]" title="-1% to -2%" />
-            <div className="w-4 h-full bg-[#8B333B]" title="0% to -1%" />
-            <div className="w-4 h-full bg-[#2A2E39]" title="0%" />
-            <div className="w-4 h-full bg-[#1B826B]" title="0% to +1%" />
-            <div className="w-4 h-full bg-[#16B398]" title="+1% to +2%" />
-            <div className="w-4 h-full bg-[#0DA88F]" title="+2% to +3%" />
-            <div className="w-4 h-full bg-[#089981]" title="+3% and above" />
+        {/* 7-Step Color Ramp Legend matching TradingView close-up */}
+        <div className="flex flex-col items-center">
+          {/* Percentage Labels */}
+          <div className="flex items-center text-[12px] text-slate-400 font-medium pb-0.5">
+            <span className="w-8 text-center">-3%</span>
+            <span className="w-8 text-center">-2%</span>
+            <span className="w-8 text-center">-1%</span>
+            <span className="w-8 text-center">0%</span>
+            <span className="w-8 text-center">1%</span>
+            <span className="w-8 text-center">2%</span>
+            <span className="w-8 text-center">3%</span>
           </div>
-          <span className="text-slate-400 text-[12px] font-medium">+3%</span>
+          {/* Color Segments with 1px black divider */}
+          <div className="flex items-center h-2.5 rounded-[2px] overflow-hidden gap-[1px] bg-black">
+            <div className="w-8 h-full bg-[#F13948]" title="<= -3.0%" />
+            <div className="w-8 h-full bg-[#B12A35]" title="-3.0% to -1.5%" />
+            <div className="w-8 h-full bg-[#7F1B24]" title="-1.5% to -0.5%" />
+            <div className="w-8 h-full bg-[#3D3D3D]" title="-0.5% to +0.5%" />
+            <div className="w-8 h-full bg-[#1A3327]" title="+0.5% to +1.5%" />
+            <div className="w-8 h-full bg-[#0A6639]" title="+1.5% to +3.0%" />
+            <div className="w-8 h-full bg-[#129955]" title=">= +3.0%" />
+          </div>
         </div>
       </div>
     </div>

@@ -13,7 +13,7 @@ export const HeatmapTooltip: React.FC<HeatmapTooltipProps> = ({ tooltip, contain
 
   const { item, x, y, isPortfolio } = tooltip;
   const isPositive = item.percentChange >= 0;
-  const changeColor = isPositive ? 'text-[#089981]' : 'text-[#F23645]';
+  const changeColor = isPositive ? 'text-[#129955]' : 'text-[#F13948]';
 
   // Smart boundary collision detection
   const TOOLTIP_WIDTH = 260;
@@ -33,7 +33,7 @@ export const HeatmapTooltip: React.FC<HeatmapTooltipProps> = ({ tooltip, contain
 
   return (
     <div
-      className="absolute pointer-events-none z-50 rounded-xl bg-[#1E222D]/95 backdrop-blur-md border border-[#2A2E39] shadow-2xl p-3.5 transition-transform duration-75 ease-out text-slate-200"
+      className="absolute pointer-events-none z-50 rounded-xl bg-[#141414]/95 backdrop-blur-md border border-[#2A2A2A] shadow-2xl p-3.5 transition-transform duration-75 ease-out text-slate-200"
       style={{
         left: Math.max(8, posX),
         top: Math.max(8, posY),
@@ -95,7 +95,7 @@ export const HeatmapTooltip: React.FC<HeatmapTooltipProps> = ({ tooltip, contain
             {item.totalReturnPercent !== undefined && (
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Total Return</span>
-                <span className={`font-semibold ${item.totalReturnPercent >= 0 ? 'text-[#089981]' : 'text-[#F23645]'}`}>
+                <span className={`font-semibold ${item.totalReturnPercent >= 0 ? 'text-[#129955]' : 'text-[#F13948]'}`}>
                   {formatPercent(item.totalReturnPercent)}
                 </span>
               </div>

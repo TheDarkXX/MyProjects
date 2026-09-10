@@ -2,19 +2,23 @@ import * as d3 from 'd3';
 import { HeatmapItem, TileSizeTier, TreemapLeafNode, TreemapSectorNode, GroupBy, SizeMetric, ColorMetric } from './types';
 
 /**
- * Exact TradingView 9-step color ramp
- * Negative: Coral Red (#F23645) -> Charcoal Neutral (#2A2E39) -> Pine Green (#089981)
+ * Exact TradingView 7-step color palette sampled directly from TradingView screenshot:
+ * -3% and below: #F13948 (Vibrant Coral Red)
+ * -2% (-3.0% to -1.5%): #B12A35 (Crimson Red)
+ * -1% (-1.5% to -0.5%): #7F1B24 (Deep Burgundy Red)
+ *  0% (-0.5% to +0.5%): #3D3D3D (Charcoal Neutral Gray)
+ * +1% (+0.5% to +1.5%): #1A3327 (Dark Forest Green)
+ * +2% (+1.5% to +3.0%): #0A6639 (Rich Pine Green)
+ * +3% and above: #129955 (Vibrant Emerald Green)
  */
 export function getTvColor(percent: number): string {
-  if (percent >= 3.0) return '#089981';       // TV Dark Pine Green (+3% and up)
-  if (percent >= 2.0) return '#0DA88F';       // +2% to +3%
-  if (percent >= 1.0) return '#15B89D';       // +1% to +2%
-  if (percent > 0.05) return '#1B826B';       // 0% to +1%
-  if (percent < -3.0) return '#F23645';       // TV Coral Red (-3% and below)
-  if (percent <= -2.0) return '#DA333E';      // -2% to -3%
-  if (percent <= -1.0) return '#B92E38';      // -1% to -2%
-  if (percent < -0.05) return '#8B333B';      // 0% to -1%
-  return '#2A2E39';                           // Charcoal neutral (0%)
+  if (percent >= 3.0) return '#129955';
+  if (percent >= 1.5) return '#0A6639';
+  if (percent >= 0.5) return '#1A3327';
+  if (percent <= -3.0) return '#F13948';
+  if (percent <= -1.5) return '#B12A35';
+  if (percent <= -0.5) return '#7F1B24';
+  return '#3D3D3D';
 }
 
 /**
