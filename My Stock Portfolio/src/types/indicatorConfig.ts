@@ -27,6 +27,9 @@ export interface SignalMarkersConfig {
 
 export interface SignalConfig {
   visible: boolean;
+  showText: boolean;
+  size: number;
+  padding: number;
   markers: SignalMarkersConfig;
 }
 
@@ -48,6 +51,7 @@ export type PresetType = 'full' | 'clean' | 'banker' | 'triple_ema' | 'custom';
 
 export interface IndicatorSettings {
   activePreset: PresetType;
+  customColors: string[];
   ema1: EMALineConfig;
   ema2: EMALineConfig;
   ema3: EMALineConfig;
@@ -57,8 +61,17 @@ export interface IndicatorSettings {
   volume: VolumeConfig;
 }
 
+export const DEFAULT_CUSTOM_COLORS: string[] = [
+  '#00E5FF', // Neon Cyan
+  '#EC4899', // Hot Pink
+  '#FFD700', // Bright Gold
+  '#A855F7', // Vivid Purple
+  '#10B981', // Emerald Green
+];
+
 export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
   activePreset: 'full',
+  customColors: DEFAULT_CUSTOM_COLORS,
   ema1: {
     id: 'ema1',
     name: 'EMA 1',
@@ -95,6 +108,9 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
   },
   signals: {
     visible: true,
+    showText: true,
+    size: 1.2,
+    padding: 1,
     markers: {
       rebound: true,
       breakout: true,

@@ -435,6 +435,59 @@ export const LWChart: React.FC<LWChartProps> = ({
     let lastType: string | null = null;
     let lastReadyIdx = -100;
     const { rebound, breakout, goldenStar, pullback } = indicatorConfig.signals.markers;
+    const showText = indicatorConfig.signals.showText !== false;
+    const userSize = indicatorConfig.signals.size ?? 1.2;
+    const padding = indicatorConfig.signals.padding ?? 1;
+
+    const makeMarker = (
+      time: Time,
+      pos: 'below' | 'above',
+      barHigh: number,
+      barLow: number,
+      barClose: number,
+      color: string,
+      shape: 'circle' | 'arrowUp' | 'arrowDown',
+      textLabel: string,
+      sizeMult: number
+    ): SeriesMarker<Time> => {
+      const finalSize = Math.round(userSize * sizeMult * 10) / 10;
+      const text = showText ? textLabel : undefined;
+
+      if (padding > 1) {
+        const barRange = Math.max(barHigh - barLow, barClose * 0.006);
+        const offset = barRange * (padding - 1) * 0.45;
+        if (pos === 'below') {
+          return {
+            time,
+            position: 'atPriceBottom',
+            price: barLow - offset,
+            color,
+            shape,
+            text,
+            size: finalSize,
+          };
+        } else {
+          return {
+            time,
+            position: 'atPriceTop',
+            price: barHigh + offset,
+            color,
+            shape,
+            text,
+            size: finalSize,
+          };
+        }
+      }
+
+      return {
+        time,
+        position: pos === 'below' ? 'belowBar' : 'aboveBar',
+        color,
+        shape,
+        text,
+        size: finalSize,
+      };
+    };
 
     for (let i = 0; i < aggregatedBars.length; i++) {
       const bar = aggregatedBars[i];
@@ -453,14 +506,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       // STEP 3: ★ SUPER MONEY (Banker crosses >= 10, in trend) -> White Star below candle
       if (goldenStar && bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
         if (lastType !== 'SUPER') {
-          markers.push({
-            time: bar.time as Time,
-            position: 'belowBar',
-            color: '#FFFFFF',
-            shape: 'circle',
-            text: '★ SUPER',
-            size: 1.5,
-          });
+          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, '#FFFFFF', 'circle', '★ SUPER', 1.25));
           lastType = 'SUPER';
           continue;
         }
@@ -469,14 +515,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       // STEP 2: ▲ BUY ZONE (At/near EMA support + Banker emerges > 0 on green bar) -> Yellow Triangle below candle
       if (breakout && nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
         if (lastType !== 'BUY') {
-          markers.push({
-            time: bar.time as Time,
-            position: 'belowBar',
-            color: '#FFE600',
-            shape: 'arrowUp',
-            text: '▲ BUY',
-            size: 1.5,
-          });
+          markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, '#FFE600', 'arrowUp', '▲ BUY', 1.15));
           lastType = 'BUY';
           continue;
         }
@@ -486,14 +525,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       if (rebound && nearSupport && bVal === 0) {
         if (lastType !== 'READY' && lastType !== 'BUY') {
           if (i - lastReadyIdx >= 8) {
-            markers.push({
-              time: bar.time as Time,
-              position: 'belowBar',
-              color: '#FBBF24',
-              shape: 'circle',
-              text: '••• READY',
-              size: 1.2,
-            });
+            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, '#FBBF24', 'circle', '••• READY', 0.95));
             lastType = 'READY';
             lastReadyIdx = i;
             continue;
@@ -504,14 +536,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       // EXIT: ▼ DANGER / STOP LOSS (Breakdown below EMA 200 or Banker collapse) -> Crimson Triangle above candle
       if (pullback && ((dist200 < -4 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close)))) {
         if (lastType !== 'EXIT') {
-          markers.push({
-            time: bar.time as Time,
-            position: 'aboveBar',
-            color: '#FF1744',
-            shape: 'arrowDown',
-            text: '▼ EXIT',
-            size: 1.5,
-          });
+          markers.push(makeMarker(bar.time as Time, 'above', bar.high, bar.low, bar.close, '#FF1744', 'arrowDown', '▼ EXIT', 1.15));
           lastType = 'EXIT';
         }
       }

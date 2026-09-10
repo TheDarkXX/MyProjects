@@ -21,6 +21,9 @@ function loadSavedConfig(): IndicatorSettings {
     return {
       ...DEFAULT_INDICATOR_SETTINGS,
       ...parsed,
+      customColors: Array.isArray(parsed.customColors) && parsed.customColors.length > 0
+        ? parsed.customColors.slice(0, 5)
+        : DEFAULT_INDICATOR_SETTINGS.customColors,
       ema1: { ...DEFAULT_INDICATOR_SETTINGS.ema1, ...(parsed.ema1 || {}) },
       ema2: { ...DEFAULT_INDICATOR_SETTINGS.ema2, ...(parsed.ema2 || {}) },
       ema3: { ...DEFAULT_INDICATOR_SETTINGS.ema3, ...(parsed.ema3 || {}) },
@@ -28,6 +31,9 @@ function loadSavedConfig(): IndicatorSettings {
       signals: {
         ...DEFAULT_INDICATOR_SETTINGS.signals,
         ...(parsed.signals || {}),
+        showText: parsed.signals?.showText !== undefined ? parsed.signals.showText : DEFAULT_INDICATOR_SETTINGS.signals.showText,
+        size: typeof parsed.signals?.size === 'number' ? parsed.signals.size : DEFAULT_INDICATOR_SETTINGS.signals.size,
+        padding: typeof parsed.signals?.padding === 'number' ? parsed.signals.padding : DEFAULT_INDICATOR_SETTINGS.signals.padding,
         markers: {
           ...DEFAULT_INDICATOR_SETTINGS.signals.markers,
           ...(parsed.signals?.markers || {}),
@@ -49,6 +55,8 @@ function saveConfig(config: IndicatorSettings) {
 
 interface IndicatorState {
   config: IndicatorSettings;
+  addCustomColor: (color: string) => void;
+  setCustomColors: (colors: string[]) => void;
   updateEMA: (id: 'ema1' | 'ema2' | 'ema3', partial: Partial<EMALineConfig>) => void;
   toggleEMA: (id: 'ema1' | 'ema2' | 'ema3') => void;
   toggleAllEMA: (visible: boolean) => void;
@@ -67,6 +75,31 @@ interface IndicatorState {
 
 export const useIndicatorStore = create<IndicatorState>((set, get) => ({
   config: loadSavedConfig(),
+
+  addCustomColor: (color: string) => {
+    if (!color) return;
+    const prev = get().config;
+    const normalized = color.toUpperCase();
+    const existing = prev.customColors || [];
+    const filtered = existing.filter(c => c.toUpperCase() !== normalized);
+    const nextColors = [normalized, ...filtered].slice(0, 5);
+    const next: IndicatorSettings = {
+      ...prev,
+      customColors: nextColors,
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  setCustomColors: (colors: string[]) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      customColors: colors.slice(0, 5),
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
 
   updateEMA: (id, partial) => {
     const prev = get().config;
@@ -216,6 +249,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       case 'full':
         next = {
           ...DEFAULT_INDICATOR_SETTINGS,
+          customColors: current.customColors || DEFAULT_INDICATOR_SETTINGS.customColors,
+          signals: {
+            ...DEFAULT_INDICATOR_SETTINGS.signals,
+            showText: current.signals.showText,
+            size: current.signals.size,
+            padding: current.signals.padding,
+          },
           activePreset: 'full',
         };
         break;

@@ -11,6 +11,8 @@ import {
   Zap,
   BarChart3,
   Activity,
+  Plus,
+  Type,
 } from 'lucide-react';
 import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import {
@@ -43,7 +45,14 @@ interface ColorPickerDropdownProps {
 
 const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChange, label }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [hexInput, setHexInput] = useState(color);
   const containerRef = useRef<HTMLDivElement>(null);
+  const customColors = useIndicatorStore((s) => s.config.customColors) || [];
+  const addCustomColor = useIndicatorStore((s) => s.addCustomColor);
+
+  useEffect(() => {
+    setHexInput(color.toUpperCase());
+  }, [color]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -56,6 +65,17 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
+
+  const handleApplyHex = () => {
+    let val = hexInput.trim();
+    if (!val.startsWith('#')) val = '#' + val;
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+      const upper = val.toUpperCase();
+      onChange(upper);
+      addCustomColor(upper);
+      setIsOpen(false);
+    }
+  };
 
   return (
     <div className="relative" ref={containerRef}>
@@ -70,23 +90,106 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
       </button>
 
       {isOpen && (
-        <div className="absolute top-8 left-0 z-50 p-2.5 bg-[#0B101B] border border-slate-700 rounded-xl shadow-2xl grid grid-cols-4 gap-2 w-44 backdrop-blur-md">
-          {TV_COLOR_PALETTE.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => {
-                onChange(c);
-                setIsOpen(false);
+        <div className="absolute top-8 left-0 z-50 p-3 bg-[#0B101B]/95 border border-slate-700 rounded-xl shadow-2xl w-60 backdrop-blur-md flex flex-col gap-2.5">
+          {/* Section 1: Standard 12 Colors */}
+          <div>
+            <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-0.5">
+              Standard Palette
+            </div>
+            <div className="grid grid-cols-6 gap-1.5">
+              {TV_COLOR_PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    onChange(c);
+                    setIsOpen(false);
+                  }}
+                  className="w-7 h-7 rounded-lg border border-slate-700/80 flex items-center justify-center transition-all hover:scale-110 cursor-pointer shadow-sm"
+                  style={{ backgroundColor: c }}
+                  title={c}
+                >
+                  {color.toLowerCase() === c.toLowerCase() && (
+                    <Check className={`w-3.5 h-3.5 ${['#FFFFFF', '#FFE600', '#00E5FF', '#FFF176'].includes(c) ? 'text-slate-950' : 'text-white'}`} />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-slate-800" />
+
+          {/* Section 2: Custom Saved Swatches (5 Slots) + Native Picker (+) */}
+          <div>
+            <div className="flex items-center justify-between text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-0.5">
+              <span>Custom Swatches</span>
+              <span className="text-cyan-400 font-normal">5 Slots</span>
+            </div>
+            <div className="grid grid-cols-6 gap-1.5">
+              {customColors.map((c, idx) => (
+                <button
+                  key={`custom-${idx}-${c}`}
+                  type="button"
+                  onClick={() => {
+                    onChange(c);
+                    setIsOpen(false);
+                  }}
+                  className="w-7 h-7 rounded-lg border border-slate-600 flex items-center justify-center transition-all hover:scale-110 cursor-pointer shadow-sm relative"
+                  style={{ backgroundColor: c }}
+                  title={`Custom ${c}`}
+                >
+                  {color.toLowerCase() === c.toLowerCase() && (
+                    <Check className={`w-3.5 h-3.5 ${['#FFFFFF', '#FFE600', '#00E5FF', '#FFF176'].includes(c) ? 'text-slate-950' : 'text-white'}`} />
+                  )}
+                </button>
+              ))}
+
+              {/* Add Custom Color Native Picker Button (+) */}
+              <div className="relative w-7 h-7 rounded-lg border-2 border-dashed border-cyan-500/60 bg-cyan-950/20 hover:bg-cyan-900/40 hover:border-cyan-400 flex items-center justify-center transition-all cursor-pointer group">
+                <Plus className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform pointer-events-none" />
+                <input
+                  type="color"
+                  value={color.startsWith('#') && color.length === 7 ? color : '#00E5FF'}
+                  onChange={(e) => {
+                    const chosen = e.target.value.toUpperCase();
+                    onChange(chosen);
+                    addCustomColor(chosen);
+                    setIsOpen(false);
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Pick Custom Color"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-800" />
+
+          {/* Section 3: Direct HEX Code Input */}
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-6 h-6 rounded-md border border-slate-700 shrink-0"
+              style={{ backgroundColor: hexInput.length === 7 ? hexInput : color }}
+            />
+            <input
+              type="text"
+              value={hexInput}
+              onChange={(e) => setHexInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleApplyHex();
               }}
-              className="w-8 h-8 rounded-lg border border-slate-700 flex items-center justify-center transition-all hover:scale-110 cursor-pointer"
-              style={{ backgroundColor: c }}
+              placeholder="#FFFFFF"
+              maxLength={7}
+              className="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-md px-2 py-1 text-[13px] font-mono text-slate-100 uppercase focus:border-cyan-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleApplyHex}
+              className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-md text-[13px] font-bold cursor-pointer transition-all shrink-0"
             >
-              {color.toLowerCase() === c.toLowerCase() && (
-                <Check className={`w-4 h-4 ${['#FFFFFF', '#FFE600', '#00E5FF', '#FFF176'].includes(c) ? 'text-slate-950' : 'text-white'}`} />
-              )}
+              OK
             </button>
-          ))}
+          </div>
         </div>
       )}
     </div>
@@ -474,6 +577,91 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
             />
             <span className="text-rose-400">▼ EXIT</span>
           </label>
+        </div>
+
+        {/* Signal Display Controls: Labels (Text On/Off), Size, Spacing (Padding) */}
+        <div
+          className={`flex flex-col gap-2 p-2.5 rounded-xl border transition-all ${
+            config.signals.visible
+              ? 'bg-slate-900/80 border-slate-700/80'
+              : 'bg-slate-950/40 border-slate-800/40 opacity-50 pointer-events-none'
+          }`}
+        >
+          {/* Top Row: Labels On/Off + Size */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Text Labels On/Off */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[13px] font-semibold text-slate-300 flex items-center gap-1">
+                <Type className="w-3.5 h-3.5 text-amber-400" />
+                Text:
+              </span>
+              <button
+                type="button"
+                onClick={() => updateSignals({ showText: !config.signals.showText })}
+                className={`px-2.5 py-0.5 rounded-md text-[13px] font-bold transition-all cursor-pointer border ${
+                  config.signals.showText
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
+                    : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
+                }`}
+              >
+                {config.signals.showText ? 'SHOW' : 'HIDE'}
+              </button>
+            </div>
+
+            {/* Size Selector */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[13px] font-semibold text-slate-300">Size:</span>
+              <div className="flex items-center bg-slate-950 border border-slate-700 rounded-lg p-0.5">
+                {[
+                  { label: 'S', val: 0.9 },
+                  { label: 'M', val: 1.2 },
+                  { label: 'L', val: 1.5 },
+                  { label: 'XL', val: 2.0 },
+                ].map((s) => (
+                  <button
+                    key={s.label}
+                    type="button"
+                    onClick={() => updateSignals({ size: s.val })}
+                    className={`px-2 py-0.5 rounded text-[13px] font-bold transition-all cursor-pointer ${
+                      config.signals.size === s.val
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Row: Vertical Spacing (Padding) */}
+          <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-800">
+            <span className="text-[13px] font-semibold text-slate-300">
+              Spacing (Padding):
+            </span>
+            <div className="flex items-center bg-slate-950 border border-slate-700 rounded-lg p-0.5">
+              {[
+                { label: '1 (Tight)', val: 1 },
+                { label: '2 (Normal)', val: 2 },
+                { label: '3 (Wide)', val: 3 },
+                { label: '4 (X-Wide)', val: 4 },
+              ].map((p) => (
+                <button
+                  key={p.val}
+                  type="button"
+                  onClick={() => updateSignals({ padding: p.val })}
+                  className={`px-2 py-0.5 rounded text-[13px] font-bold transition-all cursor-pointer ${
+                    config.signals.padding === p.val
+                      ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
