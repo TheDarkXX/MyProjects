@@ -271,17 +271,44 @@ export const LWChart: React.FC<LWChartProps> = ({
   const [isIndicatorOpen, setIsIndicatorOpen] = useState<boolean>(false);
   const indicatorConfig = useIndicatorStore((s) => s.config);
   const paneLayout = indicatorConfig.paneLayout || { assignments: { mcdx: 1, ultimateRsi: 2, trendSpeed: 3 } };
-  const mcdxPane = paneLayout.assignments.mcdx ?? 1;
-  const rsiPane = paneLayout.assignments.ultimateRsi ?? 2;
-  const trendSpeedPane = paneLayout.assignments.trendSpeed ?? 3;
+
+  // Calculate dynamic active sub-panes: ONLY visible indicators get allocated panes!
+  const activeSubPanes = useMemo(() => {
+    const list: { id: SubPaneIndicatorId; rank: number }[] = [];
+    if (indicatorConfig.mcdx?.visible) {
+      list.push({ id: 'mcdx', rank: paneLayout.assignments.mcdx ?? 1 });
+    }
+    if (indicatorConfig.ultimateRsi?.visible) {
+      list.push({ id: 'ultimateRsi', rank: paneLayout.assignments.ultimateRsi ?? 2 });
+    }
+    if (indicatorConfig.trendSpeed?.visible) {
+      list.push({ id: 'trendSpeed', rank: paneLayout.assignments.trendSpeed ?? 3 });
+    }
+    list.sort((a, b) => a.rank - b.rank);
+
+    const paneMap: Partial<Record<SubPaneIndicatorId, number>> = {};
+    list.forEach((item, idx) => {
+      paneMap[item.id] = idx + 1;
+    });
+
+    return {
+      list,
+      paneMap,
+      count: list.length,
+    };
+  }, [
+    indicatorConfig.mcdx?.visible,
+    indicatorConfig.ultimateRsi?.visible,
+    indicatorConfig.trendSpeed?.visible,
+    paneLayout.assignments.mcdx,
+    paneLayout.assignments.ultimateRsi,
+    paneLayout.assignments.trendSpeed,
+  ]);
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [maximizedPane, setMaximizedPane] = useState<number | null>(null);
   const [paneOffsets, setPaneOffsets] = useState<Record<number, { top: number; height: number }>>({});
   const [indicatorInitialView, setIndicatorInitialView] = useState<'list' | 'mcdx' | 'ultimateRsi' | 'trendSpeed'>('list');
-
-  // Constant for collapsed subpane height (35% reduction from 28px -> 18px)
-  const COLLAPSED_PANE_HEIGHT = 18;
 
   // Synchronized multi-pane stretch layout calculation
   const applyPaneLayoutHeights = useCallback((
@@ -291,48 +318,52 @@ export const LWChart: React.FC<LWChartProps> = ({
   ) => {
     if (!chartInstance) return;
     const panes = chartInstance.panes?.();
-    if (!panes || panes.length < 2) return;
+    if (!panes || panes.length === 0) return;
 
     const containerH = chartContainerRef.current?.clientHeight || 650;
+
+    if (panes.length < 2) {
+      // Only main chart pane exists (all subpanes closed)
+      if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(containerH);
+      return;
+    }
 
     if (maximized !== null) {
       // Maximized mode: target subpane takes most of the height, main chart keeps 60px
       const mainH = 60;
       const subMaxH = Math.max(200, containerH - mainH);
       if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
-      if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
-        panes[mcdxPane].setStretchFactor(maximized === mcdxPane ? subMaxH : COLLAPSED_PANE_HEIGHT);
-      }
-      if (panes.length > rsiPane && panes[rsiPane]?.setStretchFactor) {
-        panes[rsiPane].setStretchFactor(maximized === rsiPane ? subMaxH : COLLAPSED_PANE_HEIGHT);
-      }
-      if (panes.length > trendSpeedPane && panes[trendSpeedPane]?.setStretchFactor) {
-        panes[trendSpeedPane].setStretchFactor(maximized === trendSpeedPane ? subMaxH : COLLAPSED_PANE_HEIGHT);
+      for (let i = 1; i < panes.length; i++) {
+        if (panes[i]?.setStretchFactor) {
+          panes[i].setStretchFactor(maximized === i ? subMaxH : 0);
+        }
       }
     } else {
-      // Normal / Collapsed mode
-      const mcdxTargetH = cfg.mcdx.visible ? Math.max(80, cfg.paneHeights?.mcdx || 140) : COLLAPSED_PANE_HEIGHT;
-      const rsiTargetH = cfg.ultimateRsi.visible ? Math.max(80, cfg.paneHeights?.ultimateRsi || 140) : COLLAPSED_PANE_HEIGHT;
-      const tsTargetH = cfg.trendSpeed?.visible ? Math.max(80, cfg.paneHeights?.trendSpeed || 140) : COLLAPSED_PANE_HEIGHT;
-
       let subpanesSum = 0;
-      if (panes.length > mcdxPane) subpanesSum += mcdxTargetH;
-      if (panes.length > rsiPane) subpanesSum += rsiTargetH;
-      if (panes.length > trendSpeedPane) subpanesSum += tsTargetH;
+      const heights: number[] = [];
+
+      for (let i = 1; i < panes.length; i++) {
+        let targetH = 140;
+        if (activeSubPanes.paneMap.mcdx === i) {
+          targetH = Math.max(80, cfg.paneHeights?.mcdx || 140);
+        } else if (activeSubPanes.paneMap.ultimateRsi === i) {
+          targetH = Math.max(80, cfg.paneHeights?.ultimateRsi || 140);
+        } else if (activeSubPanes.paneMap.trendSpeed === i) {
+          targetH = Math.max(80, cfg.paneHeights?.trendSpeed || 140);
+        }
+        heights[i] = targetH;
+        subpanesSum += targetH;
+      }
 
       const mainH = Math.max(120, containerH - subpanesSum);
       if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
-      if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
-        panes[mcdxPane].setStretchFactor(mcdxTargetH);
-      }
-      if (panes.length > rsiPane && panes[rsiPane]?.setStretchFactor) {
-        panes[rsiPane].setStretchFactor(rsiTargetH);
-      }
-      if (panes.length > trendSpeedPane && panes[trendSpeedPane]?.setStretchFactor) {
-        panes[trendSpeedPane].setStretchFactor(tsTargetH);
+      for (let i = 1; i < panes.length; i++) {
+        if (panes[i]?.setStretchFactor) {
+          panes[i].setStretchFactor(heights[i]);
+        }
       }
     }
-  }, [mcdxPane, rsiPane, trendSpeedPane]);
+  }, [activeSubPanes]);
 
   // Live Pulse state
   const [isLiveActive, setIsLiveActive] = useState<boolean>(false);
@@ -1266,14 +1297,13 @@ export const LWChart: React.FC<LWChartProps> = ({
       });
     };
 
-    // Sequentially build sub-panes in ascending pane order
-    const subPanesToCreate = [
-      { id: 'mcdx', pane: mcdxPane, create: () => createMCDXPane(mcdxPane) },
-      { id: 'rsi', pane: rsiPane, create: () => createRSIPane(rsiPane) },
-      { id: 'trendSpeed', pane: trendSpeedPane, create: () => createTrendSpeedPane(trendSpeedPane) },
-    ].sort((a, b) => a.pane - b.pane);
-
-    subPanesToCreate.forEach(p => p.create());
+    // Sequentially build ONLY active sub-panes in ascending pane order
+    activeSubPanes.list.forEach(p => {
+      const paneIdx = activeSubPanes.paneMap[p.id]!;
+      if (p.id === 'mcdx') createMCDXPane(paneIdx);
+      if (p.id === 'ultimateRsi') createRSIPane(paneIdx);
+      if (p.id === 'trendSpeed') createTrendSpeedPane(paneIdx);
+    });
 
     // Adjust Sub-Panes Heights according to assigned pane layout & saved state
     applyPaneLayoutHeights(chart, indicatorConfig, maximizedPane);
@@ -1421,7 +1451,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       rsiMidLineRef.current = null;
       rsiOsLineRef.current = null;
     };
-  }, [mcdxPane, rsiPane, trendSpeedPane]); // Rebuild chart when pane layout changes
+  }, [activeSubPanes, applyPaneLayoutHeights]); // Rebuild chart when active sub-panes or layout changes
 
   // Update Data when displayBars or calculated markers change
   useEffect(() => {
@@ -1610,11 +1640,9 @@ export const LWChart: React.FC<LWChartProps> = ({
     indicatorConfig.ultimateRsi.showArea,
     indicatorConfig.trendSpeed,
     indicatorConfig.envelope.percent,
-    applyTimeframeRange,
+    trendSpeedResult,
     timeframe,
-    mcdxPane,
-    rsiPane,
-    trendSpeedPane,
+    activeSubPanes,
   ]);
 
   // Handle Style Switching
@@ -1784,7 +1812,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
       setPaneOffsets(newOffsets);
     });
-  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, mcdxPane, rsiPane, trendSpeedPane, maximizedPane, applyPaneLayoutHeights]);
+  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, activeSubPanes, maximizedPane, applyPaneLayoutHeights]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {
@@ -1851,104 +1879,6 @@ export const LWChart: React.FC<LWChartProps> = ({
       const isSplitter = cursor === 'row-resize' || !!target.closest('tr')?.style?.height.includes('1px');
       if (!isSplitter) return;
 
-      const currentPanes = chartRef.current?.panes();
-      if (!currentPanes || currentPanes.length < 3 || maximizedPane !== null) {
-        isDraggingSplitter = true;
-        return;
-      }
-
-      const mcdxVis = indicatorConfig.mcdx.visible;
-      const rsiVis = indicatorConfig.ultimateRsi.visible;
-
-      // Special Case 1: P1 is collapsed, user drags splitter above P2 to resize P2 against Pane 0
-      if (!mcdxVis && rsiVis) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const startY = e.clientY;
-        const containerH = chartContainerRef.current?.clientHeight || 650;
-        const startRsiH = currentPanes[rsiPane]?.getHTMLElement?.()?.clientHeight || (indicatorConfig.paneHeights?.ultimateRsi || 140);
-        let lastTargetRsiH = startRsiH;
-
-        const onMouseMove = (moveEvt: MouseEvent | PointerEvent) => {
-          moveEvt.preventDefault();
-          const deltaY = moveEvt.clientY - startY;
-          // Dragging UP (deltaY < 0) makes P2 taller
-          const targetRsiH = Math.max(80, Math.min(containerH - 120 - COLLAPSED_PANE_HEIGHT, Math.round(startRsiH - deltaY)));
-          lastTargetRsiH = targetRsiH;
-          const targetMainH = Math.max(100, containerH - COLLAPSED_PANE_HEIGHT - targetRsiH);
-
-          currentPanes[0]?.setStretchFactor?.(targetMainH);
-          currentPanes[mcdxPane]?.setStretchFactor?.(COLLAPSED_PANE_HEIGHT);
-          currentPanes[rsiPane]?.setStretchFactor?.(targetRsiH);
-          updateOffsets();
-        };
-
-        const onMouseUp = () => {
-          window.removeEventListener('mousemove', onMouseMove, true);
-          window.removeEventListener('mouseup', onMouseUp, true);
-          window.removeEventListener('pointermove', onMouseMove, true);
-          window.removeEventListener('pointerup', onMouseUp, true);
-          if (lastTargetRsiH >= 80) {
-            useIndicatorStore.getState().setPaneHeight('ultimateRsi', lastTargetRsiH);
-          }
-          requestAnimationFrame(updateOffsets);
-        };
-
-        window.addEventListener('mousemove', onMouseMove, true);
-        window.addEventListener('mouseup', onMouseUp, true);
-        window.addEventListener('pointermove', onMouseMove, true);
-        window.addEventListener('pointerup', onMouseUp, true);
-        return;
-      }
-
-      // Special Case 2: P2 is collapsed, user drags splitter between P1 and P2 to resize P1 against Pane 0
-      if (mcdxVis && !rsiVis) {
-        const allSeparators = Array.from(container.querySelectorAll('tr')).filter(tr => tr.style.height.includes('1px'));
-        const sepIdx = allSeparators.findIndex(tr => tr.contains(target));
-        if (sepIdx === 1 || sepIdx === -1) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const startY = e.clientY;
-          const containerH = chartContainerRef.current?.clientHeight || 650;
-          const startMcdxH = currentPanes[mcdxPane]?.getHTMLElement?.()?.clientHeight || (indicatorConfig.paneHeights?.mcdx || 140);
-          let lastTargetMcdxH = startMcdxH;
-
-          const onMouseMove = (moveEvt: MouseEvent | PointerEvent) => {
-            moveEvt.preventDefault();
-            const deltaY = moveEvt.clientY - startY;
-            // Dragging DOWN (deltaY > 0) makes P1 taller
-            const targetMcdxH = Math.max(80, Math.min(containerH - 120 - COLLAPSED_PANE_HEIGHT, Math.round(startMcdxH + deltaY)));
-            lastTargetMcdxH = targetMcdxH;
-            const targetMainH = Math.max(100, containerH - COLLAPSED_PANE_HEIGHT - targetMcdxH);
-
-            currentPanes[0]?.setStretchFactor?.(targetMainH);
-            currentPanes[mcdxPane]?.setStretchFactor?.(targetMcdxH);
-            currentPanes[rsiPane]?.setStretchFactor?.(COLLAPSED_PANE_HEIGHT);
-            updateOffsets();
-          };
-
-          const onMouseUp = () => {
-            window.removeEventListener('mousemove', onMouseMove, true);
-            window.removeEventListener('mouseup', onMouseUp, true);
-            window.removeEventListener('pointermove', onMouseMove, true);
-            window.removeEventListener('pointerup', onMouseUp, true);
-            if (lastTargetMcdxH >= 80) {
-              useIndicatorStore.getState().setPaneHeight('mcdx', lastTargetMcdxH);
-            }
-            requestAnimationFrame(updateOffsets);
-          };
-
-          window.addEventListener('mousemove', onMouseMove, true);
-          window.addEventListener('mouseup', onMouseUp, true);
-          window.addEventListener('pointermove', onMouseMove, true);
-          window.addEventListener('pointerup', onMouseUp, true);
-          return;
-        }
-      }
-
-      // Normal Case: Both visible
       isDraggingSplitter = true;
     };
 
@@ -1960,20 +1890,20 @@ export const LWChart: React.FC<LWChartProps> = ({
       const currentPanes = chartRef.current?.panes();
       if (!currentPanes || maximizedPane !== null) return;
 
-      if (indicatorConfig.mcdx.visible && currentPanes.length > mcdxPane) {
-        const h = currentPanes[mcdxPane].getHTMLElement?.()?.clientHeight;
+      if (activeSubPanes.paneMap.mcdx && currentPanes.length > activeSubPanes.paneMap.mcdx) {
+        const h = currentPanes[activeSubPanes.paneMap.mcdx].getHTMLElement?.()?.clientHeight;
         if (h && h >= 80 && Math.abs(h - (indicatorConfig.paneHeights?.mcdx || 140)) > 4) {
           useIndicatorStore.getState().setPaneHeight('mcdx', h);
         }
       }
-      if (indicatorConfig.ultimateRsi.visible && currentPanes.length > rsiPane) {
-        const h = currentPanes[rsiPane].getHTMLElement?.()?.clientHeight;
+      if (activeSubPanes.paneMap.ultimateRsi && currentPanes.length > activeSubPanes.paneMap.ultimateRsi) {
+        const h = currentPanes[activeSubPanes.paneMap.ultimateRsi].getHTMLElement?.()?.clientHeight;
         if (h && h >= 80 && Math.abs(h - (indicatorConfig.paneHeights?.ultimateRsi || 140)) > 4) {
           useIndicatorStore.getState().setPaneHeight('ultimateRsi', h);
         }
       }
-      if (indicatorConfig.trendSpeed?.visible && currentPanes.length > trendSpeedPane) {
-        const h = currentPanes[trendSpeedPane].getHTMLElement?.()?.clientHeight;
+      if (activeSubPanes.paneMap.trendSpeed && currentPanes.length > activeSubPanes.paneMap.trendSpeed) {
+        const h = currentPanes[activeSubPanes.paneMap.trendSpeed].getHTMLElement?.()?.clientHeight;
         if (h && h >= 80 && Math.abs(h - (indicatorConfig.paneHeights?.trendSpeed || 140)) > 4) {
           useIndicatorStore.getState().setPaneHeight('trendSpeed', h);
         }
@@ -1996,7 +1926,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       window.removeEventListener('mouseup', handleSplitterRelease);
       window.removeEventListener('pointerup', handleSplitterRelease);
     };
-  }, [mcdxPane, rsiPane, trendSpeedPane, maximizedPane, indicatorConfig.mcdx.visible, indicatorConfig.ultimateRsi.visible, indicatorConfig.trendSpeed?.visible]);
+  }, [activeSubPanes, maximizedPane]);
 
   // -------------------------------------------------------------
   // Adaptive Heartbeat: Real-time Live Candle Polling
@@ -2451,14 +2381,14 @@ export const LWChart: React.FC<LWChartProps> = ({
         <div className="relative flex-1 w-full h-full min-h-0">
           <div ref={chartContainerRef} className="w-full h-full min-h-0" />
 
-          {/* MCDX Floating Toolbar (Supports both Normal & Collapsed Dock Bar) */}
-          {paneOffsets[mcdxPane] && paneOffsets[mcdxPane].height >= 14 && (
+          {/* MCDX Floating Toolbar */}
+          {indicatorConfig.mcdx.visible && activeSubPanes.paneMap.mcdx && paneOffsets[activeSubPanes.paneMap.mcdx] && (
             <SubPaneHeaderToolbar
-              paneIndex={mcdxPane}
+              paneIndex={activeSubPanes.paneMap.mcdx}
               title="MCDX"
-              top={paneOffsets[mcdxPane].top}
-              isVisible={indicatorConfig.mcdx.visible}
-              isMaximized={maximizedPane === mcdxPane}
+              top={paneOffsets[activeSubPanes.paneMap.mcdx].top}
+              isVisible={true}
+              isMaximized={maximizedPane === activeSubPanes.paneMap.mcdx}
               liveValues={
                 activeLegend
                   ? {
@@ -2476,19 +2406,19 @@ export const LWChart: React.FC<LWChartProps> = ({
               }}
               onMoveUp={() => useIndicatorStore.getState().moveIndicatorUp('mcdx')}
               onMoveDown={() => useIndicatorStore.getState().moveIndicatorDown('mcdx')}
-              onToggleMaximize={() => setMaximizedPane(prev => prev === mcdxPane ? null : mcdxPane)}
+              onToggleMaximize={() => setMaximizedPane(prev => prev === activeSubPanes.paneMap.mcdx ? null : activeSubPanes.paneMap.mcdx)}
               onRemove={() => useIndicatorStore.getState().toggleMCDX()}
             />
           )}
 
-          {/* Ultimate RSI Floating Toolbar (Supports both Normal & Collapsed Dock Bar) */}
-          {paneOffsets[rsiPane] && paneOffsets[rsiPane].height >= 14 && (
+          {/* Ultimate RSI Floating Toolbar */}
+          {indicatorConfig.ultimateRsi.visible && activeSubPanes.paneMap.ultimateRsi && paneOffsets[activeSubPanes.paneMap.ultimateRsi] && (
             <SubPaneHeaderToolbar
-              paneIndex={rsiPane}
+              paneIndex={activeSubPanes.paneMap.ultimateRsi}
               title="Ultimate RSI"
-              top={paneOffsets[rsiPane].top}
-              isVisible={indicatorConfig.ultimateRsi.visible}
-              isMaximized={maximizedPane === rsiPane}
+              top={paneOffsets[activeSubPanes.paneMap.ultimateRsi].top}
+              isVisible={true}
+              isMaximized={maximizedPane === activeSubPanes.paneMap.ultimateRsi}
               liveValues={
                 hoveredRsi
                   ? {
@@ -2515,20 +2445,20 @@ export const LWChart: React.FC<LWChartProps> = ({
               }}
               onMoveUp={() => useIndicatorStore.getState().moveIndicatorUp('ultimateRsi')}
               onMoveDown={() => useIndicatorStore.getState().moveIndicatorDown('ultimateRsi')}
-              onToggleMaximize={() => setMaximizedPane(prev => prev === rsiPane ? null : rsiPane)}
+              onToggleMaximize={() => setMaximizedPane(prev => prev === activeSubPanes.paneMap.ultimateRsi ? null : activeSubPanes.paneMap.ultimateRsi)}
               onRemove={() => useIndicatorStore.getState().toggleUltimateRSI()}
             />
           )}
 
           {/* Trend Speed Floating Toolbar */}
-          {paneOffsets[trendSpeedPane] && paneOffsets[trendSpeedPane].height >= 14 && (
+          {indicatorConfig.trendSpeed?.visible && activeSubPanes.paneMap.trendSpeed && paneOffsets[activeSubPanes.paneMap.trendSpeed] && (
             <SubPaneHeaderToolbar
-              paneIndex={trendSpeedPane}
+              paneIndex={activeSubPanes.paneMap.trendSpeed}
               title="Trend Speed Analyzer (Zeiierman)"
               subtitle={`${indicatorConfig.trendSpeed?.maxLength ?? 50} ${indicatorConfig.trendSpeed?.accelMultiplier ?? 0.01} ${indicatorConfig.trendSpeed?.lookbackPeriod ?? 150} ${indicatorConfig.trendSpeed?.collectionPeriod ?? 100} From start`}
-              top={paneOffsets[trendSpeedPane].top}
-              isVisible={indicatorConfig.trendSpeed?.visible ?? true}
-              isMaximized={maximizedPane === trendSpeedPane}
+              top={paneOffsets[activeSubPanes.paneMap.trendSpeed].top}
+              isVisible={true}
+              isMaximized={maximizedPane === activeSubPanes.paneMap.trendSpeed}
               hideLabels={true}
               liveValues={(() => {
                 const tsData = hoveredTrendSpeed || (activeLegend ? trendSpeedDataByDate.get(activeLegend.time) : null);
@@ -2558,7 +2488,7 @@ export const LWChart: React.FC<LWChartProps> = ({
               }}
               onMoveUp={() => useIndicatorStore.getState().moveIndicatorUp('trendSpeed')}
               onMoveDown={() => useIndicatorStore.getState().moveIndicatorDown('trendSpeed')}
-              onToggleMaximize={() => setMaximizedPane(prev => prev === trendSpeedPane ? null : trendSpeedPane)}
+              onToggleMaximize={() => setMaximizedPane(prev => prev === activeSubPanes.paneMap.trendSpeed ? null : activeSubPanes.paneMap.trendSpeed)}
               onRemove={() => useIndicatorStore.getState().toggleTrendSpeed()}
             />
           )}

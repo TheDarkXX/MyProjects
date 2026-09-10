@@ -53,28 +53,7 @@ export const SubPaneHeaderToolbar: React.FC<SubPaneHeaderToolbarProps> = ({
   onRemove,
 }) => {
   if (!isVisible) {
-    return (
-      <div
-        className="absolute left-2 z-30 pointer-events-auto flex items-center"
-        style={{ top: `${top}px`, height: '18px' }}
-      >
-        <div
-          onClick={onToggleVisibility}
-          className="inline-flex items-center gap-1.5 h-[17px] px-2 rounded bg-[#0B101B]/95 hover:bg-slate-800/95 border border-slate-700/80 shadow-md text-[11px] text-slate-300 hover:text-white cursor-pointer transition-all select-none group leading-none"
-          title={`คลิกเพื่อเปิดขยาย ${title} กลับมา`}
-        >
-          <span className="px-1 py-0.2 rounded bg-slate-800 text-[10px] font-bold text-cyan-300 border border-slate-700 leading-none">
-            P{paneIndex}
-          </span>
-          <span className="font-bold text-slate-200 tracking-wide text-[11px]">{title}</span>
-          <span className="text-[10px] text-slate-400">(พับเก็บ)</span>
-          <span className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 group-hover:text-cyan-300 ml-0.5 bg-cyan-950/50 px-1 py-0.2 rounded border border-cyan-800/40 leading-none">
-            <Eye className="w-3 h-3" />
-            <span>เปิดคืน</span>
-          </span>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
