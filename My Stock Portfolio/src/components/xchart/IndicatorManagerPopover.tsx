@@ -49,6 +49,7 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
   const [isOpen, setIsOpen] = useState(false);
   const [hexInput, setHexInput] = useState(color);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isPickingRef = useRef(false);
   const customColors = useIndicatorStore((s) => s.config.customColors) || [];
   const addCustomColor = useIndicatorStore((s) => s.addCustomColor);
 
@@ -58,6 +59,7 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      if (isPickingRef.current) return;
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
@@ -152,11 +154,21 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
                 <input
                   type="color"
                   value={color.startsWith('#') && color.length === 7 ? color : '#00E5FF'}
-                  onChange={(e) => {
-                    const chosen = e.target.value.toUpperCase();
+                  onFocus={() => { isPickingRef.current = true; }}
+                  onBlur={() => {
+                    setTimeout(() => { isPickingRef.current = false; }, 250);
+                  }}
+                  onInput={(e) => {
+                    const chosen = (e.target as HTMLInputElement).value.toUpperCase();
                     onChange(chosen);
+                    setHexInput(chosen);
+                  }}
+                  onChange={(e) => {
+                    const chosen = (e.target as HTMLInputElement).value.toUpperCase();
+                    onChange(chosen);
+                    setHexInput(chosen);
                     addCustomColor(chosen);
-                    setIsOpen(false);
+                    setTimeout(() => { isPickingRef.current = false; }, 250);
                   }}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   title="Pick Custom Color"
