@@ -1182,6 +1182,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           <div className="relative">
             <button
               type="button"
+              data-indicator-trigger="true"
               onClick={() => setIsIndicatorOpen(prev => !prev)}
               title="Indicator Manager & Custom Settings"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold border transition-all cursor-pointer ${

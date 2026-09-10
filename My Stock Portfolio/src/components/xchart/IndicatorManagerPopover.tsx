@@ -117,10 +117,14 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     resetDefaults,
   } = useIndicatorStore();
 
-  // Close on outside click
+  // Close on outside click (ignore if clicking the trigger button itself)
   useEffect(() => {
     const handleOutside = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      const target = e.target as HTMLElement;
+      if (target && target.closest('[data-indicator-trigger="true"]')) {
+        return;
+      }
+      if (popoverRef.current && !popoverRef.current.contains(target as Node)) {
         onClose();
       }
     };
@@ -150,7 +154,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
   return (
     <div
       ref={popoverRef}
-      className="absolute top-12 right-0 z-[80] w-96 max-w-[95vw] max-h-[85vh] overflow-y-auto bg-[#0A0F1D]/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col divide-y divide-slate-800/80 text-slate-200 select-none animate-in fade-in duration-150"
+      className="absolute top-12 right-0 z-[80] w-96 max-w-[95vw] max-h-[85vh] overflow-y-auto bg-[#0A0F1D]/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col divide-y divide-slate-800/80 text-slate-200 select-none transition-opacity duration-150"
     >
       {/* ----------------------------------------------------------- */}
       {/* HEADER                                                      */}
