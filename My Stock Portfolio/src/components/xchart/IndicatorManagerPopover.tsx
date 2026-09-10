@@ -453,7 +453,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                       Super Money Signals
                     </span>
                     <span className="text-[13px] text-slate-400">
-                      xxx READY, ▲ BUY, ★ SUPER, ▼ EXIT
+                      ● ● ● READY, ▲ BUY, ★ SUPER, ▼ EXIT
                     </span>
                   </div>
                 </div>
@@ -625,7 +625,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                         className="rounded bg-slate-900 border-slate-700 text-amber-400 focus:ring-0 cursor-pointer"
                       />
                       <span className="font-extrabold" style={{ color: sigColors.rebound }}>
-                        xxx READY
+                        ● ● ● READY
                       </span>
                       <span className="text-[12px] font-normal text-slate-400 hidden sm:inline">
                         (Rebound Setup)

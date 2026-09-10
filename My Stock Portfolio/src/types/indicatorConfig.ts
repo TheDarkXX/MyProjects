@@ -19,14 +19,14 @@ export interface EnvelopeConfig {
 }
 
 export interface SignalMarkersConfig {
-  rebound: boolean;   // xxx READY
+  rebound: boolean;   // ● ● ● READY
   breakout: boolean;  // ▲ BUY
   goldenStar: boolean;// ★ SUPER
   pullback: boolean;  // ▼ EXIT
 }
 
 export interface SignalColorsConfig {
-  rebound: string;   // xxx READY
+  rebound: string;   // ● ● ● READY
   breakout: string;  // ▲ BUY
   goldenStar: string;// ★ SUPER
   pullback: string;  // ▼ EXIT

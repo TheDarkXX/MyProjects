@@ -508,11 +508,11 @@ export const LWChart: React.FC<LWChartProps> = ({
         }
       }
 
-      // STEP 1: xxx READY (Near EMA support, Banker = 0, setup forming) -> 'xxx' below candle
+      // STEP 1: ● ● ● READY (Near EMA support, Banker = 0, setup forming) -> 3 dots (● ● ●) below candle
       if (rebound && nearSupport && bVal === 0) {
         if (lastType !== 'READY' && lastType !== 'BUY') {
           if (i - lastReadyIdx >= 8) {
-            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.rebound, 'circle', '', 0, 'xxx'));
+            markers.push(makeMarker(bar.time as Time, 'below', bar.high, bar.low, bar.close, sigColors.rebound, 'circle', '', 0, '● ● ●'));
             lastType = 'READY';
             lastReadyIdx = i;
             continue;
@@ -571,13 +571,16 @@ export const LWChart: React.FC<LWChartProps> = ({
     // Clear old container children
     chartContainerRef.current.innerHTML = '';
 
+    const initialSize = indicatorConfig.signals.size ?? 1.2;
+    const initialFontSize = initialSize <= 0.9 ? 11 : initialSize <= 1.2 ? 13 : initialSize <= 1.5 ? 15 : 18;
+
     const chart = createChart(chartContainerRef.current, {
       autoSize: true,
       layout: {
         background: { type: ColorType.Solid, color: '#090D16' },
         textColor: '#94A3B8',
         fontFamily: TV_FONT_FAMILY,
-        fontSize: 12,
+        fontSize: initialFontSize,
       },
       grid: {
         vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
@@ -947,6 +950,10 @@ export const LWChart: React.FC<LWChartProps> = ({
 
   // Synchronize dynamic series options when indicatorConfig changes
   useEffect(() => {
+    const sSize = indicatorConfig.signals.size ?? 1.2;
+    const fSize = sSize <= 0.9 ? 11 : sSize <= 1.2 ? 13 : sSize <= 1.5 ? 15 : 18;
+    chartRef.current?.applyOptions({ layout: { fontSize: fSize } });
+
     ema50SeriesRef.current?.applyOptions({ color: indicatorConfig.ema1.color, lineWidth: indicatorConfig.ema1.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema1.lineStyle), visible: indicatorConfig.ema1.visible, title: `EMA ${indicatorConfig.ema1.period}` });
     ema150SeriesRef.current?.applyOptions({ color: indicatorConfig.ema2.color, lineWidth: indicatorConfig.ema2.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema2.lineStyle), visible: indicatorConfig.ema2.visible, title: `EMA ${indicatorConfig.ema2.period}` });
     ema200SeriesRef.current?.applyOptions({ color: indicatorConfig.ema3.color, lineWidth: indicatorConfig.ema3.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.ema3.lineStyle), visible: indicatorConfig.ema3.visible, title: `EMA ${indicatorConfig.ema3.period}` });
