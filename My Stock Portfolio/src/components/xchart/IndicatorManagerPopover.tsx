@@ -210,7 +210,7 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
   );
 };
 
-type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx';
+type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi';
 
 interface IndicatorManagerPopoverProps {
   onClose: () => void;
@@ -234,6 +234,9 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     toggleMCDX,
     updateVolume,
     toggleVolume,
+    updateUltimateRSI,
+    toggleUltimateRSI,
+    toggleUltimateRSISignal,
     applyPreset,
     resetDefaults,
   } = useIndicatorStore();
@@ -553,6 +556,54 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                   <span className="text-[12px] font-bold px-2 py-0.5 rounded-md bg-slate-950 text-slate-400 border border-slate-800">
                     {config.volume.visible ? 'ACTIVE' : 'OFF'}
                   </span>
+                </div>
+              </div>
+
+              {/* Item 6: My Ultimate RSI (DoctorBank ARSI) */}
+              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleUltimateRSI}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      config.ultimateRsi.visible
+                        ? 'text-teal-400 bg-teal-950/30 hover:bg-teal-950/60'
+                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                    }`}
+                    title="Toggle Ultimate RSI"
+                  >
+                    {config.ultimateRsi.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+
+                  <div className="flex flex-col">
+                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                      <Activity className="w-3.5 h-3.5 text-teal-400" />
+                      My Ultimate RSI
+                      <span className="text-[11px] px-1.5 py-0.2 rounded bg-teal-950/80 text-teal-300 border border-teal-800/50 font-bold">
+                        PANE 2
+                      </span>
+                    </span>
+                    <span className="text-[13px] text-slate-400">
+                      ARSI {config.ultimateRsi.length} ({config.ultimateRsi.smoType1}) + Sig {config.ultimateRsi.smooth} ({config.ultimateRsi.smoType2}) • OB {config.ultimateRsi.obValue} / OS {config.ultimateRsi.osValue}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.obColor }} title="Overbought" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.signalColor }} title="Signal Line" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.osColor }} title="Oversold" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('ultimateRsi')}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-400 transition-colors" />
+                    <span>Config</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1203,6 +1254,297 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
               </div>
             </div>
 
+            <div className="p-3.5 bg-[#080D18] border-t border-slate-800 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setActiveView('list')}
+                className="px-3 py-1.5 rounded-lg text-[13px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-slate-800 transition-all cursor-pointer"
+              >
+                Back to Indicators
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-1.5 rounded-lg text-[13px] font-extrabold bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-md transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ========================================================= */}
+        {/* VIEW 6: MY ULTIMATE RSI CONFIG (DOCTORBANK)               */}
+        {/* ========================================================= */}
+        {activeView === 'ultimateRsi' && (
+          <>
+            {/* Sub-Header */}
+            <div className="flex items-center justify-between px-5 py-3.5 bg-[#0E1526] border-b border-slate-800">
+              <button
+                type="button"
+                onClick={() => setActiveView('list')}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-[13px] font-bold transition-all cursor-pointer border border-slate-700/60"
+              >
+                <ArrowLeft className="w-4 h-4 text-amber-400" />
+                <span>Back</span>
+              </button>
+              <span className="text-[15px] font-black tracking-wide text-slate-100 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-teal-400" />
+                My Ultimate RSI Settings
+              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
+              {/* Section 1: ARSI Core Calculation */}
+              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                <div className="text-[13px] font-extrabold text-teal-300 uppercase tracking-wider">
+                  ARSI Calculation
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[12px] font-bold text-slate-400">ARSI Length</label>
+                    <input
+                      type="number"
+                      min="2"
+                      max="100"
+                      value={config.ultimateRsi.length}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 2 && val <= 100) {
+                          updateUltimateRSI({ length: val });
+                        }
+                      }}
+                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[12px] font-bold text-slate-400">Smoothing Method</label>
+                    <select
+                      value={config.ultimateRsi.smoType1}
+                      onChange={(e) => updateUltimateRSI({ smoType1: e.target.value as any })}
+                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="RMA">RMA (Wilder's)</option>
+                      <option value="EMA">EMA</option>
+                      <option value="SMA">SMA</option>
+                      <option value="TMA">TMA (Triangular)</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[12px] font-bold text-slate-400">Source</label>
+                    <select
+                      value={config.ultimateRsi.source}
+                      onChange={(e) => updateUltimateRSI({ source: e.target.value as any })}
+                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="close">Close</option>
+                      <option value="hl2">HL2 ((High+Low)/2)</option>
+                      <option value="hlc3">HLC3 ((H+L+C)/3)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Signal Line */}
+              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                <div className="text-[13px] font-extrabold text-orange-400 uppercase tracking-wider">
+                  Signal Line
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[12px] font-bold text-slate-400">Signal Length</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={config.ultimateRsi.smooth}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 1 && val <= 100) {
+                          updateUltimateRSI({ smooth: val });
+                        }
+                      }}
+                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[12px] font-bold text-slate-400">Signal Method</label>
+                    <select
+                      value={config.ultimateRsi.smoType2}
+                      onChange={(e) => updateUltimateRSI({ smoType2: e.target.value as any })}
+                      className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-orange-500 cursor-pointer"
+                    >
+                      <option value="EMA">EMA</option>
+                      <option value="SMA">SMA</option>
+                      <option value="RMA">RMA</option>
+                      <option value="TMA">TMA</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[12px] font-bold text-slate-400">Signal Color</label>
+                    <div className="flex items-center gap-2 pt-1">
+                      <ColorPickerDropdown
+                        color={config.ultimateRsi.signalColor}
+                        onChange={(c) => updateUltimateRSI({ signalColor: c })}
+                        label="Signal Color"
+                      />
+                      <span className="text-[13px] font-mono text-slate-300">
+                        {config.ultimateRsi.signalColor}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Overbought & Oversold Levels */}
+              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                <div className="text-[13px] font-extrabold text-slate-200 uppercase tracking-wider">
+                  Overbought / Oversold Levels & Colors
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Overbought */}
+                  <div className="p-3 rounded-lg bg-slate-950/60 border border-emerald-900/40 flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[13px] font-bold text-emerald-400">Overbought Level</span>
+                      <input
+                        type="number"
+                        min="50"
+                        max="99"
+                        value={config.ultimateRsi.obValue}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val >= 50 && val <= 99) {
+                            updateUltimateRSI({ obValue: val });
+                          }
+                        }}
+                        className="w-20 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <ColorPickerDropdown
+                      color={config.ultimateRsi.obColor}
+                      onChange={(c) => updateUltimateRSI({ obColor: c })}
+                      label="Overbought Color"
+                    />
+                  </div>
+
+                  {/* Oversold */}
+                  <div className="p-3 rounded-lg bg-slate-950/60 border border-rose-900/40 flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[13px] font-bold text-rose-400">Oversold Level</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={config.ultimateRsi.osValue}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val >= 1 && val <= 50) {
+                            updateUltimateRSI({ osValue: val });
+                          }
+                        }}
+                        className="w-20 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <ColorPickerDropdown
+                      color={config.ultimateRsi.osColor}
+                      onChange={(c) => updateUltimateRSI({ osColor: c })}
+                      label="Oversold Color"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Buy Signals & Markers */}
+              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                <div className="text-[13px] font-extrabold text-amber-400 uppercase tracking-wider">
+                  Sniper Buy Signals & Markers
+                </div>
+
+                <div className="flex flex-col gap-2.5">
+                  {/* Signal 1: Buy Cross */}
+                  <div
+                    onClick={() => toggleUltimateRSISignal('buyCross')}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-5 h-5 rounded flex items-center justify-center bg-white text-slate-950 text-[11px] font-black">
+                        BUY
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-[13px] font-bold text-slate-200">
+                          1. Momentum Buy Cross
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          ARSI crosses over Signal line below 30
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${config.ultimateRsi.signals.buyCross ? 'bg-teal-500 border-teal-400 text-slate-950' : 'border-slate-600'}`}>
+                      {config.ultimateRsi.signals.buyCross && <Check className="w-3 h-3" />}
+                    </div>
+                  </div>
+
+                  {/* Signal 2: Bullish Reversal */}
+                  <div
+                    onClick={() => toggleUltimateRSISignal('reversal')}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-3.5 h-3.5 rounded-full bg-[#FFE600]" />
+                      <div className="flex flex-col">
+                        <span className="text-[13px] font-bold text-slate-200">
+                          2. Bullish Reversal Dot
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          ARSI & Signal recover from &lt; 20 into 20–30 zone
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${config.ultimateRsi.signals.reversal ? 'bg-teal-500 border-teal-400 text-slate-950' : 'border-slate-600'}`}>
+                      {config.ultimateRsi.signals.reversal && <Check className="w-3 h-3" />}
+                    </div>
+                  </div>
+
+                  {/* Signal 3: Buy Zone */}
+                  <div
+                    onClick={() => toggleUltimateRSISignal('buyZone')}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-3.5 h-3.5 rounded-sm bg-[#D0FF00]" />
+                      <div className="flex flex-col">
+                        <span className="text-[13px] font-bold text-slate-200">
+                          3. Buy Zone Accumulation
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          Within 10 bars after cross, both ARSI & Signal in 20–40 zone
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${config.ultimateRsi.signals.buyZone ? 'bg-teal-500 border-teal-400 text-slate-950' : 'border-slate-600'}`}>
+                      {config.ultimateRsi.signals.buyZone && <Check className="w-3 h-3" />}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
             <div className="p-3.5 bg-[#080D18] border-t border-slate-800 flex items-center justify-between">
               <button
                 type="button"

@@ -62,6 +62,32 @@ export interface VolumeConfig {
   visible: boolean;
 }
 
+export type MAMethod = 'RMA' | 'EMA' | 'SMA' | 'TMA';
+
+export interface UltimateRSISignalsConfig {
+  buyCross: boolean;    // arsi < 30 and crossover
+  reversal: boolean;    // arsi[1] < 20 and signal[1] < 20 and arsi >= 20 and arsi < 30
+  buyZone: boolean;     // barssince(cross) < 10 and arsi in [20,40] and signal in [20,40]
+}
+
+export interface UltimateRSIConfig {
+  visible: boolean;
+  length: number;
+  smoType1: MAMethod;
+  smooth: number;
+  smoType2: MAMethod;
+  source: 'close' | 'hl2' | 'hlc3';
+  obValue: number;
+  osValue: number;
+  obColor: string;
+  osColor: string;
+  rsiColor: string;
+  signalColor: string;
+  autoColor: boolean;
+  showArea: boolean;
+  signals: UltimateRSISignalsConfig;
+}
+
 export type PresetType = 'full' | 'clean' | 'banker' | 'triple_ema' | 'custom';
 
 export interface IndicatorSettings {
@@ -74,6 +100,7 @@ export interface IndicatorSettings {
   signals: SignalConfig;
   mcdx: MCDXConfig;
   volume: VolumeConfig;
+  ultimateRsi: UltimateRSIConfig;
 }
 
 export const DEFAULT_CUSTOM_COLORS: string[] = [
@@ -145,5 +172,26 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
   },
   volume: {
     visible: true,
+  },
+  ultimateRsi: {
+    visible: true,
+    length: 14,
+    smoType1: 'RMA',
+    smooth: 14,
+    smoType2: 'EMA',
+    source: 'close',
+    obValue: 80,
+    osValue: 20,
+    obColor: '#089981',
+    osColor: '#F23645',
+    rsiColor: '#E2E8F0',
+    signalColor: '#FF5D00',
+    autoColor: true,
+    showArea: true,
+    signals: {
+      buyCross: true,
+      reversal: true,
+      buyZone: true,
+    },
   },
 };

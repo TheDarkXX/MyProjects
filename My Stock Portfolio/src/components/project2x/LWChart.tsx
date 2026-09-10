@@ -6,6 +6,7 @@ import {
   CandlestickSeries,
   AreaSeries,
   LineSeries,
+  BaselineSeries,
   createSeriesMarkers,
   ColorType,
   CrosshairMode,
@@ -34,6 +35,7 @@ import { BankerMCDXSeriesView, BankerMCDXData } from './BankerMCDXPlugin';
 import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import { useUiStore } from '../../stores/uiStore';
 import { computeEMA } from '../../utils/computeEMA';
+import { computeUltimateRSI } from '../../utils/indicators/ultimateRSI';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { LineStyleOption } from '../../types/indicatorConfig';
 
@@ -173,7 +175,10 @@ export const LWChart: React.FC<LWChartProps> = ({
   const lowerEnvSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const mcdxSeriesRef = useRef<ISeriesApi<'Custom'> | null>(null);
   const bankerMaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const rsiSeriesRef = useRef<ISeriesApi<'Baseline'> | null>(null);
+  const rsiSignalSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const markersPluginRef = useRef<any>(null);
+  const rsiMarkersPluginRef = useRef<any>(null);
   const isDraggingRef = useRef<boolean>(false);
   const lastYRef = useRef<number>(0);
 
@@ -466,6 +471,99 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
     return map;
   }, [aggregatedBars]);
+
+  // Compute My Ultimate RSI by doctorbank8989
+  const ultimateRSIResult = useMemo(() => {
+    if (aggregatedBars.length === 0) return null;
+    const closes = aggregatedBars.map(b => b.close);
+    const highs = aggregatedBars.map(b => b.high);
+    const lows = aggregatedBars.map(b => b.low);
+    const opens = aggregatedBars.map(b => b.open);
+    return computeUltimateRSI(closes, highs, lows, opens, {
+      length: indicatorConfig.ultimateRsi.length,
+      smoType1: indicatorConfig.ultimateRsi.smoType1,
+      smooth: indicatorConfig.ultimateRsi.smooth,
+      smoType2: indicatorConfig.ultimateRsi.smoType2,
+      source: indicatorConfig.ultimateRsi.source,
+    });
+  }, [
+    aggregatedBars,
+    indicatorConfig.ultimateRsi.length,
+    indicatorConfig.ultimateRsi.smoType1,
+    indicatorConfig.ultimateRsi.smooth,
+    indicatorConfig.ultimateRsi.smoType2,
+    indicatorConfig.ultimateRsi.source,
+  ]);
+
+  // Map for O(1) hover lookup of Ultimate RSI values by date
+  const rsiDataByDate = useMemo(() => {
+    const map = new Map<string, { arsi: number | null; signal: number | null; buyCross: boolean; reversal: boolean; buyZone: boolean }>();
+    if (!ultimateRSIResult) return map;
+    for (let i = 0; i < aggregatedBars.length; i++) {
+      const b = aggregatedBars[i];
+      const item = {
+        arsi: ultimateRSIResult.arsi[i],
+        signal: ultimateRSIResult.signal[i],
+        buyCross: ultimateRSIResult.bullishCrossLow[i],
+        reversal: ultimateRSIResult.bullishReversal[i],
+        buyZone: ultimateRSIResult.buyZone[i],
+      };
+      map.set(b.time, item);
+      if (b.time && b.time.includes('T')) {
+        const sec = Math.floor(new Date(b.time).getTime() / 1000);
+        map.set(String(sec), item);
+      }
+    }
+    return map;
+  }, [aggregatedBars, ultimateRSIResult]);
+
+  // Calculate Ultimate RSI buy signals markers (Diamond BUY, Circle REV, Square/Cross BUY ZONE)
+  const calculatedRsiMarkers: SeriesMarker<Time>[] = useMemo(() => {
+    if (!ultimateRSIResult || !indicatorConfig.ultimateRsi.visible) return [];
+    const markers: SeriesMarker<Time>[] = [];
+    const sigs = indicatorConfig.ultimateRsi.signals;
+
+    for (let i = 0; i < aggregatedBars.length; i++) {
+      const bar = aggregatedBars[i];
+      const t = formatBarTime(bar.time);
+
+      // 1. Buy Signal (Diamond White + 'BUY')
+      if (sigs.buyCross && ultimateRSIResult.bullishCrossLow[i]) {
+        markers.push({
+          time: t,
+          position: 'belowBar',
+          color: '#FFFFFF',
+          shape: 'arrowUp',
+          text: 'BUY',
+          size: 1.2,
+        });
+      }
+
+      // 2. Bullish Reversal (Yellow Circle)
+      if (sigs.reversal && ultimateRSIResult.bullishReversal[i]) {
+        markers.push({
+          time: t,
+          position: 'belowBar',
+          color: '#FFE600',
+          shape: 'circle',
+          text: 'REV',
+          size: 1,
+        });
+      }
+
+      // 3. Buy Zone (Neon Yellow-Green Square)
+      if (sigs.buyZone && ultimateRSIResult.buyZone[i]) {
+        markers.push({
+          time: t,
+          position: 'belowBar',
+          color: '#D0FF00',
+          shape: 'square',
+          size: 0.8,
+        });
+      }
+    }
+    return markers;
+  }, [aggregatedBars, ultimateRSIResult, indicatorConfig.ultimateRsi.visible, indicatorConfig.ultimateRsi.signals]);
 
   // Calculate 3-Step Super Money Signals markers with individual sub-toggles
   const calculatedMarkers: SeriesMarker<Time>[] = useMemo(() => {
@@ -788,15 +886,98 @@ export const LWChart: React.FC<LWChartProps> = ({
       },
     });
 
-    // Adjust Pane 1 Height
+    // -------------------------------------------------------------
+    // PANE 2: My Ultimate RSI (DoctorBank ARSI + Signal + OB/OS)
+    // -------------------------------------------------------------
+    const rsiSeries = chart.addSeries(
+      BaselineSeries,
+      {
+        baseValue: { type: 'price', price: 50 },
+        topLineColor: indicatorConfig.ultimateRsi.obColor,
+        bottomLineColor: indicatorConfig.ultimateRsi.osColor,
+        topFillColor1: 'rgba(8, 153, 129, 0.32)',
+        topFillColor2: 'rgba(8, 153, 129, 0.02)',
+        bottomFillColor1: 'rgba(242, 54, 69, 0.02)',
+        bottomFillColor2: 'rgba(242, 54, 69, 0.32)',
+        lineWidth: 2,
+        priceLineVisible: false,
+        lastValueVisible: true,
+        title: 'ARSI',
+        visible: indicatorConfig.ultimateRsi.visible,
+      },
+      2 // Pane index 2!
+    );
+    rsiSeriesRef.current = rsiSeries;
+
+    // Overbought (80)
+    rsiSeries.createPriceLine({
+      price: indicatorConfig.ultimateRsi.obValue,
+      color: indicatorConfig.ultimateRsi.obColor,
+      lineStyle: LineStyle.Dashed,
+      lineWidth: 1,
+      axisLabelVisible: true,
+      title: '80 OB',
+    });
+
+    // Midline (50)
+    rsiSeries.createPriceLine({
+      price: 50,
+      color: 'rgba(255, 255, 255, 0.25)',
+      lineStyle: LineStyle.Dotted,
+      lineWidth: 1,
+      axisLabelVisible: false,
+      title: '50 MID',
+    });
+
+    // Oversold (20)
+    rsiSeries.createPriceLine({
+      price: indicatorConfig.ultimateRsi.osValue,
+      color: indicatorConfig.ultimateRsi.osColor,
+      lineStyle: LineStyle.Dashed,
+      lineWidth: 1,
+      axisLabelVisible: true,
+      title: '20 OS',
+    });
+
+    // Signal Line (Pane 2)
+    const rsiSignalSeries = chart.addSeries(
+      LineSeries,
+      {
+        color: indicatorConfig.ultimateRsi.signalColor,
+        lineWidth: 2,
+        priceLineVisible: false,
+        lastValueVisible: true,
+        title: 'Signal',
+        visible: indicatorConfig.ultimateRsi.visible,
+      },
+      2
+    );
+    rsiSignalSeriesRef.current = rsiSignalSeries;
+
+    // Configure Pane 2 scale
+    chart.priceScale('right', 2).applyOptions({
+      borderColor: 'rgba(255, 255, 255, 0.12)',
+      scaleMargins: {
+        top: 0.08,
+        bottom: 0.08,
+      },
+    });
+
+    // Adjust Sub-Panes Heights
     const panes = chart.panes();
     if (panes.length > 1) {
-      panes[1].setHeight(135);
+      panes[1].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
+    }
+    if (panes.length > 2) {
+      panes[2].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
     }
 
-    // Initialize Markers Plugin
+    // Initialize Markers Plugin for Pane 0 (Candles) and Pane 2 (RSI)
     const markersPlugin = createSeriesMarkers(candleSeries, indicatorConfig.signals.visible ? calculatedMarkers : []);
     markersPluginRef.current = markersPlugin;
+
+    const rsiMarkersPlugin = createSeriesMarkers(rsiSeries, indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
+    rsiMarkersPluginRef.current = rsiMarkersPlugin;
 
     // Crosshair listener for rich header legend
     chart.subscribeCrosshairMove(param => {
@@ -901,7 +1082,10 @@ export const LWChart: React.FC<LWChartProps> = ({
       lowerEnvSeriesRef.current = null;
       mcdxSeriesRef.current = null;
       bankerMaSeriesRef.current = null;
+      rsiSeriesRef.current = null;
+      rsiSignalSeriesRef.current = null;
       markersPluginRef.current = null;
+      rsiMarkersPluginRef.current = null;
     };
   }, []); // Run once on mount
 
@@ -966,11 +1150,30 @@ export const LWChart: React.FC<LWChartProps> = ({
     mcdxSeriesRef.current?.setData(mcdxData as any);
     bankerMaSeriesRef.current?.setData(bMaData);
 
+    if (ultimateRSIResult) {
+      const arsiData: any[] = [];
+      const sigData: any[] = [];
+      for (let i = 0; i < displayBars.length; i++) {
+        const t = formatBarTime(displayBars[i].time);
+        const aVal = ultimateRSIResult.arsi[i];
+        const sVal = ultimateRSIResult.signal[i];
+        if (aVal !== null) {
+          arsiData.push({ time: t, value: aVal });
+        }
+        if (sVal !== null) {
+          sigData.push({ time: t, value: sVal });
+        }
+      }
+      rsiSeriesRef.current?.setData(arsiData);
+      rsiSignalSeriesRef.current?.setData(sigData);
+      rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
+    }
+
     markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
 
     // Apply current timeframe range
     applyTimeframeRange(timeframe);
-  }, [displayBars, calculatedMarkers, indicatorConfig.signals.visible, indicatorConfig.envelope.percent, applyTimeframeRange, timeframe]);
+  }, [displayBars, calculatedMarkers, calculatedRsiMarkers, ultimateRSIResult, indicatorConfig.signals.visible, indicatorConfig.ultimateRsi.visible, indicatorConfig.envelope.percent, applyTimeframeRange, timeframe]);
 
   // Handle Style Switching
   useEffect(() => {
@@ -997,8 +1200,26 @@ export const LWChart: React.FC<LWChartProps> = ({
     lowerEnvSeriesRef.current?.applyOptions({ color: indicatorConfig.envelope.color, lineWidth: indicatorConfig.envelope.lineWidth as any, lineStyle: getChartLineStyle(indicatorConfig.envelope.lineStyle), visible: indicatorConfig.envelope.visible, title: `-${indicatorConfig.envelope.percent}% Bedrock` });
     mcdxSeriesRef.current?.applyOptions({ visible: indicatorConfig.mcdx.visible });
     bankerMaSeriesRef.current?.applyOptions({ visible: indicatorConfig.mcdx.visible });
+    rsiSeriesRef.current?.applyOptions({
+      visible: indicatorConfig.ultimateRsi.visible,
+      topLineColor: indicatorConfig.ultimateRsi.obColor,
+      bottomLineColor: indicatorConfig.ultimateRsi.osColor,
+    });
+    rsiSignalSeriesRef.current?.applyOptions({
+      visible: indicatorConfig.ultimateRsi.visible,
+      color: indicatorConfig.ultimateRsi.signalColor,
+    });
     markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
-  }, [indicatorConfig, calculatedMarkers]);
+    rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
+
+    const panes = chartRef.current?.panes();
+    if (panes && panes.length > 1) {
+      panes[1].setHeight(indicatorConfig.mcdx.visible ? 135 : 0);
+    }
+    if (panes && panes.length > 2) {
+      panes[2].setHeight(indicatorConfig.ultimateRsi.visible ? 135 : 0);
+    }
+  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {
@@ -1270,6 +1491,7 @@ export const LWChart: React.FC<LWChartProps> = ({
                   indicatorConfig.envelope.visible,
                   indicatorConfig.signals.visible,
                   indicatorConfig.mcdx.visible,
+                  indicatorConfig.ultimateRsi.visible,
                 ].filter(Boolean).length}
               </span>
             </button>
@@ -1379,6 +1601,47 @@ export const LWChart: React.FC<LWChartProps> = ({
             <span className="hidden md:inline text-slate-300">
               Retail: <strong className="text-[#1B5E20]">{activeLegend.retail.toFixed(1)}</strong>
             </span>
+            {indicatorConfig.ultimateRsi.visible && (
+              (() => {
+                const rsiInfo = activeLegend ? rsiDataByDate.get(activeLegend.time) : null;
+                if (!rsiInfo) return null;
+                const arsiVal = rsiInfo.arsi;
+                const sigVal = rsiInfo.signal;
+                const isOB = arsiVal !== null && arsiVal >= indicatorConfig.ultimateRsi.obValue;
+                const isOS = arsiVal !== null && arsiVal <= indicatorConfig.ultimateRsi.osValue;
+                const color = isOB ? indicatorConfig.ultimateRsi.obColor : isOS ? indicatorConfig.ultimateRsi.osColor : '#E2E8F0';
+
+                return (
+                  <span className="flex items-center gap-2 border-l border-slate-700 pl-3">
+                    <span>
+                      ARSI({indicatorConfig.ultimateRsi.length}):{' '}
+                      <strong style={{ color }}>{arsiVal !== null ? arsiVal.toFixed(2) : '--'}</strong>
+                    </span>
+                    <span>
+                      Sig:{' '}
+                      <strong style={{ color: indicatorConfig.ultimateRsi.signalColor }}>
+                        {sigVal !== null ? sigVal.toFixed(2) : '--'}
+                      </strong>
+                    </span>
+                    {rsiInfo.buyCross && (
+                      <span className="px-1.5 py-0.2 rounded bg-white text-slate-950 font-black text-[11px] shadow-sm animate-pulse">
+                        BUY
+                      </span>
+                    )}
+                    {rsiInfo.reversal && (
+                      <span className="px-1.5 py-0.2 rounded bg-[#FFE600] text-slate-950 font-black text-[11px] shadow-sm">
+                        REV
+                      </span>
+                    )}
+                    {rsiInfo.buyZone && (
+                      <span className="px-1.5 py-0.2 rounded bg-[#D0FF00] text-slate-950 font-black text-[11px] shadow-sm">
+                        ZONE
+                      </span>
+                    )}
+                  </span>
+                );
+              })()
+            )}
           </>
         ) : (
           <span className="text-slate-400 italic text-[13px]">Scroll to zoom • Drag anywhere for 2D Pan • Double-click to reset</span>

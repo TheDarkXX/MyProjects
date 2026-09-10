@@ -10,6 +10,8 @@ import {
   MCDXConfig,
   VolumeConfig,
   PresetType,
+  UltimateRSIConfig,
+  UltimateRSISignalsConfig,
 } from '../types/indicatorConfig';
 
 const STORAGE_KEY = 'xchart_indicators_v1';
@@ -46,6 +48,14 @@ function loadSavedConfig(): IndicatorSettings {
       },
       mcdx: { ...DEFAULT_INDICATOR_SETTINGS.mcdx, ...(parsed.mcdx || {}) },
       volume: { ...DEFAULT_INDICATOR_SETTINGS.volume, ...(parsed.volume || {}) },
+      ultimateRsi: {
+        ...DEFAULT_INDICATOR_SETTINGS.ultimateRsi,
+        ...(parsed.ultimateRsi || {}),
+        signals: {
+          ...DEFAULT_INDICATOR_SETTINGS.ultimateRsi.signals,
+          ...(parsed.ultimateRsi?.signals || {}),
+        },
+      },
     };
   } catch (e) {
     return DEFAULT_INDICATOR_SETTINGS;
@@ -75,6 +85,9 @@ interface IndicatorState {
   toggleMCDX: () => void;
   updateVolume: (partial: Partial<VolumeConfig>) => void;
   toggleVolume: () => void;
+  updateUltimateRSI: (partial: Partial<UltimateRSIConfig>) => void;
+  toggleUltimateRSI: () => void;
+  toggleUltimateRSISignal: (signalKey: keyof UltimateRSISignalsConfig) => void;
   applyPreset: (preset: PresetType) => void;
   resetDefaults: () => void;
 }
@@ -259,6 +272,45 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       ...prev,
       activePreset: 'custom',
       volume: { ...prev.volume, visible: !prev.volume.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateUltimateRSI: (partial) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      ultimateRsi: { ...prev.ultimateRsi, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleUltimateRSI: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      ultimateRsi: { ...prev.ultimateRsi, visible: !prev.ultimateRsi.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleUltimateRSISignal: (signalKey) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      ultimateRsi: {
+        ...prev.ultimateRsi,
+        signals: {
+          ...prev.ultimateRsi.signals,
+          [signalKey]: !prev.ultimateRsi.signals[signalKey],
+        },
+      },
     };
     saveConfig(next);
     set({ config: next });
