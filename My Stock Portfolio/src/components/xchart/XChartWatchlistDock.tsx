@@ -18,7 +18,8 @@ import {
   Coins,
   Flame,
   Check,
-  Sparkles
+  Sparkles,
+  GripVertical
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -67,7 +68,9 @@ export const XChartWatchlistDock: React.FC = () => {
     setWatchlistDetailSymbol,
     toggleWatchlistDetail,
     fetchWatchlistQuotes,
-    resetToTVWatchlist
+    resetToTVWatchlist,
+    moveSymbol,
+    moveSection
   } = useXChartStore();
 
   // Local UI states
@@ -80,6 +83,77 @@ export const XChartWatchlistDock: React.FC = () => {
 
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionName, setEditingSectionName] = useState('');
+
+  // Resizable width state (min 240px, max 650px)
+  const [dockWidth, setDockWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('xchart_watchlist_dock_width');
+      if (saved) {
+        const val = parseInt(saved, 10);
+        if (!isNaN(val) && val >= 240 && val <= 700) {
+          return val;
+        }
+      }
+    } catch {}
+    return 330;
+  });
+
+  const [isResizing, setIsResizing] = useState(false);
+  const startDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const handleResizerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    startDragRef.current = { startX: e.clientX, startWidth: dockWidth };
+
+    const handleMouseMove = (moveEvt: MouseEvent) => {
+      if (!startDragRef.current) return;
+      const deltaX = startDragRef.current.startX - moveEvt.clientX;
+      const nextWidth = Math.max(240, Math.min(650, startDragRef.current.startWidth + deltaX));
+      setDockWidth(nextWidth);
+    };
+
+    const handleMouseUp = (upEvt: MouseEvent) => {
+      if (startDragRef.current) {
+        const deltaX = startDragRef.current.startX - upEvt.clientX;
+        const finalWidth = Math.max(240, Math.min(650, startDragRef.current.startWidth + deltaX));
+        setDockWidth(finalWidth);
+        try {
+          localStorage.setItem('xchart_watchlist_dock_width', String(finalWidth));
+        } catch {}
+      }
+      setIsResizing(false);
+      startDragRef.current = null;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // Drag & Drop states
+  const [draggedSymbol, setDraggedSymbol] = useState<{
+    symbol: string;
+    sectionId: string;
+    index: number;
+  } | null>(null);
+
+  const [dropTargetSymbol, setDropTargetSymbol] = useState<{
+    sectionId: string;
+    index: number;
+    isAfter: boolean;
+  } | null>(null);
+
+  const [draggedSection, setDraggedSection] = useState<{
+    sectionId: string;
+    index: number;
+  } | null>(null);
+
+  const [dropTargetSection, setDropTargetSection] = useState<{
+    sectionId: string;
+    isAfter: boolean;
+  } | null>(null);
 
   const symbolInputRef = useRef<HTMLInputElement>(null);
   const sectionInputRef = useRef<HTMLInputElement>(null);
@@ -206,7 +280,21 @@ export const XChartWatchlistDock: React.FC = () => {
   }
 
   return (
-    <aside className="w-80 lg:w-88 bg-[#0F111A] border-l border-[#1F2233] flex flex-col h-full select-none shrink-0 overflow-hidden font-sans">
+    <aside 
+      className="bg-[#0F111A] border-l border-[#1F2233] flex flex-col h-full select-none shrink-0 overflow-hidden font-sans relative"
+      style={{ width: `${dockWidth}px` }}
+    >
+      {/* Left Resizer Drag Bar */}
+      <div
+        onMouseDown={handleResizerMouseDown}
+        className={clsx(
+          "absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-purple-500/60 transition-colors z-40 group",
+          isResizing && "bg-purple-500"
+        )}
+        title="ลากขอบซ้ายเพื่อปรับความกว้าง Watchlist"
+      >
+        <div className="w-0.5 h-8 bg-slate-600/40 group-hover:bg-purple-300 rounded-full mx-auto absolute top-1/2 -translate-y-1/2 left-0.5 pointer-events-none" />
+      </div>
       {/* 1. Dock Top Header */}
       <div className="h-11 px-3 border-b border-[#1F2233] flex items-center justify-between bg-[#121520] shrink-0">
         <div className="flex items-center gap-2">
@@ -414,9 +502,9 @@ export const XChartWatchlistDock: React.FC = () => {
         </button>
       </div>
 
-      {/* 5. Scrollable Sections & High-Density Stocks List */}
+      {/* 5. Scrollable Sections & High-Density Stocks List with Free-Style Drag & Drop */}
       <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 divide-y divide-[#1F2233]/40">
-        {watchlistSections.map((section) => {
+        {watchlistSections.map((section, secIdx) => {
           // Visual sort of symbols for this section
           const sortedSymbols = [...section.symbols].sort((a, b) => {
             if (!watchlistSortColumn) return 0;
@@ -433,19 +521,77 @@ export const XChartWatchlistDock: React.FC = () => {
           });
 
           const isEditing = editingSectionId === section.id;
+          const isSecDropTarget = dropTargetSection?.sectionId === section.id;
+          const isSecBeingDragged = draggedSection?.sectionId === section.id;
 
           return (
-            <div key={section.id} className="bg-[#0F111A]">
+            <div 
+              key={section.id} 
+              className={clsx(
+                "bg-[#0F111A] transition-colors relative",
+                isSecBeingDragged && "opacity-30",
+                isSecDropTarget && (dropTargetSection.isAfter ? "border-b-2 border-cyan-400" : "border-t-2 border-cyan-400")
+              )}
+            >
               {/* Section Header Row (Height: ~28px) */}
-              <div className="h-7 px-3 bg-[#131724]/90 border-b border-[#1F2233]/60 flex items-center justify-between text-xs font-bold text-slate-300 hover:text-white group">
+              <div 
+                draggable={!isEditing}
+                onDragStart={(e) => {
+                  if (isEditing) return;
+                  e.stopPropagation();
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/section', section.id);
+                  setDraggedSection({ sectionId: section.id, index: secIdx });
+                }}
+                onDragEnd={() => {
+                  setDraggedSection(null);
+                  setDropTargetSection(null);
+                }}
+                onDragOver={(e) => {
+                  if (draggedSection && draggedSection.sectionId !== section.id) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = 'move';
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const isAfter = (e.clientY - rect.top) > rect.height / 2;
+                    setDropTargetSection({ sectionId: section.id, isAfter });
+                  } else if (draggedSymbol) {
+                    // Allow dropping symbol onto section header to place at top of section
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = 'move';
+                    setDropTargetSymbol({ sectionId: section.id, index: 0, isAfter: false });
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (draggedSection && draggedSection.sectionId !== section.id) {
+                    const isAfter = dropTargetSection?.isAfter ?? false;
+                    const targetIdx = isAfter ? secIdx + 1 : secIdx;
+                    moveSection(draggedSection.index, targetIdx);
+                    setDraggedSection(null);
+                    setDropTargetSection(null);
+                  } else if (draggedSymbol) {
+                    moveSymbol(draggedSymbol.sectionId, section.id, draggedSymbol.index, 0);
+                    setDraggedSymbol(null);
+                    setDropTargetSymbol(null);
+                  }
+                }}
+                className={clsx(
+                  "h-7 px-2.5 bg-[#131724]/90 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white group cursor-grab active:cursor-grabbing",
+                  dropTargetSymbol?.sectionId === section.id && dropTargetSymbol.index === 0 && "bg-purple-900/30"
+                )}
+              >
                 <div 
                   onClick={() => toggleSectionCollapse(section.id)}
-                  className="flex items-center gap-1.5 cursor-pointer flex-1 py-1"
+                  className="flex items-center gap-1.5 cursor-pointer flex-1 py-1 overflow-hidden select-none"
                 >
+                  <GripVertical className="w-3 h-3 text-slate-500 opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
                   {section.isCollapsed ? (
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors" />
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors shrink-0" />
                   ) : (
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors" />
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors shrink-0" />
                   )}
 
                   {isEditing ? (
@@ -459,21 +605,21 @@ export const XChartWatchlistDock: React.FC = () => {
                         if (e.key === 'Escape') setEditingSectionId(null);
                       }}
                       autoFocus
-                      className="bg-[#0B1220] border border-purple-500 rounded px-1.5 py-0.5 text-xs text-white uppercase font-bold focus:outline-none"
+                      className="bg-[#0B1220] border border-purple-500 rounded px-1.5 py-0.5 text-xs text-white uppercase font-normal focus:outline-none"
                     />
                   ) : (
-                    <span className="tracking-wide uppercase text-slate-200 group-hover:text-white">
+                    <span className="tracking-wide uppercase text-slate-200 group-hover:text-white truncate font-medium">
                       {section.name}
                     </span>
                   )}
 
-                  <span className="text-[11px] text-slate-400 font-semibold">
+                  <span className="text-[11px] text-slate-400 font-normal shrink-0">
                     ({section.symbols.length})
                   </span>
                 </div>
 
                 {/* Section Hover Actions */}
-                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -517,10 +663,27 @@ export const XChartWatchlistDock: React.FC = () => {
 
               {/* High-Density Stock Rows (Height: ~30px per row) */}
               {!section.isCollapsed && (
-                <div className="divide-y divide-[#1F2233]/25">
+                <div 
+                  onDragOver={(e) => {
+                    if (draggedSymbol && sortedSymbols.length === 0) {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      setDropTargetSymbol({ sectionId: section.id, index: 0, isAfter: false });
+                    }
+                  }}
+                  onDrop={(e) => {
+                    if (draggedSymbol && sortedSymbols.length === 0) {
+                      e.preventDefault();
+                      moveSymbol(draggedSymbol.sectionId, section.id, draggedSymbol.index, 0);
+                      setDraggedSymbol(null);
+                      setDropTargetSymbol(null);
+                    }
+                  }}
+                  className="divide-y divide-[#1F2233]/25"
+                >
                   {sortedSymbols.length === 0 ? (
                     <div className="px-6 py-2.5 text-xs text-slate-400 italic text-center">
-                      ไม่มีหุ้นในหมวดนี้ — กด + เพื่อเพิ่ม
+                      ไม่มีหุ้นในหมวดนี้ — ลากหุ้นมาวางที่นี่ได้
                     </div>
                   ) : (
                     sortedSymbols.map((symbol) => {
@@ -528,6 +691,7 @@ export const XChartWatchlistDock: React.FC = () => {
                       const isSelected = activeSymbol === symbol;
                       const isDetailSelected = detailSymbol === symbol;
                       const isCurrency = symbol.includes('=X');
+                      const originalIndex = section.symbols.indexOf(symbol);
 
                       const price = quote?.price ?? 0;
                       const change = quote?.change ?? 0;
@@ -543,17 +707,56 @@ export const XChartWatchlistDock: React.FC = () => {
                         formattedPrice = price.toFixed(4);
                       }
 
+                      const isItemBeingDragged = draggedSymbol?.symbol === symbol;
+                      const isDropTarget = dropTargetSymbol?.sectionId === section.id && dropTargetSymbol.index === originalIndex;
+
                       return (
                         <div
                           key={symbol}
+                          draggable={true}
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', symbol);
+                            setDraggedSymbol({ symbol, sectionId: section.id, index: originalIndex });
+                            // Turn off column sort if active so user's manual order is preserved & visible
+                            if (watchlistSortColumn) {
+                              setWatchlistSort(watchlistSortColumn);
+                            }
+                          }}
+                          onDragEnd={() => {
+                            setDraggedSymbol(null);
+                            setDropTargetSymbol(null);
+                          }}
+                          onDragOver={(e) => {
+                            if (!draggedSymbol) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.dataTransfer.dropEffect = 'move';
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const isAfter = (e.clientY - rect.top) > rect.height / 2;
+                            setDropTargetSymbol({ sectionId: section.id, index: originalIndex, isAfter });
+                          }}
+                          onDrop={(e) => {
+                            if (!draggedSymbol) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const isAfter = dropTargetSymbol?.isAfter ?? false;
+                            const destIdx = isAfter ? originalIndex + 1 : originalIndex;
+                            moveSymbol(draggedSymbol.sectionId, section.id, draggedSymbol.index, destIdx);
+                            setDraggedSymbol(null);
+                            setDropTargetSymbol(null);
+                          }}
                           onClick={() => handleStockClick(symbol)}
                           className={clsx(
-                            'h-[30px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative',
+                            'h-[30px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative select-none',
                             isSelected
-                              ? 'bg-purple-950/40 text-white font-semibold'
+                              ? 'bg-purple-950/40 text-white'
                               : isDetailSelected
                               ? 'bg-white/5 text-white'
-                              : 'hover:bg-white/5 text-slate-200 hover:text-white'
+                              : 'hover:bg-white/5 text-slate-200 hover:text-white',
+                            isItemBeingDragged && 'opacity-25 bg-purple-900/20',
+                            isDropTarget && (dropTargetSymbol.isAfter ? 'border-b-2 border-purple-500 shadow-[0_2px_4px_rgba(168,85,247,0.4)]' : 'border-t-2 border-purple-500 shadow-[0_-2px_4px_rgba(168,85,247,0.4)]')
                           )}
                         >
                           {/* Active Neon Left Border Indicator */}
@@ -563,31 +766,34 @@ export const XChartWatchlistDock: React.FC = () => {
 
                           {/* Symbol Column: Dot Badge + Ticker */}
                           <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
+                            {/* Grip handle on hover */}
+                            <GripVertical className="w-2.5 h-2.5 text-slate-500 opacity-0 group-hover:opacity-80 transition-opacity shrink-0 -ml-1 cursor-grab" />
+
                             {/* TradingView-style circle badge */}
                             <div
                               className={clsx(
-                                'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white shrink-0 bg-gradient-to-tr shadow-sm',
+                                'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm',
                                 isCurrency ? 'from-amber-600 to-yellow-500' : getSymbolBadgeGradient(symbol)
                               )}
                             >
                               {isCurrency ? '$' : symbol.slice(0, 1)}
                             </div>
 
-                            {/* Ticker Name */}
-                            <span className="text-[13px] font-bold tracking-tight truncate font-mono text-white">
+                            {/* Ticker Name (No Bold - font-normal) */}
+                            <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
                               {symbol}
                             </span>
                           </div>
 
-                          {/* Last Price Column */}
-                          <div className="col-span-3 text-right font-mono text-[13px] font-semibold text-slate-200 group-hover:text-white pr-1">
+                          {/* Last Price Column (No Bold - font-normal) */}
+                          <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1">
                             {quote ? formattedPrice : '—'}
                           </div>
 
-                          {/* Change Column */}
+                          {/* Change Column (No Bold - font-normal) */}
                           <div 
                             className={clsx(
-                              "col-span-2 text-right font-mono text-[13px] font-medium truncate",
+                              "col-span-2 text-right font-mono text-[13px] font-normal truncate",
                               isZero 
                                 ? "text-slate-300" 
                                 : isPositive 
@@ -598,11 +804,11 @@ export const XChartWatchlistDock: React.FC = () => {
                             {quote ? (isPositive && change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2)) : '—'}
                           </div>
 
-                          {/* Change % Column + Hover Delete Action */}
+                          {/* Change % Column + Hover Delete Action (No Bold - font-normal) */}
                           <div className="col-span-2 text-right relative flex items-center justify-end">
                             <span 
                               className={clsx(
-                                "font-mono text-[13px] font-bold group-hover:opacity-20 transition-opacity",
+                                "font-mono text-[13px] font-normal group-hover:opacity-20 transition-opacity",
                                 isZero 
                                   ? "text-slate-300" 
                                   : isPositive 

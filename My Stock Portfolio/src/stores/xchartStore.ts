@@ -69,6 +69,9 @@ interface XChartState {
   toggleSectionCollapse: (sectionId: string) => void;
   setWatchlistSort: (column: WatchlistSortColumn) => void;
   setWatchlistDetailSymbol: (symbol: string | null) => void;
+  moveSymbol: (sourceSectionId: string, destSectionId: string, fromIndex: number, toIndex: number) => void;
+  moveSection: (fromIndex: number, toIndex: number) => void;
+  setWatchlistSections: (nextSections: WatchlistSection[]) => void;
   toggleWatchlistDetail: () => void;
   fetchWatchlistQuotes: () => Promise<void>;
   resetToTVWatchlist: () => void;
@@ -412,6 +415,50 @@ export const useXChartStore = create<XChartState>((set, get) => ({
 
   setWatchlistDetailSymbol: (symbol: string | null) => {
     set({ watchlistDetailSymbol: symbol });
+  },
+
+  moveSymbol: (sourceSectionId: string, destSectionId: string, fromIndex: number, toIndex: number) => {
+    const { watchlistSections } = get();
+    const nextSections = watchlistSections.map((s) => ({ ...s, symbols: [...s.symbols] }));
+    const srcSec = nextSections.find((s) => s.id === sourceSectionId);
+    const destSec = nextSections.find((s) => s.id === destSectionId);
+    if (!srcSec || !destSec) return;
+    if (fromIndex < 0 || fromIndex >= srcSec.symbols.length) return;
+
+    const [sym] = srcSec.symbols.splice(fromIndex, 1);
+    if (!sym) return;
+
+    if (sourceSectionId === destSectionId) {
+      const target = fromIndex < toIndex ? toIndex - 1 : toIndex;
+      const clamped = Math.max(0, Math.min(srcSec.symbols.length, target));
+      srcSec.symbols.splice(clamped, 0, sym);
+    } else {
+      const existing = destSec.symbols.indexOf(sym);
+      if (existing !== -1) {
+        destSec.symbols.splice(existing, 1);
+      }
+      const clamped = Math.max(0, Math.min(destSec.symbols.length, toIndex));
+      destSec.symbols.splice(clamped, 0, sym);
+    }
+
+    set({ watchlistSections: nextSections, watchlistSortColumn: null });
+    persistSections(nextSections);
+  },
+
+  moveSection: (fromIndex: number, toIndex: number) => {
+    const { watchlistSections } = get();
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= watchlistSections.length || toIndex >= watchlistSections.length) return;
+    const nextSections = [...watchlistSections];
+    const [moved] = nextSections.splice(fromIndex, 1);
+    if (!moved) return;
+    nextSections.splice(toIndex, 0, moved);
+    set({ watchlistSections: nextSections, watchlistSortColumn: null });
+    persistSections(nextSections);
+  },
+
+  setWatchlistSections: (nextSections: WatchlistSection[]) => {
+    set({ watchlistSections: nextSections, watchlistSortColumn: null });
+    persistSections(nextSections);
   },
 
   toggleWatchlistDetail: () => {
