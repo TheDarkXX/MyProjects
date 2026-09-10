@@ -7,6 +7,7 @@ import {
   AreaSeries,
   LineSeries,
   BaselineSeries,
+  HistogramSeries,
   createSeriesMarkers,
   ColorType,
   CrosshairMode,
@@ -38,6 +39,7 @@ import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import { useUiStore } from '../../stores/uiStore';
 import { computeEMA } from '../../utils/computeEMA';
 import { computeUltimateRSI } from '../../utils/indicators/ultimateRSI';
+import { computeTrendSpeed, TrendSpeedResult } from '../../utils/indicators/trendSpeed';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { SubPaneHeaderToolbar } from '../xchart/panes/SubPaneHeaderToolbar';
 import {
@@ -205,6 +207,8 @@ export const LWChart: React.FC<LWChartProps> = ({
   const rsiAreaSeriesRef = useRef<ISeriesApi<'Baseline'> | null>(null);
   const rsiSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const rsiSignalSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const dynTrendSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const trendSpeedHistSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const markersPluginRef = useRef<any>(null);
   const rsiMarkersPluginRef = useRef<any>(null);
   const mcdxStrikeLineRef = useRef<IPriceLine | null>(null);
@@ -266,14 +270,15 @@ export const LWChart: React.FC<LWChartProps> = ({
 
   const [isIndicatorOpen, setIsIndicatorOpen] = useState<boolean>(false);
   const indicatorConfig = useIndicatorStore((s) => s.config);
-  const paneLayout = indicatorConfig.paneLayout || { assignments: { mcdx: 1, ultimateRsi: 2 } };
+  const paneLayout = indicatorConfig.paneLayout || { assignments: { mcdx: 1, ultimateRsi: 2, trendSpeed: 3 } };
   const mcdxPane = paneLayout.assignments.mcdx ?? 1;
   const rsiPane = paneLayout.assignments.ultimateRsi ?? 2;
+  const trendSpeedPane = paneLayout.assignments.trendSpeed ?? 3;
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [maximizedPane, setMaximizedPane] = useState<number | null>(null);
   const [paneOffsets, setPaneOffsets] = useState<Record<number, { top: number; height: number }>>({});
-  const [indicatorInitialView, setIndicatorInitialView] = useState<'list' | 'mcdx' | 'ultimateRsi'>('list');
+  const [indicatorInitialView, setIndicatorInitialView] = useState<'list' | 'mcdx' | 'ultimateRsi' | 'trendSpeed'>('list');
 
   // Constant for collapsed subpane height (35% reduction from 28px -> 18px)
   const COLLAPSED_PANE_HEIGHT = 18;
@@ -301,31 +306,33 @@ export const LWChart: React.FC<LWChartProps> = ({
       if (panes.length > rsiPane && panes[rsiPane]?.setStretchFactor) {
         panes[rsiPane].setStretchFactor(maximized === rsiPane ? subMaxH : COLLAPSED_PANE_HEIGHT);
       }
+      if (panes.length > trendSpeedPane && panes[trendSpeedPane]?.setStretchFactor) {
+        panes[trendSpeedPane].setStretchFactor(maximized === trendSpeedPane ? subMaxH : COLLAPSED_PANE_HEIGHT);
+      }
     } else {
       // Normal / Collapsed mode
       const mcdxTargetH = cfg.mcdx.visible ? Math.max(80, cfg.paneHeights?.mcdx || 140) : COLLAPSED_PANE_HEIGHT;
       const rsiTargetH = cfg.ultimateRsi.visible ? Math.max(80, cfg.paneHeights?.ultimateRsi || 140) : COLLAPSED_PANE_HEIGHT;
+      const tsTargetH = cfg.trendSpeed?.visible ? Math.max(80, cfg.paneHeights?.trendSpeed || 140) : COLLAPSED_PANE_HEIGHT;
 
-      if (mcdxPane === rsiPane) {
-        // Both sharing the same subpane
-        const sharedH = (cfg.mcdx.visible || cfg.ultimateRsi.visible) ? Math.max(80, cfg.paneHeights?.mcdx || 140) : COLLAPSED_PANE_HEIGHT;
-        const mainH = Math.max(120, containerH - sharedH);
-        if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
-        if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
-          panes[mcdxPane].setStretchFactor(sharedH);
-        }
-      } else {
-        const mainH = Math.max(120, containerH - mcdxTargetH - rsiTargetH);
-        if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
-        if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
-          panes[mcdxPane].setStretchFactor(mcdxTargetH);
-        }
-        if (panes.length > rsiPane && panes[rsiPane]?.setStretchFactor) {
-          panes[rsiPane].setStretchFactor(rsiTargetH);
-        }
+      let subpanesSum = 0;
+      if (panes.length > mcdxPane) subpanesSum += mcdxTargetH;
+      if (panes.length > rsiPane) subpanesSum += rsiTargetH;
+      if (panes.length > trendSpeedPane) subpanesSum += tsTargetH;
+
+      const mainH = Math.max(120, containerH - subpanesSum);
+      if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
+      if (panes.length > mcdxPane && panes[mcdxPane]?.setStretchFactor) {
+        panes[mcdxPane].setStretchFactor(mcdxTargetH);
+      }
+      if (panes.length > rsiPane && panes[rsiPane]?.setStretchFactor) {
+        panes[rsiPane].setStretchFactor(rsiTargetH);
+      }
+      if (panes.length > trendSpeedPane && panes[trendSpeedPane]?.setStretchFactor) {
+        panes[trendSpeedPane].setStretchFactor(tsTargetH);
       }
     }
-  }, [mcdxPane, rsiPane]);
+  }, [mcdxPane, rsiPane, trendSpeedPane]);
 
   // Live Pulse state
   const [isLiveActive, setIsLiveActive] = useState<boolean>(false);
@@ -337,6 +344,8 @@ export const LWChart: React.FC<LWChartProps> = ({
   const [hoveredBar, setHoveredBar] = useState<RawBarItem | null>(null);
   // Hover RSI values for sub-pane toolbar
   const [hoveredRsi, setHoveredRsi] = useState<{ arsi: number | null; signal: number | null } | null>(null);
+  // Hover Trend Speed values for sub-pane toolbar
+  const [hoveredTrendSpeed, setHoveredTrendSpeed] = useState<{ speed: number | null; color: string } | null>(null);
 
   // Save state to localStorage
   useEffect(() => {
@@ -608,6 +617,62 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
     return map;
   }, [aggregatedBars, ultimateRSIResult]);
+
+  // Compute Trend Speed Analyzer by Zeiierman
+  const trendSpeedResult: TrendSpeedResult | null = useMemo(() => {
+    if (aggregatedBars.length === 0) return null;
+    const c = aggregatedBars.map(b => b.close);
+    const o = aggregatedBars.map(b => b.open);
+    return computeTrendSpeed(c, o, {
+      maxLength: indicatorConfig.trendSpeed?.maxLength ?? 50,
+      accelMultiplier: indicatorConfig.trendSpeed?.accelMultiplier ?? 0.01,
+      enableTable: indicatorConfig.trendSpeed?.enableTable ?? true,
+      lookbackPeriod: indicatorConfig.trendSpeed?.lookbackPeriod ?? 150,
+      enableCandles: indicatorConfig.trendSpeed?.enableCandles ?? true,
+      collectionPeriod: indicatorConfig.trendSpeed?.collectionPeriod ?? 100,
+      upTrendColor: indicatorConfig.trendSpeed?.upTrendColor ?? '#F7D02C',
+      dnTrendColor: indicatorConfig.trendSpeed?.dnTrendColor ?? '#FFF8DB',
+      upHistColor1: indicatorConfig.trendSpeed?.upHistColor1 ?? '#F7D02C',
+      upHistColor2: indicatorConfig.trendSpeed?.upHistColor2 ?? '#FFE600',
+      dnHistColor1: indicatorConfig.trendSpeed?.dnHistColor1 ?? '#9E2A2B',
+      dnHistColor2: indicatorConfig.trendSpeed?.dnHistColor2 ?? '#C83337',
+    });
+  }, [
+    aggregatedBars,
+    indicatorConfig.trendSpeed?.maxLength,
+    indicatorConfig.trendSpeed?.accelMultiplier,
+    indicatorConfig.trendSpeed?.enableTable,
+    indicatorConfig.trendSpeed?.lookbackPeriod,
+    indicatorConfig.trendSpeed?.enableCandles,
+    indicatorConfig.trendSpeed?.collectionPeriod,
+    indicatorConfig.trendSpeed?.upTrendColor,
+    indicatorConfig.trendSpeed?.dnTrendColor,
+    indicatorConfig.trendSpeed?.upHistColor1,
+    indicatorConfig.trendSpeed?.upHistColor2,
+    indicatorConfig.trendSpeed?.dnHistColor1,
+    indicatorConfig.trendSpeed?.dnHistColor2,
+  ]);
+
+  // Map for O(1) hover lookup of Trend Speed values by date
+  const trendSpeedDataByDate = useMemo(() => {
+    const map = new Map<string, { speed: number | null; color: string; dynEma: number | null; dynColor: string }>();
+    if (!trendSpeedResult) return map;
+    for (let i = 0; i < aggregatedBars.length; i++) {
+      const b = aggregatedBars[i];
+      const item = {
+        speed: trendSpeedResult.trendSpeed[i],
+        color: trendSpeedResult.barColor[i],
+        dynEma: trendSpeedResult.dynEma[i],
+        dynColor: trendSpeedResult.dynTrendColor[i],
+      };
+      map.set(b.time, item);
+      if (b.time && b.time.includes('T')) {
+        const sec = Math.floor(new Date(b.time).getTime() / 1000);
+        map.set(String(sec), item);
+      }
+    }
+    return map;
+  }, [aggregatedBars, trendSpeedResult]);
 
   // Helper to map RSI marker shape to SeriesMarkerShape & text
   // IMPORTANT: For text-based symbols ('diamond', 'cross'), size MUST be 0 so Lightweight Charts does NOT draw a shape above the text!
@@ -987,6 +1052,18 @@ export const LWChart: React.FC<LWChartProps> = ({
     }, 0);
     lowerEnvSeriesRef.current = lowerEnvSeries;
 
+    // 8. Dynamic Trend EMA (Zeiierman)
+    const isDynTrendVisible = indicatorConfig.trendSpeed?.visible && indicatorConfig.trendSpeed?.dynamicTrendVisible;
+    const dynTrendSeries = chart.addSeries(LineSeries, {
+      color: indicatorConfig.trendSpeed?.upTrendColor ?? '#F7D02C',
+      lineWidth: (indicatorConfig.trendSpeed?.dynamicTrendLineWidth ?? 2) as any,
+      priceLineVisible: false,
+      lastValueVisible: showLabels,
+      title: showLabels ? 'Dyn Trend' : '',
+      visible: isDynTrendVisible,
+    }, 0);
+    dynTrendSeriesRef.current = dynTrendSeries;
+
     // -------------------------------------------------------------
     // Dynamic Sub-Panes Construction (Ordered by Pane Index)
     // -------------------------------------------------------------
@@ -1143,14 +1220,53 @@ export const LWChart: React.FC<LWChartProps> = ({
       });
     };
 
+    const createTrendSpeedPane = (targetPane: number) => {
+      const isVisible = indicatorConfig.trendSpeed?.visible && indicatorConfig.trendSpeed?.trendSpeedVisible;
+      const histSeries = chart.addSeries(
+        HistogramSeries,
+        {
+          color: indicatorConfig.trendSpeed?.upHistColor1 ?? '#F7D02C',
+          priceLineVisible: false,
+          lastValueVisible: showLabels,
+          title: showLabels ? 'Trend Speed' : '',
+          visible: isVisible,
+          priceFormat: {
+            type: 'custom',
+            minMove: 0.01,
+            formatter: (val: number) => val.toFixed(2),
+          },
+        },
+        targetPane
+      );
+      trendSpeedHistSeriesRef.current = histSeries;
+
+      // Base 0 Line
+      histSeries.createPriceLine({
+        price: 0,
+        color: 'rgba(255, 255, 255, 0.25)',
+        lineStyle: LineStyle.Dashed,
+        lineWidth: 1,
+        axisLabelVisible: false,
+        title: '',
+      });
+
+      chart.priceScale('right', targetPane).applyOptions({
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        scaleMargins: {
+          top: 0.08,
+          bottom: 0.08,
+        },
+      });
+    };
+
     // Sequentially build sub-panes in ascending pane order
-    if (mcdxPane <= rsiPane) {
-      createMCDXPane(mcdxPane);
-      createRSIPane(rsiPane);
-    } else {
-      createRSIPane(rsiPane);
-      createMCDXPane(mcdxPane);
-    }
+    const subPanesToCreate = [
+      { id: 'mcdx', pane: mcdxPane, create: () => createMCDXPane(mcdxPane) },
+      { id: 'rsi', pane: rsiPane, create: () => createRSIPane(rsiPane) },
+      { id: 'trendSpeed', pane: trendSpeedPane, create: () => createTrendSpeedPane(trendSpeedPane) },
+    ].sort((a, b) => a.pane - b.pane);
+
+    subPanesToCreate.forEach(p => p.create());
 
     // Adjust Sub-Panes Heights according to assigned pane layout & saved state
     applyPaneLayoutHeights(chart, indicatorConfig, maximizedPane);
@@ -1169,6 +1285,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       if (!param.point || !param.time) {
         setHoveredBar(null);
         setHoveredRsi(null);
+        setHoveredTrendSpeed(null);
         return;
       }
       const timeStr = String(param.time);
@@ -1181,6 +1298,12 @@ export const LWChart: React.FC<LWChartProps> = ({
         setHoveredRsi({ arsi: rsi.arsi, signal: rsi.signal });
       } else {
         setHoveredRsi(null);
+      }
+      const ts = trendSpeedDataByDate.get(timeStr);
+      if (ts) {
+        setHoveredTrendSpeed({ speed: ts.speed, color: ts.color });
+      } else {
+        setHoveredTrendSpeed(null);
       }
     });
 
@@ -1272,11 +1395,13 @@ export const LWChart: React.FC<LWChartProps> = ({
       ema200SeriesRef.current = null;
       upperEnvSeriesRef.current = null;
       lowerEnvSeriesRef.current = null;
+      dynTrendSeriesRef.current = null;
       mcdxSeriesRef.current = null;
       bankerMaSeriesRef.current = null;
       rsiAreaSeriesRef.current = null;
       rsiSeriesRef.current = null;
       rsiSignalSeriesRef.current = null;
+      trendSpeedHistSeriesRef.current = null;
       markersPluginRef.current = null;
       rsiMarkersPluginRef.current = null;
       mcdxStrikeLineRef.current = null;
@@ -1284,20 +1409,33 @@ export const LWChart: React.FC<LWChartProps> = ({
       rsiMidLineRef.current = null;
       rsiOsLineRef.current = null;
     };
-  }, [mcdxPane, rsiPane]); // Rebuild chart when pane layout changes
+  }, [mcdxPane, rsiPane, trendSpeedPane]); // Rebuild chart when pane layout changes
 
   // Update Data when displayBars or calculated markers change
   useEffect(() => {
     if (!chartRef.current || displayBars.length === 0) return;
 
     // Prepare arrays
-    const candleData = displayBars.map(b => ({
-      time: formatBarTime(b.time),
-      open: b.open,
-      high: b.high,
-      low: b.low,
-      close: b.close,
-    }));
+    const recolorCandles = indicatorConfig.trendSpeed?.visible &&
+      indicatorConfig.trendSpeed?.enableCandles &&
+      indicatorConfig.trendSpeed?.plotCandleVisible &&
+      trendSpeedResult;
+
+    const candleData = displayBars.map((b, idx) => {
+      const spColor = recolorCandles ? trendSpeedResult.barColor[idx] : undefined;
+      return {
+        time: formatBarTime(b.time),
+        open: b.open,
+        high: b.high,
+        low: b.low,
+        close: b.close,
+        ...(spColor ? {
+          color: spColor,
+          borderColor: spColor,
+          wickColor: spColor,
+        } : {}),
+      };
+    });
 
     const areaData = displayBars.map(b => ({
       time: formatBarTime(b.time),
@@ -1407,6 +1545,38 @@ export const LWChart: React.FC<LWChartProps> = ({
       rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
     }
 
+    if (trendSpeedResult) {
+      if (dynTrendSeriesRef.current) {
+        const dynData: any[] = [];
+        for (let i = 0; i < displayBars.length; i++) {
+          const val = trendSpeedResult.dynEma[i];
+          if (val !== null) {
+            dynData.push({
+              time: formatBarTime(displayBars[i].time),
+              value: val,
+              color: trendSpeedResult.dynTrendColor[i],
+            });
+          }
+        }
+        dynTrendSeriesRef.current.setData(dynData);
+      }
+
+      if (trendSpeedHistSeriesRef.current) {
+        const histData: any[] = [];
+        for (let i = 0; i < displayBars.length; i++) {
+          const sp = trendSpeedResult.trendSpeed[i];
+          if (sp !== null) {
+            histData.push({
+              time: formatBarTime(displayBars[i].time),
+              value: sp,
+              color: trendSpeedResult.barColor[i],
+            });
+          }
+        }
+        trendSpeedHistSeriesRef.current.setData(histData);
+      }
+    }
+
     markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
 
     // Apply current timeframe range
@@ -1416,6 +1586,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     calculatedMarkers,
     calculatedRsiMarkers,
     ultimateRSIResult,
+    trendSpeedResult,
     indicatorConfig.signals.visible,
     indicatorConfig.ultimateRsi.visible,
     indicatorConfig.ultimateRsi.autoColor,
@@ -1425,11 +1596,13 @@ export const LWChart: React.FC<LWChartProps> = ({
     indicatorConfig.ultimateRsi.osColor,
     indicatorConfig.ultimateRsi.rsiColor,
     indicatorConfig.ultimateRsi.showArea,
+    indicatorConfig.trendSpeed,
     indicatorConfig.envelope.percent,
     applyTimeframeRange,
     timeframe,
     mcdxPane,
     rsiPane,
+    trendSpeedPane,
   ]);
 
   // Handle Style Switching
@@ -1556,6 +1729,23 @@ export const LWChart: React.FC<LWChartProps> = ({
       axisLabelVisible: showLabels && isOsVisible,
       title: showLabels && isOsVisible ? `${indicatorConfig.ultimateRsi.osValue} OS` : '',
     });
+
+    const isDynTrendVisible = indicatorConfig.trendSpeed?.visible && indicatorConfig.trendSpeed?.dynamicTrendVisible;
+    dynTrendSeriesRef.current?.applyOptions({
+      visible: isDynTrendVisible,
+      color: indicatorConfig.trendSpeed?.upTrendColor ?? '#F7D02C',
+      lineWidth: (indicatorConfig.trendSpeed?.dynamicTrendLineWidth ?? 2) as any,
+      lastValueVisible: showLabels,
+      title: showLabels ? 'Dyn Trend' : '',
+    });
+
+    const isTrendSpeedVisible = indicatorConfig.trendSpeed?.visible && indicatorConfig.trendSpeed?.trendSpeedVisible;
+    trendSpeedHistSeriesRef.current?.applyOptions({
+      visible: isTrendSpeedVisible,
+      lastValueVisible: showLabels,
+      title: showLabels ? 'Trend Speed' : '',
+    });
+
     markersPluginRef.current?.setMarkers(indicatorConfig.signals.visible ? calculatedMarkers : []);
     rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
 
@@ -1582,7 +1772,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
       setPaneOffsets(newOffsets);
     });
-  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, mcdxPane, rsiPane, maximizedPane, applyPaneLayoutHeights]);
+  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, mcdxPane, rsiPane, trendSpeedPane, maximizedPane, applyPaneLayoutHeights]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {
@@ -1770,6 +1960,12 @@ export const LWChart: React.FC<LWChartProps> = ({
           useIndicatorStore.getState().setPaneHeight('ultimateRsi', h);
         }
       }
+      if (indicatorConfig.trendSpeed?.visible && currentPanes.length > trendSpeedPane) {
+        const h = currentPanes[trendSpeedPane].getHTMLElement?.()?.clientHeight;
+        if (h && h >= 80 && Math.abs(h - (indicatorConfig.paneHeights?.trendSpeed || 140)) > 4) {
+          useIndicatorStore.getState().setPaneHeight('trendSpeed', h);
+        }
+      }
       requestAnimationFrame(updateOffsets);
     };
 
@@ -1788,7 +1984,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       window.removeEventListener('mouseup', handleSplitterRelease);
       window.removeEventListener('pointerup', handleSplitterRelease);
     };
-  }, [mcdxPane, rsiPane, maximizedPane, indicatorConfig.mcdx.visible, indicatorConfig.ultimateRsi.visible]);
+  }, [mcdxPane, rsiPane, trendSpeedPane, maximizedPane, indicatorConfig.mcdx.visible, indicatorConfig.ultimateRsi.visible, indicatorConfig.trendSpeed?.visible]);
 
   // -------------------------------------------------------------
   // Adaptive Heartbeat: Real-time Live Candle Polling
@@ -2048,6 +2244,7 @@ export const LWChart: React.FC<LWChartProps> = ({
                   indicatorConfig.signals.visible,
                   indicatorConfig.mcdx.visible,
                   indicatorConfig.ultimateRsi.visible,
+                  indicatorConfig.trendSpeed?.visible,
                 ].filter(Boolean).length}
               </span>
             </button>
@@ -2204,6 +2401,30 @@ export const LWChart: React.FC<LWChartProps> = ({
                 );
               })()
             )}
+            {indicatorConfig.trendSpeed?.visible && (
+              (() => {
+                const tsInfo = activeLegend ? trendSpeedDataByDate.get(activeLegend.time) : null;
+                if (!tsInfo) return null;
+                return (
+                  <span className="flex items-center gap-2 border-l border-slate-700 pl-3">
+                    <span>
+                      Speed:{' '}
+                      <strong style={{ color: tsInfo.color }}>
+                        {tsInfo.speed !== null ? tsInfo.speed.toFixed(2) : '--'}
+                      </strong>
+                    </span>
+                    {indicatorConfig.trendSpeed?.dynamicTrendVisible && tsInfo.dynEma !== null && (
+                      <span className="hidden lg:inline">
+                        Dyn:{' '}
+                        <strong style={{ color: tsInfo.dynColor }}>
+                          ${tsInfo.dynEma.toFixed(2)}
+                        </strong>
+                      </span>
+                    )}
+                  </span>
+                );
+              })()
+            )}
           </>
         ) : (
           <span className="text-slate-400 italic text-[13px]">Scroll to zoom • Drag anywhere for 2D Pan • Double-click to reset</span>
@@ -2286,6 +2507,92 @@ export const LWChart: React.FC<LWChartProps> = ({
               onRemove={() => useIndicatorStore.getState().toggleUltimateRSI()}
             />
           )}
+
+          {/* Trend Speed Floating Toolbar */}
+          {paneOffsets[trendSpeedPane] && paneOffsets[trendSpeedPane].height >= 14 && (
+            <SubPaneHeaderToolbar
+              paneIndex={trendSpeedPane}
+              title="Trend Speed"
+              top={paneOffsets[trendSpeedPane].top}
+              isVisible={indicatorConfig.trendSpeed?.visible ?? true}
+              isMaximized={maximizedPane === trendSpeedPane}
+              liveValues={
+                hoveredTrendSpeed
+                  ? {
+                      Speed: {
+                        value: hoveredTrendSpeed.speed !== null ? hoveredTrendSpeed.speed.toFixed(2) : '--',
+                        color: hoveredTrendSpeed.color,
+                      },
+                    }
+                  : activeLegend && trendSpeedDataByDate.get(activeLegend.time)
+                  ? {
+                      Speed: {
+                        value: (trendSpeedDataByDate.get(activeLegend.time)!.speed ?? 0).toFixed(2),
+                        color: trendSpeedDataByDate.get(activeLegend.time)!.color,
+                      },
+                    }
+                  : {}
+              }
+              onToggleVisibility={() => useIndicatorStore.getState().toggleTrendSpeed()}
+              onOpenSettings={() => {
+                setIndicatorInitialView('trendSpeed');
+                setIsIndicatorOpen(true);
+              }}
+              onMoveUp={() => useIndicatorStore.getState().moveIndicatorUp('trendSpeed')}
+              onMoveDown={() => useIndicatorStore.getState().moveIndicatorDown('trendSpeed')}
+              onToggleMaximize={() => setMaximizedPane(prev => prev === trendSpeedPane ? null : trendSpeedPane)}
+              onRemove={() => useIndicatorStore.getState().toggleTrendSpeed()}
+            />
+          )}
+
+          {/* Dominance Statistics Floating Table (Zeiierman Dominance Table) */}
+          {indicatorConfig.trendSpeed?.visible &&
+            indicatorConfig.trendSpeed?.enableTable &&
+            indicatorConfig.trendSpeed?.tableVisible &&
+            trendSpeedResult?.stats && (
+              <div
+                className="absolute top-3 right-16 z-20 pointer-events-auto bg-[#090D16]/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-2.5 shadow-2xl flex flex-col gap-1.5 select-none animate-in fade-in duration-150"
+                style={{ fontFamily: TV_FONT_FAMILY }}
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1">
+                  <span className="text-[12px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                    <Flame className="w-3.5 h-3.5 text-amber-400" />
+                    Dominance Wave
+                  </span>
+                  <span
+                    className="text-[12px] font-black px-1.5 py-0.2 rounded"
+                    style={{
+                      color: trendSpeedResult.stats.dominanceAvgColor,
+                      backgroundColor: hexToRgba(trendSpeedResult.stats.dominanceAvgColor, 0.15),
+                      border: `1px solid ${hexToRgba(trendSpeedResult.stats.dominanceAvgColor, 0.3)}`,
+                    }}
+                  >
+                    {trendSpeedResult.stats.dominanceAvgText}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400">Bull Avg:</span>
+                    <strong className="text-emerald-400">{trendSpeedResult.stats.bullAvg.toFixed(1)}</strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400">Bear Avg:</span>
+                    <strong className="text-rose-400">{trendSpeedResult.stats.bearAvg.toFixed(1)}</strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400">Ratio:</span>
+                    <strong className="text-slate-200">{trendSpeedResult.stats.waveRatioAvg.toFixed(2)}x</strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400">Current:</span>
+                    <strong style={{ color: trendSpeedResult.stats.currentColorAvg }}>
+                      {trendSpeedResult.stats.currentTextAvg}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
 
         {/* Right: Quick Watchlist Sidebar (Visible in Fullscreen Mode) */}

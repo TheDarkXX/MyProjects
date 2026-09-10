@@ -65,6 +65,10 @@ function loadSavedConfig(): IndicatorSettings {
           ...(parsed.ultimateRsi?.signals || {}),
         },
       },
+      trendSpeed: {
+        ...DEFAULT_INDICATOR_SETTINGS.trendSpeed,
+        ...(parsed.trendSpeed || {}),
+      },
       showAxisLabels: typeof parsed.showAxisLabels === 'boolean' ? parsed.showAxisLabels : DEFAULT_INDICATOR_SETTINGS.showAxisLabels,
       paneHeights: {
         mcdx: typeof parsed.paneHeights?.mcdx === 'number' && parsed.paneHeights.mcdx >= 80
@@ -73,6 +77,9 @@ function loadSavedConfig(): IndicatorSettings {
         ultimateRsi: typeof parsed.paneHeights?.ultimateRsi === 'number' && parsed.paneHeights.ultimateRsi >= 80
           ? parsed.paneHeights.ultimateRsi
           : DEFAULT_INDICATOR_SETTINGS.paneHeights.ultimateRsi,
+        trendSpeed: typeof parsed.paneHeights?.trendSpeed === 'number' && parsed.paneHeights.trendSpeed >= 80
+          ? parsed.paneHeights.trendSpeed
+          : DEFAULT_INDICATOR_SETTINGS.paneHeights.trendSpeed,
       },
     };
   } catch (e) {
@@ -107,6 +114,8 @@ interface IndicatorState {
   toggleUltimateRSI: () => void;
   toggleUltimateRSISignal: (signalKey: keyof UltimateRSISignalsConfig) => void;
   updateUltimateRSISignals: (partial: Partial<UltimateRSISignalsConfig>) => void;
+  updateTrendSpeed: (partial: Partial<TrendSpeedConfig>) => void;
+  toggleTrendSpeed: () => void;
   assignIndicatorPane: (id: SubPaneIndicatorId, targetPane: number) => void;
   moveIndicatorUp: (id: SubPaneIndicatorId) => void;
   moveIndicatorDown: (id: SubPaneIndicatorId) => void;
@@ -353,6 +362,28 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
           ...partial,
         },
       },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateTrendSpeed: (partial) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      trendSpeed: { ...prev.trendSpeed, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleTrendSpeed: () => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      trendSpeed: { ...prev.trendSpeed, visible: !prev.trendSpeed.visible },
     };
     saveConfig(next);
     set({ config: next });

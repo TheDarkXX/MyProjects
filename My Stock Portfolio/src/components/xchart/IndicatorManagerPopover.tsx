@@ -18,6 +18,7 @@ import {
   Minus,
   ChevronUp,
   ChevronDown,
+  Flame,
 } from 'lucide-react';
 import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import {
@@ -330,7 +331,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ location, onChange 
   );
 };
 
-type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi';
+type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed';
 
 interface IndicatorManagerPopoverProps {
   onClose: () => void;
@@ -342,6 +343,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
   const modalCardRef = useRef<HTMLDivElement>(null);
   const [activeView, setActiveView] = useState<ActiveView>(initialView || 'list');
   const [rsiTab, setRsiTab] = useState<'inputs' | 'style'>('style');
+  const [trendSpeedTab, setTrendSpeedTab] = useState<'inputs' | 'style'>('inputs');
 
   const {
     config,
@@ -361,6 +363,8 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     toggleUltimateRSI,
     toggleUltimateRSISignal,
     updateUltimateRSISignals,
+    updateTrendSpeed,
+    toggleTrendSpeed,
     assignIndicatorPane,
     moveIndicatorUp,
     moveIndicatorDown,
@@ -649,6 +653,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     >
                       <option value={1}>1</option>
                       <option value={2}>2</option>
+                      <option value={3}>3</option>
                     </select>
                     <div className="flex flex-col">
                       <button
@@ -663,7 +668,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                       <button
                         type="button"
                         onClick={() => moveIndicatorDown('mcdx')}
-                        disabled={(config.paneLayout?.assignments?.mcdx ?? 1) >= 2}
+                        disabled={(config.paneLayout?.assignments?.mcdx ?? 1) >= 3}
                         title="Move Pane Down"
                         className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
                       >
@@ -764,6 +769,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     >
                       <option value={1}>1</option>
                       <option value={2}>2</option>
+                      <option value={3}>3</option>
                     </select>
                     <div className="flex flex-col">
                       <button
@@ -778,7 +784,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                       <button
                         type="button"
                         onClick={() => moveIndicatorDown('ultimateRsi')}
-                        disabled={(config.paneLayout?.assignments?.ultimateRsi ?? 2) >= 2}
+                        disabled={(config.paneLayout?.assignments?.ultimateRsi ?? 2) >= 3}
                         title="Move Pane Down"
                         className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
                       >
@@ -799,6 +805,88 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
                   >
                     <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-400 transition-colors" />
+                    <span>Config</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Item 7: Trend Speed Analyzer (Zeiierman) */}
+              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleTrendSpeed}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      config.trendSpeed?.visible
+                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                    }`}
+                    title="Toggle Trend Speed Analyzer"
+                  >
+                    {config.trendSpeed?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+
+                  <div className="flex flex-col">
+                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                      <Flame className="w-3.5 h-3.5 text-amber-400" />
+                      Trend Speed Analyzer
+                      <span className="text-[12px] px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/50 font-bold">
+                        PANE {config.paneLayout?.assignments?.trendSpeed ?? 3}
+                      </span>
+                    </span>
+                    <span className="text-[13px] text-slate-400">
+                      Dyn EMA {config.trendSpeed?.maxLength ?? 50} • Speed HMA(5) • Dominance Wave Ratio
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  {/* Slot Reorder Controls */}
+                  <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
+                    <span className="text-[13px] font-bold text-slate-300">Pane</span>
+                    <select
+                      value={config.paneLayout?.assignments?.trendSpeed ?? 3}
+                      onChange={(e) => assignIndicatorPane('trendSpeed', Number(e.target.value))}
+                      className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[13px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-500 cursor-pointer"
+                    >
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                      <option value={3}>3</option>
+                    </select>
+                    <div className="flex flex-col">
+                      <button
+                        type="button"
+                        onClick={() => moveIndicatorUp('trendSpeed')}
+                        disabled={(config.paneLayout?.assignments?.trendSpeed ?? 3) <= 1}
+                        title="Move Pane Up"
+                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveIndicatorDown('trendSpeed')}
+                        disabled={(config.paneLayout?.assignments?.trendSpeed ?? 3) >= 3}
+                        title="Move Pane Down"
+                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.trendSpeed?.upHistColor1 ?? '#F7D02C' }} title="Speed Up 1" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.trendSpeed?.dnHistColor1 ?? '#9E2A2B' }} title="Speed Dn 1" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.trendSpeed?.upTrendColor ?? '#F7D02C' }} title="Dyn Trend" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('trendSpeed')}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
                     <span>Config</span>
                   </button>
                 </div>
@@ -1967,6 +2055,405 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                         </select>
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3.5 bg-[#080D18] border-t border-slate-800 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setActiveView('list')}
+                className="px-3 py-1.5 rounded-lg text-[13px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-slate-800 transition-all cursor-pointer"
+              >
+                Back to Indicators
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-1.5 rounded-lg text-[13px] font-extrabold bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-md transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ========================================================= */}
+        {/* VIEW 7: TREND SPEED ANALYZER CONFIG (ZEIIERMAN 1:1)       */}
+        {/* ========================================================= */}
+        {activeView === 'trendSpeed' && (
+          <>
+            {/* Header with Title & Back Button */}
+            <div className="flex items-center justify-between px-5 py-3.5 bg-[#0E1526] border-b border-slate-800">
+              <button
+                type="button"
+                onClick={() => setActiveView('list')}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-[13px] font-bold transition-all cursor-pointer border border-slate-700/60"
+              >
+                <ArrowLeft className="w-4 h-4 text-amber-400" />
+                <span>Back</span>
+              </button>
+              <span className="text-[15px] font-black tracking-wide text-slate-100 flex items-center gap-2">
+                <Flame className="w-4 h-4 text-amber-400" />
+                Trend Speed Analyzer (Zeiierman)
+              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* TradingView Top Tabs (Inputs vs Style) */}
+            <div className="flex items-center gap-2 px-5 pt-3 border-b border-slate-800 bg-[#0B101B]">
+              <button
+                type="button"
+                onClick={() => setTrendSpeedTab('inputs')}
+                className={`pb-2 px-2 text-[14px] font-extrabold border-b-2 transition-all cursor-pointer ${
+                  trendSpeedTab === 'inputs'
+                    ? 'border-amber-400 text-amber-300'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Inputs
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrendSpeedTab('style')}
+                className={`pb-2 px-2 text-[14px] font-extrabold border-b-2 transition-all cursor-pointer ${
+                  trendSpeedTab === 'style'
+                    ? 'border-amber-400 text-amber-300'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Style
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+              {/* TAB 1: INPUTS (MATCHING TRADINGVIEW 1:1) */}
+              {trendSpeedTab === 'inputs' && (
+                <div className="flex flex-col gap-4">
+                  {/* Section 1: Dynamic Moving Average */}
+                  <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                    <div className="text-[13px] font-extrabold text-amber-300 uppercase tracking-wider">
+                      Dynamic Moving Average
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[13px] font-bold text-slate-300" title="Maximum Length: Upper limit for number of bars considered in dynamic moving average">
+                          Maximum Length
+                        </label>
+                        <input
+                          type="number"
+                          min="5"
+                          max="200"
+                          value={config.trendSpeed?.maxLength ?? 50}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val >= 5 && val <= 200) {
+                              updateTrendSpeed({ maxLength: val });
+                            }
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[13px] font-bold text-slate-300" title="Accelerator Multiplier: Adjusts responsiveness to price changes">
+                          Accelerator Multiplier
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          min="0.001"
+                          max="0.1"
+                          value={config.trendSpeed?.accelMultiplier ?? 0.01}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val) && val > 0 && val <= 1) {
+                              updateTrendSpeed({ accelMultiplier: val });
+                            }
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Wave Analysis */}
+                  <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                    <div className="text-[13px] font-extrabold text-cyan-300 uppercase tracking-wider">
+                      Wave Analysis
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={config.trendSpeed?.enableTable ?? true}
+                          onChange={() =>
+                            updateTrendSpeed({
+                              enableTable: !(config.trendSpeed?.enableTable ?? true),
+                            })
+                          }
+                          className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span className="text-[13px] font-bold text-slate-200">
+                          Enable Table
+                        </span>
+                      </label>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[13px] font-bold text-slate-300">Lookback Period</label>
+                        <input
+                          type="number"
+                          min="10"
+                          max="500"
+                          value={config.trendSpeed?.lookbackPeriod ?? 150}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val >= 10 && val <= 500) {
+                              updateTrendSpeed({ lookbackPeriod: val });
+                            }
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Trend Visualization */}
+                  <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                    <div className="text-[13px] font-extrabold text-emerald-300 uppercase tracking-wider">
+                      Trend Visualization
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={config.trendSpeed?.enableCandles ?? true}
+                          onChange={() =>
+                            updateTrendSpeed({
+                              enableCandles: !(config.trendSpeed?.enableCandles ?? true),
+                            })
+                          }
+                          className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span className="text-[13px] font-bold text-slate-200">
+                          Enable Candles
+                        </span>
+                      </label>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[13px] font-bold text-slate-300">Collection Period</label>
+                        <input
+                          type="number"
+                          min="10"
+                          max="500"
+                          value={config.trendSpeed?.collectionPeriod ?? 100}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val >= 10 && val <= 500) {
+                              updateTrendSpeed({ collectionPeriod: val });
+                            }
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 4: Color Settings (Inputs Palette Matching Screenshot) */}
+                  <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col gap-3">
+                    <div className="text-[13px] font-extrabold text-amber-300 uppercase tracking-wider">
+                      Color Settings (Gradient Palettes)
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      {/* Dynamic Trend Colors */}
+                      <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
+                        <span className="text-[13px] font-bold text-slate-200">Dynamic Trend</span>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] text-slate-400">Up</span>
+                            <ColorPickerDropdown
+                              color={config.trendSpeed?.upTrendColor ?? '#F7D02C'}
+                              onChange={(c) => updateTrendSpeed({ upTrendColor: c })}
+                              label="Up Trend Line"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] text-slate-400">Dn</span>
+                            <ColorPickerDropdown
+                              color={config.trendSpeed?.dnTrendColor ?? '#FFF8DB'}
+                              onChange={(c) => updateTrendSpeed({ dnTrendColor: c })}
+                              label="Down Trend Line"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Trend Speed Up Gradient Colors */}
+                      <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
+                        <span className="text-[13px] font-bold text-slate-200">Trend Speed Up</span>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] text-slate-400">1</span>
+                            <ColorPickerDropdown
+                              color={config.trendSpeed?.upHistColor1 ?? '#F7D02C'}
+                              onChange={(c) => updateTrendSpeed({ upHistColor1: c })}
+                              label="Speed Up 1"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] text-slate-400">2</span>
+                            <ColorPickerDropdown
+                              color={config.trendSpeed?.upHistColor2 ?? '#FFE600'}
+                              onChange={(c) => updateTrendSpeed({ upHistColor2: c })}
+                              label="Speed Up 2"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Trend Speed Dn Gradient Colors */}
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-[13px] font-bold text-slate-200">Trend Speed Dn</span>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] text-slate-400">1</span>
+                            <ColorPickerDropdown
+                              color={config.trendSpeed?.dnHistColor1 ?? '#9E2A2B'}
+                              onChange={(c) => updateTrendSpeed({ dnHistColor1: c })}
+                              label="Speed Dn 1"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] text-slate-400">2</span>
+                            <ColorPickerDropdown
+                              color={config.trendSpeed?.dnHistColor2 ?? '#C83337'}
+                              onChange={(c) => updateTrendSpeed({ dnHistColor2: c })}
+                              label="Speed Dn 2"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: STYLE (MATCHING TRADINGVIEW 1:1) */}
+              {trendSpeedTab === 'style' && (
+                <div className="flex flex-col gap-2">
+                  {/* Row 1: Dynamic Trend */}
+                  <div className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.trendSpeed?.dynamicTrendVisible ?? true}
+                        onChange={() =>
+                          updateTrendSpeed({
+                            dynamicTrendVisible: !(config.trendSpeed?.dynamicTrendVisible ?? true),
+                          })
+                        }
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-bold text-slate-200">
+                        Dynamic Trend
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      <ColorPickerDropdown
+                        color={config.trendSpeed?.upTrendColor ?? '#F7D02C'}
+                        onChange={(c) => updateTrendSpeed({ upTrendColor: c })}
+                        label="Dynamic Trend Color"
+                      />
+                      <select
+                        value={config.trendSpeed?.dynamicTrendLineWidth ?? 2}
+                        onChange={(e) => updateTrendSpeed({ dynamicTrendLineWidth: Number(e.target.value) })}
+                        className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-[13px] font-bold text-slate-200 cursor-pointer focus:outline-none focus:border-amber-500"
+                      >
+                        <option value={1}>1px</option>
+                        <option value={2}>2px</option>
+                        <option value={3}>3px</option>
+                        <option value={4}>4px</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Trend Speed */}
+                  <div className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.trendSpeed?.trendSpeedVisible ?? true}
+                        onChange={() =>
+                          updateTrendSpeed({
+                            trendSpeedVisible: !(config.trendSpeed?.trendSpeedVisible ?? true),
+                          })
+                        }
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-bold text-slate-200">
+                        Trend Speed
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-md border border-slate-800">
+                      <span className="text-[12px] font-extrabold text-amber-400">HISTOGRAM</span>
+                    </div>
+                  </div>
+
+                  {/* Row 3: PlotCandle */}
+                  <div className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.trendSpeed?.plotCandleVisible ?? true}
+                        onChange={() =>
+                          updateTrendSpeed({
+                            plotCandleVisible: !(config.trendSpeed?.plotCandleVisible ?? true),
+                          })
+                        }
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-bold text-slate-200">
+                        PlotCandle (Recolor Candles by Speed)
+                      </span>
+                    </label>
+                    <span className="text-[12px] font-semibold text-slate-400">
+                      {config.trendSpeed?.plotCandleVisible ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+
+                  {/* Row 4: Tables */}
+                  <div className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-slate-900/50 border border-transparent hover:border-slate-800/60 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.trendSpeed?.tableVisible ?? true}
+                        onChange={() =>
+                          updateTrendSpeed({
+                            tableVisible: !(config.trendSpeed?.tableVisible ?? true),
+                          })
+                        }
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] font-bold text-slate-200">
+                        Tables (Dominance Wave Stats)
+                      </span>
+                    </label>
+                    <span className="text-[12px] font-semibold text-slate-400">
+                      {config.trendSpeed?.tableVisible ? 'ON' : 'OFF'}
+                    </span>
                   </div>
                 </div>
               )}

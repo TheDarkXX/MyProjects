@@ -107,7 +107,28 @@ export interface UltimateRSIConfig {
   signals: UltimateRSISignalsConfig;
 }
 
-export type SubPaneIndicatorId = 'mcdx' | 'ultimateRsi';
+export interface TrendSpeedConfig {
+  visible: boolean;
+  maxLength: number;
+  accelMultiplier: number;
+  enableTable: boolean;
+  lookbackPeriod: number;
+  enableCandles: boolean;
+  collectionPeriod: number;
+  upTrendColor: string;
+  dnTrendColor: string;
+  upHistColor1: string;
+  upHistColor2: string;
+  dnHistColor1: string;
+  dnHistColor2: string;
+  dynamicTrendVisible: boolean;
+  dynamicTrendLineWidth: number;
+  trendSpeedVisible: boolean;
+  plotCandleVisible: boolean;
+  tableVisible: boolean;
+}
+
+export type SubPaneIndicatorId = 'mcdx' | 'ultimateRsi' | 'trendSpeed';
 
 export interface PaneLayout {
   assignments: Record<SubPaneIndicatorId, number>;
@@ -117,17 +138,20 @@ export const DEFAULT_PANE_LAYOUT: PaneLayout = {
   assignments: {
     mcdx: 1,
     ultimateRsi: 2,
+    trendSpeed: 3,
   },
 };
 
 export interface PaneHeights {
   mcdx: number;
   ultimateRsi: number;
+  trendSpeed: number;
 }
 
 export const DEFAULT_PANE_HEIGHTS: PaneHeights = {
   mcdx: 140,
   ultimateRsi: 140,
+  trendSpeed: 140,
 };
 
 export type PresetType = 'full' | 'clean' | 'banker' | 'triple_ema' | 'custom';
@@ -146,6 +170,7 @@ export interface IndicatorSettings {
   mcdx: MCDXConfig;
   volume: VolumeConfig;
   ultimateRsi: UltimateRSIConfig;
+  trendSpeed: TrendSpeedConfig;
 }
 
 export const DEFAULT_CUSTOM_COLORS: string[] = [
@@ -257,5 +282,25 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
       buyZoneLocation: 'bottom',
       buyZoneColor: '#22c55e',
     },
+  },
+  trendSpeed: {
+    visible: true,
+    maxLength: 50,
+    accelMultiplier: 0.01,
+    enableTable: true,
+    lookbackPeriod: 150,
+    enableCandles: true,
+    collectionPeriod: 100,
+    upTrendColor: '#F7D02C',
+    dnTrendColor: '#FFF8DB',
+    upHistColor1: '#F7D02C',
+    upHistColor2: '#FFE600',
+    dnHistColor1: '#9E2A2B',
+    dnHistColor2: '#C83337',
+    dynamicTrendVisible: true,
+    dynamicTrendLineWidth: 2,
+    trendSpeedVisible: true,
+    plotCandleVisible: true,
+    tableVisible: true,
   },
 };
