@@ -202,9 +202,8 @@ export const LWChart: React.FC<LWChartProps> = ({
   const lowerEnvSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const mcdxSeriesRef = useRef<ISeriesApi<'Custom'> | null>(null);
   const bankerMaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const rsiAreaSeriesRef = useRef<ISeriesApi<'Baseline'> | null>(null);
   const rsiSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
-  const rsiUpperBandSeriesRef = useRef<ISeriesApi<'Baseline'> | null>(null);
-  const rsiLowerBandSeriesRef = useRef<ISeriesApi<'Baseline'> | null>(null);
   const rsiSignalSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const markersPluginRef = useRef<any>(null);
   const rsiMarkersPluginRef = useRef<any>(null);
@@ -1045,18 +1044,20 @@ export const LWChart: React.FC<LWChartProps> = ({
       const showArea = indicatorConfig.ultimateRsi.showArea !== false;
       const obColor = indicatorConfig.ultimateRsi.obColor || '#089981';
       const osColor = indicatorConfig.ultimateRsi.osColor || '#F23645';
+      const midVal = indicatorConfig.ultimateRsi.midValue ?? 50;
 
-      // Upper Cloud (Gradient above Overbought level, e.g. 80)
-      const rsiUpperBandSeries = chart.addSeries(
+      // Shaded Background Cloud (Baseline 50: Green above 50, Red below 50)
+      const rsiAreaSeries = chart.addSeries(
         BaselineSeries,
         {
-          baseValue: { type: 'price', price: indicatorConfig.ultimateRsi.obValue },
-          topFillColor1: hexToRgba(obColor, 0.38),
-          topFillColor2: hexToRgba(obColor, 0.04),
-          bottomFillColor1: 'transparent',
-          bottomFillColor2: 'transparent',
+          baseValue: { type: 'price', price: midVal },
+          topFillColor1: hexToRgba(obColor, 0.35),
+          topFillColor2: hexToRgba(obColor, 0.03),
+          bottomFillColor1: hexToRgba(osColor, 0.03),
+          bottomFillColor2: hexToRgba(osColor, 0.35),
           topLineColor: 'transparent',
           bottomLineColor: 'transparent',
+          lineVisible: false,
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
@@ -1064,27 +1065,7 @@ export const LWChart: React.FC<LWChartProps> = ({
         },
         targetPane
       );
-      rsiUpperBandSeriesRef.current = rsiUpperBandSeries;
-
-      // Lower Cloud (Gradient below Oversold level, e.g. 20)
-      const rsiLowerBandSeries = chart.addSeries(
-        BaselineSeries,
-        {
-          baseValue: { type: 'price', price: indicatorConfig.ultimateRsi.osValue },
-          topFillColor1: 'transparent',
-          topFillColor2: 'transparent',
-          bottomFillColor1: hexToRgba(osColor, 0.04),
-          bottomFillColor2: hexToRgba(osColor, 0.38),
-          topLineColor: 'transparent',
-          bottomLineColor: 'transparent',
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          visible: isRsiVisible && showArea,
-        },
-        targetPane
-      );
-      rsiLowerBandSeriesRef.current = rsiLowerBandSeries;
+      rsiAreaSeriesRef.current = rsiAreaSeries;
 
       // ARSI Line (Renders only when in Overbought / Oversold zones like TradingView)
       const rsiSeries = chart.addSeries(
@@ -1293,9 +1274,8 @@ export const LWChart: React.FC<LWChartProps> = ({
       lowerEnvSeriesRef.current = null;
       mcdxSeriesRef.current = null;
       bankerMaSeriesRef.current = null;
+      rsiAreaSeriesRef.current = null;
       rsiSeriesRef.current = null;
-      rsiUpperBandSeriesRef.current = null;
-      rsiLowerBandSeriesRef.current = null;
       rsiSignalSeriesRef.current = null;
       markersPluginRef.current = null;
       rsiMarkersPluginRef.current = null;
@@ -1421,8 +1401,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           sigData.push({ time: t, value: sVal });
         }
       }
-      rsiUpperBandSeriesRef.current?.setData(arsiRawData);
-      rsiLowerBandSeriesRef.current?.setData(arsiRawData);
+      rsiAreaSeriesRef.current?.setData(arsiRawData);
       rsiSeriesRef.current?.setData(arsiData);
       rsiSignalSeriesRef.current?.setData(sigData);
       rsiMarkersPluginRef.current?.setMarkers(indicatorConfig.ultimateRsi.visible ? calculatedRsiMarkers : []);
@@ -1532,16 +1511,14 @@ export const LWChart: React.FC<LWChartProps> = ({
     const isMidVisible = indicatorConfig.ultimateRsi.midVisible !== false;
     const isOsVisible = indicatorConfig.ultimateRsi.osVisible !== false;
 
-    rsiUpperBandSeriesRef.current?.applyOptions({
-      baseValue: { type: 'price', price: indicatorConfig.ultimateRsi.obValue },
-      topFillColor1: hexToRgba(obColor, 0.38),
-      topFillColor2: hexToRgba(obColor, 0.04),
-      visible: isRsiVisible && showArea,
-    });
-    rsiLowerBandSeriesRef.current?.applyOptions({
-      baseValue: { type: 'price', price: indicatorConfig.ultimateRsi.osValue },
-      bottomFillColor1: hexToRgba(osColor, 0.04),
-      bottomFillColor2: hexToRgba(osColor, 0.38),
+    const midVal = indicatorConfig.ultimateRsi.midValue ?? 50;
+
+    rsiAreaSeriesRef.current?.applyOptions({
+      baseValue: { type: 'price', price: midVal },
+      topFillColor1: hexToRgba(obColor, 0.35),
+      topFillColor2: hexToRgba(obColor, 0.03),
+      bottomFillColor1: hexToRgba(osColor, 0.03),
+      bottomFillColor2: hexToRgba(osColor, 0.35),
       visible: isRsiVisible && showArea,
     });
     rsiSeriesRef.current?.applyOptions({
