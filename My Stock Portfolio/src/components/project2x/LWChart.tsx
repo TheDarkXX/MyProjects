@@ -46,6 +46,7 @@ import { computeAnchoredVWAP, AnchoredVWAPResult } from '../../utils/indicators/
 import { computeSuperMoneySignal, SuperMoneySignalResult } from '../../utils/indicators/superMoneySignal';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { SubPaneHeaderToolbar } from '../xchart/panes/SubPaneHeaderToolbar';
+import { MainPaneIndicatorLegend } from './panes/MainPaneIndicatorLegend';
 import {
   LineStyleOption,
   RSIMarkerShape,
@@ -334,7 +335,9 @@ export const LWChart: React.FC<LWChartProps> = ({
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [maximizedPane, setMaximizedPane] = useState<number | null>(null);
   const [paneOffsets, setPaneOffsets] = useState<Record<number, { top: number; height: number }>>({});
-  const [indicatorInitialView, setIndicatorInitialView] = useState<'list' | 'mcdx' | 'ultimateRsi' | 'trendSpeed'>('list');
+  const [indicatorInitialView, setIndicatorInitialView] = useState<
+    'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal'
+  >('list');
 
   // Synchronized multi-pane stretch layout calculation
   const applyPaneLayoutHeights = useCallback((
@@ -3311,6 +3314,31 @@ export const LWChart: React.FC<LWChartProps> = ({
         {/* Left: Chart Canvas Container + Floating Pane Toolbars */}
         <div className="relative flex-1 w-full h-full min-h-0">
           <div ref={chartContainerRef} className="w-full h-full min-h-0" />
+
+          {/* TradingView-Style In-Canvas Indicator Legend Overlay (Main Pane 0) */}
+          <MainPaneIndicatorLegend
+            indicatorConfig={indicatorConfig}
+            activeLegend={activeLegend}
+            superMoneySignalResult={superMoneySignalResult}
+            trendSpeedData={
+              hoveredTrendSpeed ||
+              (activeLegend ? trendSpeedDataByDate.get(activeLegend.time) : null)
+            }
+            autoSRCount={visibleDrawings.length}
+            globalDrawingsVisible={globalDrawingsVisible}
+            onToggleEMA={(key) => useIndicatorStore.getState().toggleEMA(key)}
+            onToggleEnvelope={() => useIndicatorStore.getState().toggleEnvelope()}
+            onToggleTrendSpeedDyn={() => {
+              const cur = indicatorConfig.trendSpeed?.dynamicTrendVisible ?? true;
+              useIndicatorStore.getState().updateTrendSpeed({ dynamicTrendVisible: !cur });
+            }}
+            onToggleSuperMoneySignal={() => useIndicatorStore.getState().toggleSuperMoneySignal()}
+            onToggleAutoSR={() => useDrawingStore.getState().toggleGlobalVisibility()}
+            onOpenConfig={(view) => {
+              setIndicatorInitialView(view);
+              setIsIndicatorOpen(true);
+            }}
+          />
 
           {/* Real-time Price Alert Banner */}
           <DrawingAlertBanner />
