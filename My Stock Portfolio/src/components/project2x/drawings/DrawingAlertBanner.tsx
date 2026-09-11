@@ -46,7 +46,7 @@ export const DrawingAlertBanner: React.FC = () => {
             PRICE ALERT TRIGGERED
           </span>
           {activeAlert.symbol && (
-            <span className="px-1.5 py-0.2 bg-slate-800 text-slate-200 text-[12px] font-mono rounded">
+            <span className="px-1.5 py-0.5 bg-slate-800 text-slate-200 text-[13px] font-mono rounded">
               {activeAlert.symbol}
             </span>
           )}

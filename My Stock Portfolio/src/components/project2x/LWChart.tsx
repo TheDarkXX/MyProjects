@@ -3284,7 +3284,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           {magnetIndicator && (
             <div
               style={{ left: `${magnetIndicator.x + 12}px`, top: `${magnetIndicator.y - 12}px` }}
-              className="pointer-events-none absolute z-40 px-2 py-0.5 bg-emerald-600/90 text-white rounded text-[12px] font-mono font-bold shadow-lg border border-emerald-400/80 flex items-center gap-1.5 animate-in fade-in duration-75"
+              className="pointer-events-none absolute z-40 px-2 py-0.5 bg-emerald-600/90 text-white rounded text-[13px] font-mono font-bold shadow-lg border border-emerald-400/80 flex items-center gap-1.5 animate-in fade-in duration-75"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-ping" />
               <span>🧲 {magnetIndicator.text}</span>

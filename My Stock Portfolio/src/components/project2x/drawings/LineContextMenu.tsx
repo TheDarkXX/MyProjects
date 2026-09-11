@@ -58,9 +58,9 @@ export const LineContextMenu: React.FC<LineContextMenuProps> = ({
       style={{ left: `${left}px`, top: `${top}px` }}
       className="fixed z-50 w-56 bg-[#1E222D] border border-slate-700/90 rounded-lg shadow-2xl p-1 text-[13px] text-slate-200 select-none animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-800"
     >
-      <div className="px-3 py-1.5 text-slate-400 font-mono text-[12px] flex items-center justify-between">
+      <div className="px-3 py-1.5 text-slate-300 font-mono text-[13px] flex items-center justify-between">
         <span>{line.text ? line.text : 'Horizontal Line'}</span>
-        <span className="text-slate-300 font-semibold">{line.price.toFixed(2)}</span>
+        <span className="text-slate-100 font-semibold">{line.price.toFixed(2)}</span>
       </div>
 
       <div className="py-1">
