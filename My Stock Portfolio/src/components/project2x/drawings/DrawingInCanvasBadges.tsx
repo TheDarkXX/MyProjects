@@ -13,6 +13,7 @@ interface DrawingInCanvasBadgesProps {
   onContextMenu: (line: HorizontalLineDrawing, pos: { x: number; y: number }) => void;
   chartContainer: HTMLElement | null;
   symbol: string;
+  onStartDragLine: (id: string, price: number) => void;
 }
 
 export const DrawingInCanvasBadges: React.FC<DrawingInCanvasBadgesProps> = ({
@@ -25,6 +26,7 @@ export const DrawingInCanvasBadges: React.FC<DrawingInCanvasBadgesProps> = ({
   onContextMenu,
   chartContainer,
   symbol,
+  onStartDragLine,
 }) => {
   const drawingSettings = useDrawingStore((s) => s.drawingSettings);
   const [positions, setPositions] = useState<Record<string, number>>({});
@@ -165,6 +167,24 @@ export const DrawingInCanvasBadges: React.FC<DrawingInCanvasBadgesProps> = ({
               backgroundColor: '#1E222D',
               borderColor: d.color,
               color: d.color,
+            }}
+            onMouseDown={(e) => {
+              if (e.button !== 0) return;
+              e.preventDefault();
+              e.stopPropagation();
+              onSelectLine(d.id);
+
+              if (d.locked) {
+                useDrawingStore.getState().setToastNotification('🔒 เส้นนี้ล็อคอยู่ — กดปลดล็อคก่อนลากปรับราคา');
+                setTimeout(() => {
+                  if (useDrawingStore.getState().toastNotification?.includes('ล็อคอยู่')) {
+                    useDrawingStore.getState().setToastNotification(null);
+                  }
+                }, 2000);
+                return;
+              }
+
+              onStartDragLine(d.id, d.price);
             }}
             onClick={(e) => {
               e.stopPropagation();

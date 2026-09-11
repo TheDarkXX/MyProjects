@@ -1880,6 +1880,9 @@ export const LWChart: React.FC<LWChartProps> = ({
 
       // Priority 1: Drawing Tool Active -> Place new line
       if (currentTool === 'horizontalLine') {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         const rawPrice = candleSeries.coordinateToPrice(mouseY);
         if (rawPrice !== null && !isNaN(rawPrice)) {
           let snappedPrice = rawPrice;
@@ -1898,8 +1901,27 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
 
       // Priority 2: Hit-test existing line -> Select / Drag / Clone
-      const hitLine = hitTestLines(mouseY, currentDrawings, candleSeries, 8);
+      const hitLine = hitTestLines(mouseY, currentDrawings, candleSeries, 14);
       if (hitLine) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        store.selectLine(hitLine.id);
+        setSelectedLineY(mouseY);
+
+        if (hitLine.locked) {
+          store.setToastNotification('🔒 เส้นนี้ล็อคอยู่ — กด Unlock ที่เมนูบนเส้นหรือไอคอนบนป้ายเพื่อลากปรับราคา');
+          setTimeout(() => {
+            if (useDrawingStore.getState().toastNotification?.includes('เส้นนี้ล็อคอยู่')) {
+              useDrawingStore.getState().setToastNotification(null);
+            }
+          }, 2500);
+          return; // Block chart pan & block drag
+        }
+
+        // Unlocked line -> temporarily disable LWC scroll while dragging line
+        chartRef.current?.applyOptions({ handleScroll: false, handleScale: false });
         if (e.ctrlKey) {
           // Ctrl+Drag = Clone line
           const clonedId = store.cloneLine(symbol, hitLine.id);
@@ -1909,9 +1931,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           }
         } else {
           isDraggingLineRef.current = { lineId: hitLine.id, startPrice: hitLine.price };
-          store.selectLine(hitLine.id);
         }
-        setSelectedLineY(mouseY);
         return; // Block 2D pan
       }
 
@@ -2065,9 +2085,9 @@ export const LWChart: React.FC<LWChartProps> = ({
       } else {
         setMagnetIndicator(null);
         const currentDrawings = store.getDrawings(symbol);
-        const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 8);
+        const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 14);
         if (hit) {
-          container.style.cursor = hit.locked ? 'not-allowed' : 'ns-resize';
+          container.style.cursor = hit.locked ? 'pointer' : 'ns-resize';
           store.hoverLine(hit.id);
         } else {
           container.style.cursor = 'default';
@@ -2077,11 +2097,19 @@ export const LWChart: React.FC<LWChartProps> = ({
     };
 
     const handleMouseUp = () => {
+      if (isDraggingLineRef.current) {
+        chartRef.current?.applyOptions({ handleScroll: true, handleScale: true });
+      }
       isDraggingRef.current = false;
       isDraggingLineRef.current = null;
     };
 
     const handleMouseLeave = () => {
+      if (isDraggingLineRef.current) {
+        chartRef.current?.applyOptions({ handleScroll: true, handleScale: true });
+      }
+      isDraggingLineRef.current = null;
+      isDraggingRef.current = false;
       setMagnetIndicator(null);
     };
 
@@ -2095,7 +2123,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       const candleSeries = candleSeriesRef.current;
       if (candleSeries) {
         const currentDrawings = useDrawingStore.getState().getDrawings(symbol);
-        const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 8);
+        const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 14);
         if (hit) {
           e.preventDefault();
           setContextMenuData({ line: hit, position: { x: e.clientX, y: e.clientY } });
@@ -2114,7 +2142,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       const candleSeries = candleSeriesRef.current;
       if (candleSeries) {
         const currentDrawings = useDrawingStore.getState().getDrawings(symbol);
-        const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 8);
+        const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 14);
         if (hit) {
           setPropertiesModalLineId(hit.id);
           return;
@@ -2126,7 +2154,7 @@ export const LWChart: React.FC<LWChartProps> = ({
 
     const containerEl = chartContainerRef.current;
     if (containerEl) {
-      containerEl.addEventListener('mousedown', handleMouseDown);
+      containerEl.addEventListener('mousedown', handleMouseDown, true);
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       containerEl.addEventListener('mouseleave', handleMouseLeave);
@@ -2137,7 +2165,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     // Clean up
     return () => {
       if (containerEl) {
-        containerEl.removeEventListener('mousedown', handleMouseDown);
+        containerEl.removeEventListener('mousedown', handleMouseDown, true);
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
         containerEl.removeEventListener('mouseleave', handleMouseLeave);
@@ -3298,6 +3326,11 @@ export const LWChart: React.FC<LWChartProps> = ({
             onContextMenu={(line, pos) => setContextMenuData({ line, position: pos })}
             chartContainer={chartContainerRef.current}
             symbol={symbol}
+            onStartDragLine={(id, price) => {
+              chartRef.current?.applyOptions({ handleScroll: false, handleScale: false });
+              isDraggingLineRef.current = { lineId: id, startPrice: price };
+              useDrawingStore.getState().selectLine(id);
+            }}
           />
 
           {/* Auto S/R Toast Notification */}

@@ -253,7 +253,7 @@ export const LineFloatingToolbar: React.FC<LineFloatingToolbarProps> = ({
             ? '🔒 Locked: Click to unlock and enable Drag & Drop'
             : '🔓 Unlocked: Click and drag anywhere along the line to adjust price'
         }
-        className={`flex items-center gap-1 px-1.5 h-6 rounded text-[11px] font-bold transition-all ${
+        className={`flex items-center gap-1 px-1.5 h-6 rounded text-[13px] font-bold transition-all ${
           line.locked
             ? 'text-amber-300 bg-amber-500/20 border border-amber-500/50 shadow-sm'
             : 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/40 hover:bg-emerald-500/25'
