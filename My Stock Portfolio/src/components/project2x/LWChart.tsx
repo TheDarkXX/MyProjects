@@ -53,6 +53,17 @@ import {
   IndicatorSettings,
   SubPaneIndicatorId,
 } from '../../types/indicatorConfig';
+import { useDrawingStore } from '../../stores/drawingStore';
+import { LeftDrawingToolbar } from './drawings/LeftDrawingToolbar';
+import { LineFloatingToolbar } from './drawings/LineFloatingToolbar';
+import { LinePropertiesDialog } from './drawings/LinePropertiesDialog';
+import {
+  hitTestLines,
+  snapToOHLC,
+  snapToTickSize,
+  countTouches,
+} from '../../utils/drawingUtils';
+import { triggerPriceAlert } from '../../utils/drawingAlerts';
 
 export const TV_FONT_FAMILY = "'Trebuchet MS', 'Segoe UI Symbol', 'Segoe UI Emoji', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
@@ -633,6 +644,167 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
     return map;
   }, [aggregatedBars]);
+
+  // -------------------------------------------------------------
+  // TRADINGVIEW-STYLE DRAWING TOOLS STATE & HOOKS
+  // -------------------------------------------------------------
+  const priceLineMapRef = useRef<Map<string, IPriceLine>>(new Map());
+  const isDraggingLineRef = useRef<{ lineId: string; startPrice: number } | null>(null);
+  const [selectedLineY, setSelectedLineY] = useState<number>(0);
+  const [propertiesModalLineId, setPropertiesModalLineId] = useState<string | null>(null);
+  const [candleSeriesReady, setCandleSeriesReady] = useState(0);
+
+  const drawingsBySymbol = useDrawingStore((s) => s.drawingsBySymbol);
+  const globalDrawingsVisible = useDrawingStore((s) => s.globalDrawingsVisible);
+  const selectedLineId = useDrawingStore((s) => s.selectedLineId);
+
+  const drawings = useMemo(() => {
+    return drawingsBySymbol[symbol.toUpperCase().trim()] || [];
+  }, [drawingsBySymbol, symbol]);
+
+  // Load drawings on symbol change
+  useEffect(() => {
+    useDrawingStore.getState().loadDrawings(symbol);
+  }, [symbol]);
+
+  const visibleDrawings = useMemo(() => {
+    if (!globalDrawingsVisible) return [];
+    return drawings.filter((d) => {
+      if (!d.visible) return false;
+      if (d.visibleOn && d.visibleOn !== 'all' && d.visibleOn !== resolution) return false;
+      return true;
+    });
+  }, [drawings, globalDrawingsVisible, resolution]);
+
+  const selectedDrawing = useMemo(() => {
+    if (!selectedLineId) return null;
+    return drawings.find((d) => d.id === selectedLineId) || null;
+  }, [drawings, selectedLineId]);
+
+  // Sync selected line Y coordinate
+  useEffect(() => {
+    if (!selectedDrawing || !candleSeriesRef.current) return;
+    const y = candleSeriesRef.current.priceToCoordinate(selectedDrawing.price);
+    if (y !== null) {
+      setSelectedLineY(y);
+    }
+  }, [selectedDrawing, selectedDrawing?.price]);
+
+  // Synchronize drawings store with Native Lightweight Charts IPriceLine
+  useEffect(() => {
+    const candleSeries = candleSeriesRef.current;
+    if (!candleSeries) return;
+
+    const currentMap = priceLineMapRef.current;
+    const activeIds = new Set(visibleDrawings.map((d) => d.id));
+
+    // Remove deleted / hidden
+    for (const [id, pl] of currentMap.entries()) {
+      if (!activeIds.has(id)) {
+        try {
+          candleSeries.removePriceLine(pl);
+        } catch (e) {}
+        currentMap.delete(id);
+      }
+    }
+
+    // Add or update
+    for (const d of visibleDrawings) {
+      const existing = currentMap.get(d.id);
+      const lineOpts = {
+        price: d.price,
+        color: d.color,
+        lineWidth: d.lineWidth,
+        lineStyle: getChartLineStyle(d.lineStyle as any),
+        axisLabelVisible: d.showPriceLabel,
+        title: d.text || '',
+      };
+
+      if (existing) {
+        existing.applyOptions(lineOpts);
+      } else {
+        const pl = candleSeries.createPriceLine(lineOpts);
+        currentMap.set(d.id, pl);
+      }
+    }
+  }, [visibleDrawings, symbol, candleSeriesReady]);
+
+  // Price Alert Monitor Effect
+  useEffect(() => {
+    if (!displayBars || displayBars.length < 2) return;
+    const latestBar = displayBars[displayBars.length - 1];
+    const prevBar = displayBars[displayBars.length - 2];
+    const alertLines = visibleDrawings.filter((d) => d.alertEnabled);
+
+    for (const line of alertLines) {
+      const crossedUp = prevBar.close < line.price && latestBar.close >= line.price;
+      const crossedDown = prevBar.close > line.price && latestBar.close <= line.price;
+
+      if (crossedUp || crossedDown) {
+        const pl = priceLineMapRef.current.get(line.id);
+        triggerPriceAlert(line, crossedUp ? 'up' : 'down', chartContainerRef.current, pl);
+      }
+    }
+  }, [displayBars, visibleDrawings]);
+
+  // Global Keyboard Shortcuts (Alt+H, Del, Esc, Ctrl+C/V, Arrow Nudge)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      if (e.altKey && (e.key === 'h' || e.key === 'H')) {
+        e.preventDefault();
+        useDrawingStore.getState().setActiveTool('horizontalLine');
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        useDrawingStore.getState().setActiveTool('cursor');
+        useDrawingStore.getState().selectLine(null);
+        setPropertiesModalLineId(null);
+        return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const sel = useDrawingStore.getState().selectedLineId;
+        if (sel) {
+          e.preventDefault();
+          useDrawingStore.getState().deleteLine(symbol, sel);
+          return;
+        }
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+        useDrawingStore.getState().copySelectedLine(symbol);
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+        useDrawingStore.getState().pasteClipboard(symbol);
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        const sel = useDrawingStore.getState().selectedLineId;
+        if (sel) {
+          e.preventDefault();
+          useDrawingStore.getState().nudgeSelectedLine(symbol, 'up');
+        }
+      } else if (e.key === 'ArrowDown') {
+        const sel = useDrawingStore.getState().selectedLineId;
+        if (sel) {
+          e.preventDefault();
+          useDrawingStore.getState().nudgeSelectedLine(symbol, 'down');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [symbol]);
 
   // Compute My Ultimate RSI by doctorbank8989
   const ultimateRSIResult = useMemo(() => {
@@ -1264,6 +1436,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       visible: chartStyle !== 'AREA',
     }, 0);
     candleSeriesRef.current = candleSeries;
+    setCandleSeriesReady((c) => c + 1);
 
     // 2. Area Series (for Area Mode)
     const areaSeries = chart.addSeries(AreaSeries, {
@@ -1666,8 +1839,17 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
     });
 
-    // Free 2D Panning (Simultaneous X Time & Y Price Drag)
+    // Free 2D Panning & Drawing Tool Handlers
     const handleMouseDown = (e: MouseEvent) => {
+      // Middle click: instant delete hovered drawing
+      if (e.button === 1) {
+        const hovered = useDrawingStore.getState().hoveredLineId;
+        if (hovered) {
+          useDrawingStore.getState().deleteLine(symbol, hovered);
+          return;
+        }
+      }
+
       if (e.button !== 0) return; // Only left click
       const container = chartContainerRef.current;
       if (!container) return;
@@ -1675,50 +1857,154 @@ export const LWChart: React.FC<LWChartProps> = ({
       // If clicked on right price scale axis (last 60px) or bottom time scale axis (last 26px), let native handlers run
       if (e.clientX > rect.right - 60 || e.clientY > rect.bottom - 26) return;
 
+      const mouseY = e.clientY - rect.top;
+      const candleSeries = candleSeriesRef.current;
+      if (!candleSeries) return;
+
+      const store = useDrawingStore.getState();
+      const currentTool = store.activeTool;
+      const currentDrawings = store.getDrawings(symbol);
+      const isMagnet = store.magnetMode;
+
+      // Priority 1: Drawing Tool Active -> Place new line
+      if (currentTool === 'horizontalLine') {
+        const rawPrice = candleSeries.coordinateToPrice(mouseY);
+        if (rawPrice !== null && !isNaN(rawPrice)) {
+          const snappedPrice = isMagnet
+            ? snapToOHLC(rawPrice, displayBars)
+            : snapToTickSize(rawPrice);
+
+          store.addLine(symbol, { price: snappedPrice });
+          setSelectedLineY(mouseY);
+        }
+        return;
+      }
+
+      // Priority 2: Hit-test existing line -> Select / Drag / Clone
+      const hitLine = hitTestLines(mouseY, currentDrawings, candleSeries, 8);
+      if (hitLine) {
+        if (e.ctrlKey) {
+          // Ctrl+Drag = Clone line
+          const clonedId = store.cloneLine(symbol, hitLine.id);
+          if (clonedId) {
+            isDraggingLineRef.current = { lineId: clonedId, startPrice: hitLine.price };
+            store.selectLine(clonedId);
+          }
+        } else {
+          isDraggingLineRef.current = { lineId: hitLine.id, startPrice: hitLine.price };
+          store.selectLine(hitLine.id);
+        }
+        setSelectedLineY(mouseY);
+        return; // Block 2D pan
+      }
+
+      // Priority 3: Click empty space -> Deselect drawing
+      store.selectLine(null);
+
+      // Priority 4: Free 2D Pan
       isDraggingRef.current = true;
       lastYRef.current = e.clientY;
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
       const container = chartContainerRef.current;
       const candleSeries = candleSeriesRef.current;
       if (!container || !candleSeries) return;
 
-      const deltaY = e.clientY - lastYRef.current;
-      if (Math.abs(deltaY) < 1) return;
-
-      const priceScale = candleSeries.priceScale();
-      const range = priceScale.getVisibleRange();
-      if (!range) return;
-
       const rect = container.getBoundingClientRect();
-      const relLastY = lastYRef.current - rect.top;
-      const relCurrY = e.clientY - rect.top;
+      const mouseY = e.clientY - rect.top;
 
-      const p1 = candleSeries.coordinateToPrice(relLastY);
-      const p2 = candleSeries.coordinateToPrice(relCurrY);
+      // Case 1: Dragging a horizontal line
+      if (isDraggingLineRef.current) {
+        const lineId = isDraggingLineRef.current.lineId;
+        const store = useDrawingStore.getState();
+        const currentDrawings = store.getDrawings(symbol);
+        const targetLine = currentDrawings.find((d) => d.id === lineId);
 
-      let deltaPrice = 0;
-      if (p1 !== null && p2 !== null && !isNaN(p1) && !isNaN(p2)) {
-        deltaPrice = p1 - p2;
-      } else {
-        const height = Math.max(100, rect.height * 0.7);
-        const priceRange = range.to - range.from;
-        deltaPrice = (deltaY / height) * priceRange;
+        if (targetLine && !targetLine.locked) {
+          const rawPrice = candleSeries.coordinateToPrice(mouseY);
+          if (rawPrice !== null && !isNaN(rawPrice)) {
+            const isMagnet = store.magnetMode;
+            const newPrice = isMagnet
+              ? snapToOHLC(rawPrice, displayBars)
+              : snapToTickSize(rawPrice);
+
+            // Instant update for 60fps responsiveness
+            const pl = priceLineMapRef.current.get(lineId);
+            if (pl) {
+              pl.applyOptions({ price: newPrice });
+            }
+            store.updateLine(symbol, lineId, { price: newPrice });
+            setSelectedLineY(mouseY);
+          }
+        }
+        return; // Block 2D pan
       }
 
-      if (!isNaN(deltaPrice) && isFinite(deltaPrice)) {
-        priceScale.setVisibleRange({
-          from: range.from + deltaPrice,
-          to: range.to + deltaPrice,
-        });
-        lastYRef.current = e.clientY;
+      // Case 2: Free 2D Pan
+      if (isDraggingRef.current) {
+        const deltaY = e.clientY - lastYRef.current;
+        if (Math.abs(deltaY) < 1) return;
+
+        const priceScale = candleSeries.priceScale();
+        const range = priceScale.getVisibleRange();
+        if (!range) return;
+
+        const relLastY = lastYRef.current - rect.top;
+        const relCurrY = e.clientY - rect.top;
+
+        const p1 = candleSeries.coordinateToPrice(relLastY);
+        const p2 = candleSeries.coordinateToPrice(relCurrY);
+
+        let deltaPrice = 0;
+        if (p1 !== null && p2 !== null && !isNaN(p1) && !isNaN(p2)) {
+          deltaPrice = p1 - p2;
+        } else {
+          const height = Math.max(100, rect.height * 0.7);
+          const priceRange = range.to - range.from;
+          deltaPrice = (deltaY / height) * priceRange;
+        }
+
+        if (!isNaN(deltaPrice) && isFinite(deltaPrice)) {
+          priceScale.setVisibleRange({
+            from: range.from + deltaPrice,
+            to: range.to + deltaPrice,
+          });
+          lastYRef.current = e.clientY;
+          // Update selected line position if visible
+          const selId = useDrawingStore.getState().selectedLineId;
+          if (selId) {
+            const selLine = useDrawingStore.getState().getDrawings(symbol).find((d) => d.id === selId);
+            if (selLine) {
+              const newY = candleSeries.priceToCoordinate(selLine.price);
+              if (newY !== null) setSelectedLineY(newY);
+            }
+          }
+        }
+        return;
+      }
+
+      // Case 3: Hover detection
+      const store = useDrawingStore.getState();
+      const currentTool = store.activeTool;
+      if (currentTool === 'horizontalLine') {
+        container.style.cursor = 'crosshair';
+      } else {
+        const currentDrawings = store.getDrawings(symbol);
+        const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 8);
+        if (hit) {
+          container.style.cursor = hit.locked ? 'not-allowed' : 'ns-resize';
+          store.hoverLine(hit.id);
+        } else {
+          container.style.cursor = 'default';
+          store.hoverLine(null);
+        }
       }
     };
 
     const handleMouseUp = () => {
       isDraggingRef.current = false;
+      isDraggingLineRef.current = null;
     };
 
     const handleDblClick = (e: MouseEvent) => {
@@ -1726,6 +2012,18 @@ export const LWChart: React.FC<LWChartProps> = ({
       if (!container) return;
       const rect = container.getBoundingClientRect();
       if (e.clientX > rect.right - 60 || e.clientY > rect.bottom - 26) return;
+
+      const mouseY = e.clientY - rect.top;
+      const candleSeries = candleSeriesRef.current;
+      if (candleSeries) {
+        const currentDrawings = useDrawingStore.getState().getDrawings(symbol);
+        const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 8);
+        if (hit) {
+          setPropertiesModalLineId(hit.id);
+          return;
+        }
+      }
+
       candleSeriesRef.current?.priceScale().setAutoScale(true);
     };
 
@@ -1745,6 +2043,13 @@ export const LWChart: React.FC<LWChartProps> = ({
         window.removeEventListener('mouseup', handleMouseUp);
         containerEl.removeEventListener('dblclick', handleDblClick);
       }
+      for (const [, pl] of priceLineMapRef.current.entries()) {
+        try {
+          candleSeriesRef.current?.removePriceLine(pl);
+        } catch (_) {}
+      }
+      priceLineMapRef.current.clear();
+      isDraggingLineRef.current = null;
       chart.remove();
       chartRef.current = null;
       candleSeriesRef.current = null;
@@ -2871,9 +3176,35 @@ export const LWChart: React.FC<LWChartProps> = ({
       {/* MAIN BODY: CHART CANVAS + FULLSCREEN WATCHLIST SIDEBAR      */}
       {/* ----------------------------------------------------------- */}
       <div className="relative flex-1 flex overflow-hidden min-h-0 w-full h-full">
+        {/* Left Drawing Toolbar (TradingView Style) */}
+        <LeftDrawingToolbar symbol={symbol} bars={displayBars} />
+
         {/* Left: Chart Canvas Container + Floating Pane Toolbars */}
         <div className="relative flex-1 w-full h-full min-h-0">
           <div ref={chartContainerRef} className="w-full h-full min-h-0" />
+
+          {/* Floating Action Toolbar for selected horizontal line */}
+          {selectedDrawing && (
+            <LineFloatingToolbar
+              line={selectedDrawing}
+              symbol={symbol}
+              yPosition={selectedLineY}
+              touchCount={countTouches(selectedDrawing.price, displayBars)}
+              onOpenSettings={(id) => setPropertiesModalLineId(id)}
+            />
+          )}
+
+          {/* Properties Dialog Modal */}
+          {propertiesModalLineId && (() => {
+            const line = drawings.find((d) => d.id === propertiesModalLineId);
+            return line ? (
+              <LinePropertiesDialog
+                line={line}
+                symbol={symbol}
+                onClose={() => setPropertiesModalLineId(null)}
+              />
+            ) : null;
+          })()}
 
           {/* MCDX Floating Toolbar */}
           {indicatorConfig.mcdx.visible && activeSubPanes.paneMap.mcdx && paneOffsets[activeSubPanes.paneMap.mcdx] && (
