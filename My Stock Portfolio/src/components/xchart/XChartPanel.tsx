@@ -146,6 +146,20 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
     );
   }
 
+  if (!currentData) {
+    return (
+      <div className="flex-1 w-full h-full bg-[#111418] flex flex-col items-center justify-center p-8 select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full border-2 border-[#1F2233] border-t-purple-500 animate-spin" />
+          <div className="absolute font-bold text-xs text-purple-400 font-heading">XC</div>
+        </div>
+        <div className="mt-4 text-sm font-semibold text-slate-200">
+          กำลังโหลดข้อมูลกราฟ {symbol} ({activeResolution})...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 w-full h-full flex flex-col overflow-hidden relative bg-[#111418] min-h-0">
       <LWChart
