@@ -29,7 +29,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   const totalUnrealizedProfitPercent = rawTotalUnrealizedProfitPercent ?? totalPnlPercent ?? 0;
 
   const { exchangeRate } = usePriceStore();
-  const { portfolios, activePortfolioId } = usePortfolioStore();
+  const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,9 +70,23 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
               <Briefcase className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-sm font-bold text-slate-200 truncate max-w-[170px]">
-                {activePortfolio?.name || 'My Portfolio'}
-              </div>
+              {portfolios.length > 1 ? (
+                <select
+                  value={activePortfolioId || ''}
+                  onChange={(e) => setActivePortfolio(e.target.value)}
+                  className="bg-[#1C2235] border border-slate-700/80 rounded-md px-1.5 py-0.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-amber-400 cursor-pointer max-w-[160px] truncate"
+                >
+                  {portfolios.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-[#121622] text-white">
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="text-sm font-bold text-slate-200 truncate max-w-[170px]">
+                  {activePortfolio?.name || 'My Portfolio'}
+                </div>
+              )}
               <div className="text-[13px] text-slate-300">
                 {filteredHoldings.length} ตัวที่ถือครอง (Holdings)
               </div>
