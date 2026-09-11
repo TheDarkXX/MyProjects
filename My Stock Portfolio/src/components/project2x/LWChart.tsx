@@ -207,7 +207,7 @@ export const LWChart: React.FC<LWChartProps> = ({
   const [maximizedPane, setMaximizedPane] = useState<number | null>(null);
   const [paneOffsets, setPaneOffsets] = useState<Record<number, { top: number; height: number }>>({});
   const [indicatorInitialView, setIndicatorInitialView] = useState<
-    'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal'
+    'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal' | 'volumeProfile'
   >('list');
 
   // Multi-pane stretch layout calculation

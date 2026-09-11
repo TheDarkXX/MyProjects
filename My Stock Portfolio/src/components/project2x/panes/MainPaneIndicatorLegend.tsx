@@ -139,7 +139,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
     setIsCollapsed((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem('tv_main_legend_collapsed', String(next));
+        localStorage.setItem('tv_legend_collapsed', String(next));
       } catch (_) {}
       return next;
     });
@@ -200,7 +200,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       multiValues: emas.map((e) => ({
         label: '',
         value: e.val !== undefined && e.val !== null ? `$${e.val.toFixed(2)}` : '--',
-        color: anyEmaVisible && e.visible ? e.color : '#64748B',
+        color: e.color,
       })),
       visible: anyEmaVisible,
       isLocked: lockedItems['emaRibbon'] ?? true,
@@ -234,8 +234,8 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       title: 'Bedrock Envelope',
       params: `±${pct}% ${indicatorConfig.envelope.emaPeriod || 200}`,
       multiValues: [
-        { label: '+', value: upper !== null ? `$${upper.toFixed(2)}` : '--', color: isEnvVisible ? indicatorConfig.envelope.color : '#64748B' },
-        { label: '-', value: lower !== null ? `$${lower.toFixed(2)}` : '--', color: isEnvVisible ? indicatorConfig.envelope.color : '#64748B' },
+        { label: '+', value: upper !== null ? `$${upper.toFixed(2)}` : '--', color: indicatorConfig.envelope.color },
+        { label: '-', value: lower !== null ? `$${lower.toFixed(2)}` : '--', color: indicatorConfig.envelope.color },
       ],
       visible: isEnvVisible,
       isLocked: lockedItems['envelope'] ?? true,
@@ -257,7 +257,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       title: 'Dyn Trend EMA',
       params: 'Zeiierman',
       valueText: dynVal !== null && dynVal !== undefined ? `$${dynVal.toFixed(2)}` : '--',
-      valueColor: isDynVisible ? (trendSpeedData?.dynColor || '#F7D02C') : '#64748B',
+      valueColor: trendSpeedData?.dynColor || '#F7D02C',
       visible: isDynVisible,
       isLocked: lockedItems['dynamicTrend'] ?? true,
       onToggleLock: () => handleToggleItemLock('dynamicTrend'),
@@ -278,15 +278,14 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       title: 'Super Money Signal',
       badge: {
         text: superMoneySignalResult.currentStatusText || 'NEUTRAL',
-        bgClass: !isSmVisible
-          ? 'bg-slate-800 text-slate-500'
-          : dir === 1
-          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-          : dir === 2
-          ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
-          : dir === -1
-          ? 'bg-rose-600/20 text-rose-300 border border-rose-600/40'
-          : 'bg-slate-800 text-slate-300',
+        bgClass:
+          dir === 1
+            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+            : dir === 2
+            ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
+            : dir === -1
+            ? 'bg-rose-600/20 text-rose-300 border border-rose-600/40'
+            : 'bg-slate-800 text-slate-300',
         textClass: 'px-1.5 py-0.2 rounded text-[11px] font-medium',
       },
       visible: isSmVisible,
@@ -330,7 +329,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       isLocked: lockedItems['volumeProfile'] ?? true,
       onToggleLock: () => handleToggleItemLock('volumeProfile'),
       onToggle: onToggleVolumeProfile || (() => {}),
-      onConfigure: () => onOpenConfig('list'),
+      onConfigure: () => onOpenConfig('volumeProfile'),
       onRemove: () => handleRemoveItem('volumeProfile', () => {
         if (isVpVisible) onToggleVolumeProfile?.();
       }),
@@ -344,7 +343,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       title: 'Auto S/R Swings',
       params: `${autoSRCount} lvls`,
       valueText: globalDrawingsVisible ? (autoSRLocked ? '🔒 Locked' : '🔓 Unlocked') : 'Hidden',
-      valueColor: globalDrawingsVisible ? (autoSRLocked ? '#FBBF24' : '#10B981') : '#64748B',
+      valueColor: autoSRLocked ? '#FBBF24' : '#10B981',
       visible: globalDrawingsVisible,
       isLocked: autoSRLocked,
       onToggleLock: onToggleAutoSRLock,
@@ -381,12 +380,12 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
               }`}
             >
               {/* Title & Parameters */}
-              <span className={`font-normal whitespace-nowrap ${item.visible ? 'text-slate-200' : 'text-slate-400'}`}>
+              <span className="font-normal whitespace-nowrap text-slate-200">
                 {item.title}
               </span>
 
               {item.params && (
-                <span className={`text-[10px] whitespace-nowrap font-mono ${item.visible ? 'text-slate-400' : 'text-slate-500'}`}>
+                <span className="text-[10px] whitespace-nowrap font-mono text-slate-400">
                   {item.params}
                 </span>
               )}
@@ -395,7 +394,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
               {item.valueText && (
                 <span
                   className="font-normal font-mono text-[10px] whitespace-nowrap"
-                  style={{ color: item.visible ? (item.valueColor || '#CBD5E1') : '#94A3B8' }}
+                  style={{ color: item.valueColor || '#CBD5E1' }}
                 >
                   {item.valueText}
                 </span>
@@ -407,8 +406,8 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                   {item.multiValues.map((mv, idx) => (
                     <span key={idx} className="whitespace-nowrap">
                       {mv.label && <span className="text-slate-400 text-[9px] mr-0.5">{mv.label}</span>}
-                      <span className="font-normal" style={{ color: item.visible ? mv.color : '#94A3B8' }}>
-                        {item.visible ? mv.value : '--'}
+                      <span className="font-normal" style={{ color: mv.color }}>
+                        {mv.value}
                       </span>
                     </span>
                   ))}

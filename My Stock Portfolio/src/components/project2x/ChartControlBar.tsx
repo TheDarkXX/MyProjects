@@ -28,8 +28,8 @@ export interface ChartControlBarProps {
   setChartStyle: (style: ChartStyle) => void;
   isIndicatorOpen: boolean;
   setIsIndicatorOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  indicatorInitialView: 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal';
-  setIndicatorInitialView: (view: 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal') => void;
+  indicatorInitialView: 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal' | 'volumeProfile';
+  setIndicatorInitialView: (view: 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal' | 'volumeProfile') => void;
   indicatorConfig: IndicatorSettings;
   timeframe: TimeFrame;
   applyTimeframeRange: (tf: TimeFrame) => void;
