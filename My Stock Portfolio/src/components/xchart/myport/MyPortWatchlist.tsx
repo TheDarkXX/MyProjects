@@ -173,7 +173,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                       {h.symbol}
                     </span>
                     {h.stockType && (
-                      <span className="text-[12px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 font-medium border border-slate-700/60">
+                      <span className="text-[13px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 font-medium border border-slate-700/60">
                         {h.stockType}
                       </span>
                     )}

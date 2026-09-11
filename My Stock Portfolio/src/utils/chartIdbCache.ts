@@ -62,8 +62,7 @@ export async function getCachedCandles<T = any>(symbol: string, resolution: stri
           return;
         }
 
-        // Cache valid for 3 minutes for intraday live revalidation
-        const isStale = Date.now() - record.cachedAt > 3 * 60 * 1000;
+        // Always return cached data for instant chart load (stale-while-revalidate pattern)
         resolve(record.data);
       };
 
