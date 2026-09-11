@@ -45,7 +45,7 @@ export function hitTestLines(
   mouseY: number,
   drawings: HorizontalLineDrawing[],
   series: { priceToCoordinate: (price: number) => number | null } | null,
-  hitZonePx: number = 6
+  hitZonePx: number = 7
 ): HorizontalLineDrawing | null {
   if (!series) return null;
   // Test in reverse so top-most drawn line gets priority
@@ -60,20 +60,105 @@ export function hitTestLines(
   return null;
 }
 
+export interface SnapTargetResult {
+  price: number;
+  snappedType: 'High' | 'Low' | 'Open' | 'Close' | 'Tick' | null;
+  yCoord?: number;
+}
+
 /**
- * Magnet snap to nearest OHLC of visible bars
+ * High-precision TradingView Magnet Snap
+ * Prioritizes the candle currently under cursor (mouseX) or nearby candles (±2)
+ */
+export function snapToCandleOHLC(
+  price: number,
+  mouseY: number,
+  barIndex: number | null,
+  bars: Array<{ high: number; low: number; open: number; close: number }>,
+  series: { priceToCoordinate: (p: number) => number | null } | null,
+  snapThresholdPx: number = 28
+): SnapTargetResult {
+  if (!bars || bars.length === 0 || !series) {
+    return { price: snapToTickSize(price), snappedType: 'Tick' };
+  }
+
+  // If we have a target bar index under the mouse, scan it and its immediate neighbors (±2)
+  const candidateIndices: number[] = [];
+  if (barIndex !== null && barIndex >= 0 && barIndex < bars.length) {
+    for (let offset = -2; offset <= 2; offset++) {
+      const idx = barIndex + offset;
+      if (idx >= 0 && idx < bars.length) {
+        candidateIndices.push(idx);
+      }
+    }
+  } else {
+    // If no specific bar index, inspect the last 50 bars
+    const start = Math.max(0, bars.length - 60);
+    for (let i = start; i < bars.length; i++) {
+      candidateIndices.push(i);
+    }
+  }
+
+  let bestPrice: number | null = null;
+  let bestDistPx = Infinity;
+  let bestType: 'High' | 'Low' | 'Open' | 'Close' | null = null;
+  let bestY: number | undefined = undefined;
+
+  for (const idx of candidateIndices) {
+    const bar = bars[idx];
+    const points: Array<{ val: number; type: 'High' | 'Low' | 'Open' | 'Close' }> = [
+      { val: bar.high, type: 'High' },
+      { val: bar.low, type: 'Low' },
+      { val: bar.close, type: 'Close' },
+      { val: bar.open, type: 'Open' },
+    ];
+
+    for (const pt of points) {
+      const coord = series.priceToCoordinate(pt.val);
+      if (coord !== null) {
+        const dist = Math.abs(mouseY - coord);
+        if (dist <= snapThresholdPx && dist < bestDistPx) {
+          bestDistPx = dist;
+          bestPrice = pt.val;
+          bestType = pt.type;
+          bestY = coord;
+        }
+      }
+    }
+  }
+
+  if (bestPrice !== null && bestType !== null) {
+    return {
+      price: Number(bestPrice.toFixed(4)),
+      snappedType: bestType,
+      yCoord: bestY,
+    };
+  }
+
+  return {
+    price: snapToTickSize(price),
+    snappedType: 'Tick',
+  };
+}
+
+/**
+ * Legacy OHLC snap fallback
  */
 export function snapToOHLC(
   price: number,
   bars: Array<{ high: number; low: number; open: number; close: number }>,
-  maxRangePct: number = 0.015
+  maxRangePct: number = 0.02
 ): number {
-  if (!bars || bars.length === 0) return price;
+  if (!bars || bars.length === 0) return snapToTickSize(price);
 
   let nearest = price;
   let minDist = Infinity;
 
-  for (let i = 0; i < bars.length; i++) {
+  const lastBar = bars[bars.length - 1];
+  const firstBar = bars[0];
+  const range = Math.abs((lastBar?.high || 100) - (firstBar?.low || 1)) || 1;
+
+  for (let i = Math.max(0, bars.length - 100); i < bars.length; i++) {
     const b = bars[i];
     const points = [b.high, b.low, b.close, b.open];
     for (const val of points) {
@@ -85,18 +170,20 @@ export function snapToOHLC(
     }
   }
 
-  const lastBar = bars[bars.length - 1];
-  const firstBar = bars[0];
-  const range = Math.abs((lastBar?.high || 100) - (firstBar?.low || 1)) || 1;
-
   if (minDist / range <= maxRangePct) {
     return Number(nearest.toFixed(4));
   }
-  return price;
+  return snapToTickSize(price);
+}
+
+export interface TouchAnalysis {
+  count: number;
+  strength: 'weak' | 'moderate' | 'strong';
+  label: string;
 }
 
 /**
- * Count how many candles tested or bounced off this line (Touch Counter)
+ * Count how many candles tested or reacted to this level
  */
 export function countTouches(
   linePrice: number,
@@ -118,49 +205,85 @@ export function countTouches(
   return touches;
 }
 
+export function analyzeLineStrength(touchCount: number): TouchAnalysis {
+  if (touchCount >= 5) {
+    return { count: touchCount, strength: 'strong', label: `Tested ${touchCount}x (Rock Solid)` };
+  }
+  if (touchCount >= 3) {
+    return { count: touchCount, strength: 'moderate', label: `Tested ${touchCount}x (Moderate)` };
+  }
+  if (touchCount >= 1) {
+    return { count: touchCount, strength: 'weak', label: `Tested ${touchCount}x (Minor)` };
+  }
+  return { count: 0, strength: 'weak', label: 'Unverified Level' };
+}
+
 /**
- * Auto-detect Support and Resistance levels from Swing High/Low
+ * Institutional Swing-based Support & Resistance Detector
+ * Classifies levels into Major Resistance (above current price) and Major Support (below current price)
  */
 export function detectSupportResistance(
   bars: Array<{ high: number; low: number; open: number; close: number }>,
-  lookback: number = 15,
-  maxLevels: number = 5
+  lookback: number = 12,
+  maxPerSide: number = 2
 ): AutoSRLevel[] {
   if (!bars || bars.length < lookback * 2) return [];
 
-  const rawLevels: AutoSRLevel[] = [];
+  const currentPrice = bars[bars.length - 1].close;
+  const rawHighs: { price: number; strength: number }[] = [];
+  const rawLows: { price: number; strength: number }[] = [];
 
   for (let i = lookback; i < bars.length - lookback; i++) {
     const current = bars[i];
 
-    let isHigh = true;
-    let isLow = true;
+    let isSwingHigh = true;
+    let isSwingLow = true;
 
     for (let j = i - lookback; j <= i + lookback; j++) {
       if (j === i) continue;
-      if (bars[j].high > current.high) isHigh = false;
-      if (bars[j].low < current.low) isLow = false;
+      if (bars[j].high > current.high) isSwingHigh = false;
+      if (bars[j].low < current.low) isSwingLow = false;
     }
 
-    if (isHigh) {
-      rawLevels.push({ price: current.high, strength: 1, type: 'resistance' });
+    if (isSwingHigh) {
+      rawHighs.push({ price: current.high, strength: 1 });
     }
-    if (isLow) {
-      rawLevels.push({ price: current.low, strength: 1, type: 'support' });
+    if (isSwingLow) {
+      rawLows.push({ price: current.low, strength: 1 });
     }
   }
 
-  // Cluster nearby levels (within 0.8% of price)
-  const clustered: AutoSRLevel[] = [];
-  for (const item of rawLevels) {
-    const existing = clustered.find(c => Math.abs(c.price - item.price) / item.price <= 0.008);
-    if (existing) {
-      existing.strength += 1;
-      existing.price = Number(((existing.price + item.price) / 2).toFixed(4));
-    } else {
-      clustered.push({ ...item });
+  // Cluster nearby levels (within 0.9% of price)
+  const clusterItems = (items: { price: number; strength: number }[]) => {
+    const clustered: { price: number; strength: number }[] = [];
+    for (const item of items) {
+      const found = clustered.find(c => Math.abs(c.price - item.price) / item.price <= 0.009);
+      if (found) {
+        found.strength += 1;
+        found.price = Number(((found.price + item.price) / 2).toFixed(4));
+      } else {
+        clustered.push({ ...item });
+      }
     }
-  }
+    return clustered;
+  };
 
-  return clustered.sort((a, b) => b.strength - a.strength).slice(0, maxLevels);
+  const clusteredHighs = clusterItems(rawHighs);
+  const clusteredLows = clusterItems(rawLows);
+
+  // Resistances: levels above current price (or highest swing highs)
+  const resistances = clusteredHighs
+    .filter(item => item.price >= currentPrice * 0.995)
+    .sort((a, b) => b.strength - a.strength || a.price - b.price)
+    .slice(0, maxPerSide)
+    .map(r => ({ price: snapToTickSize(r.price), strength: r.strength, type: 'resistance' as const }));
+
+  // Supports: levels below current price (or lowest swing lows)
+  const supports = clusteredLows
+    .filter(item => item.price <= currentPrice * 1.005)
+    .sort((a, b) => b.strength - a.strength || b.price - a.price)
+    .slice(0, maxPerSide)
+    .map(s => ({ price: snapToTickSize(s.price), strength: s.strength, type: 'support' as const }));
+
+  return [...resistances, ...supports];
 }

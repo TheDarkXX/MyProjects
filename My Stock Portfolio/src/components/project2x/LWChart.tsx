@@ -57,8 +57,11 @@ import { useDrawingStore } from '../../stores/drawingStore';
 import { LeftDrawingToolbar } from './drawings/LeftDrawingToolbar';
 import { LineFloatingToolbar } from './drawings/LineFloatingToolbar';
 import { LinePropertiesDialog } from './drawings/LinePropertiesDialog';
+import { LineContextMenu } from './drawings/LineContextMenu';
+import { DrawingAlertBanner } from './drawings/DrawingAlertBanner';
 import {
   hitTestLines,
+  snapToCandleOHLC,
   snapToOHLC,
   snapToTickSize,
   countTouches,
@@ -652,11 +655,14 @@ export const LWChart: React.FC<LWChartProps> = ({
   const isDraggingLineRef = useRef<{ lineId: string; startPrice: number } | null>(null);
   const [selectedLineY, setSelectedLineY] = useState<number>(0);
   const [propertiesModalLineId, setPropertiesModalLineId] = useState<string | null>(null);
+  const [contextMenuData, setContextMenuData] = useState<{ line: HorizontalLineDrawing; position: { x: number; y: number } } | null>(null);
+  const [magnetIndicator, setMagnetIndicator] = useState<{ x: number; y: number; text: string; price: number } | null>(null);
   const [candleSeriesReady, setCandleSeriesReady] = useState(0);
 
   const drawingsBySymbol = useDrawingStore((s) => s.drawingsBySymbol);
   const globalDrawingsVisible = useDrawingStore((s) => s.globalDrawingsVisible);
   const selectedLineId = useDrawingStore((s) => s.selectedLineId);
+  const toastNotification = useDrawingStore((s) => s.toastNotification);
 
   const drawings = useMemo(() => {
     return drawingsBySymbol[symbol.toUpperCase().trim()] || [];
@@ -742,10 +748,10 @@ export const LWChart: React.FC<LWChartProps> = ({
 
       if (crossedUp || crossedDown) {
         const pl = priceLineMapRef.current.get(line.id);
-        triggerPriceAlert(line, crossedUp ? 'up' : 'down', chartContainerRef.current, pl);
+        triggerPriceAlert(line, crossedUp ? 'up' : 'down', chartContainerRef.current, pl, symbol);
       }
     }
-  }, [displayBars, visibleDrawings]);
+  }, [displayBars, visibleDrawings, symbol]);
 
   // Global Keyboard Shortcuts (Alt+H, Del, Esc, Ctrl+C/V, Arrow Nudge)
   useEffect(() => {
@@ -1858,6 +1864,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       if (e.clientX > rect.right - 60 || e.clientY > rect.bottom - 26) return;
 
       const mouseY = e.clientY - rect.top;
+      const mouseX = e.clientX - rect.left;
       const candleSeries = candleSeriesRef.current;
       if (!candleSeries) return;
 
@@ -1866,16 +1873,25 @@ export const LWChart: React.FC<LWChartProps> = ({
       const currentDrawings = store.getDrawings(symbol);
       const isMagnet = store.magnetMode;
 
+      // Calculate bar index under cursor
+      const logical = chartRef.current?.timeScale().coordinateToLogical(mouseX);
+      const barIdx = logical !== null && logical !== undefined ? Math.round(logical) : null;
+
       // Priority 1: Drawing Tool Active -> Place new line
       if (currentTool === 'horizontalLine') {
         const rawPrice = candleSeries.coordinateToPrice(mouseY);
         if (rawPrice !== null && !isNaN(rawPrice)) {
-          const snappedPrice = isMagnet
-            ? snapToOHLC(rawPrice, displayBars)
-            : snapToTickSize(rawPrice);
+          let snappedPrice = rawPrice;
+          if (isMagnet) {
+            const snap = snapToCandleOHLC(rawPrice, mouseY, barIdx, displayBars, candleSeries, 30);
+            snappedPrice = snap.price;
+          } else {
+            snappedPrice = snapToTickSize(rawPrice);
+          }
 
           store.addLine(symbol, { price: snappedPrice });
           setSelectedLineY(mouseY);
+          setMagnetIndicator(null);
         }
         return;
       }
@@ -1900,6 +1916,7 @@ export const LWChart: React.FC<LWChartProps> = ({
 
       // Priority 3: Click empty space -> Deselect drawing
       store.selectLine(null);
+      setContextMenuData(null);
 
       // Priority 4: Free 2D Pan
       isDraggingRef.current = true;
@@ -1913,6 +1930,10 @@ export const LWChart: React.FC<LWChartProps> = ({
 
       const rect = container.getBoundingClientRect();
       const mouseY = e.clientY - rect.top;
+      const mouseX = e.clientX - rect.left;
+
+      const logical = chartRef.current?.timeScale().coordinateToLogical(mouseX);
+      const barIdx = logical !== null && logical !== undefined ? Math.round(logical) : null;
 
       // Case 1: Dragging a horizontal line
       if (isDraggingLineRef.current) {
@@ -1925,9 +1946,25 @@ export const LWChart: React.FC<LWChartProps> = ({
           const rawPrice = candleSeries.coordinateToPrice(mouseY);
           if (rawPrice !== null && !isNaN(rawPrice)) {
             const isMagnet = store.magnetMode;
-            const newPrice = isMagnet
-              ? snapToOHLC(rawPrice, displayBars)
-              : snapToTickSize(rawPrice);
+            let newPrice = rawPrice;
+
+            if (isMagnet) {
+              const snap = snapToCandleOHLC(rawPrice, mouseY, barIdx, displayBars, candleSeries, 30);
+              newPrice = snap.price;
+              if (snap.snappedType && snap.snappedType !== 'Tick') {
+                setMagnetIndicator({
+                  x: mouseX,
+                  y: snap.yCoord ?? mouseY,
+                  text: `${snap.snappedType}: ${snap.price.toFixed(2)}`,
+                  price: snap.price,
+                });
+              } else {
+                setMagnetIndicator(null);
+              }
+            } else {
+              newPrice = snapToTickSize(rawPrice);
+              setMagnetIndicator(null);
+            }
 
             // Instant update for 60fps responsiveness
             const pl = priceLineMapRef.current.get(lineId);
@@ -1984,12 +2021,35 @@ export const LWChart: React.FC<LWChartProps> = ({
         return;
       }
 
-      // Case 3: Hover detection
+      // Case 3: Hover detection & Magnet Preview
       const store = useDrawingStore.getState();
       const currentTool = store.activeTool;
+      const isMagnet = store.magnetMode;
+
       if (currentTool === 'horizontalLine') {
         container.style.cursor = 'crosshair';
+
+        // Magnet preview dot
+        if (isMagnet) {
+          const rawP = candleSeries.coordinateToPrice(mouseY);
+          if (rawP !== null && !isNaN(rawP)) {
+            const snap = snapToCandleOHLC(rawP, mouseY, barIdx, displayBars, candleSeries, 30);
+            if (snap.snappedType && snap.snappedType !== 'Tick') {
+              setMagnetIndicator({
+                x: mouseX,
+                y: snap.yCoord ?? mouseY,
+                text: `${snap.snappedType}: ${snap.price.toFixed(2)}`,
+                price: snap.price,
+              });
+            } else {
+              setMagnetIndicator(null);
+            }
+          }
+        } else {
+          setMagnetIndicator(null);
+        }
       } else {
+        setMagnetIndicator(null);
         const currentDrawings = store.getDrawings(symbol);
         const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 8);
         if (hit) {
@@ -2005,6 +2065,29 @@ export const LWChart: React.FC<LWChartProps> = ({
     const handleMouseUp = () => {
       isDraggingRef.current = false;
       isDraggingLineRef.current = null;
+    };
+
+    const handleMouseLeave = () => {
+      setMagnetIndicator(null);
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+      const container = chartContainerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      if (e.clientX > rect.right - 60 || e.clientY > rect.bottom - 26) return;
+
+      const mouseY = e.clientY - rect.top;
+      const candleSeries = candleSeriesRef.current;
+      if (candleSeries) {
+        const currentDrawings = useDrawingStore.getState().getDrawings(symbol);
+        const hit = hitTestLines(mouseY, currentDrawings, candleSeries, 8);
+        if (hit) {
+          e.preventDefault();
+          setContextMenuData({ line: hit, position: { x: e.clientX, y: e.clientY } });
+          return;
+        }
+      }
     };
 
     const handleDblClick = (e: MouseEvent) => {
@@ -2032,6 +2115,8 @@ export const LWChart: React.FC<LWChartProps> = ({
       containerEl.addEventListener('mousedown', handleMouseDown);
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
+      containerEl.addEventListener('mouseleave', handleMouseLeave);
+      containerEl.addEventListener('contextmenu', handleContextMenu);
       containerEl.addEventListener('dblclick', handleDblClick);
     }
 
@@ -2041,6 +2126,8 @@ export const LWChart: React.FC<LWChartProps> = ({
         containerEl.removeEventListener('mousedown', handleMouseDown);
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
+        containerEl.removeEventListener('mouseleave', handleMouseLeave);
+        containerEl.removeEventListener('contextmenu', handleContextMenu);
         containerEl.removeEventListener('dblclick', handleDblClick);
       }
       for (const [, pl] of priceLineMapRef.current.entries()) {
@@ -3183,6 +3270,27 @@ export const LWChart: React.FC<LWChartProps> = ({
         <div className="relative flex-1 w-full h-full min-h-0">
           <div ref={chartContainerRef} className="w-full h-full min-h-0" />
 
+          {/* Real-time Price Alert Banner */}
+          <DrawingAlertBanner />
+
+          {/* Auto S/R Toast Notification */}
+          {toastNotification && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 bg-[#1E222D]/95 border border-amber-500/60 text-amber-300 rounded-lg shadow-xl text-[13px] font-medium backdrop-blur-md flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-150 select-none">
+              <span>{toastNotification}</span>
+            </div>
+          )}
+
+          {/* Magnet Target Snapping Indicator */}
+          {magnetIndicator && (
+            <div
+              style={{ left: `${magnetIndicator.x + 12}px`, top: `${magnetIndicator.y - 12}px` }}
+              className="pointer-events-none absolute z-40 px-2 py-0.5 bg-emerald-600/90 text-white rounded text-[12px] font-mono font-bold shadow-lg border border-emerald-400/80 flex items-center gap-1.5 animate-in fade-in duration-75"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-ping" />
+              <span>🧲 {magnetIndicator.text}</span>
+            </div>
+          )}
+
           {/* Floating Action Toolbar for selected horizontal line */}
           {selectedDrawing && (
             <LineFloatingToolbar
@@ -3190,6 +3298,17 @@ export const LWChart: React.FC<LWChartProps> = ({
               symbol={symbol}
               yPosition={selectedLineY}
               touchCount={countTouches(selectedDrawing.price, displayBars)}
+              onOpenSettings={(id) => setPropertiesModalLineId(id)}
+            />
+          )}
+
+          {/* Right-click Context Menu */}
+          {contextMenuData && (
+            <LineContextMenu
+              line={contextMenuData.line}
+              symbol={symbol}
+              position={contextMenuData.position}
+              onClose={() => setContextMenuData(null)}
               onOpenSettings={(id) => setPropertiesModalLineId(id)}
             />
           )}

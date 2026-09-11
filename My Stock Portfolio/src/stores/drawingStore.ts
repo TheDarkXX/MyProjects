@@ -42,8 +42,10 @@ export interface DrawingState {
   globalDrawingsVisible: boolean;
   isToolbarCollapsed: boolean;
   clipboardLine: HorizontalLineDrawing | null;
+  toastNotification: string | null;
 
   // Actions
+  setToastNotification: (msg: string | null) => void;
   loadDrawings: (symbol: string) => HorizontalLineDrawing[];
   getDrawings: (symbol: string) => HorizontalLineDrawing[];
   addLine: (symbol: string, line: Partial<HorizontalLineDrawing> & { price: number }) => string;
@@ -72,6 +74,11 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   globalDrawingsVisible: true,
   isToolbarCollapsed: false,
   clipboardLine: null,
+  toastNotification: null,
+
+  setToastNotification: (msg: string | null) => {
+    set({ toastNotification: msg });
+  },
 
   loadDrawings: (symbol: string) => {
     const sym = symbol.toUpperCase().trim();
@@ -268,43 +275,53 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
 
   autoDetectSRLevels: (symbol: string, bars: any[]) => {
     if (!bars || bars.length < 30) return;
-    const detected = detectSupportResistance(bars, 15, 4);
+    const detected = detectSupportResistance(bars, 12, 2);
     if (detected.length === 0) return;
 
     const sym = symbol.toUpperCase().trim();
     const current = get().getDrawings(sym);
-    const newDrawings: HorizontalLineDrawing[] = [];
+    // Keep manual user lines, replace previous auto-generated lines
+    const manualLines = current.filter((d) => !d.isAuto);
 
-    detected.forEach((lvl, idx) => {
-      // Avoid duplicate price
-      const exists = current.some((d) => Math.abs(d.price - lvl.price) / lvl.price < 0.005);
-      if (!exists) {
-        newDrawings.push({
-          ...DEFAULT_LINE_DRAWING,
-          id: generateId(),
-          price: lvl.price,
-          color: lvl.type === 'support' ? '#26A69A' : '#EF5350',
-          lineStyle: 'Dashed',
-          lineWidth: 1,
-          text: `${lvl.type === 'support' ? 'Support' : 'Resist'} ${idx + 1} (${lvl.strength}x)`,
-          showPriceLabel: true,
-          locked: false,
-          visible: true,
-          visibleOn: 'all',
-          createdAt: Date.now(),
-        });
-      }
+    let resCount = 1;
+    let supCount = 1;
+
+    const newDrawings: HorizontalLineDrawing[] = detected.map((lvl) => {
+      const isSup = lvl.type === 'support';
+      const label = isSup ? `S${supCount++}` : `R${resCount++}`;
+      return {
+        ...DEFAULT_LINE_DRAWING,
+        id: generateId(),
+        price: lvl.price,
+        color: isSup ? '#26A69A' : '#EF5350',
+        lineStyle: 'Dashed',
+        lineWidth: 1,
+        text: `${label} (${lvl.price.toFixed(2)})`,
+        showPriceLabel: true,
+        locked: false,
+        visible: true,
+        visibleOn: 'all',
+        isAuto: true,
+        alertEnabled: false,
+        createdAt: Date.now(),
+      };
     });
 
-    if (newDrawings.length > 0) {
-      const updated = [...current, ...newDrawings];
-      saveToStorage(sym, updated);
+    const updated = [...manualLines, ...newDrawings];
+    saveToStorage(sym, updated);
+
+    set((state) => ({
+      drawingsBySymbol: {
+        ...state.drawingsBySymbol,
+        [sym]: updated,
+      },
+      toastNotification: `✨ Auto S/R: Placed ${newDrawings.length} Key Levels for ${sym}`,
+    }));
+
+    setTimeout(() => {
       set((state) => ({
-        drawingsBySymbol: {
-          ...state.drawingsBySymbol,
-          [sym]: updated,
-        },
+        toastNotification: state.toastNotification?.includes(sym) ? null : state.toastNotification,
       }));
-    }
+    }, 4500);
   },
 }));

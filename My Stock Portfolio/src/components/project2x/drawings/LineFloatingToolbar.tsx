@@ -203,25 +203,37 @@ export const LineFloatingToolbar: React.FC<LineFloatingToolbarProps> = ({
       {/* 5. Alert Toggle */}
       <button
         onClick={handleToggleAlert}
-        title={line.alertEnabled ? 'Price Alert: ON' : 'Price Alert: OFF'}
+        title={line.alertEnabled ? '🔔 Price Alert: ON (Will chime & flash when crossed)' : '🔔 Price Alert: OFF (Click to enable)'}
         className={`flex items-center justify-center w-6 h-6 rounded transition-colors ${
           line.alertEnabled
-            ? 'text-amber-400 bg-amber-500/20 animate-pulse'
+            ? 'text-amber-400 bg-amber-500/20 shadow-sm shadow-amber-500/30 ring-1 ring-amber-400/50'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
         }`}
       >
-        {line.alertEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+        {line.alertEnabled ? <Bell className="w-3.5 h-3.5 animate-bounce" /> : <BellOff className="w-3.5 h-3.5" />}
       </button>
 
-      {/* 6. Touch Count Badge (if tested) */}
+      {/* 6. Touch Count Strength Badge */}
       {touchCount > 0 && (
-        <span
-          title={`Tested ${touchCount} times in chart history`}
-          className="flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-[13px] font-medium"
+        <div
+          title={
+            touchCount >= 5
+              ? `Rock Solid Level: Tested ${touchCount} times in chart history`
+              : touchCount >= 3
+              ? `Moderate Level: Tested ${touchCount} times in chart history`
+              : `Minor Level: Tested ${touchCount} times in chart history`
+          }
+          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[13px] font-semibold tracking-tight shadow-sm ${
+            touchCount >= 5
+              ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/50'
+              : touchCount >= 3
+              ? 'bg-amber-500/25 text-amber-300 border border-amber-500/50'
+              : 'bg-slate-700/60 text-slate-300 border border-slate-600/40'
+          }`}
         >
-          <Flame className="w-3 h-3 text-emerald-400" />
-          {touchCount}x
-        </span>
+          <Flame className={`w-3 h-3 ${touchCount >= 5 ? 'text-emerald-400 fill-emerald-400/40' : 'text-amber-400'}`} />
+          <span>{touchCount >= 5 ? `Solid ${touchCount}x` : `${touchCount}x`}</span>
+        </div>
       )}
 
       {/* 7. Settings Gear (Open Modal) */}

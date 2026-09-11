@@ -13,6 +13,7 @@ export interface HorizontalLineDrawing {
   visibleOn: 'all' | '1D' | '1W' | '4H';
   alertEnabled?: boolean;
   touchCount?: number;
+  isAuto?: boolean;
   createdAt: number;
 }
 
