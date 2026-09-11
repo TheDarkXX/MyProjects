@@ -8,3 +8,6 @@
   4. `ssh root@185.250.38.247 "pm2 reload stock-api"`
   5. `git push origin master`
   All 5 steps must be executed in a single shot without the user ever having to ask twice.
+- **Lightweight Charts Custom Plugin Canvas Repaint Lifecycle**: Calling `applyOptions()` on custom series plugins (`ICustomSeriesPaneRenderer` such as `BankerMCDXPlugin`) does NOT trigger a canvas repaint automatically. You MUST explicitly trigger `setData(...)` on the series ref immediately after `applyOptions()` to force the engine to cycle through `update()` -> `draw()`. Never assume custom plugins repaint like built-in series.
+- **Imperative Chart Bridge Dependencies (Stale Closures in LWChart.tsx)**: When adding or tweaking UI indicator controls (e.g. padding, size, colors in `IndicatorManagerPopover`), DO NOT just verify Zustand store updates. You MUST ensure every reactive config field (e.g. `indicatorConfig.signals.padding`, `pane0Markers`, `indicatorConfig.signals.size`, `indicatorConfig.signals.colors`) is present in the `useEffect` dependency array that executes imperative updates (`setMarkers`, `applyOptions`). Otherwise, React re-renders silently while the chart series retains stale closure values and appears completely unresponsive.
+
