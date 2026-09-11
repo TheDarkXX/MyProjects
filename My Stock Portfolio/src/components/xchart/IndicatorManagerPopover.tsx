@@ -21,6 +21,7 @@ import {
   Flame,
   Calendar,
   Clock,
+  MapPin,
 } from 'lucide-react';
 import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import {
@@ -3612,6 +3613,159 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                           <option key={s} value={s}>{s}</option>
                         ))}
                       </select>
+                    </div>
+                  </div>
+
+                  {/* Section: ANCHOR POINT MARKER */}
+                  <div className="flex flex-col gap-3 bg-slate-900/60 border border-slate-800 p-3 rounded-xl mt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[13px] font-bold text-amber-400 uppercase tracking-wider">
+                        <MapPin className="w-4 h-4 text-amber-400" />
+                        <span>Anchor Point Marker</span>
+                      </div>
+                      <span className="text-[12px] text-slate-300 font-medium">จุด Anchor บนกราฟ</span>
+                    </div>
+
+                    {/* Shape & Color */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
+                      <span className="text-[13px] font-bold text-slate-200">Sign & Color:</span>
+                      <div className="flex items-center gap-3">
+                        <ColorPickerDropdown
+                          color={config.anchoredVwap?.anchorColor ?? '#FFE600'}
+                          onChange={(c) => updateAnchoredVWAP({ anchorColor: c })}
+                          label="Anchor Marker Color"
+                        />
+                        <select
+                          value={config.anchoredVwap?.anchorShape ?? 'arrowUp'}
+                          onChange={(e) => updateAnchoredVWAP({ anchorShape: e.target.value as any })}
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-[13px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                          title="Anchor Marker Shape"
+                        >
+                          <option value="arrowUp">▲ Arrow Up</option>
+                          <option value="arrowDown">▼ Arrow Down</option>
+                          <option value="circle">● Circle</option>
+                          <option value="square">■ Square</option>
+                          <option value="star">★ Star</option>
+                          <option value="diamond">◆ Diamond</option>
+                          <option value="pin">📍 Pin</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Marker Size */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
+                      <span className="text-[13px] font-bold text-slate-200">Marker Size:</span>
+                      <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg p-0.5">
+                        {[
+                          { label: '0.8x', val: 0.8 },
+                          { label: '1.0x', val: 1.0 },
+                          { label: '1.5x', val: 1.5 },
+                          { label: '2.0x', val: 2.0 },
+                          { label: '2.5x', val: 2.5 },
+                        ].map((s) => (
+                          <button
+                            key={s.label}
+                            type="button"
+                            onClick={() => updateAnchoredVWAP({ anchorSize: s.val })}
+                            className={`px-2 py-1 rounded text-[13px] font-bold transition-all cursor-pointer ${
+                              (config.anchoredVwap?.anchorSize ?? 1.5) === s.val
+                                ? 'bg-amber-400 text-slate-950 shadow-sm font-extrabold'
+                                : 'text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Vertical Spacing / Padding */}
+                    <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[13px] font-bold text-slate-200">
+                          Vertical Padding (ระยะห่าง):
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = config.anchoredVwap?.anchorPadding ?? 0;
+                              updateAnchoredVWAP({ anchorPadding: Math.max(0, cur - 1) });
+                            }}
+                            className="w-7 h-7 rounded-md bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-200 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+                            title="Decrease Padding"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+
+                          <div className="flex items-center bg-slate-900 border border-slate-700 rounded-md px-2 py-0.5">
+                            <input
+                              type="number"
+                              min="0"
+                              max="10"
+                              value={config.anchoredVwap?.anchorPadding ?? 0}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val >= 0 && val <= 10) {
+                                  updateAnchoredVWAP({ anchorPadding: val });
+                                }
+                              }}
+                              className="w-8 bg-transparent text-center text-[13px] font-bold text-slate-100 focus:outline-none"
+                            />
+                            <span className="text-[12px] font-bold text-amber-400">lvl</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = config.anchoredVwap?.anchorPadding ?? 0;
+                              updateAnchoredVWAP({ anchorPadding: Math.min(10, cur + 1) });
+                            }}
+                            className="w-7 h-7 rounded-md bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-200 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+                            title="Increase Padding"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 justify-end">
+                        {[0, 1, 2, 3, 4, 5].map((p) => (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => updateAnchoredVWAP({ anchorPadding: p })}
+                            className={`px-2.5 py-0.5 rounded text-[12px] font-bold transition-all cursor-pointer ${
+                              (config.anchoredVwap?.anchorPadding ?? 0) === p
+                                ? 'bg-amber-400 text-slate-950 font-extrabold'
+                                : 'bg-slate-900 text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            {p === 0 ? 'Auto' : `+${p}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Text Labels Switch */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Type className="w-4 h-4 text-amber-400" />
+                        <span className="text-[13px] font-bold text-slate-200">
+                          Show Anchor Text ("ANCHOR")
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateAnchoredVWAP({ showAnchorText: !(config.anchoredVwap?.showAnchorText ?? true) })}
+                        className={`px-3 py-1 rounded-md text-[13px] font-extrabold transition-all cursor-pointer border ${
+                          (config.anchoredVwap?.showAnchorText ?? true)
+                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm'
+                            : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        {(config.anchoredVwap?.showAnchorText ?? true) ? 'SHOW' : 'HIDE'}
+                      </button>
                     </div>
                   </div>
 

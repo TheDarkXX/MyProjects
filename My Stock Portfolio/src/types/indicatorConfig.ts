@@ -217,6 +217,12 @@ export interface AnchoredVWAPConfig {
   lowerBandColor: string;
   lowerBandLineWidth: number;
   lowerBandLineStyle: LineStyleOption;
+  // Anchor Marker Customization
+  anchorShape?: 'arrowUp' | 'arrowDown' | 'circle' | 'square' | 'star' | 'diamond' | 'pin';
+  anchorColor?: string;
+  anchorSize?: number;
+  anchorPadding?: number;
+  showAnchorText?: boolean;
 }
 
 export interface SuperMoneySignalConfig {
@@ -509,6 +515,11 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     lowerBandColor: '#94A3B8',
     lowerBandLineWidth: 2,
     lowerBandLineStyle: 'Dashed',
+    anchorShape: 'arrowUp',
+    anchorColor: '#FFE600',
+    anchorSize: 1.5,
+    anchorPadding: 0,
+    showAnchorText: true,
   },
   superMoneySignal: {
     visible: true,

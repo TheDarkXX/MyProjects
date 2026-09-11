@@ -634,14 +634,66 @@ export function useChartIndicators({
       }
     }
     if (indicatorConfig.anchoredVwap?.visible && anchoredVWAPResult?.anchorTime) {
-      list.push({
-        time: formatBarTime(anchoredVWAPResult.anchorTime),
-        position: 'belowBar',
-        color: '#FFE600',
-        shape: 'arrowUp',
-        text: 'ANCHOR',
-        size: 1.5,
-      });
+      const avCfg = indicatorConfig.anchoredVwap;
+      const aShape = avCfg.anchorShape ?? 'arrowUp';
+      const aColor = avCfg.anchorColor ?? '#FFE600';
+      const aSize = avCfg.anchorSize ?? 1.5;
+      const aPadding = avCfg.anchorPadding ?? 0;
+      const aShowText = avCfg.showAnchorText !== false;
+      const aText = aShowText ? 'ANCHOR' : undefined;
+
+      let resolvedShape: SeriesMarkerShape = 'arrowUp';
+      let markerText = aText;
+      let markerSize = aSize;
+
+      if (aShape === 'arrowUp' || aShape === 'arrowDown' || aShape === 'circle' || aShape === 'square') {
+        resolvedShape = aShape;
+      } else {
+        const glyphMap: Record<string, string> = {
+          star: '★',
+          diamond: '◆',
+          pin: '📍',
+        };
+        const glyph = glyphMap[aShape] || '▲';
+        resolvedShape = 'circle';
+        markerText = aShowText ? `${glyph} ANCHOR` : glyph;
+        markerSize = 0;
+      }
+
+      const t = formatBarTime(anchoredVWAPResult.anchorTime);
+
+      if (aPadding > 0) {
+        const anchorBar = aggregatedBars.find(b => formatBarTime(b.time) === t);
+        const bLow = anchorBar && typeof anchorBar.low === 'number' && !isNaN(anchorBar.low)
+          ? anchorBar.low
+          : (anchoredVWAPResult.vwap[anchoredVWAPResult.anchorIndex] || 0);
+        const bHigh = anchorBar && typeof anchorBar.high === 'number' && !isNaN(anchorBar.high)
+          ? anchorBar.high
+          : bLow;
+        const candleSpread = Math.abs(bHigh - bLow);
+        const localUnit = Math.max(candleSpread, (bLow || 1) * 0.015);
+        const offset = localUnit * 0.6 + localUnit * (aPadding * 0.25);
+        const safePrice = bLow - offset;
+
+        list.push({
+          time: t,
+          position: 'atPriceBottom',
+          price: safePrice,
+          color: aColor,
+          shape: resolvedShape,
+          text: markerText,
+          size: markerSize,
+        });
+      } else {
+        list.push({
+          time: t,
+          position: 'belowBar',
+          color: aColor,
+          shape: resolvedShape,
+          text: markerText,
+          size: markerSize,
+        });
+      }
     }
     if (indicatorConfig.superMoneySignal?.visible && superMoneySignalResult) {
       const cfg = indicatorConfig.superMoneySignal;
@@ -790,7 +842,7 @@ export function useChartIndicators({
     calculatedMarkers,
     indicatorConfig.smcLite,
     smcLiteResult,
-    indicatorConfig.anchoredVwap?.visible,
+    indicatorConfig.anchoredVwap,
     anchoredVWAPResult,
     indicatorConfig.superMoneySignal,
     superMoneySignalResult,
