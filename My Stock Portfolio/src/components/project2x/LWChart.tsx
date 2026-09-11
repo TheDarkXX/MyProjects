@@ -49,6 +49,7 @@ import { useChartSeries } from './hooks/useChartSeries';
 import { PriceRangeRuler } from './PriceRangeRuler';
 import { ChartControlBar } from './ChartControlBar';
 import { ChartLegendBar, DominanceTableOverlay } from './ChartLegendOverlay';
+import { applyPaneLayoutHeights as computePaneHeights } from './chartLayoutUtils';
 
 export { TV_FONT_FAMILY };
 export type { WatchlistStock, TimeFrame, ChartStyle, Resolution, PortfolioOverlayConfig };
@@ -214,51 +215,13 @@ export const LWChart: React.FC<LWChartProps> = ({
     cfg: IndicatorSettings,
     maximized: number | null
   ) => {
-    if (!chartInstance) return;
-    const panes = chartInstance.panes?.();
-    if (!panes || panes.length === 0) return;
-
-    const containerH = chartContainerRef.current?.clientHeight || 650;
-
-    if (panes.length < 2) {
-      if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(containerH);
-      return;
-    }
-
-    if (maximized !== null) {
-      const mainH = 60;
-      const subMaxH = Math.max(200, containerH - mainH);
-      if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
-      for (let i = 1; i < panes.length; i++) {
-        if (panes[i]?.setStretchFactor) {
-          panes[i].setStretchFactor(maximized === i ? subMaxH : 0);
-        }
-      }
-    } else {
-      let subpanesSum = 0;
-      const heights: number[] = [];
-
-      for (let i = 1; i < panes.length; i++) {
-        let targetH = 140;
-        if (activeSubPanes.paneMap.mcdx === i) {
-          targetH = Math.max(80, cfg.paneHeights?.mcdx || 140);
-        } else if (activeSubPanes.paneMap.ultimateRsi === i) {
-          targetH = Math.max(80, cfg.paneHeights?.ultimateRsi || 140);
-        } else if (activeSubPanes.paneMap.trendSpeed === i) {
-          targetH = Math.max(80, cfg.paneHeights?.trendSpeed || 140);
-        }
-        heights[i] = targetH;
-        subpanesSum += targetH;
-      }
-
-      const mainH = Math.max(120, containerH - subpanesSum);
-      if (panes[0]?.setStretchFactor) panes[0].setStretchFactor(mainH);
-      for (let i = 1; i < panes.length; i++) {
-        if (panes[i]?.setStretchFactor) {
-          panes[i].setStretchFactor(heights[i]);
-        }
-      }
-    }
+    computePaneHeights(
+      chartInstance,
+      chartContainerRef.current?.clientHeight || 650,
+      cfg,
+      activeSubPanes,
+      maximized
+    );
   }, [activeSubPanes]);
 
   // Hover Crosshair Legend data
@@ -1015,6 +978,8 @@ export const LWChart: React.FC<LWChartProps> = ({
       rsiObLineRef.current = null;
       rsiMidLineRef.current = null;
       rsiOsLineRef.current = null;
+      smcPrimitiveRef.current = null;
+      volumeProfilePrimitiveRef.current = null;
     };
   }, [activeSubPanes, applyPaneLayoutHeights]);
 
@@ -1469,7 +1434,7 @@ export const LWChart: React.FC<LWChartProps> = ({
                       <div className="flex items-center gap-1.5">
                         <span className="font-black text-slate-100 text-sm">{item.symbol}</span>
                         {isBuy && (
-                          <span className="px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold">
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
                             BUY
                           </span>
                         )}

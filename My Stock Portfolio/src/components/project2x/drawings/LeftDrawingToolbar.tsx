@@ -12,6 +12,7 @@ import {
   Sparkles,
   HelpCircle,
   Settings,
+  Ruler,
 } from 'lucide-react';
 import { useDrawingStore } from '../../../stores/drawingStore';
 import { DrawingTool } from '../../../types/drawingTypes';
@@ -133,6 +134,25 @@ export const LeftDrawingToolbar: React.FC<LeftDrawingToolbarProps> = ({ symbol, 
           <TrendingUp className="w-4 h-4" />
           <span className="pointer-events-none absolute left-10 ml-1.5 px-2 py-1 bg-[#1E222D] text-slate-200 text-[13px] rounded shadow-lg border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
             Trend Line (Alt+T)
+          </span>
+        </button>
+
+        {/* Price Range Ruler */}
+        <button
+          onClick={() => {
+            useDrawingStore.getState().setToastNotification('📐 Price Range Ruler: กดปุ่ม Shift ค้างไว้ แล้วคลิกลากบนกราฟเพื่อวัดระยะแท่งเทียน');
+            setTimeout(() => {
+              if (useDrawingStore.getState().toastNotification?.includes('Price Range Ruler')) {
+                useDrawingStore.getState().setToastNotification(null);
+              }
+            }, 4000);
+          }}
+          title="Price Range Ruler (Hold Shift + Drag)"
+          className="relative group flex items-center justify-center w-8 h-8 rounded-md text-slate-300 hover:text-amber-300 hover:bg-amber-500/10 transition-all"
+        >
+          <Ruler className="w-4 h-4" />
+          <span className="pointer-events-none absolute left-10 ml-1.5 px-2 py-1 bg-[#1E222D] text-slate-200 text-[13px] rounded shadow-lg border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
+            Ruler (Shift + Drag)
           </span>
         </button>
 

@@ -216,7 +216,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 </div>
 
                 {/* Row 3: Total Value & Port Weight */}
-                <div className="flex items-center justify-between text-[12px] text-slate-300 pt-0.5">
+                <div className="flex items-center justify-between text-[13px] text-slate-300 pt-0.5">
                   <div>
                     มูลค่า: <span className="font-semibold text-slate-200">${h.currentValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                   </div>

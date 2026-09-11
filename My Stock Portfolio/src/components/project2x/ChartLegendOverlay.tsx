@@ -62,7 +62,7 @@ export const ChartLegendBar: React.FC<ChartLegendOverlayProps> = ({
           {indicatorConfig.superMoneySignal?.visible && superMoneySignalResult && indicatorConfig.superMoneySignal?.showPaneLabels && (
             <span className="flex items-center gap-1.5 border-l border-slate-700 pl-3">
               <span className="text-slate-400">Signal:</span>
-              <span className={`px-2 py-0.5 rounded text-[11px] font-extrabold shadow-sm ${
+              <span className={`px-2 py-0.5 rounded text-xs font-extrabold shadow-sm ${
                 superMoneySignalResult.currentDirection === 1
                   ? 'bg-white text-slate-950 font-black'
                   : superMoneySignalResult.currentDirection === 2
