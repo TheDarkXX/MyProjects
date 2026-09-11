@@ -95,6 +95,19 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
     updateTab(tabId, { resolution: newRes });
   };
 
+  const handleToggleFullscreen = useCallback(() => {
+    const target = document.getElementById('xchart-terminal-container');
+    if (!document.fullscreenElement) {
+      target?.requestFullscreen?.().catch((err) => {
+        console.error('Error entering fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen?.().catch((err) => {
+        console.error('Error exiting fullscreen:', err);
+      });
+    }
+  }, []);
+
   if (loading && !currentData) {
     return (
       <div className="flex-1 w-full h-full bg-[#111418] flex flex-col items-center justify-center p-8 select-none">
@@ -132,19 +145,6 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
       </div>
     );
   }
-
-  const handleToggleFullscreen = useCallback(() => {
-    const target = document.getElementById('xchart-terminal-container');
-    if (!document.fullscreenElement) {
-      target?.requestFullscreen?.().catch((err) => {
-        console.error('Error entering fullscreen:', err);
-      });
-    } else {
-      document.exitFullscreen?.().catch((err) => {
-        console.error('Error exiting fullscreen:', err);
-      });
-    }
-  }, []);
 
   return (
     <div className="flex-1 w-full h-full flex flex-col overflow-hidden relative bg-[#111418] min-h-0">
