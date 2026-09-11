@@ -1943,37 +1943,50 @@ export const LWChart: React.FC<LWChartProps> = ({
         const currentDrawings = store.getDrawings(symbol);
         const targetLine = currentDrawings.find((d) => d.id === lineId);
 
-        if (targetLine && !targetLine.locked) {
-          const rawPrice = candleSeries.coordinateToPrice(mouseY);
-          if (rawPrice !== null && !isNaN(rawPrice)) {
-            const isMagnet = store.magnetMode;
-            let newPrice = rawPrice;
+        if (targetLine) {
+          if (targetLine.locked) {
+            const startPrice = isDraggingLineRef.current.startPrice;
+            const rawP = candleSeries.coordinateToPrice(mouseY);
+            if (rawP !== null && Math.abs(rawP - startPrice) / startPrice > 0.006) {
+              store.setToastNotification('🔒 เส้นนี้ล็อคอยู่ — กด Unlock ที่เมนูบนเส้นหรือไอคอนบนป้ายเพื่อลากปรับราคา');
+              setTimeout(() => {
+                if (useDrawingStore.getState().toastNotification?.includes('เส้นนี้ล็อคอยู่')) {
+                  useDrawingStore.getState().setToastNotification(null);
+                }
+              }, 2500);
+            }
+          } else {
+            const rawPrice = candleSeries.coordinateToPrice(mouseY);
+            if (rawPrice !== null && !isNaN(rawPrice)) {
+              const isMagnet = store.magnetMode;
+              let newPrice = rawPrice;
 
-            if (isMagnet) {
-              const snap = snapToCandleOHLC(rawPrice, mouseY, barIdx, displayBars, candleSeries, 30);
-              newPrice = snap.price;
-              if (snap.snappedType && snap.snappedType !== 'Tick') {
-                setMagnetIndicator({
-                  x: mouseX,
-                  y: snap.yCoord ?? mouseY,
-                  text: `${snap.snappedType}: ${snap.price.toFixed(2)}`,
-                  price: snap.price,
-                });
+              if (isMagnet) {
+                const snap = snapToCandleOHLC(rawPrice, mouseY, barIdx, displayBars, candleSeries, 30);
+                newPrice = snap.price;
+                if (snap.snappedType && snap.snappedType !== 'Tick') {
+                  setMagnetIndicator({
+                    x: mouseX,
+                    y: snap.yCoord ?? mouseY,
+                    text: `${snap.snappedType}: ${snap.price.toFixed(2)}`,
+                    price: snap.price,
+                  });
+                } else {
+                  setMagnetIndicator(null);
+                }
               } else {
+                newPrice = snapToTickSize(rawPrice);
                 setMagnetIndicator(null);
               }
-            } else {
-              newPrice = snapToTickSize(rawPrice);
-              setMagnetIndicator(null);
-            }
 
-            // Instant update for 60fps responsiveness
-            const pl = priceLineMapRef.current.get(lineId);
-            if (pl) {
-              pl.applyOptions({ price: newPrice });
+              // Instant update for 60fps responsiveness
+              const pl = priceLineMapRef.current.get(lineId);
+              if (pl) {
+                pl.applyOptions({ price: newPrice });
+              }
+              store.updateLine(symbol, lineId, { price: newPrice });
+              setSelectedLineY(mouseY);
             }
-            store.updateLine(symbol, lineId, { price: newPrice });
-            setSelectedLineY(mouseY);
           }
         }
         return; // Block 2D pan
@@ -3284,6 +3297,7 @@ export const LWChart: React.FC<LWChartProps> = ({
             onOpenProperties={(id) => setPropertiesModalLineId(id)}
             onContextMenu={(line, pos) => setContextMenuData({ line, position: pos })}
             chartContainer={chartContainerRef.current}
+            symbol={symbol}
           />
 
           {/* Auto S/R Toast Notification */}

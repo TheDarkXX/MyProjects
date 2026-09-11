@@ -12,6 +12,7 @@ interface DrawingInCanvasBadgesProps {
   onOpenProperties: (id: string) => void;
   onContextMenu: (line: HorizontalLineDrawing, pos: { x: number; y: number }) => void;
   chartContainer: HTMLElement | null;
+  symbol: string;
 }
 
 export const DrawingInCanvasBadges: React.FC<DrawingInCanvasBadgesProps> = ({
@@ -23,6 +24,7 @@ export const DrawingInCanvasBadges: React.FC<DrawingInCanvasBadgesProps> = ({
   onOpenProperties,
   onContextMenu,
   chartContainer,
+  symbol,
 }) => {
   const drawingSettings = useDrawingStore((s) => s.drawingSettings);
   const [positions, setPositions] = useState<Record<string, number>>({});
@@ -190,6 +192,38 @@ export const DrawingInCanvasBadges: React.FC<DrawingInCanvasBadgesProps> = ({
               style={{ backgroundColor: d.color }}
             />
             <span className="whitespace-nowrap">{displayText}</span>
+
+            {/* Lock / Unlock Quick Toggle Icon */}
+            {d.locked ? (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useDrawingStore.getState().updateLine(symbol, d.id, { locked: false });
+                  useDrawingStore.getState().selectLine(d.id);
+                  useDrawingStore.getState().setToastNotification(`🔓 ปลดล็อค ${displayText} แล้ว — ลากปรับราคาได้เลย`);
+                  setTimeout(() => {
+                    if (useDrawingStore.getState().toastNotification?.includes('ปลดล็อค')) {
+                      useDrawingStore.getState().setToastNotification(null);
+                    }
+                  }, 2500);
+                }}
+                title="🔒 ล็อคอยู่: กดเพื่อปลดล็อคแล้วลากปรับราคา"
+                className="hover:scale-125 transition-transform ml-0.5 opacity-80 hover:opacity-100 text-[10px]"
+              >
+                🔒
+              </span>
+            ) : (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useDrawingStore.getState().updateLine(symbol, d.id, { locked: true });
+                }}
+                title="🔓 ปลดล็อคอยู่: กดเพื่อล็อคตำแหน่ง"
+                className="hover:scale-125 transition-transform ml-0.5 opacity-50 hover:opacity-100 text-[10px]"
+              >
+                🔓
+              </span>
+            )}
           </div>
         );
       })}

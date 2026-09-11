@@ -341,7 +341,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
         lineWidth: isSup ? settings.supportWidth : settings.resistanceWidth,
         text: `${label} (${lvl.price.toFixed(2)})`,
         showPriceLabel: false, // In-canvas badges only! Never blocks Price Scale!
-        locked: false,
+        locked: true, // Auto lines are locked by default to prevent accidental dragging
         visible: true,
         visibleOn: 'all',
         isAuto: true,
@@ -358,7 +358,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
         ...state.drawingsBySymbol,
         [sym]: updated,
       },
-      toastNotification: `✨ Auto S/R: Placed ${newDrawings.length} Key Levels for ${sym}`,
+      toastNotification: `✨ Auto S/R: Placed ${newDrawings.length} Levels (🔒 Locked — Click unlock to drag)`,
     }));
 
     setTimeout(() => {

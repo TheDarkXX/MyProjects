@@ -248,12 +248,19 @@ export const LineFloatingToolbar: React.FC<LineFloatingToolbarProps> = ({
       {/* 8. Lock Toggle */}
       <button
         onClick={handleToggleLock}
-        title={line.locked ? 'Unlock Position' : 'Lock Position'}
-        className={`flex items-center justify-center w-6 h-6 rounded transition-colors ${
-          line.locked ? 'text-amber-400 bg-amber-500/10' : 'text-slate-300 hover:text-white hover:bg-slate-800'
+        title={
+          line.locked
+            ? '🔒 Locked: Click to unlock and enable Drag & Drop'
+            : '🔓 Unlocked: Click and drag anywhere along the line to adjust price'
+        }
+        className={`flex items-center gap-1 px-1.5 h-6 rounded text-[11px] font-bold transition-all ${
+          line.locked
+            ? 'text-amber-300 bg-amber-500/20 border border-amber-500/50 shadow-sm'
+            : 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/40 hover:bg-emerald-500/25'
         }`}
       >
         {line.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+        <span>{line.locked ? 'Unlock' : 'Drag Ready'}</span>
       </button>
 
       {/* 9. Clone */}
