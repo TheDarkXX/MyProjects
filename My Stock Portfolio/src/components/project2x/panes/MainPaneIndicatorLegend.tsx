@@ -370,12 +370,12 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
           <ChevronDown className="w-3 h-3 text-slate-300 group-hover:text-white" />
         </button>
       ) : (
-        // Expanded Stacked List (TradingView Style - Compact 10px text with 12px icons)
-        <div className="pointer-events-auto flex flex-col gap-0.5 p-0.5 rounded bg-transparent transition-all duration-150 group/container">
+        // Expanded Stacked List (TradingView Style - Per-Row Sleek Pills)
+        <div className="pointer-events-auto flex flex-col items-start gap-1 p-0 bg-transparent transition-all duration-150 group/container">
           {activeItems.map((item) => (
             <div
               key={item.id}
-              className={`flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-slate-800/50 transition-colors group/row text-[10px] leading-none ${
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#090D16]/90 hover:bg-[#0B101B] backdrop-blur-md border border-slate-800/50 hover:border-slate-700/80 shadow-sm transition-all group/row text-[10px] leading-none w-fit ${
                 !item.visible ? 'opacity-75' : ''
               }`}
             >
@@ -471,10 +471,10 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
           ))}
 
           {/* Minimal Expand/Collapse Bar */}
-          <div className="pt-0.5 mt-0.5 border-t border-slate-800/60 flex items-center justify-between px-1">
+          <div className="pt-0.5">
             <button
               onClick={handleToggleCollapse}
-              className="text-[9px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
+              className="text-[9px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors px-1.5 py-0.5 rounded bg-[#090D16]/80 hover:bg-[#0B101B] border border-slate-800/40 backdrop-blur-sm"
             >
               <ChevronUp className="w-2.5 h-2.5" />
               <span>Collapse</span>
