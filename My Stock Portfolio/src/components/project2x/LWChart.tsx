@@ -3325,6 +3325,7 @@ export const LWChart: React.FC<LWChartProps> = ({
               (activeLegend ? trendSpeedDataByDate.get(activeLegend.time) : null)
             }
             autoSRCount={visibleDrawings.length}
+            autoSRLocked={visibleDrawings.some((d) => d.locked)}
             globalDrawingsVisible={globalDrawingsVisible}
             onToggleEMA={(key) => useIndicatorStore.getState().toggleEMA(key)}
             onToggleEnvelope={() => useIndicatorStore.getState().toggleEnvelope()}
@@ -3334,6 +3335,23 @@ export const LWChart: React.FC<LWChartProps> = ({
             }}
             onToggleSuperMoneySignal={() => useIndicatorStore.getState().toggleSuperMoneySignal()}
             onToggleAutoSR={() => useDrawingStore.getState().toggleGlobalVisibility()}
+            onToggleAutoSRLock={() => {
+              const store = useDrawingStore.getState();
+              const currentDrawings = store.getDrawings(symbol);
+              const anyLocked = currentDrawings.some((d) => d.locked);
+              const nextLocked = !anyLocked;
+              currentDrawings.forEach((d) => store.updateLine(symbol, d.id, { locked: nextLocked }));
+              store.setToastNotification(
+                nextLocked
+                  ? '🔒 ล็อคตำแหน่งเส้นแนวรับ-แนวต้านทั้งหมดแล้ว'
+                  : '🔓 ปลดล็อคเส้นทั้งหมดแล้ว — ลากปรับราคาได้อิสระ'
+              );
+              setTimeout(() => {
+                if (useDrawingStore.getState().toastNotification?.includes('เส้น')) {
+                  useDrawingStore.getState().setToastNotification(null);
+                }
+              }, 2500);
+            }}
             onOpenConfig={(view) => {
               setIndicatorInitialView(view);
               setIsIndicatorOpen(true);
