@@ -1729,7 +1729,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {/* Banker */}
                   <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="text-[13px] font-bold text-rose-400">Banker:</span>
+                    <span className="text-[13px] font-bold" style={{ color: config.mcdx.bankerColor || '#F87171' }}>Banker:</span>
                     <ColorPickerDropdown
                       color={config.mcdx.bankerColor}
                       onChange={(c) => updateMCDX({ bankerColor: c })}
@@ -1739,7 +1739,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
 
                   {/* Hot Money */}
                   <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="text-[13px] font-bold text-[#FFE600]">Hot Money:</span>
+                    <span className="text-[13px] font-bold" style={{ color: config.mcdx.hotMoneyColor || '#FFE600' }}>Hot Money:</span>
                     <ColorPickerDropdown
                       color={config.mcdx.hotMoneyColor}
                       onChange={(c) => updateMCDX({ hotMoneyColor: c })}
@@ -1749,7 +1749,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
 
                   {/* Retail */}
                   <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="text-[13px] font-bold text-emerald-400">Retail:</span>
+                    <span className="text-[13px] font-bold" style={{ color: config.mcdx.retailColor || '#34D399' }}>Retail:</span>
                     <ColorPickerDropdown
                       color={config.mcdx.retailColor}
                       onChange={(c) => updateMCDX({ retailColor: c })}

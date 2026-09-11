@@ -496,7 +496,21 @@ export const LWChart: React.FC<LWChartProps> = ({
         hVal = Math.min(20, bVal * 1.6);
       }
       const rVal = retailSeries[i] ?? Math.max(0, 20 - Math.max(bVal, hVal));
-      const bMaVal = bankerMaSeries[i] ?? bVal;
+
+      const maLen = indicatorConfig.mcdx.maPeriod || 9;
+      let bMaVal = bVal;
+      if (maLen === 9 && bankerMaSeries[i] !== undefined) {
+        bMaVal = bankerMaSeries[i];
+      } else {
+        const start = Math.max(0, i - maLen + 1);
+        let sum = 0;
+        let count = 0;
+        for (let k = start; k <= i; k++) {
+          sum += (bankerSeries[k] ?? 0);
+          count++;
+        }
+        bMaVal = count > 0 ? sum / count : bVal;
+      }
 
       items.push({
         time: d,
@@ -518,7 +532,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     // Ensure sorted ascending by date
     items.sort((a, b) => a.time.localeCompare(b.time));
     return items;
-  }, [dates, closes, opens, highs, lows, volumes, activeEma1, activeEma2, activeEma3, bankerSeries, hotMoneySeries, retailSeries, bankerMaSeries]);
+  }, [dates, closes, opens, highs, lows, volumes, activeEma1, activeEma2, activeEma3, bankerSeries, hotMoneySeries, retailSeries, bankerMaSeries, indicatorConfig.mcdx.maPeriod]);
 
   // Aggregate into Weekly bars (if resolution === '1W')
   const aggregatedBars: RawBarItem[] = useMemo(() => {
@@ -870,10 +884,11 @@ export const LWChart: React.FC<LWChartProps> = ({
       const finalSize = textOnly !== undefined ? 0 : Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
       const text = textOnly !== undefined ? (showText ? `${textOnly} READY` : textOnly) : (showText ? textLabel : undefined);
       if (padding > 0) {
-        // Uniform offset measured directly from wick tips (barHigh / barLow) with base clearance
-        const baseWickOffset = avgRange * 0.45;
-        const extraPadding = avgRange * (padding * 0.15);
-        const offset = baseWickOffset + extraPadding;
+        // Dynamic adaptive clearance: local candle spread or 1.5% of price, scaling cleanly with padding
+        const candleSpread = Math.abs(barHigh - barLow);
+        const refPrice = pos === 'below' ? barLow : barHigh;
+        const localUnit = Math.max(candleSpread, (refPrice || 1) * 0.015);
+        const offset = localUnit * 0.6 + localUnit * (padding * 0.25);
         return {
           time,
           position: pos === 'below' ? 'atPriceBottom' : 'atPriceTop',
@@ -1096,19 +1111,22 @@ export const LWChart: React.FC<LWChartProps> = ({
         color: string,
         shapeKey: string,
         label: string,
-        sizeMult: number
+        sizeMult: number,
+        pos: 'below' | 'above' = 'below'
       ): SeriesMarker<Time> => {
         const visual = resolveSuperVisual(shapeKey, sizeMult, label);
 
         if (padding > 0) {
-          // Uniform offset measured directly from wick tips with base clearance matching V1
-          const baseWickOffset = avgRange * 0.45;
-          const extraPadding = avgRange * (padding * 0.15);
-          const offset = baseWickOffset + extraPadding;
-          const safePrice = typeof bar.low === 'number' && !isNaN(bar.low) ? bar.low - offset : 0;
+          const bHigh = typeof bar.high === 'number' && !isNaN(bar.high) ? bar.high : bar.close;
+          const bLow = typeof bar.low === 'number' && !isNaN(bar.low) ? bar.low : bar.close;
+          const candleSpread = Math.abs(bHigh - bLow);
+          const refPrice = pos === 'below' ? bLow : bHigh;
+          const localUnit = Math.max(candleSpread, (refPrice || 1) * 0.015);
+          const offset = localUnit * 0.6 + localUnit * (padding * 0.25);
+          const safePrice = pos === 'below' ? bLow - offset : bHigh + offset;
           return {
             time,
-            position: 'atPriceBottom',
+            position: pos === 'below' ? 'atPriceBottom' : 'atPriceTop',
             price: safePrice,
             color,
             shape: visual.shape,
@@ -1118,7 +1136,7 @@ export const LWChart: React.FC<LWChartProps> = ({
         }
         return {
           time,
-          position: 'belowBar',
+          position: pos === 'below' ? 'belowBar' : 'aboveBar',
           color,
           shape: visual.shape,
           text: visual.text,
@@ -1136,7 +1154,8 @@ export const LWChart: React.FC<LWChartProps> = ({
             cfg.readySignalColor ?? '#FFFFFF',
             cfg.readySignalShape ?? 'arrowUp',
             'READY',
-            1.0
+            1.0,
+            'below'
           ));
         }
         if (cfg.showBuySignal && superMoneySignalResult.buySignals[i]) {
@@ -1146,7 +1165,8 @@ export const LWChart: React.FC<LWChartProps> = ({
             cfg.buySignalColor ?? '#FFE600',
             cfg.buySignalShape ?? 'arrowUp',
             'BUY',
-            1.2
+            1.2,
+            'below'
           ));
         }
         if (cfg.showNoSignal && superMoneySignalResult.noSignals[i]) {
@@ -1156,7 +1176,8 @@ export const LWChart: React.FC<LWChartProps> = ({
             cfg.noSignalColor ?? '#800000',
             cfg.noSignalShape ?? 'arrowDown',
             'NO SIGNAL',
-            1.0
+            1.0,
+            cfg.noSignalShape === 'arrowDown' ? 'above' : 'below'
           ));
         }
       }
@@ -1405,12 +1426,15 @@ export const LWChart: React.FC<LWChartProps> = ({
           title: showLabels ? 'MCDX' : '',
           priceLineVisible: false,
           lastValueVisible: showLabels,
+          bankerColor: indicatorConfig.mcdx.bankerColor || '#C62828',
+          hotMoneyColor: indicatorConfig.mcdx.hotMoneyColor || '#FFF176',
+          retailColor: indicatorConfig.mcdx.retailColor || '#1B5E20',
           priceFormat: {
             type: 'custom',
             minMove: 1,
             formatter: (val: number) => val.toFixed(0),
           },
-        },
+        } as any,
         targetPane
       );
       mcdxSeriesRef.current = mcdxSeries;
@@ -1426,10 +1450,10 @@ export const LWChart: React.FC<LWChartProps> = ({
       });
       mcdxStrikeLineRef.current = strikeLine;
 
-      // Banker MA Line (White #FFFFFF, overlaying Pane targetPane)
+      // Banker MA Line (overlaying Pane targetPane)
       const bankerMaSeries = chart.addSeries(LineSeries, {
-        color: '#FFFFFF',
-        lineWidth: 2,
+        color: indicatorConfig.mcdx.maColor || '#FFFFFF',
+        lineWidth: (indicatorConfig.mcdx.maWidth || 2) as any,
         priceLineVisible: false,
         lastValueVisible: showLabels,
         title: showLabels ? 'Banker MA' : '',
@@ -1997,9 +2021,13 @@ export const LWChart: React.FC<LWChartProps> = ({
     displayBars,
     calculatedMarkers,
     calculatedRsiMarkers,
+    pane0Markers,
     ultimateRSIResult,
     trendSpeedResult,
     indicatorConfig.signals.visible,
+    indicatorConfig.signals.padding,
+    indicatorConfig.signals.size,
+    indicatorConfig.signals.colors,
     indicatorConfig.ultimateRsi.visible,
     indicatorConfig.ultimateRsi.autoColor,
     indicatorConfig.ultimateRsi.obValue,
@@ -2010,7 +2038,6 @@ export const LWChart: React.FC<LWChartProps> = ({
     indicatorConfig.ultimateRsi.showArea,
     indicatorConfig.trendSpeed,
     indicatorConfig.envelope.percent,
-    trendSpeedResult,
     timeframe,
     activeSubPanes,
   ]);
@@ -2078,12 +2105,28 @@ export const LWChart: React.FC<LWChartProps> = ({
       lastValueVisible: showLabels,
       title: showLabels ? 'MCDX' : '',
       priceLineVisible: false,
-    });
+      bankerColor: indicatorConfig.mcdx.bankerColor,
+      hotMoneyColor: indicatorConfig.mcdx.hotMoneyColor,
+      retailColor: indicatorConfig.mcdx.retailColor,
+    } as any);
+    // CRITICAL: Custom series (BankerMCDXPlugin) does NOT repaint on applyOptions alone.
+    // Must re-call setData to trigger update() -> draw() cycle in the plugin renderer.
+    if (mcdxSeriesRef.current && displayBars.length > 0) {
+      const mcdxData: BankerMCDXData[] = displayBars.map(b => ({
+        time: formatBarTime(b.time),
+        banker: b.banker,
+        hotMoney: b.hotMoney,
+        retail: b.retail,
+      }));
+      mcdxSeriesRef.current.setData(mcdxData as any);
+    }
     bankerMaSeriesRef.current?.applyOptions({
       visible: indicatorConfig.mcdx.visible,
       lastValueVisible: showLabels,
       title: showLabels ? 'Banker MA' : '',
       priceLineVisible: false,
+      color: indicatorConfig.mcdx.maColor || '#FFFFFF',
+      lineWidth: (indicatorConfig.mcdx.maWidth || 2) as any,
     });
     const obColor = indicatorConfig.ultimateRsi.obColor || '#089981';
     const osColor = indicatorConfig.ultimateRsi.osColor || '#F23645';
@@ -2247,7 +2290,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
       setPaneOffsets(newOffsets);
     });
-  }, [indicatorConfig, calculatedMarkers, calculatedRsiMarkers, pane0Markers, smcLiteResult, anchoredVWAPResult, superMoneySignalResult, activeSubPanes, maximizedPane, applyPaneLayoutHeights]);
+  }, [indicatorConfig, displayBars, calculatedMarkers, calculatedRsiMarkers, pane0Markers, smcLiteResult, anchoredVWAPResult, superMoneySignalResult, activeSubPanes, maximizedPane, applyPaneLayoutHeights]);
 
   // Handle Fullscreen resize trigger
   useEffect(() => {
@@ -2744,14 +2787,14 @@ export const LWChart: React.FC<LWChartProps> = ({
             )}
             <span className="flex items-center gap-1">
               Banker:{' '}
-              <strong className="text-rose-400 font-extrabold">{activeLegend.banker.toFixed(1)}</strong>
+              <strong className="font-extrabold" style={{ color: indicatorConfig.mcdx.bankerColor || '#F87171' }}>{activeLegend.banker.toFixed(1)}</strong>
               /20
             </span>
             <span className="hidden md:inline text-slate-300">
-              HotMoney: <strong className="text-[#FFF176]">{activeLegend.hotMoney.toFixed(1)}</strong>
+              HotMoney: <strong style={{ color: indicatorConfig.mcdx.hotMoneyColor || '#FFF176' }}>{activeLegend.hotMoney.toFixed(1)}</strong>
             </span>
             <span className="hidden md:inline text-slate-300">
-              Retail: <strong className="text-[#1B5E20]">{activeLegend.retail.toFixed(1)}</strong>
+              Retail: <strong style={{ color: indicatorConfig.mcdx.retailColor || '#1B5E20' }}>{activeLegend.retail.toFixed(1)}</strong>
             </span>
             {indicatorConfig.ultimateRsi.visible && (
               (() => {
@@ -2843,10 +2886,10 @@ export const LWChart: React.FC<LWChartProps> = ({
               liveValues={
                 activeLegend
                   ? {
-                      Banker: { value: activeLegend.banker.toFixed(1), color: '#F87171' },
-                      Hot: { value: activeLegend.hotMoney.toFixed(1), color: '#FFF176' },
-                      Retail: { value: activeLegend.retail.toFixed(1), color: '#66BB6A' },
-                      'B.MA': { value: activeLegend.bankerMa.toFixed(1), color: '#FFFFFF' },
+                      Banker: { value: activeLegend.banker.toFixed(1), color: indicatorConfig.mcdx.bankerColor || '#F87171' },
+                      Hot: { value: activeLegend.hotMoney.toFixed(1), color: indicatorConfig.mcdx.hotMoneyColor || '#FFF176' },
+                      Retail: { value: activeLegend.retail.toFixed(1), color: indicatorConfig.mcdx.retailColor || '#66BB6A' },
+                      'B.MA': { value: activeLegend.bankerMa.toFixed(1), color: indicatorConfig.mcdx.maColor || '#FFFFFF' },
                     }
                   : {}
               }

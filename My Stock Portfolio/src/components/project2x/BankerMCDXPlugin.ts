@@ -42,7 +42,7 @@ class BankerMCDXRenderer implements ICustomSeriesPaneRenderer {
 
   update(data: PaneRendererCustomData<Time, BankerMCDXData>, options: BankerMCDXOptions) {
     this._data = data;
-    this._options = options;
+    this._options = { ...this._options, ...options };
   }
 
   draw(target: CanvasRenderingTarget2D, priceConverter: PriceToCoordinateConverter): void {
@@ -73,6 +73,10 @@ class BankerMCDXRenderer implements ICustomSeriesPaneRenderer {
       const startIndex = visibleRange ? Math.max(0, visibleRange.from) : 0;
       const endIndex = visibleRange ? Math.min(bars.length - 1, visibleRange.to) : bars.length - 1;
 
+      const bankerColor = this._options?.bankerColor || '#C62828';
+      const hotMoneyColor = this._options?.hotMoneyColor || '#FFF176';
+      const retailColor = this._options?.retailColor || '#1B5E20';
+
       for (let i = startIndex; i <= endIndex; i++) {
         const bar = bars[i];
         const orig = bar.originalData as BankerMCDXData;
@@ -95,19 +99,19 @@ class BankerMCDXRenderer implements ICustomSeriesPaneRenderer {
 
         // 1. Red Base (Banker Institutional Flow): 0 to bVal
         if (bVal > 0 && yBase > yBanker) {
-          ctx.fillStyle = this._options.bankerColor;
+          ctx.fillStyle = bankerColor;
           ctx.fillRect(xLeft, yBanker, barWidth, yBase - yBanker);
         }
 
         // 2. Yellow Mid (Hot Money Speculative Flow): bVal to topYellow
         if (topYellow > bVal && yBanker > yYellowTop) {
-          ctx.fillStyle = this._options.hotMoneyColor;
+          ctx.fillStyle = hotMoneyColor;
           ctx.fillRect(xLeft, yYellowTop, barWidth, yBanker - yYellowTop);
         }
 
         // 3. Green Top (Retail Floating Supply): topYellow to 20
         if (20 > topYellow && yYellowTop > yGreenTop) {
-          ctx.fillStyle = this._options.retailColor;
+          ctx.fillStyle = retailColor;
           ctx.fillRect(xLeft, yGreenTop, barWidth, yYellowTop - yGreenTop);
         }
       }
