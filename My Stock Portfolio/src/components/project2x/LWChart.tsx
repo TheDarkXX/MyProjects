@@ -103,7 +103,6 @@ export const LWChart: React.FC<LWChartProps> = ({
   bankerMaSeries = [],
   currentPrice,
   badge,
-  trafficLight = 'BUY_ZONE',
   className = '',
   onAddInflow,
   watchlist = [],
@@ -453,6 +452,24 @@ export const LWChart: React.FC<LWChartProps> = ({
     candleSeriesRef,
     candleSeriesReady,
   });
+
+  // Auto-sync logical range and price auto-scale whenever symbol changes or first loads
+  const prevSymbolRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!chartRef.current || displayBars.length === 0) return;
+    if (prevSymbolRef.current !== symbol) {
+      prevSymbolRef.current = symbol;
+      const rafId = requestAnimationFrame(() => {
+        if (!chartRef.current || displayBars.length === 0) return;
+        applyTimeframeRange(timeframe);
+        try {
+          const priceScale = candleSeriesRef.current?.priceScale() || chartRef.current.priceScale('right');
+          priceScale?.setAutoScale(true);
+        } catch (e) {}
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [symbol, displayBars.length, timeframe, applyTimeframeRange, candleSeriesRef]);
 
   // Instant reactive update for Pane 0 markers
   useEffect(() => {
@@ -1158,7 +1175,6 @@ export const LWChart: React.FC<LWChartProps> = ({
         isLiveActive={isLiveActive}
         isMarketOpen={isMarketOpen}
         badge={badge}
-        trafficLight={trafficLight}
         resolution={resolution}
         setResolution={setResolution}
         canShow4H={canShow4H}

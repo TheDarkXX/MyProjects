@@ -372,21 +372,21 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
         </button>
       ) : (
         // Expanded Stacked List (TradingView Style - Compact 10px text with 12px icons)
-        <div className="pointer-events-auto flex flex-col gap-0.5 p-0.5 rounded bg-[#0B101B]/60 hover:bg-[#0B101B]/90 border border-transparent hover:border-slate-700/60 backdrop-blur-sm transition-all duration-150 group/container shadow-lg">
+        <div className="pointer-events-auto flex flex-col gap-0.5 p-0.5 rounded bg-transparent transition-all duration-150 group/container">
           {activeItems.map((item) => (
             <div
               key={item.id}
               className={`flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-slate-800/50 transition-colors group/row text-[10px] leading-none ${
-                !item.visible ? 'opacity-40' : ''
+                !item.visible ? 'opacity-75' : ''
               }`}
             >
               {/* Title & Parameters */}
-              <span className={`font-normal whitespace-nowrap ${item.visible ? 'text-slate-200' : 'text-slate-500'}`}>
+              <span className={`font-normal whitespace-nowrap ${item.visible ? 'text-slate-200' : 'text-slate-400'}`}>
                 {item.title}
               </span>
 
               {item.params && (
-                <span className={`text-[10px] whitespace-nowrap font-mono ${item.visible ? 'text-slate-400' : 'text-slate-600'}`}>
+                <span className={`text-[10px] whitespace-nowrap font-mono ${item.visible ? 'text-slate-400' : 'text-slate-500'}`}>
                   {item.params}
                 </span>
               )}
@@ -395,7 +395,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
               {item.valueText && (
                 <span
                   className="font-normal font-mono text-[10px] whitespace-nowrap"
-                  style={{ color: item.visible ? (item.valueColor || '#CBD5E1') : '#64748B' }}
+                  style={{ color: item.visible ? (item.valueColor || '#CBD5E1') : '#94A3B8' }}
                 >
                   {item.valueText}
                 </span>
@@ -407,7 +407,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                   {item.multiValues.map((mv, idx) => (
                     <span key={idx} className="whitespace-nowrap">
                       {mv.label && <span className="text-slate-400 text-[9px] mr-0.5">{mv.label}</span>}
-                      <span className="font-normal" style={{ color: item.visible ? mv.color : '#64748B' }}>
+                      <span className="font-normal" style={{ color: item.visible ? mv.color : '#94A3B8' }}>
                         {item.visible ? mv.value : '--'}
                       </span>
                     </span>

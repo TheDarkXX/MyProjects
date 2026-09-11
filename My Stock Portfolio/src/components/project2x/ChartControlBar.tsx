@@ -6,7 +6,6 @@ import {
   Sparkles,
   TrendingUp,
   TrendingDown,
-  Zap,
   Sliders,
 } from 'lucide-react';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
@@ -48,7 +47,6 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
   isLiveActive,
   isMarketOpen,
   badge,
-  trafficLight,
   resolution,
   setResolution,
   canShow4H,
@@ -106,12 +104,6 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
         {badge && (
           <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-md bg-cyan-950/50 border border-cyan-500/30 text-cyan-300 text-[13px] font-bold">
             {badge}
-          </span>
-        )}
-
-        {trafficLight === 'BUY_ZONE' && (
-          <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-[13px] font-bold">
-            <Zap className="w-3.5 h-3.5 text-amber-400" /> BUY ZONE
           </span>
         )}
       </div>

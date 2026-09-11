@@ -318,7 +318,9 @@ export function useChartSeries({
     }
 
     markersPluginRef.current?.setMarkers(pane0Markers);
-    applyTimeframeRange(timeframe);
+    requestAnimationFrame(() => {
+      applyTimeframeRange(timeframe);
+    });
   }, [
     displayBars,
     calculatedRsiMarkers,
