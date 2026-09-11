@@ -176,7 +176,12 @@ export function useHoldings() {
       cashWeight,
       securitiesWeight,
       todaysProfit,
-      todaysProfitPercent
+      todaysProfitPercent,
+      // Compatibility aliases
+      totalPortfolioValue: totalNetWorth,
+      totalUnrealizedProfit: totalPnl,
+      totalUnrealizedProfitPercent: totalPnlPercent,
+      netInvestedCapital: netInvested,
     };
   }, [transactions, activePortfolio, prices]);
 }

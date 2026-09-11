@@ -14,7 +14,20 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   selectedSymbol,
   onSelectSymbol,
 }) => {
-  const { holdings, totalPortfolioValue, totalUnrealizedProfit, totalUnrealizedProfitPercent, netInvestedCapital } = useHoldings();
+  const { 
+    holdings = [], 
+    totalNetWorth = 0, 
+    totalPnl = 0, 
+    totalPnlPercent = 0,
+    totalPortfolioValue: rawTotalPortfolioValue,
+    totalUnrealizedProfit: rawTotalUnrealizedProfit,
+    totalUnrealizedProfitPercent: rawTotalUnrealizedProfitPercent,
+  } = useHoldings();
+
+  const totalPortfolioValue = rawTotalPortfolioValue ?? totalNetWorth ?? 0;
+  const totalUnrealizedProfit = rawTotalUnrealizedProfit ?? totalPnl ?? 0;
+  const totalUnrealizedProfitPercent = rawTotalUnrealizedProfitPercent ?? totalPnlPercent ?? 0;
+
   const { exchangeRate } = usePriceStore();
   const { portfolios, activePortfolioId } = usePortfolioStore();
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
@@ -24,7 +37,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
   // Filter and sort holdings
   const filteredHoldings = useMemo(() => {
-    let list = holdings.filter((h) => h.quantity > 0 && h.symbol !== 'CASH');
+    let list = (holdings || []).filter((h) => h && h.quantity > 0 && h.symbol !== 'CASH');
 
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toUpperCase();
@@ -32,16 +45,20 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     }
 
     list.sort((a, b) => {
-      if (sortBy === 'pnl') return b.totalReturnPercent - a.totalReturnPercent;
-      if (sortBy === 'symbol') return a.symbol.localeCompare(b.symbol);
-      return b.weightPercent - a.weightPercent;
+      const aPnl = a.totalReturnPercent ?? 0;
+      const bPnl = b.totalReturnPercent ?? 0;
+      const aWeight = a.weightPercent ?? 0;
+      const bWeight = b.weightPercent ?? 0;
+      if (sortBy === 'pnl') return bPnl - aPnl;
+      if (sortBy === 'symbol') return (a.symbol || '').localeCompare(b.symbol || '');
+      return bWeight - aWeight;
     });
 
     return list;
   }, [holdings, searchQuery, sortBy]);
 
-  const totalValueTHB = totalPortfolioValue * (exchangeRate || 34.5);
-  const totalPnLTHB = totalUnrealizedProfit * (exchangeRate || 34.5);
+  const totalValueTHB = (totalPortfolioValue || 0) * (exchangeRate || 34.5);
+  const totalPnLTHB = (totalUnrealizedProfit || 0) * (exchangeRate || 34.5);
 
   return (
     <div className="w-[340px] h-full bg-[#0D1017] border-l border-slate-800/80 flex flex-col select-none shrink-0 overflow-hidden">
@@ -63,10 +80,10 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           </div>
           <div className="text-right">
             <div className="text-sm font-extrabold text-slate-200">
-              ${totalPortfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${(totalPortfolioValue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-[13px] text-slate-300 font-medium">
-              ≈ ฿{totalValueTHB.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              ≈ ฿{(totalValueTHB ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </div>
           </div>
         </div>
@@ -78,21 +95,21 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
             <span
               className={clsx(
                 'text-sm font-bold flex items-center gap-0.5',
-                totalUnrealizedProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                (totalUnrealizedProfit ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
               )}
             >
-              {totalUnrealizedProfit >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-              {totalUnrealizedProfit >= 0 ? '+' : ''}
-              ${totalUnrealizedProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {(totalUnrealizedProfit ?? 0) >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+              {(totalUnrealizedProfit ?? 0) >= 0 ? '+' : ''}
+              ${(totalUnrealizedProfit ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <span
               className={clsx(
                 'text-[13px] font-semibold px-1.5 py-0.5 rounded',
-                totalUnrealizedProfitPercent >= 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                (totalUnrealizedProfitPercent ?? 0) >= 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
               )}
             >
-              {totalUnrealizedProfitPercent >= 0 ? '+' : ''}
-              {totalUnrealizedProfitPercent.toFixed(2)}%
+              {(totalUnrealizedProfitPercent ?? 0) >= 0 ? '+' : ''}
+              {(totalUnrealizedProfitPercent ?? 0).toFixed(2)}%
             </span>
           </div>
         </div>
@@ -180,7 +197,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                   </div>
                   <div className="text-right">
                     <span className="text-sm font-bold text-slate-200">
-                      ${h.lastPrice.toFixed(2)}
+                      ${(h.lastPrice ?? 0).toFixed(2)}
                     </span>
                     <span
                       className={clsx(
@@ -189,7 +206,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                       )}
                     >
                       {dayProfit ? '+' : ''}
-                      {h.dayChangePercent.toFixed(2)}%
+                      {(h.dayChangePercent ?? 0).toFixed(2)}%
                     </span>
                   </div>
                 </div>
@@ -198,9 +215,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 <div className="flex items-center justify-between text-[13px]">
                   <div className="text-slate-300">
                     <span>ทุน: </span>
-                    <span className="font-semibold text-slate-200">${h.avgCost.toFixed(2)}</span>
+                    <span className="font-semibold text-slate-200">${(h.avgCost ?? 0).toFixed(2)}</span>
                     <span className="mx-1 text-slate-400">·</span>
-                    <span>{h.quantity} หุ้น</span>
+                    <span>{h.quantity ?? 0} หุ้น</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span
@@ -210,7 +227,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                       )}
                     >
                       {isProfit ? '+' : ''}
-                      {h.totalReturnPercent.toFixed(2)}%
+                      {(h.totalReturnPercent ?? 0).toFixed(2)}%
                     </span>
                   </div>
                 </div>
@@ -218,11 +235,11 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 {/* Row 3: Total Value & Port Weight */}
                 <div className="flex items-center justify-between text-[13px] text-slate-300 pt-0.5">
                   <div>
-                    มูลค่า: <span className="font-semibold text-slate-200">${h.currentValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                    มูลค่า: <span className="font-semibold text-slate-200">${(h.currentValue ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <span>สัดส่วน:</span>
-                    <span className="font-bold text-purple-400">{h.weightPercent.toFixed(1)}%</span>
+                    <span className="font-bold text-purple-400">{(h.weightPercent ?? 0).toFixed(1)}%</span>
                   </div>
                 </div>
               </div>

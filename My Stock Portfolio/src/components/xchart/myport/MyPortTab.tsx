@@ -25,14 +25,14 @@ export const MyPortTab: React.FC<MyPortTabProps> = ({ tabId }) => {
 
   // Default to first holding or 'VRT'
   const [selectedSymbol, setSelectedSymbol] = useState<string>(() => {
-    const validHoldings = holdings.filter((h) => h.quantity > 0 && h.symbol !== 'CASH');
+    const validHoldings = (holdings || []).filter((h) => h && h.quantity > 0 && h.symbol !== 'CASH');
     return validHoldings.length > 0 ? validHoldings[0].symbol : 'VRT';
   });
 
   // Keep selectedSymbol synced if holdings load asynchronously
   useEffect(() => {
     if (!selectedSymbol || selectedSymbol === 'MYPORT') {
-      const validHoldings = holdings.filter((h) => h.quantity > 0 && h.symbol !== 'CASH');
+      const validHoldings = (holdings || []).filter((h) => h && h.quantity > 0 && h.symbol !== 'CASH');
       if (validHoldings.length > 0) {
         setSelectedSymbol(validHoldings[0].symbol);
       }
@@ -41,11 +41,11 @@ export const MyPortTab: React.FC<MyPortTabProps> = ({ tabId }) => {
 
   // Compute portfolio overlay for selected symbol
   const portfolioOverlay: PortfolioOverlayConfig = useMemo(() => {
-    const sym = selectedSymbol.toUpperCase().trim();
-    const holding = holdings.find((h) => h.symbol.toUpperCase() === sym);
+    const sym = (selectedSymbol || 'VRT').toUpperCase().trim();
+    const holding = (holdings || []).find((h) => h && h.symbol && h.symbol.toUpperCase() === sym);
 
-    const stockTxs = transactions
-      .filter((t) => t.symbol.toUpperCase() === sym && t.status === 'CONFIRMED' && (t.type === 'BUY' || t.type === 'SELL'))
+    const stockTxs = (transactions || [])
+      .filter((t) => t && t.symbol && t.symbol.toUpperCase() === sym && t.status === 'CONFIRMED' && (t.type === 'BUY' || t.type === 'SELL'))
       .map((t) => ({
         date: t.date,
         type: t.type as 'BUY' | 'SELL',
@@ -53,7 +53,7 @@ export const MyPortTab: React.FC<MyPortTabProps> = ({ tabId }) => {
         amount: t.amount,
       }));
 
-    const bp = blueprints.find((b: any) => b.symbol.toUpperCase() === sym);
+    const bp = (blueprints || []).find((b: any) => b && b.symbol && b.symbol.toUpperCase() === sym);
 
     return {
       avgCost: holding?.avgCost,
