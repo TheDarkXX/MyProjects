@@ -291,9 +291,10 @@ export function detectSupportResistance(
     rawPivots.push({ price: highestBar.high, type: 'high', index: windowBars.indexOf(highestBar), isMajor: true });
   }
 
-  // 4. Cluster nearby levels within 1.5%
+  // 4. Fixed-Anchor Clustering without Centroid Drift (prevents levels drifting into mid-air)
   interface PivotCluster {
-    price: number;
+    anchorPrice: number;
+    prices: number[];
     score: number;
     hasHigh: boolean;
     hasLow: boolean;
@@ -303,20 +304,22 @@ export function detectSupportResistance(
   const clusters: PivotCluster[] = [];
 
   for (const pivot of rawPivots) {
-    const cluster = clusters.find((c) => Math.abs(c.price - pivot.price) / pivot.price <= 0.018);
+    // Tight 1.2% threshold against fixed anchor to prevent chaining/drifting
+    const cluster = clusters.find((c) => Math.abs(c.anchorPrice - pivot.price) / c.anchorPrice <= 0.012);
     const recencyWeight = (pivot.index / windowBars.length) * 2; // Fresh levels get higher weight
     const pivotScore = (pivot.isMajor ? 3 : 1.5) + recencyWeight;
 
     if (cluster) {
+      cluster.prices.push(pivot.price);
       cluster.score += pivotScore;
       cluster.touchCount += 1;
       cluster.lastSeenIndex = Math.max(cluster.lastSeenIndex, pivot.index);
       if (pivot.type === 'high') cluster.hasHigh = true;
       if (pivot.type === 'low') cluster.hasLow = true;
-      cluster.price = cluster.price * 0.6 + pivot.price * 0.4;
     } else {
       clusters.push({
-        price: pivot.price,
+        anchorPrice: pivot.price,
+        prices: [pivot.price],
         score: pivotScore,
         hasHigh: pivot.type === 'high',
         hasLow: pivot.type === 'low',
@@ -326,22 +329,32 @@ export function detectSupportResistance(
     }
   }
 
-  // 5. Apply Polarity Bonus (Role Reversal: acted as both high and low!)
-  for (const c of clusters) {
+  // Calculate final accurate price using median of actual bounce touches (prevents mid-air floating)
+  const candidateClusters = clusters.map((c) => {
+    c.prices.sort((a, b) => a - b);
+    const medianPrice = c.prices[Math.floor(c.prices.length / 2)];
+    let score = c.score;
+    // Apply Polarity Bonus (Role Reversal: tested as both high and low!)
     if (c.hasHigh && c.hasLow) {
-      c.score += 4.0; // Institutional S/R Flipping
+      score += 4.0;
     }
     // Psychological round number bonus
-    const isRound = Math.round(c.price) % 10 === 0 || Math.round(c.price) % 5 === 0;
-    if (isRound) c.score += 1.5;
-  }
+    if (Math.round(medianPrice) % 10 === 0 || Math.round(medianPrice) % 5 === 0) {
+      score += 1.5;
+    }
+    return {
+      price: medianPrice,
+      score,
+      strength: Math.min(5, Math.max(1, Math.round(score / 2))),
+    };
+  });
 
   // 6. Separate into Resistances (above currentPrice) and Supports (below currentPrice)
-  const candidatesAbove = clusters
+  const candidatesAbove = candidateClusters
     .filter((c) => c.price >= currentPrice * 1.008)
     .sort((a, b) => b.score - a.score);
 
-  const candidatesBelow = clusters
+  const candidatesBelow = candidateClusters
     .filter((c) => c.price <= currentPrice * 0.992)
     .sort((a, b) => b.score - a.score);
 
@@ -351,7 +364,7 @@ export function detectSupportResistance(
     if (pickedResistances.length >= maxPerSide) break;
     const isSeparated = pickedResistances.every((p) => Math.abs(p.price - cand.price) >= minSeparation);
     if (isSeparated) {
-      pickedResistances.push({ price: cand.price, strength: Math.min(5, Math.max(1, Math.round(cand.score / 2))) });
+      pickedResistances.push({ price: cand.price, strength: cand.strength });
     }
   }
 
@@ -360,7 +373,7 @@ export function detectSupportResistance(
     if (pickedSupports.length >= maxPerSide) break;
     const isSeparated = pickedSupports.every((p) => Math.abs(p.price - cand.price) >= minSeparation);
     if (isSeparated) {
-      pickedSupports.push({ price: cand.price, strength: Math.min(5, Math.max(1, Math.round(cand.score / 2))) });
+      pickedSupports.push({ price: cand.price, strength: cand.strength });
     }
   }
 
