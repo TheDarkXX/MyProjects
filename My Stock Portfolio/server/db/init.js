@@ -288,6 +288,14 @@ export function initDb() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_historical_prices_sym_date ON historical_prices(symbol, date DESC);
+
+    -- Chart Drawings Cloud Sync (Horizontal lines, Trendlines, etc.)
+    CREATE TABLE IF NOT EXISTS chart_drawings (
+        symbol TEXT PRIMARY KEY,
+        horizontal_lines TEXT DEFAULT '[]',
+        trend_lines TEXT DEFAULT '[]',
+        updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migration for historical_prices OHLCV columns

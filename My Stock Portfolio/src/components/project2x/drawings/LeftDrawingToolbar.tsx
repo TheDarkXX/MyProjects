@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   MousePointer2,
   Minus,
+  TrendingUp,
   Magnet,
   Eye,
   EyeOff,
@@ -39,7 +40,8 @@ export const LeftDrawingToolbar: React.FC<LeftDrawingToolbarProps> = ({ symbol, 
   const [confirmClear, setConfirmClear] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const drawings = getDrawings(symbol);
-  const activeCount = drawings.length;
+  const trendLines = useDrawingStore((s) => s.getTrendLines(symbol));
+  const activeCount = drawings.length + trendLines.length;
 
   const handleToolClick = (tool: DrawingTool) => {
     if (activeTool === tool) {
@@ -115,6 +117,22 @@ export const LeftDrawingToolbar: React.FC<LeftDrawingToolbarProps> = ({ symbol, 
           </div>
           <span className="pointer-events-none absolute left-10 ml-1.5 px-2 py-1 bg-[#1E222D] text-slate-200 text-[13px] rounded shadow-lg border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
             Horizontal Line (Alt+H)
+          </span>
+        </button>
+
+        {/* Trend Line */}
+        <button
+          onClick={() => handleToolClick('trendLine')}
+          title="Trend Line (Alt+T)"
+          className={`relative group flex items-center justify-center w-8 h-8 rounded-md transition-all ${
+            activeTool === 'trendLine'
+              ? 'bg-[#2962FF] text-white shadow-lg shadow-[#2962FF]/30'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          <span className="pointer-events-none absolute left-10 ml-1.5 px-2 py-1 bg-[#1E222D] text-slate-200 text-[13px] rounded shadow-lg border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
+            Trend Line (Alt+T)
           </span>
         </button>
 

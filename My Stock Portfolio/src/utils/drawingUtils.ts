@@ -1,5 +1,5 @@
 import { LineStyle } from 'lightweight-charts';
-import { HorizontalLineDrawing, LineStyleOption, AutoSRLevel } from '../types/drawingTypes';
+import { HorizontalLineDrawing, TrendLineDrawing, LineStyleOption, AutoSRLevel } from '../types/drawingTypes';
 
 export function getChartLineStyle(opt: LineStyleOption): LineStyle {
   switch (opt) {
@@ -408,3 +408,79 @@ export function detectSupportResistance(
 
   return [...resistances, ...supports];
 }
+
+/**
+ * Calculate perpendicular distance from point (px, py) to segment or ray (x1, y1) -> (x2, y2)
+ */
+export function distanceToLineSegment(
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  extendRight: boolean = false
+): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) {
+    return Math.hypot(px - x1, py - y1);
+  }
+  let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+  if (!extendRight) {
+    t = Math.max(0, Math.min(1, t));
+  } else {
+    // If extending to the right, allow t >= 0
+    t = Math.max(0, t);
+  }
+  const projX = x1 + t * dx;
+  const projY = y1 + t * dy;
+  return Math.hypot(px - projX, py - projY);
+}
+
+/**
+ * Safe conversion of time (string YYYY-MM-DD or unix timestamp) to coordinate
+ */
+export function timeToCoordinateSafe(timeScale: any, time: string | number): number | null {
+  if (!timeScale) return null;
+  let t: any = time;
+  if (typeof time === 'string' && time.includes('T')) {
+    t = Math.floor(new Date(time).getTime() / 1000);
+  }
+  const coord = timeScale.timeToCoordinate(t);
+  return coord !== null ? (coord as number) : null;
+}
+
+/**
+ * Hit-test to see if cursor (mouseX, mouseY) is close to any visible trend line
+ */
+export function hitTestTrendLines(
+  mouseX: number,
+  mouseY: number,
+  trendLines: TrendLineDrawing[],
+  timeScale: any,
+  series: any,
+  hitThresholdPx: number = 8
+): TrendLineDrawing | null {
+  if (!timeScale || !series || !trendLines || trendLines.length === 0) return null;
+
+  for (let i = trendLines.length - 1; i >= 0; i--) {
+    const tl = trendLines[i];
+    if (tl.visible === false) continue;
+
+    const x1 = timeToCoordinateSafe(timeScale, tl.startTime);
+    const y1 = series.priceToCoordinate(tl.startPrice);
+    const x2 = timeToCoordinateSafe(timeScale, tl.endTime);
+    const y2 = series.priceToCoordinate(tl.endPrice);
+
+    if (x1 === null || y1 === null || x2 === null || y2 === null) continue;
+
+    const dist = distanceToLineSegment(mouseX, mouseY, x1, y1, x2, y2, !!tl.extendRight);
+    if (dist <= hitThresholdPx) {
+      return tl;
+    }
+  }
+  return null;
+}
+

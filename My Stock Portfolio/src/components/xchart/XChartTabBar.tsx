@@ -6,6 +6,7 @@ import {
   CandlestickChart, 
   Coins, 
   LayoutGrid, 
+  Briefcase,
   X, 
   Plus, 
   Search,
@@ -47,7 +48,7 @@ export const XChartTabBar: React.FC = () => {
     }
   }, [fetchExchangeRate, lastUpdated]);
 
-  const handleCreateTab = (type: 'STOCK' | 'CURRENCY' | 'HEATMAP', symbol: string, title?: string) => {
+  const handleCreateTab = (type: 'STOCK' | 'CURRENCY' | 'HEATMAP' | 'MYPORT', symbol: string, title?: string) => {
     addTab({ type, symbol, title });
     setShowAddModal(false);
     setCustomTicker('');
@@ -92,6 +93,9 @@ export const XChartTabBar: React.FC = () => {
               )}
               {tab.type === 'HEATMAP' && (
                 <LayoutGrid className={clsx('w-4 h-4', isActive ? 'text-emerald-400' : 'text-slate-400')} />
+              )}
+              {tab.type === 'MYPORT' && (
+                <Briefcase className={clsx('w-4 h-4', isActive ? 'text-amber-400' : 'text-slate-400')} />
               )}
 
               {/* Title */}
@@ -240,6 +244,20 @@ export const XChartTabBar: React.FC = () => {
             <div className="space-y-2.5 pt-2 border-t border-[#1F2233]">
               <div className="text-xs font-semibold text-slate-300">แท็บแนะนำยอดนิยม (Quick Presets)</div>
               <div className="grid grid-cols-1 gap-2">
+                <button
+                  onClick={() => handleCreateTab('MYPORT', 'MYPORT', '💼 My Port')}
+                  className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40 transition-all cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <Briefcase className="w-4 h-4 text-amber-400" />
+                    <div>
+                      <div className="text-sm font-bold text-white">💼 My Port (Watchlist + Cost Basis + Trades)</div>
+                      <div className="text-xs text-slate-300">สแกน Banker + ต้นทุนเฉลี่ย + จุดซื้อขายจริงบนชาร์ต</div>
+                    </div>
+                  </div>
+                  <span className="text-xs text-amber-400 font-semibold">+ เปิดแท็บ</span>
+                </button>
+
                 <button
                   onClick={() => handleCreateTab('STOCK', 'VRT', 'VRT')}
                   className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-purple-500/30 transition-all cursor-pointer text-left"

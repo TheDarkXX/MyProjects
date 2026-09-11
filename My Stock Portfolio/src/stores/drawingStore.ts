@@ -1,12 +1,34 @@
 import { create } from 'zustand';
 import {
   HorizontalLineDrawing,
+  TrendLineDrawing,
   DrawingTool,
   DEFAULT_LINE_DRAWING,
+  DEFAULT_TRENDLINE_DRAWING,
   DrawingSettings,
   DEFAULT_DRAWING_SETTINGS,
 } from '../types/drawingTypes';
 import { snapToTickSize, detectSupportResistance } from '../utils/drawingUtils';
+import { api } from '../services/api';
+
+const syncTimers = new Map<string, any>();
+function scheduleCloudSync(symbol: string, get: () => DrawingState) {
+  const sym = symbol.toUpperCase().trim();
+  if (syncTimers.has(sym)) {
+    clearTimeout(syncTimers.get(sym));
+  }
+  const timer = setTimeout(async () => {
+    syncTimers.delete(sym);
+    try {
+      const horizontalLines = get().drawingsBySymbol[sym] || [];
+      const trendLines = get().trendLinesBySymbol[sym] || [];
+      await api.drawings.save(sym, { horizontalLines, trendLines });
+    } catch (err) {
+      console.warn(`[CloudSync] Failed to sync drawings for ${sym}:`, err);
+    }
+  }, 1200);
+  syncTimers.set(sym, timer);
+}
 
 function generateId(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -17,6 +39,10 @@ function generateId(): string {
 
 function getStorageKey(symbol: string): string {
   return `tv_drawings_${symbol.toUpperCase().trim()}`;
+}
+
+function getTrendLinesStorageKey(symbol: string): string {
+  return `tv_trendlines_${symbol.toUpperCase().trim()}`;
 }
 
 const SETTINGS_STORAGE_KEY = 'tv_drawing_settings_v1';
@@ -58,10 +84,32 @@ function saveToStorage(symbol: string, drawings: HorizontalLineDrawing[]): void 
   }
 }
 
+function loadTrendLinesFromStorage(symbol: string): TrendLineDrawing[] {
+  try {
+    const raw = localStorage.getItem(getTrendLinesStorageKey(symbol));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error(`Failed to load trend lines for ${symbol}:`, err);
+    return [];
+  }
+}
+
+function saveTrendLinesToStorage(symbol: string, lines: TrendLineDrawing[]): void {
+  try {
+    localStorage.setItem(getTrendLinesStorageKey(symbol), JSON.stringify(lines));
+  } catch (err) {
+    console.error(`Failed to save trend lines for ${symbol}:`, err);
+  }
+}
+
 export interface DrawingState {
   drawingsBySymbol: Record<string, HorizontalLineDrawing[]>;
+  trendLinesBySymbol: Record<string, TrendLineDrawing[]>;
   activeTool: DrawingTool;
   selectedLineId: string | null;
+  selectedTrendLineId: string | null;
   hoveredLineId: string | null;
   magnetMode: boolean;
   globalDrawingsVisible: boolean;
@@ -80,6 +128,19 @@ export interface DrawingState {
   deleteLine: (symbol: string, id: string) => void;
   clearLines: (symbol: string) => void;
   cloneLine: (symbol: string, id: string, newPrice?: number) => string | null;
+
+  // Trendline Actions
+  loadTrendLines: (symbol: string) => TrendLineDrawing[];
+  getTrendLines: (symbol: string) => TrendLineDrawing[];
+  addTrendLine: (symbol: string, line: Partial<TrendLineDrawing> & { startPrice: number; startTime: string | number; endPrice: number; endTime: string | number }) => string;
+  updateTrendLine: (symbol: string, id: string, updates: Partial<TrendLineDrawing>) => void;
+  deleteTrendLine: (symbol: string, id: string) => void;
+  clearTrendLines: (symbol: string) => void;
+  selectTrendLine: (id: string | null) => void;
+
+  // Cloud Sync
+  syncFromCloud: (symbol: string) => Promise<void>;
+
   setActiveTool: (tool: DrawingTool) => void;
   selectLine: (id: string | null) => void;
   hoverLine: (id: string | null) => void;
@@ -94,8 +155,10 @@ export interface DrawingState {
 
 export const useDrawingStore = create<DrawingState>((set, get) => ({
   drawingsBySymbol: {},
+  trendLinesBySymbol: {},
   activeTool: 'cursor',
   selectedLineId: null,
+  selectedTrendLineId: null,
   hoveredLineId: null,
   magnetMode: false,
   globalDrawingsVisible: true,
@@ -115,6 +178,44 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     set({ drawingSettings: updated });
   },
 
+  syncFromCloud: async (symbol: string) => {
+    const sym = symbol.toUpperCase().trim();
+    try {
+      const res = await api.drawings.get(sym);
+      if (res) {
+        let hasChanges = false;
+        let finalHorizontals = get().drawingsBySymbol[sym] || [];
+        let finalTrends = get().trendLinesBySymbol[sym] || [];
+
+        if (Array.isArray(res.horizontalLines) && res.horizontalLines.length > 0) {
+          saveToStorage(sym, res.horizontalLines);
+          finalHorizontals = res.horizontalLines;
+          hasChanges = true;
+        }
+        if (Array.isArray(res.trendLines) && res.trendLines.length > 0) {
+          saveTrendLinesToStorage(sym, res.trendLines);
+          finalTrends = res.trendLines;
+          hasChanges = true;
+        }
+
+        if (hasChanges) {
+          set((state) => ({
+            drawingsBySymbol: {
+              ...state.drawingsBySymbol,
+              [sym]: finalHorizontals,
+            },
+            trendLinesBySymbol: {
+              ...state.trendLinesBySymbol,
+              [sym]: finalTrends,
+            },
+          }));
+        }
+      }
+    } catch (err) {
+      // Offline fallback: keep local data
+    }
+  },
+
   loadDrawings: (symbol: string) => {
     const sym = symbol.toUpperCase().trim();
     const stored = loadFromStorage(sym);
@@ -124,6 +225,8 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
         [sym]: stored,
       },
     }));
+    // Trigger background cloud sync
+    get().syncFromCloud(sym);
     return stored;
   },
 
@@ -152,6 +255,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
 
     const updated = [...current, newLine];
     saveToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
 
     set((state) => ({
       drawingsBySymbol: {
@@ -170,6 +274,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     const current = get().getDrawings(sym);
     const updated = current.map((d) => (d.id === id ? { ...d, ...updates } : d));
     saveToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
 
     set((state) => ({
       drawingsBySymbol: {
@@ -184,6 +289,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     const current = get().getDrawings(sym);
     const updated = current.filter((d) => d.id !== id);
     saveToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
 
     set((state) => ({
       drawingsBySymbol: {
@@ -198,14 +304,122 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   clearLines: (symbol: string) => {
     const sym = symbol.toUpperCase().trim();
     saveToStorage(sym, []);
+    saveTrendLinesToStorage(sym, []);
+    api.drawings.delete(sym).catch(() => {});
+
     set((state) => ({
       drawingsBySymbol: {
         ...state.drawingsBySymbol,
         [sym]: [],
       },
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: [],
+      },
       selectedLineId: null,
+      selectedTrendLineId: null,
       hoveredLineId: null,
     }));
+  },
+
+  loadTrendLines: (symbol: string) => {
+    const sym = symbol.toUpperCase().trim();
+    const stored = loadTrendLinesFromStorage(sym);
+    set((state) => ({
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: stored,
+      },
+    }));
+    return stored;
+  },
+
+  getTrendLines: (symbol: string) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().trendLinesBySymbol[sym];
+    if (current) return current;
+    return get().loadTrendLines(sym);
+  },
+
+  addTrendLine: (symbol: string, tlData) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().getTrendLines(sym);
+    const settings = get().drawingSettings;
+
+    const newTrendLine: TrendLineDrawing = {
+      ...DEFAULT_TRENDLINE_DRAWING,
+      color: tlData.color ?? settings.defaultLineColor ?? '#2962FF',
+      lineWidth: tlData.lineWidth ?? settings.defaultLineWidth ?? 2,
+      lineStyle: tlData.lineStyle ?? settings.defaultLineStyle ?? 'Solid',
+      ...tlData,
+      id: generateId().replace('hl_', 'tl_'),
+      createdAt: Date.now(),
+    };
+
+    const updated = [...current, newTrendLine];
+    saveTrendLinesToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
+
+    set((state) => ({
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: updated,
+      },
+      selectedTrendLineId: newTrendLine.id,
+      selectedLineId: null,
+      activeTool: 'cursor',
+    }));
+
+    return newTrendLine.id;
+  },
+
+  updateTrendLine: (symbol: string, id: string, updates: Partial<TrendLineDrawing>) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().getTrendLines(sym);
+    const updated = current.map((tl) => (tl.id === id ? { ...tl, ...updates } : tl));
+    saveTrendLinesToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
+
+    set((state) => ({
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: updated,
+      },
+    }));
+  },
+
+  deleteTrendLine: (symbol: string, id: string) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().getTrendLines(sym);
+    const updated = current.filter((tl) => tl.id !== id);
+    saveTrendLinesToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
+
+    set((state) => ({
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: updated,
+      },
+      selectedTrendLineId: state.selectedTrendLineId === id ? null : state.selectedTrendLineId,
+    }));
+  },
+
+  clearTrendLines: (symbol: string) => {
+    const sym = symbol.toUpperCase().trim();
+    saveTrendLinesToStorage(sym, []);
+    scheduleCloudSync(sym, get);
+
+    set((state) => ({
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: [],
+      },
+      selectedTrendLineId: null,
+    }));
+  },
+
+  selectTrendLine: (id: string | null) => {
+    set({ selectedTrendLineId: id, selectedLineId: null });
   },
 
   cloneLine: (symbol: string, id: string, newPrice?: number) => {

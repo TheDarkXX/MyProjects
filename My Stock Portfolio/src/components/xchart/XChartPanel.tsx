@@ -1,12 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../../services/api';
-import { LWChart, Resolution } from '../project2x/LWChart';
+import { LWChart, Resolution, PortfolioOverlayConfig } from '../project2x/LWChart';
 import { useXChartStore } from '../../stores/xchartStore';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+
+import { getCachedCandles, setCachedCandles } from '../../utils/chartIdbCache';
 
 interface XChartPanelProps {
   symbol: string;
   tabId: string;
+  portfolioOverlay?: PortfolioOverlayConfig;
 }
 
 interface ChartApiResponse {
@@ -31,7 +34,7 @@ interface ChartApiResponse {
   lastUpdated: string;
 }
 
-export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId }) => {
+export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfolioOverlay }) => {
   const { changeSymbolOnActiveTab, tabs, updateTab } = useXChartStore();
   const currentTab = tabs.find(t => t.id === tabId);
   const activeResolution: Resolution = (currentTab?.resolution as Resolution) || '1D';
@@ -48,20 +51,37 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId }) => {
     const reqRes = res === '4H' ? '4H' : '1D';
     const key = `${sym}_${reqRes}`;
 
-    // If already in local cache, no need to show loading
+    // 1. If already in React state cache, return immediately
     if (cacheByRes[key]) {
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    // 2. Check IndexedDB persistent local cache for instant snappy load
+    try {
+      const idbData = await getCachedCandles<ChartApiResponse>(sym, reqRes);
+      if (idbData && idbData.closes && idbData.closes.length > 0) {
+        setCacheByRes(prev => ({ ...prev, [key]: idbData }));
+        setLoading(false);
+        // Continue to background revalidate with fresh API data
+      } else {
+        setLoading(true);
+      }
+    } catch (e) {
+      setLoading(true);
+    }
+
     setError(null);
     try {
       const result = await api.chart.get(sym, 36500, reqRes);
       setCacheByRes(prev => ({ ...prev, [key]: result }));
+      // Save to IndexedDB for next time
+      setCachedCandles(sym, reqRes, result);
     } catch (err: any) {
       console.error(`[XChartPanel] Failed to load chart data for ${sym} (${reqRes}):`, err);
-      setError(err.message || `Failed to load chart data for ${sym}`);
+      if (!cacheByRes[key]) {
+        setError(err.message || `Failed to load chart data for ${sym}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -137,6 +157,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId }) => {
         onResolutionChange={handleResolutionChange}
         className="w-full h-full flex-1"
         onSelectSymbol={(newSym) => changeSymbolOnActiveTab(newSym)}
+        portfolioOverlay={portfolioOverlay}
       />
     </div>
   );

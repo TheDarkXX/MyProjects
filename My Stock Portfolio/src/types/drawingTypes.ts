@@ -17,7 +17,23 @@ export interface HorizontalLineDrawing {
   createdAt: number;
 }
 
-export type DrawingTool = 'cursor' | 'horizontalLine';
+export type DrawingTool = 'cursor' | 'horizontalLine' | 'trendLine';
+
+export interface TrendLineDrawing {
+  id: string;
+  startPrice: number;
+  startTime: string | number;
+  endPrice: number;
+  endTime: string | number;
+  color: string;
+  lineWidth: 1 | 2 | 3 | 4;
+  lineStyle: LineStyleOption;
+  extendRight?: boolean;
+  locked?: boolean;
+  visible?: boolean;
+  visibleOn?: 'all' | '1D' | '1W' | '4H';
+  createdAt: number;
+}
 
 export interface AutoSRLevel {
   price: number;
@@ -64,4 +80,14 @@ export const DEFAULT_LINE_DRAWING: Omit<HorizontalLineDrawing, 'id' | 'price' | 
   visible: true,
   visibleOn: 'all',
   alertEnabled: false,
+};
+
+export const DEFAULT_TRENDLINE_DRAWING: Omit<TrendLineDrawing, 'id' | 'startPrice' | 'startTime' | 'endPrice' | 'endTime' | 'createdAt'> = {
+  color: '#2962FF',
+  lineWidth: 2,
+  lineStyle: 'Solid',
+  extendRight: false,
+  locked: false,
+  visible: true,
+  visibleOn: 'all',
 };

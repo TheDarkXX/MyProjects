@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
 
-export type XChartTabType = 'STOCK' | 'CURRENCY' | 'HEATMAP';
+export type XChartTabType = 'STOCK' | 'CURRENCY' | 'HEATMAP' | 'MYPORT';
 
 export interface XChartTab {
   id: string;
@@ -109,6 +109,17 @@ const DEFAULT_TABS: XChartTab[] = [
     type: 'HEATMAP',
     symbol: 'HEATMAP',
     title: 'Market Heatmap'
+  },
+  {
+    id: 'tab-myport',
+    type: 'MYPORT',
+    symbol: 'VRT',
+    title: '💼 My Port',
+    timeframe: 'ALL',
+    chartStyle: 'CANDLE',
+    resolution: '1D',
+    showEnvelope: false,
+    showSignals: true,
   }
 ];
 

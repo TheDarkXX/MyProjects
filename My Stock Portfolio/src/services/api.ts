@@ -133,5 +133,17 @@ export const api = {
   },
   market: {
     heatmap: (scope = 'sp100') => authFetch(`/market/heatmap?scope=${encodeURIComponent(scope)}`),
+  },
+  drawings: {
+    get: (symbol: string) => authFetch(`/drawings/${encodeURIComponent(symbol)}`),
+    save: (symbol: string, data: { horizontalLines: any[]; trendLines: any[] }) =>
+      authFetch(`/drawings/${encodeURIComponent(symbol)}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    delete: (symbol: string) =>
+      authFetch(`/drawings/${encodeURIComponent(symbol)}`, {
+        method: 'DELETE',
+      }),
   }
 };

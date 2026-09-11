@@ -4,10 +4,13 @@ import { XChartTabBar } from './XChartTabBar';
 import { XChartPanel } from './XChartPanel';
 import { MarketHeatmap } from './heatmap/MarketHeatmap';
 import { XChartWatchlistDock } from './XChartWatchlistDock';
+import { MyPortTab } from './myport/MyPortTab';
 
 export const XChartPage: React.FC = () => {
   const { tabs, activeTabId } = useXChartStore();
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+
+  const isMyPort = activeTab?.type === 'MYPORT';
 
   return (
     <div className="flex-1 w-full h-full flex flex-col bg-[#0B1220] overflow-hidden select-none min-h-0">
@@ -16,11 +19,13 @@ export const XChartPage: React.FC = () => {
 
       {/* Main Terminal Body */}
       <div className="flex-1 flex overflow-hidden relative min-h-0">
-        {/* Main Canvas / Chart / Heatmap Area */}
+        {/* Main Canvas / Chart / Heatmap / MyPort Area */}
         <div className="flex-1 flex flex-col h-full overflow-hidden relative min-h-0">
           {activeTab ? (
             activeTab.type === 'HEATMAP' ? (
               <MarketHeatmap key={activeTab.id} />
+            ) : activeTab.type === 'MYPORT' ? (
+              <MyPortTab key={activeTab.id} tabId={activeTab.id} />
             ) : (
               <XChartPanel 
                 key={activeTab.id} 
@@ -35,8 +40,8 @@ export const XChartPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Watchlist Dock */}
-        <XChartWatchlistDock />
+        {/* Right Watchlist Dock (Hidden in MyPort mode since MyPort has its own holdings dock) */}
+        {!isMyPort && <XChartWatchlistDock />}
       </div>
     </div>
   );

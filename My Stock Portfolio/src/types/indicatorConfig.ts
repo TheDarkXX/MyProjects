@@ -16,6 +16,7 @@ export interface EnvelopeConfig {
   color: string;
   lineWidth: number;
   lineStyle: LineStyleOption;
+  emaPeriod?: number;
 }
 
 export interface SignalMarkersConfig {
@@ -258,6 +259,19 @@ export interface SuperMoneySignalConfig {
   padding: number;
 }
 
+export interface VolumeProfileConfig {
+  visible: boolean;
+  rowSize: number;
+  widthPercent: number;
+  placement: 'left' | 'right';
+  upColor: string;
+  downColor: string;
+  pocColor: string;
+  pocLineWidth: number;
+  showVA: boolean;
+  vaColor: string;
+}
+
 export type SubPaneIndicatorId = 'mcdx' | 'ultimateRsi' | 'trendSpeed';
 
 export interface PaneLayout {
@@ -304,6 +318,7 @@ export interface IndicatorSettings {
   smcLite: SMCLiteConfig;
   anchoredVwap: AnchoredVWAPConfig;
   superMoneySignal: SuperMoneySignalConfig;
+  volumeProfile?: VolumeProfileConfig;
 }
 
 export const DEFAULT_CUSTOM_COLORS: string[] = [
@@ -526,5 +541,17 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     showText: true,
     size: 1.2,
     padding: 0,
+  },
+  volumeProfile: {
+    visible: true,
+    rowSize: 40,
+    widthPercent: 22,
+    placement: 'right',
+    upColor: 'rgba(38, 166, 154, 0.45)',
+    downColor: 'rgba(239, 83, 80, 0.45)',
+    pocColor: '#FF1744',
+    pocLineWidth: 2,
+    showVA: true,
+    vaColor: 'rgba(255, 255, 255, 0.1)',
   },
 };
