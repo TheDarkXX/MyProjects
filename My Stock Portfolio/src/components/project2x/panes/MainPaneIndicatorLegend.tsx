@@ -244,20 +244,20 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
         // Collapsed Minimal Badge
         <button
           onClick={handleToggleCollapse}
-          className="pointer-events-auto flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#0B101B]/80 hover:bg-[#0B101B] border border-slate-700/60 hover:border-slate-500 text-slate-300 hover:text-white shadow-lg backdrop-blur-md text-[10px] font-normal transition-all group cursor-pointer"
+          className="pointer-events-auto flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0B101B]/80 hover:bg-[#0B101B] border border-slate-700/60 hover:border-slate-500 text-slate-200 hover:text-white shadow-lg backdrop-blur-md text-[10px] font-normal transition-all group cursor-pointer"
           title="Expand Indicator Legend"
         >
-          <Layers className="w-2.5 h-2.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+          <Layers className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
           <span>Indicators ({activeItems.length})</span>
-          <ChevronDown className="w-2.5 h-2.5 text-slate-400 group-hover:text-white" />
+          <ChevronDown className="w-3.5 h-3.5 text-slate-300 group-hover:text-white" />
         </button>
       ) : (
-        // Expanded Stacked List (TradingView Style - Compact & Clean 10px)
+        // Expanded Stacked List (TradingView Style - Compact 10px text with clear 16px icons)
         <div className="pointer-events-auto flex flex-col gap-0.5 p-0.5 rounded bg-[#0B101B]/50 hover:bg-[#0B101B]/85 border border-transparent hover:border-slate-700/60 backdrop-blur-sm transition-all duration-150 group/container shadow-lg">
           {activeItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-1 px-1 py-0.5 rounded hover:bg-slate-800/50 transition-colors group/row text-[10px] leading-none"
+              className="flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-slate-800/50 transition-colors group/row text-[10px] leading-none"
             >
               {/* Title & Parameters (Regular font weight, crisp & clean 10px) */}
               <span className="font-normal text-slate-200 whitespace-nowrap">
@@ -301,24 +301,24 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                 </span>
               )}
 
-              {/* Stealth Hover Action Toolbar (TradingView Style: 👁️ ⚙️ 🔒 ✕) */}
-              <div className="flex items-center gap-0.5 ml-1 opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto transition-opacity duration-150">
+              {/* Stealth Hover Action Toolbar (Enlarged 4 levels to w-4 h-4 for clear visibility) */}
+              <div className="flex items-center gap-1 ml-1.5 opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto transition-opacity duration-150">
                 {/* 👁️ Eye Toggle */}
                 <button
                   onClick={item.onToggle}
                   title={item.visible ? 'Hide on Chart' : 'Show on Chart'}
-                  className="p-0.5 rounded hover:bg-slate-700/80 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+                  className="p-1 rounded hover:bg-slate-700/80 text-slate-300 hover:text-white transition-colors cursor-pointer"
                 >
-                  {item.visible ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5" />}
+                  {item.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
 
                 {/* ⚙️ Gear (Direct Settings) */}
                 <button
                   onClick={item.onConfigure}
                   title={`Configure ${item.title}`}
-                  className="p-0.5 rounded hover:bg-slate-700/80 text-slate-400 hover:text-sky-300 transition-colors cursor-pointer"
+                  className="p-1 rounded hover:bg-slate-700/80 text-slate-300 hover:text-sky-300 transition-colors cursor-pointer"
                 >
-                  <Settings className="w-2.5 h-2.5" />
+                  <Settings className="w-4 h-4" />
                 </button>
 
                 {/* 🔒 / 🔓 Lock Toggle */}
@@ -326,12 +326,12 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                   <button
                     onClick={item.onToggleLock}
                     title={item.isLocked ? '🔒 Locked (Click to unlock)' : '🔓 Unlocked (Click to lock)'}
-                    className="p-0.5 rounded hover:bg-slate-700/80 transition-colors cursor-pointer"
+                    className="p-1 rounded hover:bg-slate-700/80 transition-colors cursor-pointer"
                   >
                     {item.isLocked ? (
-                      <Lock className="w-2.5 h-2.5 text-amber-400" />
+                      <Lock className="w-4 h-4 text-amber-400" />
                     ) : (
-                      <Unlock className="w-2.5 h-2.5 text-slate-400 hover:text-slate-200" />
+                      <Unlock className="w-4 h-4 text-slate-300 hover:text-white" />
                     )}
                   </button>
                 )}
@@ -340,9 +340,9 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                 <button
                   onClick={item.onRemove}
                   title={`Remove ${item.title}`}
-                  className="p-0.5 rounded hover:bg-rose-500/25 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                  className="p-1 rounded hover:bg-rose-500/25 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer"
                 >
-                  <X className="w-2.5 h-2.5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -352,11 +352,11 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
           <div className="flex items-center justify-between pt-0.5 border-t border-slate-800/40 mt-0.5">
             <button
               onClick={handleToggleCollapse}
-              className="p-0.5 rounded hover:bg-slate-700/60 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer flex items-center gap-1 text-[9px]"
+              className="p-0.5 rounded hover:bg-slate-700/60 text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-[10px]"
               title="Collapse Indicator Legend"
             >
-              <ChevronUp className="w-2.5 h-2.5" />
-              <span className="text-[9px] opacity-70 group-hover/container:opacity-100">Collapse</span>
+              <ChevronUp className="w-3.5 h-3.5" />
+              <span className="text-[10px] opacity-70 group-hover/container:opacity-100">Collapse</span>
             </button>
           </div>
         </div>
