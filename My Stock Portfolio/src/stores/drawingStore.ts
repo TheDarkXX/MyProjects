@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import { HorizontalLineDrawing, DrawingTool, DEFAULT_LINE_DRAWING } from '../types/drawingTypes';
+import {
+  HorizontalLineDrawing,
+  DrawingTool,
+  DEFAULT_LINE_DRAWING,
+  DrawingSettings,
+  DEFAULT_DRAWING_SETTINGS,
+} from '../types/drawingTypes';
 import { snapToTickSize, detectSupportResistance } from '../utils/drawingUtils';
 
 function generateId(): string {
@@ -11,6 +17,25 @@ function generateId(): string {
 
 function getStorageKey(symbol: string): string {
   return `tv_drawings_${symbol.toUpperCase().trim()}`;
+}
+
+const SETTINGS_STORAGE_KEY = 'tv_drawing_settings_v1';
+
+function loadSettingsFromStorage(): DrawingSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return DEFAULT_DRAWING_SETTINGS;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_DRAWING_SETTINGS, ...parsed };
+  } catch (e) {
+    return DEFAULT_DRAWING_SETTINGS;
+  }
+}
+
+function saveSettingsToStorage(settings: DrawingSettings): void {
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch (e) {}
 }
 
 function loadFromStorage(symbol: string): HorizontalLineDrawing[] {
@@ -43,9 +68,11 @@ export interface DrawingState {
   isToolbarCollapsed: boolean;
   clipboardLine: HorizontalLineDrawing | null;
   toastNotification: string | null;
+  drawingSettings: DrawingSettings;
 
   // Actions
   setToastNotification: (msg: string | null) => void;
+  updateDrawingSettings: (partial: Partial<DrawingSettings>) => void;
   loadDrawings: (symbol: string) => HorizontalLineDrawing[];
   getDrawings: (symbol: string) => HorizontalLineDrawing[];
   addLine: (symbol: string, line: Partial<HorizontalLineDrawing> & { price: number }) => string;
@@ -75,9 +102,17 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   isToolbarCollapsed: false,
   clipboardLine: null,
   toastNotification: null,
+  drawingSettings: loadSettingsFromStorage(),
 
   setToastNotification: (msg: string | null) => {
     set({ toastNotification: msg });
+  },
+
+  updateDrawingSettings: (partial: Partial<DrawingSettings>) => {
+    const current = get().drawingSettings;
+    const updated = { ...current, ...partial };
+    saveSettingsToStorage(updated);
+    set({ drawingSettings: updated });
   },
 
   loadDrawings: (symbol: string) => {
@@ -102,8 +137,14 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   addLine: (symbol: string, lineData) => {
     const sym = symbol.toUpperCase().trim();
     const current = get().getDrawings(sym);
+    const settings = get().drawingSettings;
+
     const newLine: HorizontalLineDrawing = {
       ...DEFAULT_LINE_DRAWING,
+      color: lineData.color ?? settings.defaultLineColor,
+      lineWidth: lineData.lineWidth ?? settings.defaultLineWidth,
+      lineStyle: lineData.lineStyle ?? settings.defaultLineStyle,
+      showPriceLabel: false, // In-canvas badges only
       ...lineData,
       id: generateId(),
       createdAt: Date.now(),
@@ -280,6 +321,8 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
 
     const sym = symbol.toUpperCase().trim();
     const current = get().getDrawings(sym);
+    const settings = get().drawingSettings;
+
     // Keep manual user lines, replace previous auto-generated lines
     const manualLines = current.filter((d) => !d.isAuto);
 
@@ -293,11 +336,11 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
         ...DEFAULT_LINE_DRAWING,
         id: generateId(),
         price: lvl.price,
-        color: isSup ? '#26A69A' : '#EF5350',
-        lineStyle: 'Dashed',
-        lineWidth: 1,
+        color: isSup ? settings.supportColor : settings.resistanceColor,
+        lineStyle: isSup ? settings.supportStyle : settings.resistanceStyle,
+        lineWidth: isSup ? settings.supportWidth : settings.resistanceWidth,
         text: `${label} (${lvl.price.toFixed(2)})`,
-        showPriceLabel: true,
+        showPriceLabel: false, // In-canvas badges only! Never blocks Price Scale!
         locked: false,
         visible: true,
         visibleOn: 'all',

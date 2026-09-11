@@ -10,9 +10,11 @@ import {
   ChevronRight,
   Sparkles,
   HelpCircle,
+  Settings,
 } from 'lucide-react';
 import { useDrawingStore } from '../../../stores/drawingStore';
 import { DrawingTool } from '../../../types/drawingTypes';
+import { DrawingSettingsPopover } from './DrawingSettingsPopover';
 
 interface LeftDrawingToolbarProps {
   symbol: string;
@@ -35,6 +37,7 @@ export const LeftDrawingToolbar: React.FC<LeftDrawingToolbarProps> = ({ symbol, 
   } = useDrawingStore();
 
   const [confirmClear, setConfirmClear] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const drawings = getDrawings(symbol);
   const activeCount = drawings.length;
 
@@ -161,6 +164,18 @@ export const LeftDrawingToolbar: React.FC<LeftDrawingToolbarProps> = ({ symbol, 
             {globalDrawingsVisible ? 'Hide All Lines' : 'Show All Lines'}
           </span>
         </button>
+
+        {/* Drawing & Label Settings Modal Trigger */}
+        <button
+          onClick={() => setShowSettings(true)}
+          title="Drawing & Label Settings"
+          className="relative group flex items-center justify-center w-8 h-8 rounded-md text-slate-300 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all"
+        >
+          <Settings className="w-4 h-4" />
+          <span className="pointer-events-none absolute left-10 ml-1.5 px-2 py-1 bg-[#1E222D] text-slate-200 text-[13px] rounded shadow-lg border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
+            Drawing Settings & Labels
+          </span>
+        </button>
       </div>
 
       {/* Bottom Group: Clear & Collapse */}
@@ -192,6 +207,9 @@ export const LeftDrawingToolbar: React.FC<LeftDrawingToolbarProps> = ({ symbol, 
           <ChevronLeft className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* Settings Popover Modal */}
+      <DrawingSettingsPopover isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 };

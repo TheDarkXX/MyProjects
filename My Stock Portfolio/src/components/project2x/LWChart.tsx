@@ -59,6 +59,7 @@ import { LineFloatingToolbar } from './drawings/LineFloatingToolbar';
 import { LinePropertiesDialog } from './drawings/LinePropertiesDialog';
 import { LineContextMenu } from './drawings/LineContextMenu';
 import { DrawingAlertBanner } from './drawings/DrawingAlertBanner';
+import { DrawingInCanvasBadges } from './drawings/DrawingInCanvasBadges';
 import {
   hitTestLines,
   snapToCandleOHLC,
@@ -722,8 +723,8 @@ export const LWChart: React.FC<LWChartProps> = ({
         color: d.color,
         lineWidth: d.lineWidth,
         lineStyle: getChartLineStyle(d.lineStyle as any),
-        axisLabelVisible: d.showPriceLabel,
-        title: d.text || '',
+        axisLabelVisible: false, // In-Canvas badges only! Never clutter Price Scale!
+        title: '', // In-Canvas badges only! Never block candles!
       };
 
       if (existing) {
@@ -3272,6 +3273,18 @@ export const LWChart: React.FC<LWChartProps> = ({
 
           {/* Real-time Price Alert Banner */}
           <DrawingAlertBanner />
+
+          {/* In-Canvas Micro-Badges at Right Canvas Boundary (Price Scale axis kept completely clean) */}
+          <DrawingInCanvasBadges
+            drawings={visibleDrawings}
+            candleSeries={candleSeriesRef.current}
+            chart={chartRef.current}
+            selectedLineId={selectedLineId}
+            onSelectLine={(id) => useDrawingStore.getState().selectLine(id)}
+            onOpenProperties={(id) => setPropertiesModalLineId(id)}
+            onContextMenu={(line, pos) => setContextMenuData({ line, position: pos })}
+            chartContainer={chartContainerRef.current}
+          />
 
           {/* Auto S/R Toast Notification */}
           {toastNotification && (
