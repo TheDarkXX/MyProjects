@@ -247,12 +247,12 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
           className="pointer-events-auto flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0B101B]/80 hover:bg-[#0B101B] border border-slate-700/60 hover:border-slate-500 text-slate-200 hover:text-white shadow-lg backdrop-blur-md text-[10px] font-normal transition-all group cursor-pointer"
           title="Expand Indicator Legend"
         >
-          <Layers className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+          <Layers className="w-3 h-3 text-cyan-400 group-hover:scale-110 transition-transform" />
           <span>Indicators ({activeItems.length})</span>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-300 group-hover:text-white" />
+          <ChevronDown className="w-3 h-3 text-slate-300 group-hover:text-white" />
         </button>
       ) : (
-        // Expanded Stacked List (TradingView Style - Compact 10px text with clear 16px icons)
+        // Expanded Stacked List (TradingView Style - Compact 10px text with 12px icons)
         <div className="pointer-events-auto flex flex-col gap-0.5 p-0.5 rounded bg-[#0B101B]/50 hover:bg-[#0B101B]/85 border border-transparent hover:border-slate-700/60 backdrop-blur-sm transition-all duration-150 group/container shadow-lg">
           {activeItems.map((item) => (
             <div
@@ -301,24 +301,24 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                 </span>
               )}
 
-              {/* Stealth Hover Action Toolbar (Enlarged 4 levels to w-4 h-4 for clear visibility) */}
-              <div className="flex items-center gap-1 ml-1.5 opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto transition-opacity duration-150">
+              {/* Stealth Hover Action Toolbar (Reduced 2 levels to w-3 h-3 / 12px for perfect balance) */}
+              <div className="flex items-center gap-0.5 ml-1.5 opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto transition-opacity duration-150">
                 {/* 👁️ Eye Toggle */}
                 <button
                   onClick={item.onToggle}
                   title={item.visible ? 'Hide on Chart' : 'Show on Chart'}
-                  className="p-1 rounded hover:bg-slate-700/80 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                  className="p-0.5 rounded hover:bg-slate-700/80 text-slate-300 hover:text-white transition-colors cursor-pointer"
                 >
-                  {item.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  {item.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                 </button>
 
                 {/* ⚙️ Gear (Direct Settings) */}
                 <button
                   onClick={item.onConfigure}
                   title={`Configure ${item.title}`}
-                  className="p-1 rounded hover:bg-slate-700/80 text-slate-300 hover:text-sky-300 transition-colors cursor-pointer"
+                  className="p-0.5 rounded hover:bg-slate-700/80 text-slate-300 hover:text-sky-300 transition-colors cursor-pointer"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings className="w-3 h-3" />
                 </button>
 
                 {/* 🔒 / 🔓 Lock Toggle */}
@@ -326,12 +326,12 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                   <button
                     onClick={item.onToggleLock}
                     title={item.isLocked ? '🔒 Locked (Click to unlock)' : '🔓 Unlocked (Click to lock)'}
-                    className="p-1 rounded hover:bg-slate-700/80 transition-colors cursor-pointer"
+                    className="p-0.5 rounded hover:bg-slate-700/80 transition-colors cursor-pointer"
                   >
                     {item.isLocked ? (
-                      <Lock className="w-4 h-4 text-amber-400" />
+                      <Lock className="w-3 h-3 text-amber-400" />
                     ) : (
-                      <Unlock className="w-4 h-4 text-slate-300 hover:text-white" />
+                      <Unlock className="w-3 h-3 text-slate-300 hover:text-white" />
                     )}
                   </button>
                 )}
@@ -340,9 +340,9 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                 <button
                   onClick={item.onRemove}
                   title={`Remove ${item.title}`}
-                  className="p-1 rounded hover:bg-rose-500/25 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer"
+                  className="p-0.5 rounded hover:bg-rose-500/25 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3 h-3" />
                 </button>
               </div>
             </div>
@@ -355,7 +355,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
               className="p-0.5 rounded hover:bg-slate-700/60 text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-[10px]"
               title="Collapse Indicator Legend"
             >
-              <ChevronUp className="w-3.5 h-3.5" />
+              <ChevronUp className="w-3 h-3" />
               <span className="text-[10px] opacity-70 group-hover/container:opacity-100">Collapse</span>
             </button>
           </div>
