@@ -220,70 +220,178 @@ export function analyzeLineStrength(touchCount: number): TouchAnalysis {
 
 /**
  * Institutional Swing-based Support & Resistance Detector
- * Classifies levels into Major Resistance (above current price) and Major Support (below current price)
+ * Uses Multi-Horizon Pivots (Major 8, Minor 4), ATR-based Dynamic Spacing,
+ * Polarity Flipping Bonus (Role Reversal), and Recency Scoring.
+ * 100% Dynamic for ANY stock (Zero Hardcoding).
  */
 export function detectSupportResistance(
   bars: Array<{ high: number; low: number; open: number; close: number }>,
-  lookback: number = 12,
-  maxPerSide: number = 2
+  maxPerSide: number = 3
 ): AutoSRLevel[] {
-  if (!bars || bars.length < lookback * 2) return [];
+  if (!bars || bars.length < 20) return [];
 
-  const currentPrice = bars[bars.length - 1].close;
-  const rawHighs: { price: number; strength: number }[] = [];
-  const rawLows: { price: number; strength: number }[] = [];
+  // 1. Focus on the relevant trading cycle (last 250 bars ~ 1 trading year)
+  const windowBars = bars.slice(Math.max(0, bars.length - 250));
+  const currentPrice = windowBars[windowBars.length - 1].close;
+  if (currentPrice <= 0) return [];
 
-  for (let i = lookback; i < bars.length - lookback; i++) {
-    const current = bars[i];
+  // 2. Compute dynamic ATR (14 period) to adapt level separation to this stock's volatility
+  let atrSum = 0;
+  const atrPeriod = Math.min(14, windowBars.length - 1);
+  for (let i = windowBars.length - atrPeriod; i < windowBars.length; i++) {
+    const prevClose = windowBars[i - 1].close;
+    const tr = Math.max(
+      windowBars[i].high - windowBars[i].low,
+      Math.abs(windowBars[i].high - prevClose),
+      Math.abs(windowBars[i].low - prevClose)
+    );
+    atrSum += tr;
+  }
+  const atr = atrPeriod > 0 ? atrSum / atrPeriod : currentPrice * 0.02;
+  // Minimum separation between levels: at least 1.2x ATR or 2.5% of price
+  const minSeparation = Math.max(atr * 1.2, currentPrice * 0.025);
 
-    let isSwingHigh = true;
-    let isSwingLow = true;
+  // 3. Multi-lookback swing detection (Major: 8, Minor: 4)
+  interface RawPivot {
+    price: number;
+    type: 'high' | 'low';
+    index: number;
+    isMajor: boolean;
+  }
+  const rawPivots: RawPivot[] = [];
 
-    for (let j = i - lookback; j <= i + lookback; j++) {
-      if (j === i) continue;
-      if (bars[j].high > current.high) isSwingHigh = false;
-      if (bars[j].low < current.low) isSwingLow = false;
+  const checkSwing = (idx: number, lb: number): { isHigh: boolean; isLow: boolean } => {
+    let isHigh = true;
+    let isLow = true;
+    const curr = windowBars[idx];
+    for (let j = Math.max(0, idx - lb); j <= Math.min(windowBars.length - 1, idx + lb); j++) {
+      if (j === idx) continue;
+      if (windowBars[j].high > curr.high) isHigh = false;
+      if (windowBars[j].low < curr.low) isLow = false;
     }
+    return { isHigh, isLow };
+  };
 
-    if (isSwingHigh) {
-      rawHighs.push({ price: current.high, strength: 1 });
+  for (let i = 4; i < windowBars.length - 2; i++) {
+    // Check Major Swings (lookback 8)
+    if (i >= 8 && i < windowBars.length - 4) {
+      const major = checkSwing(i, 8);
+      if (major.isHigh) rawPivots.push({ price: windowBars[i].high, type: 'high', index: i, isMajor: true });
+      if (major.isLow) rawPivots.push({ price: windowBars[i].low, type: 'low', index: i, isMajor: true });
     }
-    if (isSwingLow) {
-      rawLows.push({ price: current.low, strength: 1 });
+    // Check Minor Swings (lookback 4)
+    const minor = checkSwing(i, 4);
+    if (minor.isHigh) rawPivots.push({ price: windowBars[i].high, type: 'high', index: i, isMajor: false });
+    if (minor.isLow) rawPivots.push({ price: windowBars[i].low, type: 'low', index: i, isMajor: false });
+  }
+
+  // Always include absolute ATH in this trading cycle
+  const highestBar = windowBars.reduce((prev, curr) => (curr.high > prev.high ? curr : prev), windowBars[0]);
+  if (highestBar.high > currentPrice) {
+    rawPivots.push({ price: highestBar.high, type: 'high', index: windowBars.indexOf(highestBar), isMajor: true });
+  }
+
+  // 4. Cluster nearby levels within 1.5%
+  interface PivotCluster {
+    price: number;
+    score: number;
+    hasHigh: boolean;
+    hasLow: boolean;
+    touchCount: number;
+    lastSeenIndex: number;
+  }
+  const clusters: PivotCluster[] = [];
+
+  for (const pivot of rawPivots) {
+    const cluster = clusters.find((c) => Math.abs(c.price - pivot.price) / pivot.price <= 0.018);
+    const recencyWeight = (pivot.index / windowBars.length) * 2; // Fresh levels get higher weight
+    const pivotScore = (pivot.isMajor ? 3 : 1.5) + recencyWeight;
+
+    if (cluster) {
+      cluster.score += pivotScore;
+      cluster.touchCount += 1;
+      cluster.lastSeenIndex = Math.max(cluster.lastSeenIndex, pivot.index);
+      if (pivot.type === 'high') cluster.hasHigh = true;
+      if (pivot.type === 'low') cluster.hasLow = true;
+      cluster.price = cluster.price * 0.6 + pivot.price * 0.4;
+    } else {
+      clusters.push({
+        price: pivot.price,
+        score: pivotScore,
+        hasHigh: pivot.type === 'high',
+        hasLow: pivot.type === 'low',
+        touchCount: 1,
+        lastSeenIndex: pivot.index,
+      });
     }
   }
 
-  // Cluster nearby levels (within 0.9% of price)
-  const clusterItems = (items: { price: number; strength: number }[]) => {
-    const clustered: { price: number; strength: number }[] = [];
-    for (const item of items) {
-      const found = clustered.find(c => Math.abs(c.price - item.price) / item.price <= 0.009);
-      if (found) {
-        found.strength += 1;
-        found.price = Number(((found.price + item.price) / 2).toFixed(4));
-      } else {
-        clustered.push({ ...item });
-      }
+  // 5. Apply Polarity Bonus (Role Reversal: acted as both high and low!)
+  for (const c of clusters) {
+    if (c.hasHigh && c.hasLow) {
+      c.score += 4.0; // Institutional S/R Flipping
     }
-    return clustered;
-  };
+    // Psychological round number bonus
+    const isRound = Math.round(c.price) % 10 === 0 || Math.round(c.price) % 5 === 0;
+    if (isRound) c.score += 1.5;
+  }
 
-  const clusteredHighs = clusterItems(rawHighs);
-  const clusteredLows = clusterItems(rawLows);
+  // 6. Separate into Resistances (above currentPrice) and Supports (below currentPrice)
+  const candidatesAbove = clusters
+    .filter((c) => c.price >= currentPrice * 1.008)
+    .sort((a, b) => b.score - a.score);
 
-  // Resistances: levels above current price (or highest swing highs)
-  const resistances = clusteredHighs
-    .filter(item => item.price >= currentPrice * 0.995)
-    .sort((a, b) => b.strength - a.strength || a.price - b.price)
-    .slice(0, maxPerSide)
-    .map(r => ({ price: snapToTickSize(r.price), strength: r.strength, type: 'resistance' as const }));
+  const candidatesBelow = clusters
+    .filter((c) => c.price <= currentPrice * 0.992)
+    .sort((a, b) => b.score - a.score);
 
-  // Supports: levels below current price (or lowest swing lows)
-  const supports = clusteredLows
-    .filter(item => item.price <= currentPrice * 1.005)
-    .sort((a, b) => b.strength - a.strength || b.price - a.price)
-    .slice(0, maxPerSide)
-    .map(s => ({ price: snapToTickSize(s.price), strength: s.strength, type: 'support' as const }));
+  // Pick levels ensuring separation by minSeparation
+  const pickedResistances: { price: number; strength: number }[] = [];
+  for (const cand of candidatesAbove) {
+    if (pickedResistances.length >= maxPerSide) break;
+    const isSeparated = pickedResistances.every((p) => Math.abs(p.price - cand.price) >= minSeparation);
+    if (isSeparated) {
+      pickedResistances.push({ price: cand.price, strength: Math.min(5, Math.max(1, Math.round(cand.score / 2))) });
+    }
+  }
+
+  const pickedSupports: { price: number; strength: number }[] = [];
+  for (const cand of candidatesBelow) {
+    if (pickedSupports.length >= maxPerSide) break;
+    const isSeparated = pickedSupports.every((p) => Math.abs(p.price - cand.price) >= minSeparation);
+    if (isSeparated) {
+      pickedSupports.push({ price: cand.price, strength: Math.min(5, Math.max(1, Math.round(cand.score / 2))) });
+    }
+  }
+
+  // If price is near ATH and only 1 resistance found, or none found, project key psychological extension
+  if (pickedResistances.length === 0) {
+    const r1 = snapToTickSize(currentPrice * 1.05);
+    const r2 = snapToTickSize(currentPrice * 1.10);
+    pickedResistances.push({ price: r1, strength: 2 });
+    pickedResistances.push({ price: r2, strength: 3 });
+  } else if (pickedResistances.length === 1 && pickedResistances[0].price < currentPrice * 1.08) {
+    const nextMilestone = snapToTickSize(pickedResistances[0].price * 1.06);
+    pickedResistances.push({ price: nextMilestone, strength: 2 });
+  }
+
+  // Sort resistances ascending: R1 is nearest above current price, R2 higher, R3 highest
+  pickedResistances.sort((a, b) => a.price - b.price);
+
+  // Sort supports descending: S1 is nearest below current price, S2 lower, S3 lowest
+  pickedSupports.sort((a, b) => b.price - a.price);
+
+  const resistances: AutoSRLevel[] = pickedResistances.map((r) => ({
+    price: snapToTickSize(r.price),
+    strength: r.strength,
+    type: 'resistance',
+  }));
+
+  const supports: AutoSRLevel[] = pickedSupports.map((s) => ({
+    price: snapToTickSize(s.price),
+    strength: s.strength,
+    type: 'support',
+  }));
 
   return [...resistances, ...supports];
 }

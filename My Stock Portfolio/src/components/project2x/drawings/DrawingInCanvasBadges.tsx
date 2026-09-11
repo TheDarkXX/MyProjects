@@ -131,12 +131,16 @@ export const DrawingInCanvasBadges: React.FC<DrawingInCanvasBadgesProps> = ({
     },
   }[level];
 
+  // Restrict badges strictly to Pane 0 (Candlestick pane) so they never leak into MCDX / RSI sub-panes
+  const pane0El = chart?.panes()?.[0]?.getHTMLElement?.();
+  const candlePaneHeight = pane0El ? pane0El.clientHeight : containerHeight * 0.7;
+
   return (
     <>
       {drawings.map((d) => {
         const y = positions[d.id];
-        // Hide if outside visible vertical chart pane
-        if (y === undefined || y < 10 || y > containerHeight - 32) return null;
+        // Hide if outside visible vertical Candlestick Pane
+        if (y === undefined || y < 8 || y > candlePaneHeight - 12) return null;
 
         const isSelected = selectedLineId === d.id;
 

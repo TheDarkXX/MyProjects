@@ -315,8 +315,8 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   autoDetectSRLevels: (symbol: string, bars: any[]) => {
-    if (!bars || bars.length < 30) return;
-    const detected = detectSupportResistance(bars, 12, 2);
+    if (!bars || bars.length < 20) return;
+    const detected = detectSupportResistance(bars, 3);
     if (detected.length === 0) return;
 
     const sym = symbol.toUpperCase().trim();
