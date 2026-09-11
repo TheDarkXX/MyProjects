@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Eye,
   EyeOff,
@@ -383,7 +383,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ location, onChange 
   );
 };
 
-type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal';
+type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal' | 'volumeProfile';
 
 interface IndicatorManagerPopoverProps {
   onClose: () => void;
@@ -399,6 +399,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
   const [smcTab, setSmcTab] = useState<'inputs' | 'style'>('inputs');
   const [anchoredVwapTab, setAnchoredVwapTab] = useState<'inputs' | 'style'>('inputs');
   const [superMoneySignalTab, setSuperMoneySignalTab] = useState<'inputs' | 'style'>('inputs');
+  const [volumeProfileTab, setVolumeProfileTab] = useState<'inputs' | 'style'>('inputs');
 
   const {
     config,
@@ -426,12 +427,15 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     toggleAnchoredVWAP,
     updateSuperMoneySignal,
     toggleSuperMoneySignal,
+    updateVolumeProfile,
+    toggleVolumeProfile,
     assignIndicatorPane,
     moveIndicatorUp,
     moveIndicatorDown,
     toggleAxisLabels,
     applyPreset,
     resetDefaults,
+    addCustomColor,
   } = useIndicatorStore();
 
   // Close on Escape key
@@ -464,6 +468,717 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     goldenStar: '#FFFFFF',
     pullback: '#FF1744',
   };
+
+  // Dynamic Auto-Sorting: 1. Active first -> 2. Pane order (0 -> 1 -> 2 -> 3) -> 3. Alphabetical (A-Z)
+  const sortedIndicators = useMemo(() => {
+    const items = [
+      {
+        id: 'ema',
+        name: 'EMA Ribbon',
+        pane: 0,
+        isActive: Boolean(config.ema1.visible || config.ema2.visible || config.ema3.visible),
+        renderRow: () => (
+          <div key="ema" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const anyVisible = config.ema1.visible || config.ema2.visible || config.ema3.visible;
+                  toggleEMA('ema1');
+                  if (anyVisible) {
+                    if (config.ema2.visible) toggleEMA('ema2');
+                    if (config.ema3.visible) toggleEMA('ema3');
+                  } else {
+                    if (!config.ema2.visible) toggleEMA('ema2');
+                    if (!config.ema3.visible) toggleEMA('ema3');
+                  }
+                }}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.ema1.visible || config.ema2.visible || config.ema3.visible
+                    ? 'text-cyan-400 bg-cyan-950/30 hover:bg-cyan-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle EMA Ribbon"
+              >
+                {config.ema1.visible || config.ema2.visible || config.ema3.visible ? (
+                  <Eye className="w-4 h-4" />
+                ) : (
+                  <EyeOff className="w-4 h-4" />
+                )}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                  EMA Ribbon
+                  <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-cyan-950/80 text-cyan-300 border-cyan-800/60">
+                    Pane 0 Overlay
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  Length {config.ema1.period}, {config.ema2.period}, {config.ema3.period}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema1.color }} />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema2.color }} />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema3.color }} />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('ema')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'envelope',
+        name: 'Bedrock Envelope',
+        pane: 0,
+        isActive: Boolean(config.envelope.visible),
+        renderRow: () => (
+          <div key="envelope" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleEnvelope}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.envelope.visible
+                    ? 'text-purple-400 bg-purple-950/30 hover:bg-purple-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle Bedrock Envelope"
+              >
+                {config.envelope.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5 text-purple-400" />
+                  Bedrock Envelope
+                  <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-purple-950/80 text-purple-300 border-purple-800/60">
+                    Pane 0 Overlay
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  Channel Band ± {config.envelope.percent}%
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.envelope.color }} />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('envelope')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'signals',
+        name: 'Super Money Signals',
+        pane: 0,
+        isActive: Boolean(config.signals.visible),
+        renderRow: () => (
+          <div key="signals" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleSignals}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.signals.visible
+                    ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle Action Signals"
+              >
+                {config.signals.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  Super Money Signals
+                  <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-amber-950/80 text-amber-300 border-amber-800/60">
+                    Pane 0 Overlay
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  ● ● ● READY, ▲ BUY, ★ SUPER, ▼ EXIT
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sigColors.rebound }} title="READY" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sigColors.breakout }} title="BUY" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sigColors.goldenStar }} title="SUPER" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sigColors.pullback }} title="EXIT" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('signals')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/40 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-amber-400" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'smcLite',
+        name: 'FluidTrades - SMC Lite',
+        pane: 0,
+        isActive: Boolean(config.smcLite?.visible),
+        renderRow: () => (
+          <div key="smcLite" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleSMCLite}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.smcLite?.visible
+                    ? 'text-sky-400 bg-sky-950/30 hover:bg-sky-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle FluidTrades SMC Lite"
+              >
+                {config.smcLite?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5 text-sky-400" />
+                  FluidTrades - SMC Lite
+                  <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-sky-950/80 text-sky-300 border-sky-800/60">
+                    Pane 0 Overlay
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  Supply/Demand Zones, BOS, Dual SMA, Signals
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.smcLite?.supplyColor ?? '#1e3a5f' }} title="Supply" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.smcLite?.demandColor ?? '#5c4a18' }} title="Demand" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.smcLite?.slowSMAColor ?? '#F59E0B' }} title="Slow SMA" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('smcLite')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-400 transition-colors" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'anchoredVwap',
+        name: 'Anchored VWAP',
+        pane: 0,
+        isActive: Boolean(config.anchoredVwap?.visible),
+        renderRow: () => (
+          <div key="anchoredVwap" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleAnchoredVWAP}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.anchoredVwap?.visible
+                    ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle Anchored VWAP"
+              >
+                {config.anchoredVwap?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5 text-amber-400" />
+                  Anchored VWAP
+                  <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-amber-950/80 text-amber-300 border-amber-800/60">
+                    Pane 0 Overlay
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  Volume Weighted Average Price & StDev Bands
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.anchoredVwap?.vwapColor ?? '#FFFFFF' }} title="VWAP" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.anchoredVwap?.upperBandColor ?? '#94A3B8' }} title="Upper Band" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.anchoredVwap?.lowerBandColor ?? '#94A3B8' }} title="Lower Band" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('anchoredVwap')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'superMoneySignal',
+        name: 'Super Money Signal V3',
+        pane: 0,
+        isActive: Boolean(config.superMoneySignal?.visible),
+        renderRow: () => (
+          <div key="superMoneySignal" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleSuperMoneySignal}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.superMoneySignal?.visible
+                    ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle Super Money Signal V3"
+              >
+                {config.superMoneySignal?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  Super Money Signal V3
+                  <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-amber-950/80 text-amber-300 border-amber-800/60">
+                    Pane 0 Overlay
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  2-Stage Institutional Entry System (Ready & Buy)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.superMoneySignal?.readySignalColor ?? '#FFFFFF' }} title="Ready (White)" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.superMoneySignal?.buySignalColor ?? '#FFE600' }} title="Buy (Yellow)" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.superMoneySignal?.bankerColor ?? '#ff0000' }} title="Banker (Red)" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('superMoneySignal')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'volumeProfile',
+        name: 'Volume Profile (VPVR)',
+        pane: 0,
+        isActive: Boolean(config.volumeProfile?.visible),
+        renderRow: () => (
+          <div key="volumeProfile" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleVolumeProfile}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.volumeProfile?.visible
+                    ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle Volume Profile (VPVR)"
+              >
+                {config.volumeProfile?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <BarChart3 className="w-3.5 h-3.5 text-amber-400" />
+                  Volume Profile (VPVR)
+                  <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-amber-950/80 text-amber-300 border-amber-800/60">
+                    Pane 0 Overlay
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  Row Size {config.volumeProfile?.rowSize ?? 50} • Width {config.volumeProfile?.widthPercent ?? 30}% • {config.volumeProfile?.placement ?? 'right'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.volumeProfile?.upColor ?? '#00E5FF' }} title="Up Volume" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.volumeProfile?.downColor ?? '#FF3B69' }} title="Down Volume" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.volumeProfile?.pocColor ?? '#FFE600' }} title="POC Line" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('volumeProfile')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'volume',
+        name: 'Volume Overlay',
+        pane: 0,
+        isActive: Boolean(config.volume.visible),
+        renderRow: () => (
+          <div key="volume" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleVolume}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.volume.visible
+                    ? 'text-emerald-400 bg-emerald-950/30 hover:bg-emerald-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle Volume"
+              >
+                {config.volume.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                  Volume Overlay
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  Volume Bars Indicator
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <span className="text-[12px] font-bold px-2 py-0.5 rounded-md bg-slate-950 text-slate-400 border border-slate-800">
+                {config.volume.visible ? 'ACTIVE' : 'OFF'}
+              </span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'mcdx',
+        name: 'Banker MCDX Momentum',
+        pane: config.paneLayout?.assignments?.mcdx ?? 1,
+        isActive: Boolean(config.mcdx.visible),
+        renderRow: () => (
+          <div key="mcdx" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleMCDX}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.mcdx.visible
+                    ? 'text-rose-400 bg-rose-950/30 hover:bg-rose-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle Banker MCDX"
+              >
+                {config.mcdx.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <BarChart3 className="w-3.5 h-3.5 text-rose-400" />
+                  Banker MCDX Momentum
+                  <span className="text-[12px] px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/50 font-bold">
+                    PANE {config.paneLayout?.assignments?.mcdx ?? 1}
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  Banker, Hot Money, Retail (MA {config.mcdx.maPeriod})
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-[13px] font-bold text-slate-300">Pane</span>
+                <select
+                  value={config.paneLayout?.assignments?.mcdx ?? 1}
+                  onChange={(e) => assignIndicatorPane('mcdx', Number(e.target.value))}
+                  className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[13px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-rose-500 cursor-pointer"
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                </select>
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => moveIndicatorUp('mcdx')}
+                    disabled={(config.paneLayout?.assignments?.mcdx ?? 1) <= 1}
+                    title="Move Pane Up"
+                    className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveIndicatorDown('mcdx')}
+                    disabled={(config.paneLayout?.assignments?.mcdx ?? 1) >= 3}
+                    title="Move Pane Down"
+                    className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.mcdx.bankerColor }} title="Banker" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.mcdx.hotMoneyColor }} title="Hot Money" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.mcdx.retailColor }} title="Retail" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('mcdx')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-400 transition-colors" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'ultimateRsi',
+        name: 'My Ultimate RSI',
+        pane: config.paneLayout?.assignments?.ultimateRsi ?? 2,
+        isActive: Boolean(config.ultimateRsi.visible),
+        renderRow: () => (
+          <div key="ultimateRsi" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleUltimateRSI}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.ultimateRsi.visible
+                    ? 'text-teal-400 bg-teal-950/30 hover:bg-teal-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle Ultimate RSI"
+              >
+                {config.ultimateRsi.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5 text-teal-400" />
+                  My Ultimate RSI
+                  <span className="text-[12px] px-2 py-0.5 rounded bg-teal-950/80 text-teal-300 border border-teal-800/50 font-bold">
+                    PANE {config.paneLayout?.assignments?.ultimateRsi ?? 2}
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  ARSI {config.ultimateRsi.length} ({config.ultimateRsi.smoType1}) + Sig {config.ultimateRsi.smooth} • OB {config.ultimateRsi.obValue} / OS {config.ultimateRsi.osValue}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-[13px] font-bold text-slate-300">Pane</span>
+                <select
+                  value={config.paneLayout?.assignments?.ultimateRsi ?? 2}
+                  onChange={(e) => assignIndicatorPane('ultimateRsi', Number(e.target.value))}
+                  className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[13px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-teal-500 cursor-pointer"
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                </select>
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => moveIndicatorUp('ultimateRsi')}
+                    disabled={(config.paneLayout?.assignments?.ultimateRsi ?? 2) <= 1}
+                    title="Move Pane Up"
+                    className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveIndicatorDown('ultimateRsi')}
+                    disabled={(config.paneLayout?.assignments?.ultimateRsi ?? 2) >= 3}
+                    title="Move Pane Down"
+                    className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.obColor }} title="Overbought" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.signalColor }} title="Signal Line" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.osColor }} title="Oversold" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('ultimateRsi')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-400 transition-colors" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'trendSpeed',
+        name: 'Trend Speed Analyzer',
+        pane: config.paneLayout?.assignments?.trendSpeed ?? 3,
+        isActive: Boolean(config.trendSpeed?.visible),
+        renderRow: () => (
+          <div key="trendSpeed" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleTrendSpeed}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  config.trendSpeed?.visible
+                    ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
+                    : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                }`}
+                title="Toggle Trend Speed Analyzer"
+              >
+                {config.trendSpeed?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+
+              <div className="flex flex-col">
+                <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  Trend Speed Analyzer
+                  <span className="text-[12px] px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/50 font-bold">
+                    PANE {config.paneLayout?.assignments?.trendSpeed ?? 3}
+                  </span>
+                </span>
+                <span className="text-[13px] text-slate-400">
+                  Dyn EMA {config.trendSpeed?.maxLength ?? 50} • Speed HMA(5) • Dominance Wave Ratio
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-[13px] font-bold text-slate-300">Pane</span>
+                <select
+                  value={config.paneLayout?.assignments?.trendSpeed ?? 3}
+                  onChange={(e) => assignIndicatorPane('trendSpeed', Number(e.target.value))}
+                  className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[13px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-500 cursor-pointer"
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                </select>
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => moveIndicatorUp('trendSpeed')}
+                    disabled={(config.paneLayout?.assignments?.trendSpeed ?? 3) <= 1}
+                    title="Move Pane Up"
+                    className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveIndicatorDown('trendSpeed')}
+                    disabled={(config.paneLayout?.assignments?.trendSpeed ?? 3) >= 3}
+                    title="Move Pane Down"
+                    className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.trendSpeed?.upHistColor1 ?? '#F7D02C' }} title="Speed Up 1" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.trendSpeed?.dnHistColor1 ?? '#9E2A2B' }} title="Speed Dn 1" />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.trendSpeed?.upTrendColor ?? '#F7D02C' }} title="Dyn Trend" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('trendSpeed')}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+        ),
+      },
+    ];
+
+    return items.sort((a, b) => {
+      // 1. Active first (true before false)
+      if (a.isActive !== b.isActive) {
+        return a.isActive ? -1 : 1;
+      }
+      // 2. Pane order (0 -> 1 -> 2 -> 3)
+      if (a.pane !== b.pane) {
+        return a.pane - b.pane;
+      }
+      // 3. Alphabetical A-Z
+      return a.name.localeCompare(b.name);
+    });
+  }, [config, sigColors]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
@@ -521,581 +1236,9 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
               </div>
             </div>
 
-            {/* Indicator Items List */}
+            {/* Indicator Items List - Auto-sorted by Active first -> Pane -> A-Z */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 divide-y divide-slate-800/40">
-              {/* Item 1: EMA Ribbon */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const anyVisible = config.ema1.visible || config.ema2.visible || config.ema3.visible;
-                      toggleEMA('ema1');
-                      if (anyVisible) {
-                        if (config.ema2.visible) toggleEMA('ema2');
-                        if (config.ema3.visible) toggleEMA('ema3');
-                      } else {
-                        if (!config.ema2.visible) toggleEMA('ema2');
-                        if (!config.ema3.visible) toggleEMA('ema3');
-                      }
-                    }}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.ema1.visible || config.ema2.visible || config.ema3.visible
-                        ? 'text-cyan-400 bg-cyan-950/30 hover:bg-cyan-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle EMA Ribbon"
-                  >
-                    {config.ema1.visible || config.ema2.visible || config.ema3.visible ? (
-                      <Eye className="w-4 h-4" />
-                    ) : (
-                      <EyeOff className="w-4 h-4" />
-                    )}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <Activity className="w-3.5 h-3.5 text-cyan-400" />
-                      EMA Ribbon
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      Length {config.ema1.period}, {config.ema2.period}, {config.ema3.period}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  {/* Swatch dots preview */}
-                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema1.color }} />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema2.color }} />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema3.color }} />
-                  </div>
-
-                  {/* Settings Gear */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('ema')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
-                    <span>Config</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Item 2: Bedrock Envelope Channel */}
-              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleEnvelope}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.envelope.visible
-                        ? 'text-purple-400 bg-purple-950/30 hover:bg-purple-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle Bedrock Envelope"
-                  >
-                    {config.envelope.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5 text-purple-400" />
-                      Bedrock Envelope
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      Channel Band ± {config.envelope.percent}%
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <div className="flex items-center bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.envelope.color }} />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('envelope')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors" />
-                    <span>Config</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Item 3: Super Money Action Signals */}
-              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleSignals}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.signals.visible
-                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle Action Signals"
-                  >
-                    {config.signals.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      Super Money Signals
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      ● ● ● READY, ▲ BUY, ★ SUPER, ▼ EXIT
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sigColors.rebound }} title="READY" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sigColors.breakout }} title="BUY" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sigColors.goldenStar }} title="SUPER" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sigColors.pullback }} title="EXIT" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('signals')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/40 text-[13px] font-bold transition-all cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Config</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Item 3.5: FluidTrades - SMC Lite */}
-              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleSMCLite}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.smcLite?.visible
-                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle FluidTrades SMC Lite"
-                  >
-                    {config.smcLite?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5 text-sky-400" />
-                      FluidTrades - SMC Lite
-                      <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-sky-950/80 text-sky-300 border-sky-800/60">
-                        Pane 0 Overlay
-                      </span>
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      Supply/Demand Zones, BOS, Dual SMA, Signals
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.smcLite?.supplyColor ?? '#1e3a5f' }} title="Supply" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.smcLite?.demandColor ?? '#5c4a18' }} title="Demand" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.smcLite?.slowSMAColor ?? '#F59E0B' }} title="Slow SMA" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('smcLite')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-400 transition-colors" />
-                    <span>Config</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Item 3.6: Anchored VWAP */}
-              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleAnchoredVWAP}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.anchoredVwap?.visible
-                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle Anchored VWAP"
-                  >
-                    {config.anchoredVwap?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5 text-amber-400" />
-                      Anchored VWAP
-                      <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-amber-950/80 text-amber-300 border-amber-800/60">
-                        Pane 0 Overlay
-                      </span>
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      Volume Weighted Average Price & StDev Bands
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.anchoredVwap?.vwapColor ?? '#FFFFFF' }} title="VWAP" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.anchoredVwap?.upperBandColor ?? '#94A3B8' }} title="Upper Band" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.anchoredVwap?.lowerBandColor ?? '#94A3B8' }} title="Lower Band" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('anchoredVwap')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
-                    <span>Config</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Item 3.7: Super Money Signal V3 */}
-              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleSuperMoneySignal}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.superMoneySignal?.visible
-                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle Super Money Signal V3"
-                  >
-                    {config.superMoneySignal?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      Super Money Signal V3
-                      <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-amber-950/80 text-amber-300 border-amber-800/60">
-                        Pane 0 Overlay
-                      </span>
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      2-Stage Institutional Entry System (Ready & Buy)
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.superMoneySignal?.readySignalColor ?? '#FFFFFF' }} title="Ready (White)" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.superMoneySignal?.buySignalColor ?? '#FFE600' }} title="Buy (Yellow)" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.superMoneySignal?.bankerColor ?? '#ff0000' }} title="Banker (Red)" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('superMoneySignal')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
-                    <span>Config</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Item 4: Banker MCDX Momentum */}
-              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleMCDX}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.mcdx.visible
-                        ? 'text-rose-400 bg-rose-950/30 hover:bg-rose-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle Banker MCDX"
-                  >
-                    {config.mcdx.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <BarChart3 className="w-3.5 h-3.5 text-rose-400" />
-                      Banker MCDX Flow
-                      <span className="text-[12px] px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/50 font-bold">
-                        PANE {config.paneLayout?.assignments?.mcdx ?? 1}
-                      </span>
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      Banker, Hot Money, Retail (MA {config.mcdx.maPeriod})
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  {/* Slot Reorder Controls */}
-                  <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
-                    <span className="text-[13px] font-bold text-slate-300">Pane</span>
-                    <select
-                      value={config.paneLayout?.assignments?.mcdx ?? 1}
-                      onChange={(e) => assignIndicatorPane('mcdx', Number(e.target.value))}
-                      className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[13px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-rose-500 cursor-pointer"
-                    >
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                      <option value={3}>3</option>
-                    </select>
-                    <div className="flex flex-col">
-                      <button
-                        type="button"
-                        onClick={() => moveIndicatorUp('mcdx')}
-                        disabled={(config.paneLayout?.assignments?.mcdx ?? 1) <= 1}
-                        title="Move Pane Up"
-                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveIndicatorDown('mcdx')}
-                        disabled={(config.paneLayout?.assignments?.mcdx ?? 1) >= 3}
-                        title="Move Pane Down"
-                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.mcdx.bankerColor }} title="Banker" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.mcdx.hotMoneyColor }} title="Hot Money" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.mcdx.retailColor }} title="Retail" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('mcdx')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-400 transition-colors" />
-                    <span>Config</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Item 5: Volume Overlay */}
-              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleVolume}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.volume.visible
-                        ? 'text-emerald-400 bg-emerald-950/30 hover:bg-emerald-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle Volume"
-                  >
-                    {config.volume.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                      Volume Overlay
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      Volume Bars Indicator
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <span className="text-[12px] font-bold px-2 py-0.5 rounded-md bg-slate-950 text-slate-400 border border-slate-800">
-                    {config.volume.visible ? 'ACTIVE' : 'OFF'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Item 6: My Ultimate RSI (DoctorBank ARSI) */}
-              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleUltimateRSI}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.ultimateRsi.visible
-                        ? 'text-teal-400 bg-teal-950/30 hover:bg-teal-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle Ultimate RSI"
-                  >
-                    {config.ultimateRsi.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <Activity className="w-3.5 h-3.5 text-teal-400" />
-                      My Ultimate RSI
-                      <span className="text-[12px] px-2 py-0.5 rounded bg-teal-950/80 text-teal-300 border border-teal-800/50 font-bold">
-                        PANE {config.paneLayout?.assignments?.ultimateRsi ?? 2}
-                      </span>
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      ARSI {config.ultimateRsi.length} ({config.ultimateRsi.smoType1}) + Sig {config.ultimateRsi.smooth} ({config.ultimateRsi.smoType2}) • OB {config.ultimateRsi.obValue} / OS {config.ultimateRsi.osValue}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  {/* Slot Reorder Controls */}
-                  <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
-                    <span className="text-[13px] font-bold text-slate-300">Pane</span>
-                    <select
-                      value={config.paneLayout?.assignments?.ultimateRsi ?? 2}
-                      onChange={(e) => assignIndicatorPane('ultimateRsi', Number(e.target.value))}
-                      className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[13px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-teal-500 cursor-pointer"
-                    >
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                      <option value={3}>3</option>
-                    </select>
-                    <div className="flex flex-col">
-                      <button
-                        type="button"
-                        onClick={() => moveIndicatorUp('ultimateRsi')}
-                        disabled={(config.paneLayout?.assignments?.ultimateRsi ?? 2) <= 1}
-                        title="Move Pane Up"
-                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveIndicatorDown('ultimateRsi')}
-                        disabled={(config.paneLayout?.assignments?.ultimateRsi ?? 2) >= 3}
-                        title="Move Pane Down"
-                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.obColor }} title="Overbought" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.signalColor }} title="Signal Line" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ultimateRsi.osColor }} title="Oversold" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('ultimateRsi')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-400 transition-colors" />
-                    <span>Config</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Item 7: Trend Speed Analyzer (Zeiierman) */}
-              <div className="flex items-center justify-between p-3 pt-4 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleTrendSpeed}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                      config.trendSpeed?.visible
-                        ? 'text-amber-400 bg-amber-950/30 hover:bg-amber-950/60'
-                        : 'text-slate-500 hover:text-slate-400 bg-slate-950'
-                    }`}
-                    title="Toggle Trend Speed Analyzer"
-                  >
-                    {config.trendSpeed?.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
-                      <Flame className="w-3.5 h-3.5 text-amber-400" />
-                      Trend Speed Analyzer
-                      <span className="text-[12px] px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/50 font-bold">
-                        PANE {config.paneLayout?.assignments?.trendSpeed ?? 3}
-                      </span>
-                    </span>
-                    <span className="text-[13px] text-slate-400">
-                      Dyn EMA {config.trendSpeed?.maxLength ?? 50} • Speed HMA(5) • Dominance Wave Ratio
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  {/* Slot Reorder Controls */}
-                  <div className="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded-lg border border-slate-800">
-                    <span className="text-[13px] font-bold text-slate-300">Pane</span>
-                    <select
-                      value={config.paneLayout?.assignments?.trendSpeed ?? 3}
-                      onChange={(e) => assignIndicatorPane('trendSpeed', Number(e.target.value))}
-                      className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[13px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-500 cursor-pointer"
-                    >
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                      <option value={3}>3</option>
-                    </select>
-                    <div className="flex flex-col">
-                      <button
-                        type="button"
-                        onClick={() => moveIndicatorUp('trendSpeed')}
-                        disabled={(config.paneLayout?.assignments?.trendSpeed ?? 3) <= 1}
-                        title="Move Pane Up"
-                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveIndicatorDown('trendSpeed')}
-                        disabled={(config.paneLayout?.assignments?.trendSpeed ?? 3) >= 3}
-                        title="Move Pane Down"
-                        className="p-0.5 text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-800 rounded transition-colors"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.trendSpeed?.upHistColor1 ?? '#F7D02C' }} title="Speed Up 1" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.trendSpeed?.dnHistColor1 ?? '#9E2A2B' }} title="Speed Dn 1" />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.trendSpeed?.upTrendColor ?? '#F7D02C' }} title="Dyn Trend" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('trendSpeed')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/60 text-[13px] font-bold transition-all cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
-                    <span>Config</span>
-                  </button>
-                </div>
-              </div>
+              {sortedIndicators.map((item) => item.renderRow())}
 
               {/* Item 7: Global Display - Right Price Axis Labels */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/50 hover:bg-slate-900/80 border border-slate-800/80 transition-all">
@@ -3171,17 +3314,45 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     </select>
                   </div>
 
-                  {/* Start Calculation */}
-                  <div className="flex flex-col gap-2">
+                  {/* Anchor Calculation Mode */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[14px] font-semibold text-slate-200">Auto Anchor Rule</span>
+                      <span className="text-[12px] text-slate-400">เกณฑ์เลือกจุด Anchor เริ่มต้นอัตโนมัติ</span>
+                    </div>
+                    <select
+                      value={config.anchoredVwap?.anchorMode ?? (config.anchoredVwap?.startDate ? 'manual' : 'majorLow10M')}
+                      onChange={(e) => {
+                        const m = e.target.value as 'majorLow10M' | 'ytd' | 'swingLow60D' | 'manual';
+                        if (m === 'manual') {
+                          updateAnchoredVWAP({ anchorMode: 'manual' });
+                        } else {
+                          updateAnchoredVWAP({ anchorMode: m, startDate: '' });
+                        }
+                      }}
+                      className="bg-[#131722] border border-slate-700/80 rounded-lg px-3 py-1.5 text-[13px] font-bold text-amber-400 focus:outline-none focus:border-amber-400 cursor-pointer min-w-[190px]"
+                    >
+                      <option value="majorLow10M">10-11M Major Low (~240 bars)</option>
+                      <option value="ytd">Year-to-Date (YTD Low)</option>
+                      <option value="swingLow60D">60-Bar Swing Low</option>
+                      <option value="manual">Manual Specific Date</option>
+                    </select>
+                  </div>
+
+                  {/* Start Calculation (Custom Date/Time) */}
+                  <div className="flex flex-col gap-2 p-3 rounded-xl bg-slate-900/40 border border-slate-800">
                     <div className="flex items-center justify-between">
-                      <span className="text-[14px] font-semibold text-slate-200">Start Calculation</span>
+                      <div className="flex flex-col">
+                        <span className="text-[14px] font-semibold text-slate-200">Custom Date Anchor</span>
+                        <span className="text-[12px] text-slate-400">ระบุวันที่แบบ Manual (override auto)</span>
+                      </div>
                       <div className="flex items-center gap-2">
                         {/* Date Picker */}
                         <div className="relative flex items-center">
                           <input
                             type="date"
                             value={config.anchoredVwap?.startDate || ''}
-                            onChange={(e) => updateAnchoredVWAP({ startDate: e.target.value })}
+                            onChange={(e) => updateAnchoredVWAP({ startDate: e.target.value, anchorMode: 'manual' })}
                             className="bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer"
                           />
                         </div>
@@ -3190,7 +3361,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                           <input
                             type="time"
                             value={config.anchoredVwap?.startTime || '00:00'}
-                            onChange={(e) => updateAnchoredVWAP({ startTime: e.target.value })}
+                            onChange={(e) => updateAnchoredVWAP({ startTime: e.target.value, anchorMode: 'manual' })}
                             className="bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer"
                           />
                         </div>
@@ -3198,41 +3369,43 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     </div>
 
                     {/* Quick Anchor Presets */}
-                    <div className="flex items-center justify-end gap-1.5 pt-0.5">
-                      <span className="text-[12px] text-slate-400 mr-1">Preset:</span>
+                    <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-slate-800/60 flex-wrap">
+                      <span className="text-[12px] text-slate-400 mr-1">Presets:</span>
                       <button
                         type="button"
-                        onClick={() => updateAnchoredVWAP({ startDate: '', startTime: '00:00' })}
+                        onClick={() => updateAnchoredVWAP({ startDate: '', startTime: '00:00', anchorMode: 'majorLow10M' })}
                         className={`px-2 py-0.5 rounded text-[12px] font-semibold border transition-all cursor-pointer ${
-                          !config.anchoredVwap?.startDate
+                          (config.anchoredVwap?.anchorMode ?? 'majorLow10M') === 'majorLow10M' && !config.anchoredVwap?.startDate
                             ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
                             : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                         }`}
-                        title="Auto-anchor to lowest swing low in last 60 bars"
+                        title="Auto-anchor to major lowest low in 10-11 months (~240 bars)"
                       >
-                        Lowest Swing Low (Auto)
+                        10-11M Major Low
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          const d = new Date();
-                          d.setDate(d.getDate() - 30);
-                          updateAnchoredVWAP({ startDate: d.toISOString().split('T')[0], startTime: '00:00' });
-                        }}
-                        className="px-2 py-0.5 rounded text-[12px] font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition-all cursor-pointer"
+                        onClick={() => updateAnchoredVWAP({ startDate: '', startTime: '00:00', anchorMode: 'ytd' })}
+                        className={`px-2 py-0.5 rounded text-[12px] font-semibold border transition-all cursor-pointer ${
+                          config.anchoredVwap?.anchorMode === 'ytd' && !config.anchoredVwap?.startDate
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                        }`}
+                        title="Auto-anchor to Year-to-Date lowest low"
                       >
-                        30D Ago
+                        YTD Low
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          const d = new Date();
-                          d.setDate(d.getDate() - 90);
-                          updateAnchoredVWAP({ startDate: d.toISOString().split('T')[0], startTime: '00:00' });
-                        }}
-                        className="px-2 py-0.5 rounded text-[12px] font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition-all cursor-pointer"
+                        onClick={() => updateAnchoredVWAP({ startDate: '', startTime: '00:00', anchorMode: 'swingLow60D' })}
+                        className={`px-2 py-0.5 rounded text-[12px] font-semibold border transition-all cursor-pointer ${
+                          config.anchoredVwap?.anchorMode === 'swingLow60D' && !config.anchoredVwap?.startDate
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                        }`}
+                        title="Auto-anchor to swing low in last 60 bars"
                       >
-                        90D Ago
+                        60D Swing Low
                       </button>
                     </div>
                   </div>
@@ -4133,6 +4306,326 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
               <button
                 type="button"
                 onClick={() => updateSuperMoneySignal(DEFAULT_INDICATOR_SETTINGS.superMoneySignal)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-slate-800 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Defaults</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('list')}
+                  className="px-4 py-1.5 rounded-lg text-[13px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 border border-slate-700 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-1.5 rounded-lg text-[13px] font-extrabold bg-white text-slate-950 hover:bg-slate-100 shadow-md transition-all cursor-pointer"
+                >
+                  Ok
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ========================================================= */}
+        {/* VIEW 11: VOLUME PROFILE (VPVR) CONFIG                     */}
+        {/* ========================================================= */}
+        {activeView === 'volumeProfile' && (
+          <>
+            {/* Sub-Header */}
+            <div className="flex items-center justify-between px-5 py-3 bg-[#0E1526] border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('list')}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-[13px] font-bold transition-all cursor-pointer border border-slate-700/60 mr-1"
+                >
+                  <ArrowLeft className="w-4 h-4 text-amber-400" />
+                  <span>Back</span>
+                </button>
+                <span className="text-[15px] font-black tracking-wide text-slate-100 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-amber-400" />
+                  Volume Profile (VPVR)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* TradingView Tabs */}
+            <div className="flex items-center gap-6 px-5 border-b border-slate-800 bg-[#0B101B] text-[14px] font-bold">
+              <button
+                type="button"
+                onClick={() => setVolumeProfileTab('inputs')}
+                className={`py-2.5 relative transition-colors cursor-pointer ${
+                  volumeProfileTab === 'inputs' ? 'text-white font-extrabold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Inputs
+                {volumeProfileTab === 'inputs' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVolumeProfileTab('style')}
+                className={`py-2.5 relative transition-colors cursor-pointer ${
+                  volumeProfileTab === 'style' ? 'text-white font-extrabold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Style
+                {volumeProfileTab === 'style' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                disabled
+                className="py-2.5 text-slate-600 cursor-not-allowed opacity-60"
+                title="Visible on visible chart range"
+              >
+                Visibility
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="flex-1 overflow-y-auto p-5">
+              {/* TAB 1: INPUTS */}
+              {volumeProfileTab === 'inputs' && (
+                <div className="flex flex-col gap-5">
+                  {/* Row Size (Bins) */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[14px] font-semibold text-slate-200">Row Size (Bins)</span>
+                      <span className="text-[12px] text-slate-400">จำนวนแถบความละเอียดของราคา</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="10"
+                        max="200"
+                        step="5"
+                        value={config.volumeProfile?.rowSize ?? 50}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val) && val >= 10 && val <= 200) {
+                            updateVolumeProfile({ rowSize: val });
+                          }
+                        }}
+                        className="w-20 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                      <div className="flex items-center gap-1">
+                        {[24, 50, 70, 100].map((b) => (
+                          <button
+                            key={b}
+                            type="button"
+                            onClick={() => updateVolumeProfile({ rowSize: b })}
+                            className={`px-2 py-1 rounded text-[12px] font-semibold border transition-all cursor-pointer ${
+                              (config.volumeProfile?.rowSize ?? 50) === b
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            {b}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Width % */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[14px] font-semibold text-slate-200">Profile Width</span>
+                      <span className="text-[12px] text-slate-400">ความกว้างแถบ (% ของหน้าจอชาร์ต)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="10"
+                        max="60"
+                        step="5"
+                        value={config.volumeProfile?.widthPercent ?? 30}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val) && val >= 10 && val <= 60) {
+                            updateVolumeProfile({ widthPercent: val });
+                          }
+                        }}
+                        className="w-20 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                      <div className="flex items-center gap-1">
+                        {[20, 30, 40, 50].map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => updateVolumeProfile({ widthPercent: w })}
+                            className={`px-2 py-1 rounded text-[12px] font-semibold border transition-all cursor-pointer ${
+                              (config.volumeProfile?.widthPercent ?? 30) === w
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            {w}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Placement */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[14px] font-semibold text-slate-200">Placement</span>
+                      <span className="text-[12px] text-slate-400">ตำแหน่งการแสดงผล Profile</span>
+                    </div>
+                    <select
+                      value={config.volumeProfile?.placement ?? 'right'}
+                      onChange={(e) => updateVolumeProfile({ placement: e.target.value as 'left' | 'right' })}
+                      className="bg-[#131722] border border-slate-700/80 rounded-lg px-3 py-1.5 text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer min-w-[140px]"
+                    >
+                      <option value="right">Right Side (ชิดขวา)</option>
+                      <option value="left">Left Side (ชิดซ้าย)</option>
+                    </select>
+                  </div>
+
+                  {/* Value Area Volume % */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[14px] font-semibold text-slate-200">Value Area Volume</span>
+                      <span className="text-[12px] text-slate-400">สัดส่วนปริมาณการซื้อขายใน Value Area</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="30"
+                        max="100"
+                        step="5"
+                        value={config.volumeProfile?.valueAreaPercent ?? 70}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val) && val >= 30 && val <= 100) {
+                            updateVolumeProfile({ valueAreaPercent: val });
+                          }
+                        }}
+                        className="w-20 bg-[#131722] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-center text-[13px] font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                      />
+                      <div className="flex items-center gap-1">
+                        {[68, 70, 80].map((va) => (
+                          <button
+                            key={va}
+                            type="button"
+                            onClick={() => updateVolumeProfile({ valueAreaPercent: va })}
+                            className={`px-2 py-1 rounded text-[12px] font-semibold border transition-all cursor-pointer ${
+                              (config.volumeProfile?.valueAreaPercent ?? 70) === va
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            {va}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: STYLE */}
+              {volumeProfileTab === 'style' && (
+                <div className="flex flex-col gap-4">
+                  {/* Up Volume Color */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-slate-800">
+                    <span className="text-[14px] text-slate-200 font-bold">Up Volume (Buy)</span>
+                    <ColorPickerDropdown
+                      color={config.volumeProfile?.upColor ?? '#00E5FF'}
+                      onChange={(c) => updateVolumeProfile({ upColor: c })}
+                      label="Up Volume Color"
+                    />
+                  </div>
+
+                  {/* Down Volume Color */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-slate-800">
+                    <span className="text-[14px] text-slate-200 font-bold">Down Volume (Sell)</span>
+                    <ColorPickerDropdown
+                      color={config.volumeProfile?.downColor ?? '#FF3B69'}
+                      onChange={(c) => updateVolumeProfile({ downColor: c })}
+                      label="Down Volume Color"
+                    />
+                  </div>
+
+                  {/* Show Value Area */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-slate-800">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.volumeProfile?.showVA ?? true}
+                        onChange={(e) => updateVolumeProfile({ showVA: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">Highlight Value Area (VAH / VAL)</span>
+                    </label>
+                  </div>
+
+                  {/* Show POC Line */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-slate-800">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.volumeProfile?.showPOC ?? true}
+                        onChange={(e) => updateVolumeProfile({ showPOC: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[14px] text-slate-200 font-bold">Point of Control (POC Line)</span>
+                    </label>
+
+                    <div className="flex items-center gap-3">
+                      <ColorPickerDropdown
+                        color={config.volumeProfile?.pocColor ?? '#FFE600'}
+                        onChange={(c) => updateVolumeProfile({ pocColor: c })}
+                        label="POC Line Color"
+                      />
+
+                      {/* Line Width */}
+                      <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                        {[1, 2, 3].map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => updateVolumeProfile({ pocLineWidth: w })}
+                            className={`w-6 py-0.5 rounded text-[12px] font-extrabold transition-all cursor-pointer ${
+                              (config.volumeProfile?.pocLineWidth ?? 2) === w
+                                ? 'bg-amber-400 text-slate-950 shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer matching TradingView */}
+            <div className="p-3.5 bg-[#080D18] border-t border-slate-800 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => updateVolumeProfile(DEFAULT_INDICATOR_SETTINGS.volumeProfile)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-slate-800 transition-all cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />

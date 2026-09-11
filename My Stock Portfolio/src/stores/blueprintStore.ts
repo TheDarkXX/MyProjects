@@ -7,6 +7,7 @@ export interface BlueprintEntry {
   symbol: string;
   target_percent: number;
   target_price: number | null;
+  ceiling_price?: number | null;
   status: 'OWNED' | 'WATCHLIST';
   category: string;
   notes?: string;

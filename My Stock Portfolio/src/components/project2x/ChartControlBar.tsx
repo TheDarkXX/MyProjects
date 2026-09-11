@@ -37,6 +37,7 @@ export interface ChartControlBarProps {
   onAddInflow?: () => void;
   isFullscreen: boolean;
   setIsFullscreen: React.Dispatch<React.SetStateAction<boolean>>;
+  onToggleFullscreen?: () => void;
 }
 
 export const ChartControlBar: React.FC<ChartControlBarProps> = ({
@@ -63,6 +64,7 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
   onAddInflow,
   isFullscreen,
   setIsFullscreen,
+  onToggleFullscreen,
 }) => {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[#0D1322] border-b border-slate-800/80">
@@ -267,9 +269,15 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
 
         {/* Fullscreen Button */}
         <button
-          onClick={() => setIsFullscreen(prev => !prev)}
+          onClick={() => {
+            if (onToggleFullscreen) {
+              onToggleFullscreen();
+            } else {
+              setIsFullscreen(prev => !prev);
+            }
+          }}
           title="Toggle Fullscreen View (Key: F)"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/50 border border-cyan-500/40 text-cyan-300 text-[13px] font-bold hover:bg-cyan-900/60 transition-all shadow-md"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/50 border border-cyan-500/40 text-cyan-300 text-[13px] font-bold hover:bg-cyan-900/60 transition-all shadow-md cursor-pointer"
         >
           {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           {isFullscreen ? 'Exit [ESC]' : 'Full [F]'}

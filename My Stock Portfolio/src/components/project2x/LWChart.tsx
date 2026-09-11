@@ -83,6 +83,7 @@ export interface LWChartProps {
   resolution?: Resolution;
   onResolutionChange?: (res: Resolution) => void;
   portfolioOverlay?: PortfolioOverlayConfig;
+  onToggleFullscreen?: () => void;
 }
 
 export const LWChart: React.FC<LWChartProps> = ({
@@ -101,7 +102,7 @@ export const LWChart: React.FC<LWChartProps> = ({
   retailSeries = [],
   bankerMaSeries = [],
   currentPrice,
-  badge = 'Setup',
+  badge,
   trafficLight = 'BUY_ZONE',
   className = '',
   onAddInflow,
@@ -110,6 +111,7 @@ export const LWChart: React.FC<LWChartProps> = ({
   resolution: propResolution,
   onResolutionChange,
   portfolioOverlay,
+  onToggleFullscreen,
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -254,6 +256,32 @@ export const LWChart: React.FC<LWChartProps> = ({
     } catch (e) {}
   }, [resolution]);
 
+  // Sync with native browser fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const handleToggleFullscreen = useCallback(() => {
+    if (onToggleFullscreen) {
+      onToggleFullscreen();
+      return;
+    }
+    const target = document.getElementById('xchart-terminal-container') || chartContainerRef.current;
+    if (!document.fullscreenElement) {
+      target?.requestFullscreen?.().catch(() => {
+        setIsFullscreen(true);
+      });
+    } else {
+      document.exitFullscreen?.().catch(() => {
+        setIsFullscreen(false);
+      });
+    }
+  }, [onToggleFullscreen]);
+
   // Keyboard shortcut: F for Fullscreen, ESC to exit
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -261,15 +289,19 @@ export const LWChart: React.FC<LWChartProps> = ({
 
       if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();
-        setIsFullscreen(prev => !prev);
+        handleToggleFullscreen();
       } else if (e.key === 'Escape' && isFullscreen) {
         e.preventDefault();
-        setIsFullscreen(false);
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {});
+        } else {
+          setIsFullscreen(false);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen]);
+  }, [isFullscreen, handleToggleFullscreen]);
 
   // 1. EXTRACTED HOOK: Indicator computations
   const {
@@ -1111,7 +1143,7 @@ export const LWChart: React.FC<LWChartProps> = ({
   return (
     <div
       className={`relative flex flex-col bg-[#0A0E17] border border-slate-800/80 rounded-2xl overflow-hidden shadow-2xl transition-all select-none ${
-        isFullscreen
+        isFullscreen && !document.fullscreenElement
           ? 'fixed inset-0 z-[100] w-screen h-screen rounded-none border-none p-4'
           : `w-full ${className}`
       }`}
@@ -1142,6 +1174,7 @@ export const LWChart: React.FC<LWChartProps> = ({
         onAddInflow={onAddInflow}
         isFullscreen={isFullscreen}
         setIsFullscreen={setIsFullscreen}
+        onToggleFullscreen={handleToggleFullscreen}
       />
 
       {/* 6. EXTRACTED COMPONENT: Real-Time Floating Legend Strip */}
@@ -1182,6 +1215,8 @@ export const LWChart: React.FC<LWChartProps> = ({
               useIndicatorStore.getState().updateTrendSpeed({ dynamicTrendVisible: !cur });
             }}
             onToggleSuperMoneySignal={() => useIndicatorStore.getState().toggleSuperMoneySignal()}
+            onToggleAnchoredVWAP={() => useIndicatorStore.getState().toggleAnchoredVWAP()}
+            onToggleVolumeProfile={() => useIndicatorStore.getState().toggleVolumeProfile()}
             onToggleAutoSR={() => useDrawingStore.getState().toggleGlobalVisibility()}
             onToggleAutoSRLock={() => {
               const store = useDrawingStore.getState();

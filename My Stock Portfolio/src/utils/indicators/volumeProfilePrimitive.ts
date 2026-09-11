@@ -122,6 +122,27 @@ class VolumeProfilePaneRenderer implements IPrimitivePaneRenderer {
       const pocBin = bins[pocIndex];
       const pocPrice = (pocBin.priceBottom + pocBin.priceTop) / 2;
 
+      // 4.5 Compute Value Area (Default 70% of grandTotalVol around POC)
+      let vaTopIndex = pocIndex;
+      let vaBottomIndex = pocIndex;
+      if (config.showVA !== false) {
+        const vaTargetVol = grandTotalVol * ((config.valueAreaPercent || 70) / 100);
+        let currentVaVol = pocBin.totalVol;
+        while (currentVaVol < vaTargetVol && (vaTopIndex < bins.length - 1 || vaBottomIndex > 0)) {
+          const nextUpVol = vaTopIndex < bins.length - 1 ? bins[vaTopIndex + 1].totalVol : 0;
+          const nextDownVol = vaBottomIndex > 0 ? bins[vaBottomIndex - 1].totalVol : 0;
+          if (nextUpVol >= nextDownVol && vaTopIndex < bins.length - 1) {
+            vaTopIndex++;
+            currentVaVol += nextUpVol;
+          } else if (vaBottomIndex > 0) {
+            vaBottomIndex--;
+            currentVaVol += nextDownVol;
+          } else {
+            break;
+          }
+        }
+      }
+
       // 5. Draw Profile Bars
       const maxBarWidth = mediaWidth * ((config.widthPercent || 22) / 100);
       const isRight = (config.placement || 'right') === 'right';
@@ -145,13 +166,17 @@ class VolumeProfilePaneRenderer implements IPrimitivePaneRenderer {
         const buyW = (bin.buyVol / bin.totalVol) * totalW;
         const sellW = totalW - buyW;
 
+        // Dim non-value-area bars if showVA is enabled
+        const isOutsideVA = config.showVA !== false && (i < vaBottomIndex || i > vaTopIndex);
+        ctx.globalAlpha = isOutsideVA ? 0.35 : 1.0;
+
         if (isRight) {
           const startX = mediaWidth - totalW;
-          // Buy Volume (Teal/Emerald)
+          // Buy Volume
           ctx.fillStyle = config.upColor || 'rgba(38, 166, 154, 0.45)';
           ctx.fillRect(startX, barY, buyW, barHeight);
 
-          // Sell Volume (Rose/Red)
+          // Sell Volume
           ctx.fillStyle = config.downColor || 'rgba(239, 83, 80, 0.45)';
           ctx.fillRect(startX + buyW, barY, sellW, barHeight);
         } else {
@@ -164,40 +189,44 @@ class VolumeProfilePaneRenderer implements IPrimitivePaneRenderer {
         }
       }
 
-      // 6. Draw Point of Control (POC) Line (Red High Contrast)
-      const pocY = series.priceToCoordinate(pocPrice);
-      if (pocY !== null) {
-        ctx.strokeStyle = config.pocColor || '#FF1744';
-        ctx.lineWidth = config.pocLineWidth || 2;
-        ctx.setLineDash([4, 2]);
+      ctx.globalAlpha = 1.0;
 
-        const lineStartX = isRight ? mediaWidth - maxBarWidth * 1.3 : 0;
-        const lineEndX = isRight ? mediaWidth : maxBarWidth * 1.3;
+      // 6. Draw Point of Control (POC) Line (High Contrast)
+      if (config.showPOC !== false) {
+        const pocY = series.priceToCoordinate(pocPrice);
+        if (pocY !== null) {
+          ctx.strokeStyle = config.pocColor || '#FF1744';
+          ctx.lineWidth = config.pocLineWidth || 2;
+          ctx.setLineDash([4, 2]);
 
-        ctx.beginPath();
-        ctx.moveTo(lineStartX, pocY);
-        ctx.lineTo(lineEndX, pocY);
-        ctx.stroke();
+          const lineStartX = isRight ? mediaWidth - maxBarWidth * 1.3 : 0;
+          const lineEndX = isRight ? mediaWidth : maxBarWidth * 1.3;
 
-        // POC In-Canvas Badge
-        ctx.setLineDash([]);
-        const pocText = `POC $${pocPrice.toFixed(2)}`;
-        ctx.font = 'bold 12px sans-serif';
-        const metrics = ctx.measureText(pocText);
-        const badgeW = metrics.width + 10;
-        const badgeH = 18;
-        const badgeX = isRight ? mediaWidth - badgeW - 6 : 6;
-        const badgeY = pocY - badgeH / 2;
+          ctx.beginPath();
+          ctx.moveTo(lineStartX, pocY);
+          ctx.lineTo(lineEndX, pocY);
+          ctx.stroke();
 
-        ctx.fillStyle = '#EF4444';
-        ctx.beginPath();
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
-        ctx.fill();
+          // POC In-Canvas Badge
+          ctx.setLineDash([]);
+          const pocText = `POC $${pocPrice.toFixed(2)}`;
+          ctx.font = 'bold 12px sans-serif';
+          const metrics = ctx.measureText(pocText);
+          const badgeW = metrics.width + 10;
+          const badgeH = 18;
+          const badgeX = isRight ? mediaWidth - badgeW - 6 : 6;
+          const badgeY = pocY - badgeH / 2;
 
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(pocText, badgeX + badgeW / 2, pocY);
+          ctx.fillStyle = config.pocColor || '#EF4444';
+          ctx.beginPath();
+          ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+          ctx.fill();
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(pocText, badgeX + badgeW / 2, pocY);
+        }
       }
 
       ctx.restore();

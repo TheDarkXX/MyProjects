@@ -80,8 +80,9 @@ export function computeAnchoredVWAP(
 
   // 1. Locate the Anchor Index
   let anchorIndex = -1;
+  const anchorMode = config?.anchorMode ?? (startDateStr ? 'manual' : 'majorLow10M');
 
-  if (startDateStr) {
+  if (anchorMode === 'manual' && startDateStr) {
     // Construct target timestamp
     const targetTimestamp = new Date(`${startDateStr}T${startTimeStr}:00`).getTime();
     for (let i = 0; i < n; i++) {
@@ -91,11 +92,34 @@ export function computeAnchoredVWAP(
         break;
       }
     }
+  } else if (anchorMode === 'ytd') {
+    // First bar of the current calendar year
+    const currentYear = new Date().getFullYear();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(parseBarTimestamp(bars[i].time));
+      if (d.getFullYear() >= currentYear) {
+        anchorIndex = i;
+        break;
+      }
+    }
+  } else if (anchorMode === 'swingLow60D') {
+    // 60-day recent swing low
+    const lookback = Math.min(60, n);
+    const startScan = n - lookback;
+    let minLow = Infinity;
+    let minIdx = startScan;
+    for (let i = startScan; i < n; i++) {
+      if (bars[i].low < minLow) {
+        minLow = bars[i].low;
+        minIdx = i;
+      }
+    }
+    anchorIndex = minIdx;
   }
 
-  // Fallback: If no date specified or date was out of bounds, find the lowest swing low in last 60 bars
+  // Default / Fallback: 240 trading days (~10-11 calendar months) Major Structural Bottom
   if (anchorIndex < 0 || anchorIndex >= n) {
-    const lookback = Math.min(60, n);
+    const lookback = Math.min(240, n);
     const startScan = n - lookback;
     let minLow = Infinity;
     let minIdx = startScan;

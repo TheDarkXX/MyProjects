@@ -16,6 +16,7 @@ import {
   SMCLiteConfig,
   AnchoredVWAPConfig,
   SuperMoneySignalConfig,
+  VolumeProfileConfig,
   SubPaneIndicatorId,
   PaneLayout,
   DEFAULT_PANE_LAYOUT,
@@ -85,6 +86,10 @@ function loadSavedConfig(): IndicatorSettings {
         ...DEFAULT_INDICATOR_SETTINGS.superMoneySignal,
         ...(parsed.superMoneySignal || {}),
       },
+      volumeProfile: {
+        ...DEFAULT_INDICATOR_SETTINGS.volumeProfile!,
+        ...(parsed.volumeProfile || {}),
+      },
       showAxisLabels: typeof parsed.showAxisLabels === 'boolean' ? parsed.showAxisLabels : DEFAULT_INDICATOR_SETTINGS.showAxisLabels,
       paneHeights: {
         mcdx: typeof parsed.paneHeights?.mcdx === 'number' && parsed.paneHeights.mcdx >= 80
@@ -138,6 +143,8 @@ interface IndicatorState {
   toggleAnchoredVWAP: () => void;
   updateSuperMoneySignal: (partial: Partial<SuperMoneySignalConfig>) => void;
   toggleSuperMoneySignal: () => void;
+  updateVolumeProfile: (partial: Partial<VolumeProfileConfig>) => void;
+  toggleVolumeProfile: () => void;
   assignIndicatorPane: (id: SubPaneIndicatorId, targetPane: number) => void;
   moveIndicatorUp: (id: SubPaneIndicatorId) => void;
   moveIndicatorDown: (id: SubPaneIndicatorId) => void;
@@ -472,6 +479,29 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       ...prev,
       activePreset: 'custom',
       superMoneySignal: { ...prev.superMoneySignal, visible: !prev.superMoneySignal.visible },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateVolumeProfile: (partial: Partial<VolumeProfileConfig>) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      volumeProfile: { ...(prev.volumeProfile || DEFAULT_INDICATOR_SETTINGS.volumeProfile!), ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleVolumeProfile: () => {
+    const prev = get().config;
+    const currentVP = prev.volumeProfile || DEFAULT_INDICATOR_SETTINGS.volumeProfile!;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      volumeProfile: { ...currentVP, visible: !currentVP.visible },
     };
     saveConfig(next);
     set({ config: next });

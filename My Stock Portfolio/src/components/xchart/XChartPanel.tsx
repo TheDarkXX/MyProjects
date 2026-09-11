@@ -133,7 +133,18 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
     );
   }
 
-  if (!currentData) return null;
+  const handleToggleFullscreen = useCallback(() => {
+    const target = document.getElementById('xchart-terminal-container');
+    if (!document.fullscreenElement) {
+      target?.requestFullscreen?.().catch((err) => {
+        console.error('Error entering fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen?.().catch((err) => {
+        console.error('Error exiting fullscreen:', err);
+      });
+    }
+  }, []);
 
   return (
     <div className="flex-1 w-full h-full flex flex-col overflow-hidden relative bg-[#111418] min-h-0">
@@ -158,6 +169,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
         className="w-full h-full flex-1"
         onSelectSymbol={(newSym) => changeSymbolOnActiveTab(newSym)}
         portfolioOverlay={portfolioOverlay}
+        onToggleFullscreen={handleToggleFullscreen}
       />
     </div>
   );

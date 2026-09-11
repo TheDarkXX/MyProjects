@@ -198,6 +198,7 @@ export interface SMCLiteConfig {
 
 export interface AnchoredVWAPConfig {
   visible: boolean;
+  anchorMode?: 'majorLow10M' | 'ytd' | 'swingLow60D' | 'manual';
   source: 'close' | 'hl2' | 'hlc3' | 'ohlc4' | 'open' | 'high' | 'low';
   startDate: string; // YYYY-MM-DD
   startTime: string; // HH:mm
@@ -268,8 +269,10 @@ export interface VolumeProfileConfig {
   downColor: string;
   pocColor: string;
   pocLineWidth: number;
+  showPOC?: boolean;
   showVA: boolean;
   vaColor: string;
+  valueAreaPercent?: number;
 }
 
 export type SubPaneIndicatorId = 'mcdx' | 'ultimateRsi' | 'trendSpeed';
@@ -488,6 +491,7 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
   },
   anchoredVwap: {
     visible: true,
+    anchorMode: 'majorLow10M',
     source: 'hlc3',
     startDate: '',
     startTime: '00:00',
@@ -551,7 +555,9 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     downColor: 'rgba(239, 83, 80, 0.45)',
     pocColor: '#FF1744',
     pocLineWidth: 2,
+    showPOC: true,
     showVA: true,
     vaColor: 'rgba(255, 255, 255, 0.1)',
+    valueAreaPercent: 70,
   },
 };

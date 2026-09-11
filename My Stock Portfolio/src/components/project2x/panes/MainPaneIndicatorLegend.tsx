@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Eye,
   EyeOff,
@@ -6,8 +6,8 @@ import {
   X,
   Lock,
   Unlock,
-  ChevronUp,
   ChevronDown,
+  ChevronUp,
   Layers,
 } from 'lucide-react';
 import { IndicatorSettings } from '../../../types/indicatorConfig';
@@ -36,7 +36,9 @@ export interface MainPaneIndicatorLegendProps {
   onToggleSuperMoneySignal: () => void;
   onToggleAutoSR: () => void;
   onToggleAutoSRLock?: () => void;
-  onOpenConfig: (view: 'ema' | 'envelope' | 'trendSpeed' | 'superMoneySignal' | 'mcdx' | 'ultimateRsi' | 'list') => void;
+  onToggleAnchoredVWAP?: () => void;
+  onToggleVolumeProfile?: () => void;
+  onOpenConfig: (view: 'ema' | 'envelope' | 'trendSpeed' | 'superMoneySignal' | 'mcdx' | 'ultimateRsi' | 'list' | 'anchoredVwap') => void;
   onOpenDrawingSettings?: () => void;
 }
 
@@ -54,6 +56,8 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
   onToggleSuperMoneySignal,
   onToggleAutoSR,
   onToggleAutoSRLock,
+  onToggleAnchoredVWAP,
+  onToggleVolumeProfile,
   onOpenConfig,
   onOpenDrawingSettings,
 }) => {
@@ -73,6 +77,63 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       return {};
     }
   });
+
+  const [removedItems, setRemovedItems] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('tv_legend_removed_items');
+      return saved ? JSON.parse(saved) : {};
+    } catch (_) {
+      return {};
+    }
+  });
+
+  // If indicator is activated in top Indicators menu, unmark from removed items
+  useEffect(() => {
+    setRemovedItems((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      if (prev['emaRibbon'] && (indicatorConfig.ema1.visible || indicatorConfig.ema2.visible || indicatorConfig.ema3.visible)) {
+        delete next['emaRibbon'];
+        changed = true;
+      }
+      if (prev['envelope'] && indicatorConfig.envelope.visible) {
+        delete next['envelope'];
+        changed = true;
+      }
+      if (prev['dynamicTrend'] && indicatorConfig.trendSpeed?.dynamicTrendVisible) {
+        delete next['dynamicTrend'];
+        changed = true;
+      }
+      if (prev['superMoneySignal'] && indicatorConfig.superMoneySignal?.visible) {
+        delete next['superMoneySignal'];
+        changed = true;
+      }
+      if (prev['anchoredVwap'] && indicatorConfig.anchoredVwap?.visible) {
+        delete next['anchoredVwap'];
+        changed = true;
+      }
+      if (prev['volumeProfile'] && indicatorConfig.volumeProfile?.visible) {
+        delete next['volumeProfile'];
+        changed = true;
+      }
+      if (changed) {
+        try {
+          localStorage.setItem('tv_legend_removed_items', JSON.stringify(next));
+        } catch (_) {}
+        return next;
+      }
+      return prev;
+    });
+  }, [
+    indicatorConfig.ema1.visible,
+    indicatorConfig.ema2.visible,
+    indicatorConfig.ema3.visible,
+    indicatorConfig.envelope.visible,
+    indicatorConfig.trendSpeed?.dynamicTrendVisible,
+    indicatorConfig.superMoneySignal?.visible,
+    indicatorConfig.anchoredVwap?.visible,
+    indicatorConfig.volumeProfile?.visible,
+  ]);
 
   const handleToggleCollapse = () => {
     setIsCollapsed((prev) => {
@@ -94,6 +155,17 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
     });
   };
 
+  const handleRemoveItem = (id: string, cleanupAction?: () => void) => {
+    setRemovedItems((prev) => {
+      const next = { ...prev, [id]: true };
+      try {
+        localStorage.setItem('tv_legend_removed_items', JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+    cleanupAction?.();
+  };
+
   // Compute live active indicator list
   const activeItems: Array<{
     id: string;
@@ -111,115 +183,162 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
     onRemove: () => void;
   }> = [];
 
-  // 1. EMA Ribbon (Grouped under single name as in Indicator Manager)
-  const hasAnyEma = indicatorConfig.ema1.visible || indicatorConfig.ema2.visible || indicatorConfig.ema3.visible;
-  if (hasAnyEma) {
+  // 1. EMA Ribbon
+  if (!removedItems['emaRibbon']) {
     const emas = [
       { key: 'ema1' as const, period: indicatorConfig.ema1.period, val: activeLegend?.ema50, color: indicatorConfig.ema1.color, visible: indicatorConfig.ema1.visible },
       { key: 'ema2' as const, period: indicatorConfig.ema2.period, val: activeLegend?.ema150, color: indicatorConfig.ema2.color, visible: indicatorConfig.ema2.visible },
       { key: 'ema3' as const, period: indicatorConfig.ema3.period, val: activeLegend?.ema200, color: indicatorConfig.ema3.color, visible: indicatorConfig.ema3.visible },
     ];
-    const activeEmas = emas.filter((e) => e.visible);
-    const periodsText = activeEmas.map((e) => e.period).join(' ');
+    const anyEmaVisible = emas.some((e) => e.visible);
+    const periodsText = emas.map((e) => e.period).join(' ');
 
     activeItems.push({
       id: 'emaRibbon',
       title: 'EMA Ribbon',
       params: `${periodsText} close`,
-      multiValues: activeEmas.map((e) => ({
+      multiValues: emas.map((e) => ({
         label: '',
         value: e.val !== undefined && e.val !== null ? `$${e.val.toFixed(2)}` : '--',
-        color: e.color,
+        color: anyEmaVisible && e.visible ? e.color : '#64748B',
       })),
-      visible: true,
+      visible: anyEmaVisible,
       isLocked: lockedItems['emaRibbon'] ?? true,
       onToggleLock: () => handleToggleItemLock('emaRibbon'),
       onToggle: () => {
-        const allOn = emas.every((e) => e.visible);
-        if (allOn) {
-          emas.forEach((e) => onToggleEMA(e.key));
+        if (anyEmaVisible) {
+          emas.filter((e) => e.visible).forEach((e) => onToggleEMA(e.key));
         } else {
-          emas.filter((e) => !e.visible).forEach((e) => onToggleEMA(e.key));
+          emas.forEach((e) => onToggleEMA(e.key));
         }
       },
       onConfigure: () => onOpenConfig('ema'),
       onRemove: () => {
-        activeEmas.forEach((e) => onToggleEMA(e.key));
+        handleRemoveItem('emaRibbon', () => {
+          emas.filter((e) => e.visible).forEach((e) => onToggleEMA(e.key));
+        });
       },
     });
   }
 
   // 2. Bedrock Envelope
-  if (indicatorConfig.envelope.visible) {
+  if (!removedItems['envelope']) {
     const baseEma = activeLegend?.ema200;
     const pct = indicatorConfig.envelope.percent;
+    const isEnvVisible = indicatorConfig.envelope.visible;
     const upper = baseEma !== undefined && baseEma !== null ? baseEma * (1 + pct / 100) : null;
     const lower = baseEma !== undefined && baseEma !== null ? baseEma * (1 - pct / 100) : null;
 
     activeItems.push({
       id: 'envelope',
       title: 'Bedrock Envelope',
-      params: `±${pct}% ${indicatorConfig.envelope.emaPeriod}`,
+      params: `±${pct}% ${indicatorConfig.envelope.emaPeriod || 200}`,
       multiValues: [
-        { label: '+', value: upper !== null ? `$${upper.toFixed(2)}` : '--', color: indicatorConfig.envelope.color },
-        { label: '-', value: lower !== null ? `$${lower.toFixed(2)}` : '--', color: indicatorConfig.envelope.color },
+        { label: '+', value: upper !== null ? `$${upper.toFixed(2)}` : '--', color: isEnvVisible ? indicatorConfig.envelope.color : '#64748B' },
+        { label: '-', value: lower !== null ? `$${lower.toFixed(2)}` : '--', color: isEnvVisible ? indicatorConfig.envelope.color : '#64748B' },
       ],
-      visible: indicatorConfig.envelope.visible,
+      visible: isEnvVisible,
       isLocked: lockedItems['envelope'] ?? true,
       onToggleLock: () => handleToggleItemLock('envelope'),
       onToggle: onToggleEnvelope,
       onConfigure: () => onOpenConfig('envelope'),
-      onRemove: onToggleEnvelope,
+      onRemove: () => handleRemoveItem('envelope', () => {
+        if (isEnvVisible) onToggleEnvelope();
+      }),
     });
   }
 
   // 3. Dynamic Trend EMA (Zeiierman)
-  if (indicatorConfig.trendSpeed?.visible && indicatorConfig.trendSpeed?.dynamicTrendVisible) {
+  if (!removedItems['dynamicTrend'] && indicatorConfig.trendSpeed?.visible) {
+    const isDynVisible = indicatorConfig.trendSpeed?.dynamicTrendVisible ?? true;
     const dynVal = trendSpeedData?.dynEma;
     activeItems.push({
       id: 'dynamicTrend',
       title: 'Dyn Trend EMA',
       params: 'Zeiierman',
       valueText: dynVal !== null && dynVal !== undefined ? `$${dynVal.toFixed(2)}` : '--',
-      valueColor: trendSpeedData?.dynColor || '#F7D02C',
-      visible: true,
+      valueColor: isDynVisible ? (trendSpeedData?.dynColor || '#F7D02C') : '#64748B',
+      visible: isDynVisible,
       isLocked: lockedItems['dynamicTrend'] ?? true,
       onToggleLock: () => handleToggleItemLock('dynamicTrend'),
       onToggle: onToggleTrendSpeedDyn,
       onConfigure: () => onOpenConfig('trendSpeed'),
-      onRemove: onToggleTrendSpeedDyn,
+      onRemove: () => handleRemoveItem('dynamicTrend', () => {
+        if (isDynVisible) onToggleTrendSpeedDyn();
+      }),
     });
   }
 
   // 4. Super Money Trend Signal
-  if (indicatorConfig.superMoneySignal?.visible && superMoneySignalResult) {
+  if (!removedItems['superMoneySignal'] && superMoneySignalResult) {
+    const isSmVisible = indicatorConfig.superMoneySignal?.visible ?? true;
     const dir = superMoneySignalResult.currentDirection;
     activeItems.push({
       id: 'superMoneySignal',
       title: 'Super Money Signal',
       badge: {
         text: superMoneySignalResult.currentStatusText || 'NEUTRAL',
-        bgClass:
-          dir === 1
-            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-            : dir === 2
-            ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
-            : dir === -1
-            ? 'bg-rose-600/20 text-rose-300 border border-rose-600/40'
-            : 'bg-slate-800 text-slate-300',
+        bgClass: !isSmVisible
+          ? 'bg-slate-800 text-slate-500'
+          : dir === 1
+          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+          : dir === 2
+          ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
+          : dir === -1
+          ? 'bg-rose-600/20 text-rose-300 border border-rose-600/40'
+          : 'bg-slate-800 text-slate-300',
         textClass: 'px-1.5 py-0.2 rounded text-[11px] font-medium',
       },
-      visible: indicatorConfig.superMoneySignal.visible,
+      visible: isSmVisible,
       isLocked: lockedItems['superMoneySignal'] ?? true,
       onToggleLock: () => handleToggleItemLock('superMoneySignal'),
       onToggle: onToggleSuperMoneySignal,
       onConfigure: () => onOpenConfig('superMoneySignal'),
-      onRemove: onToggleSuperMoneySignal,
+      onRemove: () => handleRemoveItem('superMoneySignal', () => {
+        if (isSmVisible) onToggleSuperMoneySignal();
+      }),
     });
   }
 
-  // 5. Auto Support / Resistance (Active in Drawing Store)
-  if (autoSRCount > 0) {
+  // 5. Anchored VWAP
+  if (!removedItems['anchoredVwap'] && indicatorConfig.anchoredVwap) {
+    const isAvwapVisible = indicatorConfig.anchoredVwap.visible;
+    const modeLabel = indicatorConfig.anchoredVwap.anchorMode === 'ytd' ? 'YTD' : indicatorConfig.anchoredVwap.anchorMode === 'swingLow60D' ? '60D' : '10-11M';
+    activeItems.push({
+      id: 'anchoredVwap',
+      title: 'Anchored VWAP',
+      params: modeLabel,
+      visible: isAvwapVisible,
+      isLocked: lockedItems['anchoredVwap'] ?? true,
+      onToggleLock: () => handleToggleItemLock('anchoredVwap'),
+      onToggle: onToggleAnchoredVWAP || (() => {}),
+      onConfigure: () => onOpenConfig('anchoredVwap'),
+      onRemove: () => handleRemoveItem('anchoredVwap', () => {
+        if (isAvwapVisible) onToggleAnchoredVWAP?.();
+      }),
+    });
+  }
+
+  // 6. Volume Profile (VPVR)
+  if (!removedItems['volumeProfile'] && indicatorConfig.volumeProfile) {
+    const isVpVisible = indicatorConfig.volumeProfile.visible;
+    activeItems.push({
+      id: 'volumeProfile',
+      title: 'Volume Profile',
+      params: `${indicatorConfig.volumeProfile.rowSize || 40} rows`,
+      visible: isVpVisible,
+      isLocked: lockedItems['volumeProfile'] ?? true,
+      onToggleLock: () => handleToggleItemLock('volumeProfile'),
+      onToggle: onToggleVolumeProfile || (() => {}),
+      onConfigure: () => onOpenConfig('list'),
+      onRemove: () => handleRemoveItem('volumeProfile', () => {
+        if (isVpVisible) onToggleVolumeProfile?.();
+      }),
+    });
+  }
+
+  // 7. Auto Support / Resistance
+  if (!removedItems['autoSR'] && autoSRCount > 0) {
     activeItems.push({
       id: 'autoSR',
       title: 'Auto S/R Swings',
@@ -231,7 +350,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       onToggleLock: onToggleAutoSRLock,
       onToggle: onToggleAutoSR,
       onConfigure: onOpenDrawingSettings || (() => {}),
-      onRemove: onToggleAutoSR,
+      onRemove: () => handleRemoveItem('autoSR', onToggleAutoSR),
     });
   }
 
@@ -248,24 +367,26 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
           title="Expand Indicator Legend"
         >
           <Layers className="w-3 h-3 text-cyan-400 group-hover:scale-110 transition-transform" />
-          <span>Indicators ({activeItems.length})</span>
+          <span>Indicators ({activeItems.filter(i => i.visible).length}/{activeItems.length})</span>
           <ChevronDown className="w-3 h-3 text-slate-300 group-hover:text-white" />
         </button>
       ) : (
         // Expanded Stacked List (TradingView Style - Compact 10px text with 12px icons)
-        <div className="pointer-events-auto flex flex-col gap-0.5 p-0.5 rounded bg-[#0B101B]/50 hover:bg-[#0B101B]/85 border border-transparent hover:border-slate-700/60 backdrop-blur-sm transition-all duration-150 group/container shadow-lg">
+        <div className="pointer-events-auto flex flex-col gap-0.5 p-0.5 rounded bg-[#0B101B]/60 hover:bg-[#0B101B]/90 border border-transparent hover:border-slate-700/60 backdrop-blur-sm transition-all duration-150 group/container shadow-lg">
           {activeItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-slate-800/50 transition-colors group/row text-[10px] leading-none"
+              className={`flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-slate-800/50 transition-colors group/row text-[10px] leading-none ${
+                !item.visible ? 'opacity-40' : ''
+              }`}
             >
-              {/* Title & Parameters (Regular font weight, crisp & clean 10px) */}
-              <span className="font-normal text-slate-200 whitespace-nowrap">
+              {/* Title & Parameters */}
+              <span className={`font-normal whitespace-nowrap ${item.visible ? 'text-slate-200' : 'text-slate-500'}`}>
                 {item.title}
               </span>
 
               {item.params && (
-                <span className="text-slate-400 text-[10px] whitespace-nowrap font-mono">
+                <span className={`text-[10px] whitespace-nowrap font-mono ${item.visible ? 'text-slate-400' : 'text-slate-600'}`}>
                   {item.params}
                 </span>
               )}
@@ -274,42 +395,44 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
               {item.valueText && (
                 <span
                   className="font-normal font-mono text-[10px] whitespace-nowrap"
-                  style={{ color: item.valueColor || '#CBD5E1' }}
+                  style={{ color: item.visible ? (item.valueColor || '#CBD5E1') : '#64748B' }}
                 >
                   {item.valueText}
                 </span>
               )}
 
-              {/* Multi Live Values (e.g. EMA Ribbon values, Envelope Upper/Lower) */}
+              {/* Multi Live Values */}
               {item.multiValues && (
                 <div className="flex items-center gap-1 font-mono text-[10px]">
                   {item.multiValues.map((mv, idx) => (
                     <span key={idx} className="whitespace-nowrap">
                       {mv.label && <span className="text-slate-400 text-[9px] mr-0.5">{mv.label}</span>}
-                      <span className="font-normal" style={{ color: mv.color }}>
-                        {mv.value}
+                      <span className="font-normal" style={{ color: item.visible ? mv.color : '#64748B' }}>
+                        {item.visible ? mv.value : '--'}
                       </span>
                     </span>
                   ))}
                 </div>
               )}
 
-              {/* Status Badge (e.g. SuperMoney Signal BUY/HOLD/EXIT) */}
+              {/* Status Badge */}
               {item.badge && (
                 <span className={`${item.badge.bgClass} ${item.badge.textClass} whitespace-nowrap leading-tight text-[9px]`}>
                   {item.badge.text}
                 </span>
               )}
 
-              {/* Stealth Hover Action Toolbar (Reduced 2 levels to w-3 h-3 / 12px for perfect balance) */}
+              {/* Stealth Hover Action Toolbar */}
               <div className="flex items-center gap-0.5 ml-1.5 opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto transition-opacity duration-150">
                 {/* 👁️ Eye Toggle */}
                 <button
                   onClick={item.onToggle}
                   title={item.visible ? 'Hide on Chart' : 'Show on Chart'}
-                  className="p-0.5 rounded hover:bg-slate-700/80 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                  className={`p-0.5 rounded hover:bg-slate-700/80 transition-colors cursor-pointer ${
+                    item.visible ? 'text-slate-300 hover:text-white' : 'text-slate-500 hover:text-amber-400'
+                  }`}
                 >
-                  {item.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                  {item.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3 text-slate-500" />}
                 </button>
 
                 {/* ⚙️ Gear (Direct Settings) */}
@@ -348,15 +471,14 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
             </div>
           ))}
 
-          {/* Bottom Chevron to Collapse */}
-          <div className="flex items-center justify-between pt-0.5 border-t border-slate-800/40 mt-0.5">
+          {/* Minimal Expand/Collapse Bar */}
+          <div className="pt-0.5 mt-0.5 border-t border-slate-800/60 flex items-center justify-between px-1">
             <button
               onClick={handleToggleCollapse}
-              className="p-0.5 rounded hover:bg-slate-700/60 text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-[10px]"
-              title="Collapse Indicator Legend"
+              className="text-[9px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
             >
-              <ChevronUp className="w-3 h-3" />
-              <span className="text-[10px] opacity-70 group-hover/container:opacity-100">Collapse</span>
+              <ChevronUp className="w-2.5 h-2.5" />
+              <span>Collapse</span>
             </button>
           </div>
         </div>

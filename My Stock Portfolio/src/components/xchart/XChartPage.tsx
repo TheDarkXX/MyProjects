@@ -18,7 +18,10 @@ export const XChartPage: React.FC = () => {
       <XChartTabBar />
 
       {/* Main Terminal Body */}
-      <div className="flex-1 flex overflow-hidden relative min-h-0">
+      <div 
+        id="xchart-terminal-container" 
+        className="flex-1 flex overflow-hidden relative min-h-0 w-full h-full bg-[#0B1220]"
+      >
         {/* Main Canvas / Chart / Heatmap / MyPort Area */}
         <div className="flex-1 flex flex-col h-full overflow-hidden relative min-h-0">
           {activeTab ? (
