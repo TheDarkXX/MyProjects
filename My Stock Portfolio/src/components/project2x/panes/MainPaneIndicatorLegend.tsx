@@ -357,7 +357,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
   if (activeItems.length === 0) return null;
 
   return (
-    <div className="absolute top-2 left-2 z-25 pointer-events-none select-none">
+    <div className="absolute top-2 left-2 z-[45] pointer-events-none select-none">
       {isCollapsed ? (
         // Collapsed Minimal Badge
         <button
