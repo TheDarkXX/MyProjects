@@ -36,8 +36,8 @@ export interface UseChartSeriesProps {
   calculatedRsiMarkers: SeriesMarker<Time>[];
   pane0Markers: SeriesMarker<Time>[];
   chartStyle: ChartStyle;
-  timeframe: TimeFrame;
-  applyTimeframeRange: (tf: TimeFrame) => void;
+  timeframe?: TimeFrame;
+  applyTimeframeRange?: (tf: TimeFrame) => void;
   activeSubPanes: any;
   maximizedPane: number | null;
   applyPaneLayoutHeights: (chartInstance: any, cfg: IndicatorSettings, maximized: number | null) => void;
@@ -318,9 +318,6 @@ export function useChartSeries({
     }
 
     markersPluginRef.current?.setMarkers(pane0Markers);
-    requestAnimationFrame(() => {
-      applyTimeframeRange(timeframe);
-    });
   }, [
     displayBars,
     calculatedRsiMarkers,
@@ -341,10 +338,8 @@ export function useChartSeries({
     indicatorConfig.ultimateRsi.showArea,
     indicatorConfig.trendSpeed,
     indicatorConfig.envelope.percent,
-    timeframe,
     activeSubPanes,
     chartRef,
-    applyTimeframeRange,
   ]);
 
   // Handle Style Switching
