@@ -10,6 +10,7 @@ import {
 } from '../types/drawingTypes';
 import { snapToTickSize, detectSupportResistance } from '../utils/drawingUtils';
 import { api } from '../services/api';
+import { pushSettingDebounced, registerSyncHandler } from '../services/settingsSync';
 
 const syncTimers = new Map<string, any>();
 function scheduleCloudSync(symbol: string, get: () => DrawingState) {
@@ -61,6 +62,7 @@ function loadSettingsFromStorage(): DrawingSettings {
 function saveSettingsToStorage(settings: DrawingSettings): void {
   try {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    pushSettingDebounced(SETTINGS_STORAGE_KEY, settings);
   } catch (e) {}
 }
 
@@ -151,6 +153,7 @@ export interface DrawingState {
   pasteClipboard: (symbol: string, atPrice?: number) => string | null;
   nudgeSelectedLine: (symbol: string, direction: 'up' | 'down', customTick?: number) => void;
   autoDetectSRLevels: (symbol: string, bars: any[]) => void;
+  applyCloudDrawingSettings: (settings: Partial<DrawingSettings>) => void;
 }
 
 export const useDrawingStore = create<DrawingState>((set, get) => ({
@@ -581,4 +584,17 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
       }));
     }, 4500);
   },
+
+  applyCloudDrawingSettings: (settings) => {
+    if (!settings || typeof settings !== 'object') return;
+    const merged = { ...DEFAULT_DRAWING_SETTINGS, ...settings };
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+    } catch {}
+    set({ drawingSettings: merged });
+  },
 }));
+
+registerSyncHandler(SETTINGS_STORAGE_KEY, (val) => {
+  useDrawingStore.getState().applyCloudDrawingSettings(val);
+});

@@ -145,5 +145,18 @@ export const api = {
       authFetch(`/drawings/${encodeURIComponent(symbol)}`, {
         method: 'DELETE',
       }),
+  },
+  settings: {
+    getAll: () => authFetch('/settings'),
+    get: (key: string) => authFetch(`/settings/${encodeURIComponent(key)}`),
+    save: (key: string, value: any) =>
+      authFetch(`/settings/${encodeURIComponent(key)}`, {
+        method: 'POST',
+        body: JSON.stringify({ value }),
+      }),
+    delete: (key: string) =>
+      authFetch(`/settings/${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+      }),
   }
 };

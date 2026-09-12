@@ -21,6 +21,7 @@ import {
   PaneLayout,
   DEFAULT_PANE_LAYOUT,
 } from '../types/indicatorConfig';
+import { pushSettingDebounced, registerSyncHandler } from '../services/settingsSync';
 
 const STORAGE_KEY = 'xchart_indicators_v1';
 
@@ -111,11 +112,13 @@ function loadSavedConfig(): IndicatorSettings {
 function saveConfig(config: IndicatorSettings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    pushSettingDebounced(STORAGE_KEY, config);
   } catch (e) {}
 }
 
 interface IndicatorState {
   config: IndicatorSettings;
+  applyCloudConfig: (cloudConfig: Partial<IndicatorSettings>) => void;
   addCustomColor: (color: string) => void;
   setCustomColors: (colors: string[]) => void;
   updateEMA: (id: 'ema1' | 'ema2' | 'ema3', partial: Partial<EMALineConfig>) => void;
@@ -659,4 +662,81 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
     saveConfig(DEFAULT_INDICATOR_SETTINGS);
     set({ config: DEFAULT_INDICATOR_SETTINGS });
   },
+
+  applyCloudConfig: (cloudConfig: Partial<IndicatorSettings>) => {
+    if (!cloudConfig || typeof cloudConfig !== 'object') return;
+    try {
+      const merged: IndicatorSettings = {
+        ...DEFAULT_INDICATOR_SETTINGS,
+        ...cloudConfig,
+        customColors: Array.isArray(cloudConfig.customColors) && cloudConfig.customColors.length > 0
+          ? cloudConfig.customColors.slice(0, 5)
+          : (cloudConfig.customColors || DEFAULT_INDICATOR_SETTINGS.customColors),
+        paneLayout: {
+          assignments: {
+            ...DEFAULT_PANE_LAYOUT.assignments,
+            ...(cloudConfig.paneLayout?.assignments || {}),
+          },
+        },
+        ema1: { ...DEFAULT_INDICATOR_SETTINGS.ema1, ...(cloudConfig.ema1 || {}) },
+        ema2: { ...DEFAULT_INDICATOR_SETTINGS.ema2, ...(cloudConfig.ema2 || {}) },
+        ema3: { ...DEFAULT_INDICATOR_SETTINGS.ema3, ...(cloudConfig.ema3 || {}) },
+        envelope: { ...DEFAULT_INDICATOR_SETTINGS.envelope, ...(cloudConfig.envelope || {}) },
+        signals: {
+          ...DEFAULT_INDICATOR_SETTINGS.signals,
+          ...(cloudConfig.signals || {}),
+          markers: {
+            ...DEFAULT_INDICATOR_SETTINGS.signals.markers,
+            ...(cloudConfig.signals?.markers || {}),
+          },
+          colors: {
+            ...DEFAULT_INDICATOR_SETTINGS.signals.colors,
+            ...(cloudConfig.signals?.colors || {}),
+          },
+        },
+        mcdx: { ...DEFAULT_INDICATOR_SETTINGS.mcdx, ...(cloudConfig.mcdx || {}) },
+        volume: { ...DEFAULT_INDICATOR_SETTINGS.volume, ...(cloudConfig.volume || {}) },
+        ultimateRsi: {
+          ...DEFAULT_INDICATOR_SETTINGS.ultimateRsi,
+          ...(cloudConfig.ultimateRsi || {}),
+          signals: {
+            ...DEFAULT_INDICATOR_SETTINGS.ultimateRsi.signals,
+            ...(cloudConfig.ultimateRsi?.signals || {}),
+          },
+        },
+        trendSpeed: {
+          ...DEFAULT_INDICATOR_SETTINGS.trendSpeed,
+          ...(cloudConfig.trendSpeed || {}),
+        },
+        smcLite: {
+          ...DEFAULT_INDICATOR_SETTINGS.smcLite,
+          ...(cloudConfig.smcLite || {}),
+        },
+        anchoredVwap: {
+          ...DEFAULT_INDICATOR_SETTINGS.anchoredVwap,
+          ...(cloudConfig.anchoredVwap || {}),
+        },
+        superMoneySignal: {
+          ...DEFAULT_INDICATOR_SETTINGS.superMoneySignal,
+          ...(cloudConfig.superMoneySignal || {}),
+        },
+        volumeProfile: {
+          ...DEFAULT_INDICATOR_SETTINGS.volumeProfile!,
+          ...(cloudConfig.volumeProfile || {}),
+        },
+        paneHeights: {
+          ...DEFAULT_INDICATOR_SETTINGS.paneHeights,
+          ...(cloudConfig.paneHeights || {}),
+        },
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      set({ config: merged });
+    } catch (e) {
+      console.warn('[useIndicatorStore] Failed to apply cloud config:', e);
+    }
+  },
 }));
+
+registerSyncHandler(STORAGE_KEY, (cloudValue) => {
+  useIndicatorStore.getState().applyCloudConfig(cloudValue);
+});

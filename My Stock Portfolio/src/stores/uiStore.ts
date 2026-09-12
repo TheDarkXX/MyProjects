@@ -1,4 +1,13 @@
 import { create } from 'zustand';
+import { pushSettingDebounced, registerSyncHandler, SYNC_KEYS } from '../services/settingsSync';
+
+export interface UiPreferences {
+  theme: 'dark' | 'light';
+  preferred_currency: 'USD' | 'THB';
+  stock_sidebar_mode: 'normal' | 'compact';
+  stock_xchart_hide_header: boolean;
+  stock_xchart_enable_4h_forex: boolean;
+}
 
 interface UiState {
   darkMode: boolean;
@@ -18,6 +27,7 @@ interface UiState {
   setXChartHideHeader: (hide: boolean) => void;
   toggleXChartHeader: () => void;
   setXChartEnable4HForex: (enable: boolean) => void;
+  applyCloudUiPreferences: (prefs: Partial<UiPreferences>) => void;
   addNotification?: (n: { type: 'success' | 'error' | 'info'; message: string }) => void;
 }
 
@@ -48,12 +58,26 @@ const getInitialSidebarMode = (): 'normal' | 'compact' => {
   return 'normal';
 };
 
+function pushCurrentUiPreferences(partial?: Partial<UiPreferences>) {
+  if (typeof window === 'undefined') return;
+  const current = useUiStore.getState();
+  const prefs: UiPreferences = {
+    theme: current.darkMode ? 'dark' : 'light',
+    preferred_currency: current.currency,
+    stock_sidebar_mode: current.sidebarMode,
+    stock_xchart_hide_header: current.xchartHideHeader,
+    stock_xchart_enable_4h_forex: current.xchartEnable4HForex,
+    ...partial,
+  };
+  pushSettingDebounced(SYNC_KEYS.UI_PREFERENCES, prefs);
+}
+
 export const useUiStore = create<UiState>((set) => ({
-  darkMode: localStorage.getItem('theme') !== 'light',
+  darkMode: typeof window !== 'undefined' ? localStorage.getItem('theme') !== 'light' : true,
   sidebarOpen: false,
   sidebarMode: getInitialSidebarMode(),
   activeTab: getInitialTab(),
-  currency: (localStorage.getItem('preferred_currency') as 'USD' | 'THB') || 'USD',
+  currency: (typeof window !== 'undefined' ? (localStorage.getItem('preferred_currency') as 'USD' | 'THB') : null) || 'USD',
   xchartHideHeader: typeof window !== 'undefined' ? localStorage.getItem('stock_xchart_hide_header') === 'true' : false,
   xchartEnable4HForex: typeof window !== 'undefined' ? localStorage.getItem('stock_xchart_enable_4h_forex') !== 'false' : true,
 
@@ -62,6 +86,7 @@ export const useUiStore = create<UiState>((set) => ({
     localStorage.setItem('theme', newTheme ? 'dark' : 'light');
     if (newTheme) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
+    pushCurrentUiPreferences({ theme: newTheme ? 'dark' : 'light' });
     return { darkMode: newTheme };
   }),
 
@@ -70,6 +95,7 @@ export const useUiStore = create<UiState>((set) => ({
   setSidebarMode: (mode: 'normal' | 'compact') => {
     localStorage.setItem('stock_sidebar_mode', mode);
     localStorage.setItem('stock_sidebar_collapsed', String(mode === 'compact'));
+    pushCurrentUiPreferences({ stock_sidebar_mode: mode });
     set({ sidebarMode: mode });
   },
 
@@ -77,6 +103,7 @@ export const useUiStore = create<UiState>((set) => ({
     const next = state.sidebarMode === 'normal' ? 'compact' : 'normal';
     localStorage.setItem('stock_sidebar_mode', next);
     localStorage.setItem('stock_sidebar_collapsed', String(next === 'compact'));
+    pushCurrentUiPreferences({ stock_sidebar_mode: next });
     return { sidebarMode: next };
   }),
   
@@ -92,6 +119,7 @@ export const useUiStore = create<UiState>((set) => ({
 
   setCurrency: (currency: 'USD' | 'THB') => {
     localStorage.setItem('preferred_currency', currency);
+    pushCurrentUiPreferences({ preferred_currency: currency });
     set({ currency });
   },
 
@@ -99,6 +127,7 @@ export const useUiStore = create<UiState>((set) => ({
     try {
       localStorage.setItem('stock_xchart_hide_header', String(hide));
     } catch (e) {}
+    pushCurrentUiPreferences({ stock_xchart_hide_header: hide });
     set({ xchartHideHeader: hide });
   },
 
@@ -107,6 +136,7 @@ export const useUiStore = create<UiState>((set) => ({
     try {
       localStorage.setItem('stock_xchart_hide_header', String(next));
     } catch (e) {}
+    pushCurrentUiPreferences({ stock_xchart_hide_header: next });
     return { xchartHideHeader: next };
   }),
 
@@ -114,13 +144,64 @@ export const useUiStore = create<UiState>((set) => ({
     try {
       localStorage.setItem('stock_xchart_enable_4h_forex', String(enable));
     } catch (e) {}
+    pushCurrentUiPreferences({ stock_xchart_enable_4h_forex: enable });
     return { xchartEnable4HForex: enable };
   }),
+
+  applyCloudUiPreferences: (prefs) => {
+    if (!prefs || typeof prefs !== 'object') return;
+    const updates: Partial<UiState> = {};
+
+    if (prefs.theme) {
+      const isDark = prefs.theme !== 'light';
+      updates.darkMode = isDark;
+      try {
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        if (isDark) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      } catch {}
+    }
+
+    if (prefs.preferred_currency) {
+      updates.currency = prefs.preferred_currency;
+      try {
+        localStorage.setItem('preferred_currency', prefs.preferred_currency);
+      } catch {}
+    }
+
+    if (prefs.stock_sidebar_mode) {
+      updates.sidebarMode = prefs.stock_sidebar_mode;
+      try {
+        localStorage.setItem('stock_sidebar_mode', prefs.stock_sidebar_mode);
+        localStorage.setItem('stock_sidebar_collapsed', String(prefs.stock_sidebar_mode === 'compact'));
+      } catch {}
+    }
+
+    if (typeof prefs.stock_xchart_hide_header === 'boolean') {
+      updates.xchartHideHeader = prefs.stock_xchart_hide_header;
+      try {
+        localStorage.setItem('stock_xchart_hide_header', String(prefs.stock_xchart_hide_header));
+      } catch {}
+    }
+
+    if (typeof prefs.stock_xchart_enable_4h_forex === 'boolean') {
+      updates.xchartEnable4HForex = prefs.stock_xchart_enable_4h_forex;
+      try {
+        localStorage.setItem('stock_xchart_enable_4h_forex', String(prefs.stock_xchart_enable_4h_forex));
+      } catch {}
+    }
+
+    set(updates);
+  },
 
   addNotification: (n) => {
     console.log('[Notification]', n);
   }
 }));
+
+registerSyncHandler(SYNC_KEYS.UI_PREFERENCES, (val) => {
+  useUiStore.getState().applyCloudUiPreferences(val);
+});
 
 // Synchronize if user navigates using browser back / forward buttons
 if (typeof window !== 'undefined') {

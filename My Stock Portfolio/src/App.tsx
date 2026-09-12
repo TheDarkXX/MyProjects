@@ -2,6 +2,7 @@ import React, { useEffect, Suspense, lazy } from 'react';
 import { useAuthStore } from './stores/authStore';
 import { usePortfolioStore } from './stores/portfolioStore';
 import { useUiStore } from './stores/uiStore';
+import { initSettingsSync } from './services/settingsSync';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { Dashboard } from './components/dashboard/Dashboard';
@@ -157,6 +158,7 @@ export const App = () => {
     if (isAuthenticated) {
       verify();
       fetchPortfolios();
+      initSettingsSync();
     }
   }, [isAuthenticated, verify, fetchPortfolios]);
 

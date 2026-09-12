@@ -26,6 +26,7 @@ import { project2xRoutes } from './routes/project2x.js';
 import { chartRoutes } from './routes/chart.js';
 import { marketRoutes } from './routes/market.js';
 import { drawingsRoutes } from './routes/drawings.js';
+import { settingsRoutes } from './routes/settings.js';
 
 const app = new Hono();
 
@@ -56,6 +57,7 @@ app.route('/api/project-2x', project2xRoutes);
 app.route('/api/chart', chartRoutes);
 app.route('/api/market', marketRoutes);
 app.route('/api/drawings', drawingsRoutes);
+app.route('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));

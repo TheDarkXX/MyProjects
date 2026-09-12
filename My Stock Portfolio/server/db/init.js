@@ -296,6 +296,13 @@ export function initDb() {
         trend_lines TEXT DEFAULT '[]',
         updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    -- Universal User Settings Cloud Sync (Indicators, Watchlist, Tabs, Drawing Defaults, UI Prefs)
+    CREATE TABLE IF NOT EXISTS user_settings (
+        setting_key TEXT PRIMARY KEY,
+        setting_value TEXT NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migration for historical_prices OHLCV columns

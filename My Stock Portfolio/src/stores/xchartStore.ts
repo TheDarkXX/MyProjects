@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
+import { pushSettingDebounced, registerSyncHandler } from '../services/settingsSync';
 
 export type XChartTabType = 'STOCK' | 'CURRENCY' | 'HEATMAP' | 'MYPORT';
 
@@ -75,6 +76,9 @@ interface XChartState {
   toggleWatchlistDetail: () => void;
   fetchWatchlistQuotes: () => Promise<void>;
   resetToTVWatchlist: () => void;
+  applyCloudTabs: (data: { tabs: XChartTab[]; activeTabId?: string }) => void;
+  applyCloudWatchlist: (sections: WatchlistSection[]) => void;
+  applyCloudDetailCollapsed: (collapsed: boolean) => void;
 }
 
 const TABS_STORAGE_KEY = 'xchart_tabs_state_v1';
@@ -198,6 +202,7 @@ function persistTabs(tabs: XChartTab[], activeTabId: string) {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify({ tabs, activeTabId }));
+      pushSettingDebounced(TABS_STORAGE_KEY, { tabs, activeTabId });
     } catch (e) {
       console.warn('[xchartStore] Failed to save tabs to localStorage:', e);
     }
@@ -224,6 +229,7 @@ function persistSections(sections: WatchlistSection[]) {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(sections));
+      pushSettingDebounced(WATCHLIST_STORAGE_KEY, sections);
     } catch (e) {
       console.warn('[xchartStore] Failed to save watchlist to localStorage:', e);
     }
@@ -478,6 +484,7 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(DETAIL_COLLAPSED_KEY, String(next));
+        pushSettingDebounced(DETAIL_COLLAPSED_KEY, next);
       } catch {}
     }
   },
@@ -504,5 +511,51 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     set({ watchlistSections: TRADINGVIEW_WATCHLIST_SECTIONS });
     persistSections(TRADINGVIEW_WATCHLIST_SECTIONS);
     get().fetchWatchlistQuotes();
-  }
+  },
+
+  applyCloudTabs: (data) => {
+    if (!data || !Array.isArray(data.tabs) || data.tabs.length === 0) return;
+    const activeTabId = data.activeTabId && data.tabs.some((t) => t.id === data.activeTabId)
+      ? data.activeTabId
+      : data.tabs[0].id;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify({ tabs: data.tabs, activeTabId }));
+      } catch {}
+    }
+    set({ tabs: data.tabs, activeTabId });
+  },
+
+  applyCloudWatchlist: (sections) => {
+    if (!Array.isArray(sections) || sections.length === 0) return;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(sections));
+      } catch {}
+    }
+    set({ watchlistSections: sections });
+    get().fetchWatchlistQuotes();
+  },
+
+  applyCloudDetailCollapsed: (collapsed) => {
+    if (typeof collapsed !== 'boolean') return;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(DETAIL_COLLAPSED_KEY, String(collapsed));
+      } catch {}
+    }
+    set({ watchlistDetailCollapsed: collapsed });
+  },
 }));
+
+registerSyncHandler(TABS_STORAGE_KEY, (val) => {
+  useXChartStore.getState().applyCloudTabs(val);
+});
+
+registerSyncHandler(WATCHLIST_STORAGE_KEY, (val) => {
+  useXChartStore.getState().applyCloudWatchlist(val);
+});
+
+registerSyncHandler(DETAIL_COLLAPSED_KEY, (val) => {
+  useXChartStore.getState().applyCloudDetailCollapsed(val);
+});
