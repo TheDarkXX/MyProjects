@@ -156,10 +156,10 @@ export const XChartTabBar: React.FC = () => {
 
           <div className="w-[1px] h-3.5 bg-slate-700" />
 
-          {/* Yahoo Sync Indicator */}
+          {/* Live Price Feed Indicator */}
           <div className="flex items-center gap-1 text-[13px] font-semibold text-purple-300">
             <span className="text-xs">⚡</span>
-            <span>Yahoo API</span>
+            <span>Price Feed</span>
           </div>
 
           <div className="w-[1px] h-3.5 bg-slate-700" />

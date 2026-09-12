@@ -5,6 +5,7 @@ import { usePriceStore } from '../../stores/priceStore';
 import { Search } from 'lucide-react';
 import clsx from 'clsx';
 import { CloudSyncBadge } from '../common/CloudSyncBadge';
+import { useRelativeTime } from '../../hooks/useRelativeTime';
 
 const PAGE_TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -24,6 +25,7 @@ export const Header = () => {
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
   const { exchangeRate, lastUpdated, loading, fetchExchangeRate } = usePriceStore();
   const [isMarketOpen, setIsMarketOpen] = React.useState(false);
+  const priceRelTime = useRelativeTime(lastUpdated);
 
   React.useEffect(() => {
     const checkMarketStatus = () => {
@@ -136,66 +138,55 @@ export const Header = () => {
           </button>
         </div>
 
-        {/* Live Yahoo FX Rate Badge */}
+        {/* Live FX Rate Badge */}
         {exchangeRate > 0 && (
-          <div className="hidden 2xl:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#1A1D2D]/80 border border-[#2A2E45] text-xs font-semibold tabular-nums text-[#CBD5E1] shadow-inner font-heading" title="Real-time Exchange Rate from Yahoo Finance (THB=X)">
+          <div className="hidden 2xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1A1D2D]/80 border border-[#2A2E45] text-xs font-semibold tabular-nums text-[#CBD5E1] shadow-inner font-heading" title="Real-time Exchange Rate (THB=X)">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span className="text-white font-bold font-heading">$1</span>
             <span>=</span>
             <span className="text-emerald-400 font-extrabold font-heading">฿{exchangeRate.toFixed(2)}</span>
-            <span className="text-[10px] text-[#94A3B8] font-normal uppercase tracking-wider font-heading">Yahoo</span>
+            <span className="text-[11px] text-[#94A3B8] font-bold uppercase tracking-wider font-heading">FX</span>
           </div>
         )}
 
-        {/* Universal Cloud Settings Sync Status Badge */}
+        {/* Universal Cloud Settings Sync Status Badge (Twin Capsule 1) */}
         <CloudSyncBadge variant="header" />
 
-        {/* Premium Market Status & API Indicator - Full Prompt Font */}
+        {/* US Market & Live Price Feed Status Capsule (Twin Capsule 2) */}
         <button 
           onClick={() => fetchExchangeRate('USD', 'THB')}
-          className="flex items-center gap-3.5 px-3.5 py-2 rounded-2xl bg-[#151822]/80 border border-[#2A2E45]/80 hover:border-[#823AFD]/50 shadow-[0_4px_16px_rgba(0,0,0,0.2)] cursor-pointer transition-all hover:bg-[#1A1D2D] hover:-translate-y-0.5 group backdrop-blur-md font-heading"
-          title={lastUpdated ? `Last updated: ${lastUpdated.toLocaleString('th-TH')}. Click to refresh!` : 'Click to refresh data'}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#151822]/80 border border-[#2A2E45]/80 hover:border-[#823AFD]/50 shadow-sm cursor-pointer transition-all hover:bg-[#1A1D2D] hover:-translate-y-0.5 group backdrop-blur-md font-heading select-none"
+          title={lastUpdated ? `Last price update: ${priceRelTime} (${lastUpdated.toLocaleTimeString('th-TH')}). Click to refresh!` : 'Click to refresh prices'}
         >
           {/* Status Indicator Dot */}
           <div className="relative flex items-center justify-center shrink-0">
             <span className={clsx(
-              "w-2.5 h-2.5 rounded-full transition-all duration-300",
+              "w-2 h-2 rounded-full transition-all duration-300",
               loading 
                 ? "bg-[#823AFD] animate-spin" 
                 : isMarketOpen 
-                  ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.8)]"
-                  : "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]"
+                  ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
+                  : "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]"
             )} />
             {!loading && isMarketOpen && (
-              <span className="absolute w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping opacity-60" />
+              <span className="absolute w-2 h-2 rounded-full bg-emerald-400 animate-ping opacity-40 pointer-events-none" />
             )}
           </div>
 
-          <div className="flex flex-col text-left leading-tight gap-1 font-heading">
-            <div className="flex items-center gap-2 font-heading">
-              <span className="text-white font-extrabold text-[13px] tracking-wide group-hover:text-[#823AFD] transition-colors font-heading">
-                US Market
-              </span>
-              <span className={clsx(
-                "text-[11px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border font-heading",
-                isMarketOpen
-                  ? "text-amber-400 bg-amber-400/10 border-amber-400/30"
-                  : "text-rose-400 bg-rose-500/10 border-rose-500/30"
-              )}>
-                {isMarketOpen ? 'LIVE' : 'CLOSED'}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 font-heading">
-              <span className="text-xs text-[#CBD5E1] font-semibold tracking-wide font-heading">
-                Yahoo API
-              </span>
-              <span className="w-1 h-1 rounded-full bg-[#475569]"></span>
-              <span className="text-xs text-[#CBD5E1] tabular-nums tracking-tight font-bold font-heading">
-                {lastUpdated 
-                  ? lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                  : 'Syncing...'}
-              </span>
-            </div>
+          {/* Single-Line Modern Elegance Content (No Yahoo) */}
+          <div className="flex items-center gap-1.5 text-[13px] font-heading">
+            <span className={clsx(
+              "font-bold transition-colors",
+              isMarketOpen
+                ? "text-emerald-400 group-hover:text-emerald-300"
+                : "text-rose-400 group-hover:text-rose-300"
+            )}>
+              {isMarketOpen ? 'US Live' : 'US Closed'}
+            </span>
+            <span className="text-slate-600 text-[11px]">•</span>
+            <span className="font-semibold text-slate-300 tabular-nums">
+              {isMarketOpen ? 'Realtime' : `Price ${priceRelTime}`}
+            </span>
           </div>
         </button>
       </div>
