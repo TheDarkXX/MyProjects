@@ -132,7 +132,7 @@ export const AnchoredVWAPHandle: React.FC<AnchoredVWAPHandleProps> = ({
       } else {
         const yLow = candleSeries.priceToCoordinate(bLow as any);
         if (yLow !== null && !isNaN(yLow)) {
-          y = yLow + 16; // Standard belowBar marker offset
+          y = yLow + 10; // Accurately centered over Lightweight Charts belowBar marker
         }
       }
 
@@ -286,26 +286,26 @@ export const AnchoredVWAPHandle: React.FC<AnchoredVWAPHandleProps> = ({
         onMouseLeave={() => setIsHovered(false)}
         title="⚓ คลิกค้างแล้วลากเพื่อย้ายจุด Anchor VWAP"
       >
-        {/* Generous Hitbox (28px) */}
-        <div className="w-7 h-7 flex items-center justify-center relative">
-          {/* Animated Pulsing Outer Ring on Hover or Drag */}
+        {/* Generous Invisible Hitbox (32px x 32px) centered over the chart's signal marker */}
+        <div className="w-8 h-8 flex items-center justify-center relative">
+          {/* Target Reticle / Highlight Ring ONLY on Hover or Drag (No duplicate inner dot!) */}
           {(isHovered || isDragging) && (
-            <div
-              style={{ borderColor: anchorColor }}
-              className="absolute inset-0 rounded-full border-2 animate-ping opacity-60 pointer-events-none"
-            />
+            <>
+              {/* Outer pulsing wave */}
+              <div
+                style={{ borderColor: anchorColor }}
+                className="absolute inset-0 rounded-full border-2 animate-ping opacity-60 pointer-events-none"
+              />
+              {/* High-visibility focus ring surrounding the signal marker */}
+              <div
+                style={{
+                  borderColor: anchorColor,
+                  boxShadow: `0 0 12px 2px ${anchorColor}99`,
+                }}
+                className="w-6 h-6 rounded-full border-2 border-dashed transition-all duration-150 animate-spin [animation-duration:8s]"
+              />
+            </>
           )}
-
-          {/* Glowing Halo */}
-          <div
-            style={{
-              backgroundColor: anchorColor,
-              boxShadow: isHovered || isDragging ? `0 0 14px 2px ${anchorColor}` : `0 0 8px 1px ${anchorColor}80`,
-            }}
-            className={`w-3.5 h-3.5 rounded-full border-2 border-white transition-transform duration-150 ${
-              isHovered || isDragging ? 'scale-125' : 'scale-100'
-            }`}
-          />
         </div>
 
         {/* Hover Tooltip (When not actively dragging) */}
