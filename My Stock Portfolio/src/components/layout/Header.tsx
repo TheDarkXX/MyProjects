@@ -4,6 +4,7 @@ import { usePortfolioStore } from '../../stores/portfolioStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { Search } from 'lucide-react';
 import clsx from 'clsx';
+import { CloudSyncBadge } from '../common/CloudSyncBadge';
 
 const PAGE_TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -145,6 +146,9 @@ export const Header = () => {
             <span className="text-[10px] text-[#94A3B8] font-normal uppercase tracking-wider font-heading">Yahoo</span>
           </div>
         )}
+
+        {/* Universal Cloud Settings Sync Status Badge */}
+        <CloudSyncBadge variant="header" />
 
         {/* Premium Market Status & API Indicator - Full Prompt Font */}
         <button 

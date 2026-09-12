@@ -15,6 +15,7 @@ import {
   PanelTopOpen
 } from 'lucide-react';
 import clsx from 'clsx';
+import { CloudSyncBadge } from '../common/CloudSyncBadge';
 
 export const XChartTabBar: React.FC = () => {
   const { tabs, activeTabId, setActiveTabId, closeTab, addTab } = useXChartStore();
@@ -160,6 +161,11 @@ export const XChartTabBar: React.FC = () => {
             <span className="text-xs">⚡</span>
             <span>Yahoo API</span>
           </div>
+
+          <div className="w-[1px] h-3.5 bg-slate-700" />
+
+          {/* Universal Cloud Settings Sync LED Indicator */}
+          <CloudSyncBadge variant="tab" />
         </div>
 
         {/* Toggle Top Bar Header Button */}

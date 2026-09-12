@@ -1,4 +1,5 @@
 import { api } from './api';
+import { useSyncStatusStore } from '../stores/syncStatusStore';
 
 export const SYNC_KEYS = {
   INDICATORS: 'xchart_indicators_v1',
@@ -34,12 +35,20 @@ export function pushSettingDebounced(key: string, value: any, delayMs: number = 
     clearTimeout(pushTimers.get(key));
   }
 
+  useSyncStatusStore.getState().setSyncing('push');
+  useSyncStatusStore.getState().setPendingPushes(pushTimers.size + 1);
+
   const timer = setTimeout(async () => {
     pushTimers.delete(key);
+    useSyncStatusStore.getState().setPendingPushes(pushTimers.size);
     try {
       await api.settings.save(key, value);
-    } catch (err) {
+      if (pushTimers.size === 0) {
+        useSyncStatusStore.getState().setSynced();
+      }
+    } catch (err: any) {
       console.warn(`[CloudSync] Failed to push setting '${key}':`, err);
+      useSyncStatusStore.getState().setError(err?.message || `Failed to push setting '${key}'`);
     }
   }, delayMs);
 
@@ -48,10 +57,15 @@ export function pushSettingDebounced(key: string, value: any, delayMs: number = 
 
 export async function pushSettingImmediate(key: string, value: any) {
   if (isApplyingCloud) return;
+  useSyncStatusStore.getState().setSyncing('push');
   try {
     await api.settings.save(key, value);
-  } catch (err) {
+    if (pushTimers.size === 0) {
+      useSyncStatusStore.getState().setSynced();
+    }
+  } catch (err: any) {
     console.warn(`[CloudSync] Failed to push setting '${key}':`, err);
+    useSyncStatusStore.getState().setError(err?.message || `Failed to push setting '${key}'`);
   }
 }
 
@@ -64,9 +78,12 @@ export async function pullAllSettings(force = false) {
   }
   lastPullTime = now;
 
+  useSyncStatusStore.getState().setSyncing('pull');
+
   try {
     const res = await api.settings.getAll();
     if (!res || !res.success || !res.settings) {
+      useSyncStatusStore.getState().setError(res?.error || 'Failed to fetch settings from cloud');
       return;
     }
 
@@ -91,9 +108,17 @@ export async function pullAllSettings(force = false) {
     // Check for unseeded keys and push local storage
     checkAndSeedMissingSettings(cloudSettings);
 
-  } catch (err) {
+    // Mark as successfully synced
+    useSyncStatusStore.getState().setSynced();
+
+  } catch (err: any) {
     console.warn('[CloudSync] Failed to pull settings from cloud:', err);
+    useSyncStatusStore.getState().setError(err?.message || 'Failed to pull settings from cloud');
   }
+}
+
+export async function forceResync() {
+  return pullAllSettings(true);
 }
 
 function checkAndSeedMissingSettings(cloudSettings: Record<string, any>) {
