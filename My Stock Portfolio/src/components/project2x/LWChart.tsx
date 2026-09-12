@@ -47,6 +47,7 @@ import { useChartLivePulse } from './hooks/useChartLivePulse';
 import { useChartDrawings } from './hooks/useChartDrawings';
 import { useChartSeries } from './hooks/useChartSeries';
 import { PriceRangeRuler } from './PriceRangeRuler';
+import { AnchoredVWAPHandle } from './indicators/AnchoredVWAPHandle';
 import { ChartControlBar } from './ChartControlBar';
 import { ChartLegendBar, DominanceTableOverlay } from './ChartLegendOverlay';
 import { applyPaneLayoutHeights as computePaneHeights } from './chartLayoutUtils';
@@ -1285,6 +1286,16 @@ export const LWChart: React.FC<LWChartProps> = ({
               isDraggingLineRef.current = { lineId: id, startPrice: price };
               useDrawingStore.getState().selectLine(id);
             }}
+          />
+
+          {/* Anchored VWAP Interactive Canvas Drag & Drop Handle */}
+          <AnchoredVWAPHandle
+            chart={chartRef.current}
+            candleSeries={candleSeriesRef.current}
+            displayBars={displayBars}
+            anchoredVWAPResult={anchoredVWAPResult}
+            indicatorConfig={indicatorConfig}
+            chartContainer={chartContainerRef.current}
           />
 
           {/* Auto S/R Toast Notification */}

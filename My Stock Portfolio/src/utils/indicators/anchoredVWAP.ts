@@ -83,14 +83,24 @@ export function computeAnchoredVWAP(
   const anchorMode = config?.anchorMode ?? (startDateStr ? 'manual' : 'majorLow10M');
 
   if (anchorMode === 'manual' && startDateStr) {
-    // Construct target timestamp
-    const targetTimestamp = new Date(`${startDateStr}T${startTimeStr}:00`).getTime();
-    for (let i = 0; i < n; i++) {
-      const barTime = parseBarTimestamp(bars[i].time);
-      if (barTime >= targetTimestamp) {
-        anchorIndex = i;
-        break;
+    // Check for exact date match first (e.g. YYYY-MM-DD prefix)
+    const exactIdx = bars.findIndex((b) => b.time.startsWith(startDateStr));
+    if (exactIdx !== -1) {
+      anchorIndex = exactIdx;
+    } else {
+      // Construct target timestamp
+      const targetTimestamp = new Date(`${startDateStr}T${startTimeStr}:00`).getTime();
+      let closestIdx = 0;
+      let minDiff = Infinity;
+      for (let i = 0; i < n; i++) {
+        const barTime = parseBarTimestamp(bars[i].time);
+        const diff = Math.abs(barTime - targetTimestamp);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIdx = i;
+        }
       }
+      anchorIndex = closestIdx;
     }
   } else if (anchorMode === 'ytd') {
     // First bar of the current calendar year
