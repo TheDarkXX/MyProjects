@@ -229,19 +229,19 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
       ? 'hover:shadow-[0_0_24px_rgba(245,158,11,0.35)]'
       : pnlState === 'loss'
       ? 'hover:shadow-[0_0_24px_rgba(244,63,94,0.35)]'
-      : 'hover:shadow-[0_0_24px_rgba(148,163,184,0.25)]';
+      : 'hover:shadow-[0_0_20px_rgba(100,116,139,0.2)]';
 
   const cardBorderAndShadow = isDragging
     ? pnlState === 'profit'
       ? 'border-amber-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(245,158,11,0.45)] scale-[1.02]'
       : pnlState === 'loss'
       ? 'border-rose-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(244,63,94,0.45)] scale-[1.02]'
-      : 'border-slate-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(148,163,184,0.35)] scale-[1.02]'
+      : 'border-slate-500 bg-slate-950/95 shadow-[0_12px_32px_rgba(100,116,139,0.3)] scale-[1.02]'
     : pnlState === 'profit'
     ? 'border-amber-500/50 hover:border-amber-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(245,158,11,0.2)]'
     : pnlState === 'loss'
     ? 'border-rose-500/50 hover:border-rose-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(244,63,94,0.2)]'
-    : 'border-slate-600/50 hover:border-slate-400/80 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(148,163,184,0.15)]';
+    : 'border-slate-700/80 hover:border-slate-500/80 hover:bg-slate-950/90 shadow-[0_4px_16px_rgba(0,0,0,0.3)]';
 
   // If user disabled HUD in settings, don't render
   if (!config.enabled || !config.showHUD) return null;
@@ -281,14 +281,14 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
                 />
               )}
 
-              {/* Dynamic P&L Status LED Dot (Profit: Yellow, Break-Even: White/Gray, Loss: Red) */}
+              {/* Dynamic P&L Status LED Dot (Profit: Yellow, Break-Even: Dark Slate Gray, Loss: Red) */}
               <span
                 className={`w-2 h-2 rounded-full shrink-0 transition-all ${
                   pnlState === 'profit'
                     ? 'bg-amber-400 shadow-[0_0_8px_#F59E0B] animate-pulse'
                     : pnlState === 'loss'
                     ? 'bg-rose-400 shadow-[0_0_8px_#F43F5E] animate-pulse'
-                    : 'bg-slate-400 shadow-[0_0_8px_#94A3B8]'
+                    : 'bg-slate-500 shadow-[0_0_6px_rgba(100,116,139,0.7)]'
                 }`}
                 title={`สถานะพอร์ต: ${
                   pnlState === 'profit'
@@ -298,6 +298,7 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
                     : `เท่าทุน (${pnlPct.toFixed(2)}%)`
                 }`}
               />
+
 
 
               <Briefcase className="w-3.5 h-3.5 text-amber-400 shrink-0" />

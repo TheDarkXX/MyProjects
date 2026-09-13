@@ -523,9 +523,10 @@ export const LWChart: React.FC<LWChartProps> = ({
         } else if (pct < -0.05) {
           costColor = positionConfig.avgCostLossColor || '#F43F5E';
         } else {
-          costColor = positionConfig.avgCostBreakEvenColor || '#94A3B8';
+          costColor = positionConfig.avgCostBreakEvenColor || '#64748B';
         }
       }
+
 
 
       try {
