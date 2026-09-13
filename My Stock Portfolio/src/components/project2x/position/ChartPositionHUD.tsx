@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Briefcase,
   Pin,
@@ -42,84 +42,144 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
   } = usePositionOverlayStore();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const hudCardRef = useRef<HTMLDivElement>(null);
 
-  // Dragging state
+  // Dragging state refs for high-frequency 60-120fps direct DOM manipulation
   const isDraggingRef = useRef(false);
   const dragStartPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const hudStartPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Handle Drag Start
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+  // Clear manual inline styles when snapCorner or resetPosition is triggered (hudPosition is null)
+  useEffect(() => {
+    if (!config.hudPosition && hudCardRef.current) {
+      hudCardRef.current.style.left = '';
+      hudCardRef.current.style.top = '';
+      hudCardRef.current.style.right = '';
+      hudCardRef.current.style.bottom = '';
+      hudCardRef.current.style.transform = '';
+    }
+  }, [config.hudPosition, config.snapCorner]);
+
+  // Handle Drag Pointer Down
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
       if (config.isPinned) return;
-      // Prevent drag if clicking interactive buttons
+
+      // Ignore interactive controls
       const target = e.target as HTMLElement;
       if (target.closest('button') || target.closest('input') || target.closest('a')) {
         return;
       }
 
+      // Only respond to primary click / touch / stylus
+      if (e.button !== 0) return;
+
       e.preventDefault();
+      e.stopPropagation();
+
+      const card = hudCardRef.current;
+      const cont = containerRef.current;
+      if (!card || !cont) return;
+
+      try {
+        card.setPointerCapture(e.pointerId);
+      } catch (_) {}
+
       isDraggingRef.current = true;
+      setIsDragging(true);
       dragStartPosRef.current = { x: e.clientX, y: e.clientY };
 
-      const cardRect = hudCardRef.current?.getBoundingClientRect();
-      const contRect = containerRef.current?.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      const contRect = cont.getBoundingClientRect();
 
-      if (cardRect && contRect) {
-        hudStartPosRef.current = {
-          x: cardRect.left - contRect.left,
-          y: cardRect.top - contRect.top,
-        };
-      }
+      const startX = cardRect.left - contRect.left;
+      const startY = cardRect.top - contRect.top;
+      hudStartPosRef.current = { x: startX, y: startY };
 
-      const handleMouseMove = (moveEvt: MouseEvent) => {
-        if (!isDraggingRef.current || !containerRef.current || !hudCardRef.current) return;
+      // Transition smoothly from transform/snap classes to pixel coordinates
+      card.style.left = `${startX}px`;
+      card.style.top = `${startY}px`;
+      card.style.right = 'auto';
+      card.style.bottom = 'auto';
+      card.style.transform = 'none';
+    },
+    [config.isPinned, containerRef]
+  );
 
-        const deltaX = moveEvt.clientX - dragStartPosRef.current.x;
-        const deltaY = moveEvt.clientY - dragStartPosRef.current.y;
+  // Handle Drag Pointer Move
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isDraggingRef.current) return;
+      const card = hudCardRef.current;
+      const cont = containerRef.current;
+      if (!card || !cont) return;
 
-        const contRect = containerRef.current.getBoundingClientRect();
-        const cardRect = hudCardRef.current.getBoundingClientRect();
+      const deltaX = e.clientX - dragStartPosRef.current.x;
+      const deltaY = e.clientY - dragStartPosRef.current.y;
 
-        const rawX = hudStartPosRef.current.x + deltaX;
-        const rawY = hudStartPosRef.current.y + deltaY;
+      const contRect = cont.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
 
-        // Clamp boundaries within chart canvas
-        const maxX = Math.max(0, contRect.width - cardRect.width);
-        const maxY = Math.max(0, contRect.height - cardRect.height);
+      const rawX = hudStartPosRef.current.x + deltaX;
+      const rawY = hudStartPosRef.current.y + deltaY;
 
-        const clampedX = Math.min(Math.max(4, rawX), maxX - 4);
-        const clampedY = Math.min(Math.max(4, rawY), maxY - 4);
+      // Clamp boundaries within chart canvas (with 6px safe margin)
+      const maxX = Math.max(0, contRect.width - cardRect.width);
+      const maxY = Math.max(0, contRect.height - cardRect.height);
 
-        if (hudCardRef.current) {
-          hudCardRef.current.style.left = `${clampedX}px`;
-          hudCardRef.current.style.top = `${clampedY}px`;
-          hudCardRef.current.style.right = 'auto';
-          hudCardRef.current.style.bottom = 'auto';
-          hudCardRef.current.style.transform = 'none';
-        }
-      };
+      const clampedX = Math.min(Math.max(6, rawX), maxX - 6);
+      const clampedY = Math.min(Math.max(6, rawY), maxY - 6);
 
-      const handleMouseUp = () => {
-        if (!isDraggingRef.current) return;
-        isDraggingRef.current = false;
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+      card.style.left = `${clampedX}px`;
+      card.style.top = `${clampedY}px`;
+      card.style.right = 'auto';
+      card.style.bottom = 'auto';
+      card.style.transform = 'none';
+    },
+    [containerRef]
+  );
 
-        if (hudCardRef.current && containerRef.current) {
-          const contRect = containerRef.current.getBoundingClientRect();
-          const cardRect = hudCardRef.current.getBoundingClientRect();
+  // Handle Drag Pointer Up / Drop
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      setIsDragging(false);
+
+      const card = hudCardRef.current;
+      const cont = containerRef.current;
+      if (card) {
+        try {
+          card.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+
+        if (cont) {
+          const contRect = cont.getBoundingClientRect();
+          const cardRect = card.getBoundingClientRect();
           const finalX = Math.round(cardRect.left - contRect.left);
           const finalY = Math.round(cardRect.top - contRect.top);
-          setHudPosition({ x: finalX, y: finalY });
+          setHudPosition({ x: finalX, y: finalY }, 'custom');
         }
-      };
-
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      }
     },
-    [config.isPinned, containerRef, setHudPosition]
+    [containerRef, setHudPosition]
+  );
+
+  // Handle Drag Pointer Cancel
+  const handlePointerCancel = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      const card = hudCardRef.current;
+      if (card) {
+        try {
+          card.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+      }
+    },
+    []
   );
 
   // Position calculation based on stored position or snap corner
@@ -167,22 +227,40 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
       <div
         ref={hudCardRef}
         style={posConfig.style}
-        className={`${posConfig.className} select-none transition-shadow ${
-          config.isPinned ? '' : 'hover:shadow-[0_0_20px_rgba(245,158,11,0.25)]'
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        className={`${posConfig.className} select-none touch-none ${
+          config.isPinned
+            ? 'cursor-default'
+            : isDragging
+            ? 'cursor-grabbing z-[50]'
+            : 'cursor-grab hover:shadow-[0_0_20px_rgba(245,158,11,0.25)]'
         }`}
       >
         {/* ================= BLOOMBERG NANO-HUD STRIP (30% Footprint) ================= */}
         <div
-          onMouseDown={handleMouseDown}
-          className={`w-[248px] sm:w-[264px] rounded-xl bg-slate-950/75 hover:bg-slate-950/90 backdrop-blur-md border border-slate-700/70 hover:border-slate-500 shadow-xl overflow-hidden flex flex-col px-2.5 py-1.5 transition-all ${
-            config.isPinned ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
+          className={`w-[248px] sm:w-[264px] rounded-xl bg-slate-950/75 backdrop-blur-md border shadow-xl overflow-hidden flex flex-col px-2.5 py-1.5 transition-all ${
+            isDragging
+              ? 'border-amber-500/80 bg-slate-950/90 shadow-[0_12px_30px_rgba(245,158,11,0.35)] scale-[1.02]'
+              : config.isPinned
+              ? 'border-slate-700/70 hover:border-slate-600 hover:bg-slate-950/90'
+              : 'border-slate-700/70 hover:border-amber-500/60 hover:bg-slate-950/90'
           }`}
         >
           {/* Line 1: Cost Basis & Micro-Tools Toolbar */}
           <div className="flex items-center justify-between gap-1.5 leading-tight">
-            <div className="flex items-center gap-1.5 min-w-0">
+            <div
+              className="flex items-center gap-1.5 min-w-0"
+              title={config.isPinned ? 'ปักหมุดล็อคตำแหน่งอยู่' : 'คลิกลากย้ายตำแหน่งได้อิสระ (Drag to move)'}
+            >
               {!config.isPinned && (
-                <GripHorizontal className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <GripHorizontal
+                  className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                    isDragging ? 'text-amber-400' : 'text-slate-400'
+                  }`}
+                />
               )}
               <Briefcase className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <div className="flex items-center gap-1 font-bold text-white text-[13px] font-mono truncate">
@@ -196,20 +274,30 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
             <div className="flex items-center gap-0.5 shrink-0">
               {/* Pin / Unpin Button */}
               <button
-                onClick={togglePin}
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePin();
+                }}
                 className={`p-1 rounded transition-colors cursor-pointer ${
                   config.isPinned
                     ? 'text-amber-400 hover:bg-slate-800'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title={config.isPinned ? 'Pinned (Locked)' : 'Draggable (Click to Lock)'}
+                title={config.isPinned ? 'Pinned (คลิกเพื่อปลดล็อคให้ลากได้)' : 'Draggable (คลิกเพื่อปักหมุดล็อค)'}
               >
                 {config.isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
               </button>
 
               {/* Settings Popover */}
               <button
-                onClick={() => setIsSettingsOpen(true)}
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsSettingsOpen(true);
+                }}
                 className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Position Settings (Color, Width, Style, Snap)"
               >
@@ -219,7 +307,12 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
               {/* Inspect Drawer */}
               {onOpenHoldingDrawer && (
                 <button
-                  onClick={onOpenHoldingDrawer}
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenHoldingDrawer();
+                  }}
                   className="p-1 rounded text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors cursor-pointer"
                   title="Inspect Trade Lots & Blueprint"
                 >
@@ -229,7 +322,12 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
 
               {/* Recycle to Top-Center */}
               <button
-                onClick={resetPosition}
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  resetPosition();
+                }}
                 className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Recycle Position to Top-Center (รีไซเคิลกลับตรงกลางด้านบน)"
               >

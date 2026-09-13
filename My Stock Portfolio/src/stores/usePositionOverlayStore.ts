@@ -86,7 +86,7 @@ export const usePositionOverlayStore = create<PositionOverlayState>((set, get) =
       hudPosition: null,
       snapCorner: 'top-center',
       hudMode: 'expanded',
-      isPinned: true,
+      isPinned: false,
     });
   },
 

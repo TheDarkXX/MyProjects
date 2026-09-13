@@ -33,7 +33,7 @@ export const DEFAULT_POSITION_OVERLAY_SETTINGS: PositionOverlaySettings = {
   
   showHUD: true,
   hudMode: 'expanded',
-  isPinned: true,
+  isPinned: false,
   hudPosition: null,
   snapCorner: 'top-center',
   
