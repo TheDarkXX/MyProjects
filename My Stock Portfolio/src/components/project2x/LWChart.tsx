@@ -519,13 +519,14 @@ export const LWChart: React.FC<LWChartProps> = ({
       if ((positionConfig.avgCostColorMode ?? 'dynamic') === 'dynamic') {
         const pct = pnlPct ?? 0;
         if (pct > 0.05) {
-          costColor = positionConfig.avgCostProfitColor || '#10B981';
+          costColor = positionConfig.avgCostProfitColor || '#F59E0B';
         } else if (pct < -0.05) {
           costColor = positionConfig.avgCostLossColor || '#F43F5E';
         } else {
-          costColor = positionConfig.avgCostBreakEvenColor || '#F59E0B';
+          costColor = positionConfig.avgCostBreakEvenColor || '#94A3B8';
         }
       }
+
 
       try {
         const line = candleSeries.createPriceLine({

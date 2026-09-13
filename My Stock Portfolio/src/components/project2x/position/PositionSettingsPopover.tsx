@@ -31,19 +31,19 @@ const COLOR_PRESETS = [
 ];
 
 const PROFIT_PRESETS = [
-  { name: 'Emerald', hex: '#10B981' },
-  { name: 'Green', hex: '#22C55E' },
-  { name: 'Mint', hex: '#34D399' },
-  { name: 'Cyan', hex: '#06B6D4' },
-  { name: 'Teal', hex: '#14B8A6' },
+  { name: 'Amber', hex: '#F59E0B' },
+  { name: 'Gold', hex: '#EAB308' },
+  { name: 'Yellow', hex: '#FACC15' },
+  { name: 'Orange', hex: '#FB923C' },
+  { name: 'Lime', hex: '#84CC16' },
 ];
 
 const BREAKEVEN_PRESETS = [
-  { name: 'Amber', hex: '#F59E0B' },
-  { name: 'Gold', hex: '#EAB308' },
-  { name: 'Orange', hex: '#FB923C' },
+  { name: 'Slate (เทา)', hex: '#94A3B8' },
+  { name: 'Zinc', hex: '#A1A1AA' },
+  { name: 'Silver', hex: '#CBD5E1' },
   { name: 'White', hex: '#F8FAFC' },
-  { name: 'Slate', hex: '#94A3B8' },
+  { name: 'Cool Gray', hex: '#9CA3AF' },
 ];
 
 const LOSS_PRESETS = [
@@ -76,9 +76,10 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
 
   const [dynamicTab, setDynamicTab] = useState<'profit' | 'breakeven' | 'loss'>('profit');
   const [customHex, setCustomHex] = useState(config.avgCostColor || '#F59E0B');
-  const [profitHex, setProfitHex] = useState(config.avgCostProfitColor || '#10B981');
-  const [breakEvenHex, setBreakEvenHex] = useState(config.avgCostBreakEvenColor || '#F59E0B');
+  const [profitHex, setProfitHex] = useState(config.avgCostProfitColor || '#F59E0B');
+  const [breakEvenHex, setBreakEvenHex] = useState(config.avgCostBreakEvenColor || '#94A3B8');
   const [lossHex, setLossHex] = useState(config.avgCostLossColor || '#F43F5E');
+
 
   const handleCustomHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -321,17 +322,17 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
                   <div className="flex items-center gap-1.5">
                     <span
                       className="w-2.5 h-2.5 rounded-full shadow-sm"
-                      style={{ backgroundColor: config.avgCostProfitColor || '#10B981' }}
+                      style={{ backgroundColor: config.avgCostProfitColor || '#F59E0B' }}
                     />
-                    <span className="text-emerald-400">กำไร (+P&L)</span>
+                    <span className="text-amber-400">กำไร (+P&L)</span>
                   </div>
                   <span className="text-slate-700">──</span>
                   <div className="flex items-center gap-1.5">
                     <span
                       className="w-2.5 h-2.5 rounded-full shadow-sm"
-                      style={{ backgroundColor: config.avgCostBreakEvenColor || '#F59E0B' }}
+                      style={{ backgroundColor: config.avgCostBreakEvenColor || '#94A3B8' }}
                     />
-                    <span className="text-amber-400">เท่าทุน (±0%)</span>
+                    <span className="text-slate-300">เท่าทุน (±0%)</span>
                   </div>
                   <span className="text-slate-700">──</span>
                   <div className="flex items-center gap-1.5">
@@ -350,30 +351,30 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
                     onClick={() => setDynamicTab('profit')}
                     className={`py-1.5 px-2 rounded-md text-center font-bold text-[13px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                       dynamicTab === 'profit'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: config.avgCostProfitColor || '#10B981' }}
-                    />
-                    <span>🟢 กำไร</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDynamicTab('breakeven')}
-                    className={`py-1.5 px-2 rounded-md text-center font-bold text-[13px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      dynamicTab === 'breakeven'
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-sm'
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
                     <span
                       className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: config.avgCostBreakEvenColor || '#F59E0B' }}
+                      style={{ backgroundColor: config.avgCostProfitColor || '#F59E0B' }}
                     />
-                    <span>🟡 เท่าทุน</span>
+                    <span>🟡 กำไร</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDynamicTab('breakeven')}
+                    className={`py-1.5 px-2 rounded-md text-center font-bold text-[13px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      dynamicTab === 'breakeven'
+                        ? 'bg-slate-700/50 text-slate-200 border border-slate-500/60 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: config.avgCostBreakEvenColor || '#94A3B8' }}
+                    />
+                    <span>⚪ เท่าทุน</span>
                   </button>
                   <button
                     type="button"
@@ -395,10 +396,10 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
                 {/* Tab Content: Presets & Custom Hex */}
                 {dynamicTab === 'profit' && (
                   <div className="flex flex-col gap-2">
-                    <span className="text-[13px] text-slate-300 font-medium">เฉดสีกำไร (Profit Color):</span>
+                    <span className="text-[13px] text-slate-300 font-medium">เฉดสีกำไร (Profit Color - สีเหลือง/ทอง):</span>
                     <div className="flex items-center gap-2 flex-wrap">
                       {PROFIT_PRESETS.map((p) => {
-                        const isSelected = (config.avgCostProfitColor || '#10B981').toLowerCase() === p.hex.toLowerCase();
+                        const isSelected = (config.avgCostProfitColor || '#F59E0B').toLowerCase() === p.hex.toLowerCase();
                         return (
                           <button
                             key={p.name}
@@ -431,13 +432,13 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
                             updateConfig({ avgCostProfitColor: val });
                           }
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-[13px] w-28 focus:outline-none focus:border-emerald-400"
-                        placeholder="#10B981"
+                        className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-[13px] w-28 focus:outline-none focus:border-amber-400"
+                        placeholder="#F59E0B"
                         maxLength={7}
                       />
                       <span
                         className="w-6 h-6 rounded-md border border-slate-700"
-                        style={{ backgroundColor: config.avgCostProfitColor || '#10B981' }}
+                        style={{ backgroundColor: config.avgCostProfitColor || '#F59E0B' }}
                       />
                     </div>
                   </div>
@@ -445,10 +446,10 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
 
                 {dynamicTab === 'breakeven' && (
                   <div className="flex flex-col gap-2">
-                    <span className="text-[13px] text-slate-300 font-medium">เฉดสีเท่าทุน (Break-Even Color):</span>
+                    <span className="text-[13px] text-slate-300 font-medium">เฉดสีเท่าทุน (Break-Even Color - สีขาวมืด 40% / เทา):</span>
                     <div className="flex items-center gap-2 flex-wrap">
                       {BREAKEVEN_PRESETS.map((p) => {
-                        const isSelected = (config.avgCostBreakEvenColor || '#F59E0B').toLowerCase() === p.hex.toLowerCase();
+                        const isSelected = (config.avgCostBreakEvenColor || '#94A3B8').toLowerCase() === p.hex.toLowerCase();
                         return (
                           <button
                             key={p.name}
@@ -481,17 +482,18 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
                             updateConfig({ avgCostBreakEvenColor: val });
                           }
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-[13px] w-28 focus:outline-none focus:border-amber-400"
-                        placeholder="#F59E0B"
+                        className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-[13px] w-28 focus:outline-none focus:border-slate-400"
+                        placeholder="#94A3B8"
                         maxLength={7}
                       />
                       <span
                         className="w-6 h-6 rounded-md border border-slate-700"
-                        style={{ backgroundColor: config.avgCostBreakEvenColor || '#F59E0B' }}
+                        style={{ backgroundColor: config.avgCostBreakEvenColor || '#94A3B8' }}
                       />
                     </div>
                   </div>
                 )}
+
 
                 {dynamicTab === 'loss' && (
                   <div className="flex flex-col gap-2">

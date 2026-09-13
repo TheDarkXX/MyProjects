@@ -226,22 +226,22 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
   // Dynamic Glow Styles for Container and Card
   const glowHoverShadow =
     pnlState === 'profit'
-      ? 'hover:shadow-[0_0_24px_rgba(16,185,129,0.3)]'
+      ? 'hover:shadow-[0_0_24px_rgba(245,158,11,0.35)]'
       : pnlState === 'loss'
-      ? 'hover:shadow-[0_0_24px_rgba(244,63,94,0.3)]'
-      : 'hover:shadow-[0_0_24px_rgba(245,158,11,0.3)]';
+      ? 'hover:shadow-[0_0_24px_rgba(244,63,94,0.35)]'
+      : 'hover:shadow-[0_0_24px_rgba(148,163,184,0.25)]';
 
   const cardBorderAndShadow = isDragging
     ? pnlState === 'profit'
-      ? 'border-emerald-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(16,185,129,0.4)] scale-[1.02]'
+      ? 'border-amber-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(245,158,11,0.45)] scale-[1.02]'
       : pnlState === 'loss'
-      ? 'border-rose-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(244,63,94,0.4)] scale-[1.02]'
-      : 'border-amber-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(245,158,11,0.4)] scale-[1.02]'
+      ? 'border-rose-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(244,63,94,0.45)] scale-[1.02]'
+      : 'border-slate-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(148,163,184,0.35)] scale-[1.02]'
     : pnlState === 'profit'
-    ? 'border-emerald-500/50 hover:border-emerald-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(16,185,129,0.18)]'
+    ? 'border-amber-500/50 hover:border-amber-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(245,158,11,0.2)]'
     : pnlState === 'loss'
-    ? 'border-rose-500/50 hover:border-rose-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(244,63,94,0.18)]'
-    : 'border-amber-500/50 hover:border-amber-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(245,158,11,0.18)]';
+    ? 'border-rose-500/50 hover:border-rose-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(244,63,94,0.2)]'
+    : 'border-slate-600/50 hover:border-slate-400/80 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(148,163,184,0.15)]';
 
   // If user disabled HUD in settings, don't render
   if (!config.enabled || !config.showHUD) return null;
@@ -281,14 +281,14 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
                 />
               )}
 
-              {/* Dynamic P&L Status LED Dot */}
+              {/* Dynamic P&L Status LED Dot (Profit: Yellow, Break-Even: White/Gray, Loss: Red) */}
               <span
                 className={`w-2 h-2 rounded-full shrink-0 transition-all ${
                   pnlState === 'profit'
-                    ? 'bg-emerald-400 shadow-[0_0_8px_#10B981] animate-pulse'
+                    ? 'bg-amber-400 shadow-[0_0_8px_#F59E0B] animate-pulse'
                     : pnlState === 'loss'
                     ? 'bg-rose-400 shadow-[0_0_8px_#F43F5E] animate-pulse'
-                    : 'bg-amber-400 shadow-[0_0_8px_#F59E0B]'
+                    : 'bg-slate-400 shadow-[0_0_8px_#94A3B8]'
                 }`}
                 title={`สถานะพอร์ต: ${
                   pnlState === 'profit'
@@ -298,6 +298,7 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
                     : `เท่าทุน (${pnlPct.toFixed(2)}%)`
                 }`}
               />
+
 
               <Briefcase className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <div className="flex items-center gap-1 font-bold text-white text-[13px] font-mono truncate">
@@ -379,18 +380,18 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
             <span
               className={`font-bold flex items-center gap-1 ${
                 pnlState === 'profit'
-                  ? 'text-emerald-400'
+                  ? 'text-amber-400'
                   : pnlState === 'loss'
                   ? 'text-rose-400'
-                  : 'text-amber-400'
+                  : 'text-slate-300'
               }`}
             >
               {pnlState === 'profit' ? (
-                <TrendingUp className="w-3 h-3" />
+                <TrendingUp className="w-3 h-3 text-amber-400" />
               ) : pnlState === 'loss' ? (
-                <TrendingDown className="w-3 h-3" />
+                <TrendingDown className="w-3 h-3 text-rose-400" />
               ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block mr-0.5" />
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block mr-0.5" />
               )}
 
               <span>
