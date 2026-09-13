@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useXChartStore, WatchlistSortColumn } from '../../stores/xchartStore';
+import { useHoldings } from '../../hooks/useHoldings';
+import { MyPortWatchlist } from './myport/MyPortWatchlist';
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -18,7 +20,7 @@ import {
   Coins,
   Flame,
   Check,
-  Sparkles,
+  Briefcase,
   GripVertical
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -68,10 +70,29 @@ export const XChartWatchlistDock: React.FC = () => {
     setWatchlistDetailSymbol,
     toggleWatchlistDetail,
     fetchWatchlistQuotes,
-    resetToTVWatchlist,
     moveSymbol,
     moveSection
   } = useXChartStore();
+
+  const { holdings = [] } = useHoldings();
+  const portHoldingsCount = useMemo(() => {
+    return (holdings || []).filter((h) => h && h.quantity > 0 && h.symbol !== 'CASH').length;
+  }, [holdings]);
+
+  const [dockTab, setDockTab] = useState<'watchlist' | 'myport'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('xchart_dock_tab');
+      if (saved === 'watchlist' || saved === 'myport') return saved;
+    }
+    return 'watchlist';
+  });
+
+  const handleSetDockTab = (tab: 'watchlist' | 'myport') => {
+    setDockTab(tab);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('xchart_dock_tab', tab);
+    }
+  };
 
   // Local UI states
   const [showAddSymbol, setShowAddSymbol] = useState(false);
@@ -268,9 +289,9 @@ export const XChartWatchlistDock: React.FC = () => {
         </button>
 
         <div className="rotate-90 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-300 whitespace-nowrap origin-center">
-          <span>Watchlist</span>
+          <span>{dockTab === 'myport' ? 'My Port' : 'Watchlist'}</span>
           <span className="px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] border border-purple-500/30">
-            {totalSymbolsCount}
+            {dockTab === 'myport' ? portHoldingsCount : totalSymbolsCount}
           </span>
         </div>
 
@@ -296,86 +317,107 @@ export const XChartWatchlistDock: React.FC = () => {
         <div className="w-0.5 h-8 bg-slate-600/40 group-hover:bg-purple-300 rounded-full mx-auto absolute top-1/2 -translate-y-1/2 left-0.5 pointer-events-none" />
       </div>
       {/* 1. Dock Top Header */}
-      <div className="h-11 px-3 border-b border-[#1F2233] flex items-center justify-between bg-[#121520] shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-white font-heading">Watchlist</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
-            {totalSymbolsCount}
-          </span>
-          {watchlistLoading && (
-            <RefreshCw className="w-3 h-3 text-purple-400 animate-spin" />
-          )}
+      <div className="h-11 px-2.5 border-b border-[#1F2233] flex items-center justify-between bg-[#121520] shrink-0">
+        {/* Left: Twin Pill Tab Switcher */}
+        <div className="flex items-center bg-[#181D2D] p-0.5 rounded-lg border border-slate-700/60">
+          {/* Tab 1: Watchlist */}
+          <button
+            onClick={() => handleSetDockTab('watchlist')}
+            className={clsx(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-bold transition-all cursor-pointer",
+              dockTab === 'watchlist'
+                ? "bg-purple-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            )}
+            title="Switch to Watchlist"
+          >
+            <span>Watchlist</span>
+            <span className={clsx(
+              "text-xs px-1.5 py-0.2 rounded-full font-bold",
+              dockTab === 'watchlist' ? "bg-white/20 text-white" : "bg-purple-500/20 text-purple-300"
+            )}>
+              {totalSymbolsCount}
+            </span>
+          </button>
+
+          {/* Tab 2: My Port */}
+          <button
+            onClick={() => handleSetDockTab('myport')}
+            className={clsx(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-bold transition-all cursor-pointer",
+              dockTab === 'myport'
+                ? "bg-purple-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            )}
+            title="Switch to My Port Holdings"
+          >
+            <Briefcase className="w-3.5 h-3.5" />
+            <span>My Port</span>
+            {portHoldingsCount > 0 && (
+              <span className={clsx(
+                "text-xs px-1.5 py-0.2 rounded-full font-bold",
+                dockTab === 'myport' ? "bg-white/20 text-white" : "bg-emerald-500/20 text-emerald-300"
+              )}>
+                {portHoldingsCount}
+              </span>
+            )}
+          </button>
         </div>
 
+        {/* Right: Actions */}
         <div className="flex items-center gap-1">
-          {/* Add Symbol Button */}
-          <button
-            onClick={() => {
-              setShowAddSymbol((prev) => !prev);
-              setShowAddSection(false);
-              setTargetSectionId(watchlistSections[0]?.id || '');
-            }}
-            className={clsx(
-              "p-1.5 rounded-lg transition-all cursor-pointer",
-              showAddSymbol 
-                ? "bg-purple-600 text-white shadow-sm" 
-                : "text-slate-300 hover:text-white hover:bg-white/10"
-            )}
-            title="Add Symbol to Watchlist (+)"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+          {dockTab === 'watchlist' && (
+            <>
+              {/* Add Symbol Button */}
+              <button
+                onClick={() => {
+                  setShowAddSymbol((prev) => !prev);
+                  setShowAddSection(false);
+                  setTargetSectionId(watchlistSections[0]?.id || '');
+                }}
+                className={clsx(
+                  "p-1.5 rounded-lg transition-all cursor-pointer",
+                  showAddSymbol 
+                    ? "bg-purple-600 text-white shadow-sm" 
+                    : "text-slate-300 hover:text-white hover:bg-white/10"
+                )}
+                title="Add Symbol to Watchlist (+)"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
 
-          {/* Add Section Button */}
-          <button
-            onClick={() => {
-              setShowAddSection((prev) => !prev);
-              setShowAddSymbol(false);
-            }}
-            className={clsx(
-              "p-1.5 rounded-lg transition-all cursor-pointer",
-              showAddSection 
-                ? "bg-purple-600 text-white shadow-sm" 
-                : "text-slate-300 hover:text-white hover:bg-white/10"
-            )}
-            title="Create New Section"
-          >
-            <FolderPlus className="w-4 h-4" />
-          </button>
-
-          {/* Sync / Reset TradingView 87-Stock List Button */}
-          <button
-            onClick={() => {
-              if (window.confirm('ต้องการรีเซ็ตและนำเข้า Watchlist ทั้งหมดจาก TradingView (6 หมวด 87 หุ้น) หรือไม่?')) {
-                resetToTVWatchlist();
-              }
-            }}
-            className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 transition-all cursor-pointer border border-transparent hover:border-amber-500/30"
-            title="นำเข้ารายชื่อหุ้นจาก TradingView doctorbank8989 (6 หมวด 87 หุ้น)"
-          >
-            <Sparkles className="w-4 h-4" />
-          </button>
-
-          {/* Manual Refresh Button */}
-          <button
-            onClick={() => fetchWatchlistQuotes()}
-            disabled={watchlistLoading}
-            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer disabled:opacity-50"
-            title="Refresh Quotes"
-          >
-            <RefreshCw className={clsx("w-3.5 h-3.5", watchlistLoading && "animate-spin")} />
-          </button>
+              {/* Add Section Button */}
+              <button
+                onClick={() => {
+                  setShowAddSection((prev) => !prev);
+                  setShowAddSymbol(false);
+                }}
+                className={clsx(
+                  "p-1.5 rounded-lg transition-all cursor-pointer",
+                  showAddSection 
+                    ? "bg-purple-600 text-white shadow-sm" 
+                    : "text-slate-300 hover:text-white hover:bg-white/10"
+                )}
+                title="Create New Section"
+              >
+                <FolderPlus className="w-4 h-4" />
+              </button>
+            </>
+          )}
 
           {/* Collapse Dock Button */}
           <button
             onClick={toggleWatchlist}
             className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer ml-1"
-            title="Collapse Watchlist"
+            title="Collapse Dock"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
+
+      {dockTab === 'watchlist' ? (
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
 
       {/* 2. Inline Add Symbol Bar */}
       {showAddSymbol && (
@@ -993,6 +1035,13 @@ export const XChartWatchlistDock: React.FC = () => {
           </div>
         )}
       </div>
+      </div>
+      ) : (
+        <MyPortWatchlist 
+          selectedSymbol={detailSymbol} 
+          onSelectSymbol={handleStockClick} 
+        />
+      )}
     </aside>
   );
 };

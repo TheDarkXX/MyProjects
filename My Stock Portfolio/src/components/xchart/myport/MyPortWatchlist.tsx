@@ -2,7 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useHoldings, Holding } from '../../../hooks/useHoldings';
 import { usePriceStore } from '../../../stores/priceStore';
 import { usePortfolioStore } from '../../../stores/portfolioStore';
-import { Search, TrendingUp, TrendingDown, Briefcase, ChevronRight, ShieldAlert, Award } from 'lucide-react';
+import { useUiStore } from '../../../stores/uiStore';
+import { formatCurrencyVal, formatSecondaryVal, formatPriceVal } from './types';
+import { Search, TrendingUp, TrendingDown, Briefcase } from 'lucide-react';
 import clsx from 'clsx';
 
 interface MyPortWatchlistProps {
@@ -29,6 +31,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   const totalUnrealizedProfitPercent = rawTotalUnrealizedProfitPercent ?? totalPnlPercent ?? 0;
 
   const { exchangeRate } = usePriceStore();
+  const { currency } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
 
@@ -57,16 +60,13 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     return list;
   }, [holdings, searchQuery, sortBy]);
 
-  const totalValueTHB = (totalPortfolioValue || 0) * (exchangeRate || 34.5);
-  const totalPnLTHB = (totalUnrealizedProfit || 0) * (exchangeRate || 34.5);
-
   return (
-    <div className="w-[340px] h-full bg-[#0D1017] border-l border-slate-800/80 flex flex-col select-none shrink-0 overflow-hidden">
+    <div className="w-full h-full flex-1 bg-[#0F111A] flex flex-col select-none overflow-hidden">
       {/* Port Header Summary Banner */}
-      <div className="p-3.5 border-b border-slate-800/80 bg-[#121622]/80">
+      <div className="p-3 border-b border-[#1F2233] bg-[#121520]">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+            <div className="p-1.5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300">
               <Briefcase className="w-4 h-4" />
             </div>
             <div>
@@ -74,7 +74,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 <select
                   value={activePortfolioId || ''}
                   onChange={(e) => setActivePortfolio(e.target.value)}
-                  className="bg-[#1C2235] border border-slate-700/80 rounded-md px-1.5 py-0.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-amber-400 cursor-pointer max-w-[160px] truncate"
+                  className="bg-[#1C2235] border border-slate-700/80 rounded-md px-1.5 py-0.5 text-[13px] font-bold text-slate-200 focus:outline-none focus:border-purple-400 cursor-pointer max-w-[150px] truncate"
                 >
                   {portfolios.map((p) => (
                     <option key={p.id} value={p.id} className="bg-[#121622] text-white">
@@ -83,42 +83,41 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                   ))}
                 </select>
               ) : (
-                <div className="text-sm font-bold text-slate-200 truncate max-w-[170px]">
+                <div className="text-[13px] font-bold text-slate-200 truncate max-w-[150px]">
                   {activePortfolio?.name || 'My Portfolio'}
                 </div>
               )}
-              <div className="text-[13px] text-slate-300">
-                {filteredHoldings.length} ตัวที่ถือครอง (Holdings)
+              <div className="text-[13px] text-slate-300 font-medium">
+                {filteredHoldings.length} Holdings
               </div>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-sm font-extrabold text-slate-200">
-              ${(totalPortfolioValue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className="text-sm font-normal text-slate-100 font-mono">
+              {formatCurrencyVal(totalPortfolioValue, currency, exchangeRate)}
             </div>
-            <div className="text-[13px] text-slate-300 font-medium">
-              ≈ ฿{(totalValueTHB ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            <div className="text-[13px] text-slate-400 font-normal">
+              ({formatSecondaryVal(totalPortfolioValue, currency, exchangeRate)})
             </div>
           </div>
         </div>
 
         {/* Unrealized Return Strip */}
-        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#181D2D] border border-slate-700/60">
-          <span className="text-[13px] text-slate-300 font-medium">กำไร/ขาดทุนรวม (P/L)</span>
+        <div className="flex items-center justify-between px-2.5 py-1 rounded-lg bg-[#181D2D] border border-slate-700/60">
+          <span className="text-[13px] text-slate-300 font-medium">Total Return</span>
           <div className="flex items-center gap-1.5">
             <span
               className={clsx(
-                'text-sm font-bold flex items-center gap-0.5',
+                'text-sm font-normal font-mono flex items-center gap-0.5',
                 (totalUnrealizedProfit ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
               )}
             >
               {(totalUnrealizedProfit ?? 0) >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-              {(totalUnrealizedProfit ?? 0) >= 0 ? '+' : ''}
-              ${(totalUnrealizedProfit ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatCurrencyVal(totalUnrealizedProfit, currency, exchangeRate, true)}
             </span>
             <span
               className={clsx(
-                'text-[13px] font-semibold px-1.5 py-0.5 rounded',
+                'text-[13px] font-medium px-1.5 py-0.2 rounded',
                 (totalUnrealizedProfitPercent ?? 0) >= 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
               )}
             >
@@ -130,15 +129,15 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       </div>
 
       {/* Filter and Sort Controls */}
-      <div className="p-2.5 border-b border-slate-800/80 flex flex-col gap-2">
+      <div className="p-2 border-b border-[#1F2233] flex flex-col gap-1.5 bg-[#121520]/50">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหาหุ้นในพอร์ต (Search)..."
-            className="w-full bg-[#161B28] border border-slate-700/70 rounded-lg pl-9 pr-3 py-1.5 text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-colors"
+            placeholder="Search holdings..."
+            className="w-full bg-[#161B28] border border-slate-700/70 rounded-lg pl-8 pr-2.5 py-1 text-[13px] text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-colors"
           />
         </div>
 
@@ -147,29 +146,29 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           <button
             onClick={() => setSortBy('weight')}
             className={clsx(
-              'flex-1 py-1 rounded text-center transition-colors font-medium',
-              sortBy === 'weight' ? 'bg-purple-600/30 text-purple-300 font-bold border border-purple-500/40' : 'text-slate-300 hover:text-white'
+              'flex-1 py-0.5 rounded text-center transition-colors font-medium',
+              sortBy === 'weight' ? 'bg-purple-600/30 text-purple-200 font-bold border border-purple-500/40' : 'text-slate-300 hover:text-white'
             )}
           >
-            น้ำหนัก (Weight)
+            Weight
           </button>
           <button
             onClick={() => setSortBy('pnl')}
             className={clsx(
-              'flex-1 py-1 rounded text-center transition-colors font-medium',
-              sortBy === 'pnl' ? 'bg-purple-600/30 text-purple-300 font-bold border border-purple-500/40' : 'text-slate-300 hover:text-white'
+              'flex-1 py-0.5 rounded text-center transition-colors font-medium',
+              sortBy === 'pnl' ? 'bg-purple-600/30 text-purple-200 font-bold border border-purple-500/40' : 'text-slate-300 hover:text-white'
             )}
           >
-            กำไร (P/L %)
+            P&L %
           </button>
           <button
             onClick={() => setSortBy('symbol')}
             className={clsx(
-              'flex-1 py-1 rounded text-center transition-colors font-medium',
-              sortBy === 'symbol' ? 'bg-purple-600/30 text-purple-300 font-bold border border-purple-500/40' : 'text-slate-300 hover:text-white'
+              'flex-1 py-0.5 rounded text-center transition-colors font-medium',
+              sortBy === 'symbol' ? 'bg-purple-600/30 text-purple-200 font-bold border border-purple-500/40' : 'text-slate-300 hover:text-white'
             )}
           >
-            ชื่อ (A-Z)
+            A-Z
           </button>
         </div>
       </div>
@@ -178,20 +177,20 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar">
         {filteredHoldings.length === 0 ? (
           <div className="p-8 text-center text-slate-300 text-sm">
-            {searchQuery ? 'ไม่พบหุ้นที่ค้นหา' : 'ไม่มีรายการหุ้นที่ถือครองในพอร์ตนี้'}
+            {searchQuery ? 'No holdings match the search query' : 'No holdings in this portfolio'}
           </div>
         ) : (
           filteredHoldings.map((h) => {
             const isSelected = h.symbol.toUpperCase() === selectedSymbol.toUpperCase();
-            const isProfit = h.totalReturnPercent >= 0;
-            const dayProfit = h.dayChangePercent >= 0;
+            const isProfit = (h.totalReturnPercent ?? 0) >= 0;
+            const dayProfit = (h.dayChangePercent ?? 0) >= 0;
 
             return (
               <div
                 key={h.symbol}
                 onClick={() => onSelectSymbol(h.symbol)}
                 className={clsx(
-                  'p-3 cursor-pointer transition-all flex flex-col gap-1.5 relative border-l-2',
+                  'p-2.5 cursor-pointer transition-all flex flex-col gap-1.5 relative border-l-2',
                   isSelected
                     ? 'bg-[#1C2235] border-l-purple-500 shadow-sm'
                     : 'bg-transparent border-l-transparent hover:bg-slate-800/40'
@@ -199,23 +198,23 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
               >
                 {/* Row 1: Symbol, Category & Last Price */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-extrabold text-slate-200 tracking-wide font-heading">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-white tracking-wide font-heading">
                       {h.symbol}
                     </span>
                     {h.stockType && (
-                      <span className="text-[13px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 font-medium border border-slate-700/60">
+                      <span className="text-[13px] px-1.5 py-0.2 rounded bg-slate-800/80 text-slate-300 font-normal border border-slate-700/60">
                         {h.stockType}
                       </span>
                     )}
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-bold text-slate-200">
-                      ${(h.lastPrice ?? 0).toFixed(2)}
+                    <span className="text-sm font-normal text-slate-200 font-mono">
+                      {formatPriceVal(h.lastPrice ?? 0, currency, exchangeRate)}
                     </span>
                     <span
                       className={clsx(
-                        'text-[13px] ml-1.5 font-semibold',
+                        'text-[13px] ml-1.5 font-medium',
                         dayProfit ? 'text-emerald-400' : 'text-rose-400'
                       )}
                     >
@@ -227,16 +226,15 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
                 {/* Row 2: Cost Basis, Quantity & Unrealized P/L */}
                 <div className="flex items-center justify-between text-[13px]">
-                  <div className="text-slate-300">
-                    <span>ทุน: </span>
-                    <span className="font-semibold text-slate-200">${(h.avgCost ?? 0).toFixed(2)}</span>
-                    <span className="mx-1 text-slate-400">·</span>
-                    <span>{h.quantity ?? 0} หุ้น</span>
+                  <div className="text-slate-400 font-normal">
+                    <span>Avg ${(h.avgCost ?? 0).toFixed(2)}</span>
+                    <span className="mx-1 text-slate-500">·</span>
+                    <span>{h.quantity ?? 0} shares</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span
                       className={clsx(
-                        'font-extrabold text-sm',
+                        'font-normal text-sm font-mono',
                         isProfit ? 'text-emerald-400' : 'text-rose-400'
                       )}
                     >
@@ -248,12 +246,12 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
                 {/* Row 3: Total Value & Port Weight */}
                 <div className="flex items-center justify-between text-[13px] text-slate-300 pt-0.5">
-                  <div>
-                    มูลค่า: <span className="font-semibold text-slate-200">${(h.currentValue ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                  <div className="text-slate-300 font-normal font-mono">
+                    Val: <span className="text-slate-200">{formatCurrencyVal(h.currentValue ?? 0, currency, exchangeRate)}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span>สัดส่วน:</span>
-                    <span className="font-bold text-purple-400">{(h.weightPercent ?? 0).toFixed(1)}%</span>
+                    <span className="text-slate-400 font-normal">Weight:</span>
+                    <span className="font-normal text-purple-300 font-mono">{(h.weightPercent ?? 0).toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
