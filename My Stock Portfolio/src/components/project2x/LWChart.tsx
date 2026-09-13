@@ -1126,20 +1126,33 @@ export const LWChart: React.FC<LWChartProps> = ({
     };
   }, [activeSubPanes, applyPaneLayoutHeights]);
 
-  // Handle Fullscreen resize trigger
+  // Size synchronization on mount, symbol changes, subpane updates, and fullscreen triggers
   useEffect(() => {
     if (!chartRef.current) return;
-    const timer = setTimeout(() => {
-      chartRef.current?.resize(
-        chartContainerRef.current?.clientWidth || 800,
-        chartContainerRef.current?.clientHeight || 600,
-        true
-      );
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [isFullscreen]);
+    const syncSize = () => {
+      const container = chartContainerRef.current;
+      if (!container || !chartRef.current) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w > 0 && h > 0) {
+        chartRef.current.resize(w, h, true);
+        applyPaneLayoutHeights(chartRef.current, indicatorConfig, maximizedPane);
+      }
+    };
 
-  // ResizeObserver: recalculate pane offsets when container resizes
+    syncSize();
+    const t1 = setTimeout(syncSize, 50);
+    const t2 = setTimeout(syncSize, 150);
+    const t3 = setTimeout(syncSize, 350);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [isFullscreen, symbol, activeContext, activeSubPanes, maximizedPane]);
+
+  // ResizeObserver: actively resize chart canvas and recalculate pane offsets when container resizes
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container || !chartRef.current) return;
@@ -1165,7 +1178,15 @@ export const LWChart: React.FC<LWChartProps> = ({
       setPaneOffsets(newOffsets);
     };
 
-    const ro = new ResizeObserver(() => {
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === container) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0 && chartRef.current) {
+            chartRef.current.resize(width, height, true);
+          }
+        }
+      }
       requestAnimationFrame(updateOffsets);
     });
     ro.observe(container);
@@ -1251,12 +1272,15 @@ export const LWChart: React.FC<LWChartProps> = ({
     return 0;
   }, [activeLegend]);
 
+  const isCustomHeight = className.includes('h-') || className.includes('flex-1');
+  const defaultHeightClass = isCustomHeight ? '' : 'h-[650px] min-h-[500px]';
+
   return (
     <div
       className={`relative flex flex-col bg-[#0A0E17] border border-slate-800/80 rounded-2xl overflow-hidden shadow-2xl transition-all select-none ${
         isFullscreen && !document.fullscreenElement
           ? 'fixed inset-0 z-[100] w-screen h-screen rounded-none border-none p-4'
-          : `w-full ${className}`
+          : `w-full ${defaultHeightClass} ${className}`
       }`}
       style={{ fontFamily: TV_FONT_FAMILY }}
     >

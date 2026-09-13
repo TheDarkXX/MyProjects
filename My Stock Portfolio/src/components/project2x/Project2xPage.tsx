@@ -931,6 +931,7 @@ export const Project2xPage: React.FC = () => {
                   <LWChart
                     symbol={activeStockRow.symbol}
                     chartContext="project2x"
+                    className="w-full h-[650px]"
                     holding={activeHolding}
                     blueprint={activeBlueprint}
                     portfolioOverlay={computedOverlay}
