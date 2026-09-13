@@ -1,8 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { api } from '../../services/api';
 import { LWChart, Resolution, PortfolioOverlayConfig } from '../project2x/LWChart';
 import { useXChartStore } from '../../stores/xchartStore';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import { useHoldings } from '../../hooks/useHoldings';
+import { useTransactionStore } from '../../stores/transactionStore';
+import { useBlueprintStore } from '../../stores/blueprintStore';
+import { useUiStore } from '../../stores/uiStore';
+import { usePriceStore } from '../../stores/priceStore';
+import { MyPortHoldingDrawer } from './myport/MyPortHoldingDrawer';
+import { PortfolioSliceItem } from './myport/types';
 
 import { getCachedCandles, setCachedCandles } from '../../utils/chartIdbCache';
 
@@ -34,10 +41,84 @@ interface ChartApiResponse {
   lastUpdated: string;
 }
 
-export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfolioOverlay }) => {
+export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfolioOverlay: propOverlay }) => {
   const { changeSymbolOnActiveTab, tabs, updateTab } = useXChartStore();
   const currentTab = tabs.find(t => t.id === tabId);
   const activeResolution: Resolution = (currentTab?.resolution as Resolution) || '1D';
+
+  const { holdings } = useHoldings();
+  const { transactions } = useTransactionStore();
+  const { blueprints, fetchBlueprints } = useBlueprintStore();
+  const { currency } = useUiStore();
+  const { exchangeRate } = usePriceStore();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Identify if current stock is held in portfolio
+  const holding = useMemo(() => {
+    if (!symbol) return null;
+    const sym = symbol.toUpperCase();
+    return (holdings || []).find(h => h && h.symbol && h.symbol.toUpperCase() === sym && h.quantity > 0) || null;
+  }, [holdings, symbol]);
+
+  // Find blueprint if exists
+  const blueprint = useMemo(() => {
+    if (!symbol) return null;
+    const sym = symbol.toUpperCase();
+    return (blueprints || []).find(b => b && b.symbol && b.symbol.toUpperCase() === sym) || null;
+  }, [blueprints, symbol]);
+
+  // Synthesize portfolioOverlay for LWChart
+  const computedOverlay = useMemo<PortfolioOverlayConfig | undefined>(() => {
+    if (propOverlay) return propOverlay;
+    if (!holding) return undefined;
+    const sym = symbol.toUpperCase();
+    const stockTxs = (transactions || [])
+      .filter(t => t && t.symbol && t.symbol.toUpperCase() === sym && (!t.status || t.status.toUpperCase() === 'CONFIRMED'))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return {
+      avgCost: holding.avgCost,
+      totalQuantity: holding.quantity,
+      unrealizedPnLPercent: holding.totalReturnPercent,
+      transactions: stockTxs.map(t => ({
+        date: t.date,
+        type: t.type as 'BUY' | 'SELL',
+        price: t.price || 0,
+        amount: t.amount || 0,
+      })),
+      blueprint: blueprint ? {
+        targetPrice: blueprint.target_price || undefined,
+        ceilingPrice: blueprint.ceiling_price || undefined,
+      } : undefined,
+    };
+  }, [propOverlay, holding, blueprint, transactions, symbol]);
+
+  // Construct PortfolioSliceItem for Drawer inspection
+  const drawerSlice = useMemo<PortfolioSliceItem | undefined>(() => {
+    if (!holding) return undefined;
+    const targetPct = blueprint?.target_percent || 0;
+    return {
+      symbol: holding.symbol,
+      category: holding.stockType || 'STOCK',
+      quantity: holding.quantity,
+      avgCost: holding.avgCost,
+      totalCost: holding.totalCost,
+      lastPrice: holding.lastPrice,
+      dayChangePercent: holding.dayChangePercent,
+      dayReturn: holding.dayReturn,
+      currentValue: holding.currentValue,
+      totalReturn: holding.totalReturn,
+      totalReturnPercent: holding.totalReturnPercent,
+      actualWeight: holding.weightPercent,
+      targetWeight: targetPct,
+      drift: holding.weightPercent - targetPct,
+      blueprintTargetPrice: blueprint?.target_price,
+      blueprintCeilingPrice: blueprint?.ceiling_price,
+      blueprintNotes: blueprint?.notes,
+      color: '#F59E0B',
+      isCash: holding.symbol === 'CASH',
+    };
+  }, [holding, blueprint]);
 
   const [cacheByRes, setCacheByRes] = useState<Record<string, ChartApiResponse>>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -182,9 +263,29 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
         onResolutionChange={handleResolutionChange}
         className="w-full h-full flex-1"
         onSelectSymbol={(newSym) => changeSymbolOnActiveTab(newSym)}
-        portfolioOverlay={portfolioOverlay}
+        portfolioOverlay={computedOverlay}
         onToggleFullscreen={handleToggleFullscreen}
+        holding={holding}
+        blueprint={blueprint}
+        onOpenHoldingDrawer={() => setIsDrawerOpen(true)}
       />
+
+      {/* Slide-over Holding Detail Drawer */}
+      {isDrawerOpen && drawerSlice && (
+        <MyPortHoldingDrawer
+          symbol={symbol}
+          slice={drawerSlice}
+          transactions={transactions}
+          blueprint={blueprint || undefined}
+          exchangeRate={exchangeRate}
+          onClose={() => setIsDrawerOpen(false)}
+          onOpenChart={(sym) => {
+            setIsDrawerOpen(false);
+            changeSymbolOnActiveTab(sym);
+          }}
+          currency={currency}
+        />
+      )}
     </div>
   );
 };

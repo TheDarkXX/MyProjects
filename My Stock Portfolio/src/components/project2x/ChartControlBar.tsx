@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   RotateCcw,
   Maximize2,
@@ -7,10 +7,13 @@ import {
   TrendingUp,
   TrendingDown,
   Sliders,
+  Briefcase,
 } from 'lucide-react';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { IndicatorSettings } from '../../types/indicatorConfig';
 import { TimeFrame, ChartStyle, Resolution } from '../../types/chart';
+import { usePositionOverlayStore } from '../../stores/usePositionOverlayStore';
+import { PositionSettingsPopover } from './position/PositionSettingsPopover';
 
 export interface ChartControlBarProps {
   symbol: string;
@@ -37,6 +40,7 @@ export interface ChartControlBarProps {
   isFullscreen: boolean;
   setIsFullscreen: React.Dispatch<React.SetStateAction<boolean>>;
   onToggleFullscreen?: () => void;
+  hasPosition?: boolean;
 }
 
 export const ChartControlBar: React.FC<ChartControlBarProps> = ({
@@ -63,7 +67,11 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
   isFullscreen,
   setIsFullscreen,
   onToggleFullscreen,
+  hasPosition = false,
 }) => {
+  const { config: positionConfig, toggleEnabled: togglePositionEnabled } = usePositionOverlayStore();
+  const [isPositionSettingsOpen, setIsPositionSettingsOpen] = useState(false);
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[#0D1322] border-b border-slate-800/80">
       {/* LEFT: Stock Info + Live Pulse Badge */}
@@ -220,6 +228,36 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
             />
           )}
         </div>
+
+        {/* Position Overlay Button & Settings (Shown only when stock is owned in portfolio) */}
+        {hasPosition && (
+          <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-700/50">
+            <button
+              onClick={togglePositionEnabled}
+              title={positionConfig.enabled ? 'Hide My Position & Avg Cost Overlay' : 'Show My Position & Avg Cost Overlay'}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-bold transition-all cursor-pointer ${
+                positionConfig.enabled
+                  ? 'bg-amber-400 text-slate-950 shadow-md font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Position</span>
+            </button>
+            <button
+              onClick={() => setIsPositionSettingsOpen(true)}
+              title="Position Overlay Settings (Color, Width, Pattern, Snapping)"
+              className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Position Settings Popover */}
+        {isPositionSettingsOpen && (
+          <PositionSettingsPopover onClose={() => setIsPositionSettingsOpen(false)} />
+        )}
 
         {/* Timeframe Presets: 10M | 1Y | 5Y | ALL */}
         <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-700/50">

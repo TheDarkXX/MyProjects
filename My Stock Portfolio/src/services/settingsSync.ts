@@ -8,6 +8,7 @@ export const SYNC_KEYS = {
   DETAIL_COLLAPSED: 'stock_xchart_detail_collapsed',
   DRAWING_SETTINGS: 'tv_drawing_settings_v1',
   UI_PREFERENCES: 'ui_preferences_v1',
+  POSITION_OVERLAY: 'xchart_position_overlay_v1',
 } as const;
 
 export type SyncKey = typeof SYNC_KEYS[keyof typeof SYNC_KEYS];

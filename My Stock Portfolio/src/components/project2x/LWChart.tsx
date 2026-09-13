@@ -42,6 +42,11 @@ import {
   getChartLineStyle,
   hexToRgba,
 } from '../../types/chart';
+import { usePositionOverlayStore } from '../../stores/usePositionOverlayStore';
+import { ChartPositionHUD } from './position/ChartPositionHUD';
+import { Holding } from '../../hooks/useHoldings';
+import { BlueprintEntry } from '../../stores/blueprintStore';
+import { usePriceStore } from '../../stores/priceStore';
 import { useChartIndicators } from './hooks/useChartIndicators';
 import { useChartLivePulse } from './hooks/useChartLivePulse';
 import { useChartDrawings } from './hooks/useChartDrawings';
@@ -85,6 +90,9 @@ export interface LWChartProps {
   onResolutionChange?: (res: Resolution) => void;
   portfolioOverlay?: PortfolioOverlayConfig;
   onToggleFullscreen?: () => void;
+  holding?: Holding | null;
+  blueprint?: BlueprintEntry | null;
+  onOpenHoldingDrawer?: () => void;
 }
 
 export const LWChart: React.FC<LWChartProps> = ({
@@ -112,10 +120,17 @@ export const LWChart: React.FC<LWChartProps> = ({
   onResolutionChange,
   portfolioOverlay,
   onToggleFullscreen,
+  holding,
+  blueprint,
+  onOpenHoldingDrawer,
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const volumeProfilePrimitiveRef = useRef<VolumeProfilePrimitive | null>(null);
+
+  const positionConfig = usePositionOverlayStore((s) => s.config);
+  const { currency } = useUiStore();
+  const { exchangeRate } = usePriceStore();
 
   // States with localStorage persistence
   const [timeframe, setTimeframe] = useState<TimeFrame>(() => {
@@ -334,7 +349,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     resolution,
     chartStyle,
     indicatorConfig,
-    portfolioOverlay,
+    portfolioOverlay: positionConfig.enabled && positionConfig.showBuyMarkers ? portfolioOverlay : undefined,
   });
 
   // Timeframe range applier
@@ -492,18 +507,18 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
     portfolioPriceLinesRef.current = [];
 
-    if (!portfolioOverlay) return;
+    if (!portfolioOverlay || !positionConfig.enabled) return;
 
-    // 1. Cost Basis Line (Amber / Gold glow)
-    if (portfolioOverlay.avgCost && portfolioOverlay.avgCost > 0) {
+    // 1. Cost Basis Line (Amber / Gold glow by default, or user custom color/width/style)
+    if (positionConfig.showAvgCostLine && portfolioOverlay.avgCost && portfolioOverlay.avgCost > 0) {
       const pnlPct = portfolioOverlay.unrealizedPnLPercent;
       const pnlStr = pnlPct !== undefined ? ` (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%)` : '';
       try {
         const line = candleSeries.createPriceLine({
           price: portfolioOverlay.avgCost,
-          color: '#F59E0B',
-          lineWidth: 2,
-          lineStyle: LineStyle.Dashed,
+          color: positionConfig.avgCostColor || '#F59E0B',
+          lineWidth: (positionConfig.avgCostWidth || 2) as any,
+          lineStyle: getChartLineStyle(positionConfig.avgCostStyle || 'Dashed'),
           axisLabelVisible: true,
           title: `Avg Cost: $${portfolioOverlay.avgCost.toFixed(2)}${pnlStr}`,
         });
@@ -512,13 +527,13 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
 
     // 2. Blueprint Target Price Line (Sky Blue)
-    if (portfolioOverlay.blueprint?.targetPrice && portfolioOverlay.blueprint.targetPrice > 0) {
+    if (positionConfig.showBlueprintTarget && portfolioOverlay.blueprint?.targetPrice && portfolioOverlay.blueprint.targetPrice > 0) {
       try {
         const line = candleSeries.createPriceLine({
           price: portfolioOverlay.blueprint.targetPrice,
-          color: '#38BDF8',
-          lineWidth: 2,
-          lineStyle: LineStyle.Dotted,
+          color: positionConfig.targetColor || '#38BDF8',
+          lineWidth: (positionConfig.targetWidth || 2) as any,
+          lineStyle: getChartLineStyle(positionConfig.targetStyle || 'Dotted'),
           axisLabelVisible: true,
           title: `Target: $${portfolioOverlay.blueprint.targetPrice.toFixed(2)}`,
         });
@@ -527,7 +542,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     }
 
     // 3. Blueprint Ceiling Price Line (Purple)
-    if (portfolioOverlay.blueprint?.ceilingPrice && portfolioOverlay.blueprint.ceilingPrice > 0) {
+    if (positionConfig.showBlueprintTarget && portfolioOverlay.blueprint?.ceilingPrice && portfolioOverlay.blueprint.ceilingPrice > 0) {
       try {
         const line = candleSeries.createPriceLine({
           price: portfolioOverlay.blueprint.ceilingPrice,
@@ -549,7 +564,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
       portfolioPriceLinesRef.current = [];
     };
-  }, [candleSeriesReady, portfolioOverlay]);
+  }, [candleSeriesReady, portfolioOverlay, positionConfig]);
 
   // Synchronize Volume Profile (VPVR) data
   useEffect(() => {
@@ -1192,6 +1207,7 @@ export const LWChart: React.FC<LWChartProps> = ({
         isFullscreen={isFullscreen}
         setIsFullscreen={setIsFullscreen}
         onToggleFullscreen={handleToggleFullscreen}
+        hasPosition={!!holding && holding.quantity > 0}
       />
 
       {/* 6. EXTRACTED COMPONENT: Real-Time Floating Legend Strip */}
@@ -1467,6 +1483,19 @@ export const LWChart: React.FC<LWChartProps> = ({
             trendSpeedResult={trendSpeedResult}
             indicatorConfig={indicatorConfig}
           />
+
+          {/* Contextual Floating Position HUD (Heads-Up Display) */}
+          {holding && holding.quantity > 0 && (
+            <ChartPositionHUD
+              symbol={symbol}
+              holding={holding}
+              blueprint={blueprint}
+              containerRef={chartContainerRef}
+              onOpenHoldingDrawer={onOpenHoldingDrawer}
+              currency={currency}
+              exchangeRate={exchangeRate}
+            />
+          )}
         </div>
 
         {/* Right: Quick Watchlist Sidebar */}
