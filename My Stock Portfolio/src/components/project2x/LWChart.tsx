@@ -302,7 +302,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
-      if (e.key === 'f' || e.key === 'F') {
+      if (e.code === 'KeyF' || e.key === 'f' || e.key === 'F' || e.key === 'ด') {
         e.preventDefault();
         handleToggleFullscreen();
       } else if (e.key === 'Escape' && isFullscreen) {

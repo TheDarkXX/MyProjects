@@ -205,29 +205,37 @@ export function useChartDrawings({
         return;
       }
 
-      // Priority: Canvas History Shortcuts
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+      const isKeyZ = e.code === 'KeyZ' || e.key === 'z' || e.key === 'Z' || e.key === 'ผ';
+      const isKeyY = e.code === 'KeyY' || e.key === 'y' || e.key === 'Y' || e.key === 'ั';
+      const isKeyH = e.code === 'KeyH' || e.key === 'h' || e.key === 'H' || e.key === '้';
+      const isKeyT = e.code === 'KeyT' || e.key === 't' || e.key === 'T' || e.key === 'ะ';
+      const isKeyC = e.code === 'KeyC' || e.key === 'c' || e.key === 'C' || e.key === 'แ';
+      const isKeyV = e.code === 'KeyV' || e.key === 'v' || e.key === 'V' || e.key === 'อ';
+
+      // Priority 1: Canvas Undo (Ctrl+Z)
+      if (isCtrlOrMeta && isKeyZ && !e.shiftKey) {
         e.preventDefault();
         useCanvasHistoryStore.getState().undo(symbol);
         return;
       }
 
-      if (
-        ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) ||
-        ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z'))
-      ) {
+      // Priority 2: Canvas Redo (Ctrl+Y or Ctrl+Shift+Z)
+      if ((isCtrlOrMeta && isKeyY) || (isCtrlOrMeta && e.shiftKey && isKeyZ)) {
         e.preventDefault();
         useCanvasHistoryStore.getState().redo(symbol);
         return;
       }
 
-      if (e.altKey && (e.key === 'h' || e.key === 'H')) {
+      // Tool: Horizontal Line (Alt+H)
+      if (e.altKey && isKeyH) {
         e.preventDefault();
         useDrawingStore.getState().setActiveTool('horizontalLine');
         return;
       }
 
-      if (e.altKey && (e.key === 't' || e.key === 'T')) {
+      // Tool: Trendline (Alt+T)
+      if (e.altKey && isKeyT) {
         e.preventDefault();
         useDrawingStore.getState().setActiveTool('trendLine');
         return;
@@ -260,12 +268,14 @@ export function useChartDrawings({
         }
       }
 
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+      // Copy Line: Ctrl+C
+      if (isCtrlOrMeta && isKeyC) {
         useDrawingStore.getState().copySelectedLine(symbol);
         return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+      // Paste Line: Ctrl+V
+      if (isCtrlOrMeta && isKeyV) {
         useDrawingStore.getState().pasteClipboard(symbol);
         return;
       }
