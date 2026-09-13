@@ -519,7 +519,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       if ((positionConfig.avgCostColorMode ?? 'dynamic') === 'dynamic') {
         const pct = pnlPct ?? 0;
         if (pct > 0.05) {
-          costColor = positionConfig.avgCostProfitColor || '#F59E0B';
+          costColor = positionConfig.avgCostProfitColor || '#FACC15';
         } else if (pct < -0.05) {
           costColor = positionConfig.avgCostLossColor || '#F43F5E';
         } else {

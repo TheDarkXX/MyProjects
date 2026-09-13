@@ -34,7 +34,7 @@ export const DEFAULT_POSITION_OVERLAY_SETTINGS: PositionOverlaySettings = {
   showAvgCostLine: true,
   avgCostColorMode: 'dynamic',
   avgCostColor: '#F59E0B',
-  avgCostProfitColor: '#F59E0B',
+  avgCostProfitColor: '#FACC15',
   avgCostBreakEvenColor: '#64748B',
   avgCostLossColor: '#F43F5E',
   avgCostWidth: 2,

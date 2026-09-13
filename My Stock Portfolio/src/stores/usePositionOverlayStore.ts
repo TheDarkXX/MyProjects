@@ -13,10 +13,19 @@ function loadSavedConfig(): PositionOverlaySettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_POSITION_OVERLAY_SETTINGS;
     const parsed = JSON.parse(raw);
-    return {
+    const merged = {
       ...DEFAULT_POSITION_OVERLAY_SETTINGS,
       ...parsed,
     };
+    // Auto-migrate legacy profit colors (Amber / Emerald) to Bright Yellow
+    if (merged.avgCostProfitColor === '#F59E0B' || merged.avgCostProfitColor === '#10B981') {
+      merged.avgCostProfitColor = '#FACC15';
+    }
+    // Auto-migrate legacy break-even colors to Dark Slate Gray (70% darker)
+    if (merged.avgCostBreakEvenColor === '#94A3B8') {
+      merged.avgCostBreakEvenColor = '#64748B';
+    }
+    return merged;
   } catch (_) {
     return DEFAULT_POSITION_OVERLAY_SETTINGS;
   }
@@ -105,6 +114,12 @@ export const usePositionOverlayStore = create<PositionOverlayState>((set, get) =
         ...DEFAULT_POSITION_OVERLAY_SETTINGS,
         ...cloudConfig,
       };
+      if (merged.avgCostProfitColor === '#F59E0B' || merged.avgCostProfitColor === '#10B981') {
+        merged.avgCostProfitColor = '#FACC15';
+      }
+      if (merged.avgCostBreakEvenColor === '#94A3B8') {
+        merged.avgCostBreakEvenColor = '#64748B';
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
       set({ config: merged });
     } catch (e) {

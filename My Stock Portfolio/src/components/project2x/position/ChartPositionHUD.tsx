@@ -226,19 +226,19 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
   // Dynamic Glow Styles for Container and Card
   const glowHoverShadow =
     pnlState === 'profit'
-      ? 'hover:shadow-[0_0_24px_rgba(245,158,11,0.35)]'
+      ? 'hover:shadow-[0_0_24px_rgba(250,204,21,0.4)]'
       : pnlState === 'loss'
       ? 'hover:shadow-[0_0_24px_rgba(244,63,94,0.35)]'
       : 'hover:shadow-[0_0_20px_rgba(100,116,139,0.2)]';
 
   const cardBorderAndShadow = isDragging
     ? pnlState === 'profit'
-      ? 'border-amber-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(245,158,11,0.45)] scale-[1.02]'
+      ? 'border-yellow-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(250,204,21,0.45)] scale-[1.02]'
       : pnlState === 'loss'
       ? 'border-rose-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(244,63,94,0.45)] scale-[1.02]'
       : 'border-slate-500 bg-slate-950/95 shadow-[0_12px_32px_rgba(100,116,139,0.3)] scale-[1.02]'
     : pnlState === 'profit'
-    ? 'border-amber-500/50 hover:border-amber-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(245,158,11,0.2)]'
+    ? 'border-yellow-400/60 hover:border-yellow-300/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(250,204,21,0.25)]'
     : pnlState === 'loss'
     ? 'border-rose-500/50 hover:border-rose-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(244,63,94,0.2)]'
     : 'border-slate-700/80 hover:border-slate-500/80 hover:bg-slate-950/90 shadow-[0_4px_16px_rgba(0,0,0,0.3)]';
@@ -276,16 +276,16 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
               {!config.isPinned && (
                 <GripHorizontal
                   className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                    isDragging ? 'text-amber-400' : 'text-slate-400'
+                    isDragging ? 'text-yellow-400' : 'text-slate-400'
                   }`}
                 />
               )}
 
-              {/* Dynamic P&L Status LED Dot (Profit: Yellow, Break-Even: Dark Slate Gray, Loss: Red) */}
+              {/* Dynamic P&L Status LED Dot (Profit: Bright Yellow, Break-Even: Dark Slate Gray, Loss: Red) */}
               <span
                 className={`w-2 h-2 rounded-full shrink-0 transition-all ${
                   pnlState === 'profit'
-                    ? 'bg-amber-400 shadow-[0_0_8px_#F59E0B] animate-pulse'
+                    ? 'bg-yellow-300 shadow-[0_0_10px_#FACC15] animate-pulse'
                     : pnlState === 'loss'
                     ? 'bg-rose-400 shadow-[0_0_8px_#F43F5E] animate-pulse'
                     : 'bg-slate-500 shadow-[0_0_6px_rgba(100,116,139,0.7)]'
@@ -301,11 +301,11 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
 
 
 
-              <Briefcase className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <Briefcase className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
               <div className="flex items-center gap-1 font-bold text-white text-[13px] font-mono truncate">
                 <span>{holding.quantity.toLocaleString()} shs</span>
                 <span className="text-slate-400 text-xs font-normal">@</span>
-                <span className="text-amber-300">${holding.avgCost.toFixed(2)}</span>
+                <span className="text-yellow-300">${holding.avgCost.toFixed(2)}</span>
               </div>
             </div>
 
@@ -322,7 +322,7 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
                 }}
                 className={`p-1 rounded transition-colors cursor-pointer ${
                   config.isPinned
-                    ? 'text-amber-400 hover:bg-slate-800'
+                    ? 'text-yellow-400 hover:bg-slate-800'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
                 title={config.isPinned ? 'Pinned (คลิกเพื่อปลดล็อคให้ลากได้)' : 'Draggable (คลิกเพื่อปักหมุดล็อค)'}
@@ -368,7 +368,7 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
                   e.stopPropagation();
                   resetPosition();
                 }}
-                className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-1 rounded text-slate-400 hover:text-yellow-300 hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Recycle Position to Top-Center (รีไซเคิลกลับตรงกลางด้านบน)"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -381,14 +381,14 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
             <span
               className={`font-bold flex items-center gap-1 ${
                 pnlState === 'profit'
-                  ? 'text-amber-400'
+                  ? 'text-yellow-300'
                   : pnlState === 'loss'
                   ? 'text-rose-400'
                   : 'text-slate-300'
               }`}
             >
               {pnlState === 'profit' ? (
-                <TrendingUp className="w-3 h-3 text-amber-400" />
+                <TrendingUp className="w-3 h-3 text-yellow-300" />
               ) : pnlState === 'loss' ? (
                 <TrendingDown className="w-3 h-3 text-rose-400" />
               ) : (
