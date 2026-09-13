@@ -98,7 +98,7 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
       </div>
 
       {/* Donut Wheel + Ambient Glow + Center Core */}
-      <div className="relative w-full h-[330px] flex items-center justify-center shrink-0">
+      <div className="relative w-full h-[370px] xl:h-[390px] flex items-center justify-center shrink-0">
         {/* Ambient background glow behind chart */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(147,51,234,0.08)_0%,rgba(13,16,23,0)_70%)] pointer-events-none" />
 
@@ -108,8 +108,8 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius={96}
-              outerRadius={142}
+              innerRadius={114}
+              outerRadius={166}
               paddingAngle={2.5}
               dataKey="value"
               activeIndex={activeIndex}

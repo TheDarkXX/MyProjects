@@ -8,8 +8,7 @@ import {
   LayoutGrid, 
   Wallet 
 } from 'lucide-react';
-import clsx from 'clsx';
-import { Portfolio } from '../../../stores/portfolioStore';
+import { Portfolio } from '../../../types';
 import { formatCurrencyVal, formatSecondaryVal } from './types';
 
 export type MyPortViewMode = 'split' | 'table' | 'bento';

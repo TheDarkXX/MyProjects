@@ -70,3 +70,30 @@ export const formatSecondaryVal = (
   return `${prefix}฿${thbVal.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 };
 
+export const formatPriceVal = (
+  val: number,
+  currency: 'USD' | 'THB',
+  exchangeRate: number
+): string => {
+  const rate = exchangeRate || 34.5;
+  if (currency === 'THB') {
+    const converted = val * rate;
+    return `฿${converted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+export const formatSecondaryPriceVal = (
+  val: number,
+  currency: 'USD' | 'THB',
+  exchangeRate: number
+): string => {
+  const rate = exchangeRate || 34.5;
+  if (currency === 'THB') {
+    return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  const thbVal = val * rate;
+  return `฿${thbVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+

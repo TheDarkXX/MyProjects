@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { PortfolioSliceItem, formatCurrencyVal, formatSecondaryVal } from './types';
+import { 
+  PortfolioSliceItem, 
+  formatCurrencyVal, 
+  formatSecondaryVal,
+  formatPriceVal,
+  formatSecondaryPriceVal
+} from './types';
 import { 
   Search, 
   TrendingUp, 
@@ -280,15 +286,15 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                         />
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-extrabold text-white font-heading">
+                            <span className="text-sm font-bold text-white font-heading">
                               {slice.symbol}
                             </span>
-                            <span className="text-[13px] px-1.5 py-0.2 rounded bg-slate-800/90 text-slate-300 font-medium border border-slate-700/60">
+                            <span className="text-[13px] px-1.5 py-0.2 rounded bg-slate-800/90 text-slate-300 font-normal border border-slate-700/60">
                               {slice.category}
                             </span>
                           </div>
                           {slice.isCash && (
-                            <span className="text-[13px] text-emerald-400 font-medium">Cash Cushion</span>
+                            <span className="text-[13px] text-emerald-400 font-normal">Cash Cushion</span>
                           )}
                         </div>
                       </div>
@@ -298,11 +304,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       <div className="flex flex-col items-end">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-black text-white font-mono">
+                          <span className="text-sm font-normal text-slate-200 font-mono">
                             {slice.actualWeight.toFixed(1)}%
                           </span>
                           {slice.targetWeight > 0 && (
-                            <span className="text-[13px] text-slate-400 font-medium">
+                            <span className="text-[13px] text-slate-400 font-normal">
                               (Target {slice.targetWeight.toFixed(1)}%)
                             </span>
                           )}
@@ -313,7 +319,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                           <div className="mt-0.5">
                             <span
                               className={clsx(
-                                'text-[13px] font-bold px-1.5 py-0.2 rounded-full',
+                                'text-[13px] font-medium px-1.5 py-0.2 rounded-full',
                                 slice.drift >= 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
                               )}
                             >
@@ -324,36 +330,41 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                       </div>
                     </td>
 
-                    {/* 3. Market Price & 24h Change */}
+                    {/* 3. Market Price & 24h Change (Reactive Currency) */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       {!slice.isCash ? (
                         <div className="flex flex-col items-end">
-                          <span className="text-sm font-bold text-slate-100 font-mono">
-                            ${(slice.lastPrice ?? 0).toFixed(2)}
+                          <span className="text-sm font-normal text-slate-200 font-mono">
+                            {formatPriceVal(slice.lastPrice ?? 0, currency, exchangeRate)}
                           </span>
-                          <span
-                            className={clsx(
-                              'text-[13px] font-semibold flex items-center gap-0.5',
-                              isDayProfit ? 'text-emerald-400' : 'text-rose-400'
-                            )}
-                          >
-                            {isDayProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                            {isDayProfit ? '+' : ''}
-                            {(slice.dayChangePercent ?? 0).toFixed(2)}%
-                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[13px] text-slate-400 font-normal">
+                              ({formatSecondaryPriceVal(slice.lastPrice ?? 0, currency, exchangeRate)})
+                            </span>
+                            <span
+                              className={clsx(
+                                'text-[13px] font-medium flex items-center gap-0.5',
+                                isDayProfit ? 'text-emerald-400' : 'text-rose-400'
+                              )}
+                            >
+                              {isDayProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                              {isDayProfit ? '+' : ''}
+                              {(slice.dayChangePercent ?? 0).toFixed(2)}%
+                            </span>
+                          </div>
                         </div>
                       ) : (
-                        <span className="text-sm text-slate-400 font-mono">--</span>
+                        <span className="text-sm text-slate-400 font-mono font-normal">--</span>
                       )}
                     </td>
 
                     {/* 4. Holding Value */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       <div className="flex flex-col items-end">
-                        <span className="text-sm font-extrabold text-white font-mono">
+                        <span className="text-sm font-normal text-slate-200 font-mono">
                           {formatCurrencyVal(slice.currentValue, currency, exchangeRate)}
                         </span>
-                        <span className="text-[13px] text-slate-400 font-medium">
+                        <span className="text-[13px] text-slate-400 font-normal">
                           ({formatSecondaryVal(slice.currentValue, currency, exchangeRate)})
                         </span>
                       </div>
@@ -365,7 +376,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                         <div className="flex flex-col items-end">
                           <span
                             className={clsx(
-                              'text-sm font-bold font-mono',
+                              'text-sm font-normal font-mono',
                               isProfit ? 'text-emerald-400' : 'text-rose-400'
                             )}
                           >
@@ -373,7 +384,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                           </span>
                           <span
                             className={clsx(
-                              'text-[13px] font-semibold px-1.5 py-0.2 rounded mt-0.5',
+                              'text-[13px] font-medium px-1.5 py-0.2 rounded mt-0.5',
                               isProfit ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
                             )}
                           >
@@ -382,7 +393,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                           </span>
                         </div>
                       ) : (
-                        <span className="text-sm text-slate-400 font-mono">--</span>
+                        <span className="text-sm text-slate-400 font-mono font-normal">--</span>
                       )}
                     </td>
 

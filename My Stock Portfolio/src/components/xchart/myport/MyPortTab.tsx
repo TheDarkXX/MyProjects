@@ -168,7 +168,7 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
   // Quick action: Open candlestick chart tab for a symbol
   const handleOpenChart = (symbol: string) => {
     if (!symbol || symbol === 'CASH') return;
-    addTab(symbol.toUpperCase(), '1D');
+    addTab({ type: 'STOCK', symbol: symbol.toUpperCase(), title: symbol.toUpperCase() });
   };
 
   const winnersCount = useMemo(() => slices.filter((s) => !s.isCash && s.totalReturnPercent > 0).length, [slices]);
@@ -215,8 +215,8 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
       <div className="flex-1 flex overflow-hidden relative min-h-0 w-full">
         {viewMode === 'split' && (
           <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden min-h-0 w-full">
-            {/* Left: The M1 Finance Interactive Donut Wheel */}
-            <div className="w-full lg:w-[360px] xl:w-[400px] 2xl:w-[440px] h-full overflow-hidden shrink-0 border-r border-slate-800/80">
+            {/* Left: The M1 Finance Interactive Donut Wheel (2/5 of screen = 40%) */}
+            <div className="w-full lg:w-[40%] xl:w-[40%] 2xl:w-[40%] h-full overflow-hidden shrink-0 border-r border-slate-800/80">
               <MyPortM1Pie
                 slices={slices}
                 totalNetWorth={totalNetWorth}

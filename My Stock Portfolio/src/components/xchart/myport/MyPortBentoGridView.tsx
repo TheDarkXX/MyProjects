@@ -1,5 +1,5 @@
 import React from 'react';
-import { PortfolioSliceItem, formatCurrencyVal, formatSecondaryVal } from './types';
+import { PortfolioSliceItem, formatCurrencyVal, formatSecondaryVal, formatPriceVal } from './types';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -134,8 +134,8 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
                 {!slice.isCash && (
                   <div className="mt-3 flex items-center justify-between text-[13px] pt-2 border-t border-slate-800/60">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-200 font-mono">
-                        ${(slice.lastPrice ?? 0).toFixed(2)}
+                      <span className="font-normal text-slate-200 font-mono">
+                        {formatPriceVal(slice.lastPrice ?? 0, currency, exchangeRate)}
                       </span>
                       <span
                         className={clsx(
