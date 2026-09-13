@@ -11,6 +11,7 @@ import {
 import { snapToTickSize, detectSupportResistance } from '../utils/drawingUtils';
 import { api } from '../services/api';
 import { pushSettingDebounced, registerSyncHandler } from '../services/settingsSync';
+import { useCanvasHistoryStore } from './canvasHistoryStore';
 
 const syncTimers = new Map<string, any>();
 function scheduleCloudSync(symbol: string, get: () => DrawingState) {
@@ -126,7 +127,7 @@ export interface DrawingState {
   loadDrawings: (symbol: string) => HorizontalLineDrawing[];
   getDrawings: (symbol: string) => HorizontalLineDrawing[];
   addLine: (symbol: string, line: Partial<HorizontalLineDrawing> & { price: number }) => string;
-  updateLine: (symbol: string, id: string, updates: Partial<HorizontalLineDrawing>) => void;
+  updateLine: (symbol: string, id: string, updates: Partial<HorizontalLineDrawing>, skipHistory?: boolean) => void;
   deleteLine: (symbol: string, id: string) => void;
   clearLines: (symbol: string) => void;
   cloneLine: (symbol: string, id: string, newPrice?: number) => string | null;
@@ -135,10 +136,19 @@ export interface DrawingState {
   loadTrendLines: (symbol: string) => TrendLineDrawing[];
   getTrendLines: (symbol: string) => TrendLineDrawing[];
   addTrendLine: (symbol: string, line: Partial<TrendLineDrawing> & { startPrice: number; startTime: string | number; endPrice: number; endTime: string | number }) => string;
-  updateTrendLine: (symbol: string, id: string, updates: Partial<TrendLineDrawing>) => void;
+  updateTrendLine: (symbol: string, id: string, updates: Partial<TrendLineDrawing>, skipHistory?: boolean) => void;
   deleteTrendLine: (symbol: string, id: string) => void;
   clearTrendLines: (symbol: string) => void;
   selectTrendLine: (id: string | null) => void;
+
+  // History Restore Methods (Used by Canvas History Dispatcher)
+  restoreAddLine: (symbol: string, line: HorizontalLineDrawing) => void;
+  restoreDeleteLine: (symbol: string, id: string) => void;
+  restoreUpdateLine: (symbol: string, id: string, previousOrNewState: Partial<HorizontalLineDrawing>) => void;
+  restoreAddTrendLine: (symbol: string, trendLine: TrendLineDrawing) => void;
+  restoreDeleteTrendLine: (symbol: string, id: string) => void;
+  restoreUpdateTrendLine: (symbol: string, id: string, previousOrNewState: Partial<TrendLineDrawing>) => void;
+  restoreFullDrawings: (symbol: string, horizontals: HorizontalLineDrawing[], trends: TrendLineDrawing[]) => void;
 
   // Cloud Sync
   syncFromCloud: (symbol: string) => Promise<void>;
@@ -260,6 +270,17 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     saveToStorage(sym, updated);
     scheduleCloudSync(sym, get);
 
+    if (!useCanvasHistoryStore.getState().isRestoring) {
+      useCanvasHistoryStore.getState().pushCommand({
+        type: 'ADD_LINE',
+        symbol: sym,
+        description: `Place Line @ ${newLine.price.toFixed(2)}`,
+        iconType: 'line',
+        forwardData: { lineId: newLine.id, line: newLine },
+        inverseData: { lineId: newLine.id },
+      });
+    }
+
     set((state) => ({
       drawingsBySymbol: {
         ...state.drawingsBySymbol,
@@ -272,9 +293,23 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     return newLine.id;
   },
 
-  updateLine: (symbol: string, id: string, updates: Partial<HorizontalLineDrawing>) => {
+  updateLine: (symbol: string, id: string, updates: Partial<HorizontalLineDrawing>, skipHistory?: boolean) => {
     const sym = symbol.toUpperCase().trim();
     const current = get().getDrawings(sym);
+    const target = current.find((d) => d.id === id);
+    if (!target) return;
+
+    if (!skipHistory && !useCanvasHistoryStore.getState().isRestoring) {
+      useCanvasHistoryStore.getState().pushCommand({
+        type: 'UPDATE_LINE',
+        symbol: sym,
+        description: `Move Line to ${(updates.price ?? target.price).toFixed(2)}`,
+        iconType: 'line',
+        forwardData: { lineId: id, newState: updates },
+        inverseData: { lineId: id, previousState: target },
+      });
+    }
+
     const updated = current.map((d) => (d.id === id ? { ...d, ...updates } : d));
     saveToStorage(sym, updated);
     scheduleCloudSync(sym, get);
@@ -290,6 +325,19 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   deleteLine: (symbol: string, id: string) => {
     const sym = symbol.toUpperCase().trim();
     const current = get().getDrawings(sym);
+    const target = current.find((d) => d.id === id);
+
+    if (target && !useCanvasHistoryStore.getState().isRestoring) {
+      useCanvasHistoryStore.getState().pushCommand({
+        type: 'DELETE_LINE',
+        symbol: sym,
+        description: `Delete Line @ ${target.price.toFixed(2)}`,
+        iconType: 'trash',
+        forwardData: { lineId: id },
+        inverseData: { deletedLine: target },
+      });
+    }
+
     const updated = current.filter((d) => d.id !== id);
     saveToStorage(sym, updated);
     scheduleCloudSync(sym, get);
@@ -306,6 +354,20 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
 
   clearLines: (symbol: string) => {
     const sym = symbol.toUpperCase().trim();
+    const currentHorizontals = get().getDrawings(sym);
+    const currentTrends = get().getTrendLines(sym);
+
+    if ((currentHorizontals.length > 0 || currentTrends.length > 0) && !useCanvasHistoryStore.getState().isRestoring) {
+      useCanvasHistoryStore.getState().pushCommand({
+        type: 'CLEAR_ALL_DRAWINGS',
+        symbol: sym,
+        description: `Clear All (${currentHorizontals.length + currentTrends.length} items)`,
+        iconType: 'trash',
+        forwardData: {},
+        inverseData: { horizontalLines: currentHorizontals, trendLines: currentTrends },
+      });
+    }
+
     saveToStorage(sym, []);
     saveTrendLinesToStorage(sym, []);
     api.drawings.delete(sym).catch(() => {});
@@ -363,6 +425,17 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     saveTrendLinesToStorage(sym, updated);
     scheduleCloudSync(sym, get);
 
+    if (!useCanvasHistoryStore.getState().isRestoring) {
+      useCanvasHistoryStore.getState().pushCommand({
+        type: 'ADD_TRENDLINE',
+        symbol: sym,
+        description: `Place Trendline @ ${newTrendLine.startPrice.toFixed(2)}`,
+        iconType: 'trend',
+        forwardData: { trendLineId: newTrendLine.id, trendLine: newTrendLine },
+        inverseData: { trendLineId: newTrendLine.id },
+      });
+    }
+
     set((state) => ({
       trendLinesBySymbol: {
         ...state.trendLinesBySymbol,
@@ -376,9 +449,23 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     return newTrendLine.id;
   },
 
-  updateTrendLine: (symbol: string, id: string, updates: Partial<TrendLineDrawing>) => {
+  updateTrendLine: (symbol: string, id: string, updates: Partial<TrendLineDrawing>, skipHistory?: boolean) => {
     const sym = symbol.toUpperCase().trim();
     const current = get().getTrendLines(sym);
+    const target = current.find((tl) => tl.id === id);
+    if (!target) return;
+
+    if (!skipHistory && !useCanvasHistoryStore.getState().isRestoring) {
+      useCanvasHistoryStore.getState().pushCommand({
+        type: 'UPDATE_TRENDLINE',
+        symbol: sym,
+        description: `Move Trendline @ ${target.startPrice.toFixed(2)}`,
+        iconType: 'trend',
+        forwardData: { trendLineId: id, newState: updates },
+        inverseData: { trendLineId: id, previousState: target },
+      });
+    }
+
     const updated = current.map((tl) => (tl.id === id ? { ...tl, ...updates } : tl));
     saveTrendLinesToStorage(sym, updated);
     scheduleCloudSync(sym, get);
@@ -394,6 +481,19 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   deleteTrendLine: (symbol: string, id: string) => {
     const sym = symbol.toUpperCase().trim();
     const current = get().getTrendLines(sym);
+    const target = current.find((tl) => tl.id === id);
+
+    if (target && !useCanvasHistoryStore.getState().isRestoring) {
+      useCanvasHistoryStore.getState().pushCommand({
+        type: 'DELETE_TRENDLINE',
+        symbol: sym,
+        description: `Delete Trendline @ ${target.startPrice.toFixed(2)}`,
+        iconType: 'trash',
+        forwardData: { trendLineId: id },
+        inverseData: { deletedTrendLine: target },
+      });
+    }
+
     const updated = current.filter((tl) => tl.id !== id);
     saveTrendLinesToStorage(sym, updated);
     scheduleCloudSync(sym, get);
@@ -409,6 +509,19 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
 
   clearTrendLines: (symbol: string) => {
     const sym = symbol.toUpperCase().trim();
+    const currentTrends = get().getTrendLines(sym);
+
+    if (currentTrends.length > 0 && !useCanvasHistoryStore.getState().isRestoring) {
+      useCanvasHistoryStore.getState().pushCommand({
+        type: 'CLEAR_ALL_DRAWINGS',
+        symbol: sym,
+        description: `Clear Trendlines (${currentTrends.length} items)`,
+        iconType: 'trash',
+        forwardData: {},
+        inverseData: { horizontalLines: get().getDrawings(sym), trendLines: currentTrends },
+      });
+    }
+
     saveTrendLinesToStorage(sym, []);
     scheduleCloudSync(sym, get);
 
@@ -418,6 +531,118 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
         [sym]: [],
       },
       selectedTrendLineId: null,
+    }));
+  },
+
+  restoreAddLine: (symbol: string, line: HorizontalLineDrawing) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().getDrawings(sym);
+    if (current.some((d) => d.id === line.id)) return;
+    const updated = [...current, line];
+    saveToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
+    set((state) => ({
+      drawingsBySymbol: {
+        ...state.drawingsBySymbol,
+        [sym]: updated,
+      },
+      selectedLineId: line.id,
+    }));
+  },
+
+  restoreDeleteLine: (symbol: string, id: string) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().getDrawings(sym);
+    const updated = current.filter((d) => d.id !== id);
+    saveToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
+    set((state) => ({
+      drawingsBySymbol: {
+        ...state.drawingsBySymbol,
+        [sym]: updated,
+      },
+      selectedLineId: state.selectedLineId === id ? null : state.selectedLineId,
+      hoveredLineId: state.hoveredLineId === id ? null : state.hoveredLineId,
+    }));
+  },
+
+  restoreUpdateLine: (symbol: string, id: string, previousOrNewState: Partial<HorizontalLineDrawing>) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().getDrawings(sym);
+    const updated = current.map((d) => (d.id === id ? { ...d, ...previousOrNewState } : d));
+    saveToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
+    set((state) => ({
+      drawingsBySymbol: {
+        ...state.drawingsBySymbol,
+        [sym]: updated,
+      },
+    }));
+  },
+
+  restoreAddTrendLine: (symbol: string, trendLine: TrendLineDrawing) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().getTrendLines(sym);
+    if (current.some((tl) => tl.id === trendLine.id)) return;
+    const updated = [...current, trendLine];
+    saveTrendLinesToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
+    set((state) => ({
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: updated,
+      },
+      selectedTrendLineId: trendLine.id,
+      selectedLineId: null,
+    }));
+  },
+
+  restoreDeleteTrendLine: (symbol: string, id: string) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().getTrendLines(sym);
+    const updated = current.filter((tl) => tl.id !== id);
+    saveTrendLinesToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
+    set((state) => ({
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: updated,
+      },
+      selectedTrendLineId: state.selectedTrendLineId === id ? null : state.selectedTrendLineId,
+    }));
+  },
+
+  restoreUpdateTrendLine: (symbol: string, id: string, previousOrNewState: Partial<TrendLineDrawing>) => {
+    const sym = symbol.toUpperCase().trim();
+    const current = get().getTrendLines(sym);
+    const updated = current.map((tl) => (tl.id === id ? { ...tl, ...previousOrNewState } : tl));
+    saveTrendLinesToStorage(sym, updated);
+    scheduleCloudSync(sym, get);
+    set((state) => ({
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: updated,
+      },
+    }));
+  },
+
+  restoreFullDrawings: (symbol: string, horizontals: HorizontalLineDrawing[], trends: TrendLineDrawing[]) => {
+    const sym = symbol.toUpperCase().trim();
+    saveToStorage(sym, horizontals);
+    saveTrendLinesToStorage(sym, trends);
+    scheduleCloudSync(sym, get);
+    set((state) => ({
+      drawingsBySymbol: {
+        ...state.drawingsBySymbol,
+        [sym]: horizontals,
+      },
+      trendLinesBySymbol: {
+        ...state.trendLinesBySymbol,
+        [sym]: trends,
+      },
+      selectedLineId: null,
+      selectedTrendLineId: null,
+      hoveredLineId: null,
     }));
   },
 
@@ -569,6 +794,17 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
 
     const updated = [...manualLines, ...newDrawings];
     saveToStorage(sym, updated);
+
+    if (!useCanvasHistoryStore.getState().isRestoring) {
+      useCanvasHistoryStore.getState().pushCommand({
+        type: 'AUTO_DETECT_SR',
+        symbol: sym,
+        description: `Auto S/R (${newDrawings.length} levels)`,
+        iconType: 'sparkles',
+        forwardData: { newHorizontalLines: updated, newTrendLines: get().getTrendLines(sym) },
+        inverseData: { previousHorizontalLines: current, previousTrendLines: get().getTrendLines(sym) },
+      });
+    }
 
     set((state) => ({
       drawingsBySymbol: {

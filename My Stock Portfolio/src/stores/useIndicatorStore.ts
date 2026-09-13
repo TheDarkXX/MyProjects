@@ -22,6 +22,7 @@ import {
   DEFAULT_PANE_LAYOUT,
 } from '../types/indicatorConfig';
 import { pushSettingDebounced, registerSyncHandler } from '../services/settingsSync';
+import { useCanvasHistoryStore } from './canvasHistoryStore';
 
 const STORAGE_KEY = 'xchart_indicators_v1';
 
@@ -116,6 +117,23 @@ function saveConfig(config: IndicatorSettings) {
   } catch (e) {}
 }
 
+function pushIndicatorToggleHistory(
+  description: string,
+  forwardDelta: Partial<IndicatorSettings>,
+  inverseDelta: Partial<IndicatorSettings>
+) {
+  if (!useCanvasHistoryStore.getState().isRestoring) {
+    useCanvasHistoryStore.getState().pushCommand({
+      type: 'TOGGLE_INDICATOR',
+      symbol: 'GLOBAL',
+      description,
+      iconType: 'indicator',
+      forwardData: { configDelta: forwardDelta },
+      inverseData: { configDelta: inverseDelta },
+    });
+  }
+}
+
 interface IndicatorState {
   config: IndicatorSettings;
   applyCloudConfig: (cloudConfig: Partial<IndicatorSettings>) => void;
@@ -156,6 +174,7 @@ interface IndicatorState {
   setPaneHeight: (id: SubPaneIndicatorId, height: number) => void;
   applyPreset: (preset: PresetType) => void;
   resetDefaults: () => void;
+  restoreIndicatorPartial: (configDelta: Partial<IndicatorSettings>) => void;
 }
 
 export const useIndicatorStore = create<IndicatorState>((set, get) => ({
@@ -199,11 +218,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleEMA: (id) => {
     const prev = get().config;
+    const nextVisible = !prev[id].visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      [id]: { ...prev[id], visible: !prev[id].visible },
+      [id]: { ...prev[id], visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} ${id.toUpperCase()}`, { [id]: next[id] }, { [id]: prev[id] });
     saveConfig(next);
     set({ config: next });
   },
@@ -217,6 +238,11 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       ema2: { ...prev.ema2, visible },
       ema3: { ...prev.ema3, visible },
     };
+    pushIndicatorToggleHistory(
+      `${visible ? 'Show' : 'Hide'} All EMAs`,
+      { ema1: next.ema1, ema2: next.ema2, ema3: next.ema3 },
+      { ema1: prev.ema1, ema2: prev.ema2, ema3: prev.ema3 }
+    );
     saveConfig(next);
     set({ config: next });
   },
@@ -234,11 +260,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleEnvelope: () => {
     const prev = get().config;
+    const nextVisible = !prev.envelope.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      envelope: { ...prev.envelope, visible: !prev.envelope.visible },
+      envelope: { ...prev.envelope, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Envelope`, { envelope: next.envelope }, { envelope: prev.envelope });
     saveConfig(next);
     set({ config: next });
   },
@@ -273,11 +301,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleSignals: () => {
     const prev = get().config;
+    const nextVisible = !prev.signals.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      signals: { ...prev.signals, visible: !prev.signals.visible },
+      signals: { ...prev.signals, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Signals`, { signals: next.signals }, { signals: prev.signals });
     saveConfig(next);
     set({ config: next });
   },
@@ -312,11 +342,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleMCDX: () => {
     const prev = get().config;
+    const nextVisible = !prev.mcdx.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      mcdx: { ...prev.mcdx, visible: !prev.mcdx.visible },
+      mcdx: { ...prev.mcdx, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} MCDX`, { mcdx: next.mcdx }, { mcdx: prev.mcdx });
     saveConfig(next);
     set({ config: next });
   },
@@ -334,11 +366,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleVolume: () => {
     const prev = get().config;
+    const nextVisible = !prev.volume.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      volume: { ...prev.volume, visible: !prev.volume.visible },
+      volume: { ...prev.volume, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Volume`, { volume: next.volume }, { volume: prev.volume });
     saveConfig(next);
     set({ config: next });
   },
@@ -356,11 +390,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleUltimateRSI: () => {
     const prev = get().config;
+    const nextVisible = !prev.ultimateRsi.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      ultimateRsi: { ...prev.ultimateRsi, visible: !prev.ultimateRsi.visible },
+      ultimateRsi: { ...prev.ultimateRsi, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Ultimate RSI`, { ultimateRsi: next.ultimateRsi }, { ultimateRsi: prev.ultimateRsi });
     saveConfig(next);
     set({ config: next });
   },
@@ -412,11 +448,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleTrendSpeed: () => {
     const prev = get().config;
+    const nextVisible = !prev.trendSpeed.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      trendSpeed: { ...prev.trendSpeed, visible: !prev.trendSpeed.visible },
+      trendSpeed: { ...prev.trendSpeed, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Trend Speed`, { trendSpeed: next.trendSpeed }, { trendSpeed: prev.trendSpeed });
     saveConfig(next);
     set({ config: next });
   },
@@ -434,11 +472,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleSMCLite: () => {
     const prev = get().config;
+    const nextVisible = !prev.smcLite.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      smcLite: { ...prev.smcLite, visible: !prev.smcLite.visible },
+      smcLite: { ...prev.smcLite, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} SMC Lite`, { smcLite: next.smcLite }, { smcLite: prev.smcLite });
     saveConfig(next);
     set({ config: next });
   },
@@ -456,11 +496,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleAnchoredVWAP: () => {
     const prev = get().config;
+    const nextVisible = !prev.anchoredVwap.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      anchoredVwap: { ...prev.anchoredVwap, visible: !prev.anchoredVwap.visible },
+      anchoredVwap: { ...prev.anchoredVwap, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Anchored VWAP`, { anchoredVwap: next.anchoredVwap }, { anchoredVwap: prev.anchoredVwap });
     saveConfig(next);
     set({ config: next });
   },
@@ -478,11 +520,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleSuperMoneySignal: () => {
     const prev = get().config;
+    const nextVisible = !prev.superMoneySignal.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      superMoneySignal: { ...prev.superMoneySignal, visible: !prev.superMoneySignal.visible },
+      superMoneySignal: { ...prev.superMoneySignal, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Super Money Signal`, { superMoneySignal: next.superMoneySignal }, { superMoneySignal: prev.superMoneySignal });
     saveConfig(next);
     set({ config: next });
   },
@@ -501,11 +545,13 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
   toggleVolumeProfile: () => {
     const prev = get().config;
     const currentVP = prev.volumeProfile || DEFAULT_INDICATOR_SETTINGS.volumeProfile!;
+    const nextVisible = !currentVP.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      volumeProfile: { ...currentVP, visible: !currentVP.visible },
+      volumeProfile: { ...currentVP, visible: nextVisible },
     };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Volume Profile`, { volumeProfile: next.volumeProfile }, { volumeProfile: prev.volumeProfile });
     saveConfig(next);
     set({ config: next });
   },
@@ -734,6 +780,16 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
     } catch (e) {
       console.warn('[useIndicatorStore] Failed to apply cloud config:', e);
     }
+  },
+
+  restoreIndicatorPartial: (configDelta: Partial<IndicatorSettings>) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      ...configDelta,
+    };
+    saveConfig(next);
+    set({ config: next });
   },
 }));
 

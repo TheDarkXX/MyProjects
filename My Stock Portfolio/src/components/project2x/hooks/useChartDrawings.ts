@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo, RefObject } from 'react';
 import { IChartApi, ISeriesApi, IPriceLine, BarPrice } from 'lightweight-charts';
 import { useDrawingStore } from '../../../stores/drawingStore';
+import { useCanvasHistoryStore } from '../../../stores/canvasHistoryStore';
 import { HorizontalLineDrawing, TrendLineDrawing } from '../../../types/drawingTypes';
 import { RawBarItem, Resolution, getChartLineStyle } from '../../../types/chart';
 import {
@@ -201,6 +202,22 @@ export function useChartDrawings({
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      // Priority: Canvas History Shortcuts
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+        e.preventDefault();
+        useCanvasHistoryStore.getState().undo(symbol);
+        return;
+      }
+
+      if (
+        ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z'))
+      ) {
+        e.preventDefault();
+        useCanvasHistoryStore.getState().redo(symbol);
         return;
       }
 
@@ -541,7 +558,7 @@ export function useChartDrawings({
               if (pl) {
                 pl.applyOptions({ price: newPrice });
               }
-              store.updateLine(symbol, lineId, { price: newPrice });
+              store.updateLine(symbol, lineId, { price: newPrice }, true);
               setSelectedLineY(mouseY);
             }
           }
@@ -680,6 +697,19 @@ export function useChartDrawings({
         return;
       }
       if (isDraggingLineRef.current) {
+        const { lineId, startPrice } = isDraggingLineRef.current;
+        const currentDrawings = useDrawingStore.getState().getDrawings(symbol);
+        const targetLine = currentDrawings.find((d) => d.id === lineId);
+        if (targetLine && targetLine.price !== startPrice) {
+          useCanvasHistoryStore.getState().pushCommand({
+            type: 'UPDATE_LINE',
+            symbol,
+            description: `Move Line to ${targetLine.price.toFixed(2)}`,
+            iconType: 'line',
+            forwardData: { lineId, newState: { price: targetLine.price } },
+            inverseData: { lineId, previousState: { price: startPrice } },
+          });
+        }
         chartRef.current?.applyOptions({ handleScroll: true, handleScale: true });
       }
       isDraggingRef.current = false;

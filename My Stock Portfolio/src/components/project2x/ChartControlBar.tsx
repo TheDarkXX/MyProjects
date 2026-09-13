@@ -8,12 +8,17 @@ import {
   TrendingDown,
   Sliders,
   Briefcase,
+  Undo2,
+  Redo2,
+  History,
 } from 'lucide-react';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { IndicatorSettings } from '../../types/indicatorConfig';
 import { TimeFrame, ChartStyle, Resolution } from '../../types/chart';
 import { usePositionOverlayStore } from '../../stores/usePositionOverlayStore';
 import { PositionSettingsPopover } from './position/PositionSettingsPopover';
+import { useCanvasHistoryStore } from '../../stores/canvasHistoryStore';
+import { CanvasHistoryPopover } from './history/CanvasHistoryPopover';
 
 export interface ChartControlBarProps {
   symbol: string;
@@ -71,6 +76,19 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
 }) => {
   const { config: positionConfig, toggleEnabled: togglePositionEnabled } = usePositionOverlayStore();
   const [isPositionSettingsOpen, setIsPositionSettingsOpen] = useState(false);
+
+  const past = useCanvasHistoryStore((state) => state.past);
+  const future = useCanvasHistoryStore((state) => state.future);
+  const isHistoryOpen = useCanvasHistoryStore((state) => state.isHistoryOpen);
+  const toggleHistoryOpen = useCanvasHistoryStore((state) => state.toggleHistoryOpen);
+  const setHistoryOpen = useCanvasHistoryStore((state) => state.setHistoryOpen);
+  const undo = useCanvasHistoryStore((state) => state.undo);
+  const redo = useCanvasHistoryStore((state) => state.redo);
+
+  const canUndo = past.length > 0;
+  const canRedo = future.length > 0;
+  const peekUndo = past[0];
+  const peekRedo = future[0];
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[#0D1322] border-b border-slate-800/80">
@@ -275,6 +293,65 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
               {tf}
             </button>
           ))}
+        </div>
+
+        {/* Canvas Undo / Redo & History Group */}
+        <div className="relative flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-700/50">
+          {/* Undo */}
+          <button
+            onClick={() => undo(symbol)}
+            disabled={!canUndo}
+            title={canUndo ? `Undo: ${peekUndo?.description || ''} (Ctrl+Z)` : 'ไม่มีประวัติให้ Undo (Ctrl+Z)'}
+            className={`p-1.5 rounded-md transition-all ${
+              canUndo
+                ? 'text-slate-200 hover:text-amber-400 hover:bg-slate-800 cursor-pointer'
+                : 'text-slate-600 opacity-40 cursor-not-allowed'
+            }`}
+          >
+            <Undo2 className="w-4 h-4" />
+          </button>
+
+          {/* Redo */}
+          <button
+            onClick={() => redo(symbol)}
+            disabled={!canRedo}
+            title={canRedo ? `Redo: ${peekRedo?.description || ''} (Ctrl+Y)` : 'ไม่มีประวัติให้ Redo (Ctrl+Y)'}
+            className={`p-1.5 rounded-md transition-all ${
+              canRedo
+                ? 'text-slate-200 hover:text-amber-400 hover:bg-slate-800 cursor-pointer'
+                : 'text-slate-600 opacity-40 cursor-not-allowed'
+            }`}
+          >
+            <Redo2 className="w-4 h-4" />
+          </button>
+
+          {/* History Action Log Popover Trigger */}
+          <button
+            onClick={toggleHistoryOpen}
+            title="เปิดดูประวัติการกระทำทั้งหมด (History Action Log)"
+            className={`flex items-center gap-1 px-1.5 py-1 rounded-md text-[13px] font-bold transition-all cursor-pointer ${
+              isHistoryOpen
+                ? 'bg-amber-400 text-slate-950 shadow-sm'
+                : past.length > 0
+                ? 'text-slate-300 hover:text-white hover:bg-slate-800'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/60'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            {past.length > 0 && (
+              <span className="text-[13px] font-mono leading-none">
+                {past.length}
+              </span>
+            )}
+          </button>
+
+          {/* Popover Dropdown */}
+          {isHistoryOpen && (
+            <CanvasHistoryPopover
+              symbol={symbol}
+              onClose={() => setHistoryOpen(false)}
+            />
+          )}
         </div>
 
         {/* Reset Zoom & Auto-Scale */}
