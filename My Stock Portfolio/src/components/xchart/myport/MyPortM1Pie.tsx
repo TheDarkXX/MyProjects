@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Sector } from 'recharts';
-import { PortfolioSliceItem } from './types';
+import { PortfolioSliceItem, formatCurrencyVal, formatSecondaryVal } from './types';
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Wallet } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -15,12 +15,13 @@ interface MyPortM1PieProps {
   hoveredSymbol: string | null;
   onHoverSymbol: (symbol: string | null) => void;
   onSelectSymbol: (symbol: string) => void;
+  currency: 'USD' | 'THB';
+  exchangeRate: number;
 }
 
 export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
   slices,
   totalNetWorth,
-  totalValueTHB,
   totalUnrealizedProfit,
   totalUnrealizedProfitPercent,
   todaysProfit,
@@ -28,6 +29,8 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
   hoveredSymbol,
   onHoverSymbol,
   onSelectSymbol,
+  currency,
+  exchangeRate,
 }) => {
   // Find currently active slice
   const activeSlice = useMemo(() => {
@@ -90,7 +93,7 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
           Allocation Wheel
         </span>
         <span className="text-[13px] font-semibold text-slate-400">
-          {slices.length} Slices
+          {slices.length} Slices · ({currency})
         </span>
       </div>
 
@@ -140,16 +143,16 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
         {/* Center Hub Display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
           {!activeSlice ? (
-            /* Default Center Core: Entire Portfolio Metrics */
+            /* Default Center Core: Entire Portfolio Metrics (Reactive Currency) */
             <div className="animate-fadeIn flex flex-col items-center">
               <span className="text-[13px] font-semibold text-slate-300 tracking-wider uppercase">
                 Net Worth
               </span>
               <span className="text-2xl font-black text-white font-mono tracking-tight my-0.5">
-                ${totalNetWorth.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrencyVal(totalNetWorth, currency, exchangeRate)}
               </span>
               <span className="text-[13px] font-medium text-slate-400">
-                ≈ ฿{totalValueTHB.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                ({formatSecondaryVal(totalNetWorth, currency, exchangeRate)})
               </span>
 
               {/* Unrealized Return Badge */}
@@ -161,13 +164,13 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
               >
                 {isTotalProfit ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 <span>
-                  {isTotalProfit ? '+' : ''}${totalUnrealizedProfit.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({totalUnrealizedProfitPercent >= 0 ? '+' : ''}{totalUnrealizedProfitPercent.toFixed(2)}%)
+                  {formatCurrencyVal(totalUnrealizedProfit, currency, exchangeRate, true)} ({totalUnrealizedProfitPercent >= 0 ? '+' : ''}{totalUnrealizedProfitPercent.toFixed(2)}%)
                 </span>
               </div>
 
               {/* Today's Change Mini Text */}
               <div className="text-[13px] text-slate-300 font-medium mt-1">
-                Today: {isTodayProfit ? '+' : ''}${todaysProfit.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({isTodayProfit ? '+' : ''}{todaysProfitPercent.toFixed(2)}%)
+                Today: {formatCurrencyVal(todaysProfit, currency, exchangeRate, true)} ({isTodayProfit ? '+' : ''}{todaysProfitPercent.toFixed(2)}%)
               </div>
             </div>
           ) : (
@@ -182,9 +185,12 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
                 </span>
               </div>
 
-              {/* Current Value */}
+              {/* Current Value in Active Currency */}
               <span className="text-xl font-black text-slate-100 font-mono mt-1">
-                ${activeSlice.currentValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {formatCurrencyVal(activeSlice.currentValue, currency, exchangeRate)}
+              </span>
+              <span className="text-[13px] text-slate-400 font-medium">
+                ({formatSecondaryVal(activeSlice.currentValue, currency, exchangeRate)})
               </span>
 
               {/* Slices Actual vs Target Weight */}
@@ -208,13 +214,13 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
               {!activeSlice.isCash && (
                 <div
                   className={clsx(
-                    'text-[13px] font-bold mt-1.5 flex items-center gap-0.5',
+                    'text-[13px] font-bold mt-1 flex items-center gap-0.5',
                     activeSlice.totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'
                   )}
                 >
                   {activeSlice.totalReturn >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
                   <span>
-                    {activeSlice.totalReturn >= 0 ? '+' : ''}${activeSlice.totalReturn.toLocaleString('en-US', { maximumFractionDigits: 0 })} ({activeSlice.totalReturnPercent >= 0 ? '+' : ''}{activeSlice.totalReturnPercent.toFixed(1)}%)
+                    {formatCurrencyVal(activeSlice.totalReturn, currency, exchangeRate, true)} ({activeSlice.totalReturnPercent >= 0 ? '+' : ''}{activeSlice.totalReturnPercent.toFixed(1)}%)
                   </span>
                 </div>
               )}
@@ -222,7 +228,7 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
               {/* Price & Cost Basis */}
               {!activeSlice.isCash && (
                 <div className="text-[13px] text-slate-300 font-medium mt-0.5">
-                  Price ${(activeSlice.lastPrice ?? 0).toFixed(2)} · Cost ${(activeSlice.avgCost ?? 0).toFixed(2)}
+                  ${(activeSlice.lastPrice ?? 0).toFixed(2)} · Cost ${(activeSlice.avgCost ?? 0).toFixed(2)}
                 </div>
               )}
             </div>
@@ -280,16 +286,9 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
                 />
                 <span className="font-extrabold text-slate-100">{slice.symbol}</span>
                 <span className="text-slate-400 font-medium">{slice.actualWeight.toFixed(1)}%</span>
-                {!slice.isCash && (
-                  <span
-                    className={clsx(
-                      'font-semibold text-[13px]',
-                      slice.totalReturnPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                    )}
-                  >
-                    {slice.totalReturnPercent >= 0 ? '+' : ''}{slice.totalReturnPercent.toFixed(0)}%
-                  </span>
-                )}
+                <span className="text-slate-300 font-bold">
+                  {formatCurrencyVal(slice.currentValue, currency, exchangeRate, false, true)}
+                </span>
                 {slice.isCash && (
                   <Wallet className="w-3 h-3 text-emerald-400" />
                 )}

@@ -5,6 +5,7 @@ import { useBlueprintStore } from '../../../stores/blueprintStore';
 import { usePortfolioStore } from '../../../stores/portfolioStore';
 import { usePriceStore } from '../../../stores/priceStore';
 import { useXChartStore } from '../../../stores/xchartStore';
+import { useUiStore } from '../../../stores/uiStore';
 
 import { MyPortKPIHeader, MyPortViewMode } from './MyPortKPIHeader';
 import { MyPortM1Pie } from './MyPortM1Pie';
@@ -36,6 +37,7 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
   const { portfolios, activePortfolioId, setActivePortfolio, fetchPortfolios } = usePortfolioStore();
   const { fetchPrices, fetchExchangeRate, exchangeRate } = usePriceStore();
   const { addTab } = useXChartStore();
+  const { currency, setCurrency } = useUiStore();
 
   // Load saved view mode or default to 'split'
   const [viewMode, setViewMode] = useState<MyPortViewMode>(() => {
@@ -66,6 +68,13 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
     }
   }, [portfolios.length, fetchPortfolios]);
 
+  // Auto-select first portfolio if activePortfolioId is null
+  useEffect(() => {
+    if (portfolios.length > 0 && !activePortfolioId) {
+      setActivePortfolio(portfolios[0].id);
+    }
+  }, [portfolios, activePortfolioId, setActivePortfolio]);
+
   // Fetch transactions, blueprints, and USD/THB rate for active portfolio
   useEffect(() => {
     if (activePortfolioId) {
@@ -74,6 +83,13 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
       fetchExchangeRate('USD', 'THB');
     }
   }, [activePortfolioId, fetchTransactions, fetchBlueprints, fetchExchangeRate]);
+
+  // Handle portfolio switching with clean state reset
+  const handleSelectPortfolio = (id: string) => {
+    setActivePortfolio(id);
+    setDrawerSymbol(null);
+    setHoveredSymbol(null);
+  };
 
   // Fetch live market prices for all held symbols
   useEffect(() => {
@@ -99,12 +115,13 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
       const color = SLICE_PALETTE[idx % SLICE_PALETTE.length];
 
       result.push({
-        symbol: h.symbol,
-        category: h.stockType || bp?.category || 'Compounders',
+        symbol: sym,
+        name: sym,
+        category: h.stockType || 'Core',
         quantity: h.quantity,
-        avgCost: h.avgCost || 0,
-        totalCost: h.totalCost || 0,
-        lastPrice: h.lastPrice || 0,
+        avgCost: h.avgCost,
+        totalCost: h.totalCost,
+        lastPrice: h.lastPrice || h.avgCost,
         dayChangePercent: h.dayChangePercent || 0,
         dayReturn: h.dayReturn || 0,
         currentValue: h.currentValue || 0,
@@ -113,24 +130,24 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
         actualWeight,
         targetWeight,
         drift,
-        blueprintTargetPrice: bp?.target_price,
-        blueprintCeilingPrice: bp?.ceiling_price,
-        blueprintNotes: bp?.notes,
+        blueprintTargetPrice: bp?.target_price ? Number(bp.target_price) : null,
+        blueprintCeilingPrice: bp?.ceiling_price ? Number(bp.ceiling_price) : null,
+        blueprintNotes: bp?.notes || undefined,
         color,
         isCash: false,
       });
     });
 
-    // Add Cash slice if positive cash exists
-    if (cashBalance > 0.01) {
+    // Add cash cushion slice if available
+    if (cashBalance > 0) {
       result.push({
         symbol: 'CASH',
         name: 'Cash Cushion',
         category: 'Cash',
-        quantity: 1,
-        avgCost: cashBalance,
+        quantity: cashBalance,
+        avgCost: 1,
         totalCost: cashBalance,
-        lastPrice: cashBalance,
+        lastPrice: 1,
         dayChangePercent: 0,
         dayReturn: 0,
         currentValue: cashBalance,
@@ -144,26 +161,19 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
       });
     }
 
-    return result;
-  }, [holdings, blueprints, cashBalance, cashWeight]);
+    // Sort by actual weight descending
+    return result.sort((a, b) => b.actualWeight - a.actualWeight);
+  }, [holdings, cashBalance, cashWeight, blueprints]);
 
-  // Tally winners and losers
+  // Quick action: Open candlestick chart tab for a symbol
+  const handleOpenChart = (symbol: string) => {
+    if (!symbol || symbol === 'CASH') return;
+    addTab(symbol.toUpperCase(), '1D');
+  };
+
   const winnersCount = useMemo(() => slices.filter((s) => !s.isCash && s.totalReturnPercent > 0).length, [slices]);
   const losersCount = useMemo(() => slices.filter((s) => !s.isCash && s.totalReturnPercent < 0).length, [slices]);
 
-  const totalValueTHB = (totalNetWorth || 0) * (exchangeRate || 34.5);
-
-  // Quick action: Launch Full Candlestick Chart in X-Chart
-  const handleOpenChart = (symbol: string) => {
-    if (!symbol || symbol === 'CASH') return;
-    addTab({
-      type: 'STOCK',
-      symbol: symbol.toUpperCase(),
-      title: symbol.toUpperCase(),
-    });
-  };
-
-  // Find slice and blueprint for active drawer symbol
   const activeDrawerSlice = useMemo(() => {
     if (!drawerSymbol) return undefined;
     return slices.find((s) => s.symbol.toUpperCase() === drawerSymbol.toUpperCase());
@@ -174,9 +184,12 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
     return (blueprints || []).find((b) => b && b.symbol && b.symbol.toUpperCase() === drawerSymbol.toUpperCase());
   }, [blueprints, drawerSymbol]);
 
+  const rate = exchangeRate || 34.5;
+  const totalValueTHB = (totalNetWorth || 0) * rate;
+
   return (
     <div className="flex-1 flex flex-col w-full h-full bg-[#0B1220] overflow-hidden relative select-none">
-      {/* 1. Executive Top KPI Strip */}
+      {/* 1. Executive Top KPI Strip (Connected to Currency & Portfolio Switcher) */}
       <MyPortKPIHeader
         totalNetWorth={totalNetWorth}
         totalValueTHB={totalValueTHB}
@@ -190,9 +203,12 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
         losersCount={losersCount}
         portfolios={portfolios}
         activePortfolioId={activePortfolioId}
-        onSelectPortfolio={(id) => setActivePortfolio(id)}
+        onSelectPortfolio={handleSelectPortfolio}
         viewMode={viewMode}
         onChangeViewMode={handleSetViewMode}
+        currency={currency}
+        onToggleCurrency={setCurrency}
+        exchangeRate={rate}
       />
 
       {/* 2. Main Canvas View depending on ViewMode */}
@@ -212,6 +228,8 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
                 hoveredSymbol={hoveredSymbol}
                 onHoverSymbol={setHoveredSymbol}
                 onSelectSymbol={(sym) => setDrawerSymbol(sym)}
+                currency={currency}
+                exchangeRate={rate}
               />
             </div>
 
@@ -219,11 +237,12 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
             <div className="flex-1 flex flex-col h-full overflow-hidden min-h-0">
               <MyPortTableView
                 slices={slices}
-                exchangeRate={exchangeRate || 34.5}
+                exchangeRate={rate}
                 hoveredSymbol={hoveredSymbol}
                 onHoverSymbol={setHoveredSymbol}
                 onSelectSymbol={(sym) => setDrawerSymbol(sym)}
                 onOpenChart={handleOpenChart}
+                currency={currency}
               />
             </div>
           </div>
@@ -232,22 +251,24 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
         {viewMode === 'table' && (
           <MyPortTableView
             slices={slices}
-            exchangeRate={exchangeRate || 34.5}
+            exchangeRate={rate}
             hoveredSymbol={hoveredSymbol}
             onHoverSymbol={setHoveredSymbol}
             onSelectSymbol={(sym) => setDrawerSymbol(sym)}
             onOpenChart={handleOpenChart}
+            currency={currency}
           />
         )}
 
         {viewMode === 'bento' && (
           <MyPortBentoGridView
             slices={slices}
-            exchangeRate={exchangeRate || 34.5}
+            exchangeRate={rate}
             hoveredSymbol={hoveredSymbol}
             onHoverSymbol={setHoveredSymbol}
             onSelectSymbol={(sym) => setDrawerSymbol(sym)}
             onOpenChart={handleOpenChart}
+            currency={currency}
           />
         )}
       </div>
@@ -258,9 +279,10 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
         slice={activeDrawerSlice}
         transactions={transactions}
         blueprint={activeDrawerBlueprint}
-        exchangeRate={exchangeRate || 34.5}
+        exchangeRate={rate}
         onClose={() => setDrawerSymbol(null)}
         onOpenChart={handleOpenChart}
+        currency={currency}
       />
     </div>
   );

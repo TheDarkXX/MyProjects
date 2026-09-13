@@ -1,5 +1,5 @@
 import React from 'react';
-import { PortfolioSliceItem } from './types';
+import { PortfolioSliceItem, formatCurrencyVal, formatSecondaryVal } from './types';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -17,6 +17,7 @@ interface MyPortBentoGridViewProps {
   onHoverSymbol: (symbol: string | null) => void;
   onSelectSymbol: (symbol: string) => void;
   onOpenChart: (symbol: string) => void;
+  currency: 'USD' | 'THB';
 }
 
 export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
@@ -26,6 +27,7 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
   onHoverSymbol,
   onSelectSymbol,
   onOpenChart,
+  currency,
 }) => {
   return (
     <div className="flex-1 h-full bg-[#0B1220] p-4 overflow-y-auto custom-scrollbar select-none">
@@ -34,7 +36,6 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
           const isHovered = hoveredSymbol?.toUpperCase() === slice.symbol.toUpperCase();
           const isProfit = slice.totalReturn >= 0;
           const isDayProfit = slice.dayChangePercent >= 0;
-          const valueTHB = slice.currentValue * (exchangeRate || 34.5);
 
           // Blueprint distance
           let bpDistancePercent: number | null = null;
@@ -96,14 +97,14 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
                   )}
                 </div>
 
-                {/* 2. Hero Metric: Value & P&L in Clean Inline Flow */}
+                {/* 2. Hero Metric: Value & P&L in Clean Inline Flow (Currency Reactive) */}
                 <div className="mt-3.5 flex items-baseline justify-between">
                   <div>
                     <div className="text-xl font-black text-white font-mono">
-                      ${(slice.currentValue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {formatCurrencyVal(slice.currentValue, currency, exchangeRate)}
                     </div>
                     <div className="text-[13px] text-slate-400 font-medium">
-                      ≈ ฿{valueTHB.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                      ({formatSecondaryVal(slice.currentValue, currency, exchangeRate)})
                     </div>
                   </div>
 
@@ -115,7 +116,7 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
                           isProfit ? 'text-emerald-400' : 'text-rose-400'
                         )}
                       >
-                        {isProfit ? '+' : ''}${slice.totalReturn.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                        {formatCurrencyVal(slice.totalReturn, currency, exchangeRate, true, true)}
                       </div>
                       <span
                         className={clsx(

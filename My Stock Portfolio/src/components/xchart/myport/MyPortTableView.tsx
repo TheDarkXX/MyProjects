@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { PortfolioSliceItem } from './types';
+import { PortfolioSliceItem, formatCurrencyVal, formatSecondaryVal } from './types';
 import { 
   Search, 
   TrendingUp, 
@@ -19,6 +19,7 @@ interface MyPortTableViewProps {
   onHoverSymbol: (symbol: string | null) => void;
   onSelectSymbol: (symbol: string) => void;
   onOpenChart: (symbol: string) => void;
+  currency: 'USD' | 'THB';
 }
 
 type SortField = 'weight' | 'pnl' | 'drift' | 'price' | 'value' | 'symbol';
@@ -30,6 +31,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
   onHoverSymbol,
   onSelectSymbol,
   onOpenChart,
+  currency,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'winners' | 'losers' | 'overweight' | 'underweight'>('all');
@@ -349,10 +351,10 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       <div className="flex flex-col items-end">
                         <span className="text-sm font-extrabold text-white font-mono">
-                          ${(slice.currentValue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {formatCurrencyVal(slice.currentValue, currency, exchangeRate)}
                         </span>
                         <span className="text-[13px] text-slate-400 font-medium">
-                          ≈ ฿{valueTHB.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                          ({formatSecondaryVal(slice.currentValue, currency, exchangeRate)})
                         </span>
                       </div>
                     </td>
@@ -367,12 +369,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                               isProfit ? 'text-emerald-400' : 'text-rose-400'
                             )}
                           >
-                            {isProfit ? '+' : ''}$
-                            {slice.totalReturn.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatCurrencyVal(slice.totalReturn, currency, exchangeRate, true)}
                           </span>
                           <span
                             className={clsx(
-                              'text-[13px] font-semibold px-1.5 py-0.2 rounded',
+                              'text-[13px] font-semibold px-1.5 py-0.2 rounded mt-0.5',
                               isProfit ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
                             )}
                           >

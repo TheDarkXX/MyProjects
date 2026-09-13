@@ -32,9 +32,9 @@ export function useHoldings() {
     let totalDividends = 0;
     const holds: Record<string, { quantity: number; totalCost: number }> = {};
     
-    // Process transactions chronologically
+    // Process transactions chronologically (strictly scoped to active portfolio)
     const sortedTxs = [...transactions]
-      .filter(t => t.status === 'CONFIRMED')
+      .filter(t => t.status === 'CONFIRMED' && (!activePortfolioId || !t.portfolio_id || t.portfolio_id === activePortfolioId))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     const symbolMeta: Record<string, { stockType?: string; sector?: string }> = {};

@@ -35,3 +35,38 @@ export const SLICE_PALETTE: string[] = [
   '#EAB308', // Gold Yellow
   '#64748B', // Slate
 ];
+
+export const formatCurrencyVal = (
+  val: number,
+  currency: 'USD' | 'THB',
+  exchangeRate: number,
+  isPnl = false,
+  compact = false
+): string => {
+  const prefix = isPnl && val > 0 ? '+' : '';
+  const rate = exchangeRate || 34.5;
+  if (currency === 'THB') {
+    const converted = Math.round(val * rate);
+    return `${prefix}฿${converted.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  }
+  if (compact) {
+    return `${prefix}$${val.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  }
+  return `${prefix}$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+export const formatSecondaryVal = (
+  val: number,
+  currency: 'USD' | 'THB',
+  exchangeRate: number,
+  isPnl = false
+): string => {
+  const prefix = isPnl && val > 0 ? '+' : '';
+  const rate = exchangeRate || 34.5;
+  if (currency === 'THB') {
+    return `${prefix}$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  const thbVal = Math.round(val * rate);
+  return `${prefix}฿${thbVal.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+};
+

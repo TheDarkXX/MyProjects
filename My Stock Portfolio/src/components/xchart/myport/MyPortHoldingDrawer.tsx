@@ -1,5 +1,5 @@
 import React from 'react';
-import { PortfolioSliceItem } from './types';
+import { PortfolioSliceItem, formatCurrencyVal, formatSecondaryVal } from './types';
 import { Transaction } from '../../../stores/transactionStore';
 import { BlueprintEntry } from '../../../stores/blueprintStore';
 import { 
@@ -21,6 +21,7 @@ interface MyPortHoldingDrawerProps {
   exchangeRate: number;
   onClose: () => void;
   onOpenChart: (symbol: string) => void;
+  currency: 'USD' | 'THB';
 }
 
 export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
@@ -31,6 +32,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
   exchangeRate,
   onClose,
   onOpenChart,
+  currency,
 }) => {
   if (!symbol || !slice) return null;
 
@@ -113,10 +115,10 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
               <div className="bg-[#191F30] p-3 rounded-xl border border-slate-800/80">
                 <div className="text-[13px] text-slate-300 font-medium">Current Market Value</div>
                 <div className="text-base font-black text-white font-mono mt-0.5">
-                  ${(slice.currentValue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrencyVal(slice.currentValue ?? 0, currency, exchangeRate)}
                 </div>
                 <div className="text-[13px] text-slate-400">
-                  ≈ ฿{valueTHB.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                  ({formatSecondaryVal(slice.currentValue ?? 0, currency, exchangeRate)})
                 </div>
               </div>
 
@@ -124,7 +126,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
               <div className="bg-[#191F30] p-3 rounded-xl border border-slate-800/80">
                 <div className="text-[13px] text-slate-300 font-medium">Total Cost Basis</div>
                 <div className="text-base font-black text-slate-200 font-mono mt-0.5">
-                  ${(slice.totalCost ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrencyVal(slice.totalCost ?? 0, currency, exchangeRate)}
                 </div>
                 <div className="text-[13px] text-slate-400">
                   Avg ${(slice.avgCost ?? 0).toFixed(2)} · {slice.quantity.toLocaleString()} shares
@@ -144,7 +146,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
                     )}
                   >
                     {isProfit ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    {isProfit ? '+' : ''}${slice.totalReturn.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({isProfit ? '+' : ''}{slice.totalReturnPercent.toFixed(2)}%)
+                    {formatCurrencyVal(slice.totalReturn, currency, exchangeRate, true)} ({isProfit ? '+' : ''}{slice.totalReturnPercent.toFixed(2)}%)
                   </div>
                 </div>
 
