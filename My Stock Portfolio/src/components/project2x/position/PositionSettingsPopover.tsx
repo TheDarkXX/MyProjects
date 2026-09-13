@@ -13,6 +13,7 @@ import {
   ArrowUpLeft,
   ArrowDownRight,
   ArrowDownLeft,
+  ArrowUp,
   Check,
 } from 'lucide-react';
 import { usePositionOverlayStore } from '../../../stores/usePositionOverlayStore';
@@ -112,7 +113,19 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
               </button>
             </div>
 
-            {/* 4 Corner Quick Snap Buttons */}
+            {/* Corner & Center Quick Snap Buttons */}
+            <button
+              onClick={() => snapToCorner('top-center')}
+              className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-[13px] font-medium transition-all cursor-pointer ${
+                config.snapCorner === 'top-center' && !config.hudPosition
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 font-bold shadow-sm'
+                  : 'bg-slate-950/40 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <ArrowUp className="w-3.5 h-3.5 text-amber-400" />
+              <span>ตรงกลางด้านบน ⬆ (Top-Center โล่งที่สุด / แนะนำ)</span>
+            </button>
+
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => snapToCorner('top-left')}
@@ -134,7 +147,7 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
                 }`}
               >
                 <ArrowUpRight className="w-3.5 h-3.5" />
-                <span>Top-Right ↗ (Default)</span>
+                <span>Top-Right ↗</span>
               </button>
               <button
                 onClick={() => snapToCorner('bottom-left')}
@@ -166,7 +179,7 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
               className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-slate-200 hover:text-white transition-all cursor-pointer text-[13px] font-bold"
             >
               <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-              <span>Recycle Position (รีไซเคิลกลับมุมบนขวา)</span>
+              <span>Recycle Position (รีไซเคิลกลับตรงกลางด้านบน)</span>
             </button>
           </div>
 

@@ -1,6 +1,6 @@
 import { LineStyleOption } from './indicatorConfig';
 
-export type CornerSnap = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'custom';
+export type CornerSnap = 'top-center' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'custom';
 
 export interface PositionOverlaySettings {
   enabled: boolean;               // Master On/Off switch
@@ -35,7 +35,7 @@ export const DEFAULT_POSITION_OVERLAY_SETTINGS: PositionOverlaySettings = {
   hudMode: 'expanded',
   isPinned: true,
   hudPosition: null,
-  snapCorner: 'top-right',
+  snapCorner: 'top-center',
   
   showBuyMarkers: true,
   buyMarkerColor: '#10B981',

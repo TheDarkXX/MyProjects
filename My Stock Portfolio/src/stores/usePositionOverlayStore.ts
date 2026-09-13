@@ -84,7 +84,7 @@ export const usePositionOverlayStore = create<PositionOverlayState>((set, get) =
   resetPosition: () => {
     get().updateConfig({
       hudPosition: null,
-      snapCorner: 'top-right',
+      snapCorner: 'top-center',
       hudMode: 'expanded',
       isPinned: true,
     });
