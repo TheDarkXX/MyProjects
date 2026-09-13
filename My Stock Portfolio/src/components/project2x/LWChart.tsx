@@ -512,7 +512,8 @@ export const LWChart: React.FC<LWChartProps> = ({
     // 1. Cost Basis Line (Amber / Gold glow by default, or user custom color/width/style)
     if (positionConfig.showAvgCostLine && portfolioOverlay.avgCost && portfolioOverlay.avgCost > 0) {
       const pnlPct = portfolioOverlay.unrealizedPnLPercent;
-      const pnlStr = pnlPct !== undefined ? ` (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%)` : '';
+      const pnlStr = pnlPct !== undefined ? ` (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)` : '';
+      const ticker = (symbol || '').toUpperCase();
       try {
         const line = candleSeries.createPriceLine({
           price: portfolioOverlay.avgCost,
@@ -520,7 +521,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           lineWidth: (positionConfig.avgCostWidth || 2) as any,
           lineStyle: getChartLineStyle(positionConfig.avgCostStyle || 'Dashed'),
           axisLabelVisible: true,
-          title: `Avg Cost: $${portfolioOverlay.avgCost.toFixed(2)}${pnlStr}`,
+          title: ticker ? `${ticker}${pnlStr}` : `AVG${pnlStr}`,
         });
         portfolioPriceLinesRef.current.push(line);
       } catch (e) {}
