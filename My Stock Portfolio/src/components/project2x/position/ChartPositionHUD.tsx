@@ -214,10 +214,34 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
 
   const posConfig = getPositionClassesOrStyle();
 
-  // Metrics
-  const isProfit = holding.totalReturn >= 0;
-  const pnlPrefix = isProfit ? '+' : '';
-  const pnlSign = isProfit ? '+' : '';
+  // 3-State P&L Calculation with Deadband (±0.05%)
+  const pnlPct = holding.totalReturnPercent ?? 0;
+  const pnlState: 'profit' | 'breakeven' | 'loss' =
+    pnlPct > 0.05 ? 'profit' : pnlPct < -0.05 ? 'loss' : 'breakeven';
+
+  const isProfit = pnlState === 'profit';
+  const pnlPrefix = pnlPct > 0 ? '+' : '';
+  const pnlSign = pnlPct > 0 ? '+' : '';
+
+  // Dynamic Glow Styles for Container and Card
+  const glowHoverShadow =
+    pnlState === 'profit'
+      ? 'hover:shadow-[0_0_24px_rgba(16,185,129,0.3)]'
+      : pnlState === 'loss'
+      ? 'hover:shadow-[0_0_24px_rgba(244,63,94,0.3)]'
+      : 'hover:shadow-[0_0_24px_rgba(245,158,11,0.3)]';
+
+  const cardBorderAndShadow = isDragging
+    ? pnlState === 'profit'
+      ? 'border-emerald-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(16,185,129,0.4)] scale-[1.02]'
+      : pnlState === 'loss'
+      ? 'border-rose-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(244,63,94,0.4)] scale-[1.02]'
+      : 'border-amber-400 bg-slate-950/95 shadow-[0_12px_32px_rgba(245,158,11,0.4)] scale-[1.02]'
+    : pnlState === 'profit'
+    ? 'border-emerald-500/50 hover:border-emerald-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(16,185,129,0.18)]'
+    : pnlState === 'loss'
+    ? 'border-rose-500/50 hover:border-rose-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(244,63,94,0.18)]'
+    : 'border-amber-500/50 hover:border-amber-400/90 hover:bg-slate-950/90 shadow-[0_4px_20px_rgba(245,158,11,0.18)]';
 
   // If user disabled HUD in settings, don't render
   if (!config.enabled || !config.showHUD) return null;
@@ -236,18 +260,12 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
             ? 'cursor-default'
             : isDragging
             ? 'cursor-grabbing z-[50]'
-            : 'cursor-grab hover:shadow-[0_0_20px_rgba(245,158,11,0.25)]'
+            : `cursor-grab ${glowHoverShadow}`
         }`}
       >
         {/* ================= BLOOMBERG NANO-HUD STRIP (30% Footprint) ================= */}
         <div
-          className={`w-[248px] sm:w-[264px] rounded-xl bg-slate-950/75 backdrop-blur-md border shadow-xl overflow-hidden flex flex-col px-2.5 py-1.5 transition-all ${
-            isDragging
-              ? 'border-amber-500/80 bg-slate-950/90 shadow-[0_12px_30px_rgba(245,158,11,0.35)] scale-[1.02]'
-              : config.isPinned
-              ? 'border-slate-700/70 hover:border-slate-600 hover:bg-slate-950/90'
-              : 'border-slate-700/70 hover:border-amber-500/60 hover:bg-slate-950/90'
-          }`}
+          className={`w-[248px] sm:w-[264px] rounded-xl bg-slate-950/75 backdrop-blur-md border shadow-xl overflow-hidden flex flex-col px-2.5 py-1.5 transition-all ${cardBorderAndShadow}`}
         >
           {/* Line 1: Cost Basis & Micro-Tools Toolbar */}
           <div className="flex items-center justify-between gap-1.5 leading-tight">
@@ -262,6 +280,25 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
                   }`}
                 />
               )}
+
+              {/* Dynamic P&L Status LED Dot */}
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 transition-all ${
+                  pnlState === 'profit'
+                    ? 'bg-emerald-400 shadow-[0_0_8px_#10B981] animate-pulse'
+                    : pnlState === 'loss'
+                    ? 'bg-rose-400 shadow-[0_0_8px_#F43F5E] animate-pulse'
+                    : 'bg-amber-400 shadow-[0_0_8px_#F59E0B]'
+                }`}
+                title={`สถานะพอร์ต: ${
+                  pnlState === 'profit'
+                    ? `กำไร (+${pnlPct.toFixed(2)}%)`
+                    : pnlState === 'loss'
+                    ? `ขาดทุน (${pnlPct.toFixed(2)}%)`
+                    : `เท่าทุน (${pnlPct.toFixed(2)}%)`
+                }`}
+              />
+
               <Briefcase className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <div className="flex items-center gap-1 font-bold text-white text-[13px] font-mono truncate">
                 <span>{holding.quantity.toLocaleString()} shs</span>
@@ -269,6 +306,7 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
                 <span className="text-amber-300">${holding.avgCost.toFixed(2)}</span>
               </div>
             </div>
+
 
             {/* Micro Action Buttons */}
             <div className="flex items-center gap-0.5 shrink-0">
@@ -340,10 +378,21 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
           <div className="flex items-center justify-between gap-1 mt-1 text-[13px] font-mono leading-tight">
             <span
               className={`font-bold flex items-center gap-1 ${
-                isProfit ? 'text-emerald-400' : 'text-rose-400'
+                pnlState === 'profit'
+                  ? 'text-emerald-400'
+                  : pnlState === 'loss'
+                  ? 'text-rose-400'
+                  : 'text-amber-400'
               }`}
             >
-              {isProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {pnlState === 'profit' ? (
+                <TrendingUp className="w-3 h-3" />
+              ) : pnlState === 'loss' ? (
+                <TrendingDown className="w-3 h-3" />
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block mr-0.5" />
+              )}
+
               <span>
                 {pnlPrefix}
                 {formatPriceVal(holding.totalReturn, currency, exchangeRate)}

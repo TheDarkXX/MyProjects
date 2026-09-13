@@ -1,11 +1,16 @@
 import { LineStyleOption } from './indicatorConfig';
 
 export type CornerSnap = 'top-center' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'custom';
+export type CostLineColorMode = 'dynamic' | 'static';
 
 export interface PositionOverlaySettings {
   enabled: boolean;               // Master On/Off switch
   showAvgCostLine: boolean;       // Show/hide average cost horizontal price line
-  avgCostColor: string;           // Line color (default: '#F59E0B' Amber)
+  avgCostColorMode: CostLineColorMode; // 'dynamic' (3 shades based on P&L) | 'static' (single fixed color)
+  avgCostColor: string;           // Line color for static mode (default: '#F59E0B' Amber)
+  avgCostProfitColor: string;     // Profit line color (default: '#10B981' Emerald)
+  avgCostBreakEvenColor: string;  // Break-even line color (default: '#F59E0B' Amber)
+  avgCostLossColor: string;       // Loss line color (default: '#F43F5E' Rose)
   avgCostWidth: 1 | 2 | 3 | 4;    // Line thickness (1-4px)
   avgCostStyle: LineStyleOption;  // 'Solid' | 'Dashed' | 'Dotted'
   
@@ -27,7 +32,11 @@ export interface PositionOverlaySettings {
 export const DEFAULT_POSITION_OVERLAY_SETTINGS: PositionOverlaySettings = {
   enabled: true,
   showAvgCostLine: true,
+  avgCostColorMode: 'dynamic',
   avgCostColor: '#F59E0B',
+  avgCostProfitColor: '#10B981',
+  avgCostBreakEvenColor: '#F59E0B',
+  avgCostLossColor: '#F43F5E',
   avgCostWidth: 2,
   avgCostStyle: 'Dashed',
   
@@ -45,3 +54,4 @@ export const DEFAULT_POSITION_OVERLAY_SETTINGS: PositionOverlaySettings = {
   targetWidth: 2,
   targetStyle: 'Dotted',
 };
+

@@ -509,15 +509,28 @@ export const LWChart: React.FC<LWChartProps> = ({
 
     if (!portfolioOverlay || !positionConfig.enabled) return;
 
-    // 1. Cost Basis Line (Amber / Gold glow by default, or user custom color/width/style)
+    // 1. Cost Basis Line (Dynamic 3-State P&L Color or Static Custom Color)
     if (positionConfig.showAvgCostLine && portfolioOverlay.avgCost && portfolioOverlay.avgCost > 0) {
       const pnlPct = portfolioOverlay.unrealizedPnLPercent;
       const pnlStr = pnlPct !== undefined ? ` (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)` : '';
       const ticker = (symbol || '').toUpperCase();
+
+      let costColor = positionConfig.avgCostColor || '#F59E0B';
+      if ((positionConfig.avgCostColorMode ?? 'dynamic') === 'dynamic') {
+        const pct = pnlPct ?? 0;
+        if (pct > 0.05) {
+          costColor = positionConfig.avgCostProfitColor || '#10B981';
+        } else if (pct < -0.05) {
+          costColor = positionConfig.avgCostLossColor || '#F43F5E';
+        } else {
+          costColor = positionConfig.avgCostBreakEvenColor || '#F59E0B';
+        }
+      }
+
       try {
         const line = candleSeries.createPriceLine({
           price: portfolioOverlay.avgCost,
-          color: positionConfig.avgCostColor || '#F59E0B',
+          color: costColor,
           lineWidth: (positionConfig.avgCostWidth || 2) as any,
           lineStyle: getChartLineStyle(positionConfig.avgCostStyle || 'Dashed'),
           axisLabelVisible: true,
@@ -526,6 +539,7 @@ export const LWChart: React.FC<LWChartProps> = ({
         portfolioPriceLinesRef.current.push(line);
       } catch (e) {}
     }
+
 
     // 2. Blueprint Target Price Line (Sky Blue)
     if (positionConfig.showBlueprintTarget && portfolioOverlay.blueprint?.targetPrice && portfolioOverlay.blueprint.targetPrice > 0) {
