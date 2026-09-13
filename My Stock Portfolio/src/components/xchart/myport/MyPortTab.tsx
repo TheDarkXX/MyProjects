@@ -200,7 +200,7 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
         {viewMode === 'split' && (
           <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden min-h-0 w-full">
             {/* Left: The M1 Finance Interactive Donut Wheel */}
-            <div className="w-full lg:w-[420px] xl:w-[460px] 2xl:w-[500px] h-full overflow-hidden shrink-0 border-r border-slate-800/80">
+            <div className="w-full lg:w-[360px] xl:w-[400px] 2xl:w-[440px] h-full overflow-hidden shrink-0 border-r border-slate-800/80">
               <MyPortM1Pie
                 slices={slices}
                 totalNetWorth={totalNetWorth}

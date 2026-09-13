@@ -127,7 +127,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
                   ${(slice.totalCost ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <div className="text-[13px] text-slate-400">
-                  Avg Cost ${(slice.avgCost ?? 0).toFixed(2)}/share
+                  Avg ${(slice.avgCost ?? 0).toFixed(2)} · {slice.quantity.toLocaleString()} shares
                 </div>
               </div>
             </div>

@@ -67,24 +67,24 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
       list = list.filter((s) => s.targetWeight > 0 && s.drift < -0.5);
     }
 
-    // Sorting
+    // Sort
     list.sort((a, b) => {
       let comparison = 0;
       switch (sortField) {
         case 'symbol':
           comparison = a.symbol.localeCompare(b.symbol);
           break;
-        case 'pnl':
-          comparison = a.totalReturnPercent - b.totalReturnPercent;
-          break;
-        case 'drift':
-          comparison = a.drift - b.drift;
-          break;
         case 'price':
-          comparison = a.lastPrice - b.lastPrice;
+          comparison = (a.lastPrice || 0) - (b.lastPrice || 0);
           break;
         case 'value':
-          comparison = a.currentValue - b.currentValue;
+          comparison = (a.currentValue || 0) - (b.currentValue || 0);
+          break;
+        case 'pnl':
+          comparison = (a.totalReturn || 0) - (b.totalReturn || 0);
+          break;
+        case 'drift':
+          comparison = (a.drift || 0) - (b.drift || 0);
           break;
         case 'weight':
         default:
@@ -102,28 +102,28 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B1220] border-l border-slate-800/80 select-none overflow-hidden min-h-0">
-      {/* Top Filter and Search Bar */}
-      <div className="p-3 border-b border-slate-800/80 bg-[#0D1017] flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+      {/* Top Filter and Search Bar: Ultra-compact Single Row */}
+      <div className="px-3 py-2 border-b border-slate-800/80 bg-[#0D1017] flex flex-wrap items-center justify-between gap-2 shrink-0">
         {/* Search Box */}
-        <div className="relative min-w-[240px] max-w-[320px] flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="relative w-48 sm:w-56">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search symbol or category..."
-            className="w-full bg-[#141824] border border-slate-700/80 rounded-lg pl-9 pr-3 py-1.5 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-colors"
+            placeholder="Search asset..."
+            className="w-full bg-[#141824] border border-slate-700/80 rounded-lg pl-8 pr-2.5 py-1 text-[13px] text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-colors"
           />
         </div>
 
         {/* Filter Chips */}
-        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar py-0.5">
+        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">
           <button
             onClick={() => setFilterMode('all')}
             className={clsx(
-              'px-2.5 py-1 rounded-lg text-[13px] font-semibold transition-all shrink-0',
+              'px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
               filterMode === 'all'
-                ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-sm'
+                ? 'bg-purple-600/30 text-purple-200 border border-purple-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
             )}
           >
@@ -132,9 +132,9 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <button
             onClick={() => setFilterMode('winners')}
             className={clsx(
-              'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[13px] font-semibold transition-all shrink-0',
+              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
               filterMode === 'winners'
-                ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 shadow-sm'
+                ? 'bg-emerald-600/30 text-emerald-200 border border-emerald-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
             )}
           >
@@ -144,9 +144,9 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <button
             onClick={() => setFilterMode('losers')}
             className={clsx(
-              'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[13px] font-semibold transition-all shrink-0',
+              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
               filterMode === 'losers'
-                ? 'bg-rose-600/30 text-rose-300 border border-rose-500/50 shadow-sm'
+                ? 'bg-rose-600/30 text-rose-200 border border-rose-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
             )}
           >
@@ -156,9 +156,9 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <button
             onClick={() => setFilterMode('overweight')}
             className={clsx(
-              'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[13px] font-semibold transition-all shrink-0',
+              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
               filterMode === 'overweight'
-                ? 'bg-blue-600/30 text-blue-300 border border-blue-500/50 shadow-sm'
+                ? 'bg-blue-600/30 text-blue-200 border border-blue-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
             )}
           >
@@ -168,9 +168,9 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <button
             onClick={() => setFilterMode('underweight')}
             className={clsx(
-              'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[13px] font-semibold transition-all shrink-0',
+              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
               filterMode === 'underweight'
-                ? 'bg-amber-600/30 text-amber-300 border border-amber-500/50 shadow-sm'
+                ? 'bg-amber-600/30 text-amber-200 border border-amber-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
             )}
           >
@@ -180,7 +180,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
         </div>
       </div>
 
-      {/* Main Data Table */}
+      {/* Main Data Table: Consolidated 6 Essential Columns */}
       <div className="flex-1 overflow-auto custom-scrollbar">
         <table className="w-full border-collapse text-left text-sm">
           {/* Table Header */}
@@ -191,7 +191,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3.5 cursor-pointer hover:text-white transition-colors"
               >
                 <div className="flex items-center gap-1">
-                  <span>Asset / Symbol</span>
+                  <span>Asset</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -201,7 +201,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>Actual vs Target Weight</span>
+                  <span>Weight / Target</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -211,13 +211,9 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>Market Price / 24h</span>
+                  <span>Price / 24h</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
-              </th>
-
-              <th className="py-2.5 px-3 text-right">
-                <span>Avg Cost / Shares</span>
               </th>
 
               <th
@@ -225,7 +221,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>Holding Value ($)</span>
+                  <span>Holding Value</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -235,13 +231,9 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>Total Unrealized P&L</span>
+                  <span>Total P&L</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
-              </th>
-
-              <th className="py-2.5 px-3 text-center">
-                <span>Blueprint Milestone</span>
               </th>
 
               <th className="py-2.5 px-3 text-center">
@@ -254,8 +246,8 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <tbody className="divide-y divide-slate-800/60">
             {filteredSlices.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-slate-300 text-sm">
-                  {searchQuery ? 'No assets match the search query' : 'No assets found in this category'}
+                <td colSpan={6} className="py-12 text-center text-slate-300 text-sm">
+                  {searchQuery ? 'No assets match the search query' : 'No assets found'}
                 </td>
               </tr>
             ) : (
@@ -264,12 +256,6 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 const isProfit = slice.totalReturn >= 0;
                 const isDayProfit = slice.dayChangePercent >= 0;
                 const valueTHB = slice.currentValue * (exchangeRate || 34.5);
-
-                // Blueprint progress calculation
-                let bpDistancePercent: number | null = null;
-                if (slice.blueprintTargetPrice && slice.lastPrice > 0) {
-                  bpDistancePercent = ((slice.blueprintTargetPrice - slice.lastPrice) / slice.lastPrice) * 100;
-                }
 
                 return (
                   <tr
@@ -283,9 +269,9 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                         : 'bg-transparent border-l-4 border-l-transparent hover:bg-slate-800/30'
                     )}
                   >
-                    {/* 1. Symbol & Category */}
+                    {/* 1. Asset / Symbol & Category */}
                     <td className="py-2.5 px-3.5" onClick={() => onSelectSymbol(slice.symbol)}>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <span
                           className="w-3 h-3 rounded-full shrink-0 shadow-sm"
                           style={{ backgroundColor: slice.color }}
@@ -300,13 +286,13 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                             </span>
                           </div>
                           {slice.isCash && (
-                            <span className="text-[13px] text-emerald-400 font-medium">Liquid Cash Cushion</span>
+                            <span className="text-[13px] text-emerald-400 font-medium">Cash Cushion</span>
                           )}
                         </div>
                       </div>
                     </td>
 
-                    {/* 2. Slices Weight (Actual vs Target) */}
+                    {/* 2. Weight (Actual vs Target) */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       <div className="flex flex-col items-end">
                         <div className="flex items-center gap-1.5">
@@ -329,7 +315,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                                 slice.drift >= 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
                               )}
                             >
-                              {slice.drift >= 0 ? `+${slice.drift.toFixed(1)}% Overweight` : `${slice.drift.toFixed(1)}% Underweight`}
+                              {slice.drift >= 0 ? `+${slice.drift.toFixed(1)}% Over` : `${slice.drift.toFixed(1)}% Under`}
                             </span>
                           </div>
                         )}
@@ -355,39 +341,23 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                           </span>
                         </div>
                       ) : (
-                        <span className="text-sm text-slate-300">--</span>
+                        <span className="text-sm text-slate-400 font-mono">--</span>
                       )}
                     </td>
 
-                    {/* 4. Cost Basis & Quantity */}
-                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
-                      {!slice.isCash ? (
-                        <div className="flex flex-col items-end">
-                          <span className="text-sm font-semibold text-slate-200 font-mono">
-                            ${(slice.avgCost ?? 0).toFixed(2)}
-                          </span>
-                          <span className="text-[13px] text-slate-300 font-medium">
-                            {slice.quantity.toLocaleString()} shares
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-slate-300">--</span>
-                      )}
-                    </td>
-
-                    {/* 5. Holding Value */}
+                    {/* 4. Holding Value */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       <div className="flex flex-col items-end">
                         <span className="text-sm font-extrabold text-white font-mono">
                           ${(slice.currentValue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
-                        <span className="text-[13px] text-slate-300 font-medium">
+                        <span className="text-[13px] text-slate-400 font-medium">
                           ≈ ฿{valueTHB.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                         </span>
                       </div>
                     </td>
 
-                    {/* 6. Total Unrealized Return */}
+                    {/* 5. Total Unrealized Return */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       {!slice.isCash ? (
                         <div className="flex flex-col items-end">
@@ -411,34 +381,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                           </span>
                         </div>
                       ) : (
-                        <span className="text-sm text-slate-300">--</span>
+                        <span className="text-sm text-slate-400 font-mono">--</span>
                       )}
                     </td>
 
-                    {/* 7. Blueprint Milestone */}
-                    <td className="py-2.5 px-3 text-center" onClick={() => onSelectSymbol(slice.symbol)}>
-                      {slice.blueprintTargetPrice ? (
-                        <div className="flex flex-col items-center">
-                          <span className="text-sm font-bold text-purple-300 font-mono">
-                            ${slice.blueprintTargetPrice.toFixed(2)}
-                          </span>
-                          {bpDistancePercent !== null && (
-                            <span
-                              className={clsx(
-                                'text-[13px] font-medium',
-                                bpDistancePercent <= 0 ? 'text-emerald-400 font-bold' : 'text-slate-300'
-                              )}
-                            >
-                              {bpDistancePercent <= 0 ? '🎯 Target Reached!' : `+${bpDistancePercent.toFixed(1)}% to Target`}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-[13px] text-slate-400">No Target Set</span>
-                      )}
-                    </td>
-
-                    {/* 8. Action Buttons */}
+                    {/* 6. Action Buttons: Clean & Compact */}
                     <td className="py-2.5 px-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
@@ -446,11 +393,10 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                             e.stopPropagation();
                             onSelectSymbol(slice.symbol);
                           }}
-                          title="Quick Inspect"
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition-colors border border-slate-700/80 text-[13px] font-semibold"
+                          title="Quick Inspect Drawer"
+                          className="p-1.5 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition-colors border border-slate-700/80 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>Inspect</span>
                         </button>
                         {!slice.isCash && (
                           <button
@@ -459,10 +405,9 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                               onOpenChart(slice.symbol);
                             }}
                             title="Launch Full Candlestick Chart in X-Chart"
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-600/30 text-purple-300 hover:bg-purple-600/50 hover:text-white transition-all border border-purple-500/40 text-[13px] font-bold shadow-sm"
+                            className="p-1.5 rounded-lg bg-purple-600/30 text-purple-200 hover:bg-purple-600/50 hover:text-white transition-all border border-purple-500/40 shadow-sm cursor-pointer"
                           >
                             <BarChart2 className="w-3.5 h-3.5" />
-                            <span>Chart</span>
                           </button>
                         )}
                       </div>
