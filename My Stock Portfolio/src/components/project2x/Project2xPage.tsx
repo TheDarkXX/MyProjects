@@ -40,10 +40,14 @@ import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useProject2xStore, MilestoneItem, RadarRow } from '../../stores/project2xStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useChartViewStore } from '../../stores/useChartViewStore';
+import { useHoldings } from '../../hooks/useHoldings';
+import { useTransactionStore } from '../../stores/transactionStore';
+import { useBlueprintStore } from '../../stores/blueprintStore';
+import { useDrawingStore } from '../../stores/drawingStore';
 import { ProgressRing } from './ProgressRing';
 import { MiniSparkline } from './MiniSparkline';
 import { TradingViewChart } from './TradingViewChart';
-import { LWChart } from './LWChart';
+import { LWChart, PortfolioOverlayConfig } from './LWChart';
 
 type SortKey = 'STATUS' | 'PROGRESS' | 'VALUE' | 'WEIGHT' | 'NAME';
 type SortOrder = 'ASC' | 'DESC';
@@ -170,6 +174,54 @@ export const Project2xPage: React.FC = () => {
 
   // Selected stock row for large TradingView chart
   const activeStockRow = radar?.rows.find(r => r.symbol === selectedStockSymbol) || radar?.rows[0];
+
+  // Contextual Portfolio & Overlay for active stock chart
+  const { holdings } = useHoldings();
+  const { transactions } = useTransactionStore();
+  const { blueprints } = useBlueprintStore();
+
+  const activeHolding = useMemo(() => {
+    if (!activeStockRow?.symbol) return null;
+    const sym = activeStockRow.symbol.toUpperCase();
+    return (holdings || []).find(h => h && h.symbol && h.symbol.toUpperCase() === sym && h.quantity > 0) || null;
+  }, [holdings, activeStockRow?.symbol]);
+
+  const activeBlueprint = useMemo(() => {
+    if (!activeStockRow?.symbol) return null;
+    const sym = activeStockRow.symbol.toUpperCase();
+    return (blueprints || []).find(b => b && b.symbol && b.symbol.toUpperCase() === sym) || null;
+  }, [blueprints, activeStockRow?.symbol]);
+
+  const computedOverlay = useMemo<PortfolioOverlayConfig | undefined>(() => {
+    if (!activeHolding) return undefined;
+    const sym = activeHolding.symbol.toUpperCase();
+    const stockTxs = (transactions || [])
+      .filter(t => t && t.symbol && t.symbol.toUpperCase() === sym && (!t.status || t.status.toUpperCase() === 'CONFIRMED'))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return {
+      avgCost: activeHolding.avgCost,
+      totalQuantity: activeHolding.quantity,
+      unrealizedPnLPercent: activeHolding.totalReturnPercent,
+      transactions: stockTxs.map(t => ({
+        date: t.date,
+        type: t.type as 'BUY' | 'SELL',
+        price: t.price || 0,
+        amount: t.amount || 0,
+      })),
+      blueprint: activeBlueprint ? {
+        targetPrice: activeBlueprint.target_price || undefined,
+        ceilingPrice: activeBlueprint.ceiling_price || undefined,
+      } : undefined,
+    };
+  }, [activeHolding, transactions, activeBlueprint]);
+
+  const drawingsCount = useDrawingStore((s) => {
+    const sym = (activeStockRow?.symbol || '').toUpperCase().trim();
+    const d = s.drawingsBySymbol[sym] || [];
+    const t = s.trendLinesBySymbol[sym] || [];
+    return d.length + t.length;
+  });
 
   // Milestones
   const defaultMilestones: MilestoneItem[] = [
@@ -779,43 +831,71 @@ export const Project2xPage: React.FC = () => {
 
                   {/* HUD Eyeball Toggle */}
                   <button
-                    onClick={() => toggleP2XVisibility('project2x', 'showHUD')}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                    onClick={() => {
+                      const next = !p2xViewProfile?.showHUD;
+                      useChartViewStore.getState().updateProfile('project2x', {
+                        showHUD: next,
+                        showAvgCostLine: next,
+                      });
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
                       p2xViewProfile?.showHUD
                         ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
                         : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
                     }`}
-                    title={p2xViewProfile?.showHUD ? 'ซ่อน Nano-HUD ในหน้า Project 2X' : 'แสดง Nano-HUD ในหน้า Project 2X'}
+                    title={
+                      !activeHolding
+                        ? `หุ้น ${activeStockRow?.symbol} ไม่อยู่ในพอร์ต (ไม่มี Position HUD ให้แสดง)`
+                        : p2xViewProfile?.showHUD
+                        ? 'ซ่อน Nano-HUD และเส้นต้นทุนในหน้า Project 2X'
+                        : 'แสดง Nano-HUD และเส้นต้นทุนในหน้า Project 2X'
+                    }
                   >
-                    {p2xViewProfile?.showHUD ? <Eye className="w-3 h-3 text-amber-400" /> : <EyeOff className="w-3 h-3" />}
+                    {p2xViewProfile?.showHUD ? <Eye className="w-3.5 h-3.5 text-amber-400" /> : <EyeOff className="w-3.5 h-3.5" />}
                     <span>HUD</span>
+                    {activeHolding ? (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="มีหุ้นในพอร์ต" />
+                    ) : (
+                      <span className="text-[10px] text-slate-400 opacity-60 font-normal">(-พอร์ต)</span>
+                    )}
                   </button>
 
                   {/* Drawings Eyeball Toggle */}
                   <button
                     onClick={() => toggleP2XVisibility('project2x', 'showDrawings')}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
                       p2xViewProfile?.showDrawings
                         ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
                         : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
                     }`}
-                    title={p2xViewProfile?.showDrawings ? 'ซ่อนเส้นวาดในหน้า Project 2X' : 'แสดงเส้นวาดในหน้า Project 2X'}
+                    title={
+                      p2xViewProfile?.showDrawings
+                        ? 'ซ่อนเส้นวาดในหน้า Project 2X'
+                        : drawingsCount > 0
+                        ? `แสดงเส้นวาด (${drawingsCount} เส้น) ในหน้า Project 2X`
+                        : 'เปิดการแสดงเส้นวาด (ยังไม่มีเส้นวาดบนหุ้นนี้ เปิด Toolbar เพื่อเริ่มวาด)'
+                    }
                   >
-                    {p2xViewProfile?.showDrawings ? <Eye className="w-3 h-3 text-cyan-400" /> : <EyeOff className="w-3 h-3" />}
+                    {p2xViewProfile?.showDrawings ? <Eye className="w-3.5 h-3.5 text-cyan-400" /> : <EyeOff className="w-3.5 h-3.5" />}
                     <span>Drawings</span>
+                    {drawingsCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 font-bold">
+                        {drawingsCount}
+                      </span>
+                    )}
                   </button>
 
                   {/* Drawing Toolbar Toggle */}
                   <button
                     onClick={() => toggleP2XVisibility('project2x', 'showDrawingToolbar')}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
                       p2xViewProfile?.showDrawingToolbar
                         ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
                         : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
                     }`}
                     title={p2xViewProfile?.showDrawingToolbar ? 'ซ่อนแถบเครื่องมือวาดซ้าย' : 'แสดงแถบเครื่องมือวาดซ้าย'}
                   >
-                    <Pen className="w-3 h-3" />
+                    <Pen className="w-3.5 h-3.5" />
                     <span>Toolbar</span>
                   </button>
 
@@ -829,14 +909,14 @@ export const Project2xPage: React.FC = () => {
                         showVolumeProfile: next,
                       });
                     }}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
                       p2xViewProfile?.showSMC
                         ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
                         : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
                     }`}
                     title={p2xViewProfile?.showSMC ? 'ซ่อน SMC/VWAP ในหน้า Project 2X' : 'แสดง SMC/VWAP ในหน้า Project 2X'}
                   >
-                    {p2xViewProfile?.showSMC ? <Eye className="w-3 h-3 text-emerald-400" /> : <EyeOff className="w-3 h-3" />}
+                    {p2xViewProfile?.showSMC ? <Eye className="w-3.5 h-3.5 text-emerald-400" /> : <EyeOff className="w-3.5 h-3.5" />}
                     <span>SMC & VWAP</span>
                   </button>
                 </div>
@@ -851,6 +931,9 @@ export const Project2xPage: React.FC = () => {
                   <LWChart
                     symbol={activeStockRow.symbol}
                     chartContext="project2x"
+                    holding={activeHolding}
+                    blueprint={activeBlueprint}
+                    portfolioOverlay={computedOverlay}
                     dates={activeStockRow.sparkline?.dates || []}
                     closes={activeStockRow.sparkline?.closes || []}
                     opens={activeStockRow.sparkline?.opens || []}

@@ -198,24 +198,51 @@ export const LWChart: React.FC<LWChartProps> = ({
 
   // Context-scoped Effective Indicator Configuration
   const indicatorConfig = useMemo(() => {
+    const isP2X = activeContext === 'project2x';
     return {
       ...rawIndicatorConfig,
-      ema1: { ...rawIndicatorConfig.ema1, enabled: rawIndicatorConfig.ema1.enabled && viewProfile.showEMA },
-      ema2: { ...rawIndicatorConfig.ema2, enabled: rawIndicatorConfig.ema2.enabled && viewProfile.showEMA },
-      ema3: { ...rawIndicatorConfig.ema3, enabled: rawIndicatorConfig.ema3.enabled && viewProfile.showEMA },
-      smcLite: { ...rawIndicatorConfig.smcLite, enabled: rawIndicatorConfig.smcLite.enabled && viewProfile.showSMC },
-      anchoredVwap: { ...rawIndicatorConfig.anchoredVwap, enabled: rawIndicatorConfig.anchoredVwap.enabled && viewProfile.showVWAP },
-      volumeProfile: { ...rawIndicatorConfig.volumeProfile, enabled: rawIndicatorConfig.volumeProfile.enabled && viewProfile.showVolumeProfile },
-      superMoneySignal: { ...rawIndicatorConfig.superMoneySignal, enabled: rawIndicatorConfig.superMoneySignal.enabled && viewProfile.showSignals },
-      envelope: { ...rawIndicatorConfig.envelope, enabled: rawIndicatorConfig.envelope.enabled && viewProfile.showEnvelope },
-      trendSpeed: { ...rawIndicatorConfig.trendSpeed, enabled: rawIndicatorConfig.trendSpeed.enabled && viewProfile.showTrendSpeed },
+      ema1: {
+        ...rawIndicatorConfig.ema1,
+        visible: isP2X ? viewProfile.showEMA : (rawIndicatorConfig.ema1.visible && viewProfile.showEMA),
+      },
+      ema2: {
+        ...rawIndicatorConfig.ema2,
+        visible: isP2X ? viewProfile.showEMA : (rawIndicatorConfig.ema2.visible && viewProfile.showEMA),
+      },
+      ema3: {
+        ...rawIndicatorConfig.ema3,
+        visible: isP2X ? viewProfile.showEMA : (rawIndicatorConfig.ema3.visible && viewProfile.showEMA),
+      },
+      smcLite: {
+        ...rawIndicatorConfig.smcLite,
+        visible: isP2X ? viewProfile.showSMC : (Boolean(rawIndicatorConfig.smcLite?.visible) && viewProfile.showSMC),
+      },
+      anchoredVwap: {
+        ...rawIndicatorConfig.anchoredVwap,
+        visible: isP2X ? viewProfile.showVWAP : (Boolean(rawIndicatorConfig.anchoredVwap?.visible) && viewProfile.showVWAP),
+      },
+      volumeProfile: {
+        ...rawIndicatorConfig.volumeProfile,
+        visible: isP2X ? viewProfile.showVolumeProfile : (rawIndicatorConfig.volumeProfile?.visible !== false && viewProfile.showVolumeProfile),
+      },
+      superMoneySignal: {
+        ...rawIndicatorConfig.superMoneySignal,
+        visible: isP2X ? viewProfile.showSignals : (Boolean(rawIndicatorConfig.superMoneySignal?.visible) && viewProfile.showSignals),
+      },
+      envelope: {
+        ...rawIndicatorConfig.envelope,
+        visible: isP2X ? viewProfile.showEnvelope : (Boolean(rawIndicatorConfig.envelope?.visible) && viewProfile.showEnvelope),
+      },
+      trendSpeed: {
+        ...rawIndicatorConfig.trendSpeed,
+        visible: isP2X ? viewProfile.showTrendSpeed : (Boolean(rawIndicatorConfig.trendSpeed?.visible) && viewProfile.showTrendSpeed),
+      },
       mcdx: {
         ...rawIndicatorConfig.mcdx,
-        enabled: rawIndicatorConfig.mcdx.enabled && viewProfile.showSubPane,
-        visible: rawIndicatorConfig.mcdx.visible && viewProfile.showSubPane,
+        visible: isP2X ? viewProfile.showSubPane : (rawIndicatorConfig.mcdx.visible && viewProfile.showSubPane),
       },
     };
-  }, [rawIndicatorConfig, viewProfile]);
+  }, [rawIndicatorConfig, viewProfile, activeContext]);
 
   const paneLayout = indicatorConfig.paneLayout || { assignments: { mcdx: 1, ultimateRsi: 2, trendSpeed: 3 } };
 

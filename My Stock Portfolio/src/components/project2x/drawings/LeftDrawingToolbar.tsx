@@ -65,6 +65,10 @@ export const LeftDrawingToolbar: React.FC<LeftDrawingToolbarProps> = ({ symbol, 
       setActiveTool('cursor');
     } else {
       setActiveTool(tool);
+      // Auto-enable drawings visibility in this context so user can see what they are drawing
+      if (chartContext && !isDrawingsVisible) {
+        useChartViewStore.getState().setVisibility(chartContext, 'showDrawings', true);
+      }
     }
   };
 
