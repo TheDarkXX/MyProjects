@@ -82,11 +82,11 @@ export const MyPortKPIHeader: React.FC<MyPortKPIHeaderProps> = ({
                 </span>
               )}
               <span className="px-2 py-0.5 rounded-full text-[13px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                M1 Canvas
+                M1 Interactive Canvas
               </span>
             </div>
             <div className="text-[13px] text-slate-300 font-medium flex items-center gap-2 mt-0.5">
-              <span>ภาพรวมพอร์ตโฟลิโอ & สัดส่วนชิ้นพาย (Slices)</span>
+              <span>Portfolio Overview & Slices Allocation</span>
             </div>
           </div>
         </div>
@@ -136,10 +136,10 @@ export const MyPortKPIHeader: React.FC<MyPortKPIHeaderProps> = ({
             </div>
           </div>
 
-          {/* Total Unrealized Return */}
+          {/* Total Return */}
           <div className="bg-[#141824] border border-slate-800 rounded-xl px-3 py-1.5 flex flex-col justify-center">
             <div className="text-[13px] font-medium text-slate-300 uppercase tracking-wider">
-              Unrealized Return
+              Total Return
             </div>
             <div className="flex items-center gap-1.5">
               <span
@@ -183,12 +183,12 @@ export const MyPortKPIHeader: React.FC<MyPortKPIHeaderProps> = ({
           <div className="hidden xl:flex items-center gap-2 bg-[#141824] border border-slate-800 rounded-xl px-3 py-2">
             <div className="flex items-center gap-1 text-[13px] font-semibold text-emerald-300">
               <Trophy className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{winnersCount} กำไร</span>
+              <span>{winnersCount} Winners</span>
             </div>
             <span className="text-slate-600">|</span>
             <div className="flex items-center gap-1 text-[13px] font-semibold text-rose-300">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-              <span>{losersCount} ขาดทุน</span>
+              <span>{losersCount} Drawdowns</span>
             </div>
           </div>
         </div>

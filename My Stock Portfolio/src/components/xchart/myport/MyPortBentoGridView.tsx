@@ -6,8 +6,7 @@ import {
   Eye, 
   BarChart2, 
   Target, 
-  Wallet, 
-  ShieldCheck 
+  Wallet 
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -75,11 +74,11 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
                   </div>
                   {slice.isCash ? (
                     <div className="text-[13px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
-                      <Wallet className="w-3.5 h-3.5" /> เงินสดคงเหลือ
+                      <Wallet className="w-3.5 h-3.5" /> Available Cash Cushion
                     </div>
                   ) : (
                     <div className="text-[13px] text-slate-300 mt-0.5">
-                      {slice.quantity.toLocaleString()} หุ้น · ทุน ${(slice.avgCost ?? 0).toFixed(2)}
+                      {slice.quantity.toLocaleString()} shares · Cost ${(slice.avgCost ?? 0).toFixed(2)}
                     </div>
                   )}
                 </div>
@@ -120,7 +119,7 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
               {/* Holding Value & Total Return */}
               <div className="grid grid-cols-2 gap-2 mb-3 bg-[#131826] p-2.5 rounded-xl border border-slate-800/80">
                 <div>
-                  <div className="text-[13px] text-slate-300 font-medium">มูลค่าถือครอง</div>
+                  <div className="text-[13px] text-slate-300 font-medium">Holding Value</div>
                   <div className="text-sm font-extrabold text-white font-mono">
                     ${(slice.currentValue ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </div>
@@ -130,7 +129,7 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
                 </div>
 
                 <div className="text-right">
-                  <div className="text-[13px] text-slate-300 font-medium">กำไร/ขาดทุน</div>
+                  <div className="text-[13px] text-slate-300 font-medium">Total Return</div>
                   {!slice.isCash ? (
                     <>
                       <div
@@ -151,7 +150,7 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
                       </div>
                     </>
                   ) : (
-                    <div className="text-[13px] text-slate-400 mt-1">คงที่</div>
+                    <div className="text-[13px] text-slate-400 mt-1">Constant</div>
                   )}
                 </div>
               </div>
@@ -160,7 +159,7 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
               {slice.targetWeight > 0 && (
                 <div className="mb-3">
                   <div className="flex items-center justify-between text-[13px] mb-1">
-                    <span className="text-slate-300 font-medium">เป้าหมาย: {slice.targetWeight.toFixed(1)}%</span>
+                    <span className="text-slate-300 font-medium">Target: {slice.targetWeight.toFixed(1)}%</span>
                     <span
                       className={clsx(
                         'font-bold px-1.5 py-0.2 rounded-full',
@@ -187,11 +186,11 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
               {slice.blueprintTargetPrice && (
                 <div className="flex items-center justify-between text-[13px] mb-3 px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20">
                   <span className="text-purple-300 font-medium flex items-center gap-1">
-                    <Target className="w-3.5 h-3.5" /> เป้า ${slice.blueprintTargetPrice.toFixed(2)}
+                    <Target className="w-3.5 h-3.5" /> Target ${slice.blueprintTargetPrice.toFixed(2)}
                   </span>
                   {bpDistancePercent !== null && (
                     <span className="font-bold text-slate-200">
-                      {bpDistancePercent <= 0 ? 'ถึงเป้าแล้ว' : `อีก ${bpDistancePercent.toFixed(1)}%`}
+                      {bpDistancePercent <= 0 ? 'Target Hit' : `+${bpDistancePercent.toFixed(1)}% to go`}
                     </span>
                   )}
                 </div>
@@ -207,7 +206,7 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors text-[13px] font-bold border border-slate-700/80"
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  <span>ตรวจพอร์ต</span>
+                  <span>Inspect</span>
                 </button>
                 {!slice.isCash && (
                   <button
@@ -218,7 +217,7 @@ export const MyPortBentoGridView: React.FC<MyPortBentoGridViewProps> = ({
                     className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-purple-600/30 text-purple-300 hover:bg-purple-600/50 hover:text-white transition-all text-[13px] font-bold border border-purple-500/40 shadow-sm"
                   >
                     <BarChart2 className="w-3.5 h-3.5" />
-                    <span>เปิดกราฟ</span>
+                    <span>Chart</span>
                   </button>
                 )}
               </div>

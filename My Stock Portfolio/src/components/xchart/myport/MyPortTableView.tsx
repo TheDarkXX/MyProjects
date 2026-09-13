@@ -5,10 +5,8 @@ import {
   TrendingUp, 
   TrendingDown, 
   ArrowUpDown, 
-  ExternalLink, 
   Eye, 
   Target, 
-  Wallet, 
   BarChart2, 
   Scale 
 } from 'lucide-react';
@@ -113,7 +111,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหาหุ้น หรือ หมวดหมู่ (Search)..."
+            placeholder="Search symbol or category..."
             className="w-full bg-[#141824] border border-slate-700/80 rounded-lg pl-9 pr-3 py-1.5 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-colors"
           />
         </div>
@@ -129,7 +127,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
             )}
           >
-            ทั้งหมด ({slices.length})
+            All ({slices.length})
           </button>
           <button
             onClick={() => setFilterMode('winners')}
@@ -141,7 +139,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
             )}
           >
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-            <span>กำไร ({winnersCount})</span>
+            <span>Winners ({winnersCount})</span>
           </button>
           <button
             onClick={() => setFilterMode('losers')}
@@ -153,7 +151,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
             )}
           >
             <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
-            <span>ขาดทุน ({losersCount})</span>
+            <span>Drawdowns ({losersCount})</span>
           </button>
           <button
             onClick={() => setFilterMode('overweight')}
@@ -193,7 +191,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3.5 cursor-pointer hover:text-white transition-colors"
               >
                 <div className="flex items-center gap-1">
-                  <span>สินทรัพย์ (Symbol)</span>
+                  <span>Asset / Symbol</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -203,7 +201,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>สัดส่วน Actual vs Target</span>
+                  <span>Actual vs Target Weight</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -213,13 +211,13 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>ราคาตลาด / 24h</span>
+                  <span>Market Price / 24h</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
 
               <th className="py-2.5 px-3 text-right">
-                <span>ต้นทุน / จำนวนหุ้น</span>
+                <span>Avg Cost / Shares</span>
               </th>
 
               <th
@@ -227,7 +225,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>มูลค่าถือครอง ($)</span>
+                  <span>Holding Value ($)</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -237,17 +235,17 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>กำไร/ขาดทุน (P/L)</span>
+                  <span>Total Unrealized P&L</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
 
               <th className="py-2.5 px-3 text-center">
-                <span>เป้าหมาย Blueprint</span>
+                <span>Blueprint Milestone</span>
               </th>
 
               <th className="py-2.5 px-3 text-center">
-                <span>คำสั่ง (Actions)</span>
+                <span>Actions</span>
               </th>
             </tr>
           </thead>
@@ -257,7 +255,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
             {filteredSlices.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-slate-300 text-sm">
-                  {searchQuery ? 'ไม่พบข้อมูลที่ตรงกับคำค้นหา' : 'ไม่มีรายการสินทรัพย์ในหมวดหมู่นี้'}
+                  {searchQuery ? 'No assets match the search query' : 'No assets found in this category'}
                 </td>
               </tr>
             ) : (
@@ -302,7 +300,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                             </span>
                           </div>
                           {slice.isCash && (
-                            <span className="text-[13px] text-emerald-400 font-medium">เงินสดสำรองสภาพคล่อง</span>
+                            <span className="text-[13px] text-emerald-400 font-medium">Liquid Cash Cushion</span>
                           )}
                         </div>
                       </div>
@@ -317,7 +315,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                           </span>
                           {slice.targetWeight > 0 && (
                             <span className="text-[13px] text-slate-400 font-medium">
-                              (เป้า {slice.targetWeight.toFixed(1)}%)
+                              (Target {slice.targetWeight.toFixed(1)}%)
                             </span>
                           )}
                         </div>
@@ -369,7 +367,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                             ${(slice.avgCost ?? 0).toFixed(2)}
                           </span>
                           <span className="text-[13px] text-slate-300 font-medium">
-                            {slice.quantity.toLocaleString()} หุ้น
+                            {slice.quantity.toLocaleString()} shares
                           </span>
                         </div>
                       ) : (
@@ -431,12 +429,12 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                                 bpDistancePercent <= 0 ? 'text-emerald-400 font-bold' : 'text-slate-300'
                               )}
                             >
-                              {bpDistancePercent <= 0 ? '🎯 ถึงเป้าแล้ว!' : `เหลืออีก ${bpDistancePercent.toFixed(1)}%`}
+                              {bpDistancePercent <= 0 ? '🎯 Target Reached!' : `+${bpDistancePercent.toFixed(1)}% to Target`}
                             </span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-[13px] text-slate-400">ยังไม่ตั้งเป้า</span>
+                        <span className="text-[13px] text-slate-400">No Target Set</span>
                       )}
                     </td>
 
@@ -448,10 +446,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                             e.stopPropagation();
                             onSelectSymbol(slice.symbol);
                           }}
-                          title="เปิดดูรายละเอียดเชิงลึก (Quick Inspect)"
-                          className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors border border-slate-700/80"
+                          title="Quick Inspect"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition-colors border border-slate-700/80 text-[13px] font-semibold"
                         >
                           <Eye className="w-3.5 h-3.5" />
+                          <span>Inspect</span>
                         </button>
                         {!slice.isCash && (
                           <button
@@ -459,11 +458,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                               e.stopPropagation();
                               onOpenChart(slice.symbol);
                             }}
-                            title="เปิดดูกราฟแท่งเทียนตัวเต็มใน X-Chart (Launch Chart)"
+                            title="Launch Full Candlestick Chart in X-Chart"
                             className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-600/30 text-purple-300 hover:bg-purple-600/50 hover:text-white transition-all border border-purple-500/40 text-[13px] font-bold shadow-sm"
                           >
                             <BarChart2 className="w-3.5 h-3.5" />
-                            <span>กราฟ</span>
+                            <span>Chart</span>
                           </button>
                         )}
                       </div>

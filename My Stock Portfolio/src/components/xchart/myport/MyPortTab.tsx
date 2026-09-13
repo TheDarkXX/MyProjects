@@ -125,7 +125,7 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
     if (cashBalance > 0.01) {
       result.push({
         symbol: 'CASH',
-        name: 'เงินสดสภาพคล่อง',
+        name: 'Cash Cushion',
         category: 'Cash',
         quantity: 1,
         avgCost: cashBalance,

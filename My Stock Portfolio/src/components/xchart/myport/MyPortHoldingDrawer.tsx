@@ -7,13 +7,9 @@ import {
   TrendingUp, 
   TrendingDown, 
   Target, 
-  ShieldAlert, 
   Clock, 
   BarChart2, 
-  DollarSign, 
-  Layers, 
-  FileText, 
-  Wallet 
+  FileText 
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -39,7 +35,6 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
   if (!symbol || !slice) return null;
 
   const isProfit = slice.totalReturn >= 0;
-  const isDayProfit = slice.dayChangePercent >= 0;
   const valueTHB = slice.currentValue * (exchangeRate || 34.5);
 
   // Filter and sort transactions for this symbol
@@ -80,7 +75,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
                 </span>
               </div>
               <div className="text-[13px] text-slate-300 font-medium">
-                {slice.isCash ? 'เงินสดสำรอง' : `${slice.quantity.toLocaleString()} หุ้นที่ถือครอง`}
+                {slice.isCash ? 'Liquid Cash Cushion' : `${slice.quantity.toLocaleString()} Shares Held`}
               </div>
             </div>
           </div>
@@ -89,11 +84,11 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
             {!slice.isCash && (
               <button
                 onClick={() => onOpenChart(slice.symbol)}
-                title="เปิดดูกราฟตัวเต็มใน X-Chart"
+                title="Launch Full Candlestick Chart in X-Chart"
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-600/30 text-purple-300 hover:bg-purple-600/50 hover:text-white transition-all text-[13px] font-bold border border-purple-500/40 shadow-sm"
               >
                 <BarChart2 className="w-3.5 h-3.5" />
-                <span>เปิดกราฟ</span>
+                <span>Chart</span>
               </button>
             )}
             <button
@@ -110,13 +105,13 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
           {/* Section 1: Executive KPI Card */}
           <div className="bg-[#141824] rounded-2xl p-4 border border-slate-800 space-y-3">
             <div className="text-[13px] font-semibold text-slate-300 uppercase tracking-wider">
-              สถิติการถือครอง (Holdings Overview)
+              Holdings Overview
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               {/* Current Value */}
               <div className="bg-[#191F30] p-3 rounded-xl border border-slate-800/80">
-                <div className="text-[13px] text-slate-300 font-medium">มูลค่าปัจจุบัน</div>
+                <div className="text-[13px] text-slate-300 font-medium">Current Market Value</div>
                 <div className="text-base font-black text-white font-mono mt-0.5">
                   ${(slice.currentValue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
@@ -127,12 +122,12 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
 
               {/* Total Cost Basis */}
               <div className="bg-[#191F30] p-3 rounded-xl border border-slate-800/80">
-                <div className="text-[13px] text-slate-300 font-medium">ต้นทุนสะสม</div>
+                <div className="text-[13px] text-slate-300 font-medium">Total Cost Basis</div>
                 <div className="text-base font-black text-slate-200 font-mono mt-0.5">
                   ${(slice.totalCost ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <div className="text-[13px] text-slate-400">
-                  ทุนเฉลี่ย ${(slice.avgCost ?? 0).toFixed(2)}/หุ้น
+                  Avg Cost ${(slice.avgCost ?? 0).toFixed(2)}/share
                 </div>
               </div>
             </div>
@@ -141,7 +136,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
             {!slice.isCash && (
               <div className="flex items-center justify-between p-3 rounded-xl bg-[#191F30] border border-slate-800/80">
                 <div>
-                  <div className="text-[13px] text-slate-300 font-medium">กำไร/ขาดทุนสุทธิ</div>
+                  <div className="text-[13px] text-slate-300 font-medium">Net Unrealized P&L</div>
                   <div
                     className={clsx(
                       'text-base font-black font-mono flex items-center gap-1',
@@ -154,7 +149,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
                 </div>
 
                 <div className="text-right">
-                  <div className="text-[13px] text-slate-300 font-medium">สัดส่วนพอร์ต</div>
+                  <div className="text-[13px] text-slate-300 font-medium">Portfolio Weight</div>
                   <div className="text-base font-black text-purple-300 font-mono">
                     {slice.actualWeight.toFixed(1)}%
                   </div>
@@ -169,7 +164,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
               <div className="flex items-center justify-between">
                 <div className="text-[13px] font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                   <Target className="w-4 h-4 text-purple-400" />
-                  <span>กลยุทธ์ Blueprint</span>
+                  <span>Blueprint Strategy & Milestones</span>
                 </div>
                 {slice.targetWeight > 0 && (
                   <span
@@ -185,24 +180,24 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[#191F30] p-3 rounded-xl border border-slate-800/80">
-                  <div className="text-[13px] text-slate-300 font-medium">ราคาเป้าหมาย (Target)</div>
+                  <div className="text-[13px] text-slate-300 font-medium">Target Price</div>
                   <div className="text-base font-bold text-purple-300 font-mono mt-0.5">
-                    {blueprint.target_price ? `$${blueprint.target_price.toFixed(2)}` : 'ไม่ได้ตั้งไว้'}
+                    {blueprint.target_price ? `$${blueprint.target_price.toFixed(2)}` : 'Not Set'}
                   </div>
                   {bpDistancePercent !== null && (
                     <div className={clsx('text-[13px] font-semibold mt-0.5', bpDistancePercent <= 0 ? 'text-emerald-400' : 'text-slate-300')}>
-                      {bpDistancePercent <= 0 ? '🎯 ถึงเป้าหมายแล้ว!' : `ห่างอีก ${bpDistancePercent.toFixed(1)}%`}
+                      {bpDistancePercent <= 0 ? '🎯 Target Achieved!' : `+${bpDistancePercent.toFixed(1)}% Remaining`}
                     </div>
                   )}
                 </div>
 
                 <div className="bg-[#191F30] p-3 rounded-xl border border-slate-800/80">
-                  <div className="text-[13px] text-slate-300 font-medium">เพดานราคา (Ceiling)</div>
+                  <div className="text-[13px] text-slate-300 font-medium">Ceiling Price</div>
                   <div className="text-base font-bold text-slate-200 font-mono mt-0.5">
-                    {blueprint.ceiling_price ? `$${blueprint.ceiling_price.toFixed(2)}` : 'ไม่มีเพดาน'}
+                    {blueprint.ceiling_price ? `$${blueprint.ceiling_price.toFixed(2)}` : 'No Ceiling'}
                   </div>
                   <div className="text-[13px] text-slate-400">
-                    เป้าสัดส่วน: {blueprint.target_percent}%
+                    Target Allocation: {blueprint.target_percent}%
                   </div>
                 </div>
               </div>
@@ -211,7 +206,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
                 <div className="bg-[#191F30] p-3 rounded-xl border border-slate-800/80">
                   <div className="text-[13px] text-slate-300 font-medium flex items-center gap-1 mb-1">
                     <FileText className="w-3.5 h-3.5 text-purple-400" />
-                    <span>บันทึกเหตุผลการลงทุน (Investment Thesis)</span>
+                    <span>Investment Thesis & Notes</span>
                   </div>
                   <p className="text-[13px] text-slate-200 leading-relaxed font-sans">
                     {blueprint.notes}
@@ -226,14 +221,14 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
             <div className="flex items-center justify-between">
               <div className="text-[13px] font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-purple-400" />
-                <span>ประวัติไม้ที่ซื้อ-ขาย (Trade Lots History)</span>
+                <span>Trade Lots Execution History</span>
               </div>
-              <span className="text-[13px] text-slate-400">{stockTxs.length} รายการ</span>
+              <span className="text-[13px] text-slate-400">{stockTxs.length} Transactions</span>
             </div>
 
             {stockTxs.length === 0 ? (
               <div className="p-6 text-center text-slate-400 text-sm bg-[#191F30] rounded-xl border border-slate-800">
-                ไม่มีประวัติการซื้อขายที่บันทึกไว้
+                No transaction records found
               </div>
             ) : (
               <div className="divide-y divide-slate-800/80 border border-slate-800/80 rounded-xl overflow-hidden bg-[#191F30]">
@@ -258,8 +253,8 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
                           </span>
                         </div>
                         <div className="text-slate-300 mt-1">
-                          {tx.amount} หุ้น @ ${tx.price?.toFixed(2)}
-                          {tx.fee ? ` (ค่าธรรมเนียม $${tx.fee.toFixed(2)})` : ''}
+                          {tx.amount} shares @ ${tx.price?.toFixed(2)}
+                          {tx.fee ? ` (Fee: $${tx.fee.toFixed(2)})` : ''}
                         </div>
                       </div>
 
@@ -289,7 +284,7 @@ export const MyPortHoldingDrawer: React.FC<MyPortHoldingDrawerProps> = ({
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm transition-all shadow-lg shadow-purple-900/30"
             >
               <BarChart2 className="w-4 h-4" />
-              <span>เปิดดูกราฟแท่งเทียนตัวเต็ม {slice.symbol} ใน X-Chart</span>
+              <span>Launch Full {slice.symbol} Candlestick Chart in X-Chart</span>
             </button>
           </div>
         )}
