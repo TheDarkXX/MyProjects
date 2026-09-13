@@ -15,6 +15,7 @@ import { PositionSettingsPopover } from './PositionSettingsPopover';
 import { Holding } from '../../../hooks/useHoldings';
 import { BlueprintEntry } from '../../../stores/blueprintStore';
 import { formatPriceVal } from '../../xchart/myport/types';
+import { ChartContext } from '../../../stores/useChartViewStore';
 
 interface ChartPositionHUDProps {
   symbol: string;
@@ -24,15 +25,18 @@ interface ChartPositionHUDProps {
   onOpenHoldingDrawer?: () => void;
   currency?: 'USD' | 'THB';
   exchangeRate?: number;
+  chartContext?: ChartContext;
 }
 
 export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
   symbol,
   holding,
+  blueprint,
   containerRef,
   onOpenHoldingDrawer,
   currency = 'USD',
   exchangeRate = 34.5,
+  chartContext,
 }) => {
   const {
     config,
@@ -413,7 +417,10 @@ export const ChartPositionHUD: React.FC<ChartPositionHUDProps> = ({
 
       {/* Settings Popover Modal */}
       {isSettingsOpen && (
-        <PositionSettingsPopover onClose={() => setIsSettingsOpen(false)} />
+        <PositionSettingsPopover
+          onClose={() => setIsSettingsOpen(false)}
+          chartContext={chartContext}
+        />
       )}
     </>
   );

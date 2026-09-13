@@ -245,6 +245,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
     <div className="flex-1 w-full h-full flex flex-col overflow-hidden relative bg-[#111418] min-h-0">
       <LWChart
         symbol={currentData.symbol}
+        chartContext="xchart"
         dates={currentData.dates}
         opens={currentData.opens}
         highs={currentData.highs}

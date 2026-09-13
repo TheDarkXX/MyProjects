@@ -20,6 +20,7 @@ import {
 import { usePositionOverlayStore } from '../../../stores/usePositionOverlayStore';
 import { LineStyleOption } from '../../../types/indicatorConfig';
 import { CornerSnap } from '../../../types/positionOverlayConfig';
+import { ChartContext, useChartViewStore } from '../../../stores/useChartViewStore';
 
 const COLOR_PRESETS = [
   { name: 'Gold', hex: '#F59E0B' },
@@ -59,9 +60,10 @@ const LINE_WIDTHS: Array<1 | 2 | 3 | 4> = [1, 2, 3, 4];
 
 interface PositionSettingsPopoverProps {
   onClose: () => void;
+  chartContext?: ChartContext;
 }
 
-export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = ({ onClose }) => {
+export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = ({ onClose, chartContext }) => {
   const {
     config,
     updateConfig,
@@ -73,6 +75,9 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
     resetPosition,
     resetToDefaults,
   } = usePositionOverlayStore();
+
+  const viewProfile = useChartViewStore((s) => chartContext ? s.profiles[chartContext] : undefined);
+  const toggleContextVisibility = useChartViewStore((s) => s.toggleVisibility);
 
   const [dynamicTab, setDynamicTab] = useState<'profit' | 'breakeven' | 'loss'>('profit');
   const [customHex, setCustomHex] = useState(config.avgCostColor || '#F59E0B');
@@ -106,9 +111,16 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
               <Sliders className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white tracking-wide">
-                Position Overlay & HUD Settings
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white tracking-wide">
+                  Position Overlay & HUD Settings
+                </h3>
+                {chartContext && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    {chartContext === 'project2x' ? 'Project 2X View' : 'X-Chart Terminal'}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-1.5 text-[13px] text-slate-300 font-medium">
                 <Cloud className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Cloud Synced across all devices</span>
@@ -216,7 +228,14 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
 
           {/* Section 2: Component Toggles */}
           <div className="flex flex-col gap-2.5">
-            <span className="font-bold text-white text-sm">Display Toggles</span>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-white text-sm">Display Toggles</span>
+              {chartContext && (
+                <span className="text-xs text-amber-400/90 font-medium">
+                  {chartContext === 'project2x' ? '(เฉพาะหน้า Project 2X)' : '(เฉพาะหน้า X-Chart)'}
+                </span>
+              )}
+            </div>
 
             {/* Master Enabled */}
             <label className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/40 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer">
@@ -234,8 +253,14 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
               <span>Show Avg Cost Price Line</span>
               <input
                 type="checkbox"
-                checked={config.showAvgCostLine}
-                onChange={toggleAvgCostLine}
+                checked={chartContext && viewProfile ? (config.showAvgCostLine && viewProfile.showAvgCostLine) : config.showAvgCostLine}
+                onChange={() => {
+                  if (chartContext) {
+                    toggleContextVisibility(chartContext, 'showAvgCostLine');
+                  } else {
+                    toggleAvgCostLine();
+                  }
+                }}
                 className="w-4 h-4 accent-amber-400 rounded cursor-pointer"
               />
             </label>
@@ -245,8 +270,14 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
               <span>Show Floating Position HUD</span>
               <input
                 type="checkbox"
-                checked={config.showHUD}
-                onChange={toggleHUD}
+                checked={chartContext && viewProfile ? (config.showHUD && viewProfile.showHUD) : config.showHUD}
+                onChange={() => {
+                  if (chartContext) {
+                    toggleContextVisibility(chartContext, 'showHUD');
+                  } else {
+                    toggleHUD();
+                  }
+                }}
                 className="w-4 h-4 accent-amber-400 rounded cursor-pointer"
               />
             </label>
@@ -256,8 +287,14 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
               <span>Show Buy Execution Markers (BUY Arrows)</span>
               <input
                 type="checkbox"
-                checked={config.showBuyMarkers}
-                onChange={() => updateConfig({ showBuyMarkers: !config.showBuyMarkers })}
+                checked={chartContext && viewProfile ? (config.showBuyMarkers && viewProfile.showBuyMarkers) : config.showBuyMarkers}
+                onChange={() => {
+                  if (chartContext) {
+                    toggleContextVisibility(chartContext, 'showBuyMarkers');
+                  } else {
+                    updateConfig({ showBuyMarkers: !config.showBuyMarkers });
+                  }
+                }}
                 className="w-4 h-4 accent-emerald-400 rounded cursor-pointer"
               />
             </label>
@@ -267,8 +304,14 @@ export const PositionSettingsPopover: React.FC<PositionSettingsPopoverProps> = (
               <span>Show Blueprint Target Line</span>
               <input
                 type="checkbox"
-                checked={config.showBlueprintTarget}
-                onChange={() => updateConfig({ showBlueprintTarget: !config.showBlueprintTarget })}
+                checked={chartContext && viewProfile ? (config.showBlueprintTarget && viewProfile.showBlueprintTarget) : config.showBlueprintTarget}
+                onChange={() => {
+                  if (chartContext) {
+                    toggleContextVisibility(chartContext, 'showBlueprintTarget');
+                  } else {
+                    updateConfig({ showBlueprintTarget: !config.showBlueprintTarget });
+                  }
+                }}
                 className="w-4 h-4 accent-cyan-400 rounded cursor-pointer"
               />
             </label>

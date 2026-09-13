@@ -56,6 +56,12 @@ import { AnchoredVWAPHandle } from './indicators/AnchoredVWAPHandle';
 import { ChartControlBar } from './ChartControlBar';
 import { ChartLegendBar, DominanceTableOverlay } from './ChartLegendOverlay';
 import { applyPaneLayoutHeights as computePaneHeights } from './chartLayoutUtils';
+import {
+  ChartContext,
+  useChartViewStore,
+  DEFAULT_XCHART_VISIBILITY,
+  DEFAULT_P2X_VISIBILITY,
+} from '../../stores/useChartViewStore';
 
 export { TV_FONT_FAMILY };
 export type { WatchlistStock, TimeFrame, ChartStyle, Resolution, PortfolioOverlayConfig };
@@ -93,6 +99,7 @@ export interface LWChartProps {
   holding?: Holding | null;
   blueprint?: BlueprintEntry | null;
   onOpenHoldingDrawer?: () => void;
+  chartContext?: ChartContext;
 }
 
 export const LWChart: React.FC<LWChartProps> = ({
@@ -123,10 +130,14 @@ export const LWChart: React.FC<LWChartProps> = ({
   holding,
   blueprint,
   onOpenHoldingDrawer,
+  chartContext,
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const volumeProfilePrimitiveRef = useRef<VolumeProfilePrimitive | null>(null);
+
+  const activeContext: ChartContext = chartContext ?? 'xchart';
+  const viewProfile = useChartViewStore((s) => s.profiles[activeContext]) || (activeContext === 'project2x' ? DEFAULT_P2X_VISIBILITY : DEFAULT_XCHART_VISIBILITY);
 
   const positionConfig = usePositionOverlayStore((s) => s.config);
   const { currency } = useUiStore();
@@ -183,7 +194,29 @@ export const LWChart: React.FC<LWChartProps> = ({
   }, [resolution, canShow4H]);
 
   const [isIndicatorOpen, setIsIndicatorOpen] = useState<boolean>(false);
-  const indicatorConfig = useIndicatorStore((s) => s.config);
+  const rawIndicatorConfig = useIndicatorStore((s) => s.config);
+
+  // Context-scoped Effective Indicator Configuration
+  const indicatorConfig = useMemo(() => {
+    return {
+      ...rawIndicatorConfig,
+      ema1: { ...rawIndicatorConfig.ema1, enabled: rawIndicatorConfig.ema1.enabled && viewProfile.showEMA },
+      ema2: { ...rawIndicatorConfig.ema2, enabled: rawIndicatorConfig.ema2.enabled && viewProfile.showEMA },
+      ema3: { ...rawIndicatorConfig.ema3, enabled: rawIndicatorConfig.ema3.enabled && viewProfile.showEMA },
+      smcLite: { ...rawIndicatorConfig.smcLite, enabled: rawIndicatorConfig.smcLite.enabled && viewProfile.showSMC },
+      anchoredVwap: { ...rawIndicatorConfig.anchoredVwap, enabled: rawIndicatorConfig.anchoredVwap.enabled && viewProfile.showVWAP },
+      volumeProfile: { ...rawIndicatorConfig.volumeProfile, enabled: rawIndicatorConfig.volumeProfile.enabled && viewProfile.showVolumeProfile },
+      superMoneySignal: { ...rawIndicatorConfig.superMoneySignal, enabled: rawIndicatorConfig.superMoneySignal.enabled && viewProfile.showSignals },
+      envelope: { ...rawIndicatorConfig.envelope, enabled: rawIndicatorConfig.envelope.enabled && viewProfile.showEnvelope },
+      trendSpeed: { ...rawIndicatorConfig.trendSpeed, enabled: rawIndicatorConfig.trendSpeed.enabled && viewProfile.showTrendSpeed },
+      mcdx: {
+        ...rawIndicatorConfig.mcdx,
+        enabled: rawIndicatorConfig.mcdx.enabled && viewProfile.showSubPane,
+        visible: rawIndicatorConfig.mcdx.visible && viewProfile.showSubPane,
+      },
+    };
+  }, [rawIndicatorConfig, viewProfile]);
+
   const paneLayout = indicatorConfig.paneLayout || { assignments: { mcdx: 1, ultimateRsi: 2, trendSpeed: 3 } };
 
   // Calculate dynamic active sub-panes
@@ -349,7 +382,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     resolution,
     chartStyle,
     indicatorConfig,
-    portfolioOverlay: positionConfig.enabled && positionConfig.showBuyMarkers ? portfolioOverlay : undefined,
+    portfolioOverlay: positionConfig.enabled && positionConfig.showBuyMarkers && viewProfile.showBuyMarkers ? portfolioOverlay : undefined,
   });
 
   // Timeframe range applier
@@ -467,6 +500,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     chartRef,
     candleSeriesRef,
     candleSeriesReady,
+    drawingsVisible: viewProfile.showDrawings,
   });
 
   // Auto-sync logical range and price auto-scale whenever symbol changes or first loads
@@ -510,7 +544,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     if (!portfolioOverlay || !positionConfig.enabled) return;
 
     // 1. Cost Basis Line (Dynamic 3-State P&L Color or Static Custom Color)
-    if (positionConfig.showAvgCostLine && portfolioOverlay.avgCost && portfolioOverlay.avgCost > 0) {
+    if (positionConfig.showAvgCostLine && viewProfile.showAvgCostLine && portfolioOverlay.avgCost && portfolioOverlay.avgCost > 0) {
       const pnlPct = portfolioOverlay.unrealizedPnLPercent;
       const pnlStr = pnlPct !== undefined ? ` (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)` : '';
       const ticker = (symbol || '').toUpperCase();
@@ -544,7 +578,7 @@ export const LWChart: React.FC<LWChartProps> = ({
 
 
     // 2. Blueprint Target Price Line (Sky Blue)
-    if (positionConfig.showBlueprintTarget && portfolioOverlay.blueprint?.targetPrice && portfolioOverlay.blueprint.targetPrice > 0) {
+    if (positionConfig.showBlueprintTarget && viewProfile.showBlueprintTarget && portfolioOverlay.blueprint?.targetPrice && portfolioOverlay.blueprint.targetPrice > 0) {
       try {
         const line = candleSeries.createPriceLine({
           price: portfolioOverlay.blueprint.targetPrice,
@@ -1240,7 +1274,9 @@ export const LWChart: React.FC<LWChartProps> = ({
       {/* MAIN BODY: CHART CANVAS + FULLSCREEN WATCHLIST SIDEBAR */}
       <div className="relative flex-1 flex overflow-hidden min-h-0 w-full h-full">
         {/* Left Drawing Toolbar */}
-        <LeftDrawingToolbar symbol={symbol} bars={displayBars} />
+        {viewProfile.showDrawingToolbar && (
+          <LeftDrawingToolbar symbol={symbol} bars={displayBars} chartContext={activeContext} />
+        )}
 
         {/* Chart Canvas Container + Floating Pane Toolbars */}
         <div className="relative flex-1 w-full h-full min-h-0">
@@ -1257,7 +1293,7 @@ export const LWChart: React.FC<LWChartProps> = ({
             }
             autoSRCount={visibleDrawings.length}
             autoSRLocked={visibleDrawings.some((d) => d.locked)}
-            globalDrawingsVisible={globalDrawingsVisible}
+            globalDrawingsVisible={viewProfile.showDrawings}
             onToggleEMA={(key) => useIndicatorStore.getState().toggleEMA(key)}
             onToggleEnvelope={() => useIndicatorStore.getState().toggleEnvelope()}
             onToggleTrendSpeedDyn={() => {
@@ -1502,7 +1538,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           />
 
           {/* Contextual Floating Position HUD (Heads-Up Display) */}
-          {holding && holding.quantity > 0 && (
+          {holding && holding.quantity > 0 && viewProfile.showHUD && (
             <ChartPositionHUD
               symbol={symbol}
               holding={holding}
@@ -1511,6 +1547,7 @@ export const LWChart: React.FC<LWChartProps> = ({
               onOpenHoldingDrawer={onOpenHoldingDrawer}
               currency={currency}
               exchangeRate={exchangeRate}
+              chartContext={activeContext}
             />
           )}
         </div>

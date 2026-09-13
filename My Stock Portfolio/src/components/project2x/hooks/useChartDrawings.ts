@@ -22,6 +22,7 @@ export interface UseChartDrawingsProps {
   chartRef: RefObject<IChartApi | null>;
   candleSeriesRef: RefObject<ISeriesApi<'Candlestick'> | null>;
   candleSeriesReady: number;
+  drawingsVisible?: boolean;
 }
 
 export function useChartDrawings({
@@ -32,6 +33,7 @@ export function useChartDrawings({
   chartRef,
   candleSeriesRef,
   candleSeriesReady,
+  drawingsVisible,
 }: UseChartDrawingsProps) {
   const priceLineMapRef = useRef<Map<string, IPriceLine>>(new Map());
   const isDraggingLineRef = useRef<{ lineId: string; startPrice: number } | null>(null);
@@ -87,23 +89,25 @@ export function useChartDrawings({
     useDrawingStore.getState().loadTrendLines(symbol);
   }, [symbol]);
 
+  const isDrawingsVisible = drawingsVisible !== undefined ? drawingsVisible : globalDrawingsVisible;
+
   const visibleDrawings = useMemo(() => {
-    if (!globalDrawingsVisible) return [];
+    if (!isDrawingsVisible) return [];
     return drawings.filter((d) => {
       if (!d.visible) return false;
       if (d.visibleOn && d.visibleOn !== 'all' && d.visibleOn !== resolution) return false;
       return true;
     });
-  }, [drawings, globalDrawingsVisible, resolution]);
+  }, [drawings, isDrawingsVisible, resolution]);
 
   const visibleTrendLines = useMemo(() => {
-    if (!globalDrawingsVisible) return [];
+    if (!isDrawingsVisible) return [];
     return trendLines.filter((tl) => {
       if (tl.visible === false) return false;
       if (tl.visibleOn && tl.visibleOn !== 'all' && tl.visibleOn !== resolution) return false;
       return true;
     });
-  }, [trendLines, globalDrawingsVisible, resolution]);
+  }, [trendLines, isDrawingsVisible, resolution]);
 
   // Attach TrendLinePrimitive to Candle Series
   useEffect(() => {

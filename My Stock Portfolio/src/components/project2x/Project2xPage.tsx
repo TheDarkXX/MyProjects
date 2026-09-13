@@ -31,11 +31,15 @@ import {
   ExternalLink,
   ArrowDownUp,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Eye,
+  EyeOff,
+  Pen
 } from 'lucide-react';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useProject2xStore, MilestoneItem, RadarRow } from '../../stores/project2xStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useChartViewStore } from '../../stores/useChartViewStore';
 import { ProgressRing } from './ProgressRing';
 import { MiniSparkline } from './MiniSparkline';
 import { TradingViewChart } from './TradingViewChart';
@@ -48,6 +52,8 @@ type TableSortColumn = 'SYMBOL' | 'PRICE' | 'WEIGHT' | 'EMA150' | 'EMA200' | 'BA
 export const Project2xPage: React.FC = () => {
   const { activePortfolioId } = usePortfolioStore();
   const { currency } = useUiStore();
+  const p2xViewProfile = useChartViewStore((s) => s.profiles.project2x);
+  const toggleP2XVisibility = useChartViewStore((s) => s.toggleVisibility);
   const {
     selectedTab,
     setSelectedTab,
@@ -765,11 +771,86 @@ export const Project2xPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             {/* LEFT PANEL: Upgraded TradingView Chart with Dates & Banker Sub-Pane */}
-            <div className="lg:col-span-8 space-y-4">
+            <div className="lg:col-span-8 space-y-3">
+              {/* Quick View Controls for Project 2X Chart */}
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#1A1D2D]/90 border border-white/10 text-[13px] text-slate-300 flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-slate-400 text-xs uppercase tracking-wider mr-1">👁️ 2X View:</span>
+
+                  {/* HUD Eyeball Toggle */}
+                  <button
+                    onClick={() => toggleP2XVisibility('project2x', 'showHUD')}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                      p2xViewProfile?.showHUD
+                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
+                    }`}
+                    title={p2xViewProfile?.showHUD ? 'ซ่อน Nano-HUD ในหน้า Project 2X' : 'แสดง Nano-HUD ในหน้า Project 2X'}
+                  >
+                    {p2xViewProfile?.showHUD ? <Eye className="w-3 h-3 text-amber-400" /> : <EyeOff className="w-3 h-3" />}
+                    <span>HUD</span>
+                  </button>
+
+                  {/* Drawings Eyeball Toggle */}
+                  <button
+                    onClick={() => toggleP2XVisibility('project2x', 'showDrawings')}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                      p2xViewProfile?.showDrawings
+                        ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
+                    }`}
+                    title={p2xViewProfile?.showDrawings ? 'ซ่อนเส้นวาดในหน้า Project 2X' : 'แสดงเส้นวาดในหน้า Project 2X'}
+                  >
+                    {p2xViewProfile?.showDrawings ? <Eye className="w-3 h-3 text-cyan-400" /> : <EyeOff className="w-3 h-3" />}
+                    <span>Drawings</span>
+                  </button>
+
+                  {/* Drawing Toolbar Toggle */}
+                  <button
+                    onClick={() => toggleP2XVisibility('project2x', 'showDrawingToolbar')}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                      p2xViewProfile?.showDrawingToolbar
+                        ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
+                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
+                    }`}
+                    title={p2xViewProfile?.showDrawingToolbar ? 'ซ่อนแถบเครื่องมือวาดซ้าย' : 'แสดงแถบเครื่องมือวาดซ้าย'}
+                  >
+                    <Pen className="w-3 h-3" />
+                    <span>Toolbar</span>
+                  </button>
+
+                  {/* SMC & Pro Indicators Toggle */}
+                  <button
+                    onClick={() => {
+                      const next = !p2xViewProfile?.showSMC;
+                      useChartViewStore.getState().updateProfile('project2x', {
+                        showSMC: next,
+                        showVWAP: next,
+                        showVolumeProfile: next,
+                      });
+                    }}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                      p2xViewProfile?.showSMC
+                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
+                    }`}
+                    title={p2xViewProfile?.showSMC ? 'ซ่อน SMC/VWAP ในหน้า Project 2X' : 'แสดง SMC/VWAP ในหน้า Project 2X'}
+                  >
+                    {p2xViewProfile?.showSMC ? <Eye className="w-3 h-3 text-emerald-400" /> : <EyeOff className="w-3 h-3" />}
+                    <span>SMC & VWAP</span>
+                  </button>
+                </div>
+
+                <span className="text-[11px] text-slate-400 font-mono">
+                  (ลูกตาเฉพาะหน้า 2X ไม่กระทบ X-Chart)
+                </span>
+              </div>
+
               {activeStockRow ? (
                 <>
                   <LWChart
                     symbol={activeStockRow.symbol}
+                    chartContext="project2x"
                     dates={activeStockRow.sparkline?.dates || []}
                     closes={activeStockRow.sparkline?.closes || []}
                     opens={activeStockRow.sparkline?.opens || []}
