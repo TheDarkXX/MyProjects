@@ -931,7 +931,7 @@ export const Project2xPage: React.FC = () => {
                   <LWChart
                     symbol={activeStockRow.symbol}
                     chartContext="project2x"
-                    className="w-full h-[650px]"
+                    className="w-full h-[900px]"
                     holding={activeHolding}
                     blueprint={activeBlueprint}
                     portfolioOverlay={computedOverlay}
@@ -1046,7 +1046,7 @@ export const Project2xPage: React.FC = () => {
               </div>
 
               {/* Single-Row Compact Watchlist Items */}
-              <div className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-[780px] overflow-y-auto pr-1">
                 {sortedWatchlistRows.map((row) => {
                   const isSelected = selectedStockSymbol === row.symbol;
                   const isBuyZone = row.traffic_light === 'BUY_ZONE';
