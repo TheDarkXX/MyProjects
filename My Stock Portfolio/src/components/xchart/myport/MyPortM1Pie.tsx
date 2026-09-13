@@ -230,6 +230,31 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
         </div>
       </div>
 
+      {/* Segmented Linear Allocation Bar */}
+      <div className="mt-2 px-1">
+        <div className="w-full h-2 rounded-full overflow-hidden flex bg-slate-800 gap-[1px]">
+          {slices.map((slice) => (
+            <div
+              key={`bar-${slice.symbol}`}
+              style={{
+                width: `${Math.max(slice.actualWeight, 0.5)}%`,
+                backgroundColor: slice.color,
+              }}
+              title={`${slice.symbol}: ${slice.actualWeight.toFixed(1)}%`}
+              onMouseEnter={() => onHoverSymbol(slice.symbol)}
+              onMouseLeave={() => onHoverSymbol(null)}
+              onClick={() => onSelectSymbol(slice.symbol)}
+              className={clsx(
+                'h-full cursor-pointer transition-opacity duration-150',
+                hoveredSymbol && hoveredSymbol.toUpperCase() !== slice.symbol.toUpperCase()
+                  ? 'opacity-35'
+                  : 'opacity-100 hover:brightness-125'
+              )}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* Minimal Interactive Inline Slice Chips */}
       <div className="mt-2 flex-1 flex flex-col justify-start">
         <div className="flex flex-wrap items-center justify-center gap-1.5 max-h-[140px] overflow-y-auto custom-scrollbar p-1">
