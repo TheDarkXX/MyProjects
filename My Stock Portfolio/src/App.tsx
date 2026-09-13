@@ -1,6 +1,8 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { useAuthStore } from './stores/authStore';
 import { usePortfolioStore } from './stores/portfolioStore';
+import { useTransactionStore } from './stores/transactionStore';
+import { usePriceStore } from './stores/priceStore';
 import { useUiStore } from './stores/uiStore';
 import { initSettingsSync } from './services/settingsSync';
 import { Sidebar } from './components/layout/Sidebar';
@@ -152,7 +154,9 @@ const MainLayout = () => {
 
 export const App = () => {
   const { isAuthenticated, verify } = useAuthStore();
-  const fetchPortfolios = usePortfolioStore((s) => s.fetchPortfolios);
+  const { fetchPortfolios, activePortfolioId } = usePortfolioStore();
+  const fetchTransactions = useTransactionStore((s) => s.fetchTransactions);
+  const fetchExchangeRate = usePriceStore((s) => s.fetchExchangeRate);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -162,7 +166,15 @@ export const App = () => {
     }
   }, [isAuthenticated, verify, fetchPortfolios]);
 
+  useEffect(() => {
+    if (isAuthenticated && activePortfolioId && activePortfolioId !== 'null' && activePortfolioId !== 'undefined') {
+      fetchTransactions(activePortfolioId);
+      fetchExchangeRate();
+    }
+  }, [isAuthenticated, activePortfolioId, fetchTransactions, fetchExchangeRate]);
+
   if (!isAuthenticated) return <Login />;
   
   return <MainLayout />;
 };
+

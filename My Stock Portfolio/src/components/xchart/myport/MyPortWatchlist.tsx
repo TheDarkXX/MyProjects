@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useHoldings, Holding } from '../../../hooks/useHoldings';
 import { usePriceStore } from '../../../stores/priceStore';
 import { usePortfolioStore } from '../../../stores/portfolioStore';
+import { useTransactionStore } from '../../../stores/transactionStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { formatCurrencyVal, formatSecondaryVal, formatPriceVal } from './types';
 import { Search, TrendingUp, TrendingDown, Briefcase } from 'lucide-react';
@@ -24,7 +25,11 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     totalPortfolioValue: rawTotalPortfolioValue,
     totalUnrealizedProfit: rawTotalUnrealizedProfit,
     totalUnrealizedProfitPercent: rawTotalUnrealizedProfitPercent,
+    loading: holdingsLoading,
   } = useHoldings();
+
+  const { fetchTransactions, loading: txLoading } = useTransactionStore();
+  const isLoading = holdingsLoading || txLoading;
 
   const totalPortfolioValue = rawTotalPortfolioValue ?? totalNetWorth ?? 0;
   const totalUnrealizedProfit = rawTotalUnrealizedProfit ?? totalPnl ?? 0;
@@ -73,7 +78,11 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
               {portfolios.length > 1 ? (
                 <select
                   value={activePortfolioId || ''}
-                  onChange={(e) => setActivePortfolio(e.target.value)}
+                  onChange={(e) => {
+                    const newId = e.target.value;
+                    setActivePortfolio(newId);
+                    fetchTransactions(newId);
+                  }}
                   className="bg-[#1C2235] border border-slate-700/80 rounded-md px-1.5 py-0.5 text-[13px] font-bold text-slate-200 focus:outline-none focus:border-purple-400 cursor-pointer max-w-[150px] truncate"
                 >
                   {portfolios.map((p) => (
@@ -175,7 +184,12 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
       {/* Holdings List */}
       <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar">
-        {filteredHoldings.length === 0 ? (
+        {isLoading && filteredHoldings.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-sm flex flex-col items-center justify-center gap-2">
+            <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            <span>Loading portfolio holdings...</span>
+          </div>
+        ) : filteredHoldings.length === 0 ? (
           <div className="p-8 text-center text-slate-300 text-sm">
             {searchQuery ? 'No holdings match the search query' : 'No holdings in this portfolio'}
           </div>

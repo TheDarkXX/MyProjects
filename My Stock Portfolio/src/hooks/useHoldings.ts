@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { usePortfolioStore } from '../stores/portfolioStore';
 import { useTransactionStore } from '../stores/transactionStore';
 import { usePriceStore } from '../stores/priceStore';
@@ -21,12 +21,34 @@ export interface Holding {
 }
 
 export function useHoldings() {
-  const { activePortfolioId, portfolios } = usePortfolioStore();
-  const { transactions } = useTransactionStore();
-  const { prices } = usePriceStore();
+  const { activePortfolioId, portfolios, fetchPortfolios, setActivePortfolio } = usePortfolioStore();
+  const { transactions, fetchTransactions, loading: txLoading } = useTransactionStore();
+  const { prices, fetchPrices, fetchExchangeRate } = usePriceStore();
   const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
 
-  return useMemo(() => {
+  // 1. Ensure portfolios are loaded if empty
+  useEffect(() => {
+    if (portfolios.length === 0) {
+      fetchPortfolios();
+    }
+  }, [portfolios.length, fetchPortfolios]);
+
+  // 2. Ensure activePortfolioId is valid if portfolios exist
+  useEffect(() => {
+    if (portfolios.length > 0 && (!activePortfolioId || !portfolios.some(p => p.id === activePortfolioId))) {
+      setActivePortfolio(portfolios[0].id);
+    }
+  }, [portfolios, activePortfolioId, setActivePortfolio]);
+
+  // 3. Ensure transactions & exchange rate are fetched whenever activePortfolioId is ready
+  useEffect(() => {
+    if (activePortfolioId && activePortfolioId !== 'null' && activePortfolioId !== 'undefined') {
+      fetchTransactions(activePortfolioId);
+      fetchExchangeRate();
+    }
+  }, [activePortfolioId, fetchTransactions, fetchExchangeRate]);
+
+  const holdingsData = useMemo(() => {
     let cash = activePortfolio?.initial_cash || 0;
     let netInvested = activePortfolio?.initial_cash || 0;
     let totalDividends = 0;
@@ -34,7 +56,7 @@ export function useHoldings() {
     
     // Process transactions chronologically (strictly scoped to active portfolio)
     const sortedTxs = [...transactions]
-      .filter(t => t.status === 'CONFIRMED' && (!activePortfolioId || !t.portfolio_id || t.portfolio_id === activePortfolioId))
+      .filter(t => t && (!t.status || t.status.toUpperCase() === 'CONFIRMED') && (!activePortfolioId || !t.portfolio_id || t.portfolio_id === activePortfolioId))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     const symbolMeta: Record<string, { stockType?: string; sector?: string }> = {};
@@ -183,5 +205,22 @@ export function useHoldings() {
       totalUnrealizedProfitPercent: totalPnlPercent,
       netInvestedCapital: netInvested,
     };
-  }, [transactions, activePortfolio, prices]);
+  }, [transactions, activePortfolio, prices, activePortfolioId]);
+
+  // 4. Eagerly fetch live market prices for all held symbols
+  const activeSymbols = useMemo(() => {
+    return holdingsData.holdings.map(h => h.symbol).filter(s => s && s !== 'CASH');
+  }, [holdingsData.holdings]);
+
+  useEffect(() => {
+    if (activeSymbols.length > 0) {
+      fetchPrices(activeSymbols);
+    }
+  }, [activeSymbols.join(','), fetchPrices]);
+
+  return {
+    ...holdingsData,
+    loading: txLoading,
+  };
 }
+
