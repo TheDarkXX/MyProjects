@@ -642,7 +642,7 @@ export const LWChart: React.FC<LWChartProps> = ({
       }
       portfolioPriceLinesRef.current = [];
     };
-  }, [candleSeriesReady, portfolioOverlay, positionConfig]);
+  }, [candleSeriesReady, portfolioOverlay, positionConfig, viewProfile.showAvgCostLine, viewProfile.showBlueprintTarget]);
 
   // Synchronize Volume Profile (VPVR) data
   useEffect(() => {
@@ -1345,16 +1345,56 @@ export const LWChart: React.FC<LWChartProps> = ({
             autoSRCount={visibleDrawings.length}
             autoSRLocked={visibleDrawings.some((d) => d.locked)}
             globalDrawingsVisible={viewProfile.showDrawings}
-            onToggleEMA={(key) => useIndicatorStore.getState().toggleEMA(key)}
-            onToggleEnvelope={() => useIndicatorStore.getState().toggleEnvelope()}
-            onToggleTrendSpeedDyn={() => {
-              const cur = indicatorConfig.trendSpeed?.dynamicTrendVisible ?? true;
-              useIndicatorStore.getState().updateTrendSpeed({ dynamicTrendVisible: !cur });
+            onToggleEMA={(key) => {
+              if (activeContext === 'project2x') {
+                useChartViewStore.getState().toggleVisibility('project2x', 'showEMA');
+              } else {
+                useIndicatorStore.getState().toggleEMA(key);
+              }
             }}
-            onToggleSuperMoneySignal={() => useIndicatorStore.getState().toggleSuperMoneySignal()}
-            onToggleAnchoredVWAP={() => useIndicatorStore.getState().toggleAnchoredVWAP()}
-            onToggleVolumeProfile={() => useIndicatorStore.getState().toggleVolumeProfile()}
-            onToggleAutoSR={() => useDrawingStore.getState().toggleGlobalVisibility()}
+            onToggleEnvelope={() => {
+              if (activeContext === 'project2x') {
+                useChartViewStore.getState().toggleVisibility('project2x', 'showEnvelope');
+              } else {
+                useIndicatorStore.getState().toggleEnvelope();
+              }
+            }}
+            onToggleTrendSpeedDyn={() => {
+              if (activeContext === 'project2x') {
+                useChartViewStore.getState().toggleVisibility('project2x', 'showTrendSpeed');
+              } else {
+                const cur = indicatorConfig.trendSpeed?.dynamicTrendVisible ?? true;
+                useIndicatorStore.getState().updateTrendSpeed({ dynamicTrendVisible: !cur });
+              }
+            }}
+            onToggleSuperMoneySignal={() => {
+              if (activeContext === 'project2x') {
+                useChartViewStore.getState().toggleVisibility('project2x', 'showSignals');
+              } else {
+                useIndicatorStore.getState().toggleSuperMoneySignal();
+              }
+            }}
+            onToggleAnchoredVWAP={() => {
+              if (activeContext === 'project2x') {
+                useChartViewStore.getState().toggleVisibility('project2x', 'showVWAP');
+              } else {
+                useIndicatorStore.getState().toggleAnchoredVWAP();
+              }
+            }}
+            onToggleVolumeProfile={() => {
+              if (activeContext === 'project2x') {
+                useChartViewStore.getState().toggleVisibility('project2x', 'showVolumeProfile');
+              } else {
+                useIndicatorStore.getState().toggleVolumeProfile();
+              }
+            }}
+            onToggleAutoSR={() => {
+              if (activeContext === 'project2x') {
+                useChartViewStore.getState().toggleVisibility('project2x', 'showDrawings');
+              } else {
+                useDrawingStore.getState().toggleGlobalVisibility();
+              }
+            }}
             onToggleAutoSRLock={() => {
               const store = useDrawingStore.getState();
               const currentDrawings = store.getDrawings(symbol);

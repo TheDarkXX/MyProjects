@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { pushSettingDebounced, registerSyncHandler } from '../services/settingsSync';
 
 export type ChartContext = 'project2x' | 'xchart';
 
@@ -126,8 +127,9 @@ export const useChartViewStore = create<ChartViewState>((set, get) => ({
   toggleVisibility: (context, key) => {
     const current = get().profiles[context] || (context === 'project2x' ? DEFAULT_P2X_VISIBILITY : DEFAULT_XCHART_VISIBILITY);
     const updated = { ...current, [key]: !current[key] };
+    const storageKey = getStorageKey(context);
     try {
-      localStorage.setItem(getStorageKey(context), JSON.stringify(updated));
+      localStorage.setItem(storageKey, JSON.stringify(updated));
     } catch (_) {}
     set({
       profiles: {
@@ -135,13 +137,15 @@ export const useChartViewStore = create<ChartViewState>((set, get) => ({
         [context]: updated,
       },
     });
+    pushSettingDebounced(storageKey, updated);
   },
 
   setVisibility: (context, key, value) => {
     const current = get().profiles[context] || (context === 'project2x' ? DEFAULT_P2X_VISIBILITY : DEFAULT_XCHART_VISIBILITY);
     const updated = { ...current, [key]: value };
+    const storageKey = getStorageKey(context);
     try {
-      localStorage.setItem(getStorageKey(context), JSON.stringify(updated));
+      localStorage.setItem(storageKey, JSON.stringify(updated));
     } catch (_) {}
     set({
       profiles: {
@@ -149,13 +153,15 @@ export const useChartViewStore = create<ChartViewState>((set, get) => ({
         [context]: updated,
       },
     });
+    pushSettingDebounced(storageKey, updated);
   },
 
   updateProfile: (context, updates) => {
     const current = get().profiles[context] || (context === 'project2x' ? DEFAULT_P2X_VISIBILITY : DEFAULT_XCHART_VISIBILITY);
     const updated = { ...current, ...updates };
+    const storageKey = getStorageKey(context);
     try {
-      localStorage.setItem(getStorageKey(context), JSON.stringify(updated));
+      localStorage.setItem(storageKey, JSON.stringify(updated));
     } catch (_) {}
     set({
       profiles: {
@@ -163,12 +169,14 @@ export const useChartViewStore = create<ChartViewState>((set, get) => ({
         [context]: updated,
       },
     });
+    pushSettingDebounced(storageKey, updated);
   },
 
   resetProfile: (context) => {
     const def = context === 'project2x' ? DEFAULT_P2X_VISIBILITY : DEFAULT_XCHART_VISIBILITY;
+    const storageKey = getStorageKey(context);
     try {
-      localStorage.removeItem(getStorageKey(context));
+      localStorage.removeItem(storageKey);
     } catch (_) {}
     set({
       profiles: {
@@ -176,5 +184,35 @@ export const useChartViewStore = create<ChartViewState>((set, get) => ({
         [context]: def,
       },
     });
+    pushSettingDebounced(storageKey, def);
   },
 }));
+
+// Cross-Device Cloud Sync Handlers
+registerSyncHandler('chart_view_project2x_v1', (cloudVal) => {
+  if (!cloudVal || typeof cloudVal !== 'object') return;
+  const merged = { ...DEFAULT_P2X_VISIBILITY, ...cloudVal };
+  try {
+    localStorage.setItem('chart_view_project2x_v1', JSON.stringify(merged));
+  } catch (_) {}
+  useChartViewStore.setState((state) => ({
+    profiles: {
+      ...state.profiles,
+      project2x: merged,
+    },
+  }));
+});
+
+registerSyncHandler('chart_view_xchart_v1', (cloudVal) => {
+  if (!cloudVal || typeof cloudVal !== 'object') return;
+  const merged = { ...DEFAULT_XCHART_VISIBILITY, ...cloudVal };
+  try {
+    localStorage.setItem('chart_view_xchart_v1', JSON.stringify(merged));
+  } catch (_) {}
+  useChartViewStore.setState((state) => ({
+    profiles: {
+      ...state.profiles,
+      xchart: merged,
+    },
+  }));
+});

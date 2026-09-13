@@ -831,13 +831,7 @@ export const Project2xPage: React.FC = () => {
 
                   {/* HUD Eyeball Toggle */}
                   <button
-                    onClick={() => {
-                      const next = !p2xViewProfile?.showHUD;
-                      useChartViewStore.getState().updateProfile('project2x', {
-                        showHUD: next,
-                        showAvgCostLine: next,
-                      });
-                    }}
+                    onClick={() => toggleP2XVisibility('project2x', 'showHUD')}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
                       p2xViewProfile?.showHUD
                         ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
@@ -847,14 +841,41 @@ export const Project2xPage: React.FC = () => {
                       !activeHolding
                         ? `หุ้น ${activeStockRow?.symbol} ไม่อยู่ในพอร์ต (ไม่มี Position HUD ให้แสดง)`
                         : p2xViewProfile?.showHUD
-                        ? 'ซ่อน Nano-HUD และเส้นต้นทุนในหน้า Project 2X'
-                        : 'แสดง Nano-HUD และเส้นต้นทุนในหน้า Project 2X'
+                        ? 'ซ่อนกล่องลอย Nano-HUD ในหน้า Project 2X'
+                        : 'แสดงกล่องลอย Nano-HUD ในหน้า Project 2X'
                     }
                   >
                     {p2xViewProfile?.showHUD ? <Eye className="w-3.5 h-3.5 text-amber-400" /> : <EyeOff className="w-3.5 h-3.5" />}
                     <span>HUD</span>
                     {activeHolding ? (
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="มีหุ้นในพอร์ต" />
+                    ) : (
+                      <span className="text-[10px] text-slate-400 opacity-60 font-normal">(-พอร์ต)</span>
+                    )}
+                  </button>
+
+                  {/* Avg Cost Eyeball Toggle */}
+                  <button
+                    onClick={() => toggleP2XVisibility('project2x', 'showAvgCostLine')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                      p2xViewProfile?.showAvgCostLine
+                        ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300 shadow-sm shadow-yellow-500/20'
+                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
+                    }`}
+                    title={
+                      !activeHolding
+                        ? `หุ้น ${activeStockRow?.symbol} ไม่อยู่ในพอร์ต (ไม่มีเส้นราคาต้นทุน)`
+                        : p2xViewProfile?.showAvgCostLine
+                        ? `ซ่อนเส้นประราคาต้นทุนเฉลี่ย ($${activeHolding.avgCost.toFixed(2)}) บนชาร์ต 2X`
+                        : `แสดงเส้นประราคาต้นทุนเฉลี่ย ($${activeHolding.avgCost.toFixed(2)}) บนชาร์ต 2X`
+                    }
+                  >
+                    {p2xViewProfile?.showAvgCostLine ? <Eye className="w-3.5 h-3.5 text-yellow-400" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>Avg Cost</span>
+                    {activeHolding ? (
+                      <span className="text-[10px] font-mono font-bold text-yellow-300">
+                        ${activeHolding.avgCost.toFixed(1)}
+                      </span>
                     ) : (
                       <span className="text-[10px] text-slate-400 opacity-60 font-normal">(-พอร์ต)</span>
                     )}
@@ -902,7 +923,8 @@ export const Project2xPage: React.FC = () => {
                   {/* SMC & Pro Indicators Toggle */}
                   <button
                     onClick={() => {
-                      const next = !p2xViewProfile?.showSMC;
+                      const isCurrentlyActive = Boolean(p2xViewProfile?.showSMC || p2xViewProfile?.showVWAP);
+                      const next = !isCurrentlyActive;
                       useChartViewStore.getState().updateProfile('project2x', {
                         showSMC: next,
                         showVWAP: next,
@@ -910,13 +932,13 @@ export const Project2xPage: React.FC = () => {
                       });
                     }}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
-                      p2xViewProfile?.showSMC
+                      Boolean(p2xViewProfile?.showSMC || p2xViewProfile?.showVWAP)
                         ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
                         : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
                     }`}
-                    title={p2xViewProfile?.showSMC ? 'ซ่อน SMC/VWAP ในหน้า Project 2X' : 'แสดง SMC/VWAP ในหน้า Project 2X'}
+                    title={Boolean(p2xViewProfile?.showSMC || p2xViewProfile?.showVWAP) ? 'ซ่อน SMC/VWAP ในหน้า Project 2X' : 'แสดง SMC/VWAP ในหน้า Project 2X'}
                   >
-                    {p2xViewProfile?.showSMC ? <Eye className="w-3.5 h-3.5 text-emerald-400" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    {Boolean(p2xViewProfile?.showSMC || p2xViewProfile?.showVWAP) ? <Eye className="w-3.5 h-3.5 text-emerald-400" /> : <EyeOff className="w-3.5 h-3.5" />}
                     <span>SMC & VWAP</span>
                   </button>
                 </div>
