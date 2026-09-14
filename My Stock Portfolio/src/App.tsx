@@ -128,14 +128,14 @@ const MainLayout = () => {
         <main className={clsx(
           "flex-1 min-h-0 scroll-smooth",
           activeTab === 'xchart' 
-            ? "p-0 overflow-hidden flex flex-col" 
+            ? clsx("p-0 overflow-hidden flex flex-col", isCompact && "pb-14 sm:pb-16") 
             : isTabletDashboard
               ? "p-2 sm:p-4 overflow-hidden flex flex-col min-h-0"
               : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
         )}>
           <div className={clsx(
             "w-full",
-            isTabletDashboard ? "h-full flex flex-col min-h-0" :
+            (isTabletDashboard || activeTab === 'xchart') ? "h-full flex flex-col min-h-0" :
             isCompact && activeTab !== 'xchart' && "max-w-2xl mx-auto"
           )}>
             <ErrorBoundary>

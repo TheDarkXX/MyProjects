@@ -101,13 +101,13 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
 
   if (isMobile) {
     return (
-      <div className="flex items-center justify-between px-3 py-2 bg-[#0D1322] border-b border-slate-800/80 gap-2 select-none shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 bg-[#0D1322] border-b border-slate-800/80 gap-2 select-none shrink-0 min-h-[44px]">
         {/* Left: Ticker Symbol (clickable to open Watchlist) + Price + %Change */}
         <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={toggleWatchlist}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700/80 active:scale-95 transition-all text-slate-100 font-black text-sm tracking-wide cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700/80 active:scale-95 transition-all text-slate-100 font-black text-sm tracking-wide cursor-pointer shadow-sm min-h-[36px]"
             title="เลือกหุ้นจาก Watchlist / My Port"
           >
             <span>{symbol}</span>
@@ -119,11 +119,11 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
           </span>
 
           <span
-            className={`text-xs font-bold flex items-center gap-0.5 ${
+            className={`text-[13px] font-bold flex items-center gap-0.5 font-mono ${
               activePercentChange >= 0 ? 'text-emerald-400' : 'text-rose-400'
             }`}
           >
-            {activePercentChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+            {activePercentChange >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
             {activePercentChange >= 0 ? '+' : ''}
             {activePercentChange.toFixed(2)}%
           </span>
@@ -137,7 +137,7 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
               <button
                 type="button"
                 onClick={() => setResolution('4H')}
-                className={`px-2 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded text-[13px] font-bold transition-all cursor-pointer min-h-[32px] ${
                   resolution === '4H'
                     ? 'bg-cyan-500 text-slate-950 font-black'
                     : 'text-slate-300 hover:text-white'
@@ -149,7 +149,7 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
             <button
               type="button"
               onClick={() => setResolution('1D')}
-              className={`px-2 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded text-[13px] font-bold transition-all cursor-pointer min-h-[32px] ${
                 resolution === '1D'
                   ? 'bg-cyan-500 text-slate-950 font-black'
                   : 'text-slate-300 hover:text-white'
@@ -160,7 +160,7 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
             <button
               type="button"
               onClick={() => setResolution('1W')}
-              className={`px-2 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded text-[13px] font-bold transition-all cursor-pointer min-h-[32px] ${
                 resolution === '1W'
                   ? 'bg-cyan-500 text-slate-950 font-black'
                   : 'text-slate-300 hover:text-white'
@@ -177,14 +177,14 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
               data-indicator-trigger="true"
               onClick={() => setIsIndicatorOpen(prev => !prev)}
               title="Indicators"
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[13px] font-bold border transition-all cursor-pointer min-h-[36px] ${
                 isIndicatorOpen
                   ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.3)]'
                   : 'bg-slate-900/90 border-slate-700/60 text-slate-200 hover:text-white'
               }`}
             >
               <Sliders className="w-3.5 h-3.5" />
-              <span className="px-1 py-0.2 rounded-full bg-slate-800 text-amber-400 text-[10px] font-black">
+              <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-amber-400 text-xs font-black">
                 {[
                   indicatorConfig.ema1.visible,
                   indicatorConfig.ema2.visible,
@@ -217,7 +217,7 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
               else setIsFullscreen(prev => !prev);
             }}
             title="Fullscreen"
-            className="p-1.5 rounded-lg bg-slate-900/90 border border-slate-700/60 text-slate-300 hover:text-white transition-all cursor-pointer"
+            className="p-2 rounded-lg bg-slate-900/90 border border-slate-700/60 text-slate-300 hover:text-white transition-all cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>

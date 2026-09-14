@@ -18,7 +18,7 @@ export const MobileChartPage: React.FC = () => {
             tabId={activeTab.id}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-400">
+          <div className="flex-1 flex items-center justify-center text-slate-300 text-sm font-medium">
             ไม่มีแท็บที่เปิดอยู่
           </div>
         )}
