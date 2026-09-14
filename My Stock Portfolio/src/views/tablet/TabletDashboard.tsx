@@ -160,7 +160,7 @@ export const TabletDashboard: React.FC = () => {
             }
           } else if (tx.type === 'DEPOSIT') {
             dailyCash += qty;
-          } else if (tx.type === 'WITHDRAW' || tx.type === 'WITHDRAWAL') {
+          } else if (tx.type === 'WITHDRAW' || (tx.type as string) === 'WITHDRAWAL') {
             dailyCash -= qty;
           } else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
             dailyCash += (qty - fee);

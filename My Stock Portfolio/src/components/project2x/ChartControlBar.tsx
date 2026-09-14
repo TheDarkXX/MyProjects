@@ -11,6 +11,7 @@ import {
   Undo2,
   Redo2,
   History,
+  ChevronDown,
 } from 'lucide-react';
 import { IndicatorManagerPopover } from '../xchart/IndicatorManagerPopover';
 import { IndicatorSettings } from '../../types/indicatorConfig';
@@ -19,8 +20,11 @@ import { usePositionOverlayStore } from '../../stores/usePositionOverlayStore';
 import { PositionSettingsPopover } from './position/PositionSettingsPopover';
 import { useCanvasHistoryStore } from '../../stores/canvasHistoryStore';
 import { CanvasHistoryPopover } from './history/CanvasHistoryPopover';
+import { useDeviceLayout } from '../../hooks/useDeviceLayout';
+import { useXChartStore } from '../../stores/xchartStore';
 
 export interface ChartControlBarProps {
+  isMobile?: boolean;
   symbol: string;
   currentPrice: number;
   livePrice: number;
@@ -49,6 +53,7 @@ export interface ChartControlBarProps {
 }
 
 export const ChartControlBar: React.FC<ChartControlBarProps> = ({
+  isMobile: propIsMobile,
   symbol,
   currentPrice,
   livePrice,
@@ -74,6 +79,10 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
   onToggleFullscreen,
   hasPosition = false,
 }) => {
+  const { isMobile: layoutIsMobile } = useDeviceLayout();
+  const isMobile = propIsMobile ?? layoutIsMobile;
+  const toggleWatchlist = useXChartStore((state) => state.toggleWatchlist);
+
   const { config: positionConfig, toggleEnabled: togglePositionEnabled } = usePositionOverlayStore();
   const [isPositionSettingsOpen, setIsPositionSettingsOpen] = useState(false);
 
@@ -89,6 +98,133 @@ export const ChartControlBar: React.FC<ChartControlBarProps> = ({
   const canRedo = future.length > 0;
   const peekUndo = past[0];
   const peekRedo = future[0];
+
+  if (isMobile) {
+    return (
+      <div className="flex items-center justify-between px-3 py-2 bg-[#0D1322] border-b border-slate-800/80 gap-2 select-none shrink-0">
+        {/* Left: Ticker Symbol (clickable to open Watchlist) + Price + %Change */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={toggleWatchlist}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700/80 active:scale-95 transition-all text-slate-100 font-black text-sm tracking-wide cursor-pointer shadow-sm"
+            title="เลือกหุ้นจาก Watchlist / My Port"
+          >
+            <span>{symbol}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
+          </button>
+
+          <span className="text-sm font-bold text-amber-400 font-mono">
+            ${(livePrice || currentPrice).toFixed(2)}
+          </span>
+
+          <span
+            className={`text-xs font-bold flex items-center gap-0.5 ${
+              activePercentChange >= 0 ? 'text-emerald-400' : 'text-rose-400'
+            }`}
+          >
+            {activePercentChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+            {activePercentChange >= 0 ? '+' : ''}
+            {activePercentChange.toFixed(2)}%
+          </span>
+        </div>
+
+        {/* Right: Resolution [1D|1W] + Indicators [⚙️] + Fullscreen [⛶] */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Resolution pills */}
+          <div className="flex items-center bg-slate-900/90 p-0.5 rounded-lg border border-slate-700/60">
+            {canShow4H && (
+              <button
+                type="button"
+                onClick={() => setResolution('4H')}
+                className={`px-2 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                  resolution === '4H'
+                    ? 'bg-cyan-500 text-slate-950 font-black'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                4H
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setResolution('1D')}
+              className={`px-2 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                resolution === '1D'
+                  ? 'bg-cyan-500 text-slate-950 font-black'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              1D
+            </button>
+            <button
+              type="button"
+              onClick={() => setResolution('1W')}
+              className={`px-2 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                resolution === '1W'
+                  ? 'bg-cyan-500 text-slate-950 font-black'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              1W
+            </button>
+          </div>
+
+          {/* Indicator Manager Trigger */}
+          <div className="relative">
+            <button
+              type="button"
+              data-indicator-trigger="true"
+              onClick={() => setIsIndicatorOpen(prev => !prev)}
+              title="Indicators"
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                isIndicatorOpen
+                  ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.3)]'
+                  : 'bg-slate-900/90 border-slate-700/60 text-slate-200 hover:text-white'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span className="px-1 py-0.2 rounded-full bg-slate-800 text-amber-400 text-[10px] font-black">
+                {[
+                  indicatorConfig.ema1.visible,
+                  indicatorConfig.ema2.visible,
+                  indicatorConfig.ema3.visible,
+                  indicatorConfig.envelope.visible,
+                  indicatorConfig.signals.visible,
+                  indicatorConfig.mcdx.visible,
+                  indicatorConfig.ultimateRsi.visible,
+                  indicatorConfig.trendSpeed?.visible,
+                ].filter(Boolean).length}
+              </span>
+            </button>
+
+            {isIndicatorOpen && (
+              <IndicatorManagerPopover
+                initialView={indicatorInitialView}
+                onClose={() => {
+                  setIsIndicatorOpen(false);
+                  setIndicatorInitialView('list');
+                }}
+              />
+            )}
+          </div>
+
+          {/* Fullscreen Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onToggleFullscreen) onToggleFullscreen();
+              else setIsFullscreen(prev => !prev);
+            }}
+            title="Fullscreen"
+            className="p-1.5 rounded-lg bg-slate-900/90 border border-slate-700/60 text-slate-300 hover:text-white transition-all cursor-pointer"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[#0D1322] border-b border-slate-800/80">

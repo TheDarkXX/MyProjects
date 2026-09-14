@@ -13,6 +13,7 @@ import { useDeviceLayout } from './hooks/useDeviceLayout';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { MobileDashboard } from './views/mobile/MobileDashboard';
 import { TabletDashboard } from './views/tablet/TabletDashboard';
+import { MobileChartPage } from './views/mobile/MobileChartPage';
 import { AppModal } from './components/common/AppModal';
 
 import clsx from 'clsx';
@@ -123,7 +124,7 @@ const MainLayout = () => {
       {isDesktop && <Sidebar />}
       <div className="flex-1 flex flex-col h-full overflow-hidden min-h-0">
         {isDesktop && shouldShowHeader && <Header />}
-        {isCompact && <MobileHeader />}
+        {isCompact && !(activeTab === 'xchart' && isMobile) && <MobileHeader />}
         <main className={clsx(
           "flex-1 min-h-0 scroll-smooth",
           activeTab === 'xchart' 
@@ -156,7 +157,9 @@ const MainLayout = () => {
               {activeTab === 'risk' && <HealthRiskPage defaultTab="risk" />}
               {activeTab === 'rebalance' && <SmartRebalancePage />}
               {activeTab === 'project2x' && <Project2xPage />}
-              {activeTab === 'xchart' && <XChartPage />}
+              {activeTab === 'xchart' && (
+                isMobile ? <MobileChartPage /> : <XChartPage />
+              )}
               {activeTab === 'transactions' && <TransactionTable />}
               {activeTab === 'portfolios' && <PortfolioList />}
               {activeTab === 'settings' && <SettingPage />}

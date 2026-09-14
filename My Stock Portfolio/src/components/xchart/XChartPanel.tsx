@@ -10,6 +10,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { MyPortHoldingDrawer } from './myport/MyPortHoldingDrawer';
 import { PortfolioSliceItem } from './myport/types';
+import { useDeviceLayout } from '../../hooks/useDeviceLayout';
 
 import { getCachedCandles, setCachedCandles } from '../../utils/chartIdbCache';
 
@@ -51,6 +52,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
   const { blueprints, fetchBlueprints } = useBlueprintStore();
   const { currency } = useUiStore();
   const { exchangeRate } = usePriceStore();
+  const { isMobile } = useDeviceLayout();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Identify if current stock is held in portfolio
@@ -244,6 +246,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
   return (
     <div className="flex-1 w-full h-full flex flex-col overflow-hidden relative bg-[#111418] min-h-0">
       <LWChart
+        isMobile={isMobile}
         symbol={currentData.symbol}
         chartContext="xchart"
         dates={currentData.dates}

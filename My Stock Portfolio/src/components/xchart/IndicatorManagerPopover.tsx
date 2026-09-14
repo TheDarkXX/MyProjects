@@ -1182,10 +1182,10 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
   }, [config, sigColors]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
       <div
         ref={modalCardRef}
-        className="bg-[#0B101B] border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-lg md:max-w-xl max-h-[88vh] flex flex-col overflow-hidden text-slate-200 select-none animate-in zoom-in-95 duration-150"
+        className="bg-[#0B101B] border-t sm:border border-slate-700/80 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg md:max-w-xl h-[92vh] sm:h-auto sm:max-h-[88vh] flex flex-col overflow-hidden text-slate-200 select-none animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150"
       >
         {/* ========================================================= */}
         {/* VIEW 1: MASTER INDICATORS LIST                            */}

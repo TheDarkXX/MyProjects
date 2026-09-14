@@ -56,6 +56,7 @@ import { AnchoredVWAPHandle } from './indicators/AnchoredVWAPHandle';
 import { ChartControlBar } from './ChartControlBar';
 import { ChartLegendBar, DominanceTableOverlay } from './ChartLegendOverlay';
 import { applyPaneLayoutHeights as computePaneHeights } from './chartLayoutUtils';
+import { useDeviceLayout } from '../../hooks/useDeviceLayout';
 import {
   ChartContext,
   useChartViewStore,
@@ -67,6 +68,7 @@ export { TV_FONT_FAMILY };
 export type { WatchlistStock, TimeFrame, ChartStyle, Resolution, PortfolioOverlayConfig };
 
 export interface LWChartProps {
+  isMobile?: boolean;
   symbol: string;
   dates?: string[];
   closes: number[];
@@ -103,6 +105,7 @@ export interface LWChartProps {
 }
 
 export const LWChart: React.FC<LWChartProps> = ({
+  isMobile: propIsMobile,
   symbol,
   dates = [],
   closes = [],
@@ -132,6 +135,9 @@ export const LWChart: React.FC<LWChartProps> = ({
   onOpenHoldingDrawer,
   chartContext,
 }) => {
+  const { isMobile: layoutIsMobile } = useDeviceLayout();
+  const isMobile = propIsMobile ?? layoutIsMobile;
+
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const volumeProfilePrimitiveRef = useRef<VolumeProfilePrimitive | null>(null);
@@ -297,9 +303,10 @@ export const LWChart: React.FC<LWChartProps> = ({
       chartContainerRef.current?.clientHeight || 650,
       cfg,
       activeSubPanes,
-      maximized
+      maximized,
+      isMobile
     );
-  }, [activeSubPanes]);
+  }, [activeSubPanes, isMobile]);
 
   // Hover Crosshair Legend data
   const [hoveredBar, setHoveredBar] = useState<RawBarItem | null>(null);
@@ -1277,7 +1284,7 @@ export const LWChart: React.FC<LWChartProps> = ({
 
   return (
     <div
-      className={`relative flex flex-col bg-[#0A0E17] border border-slate-800/80 rounded-2xl overflow-hidden shadow-2xl transition-all select-none ${
+      className={`relative flex flex-col bg-[#0A0E17] ${isMobile ? 'border-0 rounded-none' : 'border border-slate-800/80 rounded-2xl'} overflow-hidden shadow-2xl transition-all select-none ${
         isFullscreen && !document.fullscreenElement
           ? 'fixed inset-0 z-[100] w-screen h-screen rounded-none border-none p-4'
           : `w-full ${defaultHeightClass} ${className}`
@@ -1286,6 +1293,7 @@ export const LWChart: React.FC<LWChartProps> = ({
     >
       {/* 5. EXTRACTED COMPONENT: Top Master Controls Bar */}
       <ChartControlBar
+        isMobile={isMobile}
         symbol={symbol}
         currentPrice={currentPrice}
         livePrice={livePrice}
@@ -1313,19 +1321,21 @@ export const LWChart: React.FC<LWChartProps> = ({
       />
 
       {/* 6. EXTRACTED COMPONENT: Real-Time Floating Legend Strip */}
-      <ChartLegendBar
-        activeLegend={activeLegend}
-        activePercentChange={activePercentChange}
-        indicatorConfig={indicatorConfig}
-        superMoneySignalResult={superMoneySignalResult}
-        rsiDataByDate={rsiDataByDate}
-        trendSpeedDataByDate={trendSpeedDataByDate}
-      />
+      {!isMobile && (
+        <ChartLegendBar
+          activeLegend={activeLegend}
+          activePercentChange={activePercentChange}
+          indicatorConfig={indicatorConfig}
+          superMoneySignalResult={superMoneySignalResult}
+          rsiDataByDate={rsiDataByDate}
+          trendSpeedDataByDate={trendSpeedDataByDate}
+        />
+      )}
 
       {/* MAIN BODY: CHART CANVAS + FULLSCREEN WATCHLIST SIDEBAR */}
       <div className="relative flex-1 flex overflow-hidden min-h-0 w-full h-full">
         {/* Left Drawing Toolbar */}
-        {viewProfile.showDrawingToolbar && (
+        {!isMobile && viewProfile.showDrawingToolbar && (
           <LeftDrawingToolbar symbol={symbol} bars={displayBars} chartContext={activeContext} />
         )}
 
@@ -1334,92 +1344,94 @@ export const LWChart: React.FC<LWChartProps> = ({
           <div ref={chartContainerRef} className="w-full h-full min-h-0" />
 
           {/* In-Canvas Indicator Legend Overlay (Main Pane 0) */}
-          <MainPaneIndicatorLegend
-            indicatorConfig={indicatorConfig}
-            activeLegend={activeLegend}
-            superMoneySignalResult={superMoneySignalResult}
-            trendSpeedData={
-              hoveredTrendSpeed ||
-              (activeLegend ? trendSpeedDataByDate.get(activeLegend.time) : null)
-            }
-            autoSRCount={visibleDrawings.length}
-            autoSRLocked={visibleDrawings.some((d) => d.locked)}
-            globalDrawingsVisible={viewProfile.showDrawings}
-            onToggleEMA={(key) => {
-              if (activeContext === 'project2x') {
-                useChartViewStore.getState().toggleVisibility('project2x', 'showEMA');
-              } else {
-                useIndicatorStore.getState().toggleEMA(key);
+          {!isMobile && (
+            <MainPaneIndicatorLegend
+              indicatorConfig={indicatorConfig}
+              activeLegend={activeLegend}
+              superMoneySignalResult={superMoneySignalResult}
+              trendSpeedData={
+                hoveredTrendSpeed ||
+                (activeLegend ? trendSpeedDataByDate.get(activeLegend.time) : null)
               }
-            }}
-            onToggleEnvelope={() => {
-              if (activeContext === 'project2x') {
-                useChartViewStore.getState().toggleVisibility('project2x', 'showEnvelope');
-              } else {
-                useIndicatorStore.getState().toggleEnvelope();
-              }
-            }}
-            onToggleTrendSpeedDyn={() => {
-              if (activeContext === 'project2x') {
-                useChartViewStore.getState().toggleVisibility('project2x', 'showTrendSpeed');
-              } else {
-                const cur = indicatorConfig.trendSpeed?.dynamicTrendVisible ?? true;
-                useIndicatorStore.getState().updateTrendSpeed({ dynamicTrendVisible: !cur });
-              }
-            }}
-            onToggleSuperMoneySignal={() => {
-              if (activeContext === 'project2x') {
-                useChartViewStore.getState().toggleVisibility('project2x', 'showSignals');
-              } else {
-                useIndicatorStore.getState().toggleSuperMoneySignal();
-              }
-            }}
-            onToggleAnchoredVWAP={() => {
-              if (activeContext === 'project2x') {
-                useChartViewStore.getState().toggleVisibility('project2x', 'showVWAP');
-              } else {
-                useIndicatorStore.getState().toggleAnchoredVWAP();
-              }
-            }}
-            onToggleVolumeProfile={() => {
-              if (activeContext === 'project2x') {
-                useChartViewStore.getState().toggleVisibility('project2x', 'showVolumeProfile');
-              } else {
-                useIndicatorStore.getState().toggleVolumeProfile();
-              }
-            }}
-            onToggleAutoSR={() => {
-              if (activeContext === 'project2x') {
-                useChartViewStore.getState().toggleVisibility('project2x', 'showDrawings');
-              } else {
-                useDrawingStore.getState().toggleGlobalVisibility();
-              }
-            }}
-            onToggleAutoSRLock={() => {
-              const store = useDrawingStore.getState();
-              const currentDrawings = store.getDrawings(symbol);
-              const anyLocked = currentDrawings.some((d) => d.locked);
-              const nextLocked = !anyLocked;
-              currentDrawings.forEach((d) => store.updateLine(symbol, d.id, { locked: nextLocked }));
-              store.setToastNotification(
-                nextLocked
-                  ? '🔒 ล็อคตำแหน่งเส้นแนวรับ-แนวต้านทั้งหมดแล้ว'
-                  : '🔓 ปลดล็อคเส้นทั้งหมดแล้ว — ลากปรับราคาได้อิสระ'
-              );
-              setTimeout(() => {
-                if (useDrawingStore.getState().toastNotification?.includes('เส้น')) {
-                  useDrawingStore.getState().setToastNotification(null);
+              autoSRCount={visibleDrawings.length}
+              autoSRLocked={visibleDrawings.some((d) => d.locked)}
+              globalDrawingsVisible={viewProfile.showDrawings}
+              onToggleEMA={(key) => {
+                if (activeContext === 'project2x') {
+                  useChartViewStore.getState().toggleVisibility('project2x', 'showEMA');
+                } else {
+                  useIndicatorStore.getState().toggleEMA(key);
                 }
-              }, 2500);
-            }}
-            onOpenConfig={(view) => {
-              setIndicatorInitialView(view);
-              setIsIndicatorOpen(true);
-            }}
-          />
+              }}
+              onToggleEnvelope={() => {
+                if (activeContext === 'project2x') {
+                  useChartViewStore.getState().toggleVisibility('project2x', 'showEnvelope');
+                } else {
+                  useIndicatorStore.getState().toggleEnvelope();
+                }
+              }}
+              onToggleTrendSpeedDyn={() => {
+                if (activeContext === 'project2x') {
+                  useChartViewStore.getState().toggleVisibility('project2x', 'showTrendSpeed');
+                } else {
+                  const cur = indicatorConfig.trendSpeed?.dynamicTrendVisible ?? true;
+                  useIndicatorStore.getState().updateTrendSpeed({ dynamicTrendVisible: !cur });
+                }
+              }}
+              onToggleSuperMoneySignal={() => {
+                if (activeContext === 'project2x') {
+                  useChartViewStore.getState().toggleVisibility('project2x', 'showSignals');
+                } else {
+                  useIndicatorStore.getState().toggleSuperMoneySignal();
+                }
+              }}
+              onToggleAnchoredVWAP={() => {
+                if (activeContext === 'project2x') {
+                  useChartViewStore.getState().toggleVisibility('project2x', 'showVWAP');
+                } else {
+                  useIndicatorStore.getState().toggleAnchoredVWAP();
+                }
+              }}
+              onToggleVolumeProfile={() => {
+                if (activeContext === 'project2x') {
+                  useChartViewStore.getState().toggleVisibility('project2x', 'showVolumeProfile');
+                } else {
+                  useIndicatorStore.getState().toggleVolumeProfile();
+                }
+              }}
+              onToggleAutoSR={() => {
+                if (activeContext === 'project2x') {
+                  useChartViewStore.getState().toggleVisibility('project2x', 'showDrawings');
+                } else {
+                  useDrawingStore.getState().toggleGlobalVisibility();
+                }
+              }}
+              onToggleAutoSRLock={() => {
+                const store = useDrawingStore.getState();
+                const currentDrawings = store.getDrawings(symbol);
+                const anyLocked = currentDrawings.some((d) => d.locked);
+                const nextLocked = !anyLocked;
+                currentDrawings.forEach((d) => store.updateLine(symbol, d.id, { locked: nextLocked }));
+                store.setToastNotification(
+                  nextLocked
+                    ? '🔒 ล็อคตำแหน่งเส้นแนวรับ-แนวต้านทั้งหมดแล้ว'
+                    : '🔓 ปลดล็อคเส้นทั้งหมดแล้ว — ลากปรับราคาได้อิสระ'
+                );
+                setTimeout(() => {
+                  if (useDrawingStore.getState().toastNotification?.includes('เส้น')) {
+                    useDrawingStore.getState().setToastNotification(null);
+                  }
+                }, 2500);
+              }}
+              onOpenConfig={(view) => {
+                setIndicatorInitialView(view);
+                setIsIndicatorOpen(true);
+              }}
+            />
+          )}
 
           {/* Real-time Price Alert Banner */}
-          <DrawingAlertBanner />
+          {!isMobile && <DrawingAlertBanner />}
 
           {/* Price Range Ruler (Shift+Drag Measure Tool) */}
           {rulerState && (
@@ -1431,32 +1443,36 @@ export const LWChart: React.FC<LWChartProps> = ({
           )}
 
           {/* In-Canvas Micro-Badges */}
-          <DrawingInCanvasBadges
-            drawings={visibleDrawings}
-            candleSeries={candleSeriesRef.current}
-            chart={chartRef.current}
-            selectedLineId={selectedLineId}
-            onSelectLine={(id) => useDrawingStore.getState().selectLine(id)}
-            onOpenProperties={(id) => setPropertiesModalLineId(id)}
-            onContextMenu={(line, pos) => setContextMenuData({ line, position: pos })}
-            chartContainer={chartContainerRef.current}
-            symbol={symbol}
-            onStartDragLine={(id, price) => {
-              chartRef.current?.applyOptions({ handleScroll: false, handleScale: false });
-              isDraggingLineRef.current = { lineId: id, startPrice: price };
-              useDrawingStore.getState().selectLine(id);
-            }}
-          />
+          {!isMobile && (
+            <DrawingInCanvasBadges
+              drawings={visibleDrawings}
+              candleSeries={candleSeriesRef.current}
+              chart={chartRef.current}
+              selectedLineId={selectedLineId}
+              onSelectLine={(id) => useDrawingStore.getState().selectLine(id)}
+              onOpenProperties={(id) => setPropertiesModalLineId(id)}
+              onContextMenu={(line, pos) => setContextMenuData({ line, position: pos })}
+              chartContainer={chartContainerRef.current}
+              symbol={symbol}
+              onStartDragLine={(id, price) => {
+                chartRef.current?.applyOptions({ handleScroll: false, handleScale: false });
+                isDraggingLineRef.current = { lineId: id, startPrice: price };
+                useDrawingStore.getState().selectLine(id);
+              }}
+            />
+          )}
 
           {/* Anchored VWAP Interactive Canvas Drag & Drop Handle */}
-          <AnchoredVWAPHandle
-            chart={chartRef.current}
-            candleSeries={candleSeriesRef.current}
-            displayBars={displayBars}
-            anchoredVWAPResult={anchoredVWAPResult}
-            indicatorConfig={indicatorConfig}
-            chartContainer={chartContainerRef.current}
-          />
+          {!isMobile && (
+            <AnchoredVWAPHandle
+              chart={chartRef.current}
+              candleSeries={candleSeriesRef.current}
+              displayBars={displayBars}
+              anchoredVWAPResult={anchoredVWAPResult}
+              indicatorConfig={indicatorConfig}
+              chartContainer={chartContainerRef.current}
+            />
+          )}
 
           {/* Auto S/R Toast Notification */}
           {toastNotification && (
@@ -1511,7 +1527,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           })()}
 
           {/* MCDX Floating Toolbar */}
-          {indicatorConfig.mcdx.visible && activeSubPanes.paneMap.mcdx && paneOffsets[activeSubPanes.paneMap.mcdx] && (
+          {!isMobile && indicatorConfig.mcdx.visible && activeSubPanes.paneMap.mcdx && paneOffsets[activeSubPanes.paneMap.mcdx] && (
             <SubPaneHeaderToolbar
               paneIndex={activeSubPanes.paneMap.mcdx}
               title="MCDX"
@@ -1541,7 +1557,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           )}
 
           {/* Ultimate RSI Floating Toolbar */}
-          {indicatorConfig.ultimateRsi.visible && activeSubPanes.paneMap.ultimateRsi && paneOffsets[activeSubPanes.paneMap.ultimateRsi] && (
+          {!isMobile && indicatorConfig.ultimateRsi.visible && activeSubPanes.paneMap.ultimateRsi && paneOffsets[activeSubPanes.paneMap.ultimateRsi] && (
             <SubPaneHeaderToolbar
               paneIndex={activeSubPanes.paneMap.ultimateRsi}
               title="Ultimate RSI"
@@ -1580,7 +1596,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           )}
 
           {/* Trend Speed Floating Toolbar */}
-          {indicatorConfig.trendSpeed?.visible && activeSubPanes.paneMap.trendSpeed && paneOffsets[activeSubPanes.paneMap.trendSpeed] && (
+          {!isMobile && indicatorConfig.trendSpeed?.visible && activeSubPanes.paneMap.trendSpeed && paneOffsets[activeSubPanes.paneMap.trendSpeed] && (
             <SubPaneHeaderToolbar
               paneIndex={activeSubPanes.paneMap.trendSpeed}
               title="Trend Speed Analyzer (Zeiierman)"
@@ -1623,13 +1639,15 @@ export const LWChart: React.FC<LWChartProps> = ({
           )}
 
           {/* Dominance Statistics Floating Table */}
-          <DominanceTableOverlay
-            trendSpeedResult={trendSpeedResult}
-            indicatorConfig={indicatorConfig}
-          />
+          {!isMobile && (
+            <DominanceTableOverlay
+              trendSpeedResult={trendSpeedResult}
+              indicatorConfig={indicatorConfig}
+            />
+          )}
 
           {/* Contextual Floating Position HUD (Heads-Up Display) */}
-          {holding && holding.quantity > 0 && viewProfile.showHUD && (
+          {!isMobile && holding && holding.quantity > 0 && viewProfile.showHUD && (
             <ChartPositionHUD
               symbol={symbol}
               holding={holding}
