@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 export interface DeviceLayout {
   isMobile: boolean;       // < 640px (e.g. vivo X80 Pro ~393-412px)
   isTablet: boolean;       // Tablet mode: 640px-1023px OR iPad Air M2 13" (Portrait & Landscape 1366x1024)
+  isIPad: boolean;         // iPad-specific detection (Air M2 13", Pro, Mini)
   isDesktop: boolean;      // Desktop PC / Workstation (w > 1366, or non-touch desktop)
   isCompact: boolean;      // Mobile or Tablet layout active
   isHighDPI: boolean;      // DPR >= 2.0 (vivo X80 Pro ~3.5x, iPad Retina 2.0x)
@@ -27,6 +28,7 @@ function calculateLayout(): DeviceLayout {
     return {
       isMobile: false,
       isTablet: false,
+      isIPad: false,
       isDesktop: true,
       isCompact: false,
       isHighDPI: false,
@@ -101,6 +103,7 @@ function calculateLayout(): DeviceLayout {
   return {
     isMobile,
     isTablet,
+    isIPad: !!isIPad,
     isDesktop,
     isCompact,
     isHighDPI: dpr >= 2.0,

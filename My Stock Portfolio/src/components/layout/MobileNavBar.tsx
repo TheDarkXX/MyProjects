@@ -9,11 +9,9 @@ export const MobileNavBar: React.FC = () => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const TABS = [
-    { id: 'dashboard', label: 'พอร์ต', icon: LayoutDashboard },
-    { id: 'project2x', label: '2X', icon: Rocket },
-    { id: 'xchart', label: 'กราฟ', icon: CandlestickChart },
-    { id: 'rebalance', label: 'ปรับพอร์ต', icon: Scale },
-    { id: 'more', label: 'เมนู', icon: Menu, isMore: true },
+    { id: 'dashboard', label: 'Portfolio', icon: LayoutDashboard },
+    { id: 'xchart', label: 'Charts', icon: CandlestickChart },
+    { id: 'more', label: 'More', icon: Menu, isMore: true },
   ];
 
   const handleTabClick = (tab: typeof TABS[0]) => {
@@ -25,7 +23,7 @@ export const MobileNavBar: React.FC = () => {
   };
 
   // Check if current active tab is one of the secondary tabs handled by More
-  const isMoreActive = !['dashboard', 'project2x', 'xchart', 'rebalance'].includes(activeTab);
+  const isMoreActive = !['dashboard', 'xchart'].includes(activeTab);
 
   return (
     <>

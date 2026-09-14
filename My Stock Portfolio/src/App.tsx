@@ -11,6 +11,8 @@ import { MobileHeader } from './components/layout/MobileHeader';
 import { MobileNavBar } from './components/layout/MobileNavBar';
 import { useDeviceLayout } from './hooks/useDeviceLayout';
 import { Dashboard } from './components/dashboard/Dashboard';
+import { MobileDashboard } from './views/mobile/MobileDashboard';
+import { TabletDashboard } from './views/tablet/TabletDashboard';
 import { AppModal } from './components/common/AppModal';
 
 import clsx from 'clsx';
@@ -112,9 +114,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const MainLayout = () => {
   const { activeTab, xchartHideHeader } = useUiStore();
-  const { isCompact, isDesktop, isTablet, isPortrait } = useDeviceLayout();
+  const { isCompact, isDesktop, isTablet, isMobile, isPortrait } = useDeviceLayout();
   const shouldShowHeader = !(activeTab === 'xchart' && xchartHideHeader);
-  const isTabletLandscape = isCompact && isTablet && !isPortrait;
+  const isTabletDashboard = isTablet && activeTab === 'dashboard';
   
   return (
     <div className="min-h-screen bg-[#07090E] flex font-sans">
@@ -126,10 +128,13 @@ const MainLayout = () => {
           "flex-1 scroll-smooth",
           activeTab === 'xchart' 
             ? "p-0 overflow-hidden flex flex-col" 
-            : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
+            : isTabletDashboard
+              ? "p-3 sm:p-5 overflow-hidden flex flex-col pb-20"
+              : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
         )}>
           <div className={clsx(
             "w-full",
+            isTabletDashboard ? "h-full" :
             isCompact && activeTab !== 'xchart' && "max-w-2xl mx-auto"
           )}>
             <ErrorBoundary>
@@ -139,7 +144,11 @@ const MainLayout = () => {
                   <span className="text-[#CBD5E1] text-sm font-semibold mt-4">Loading module...</span>
                 </div>
               }>
-              {activeTab === 'dashboard' && <Dashboard />}
+              {activeTab === 'dashboard' && (
+                isMobile ? <MobileDashboard /> :
+                isTablet ? <TabletDashboard /> :
+                <Dashboard />
+              )}
               {activeTab === 'analysis' && <AnalysisPage />}
               {activeTab === 'performance' && <AnalysisPage defaultTab="performance" />}
               {activeTab === 'health' && <HealthRiskPage />}

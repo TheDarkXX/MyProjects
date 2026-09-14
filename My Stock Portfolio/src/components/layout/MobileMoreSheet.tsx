@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
-  PieChart, ShieldCheck, ReceiptText, Briefcase, 
+  Rocket, Scale, PieChart, ShieldCheck, ReceiptText, Briefcase, 
   Settings, LogOut, X, ChevronRight, Sparkles 
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -34,11 +34,13 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   const NAV_ITEMS = [
-    { id: 'analysis', label: 'Analysis & Returns', desc: 'วิเคราะห์ผลตอบแทน & สัดส่วนพอร์ต', icon: PieChart, color: 'text-cyan-400' },
-    { id: 'health', label: 'Health & Risk', desc: 'ตรวจสุขภาพพอร์ต & ความเสี่ยง', icon: ShieldCheck, color: 'text-emerald-400' },
-    { id: 'transactions', label: 'Transactions', desc: 'ประวัติการซื้อขาย & Cash Flow', icon: ReceiptText, color: 'text-amber-400' },
-    { id: 'portfolios', label: 'Portfolios', desc: 'จัดการพอร์ตทั้งหมดของคุณ', icon: Briefcase, color: 'text-purple-400' },
-    { id: 'settings', label: 'Settings', desc: 'การตั้งค่า & Cloud Sync', icon: Settings, color: 'text-indigo-400' },
+    { id: 'project2x', label: 'Project 2X Simulator', desc: 'Compounding forecast & goals', icon: Rocket, color: 'text-orange-400' },
+    { id: 'rebalance', label: 'Smart Rebalance', desc: 'AI-driven asset allocation', icon: Scale, color: 'text-blue-400' },
+    { id: 'analysis', label: 'Analysis & Returns', desc: 'Performance attribution & sectors', icon: PieChart, color: 'text-cyan-400' },
+    { id: 'health', label: 'Health & Risk', desc: 'Portfolio health, beta & volatility', icon: ShieldCheck, color: 'text-emerald-400' },
+    { id: 'transactions', label: 'Transactions', desc: 'Order history & cash flows', icon: ReceiptText, color: 'text-amber-400' },
+    { id: 'portfolios', label: 'Portfolios', desc: 'Manage & switch portfolios', icon: Briefcase, color: 'text-purple-400' },
+    { id: 'settings', label: 'Settings', desc: 'App settings & cloud sync', icon: Settings, color: 'text-indigo-400' },
   ];
 
   return (
@@ -58,7 +60,7 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({ isOpen, onClos
         <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[#FC2D79]" />
-            <h3 className="text-base font-black text-white font-heading">เมนูเพิ่มเติม (More Features)</h3>
+            <h3 className="text-base font-black text-white font-heading">More Features</h3>
           </div>
           <button
             onClick={onClose}
