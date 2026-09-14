@@ -5,6 +5,8 @@ import { usePortfolioStore } from '../../../stores/portfolioStore';
 import { useTransactionStore } from '../../../stores/transactionStore';
 import { useBlueprintStore } from '../../../stores/blueprintStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { useXChartStore } from '../../../stores/xchartStore';
+import { useProject2xStore } from '../../../stores/project2xStore';
 import { formatCurrencyVal, formatSecondaryVal, formatPriceVal } from './types';
 import { 
   Briefcase, 
@@ -14,10 +16,40 @@ import {
   TrendingDown, 
   BarChart2, 
   Target,
-  Layers,
-  Clock
+  Clock,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import clsx from 'clsx';
+
+export interface TargetStockItem {
+  symbol: string;
+  name: string;
+  target_percent: number;
+  category: 'Core' | 'Moonshot';
+  target_shares?: number;
+  owned_shares?: number;
+  progress_percent?: number;
+  status?: string;
+}
+
+export const DEFAULT_2X_TARGET_STOCKS: TargetStockItem[] = [
+  // Core Commanders (83%)
+  { symbol: 'NVDA', name: 'NVIDIA', target_percent: 15.0, category: 'Core' },
+  { symbol: 'TSM', name: 'TSMC', target_percent: 10.0, category: 'Core' },
+  { symbol: 'AVGO', name: 'Broadcom', target_percent: 10.0, category: 'Core' },
+  { symbol: 'VRT', name: 'Vertiv Holdings', target_percent: 10.0, category: 'Core' },
+  { symbol: 'MELI', name: 'MercadoLibre', target_percent: 10.0, category: 'Core' },
+  { symbol: 'APH', name: 'Amphenol', target_percent: 10.0, category: 'Core' },
+  { symbol: 'KLAC', name: 'KLA Corp', target_percent: 7.0, category: 'Core' },
+  { symbol: 'ANET', name: 'Arista Networks', target_percent: 7.0, category: 'Core' },
+  { symbol: 'CRWD', name: 'CrowdStrike', target_percent: 4.0, category: 'Core' },
+  // Moonshot Strikes (11%)
+  { symbol: 'STRL', name: 'Sterling Infrastructure', target_percent: 3.0, category: 'Moonshot' },
+  { symbol: 'ALAB', name: 'Astera Labs', target_percent: 3.0, category: 'Moonshot' },
+  { symbol: 'PLTR', name: 'Palantir Technologies', target_percent: 3.0, category: 'Moonshot' },
+  { symbol: 'RKLB', name: 'Rocket Lab USA', target_percent: 2.0, category: 'Moonshot' }
+];
 
 // Deterministic gradient colors for symbol badges (TradingView style)
 const BADGE_GRADIENTS = [
@@ -57,30 +89,81 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
   const totalPortfolioValue = rawTotalPortfolioValue ?? totalNetWorth ?? 0;
 
-  const { exchangeRate, prices } = usePriceStore();
+  const { exchangeRate, prices, fetchPrices } = usePriceStore();
+  const { watchlistPrices } = useXChartStore();
   const { currency } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
   const { transactions, fetchTransactions, loading: txLoading } = useTransactionStore();
   const { blueprints, fetchBlueprints } = useBlueprintStore();
+  const { quotas, fetchQuotas } = useProject2xStore();
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
 
   const isLoading = holdingsLoading || txLoading;
 
   // Modal State
   const [detailModalHolding, setDetailModalHolding] = useState<Holding | null>(null);
+  const [detailModalTarget, setDetailModalTarget] = useState<{
+    symbol: string;
+    name: string;
+    target_percent: number;
+    category: 'Core' | 'Moonshot';
+    target_shares: number;
+    owned_shares: number;
+    progress_percent: number;
+    status: string;
+    isOwned: boolean;
+    holding: Holding | null;
+  } | null>(null);
 
-  // Eagerly fetch blueprints when activePortfolioId is available
+  // Section Collapse State
+  const [holdingsCollapsed, setHoldingsCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('myport_holdings_collapsed') === 'true';
+    }
+    return false;
+  });
+
+  const [targetCollapsed, setTargetCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('myport_target_collapsed') === 'true';
+    }
+    return false;
+  });
+
+  const toggleHoldingsCollapse = () => {
+    setHoldingsCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('myport_holdings_collapsed', String(next));
+      }
+      return next;
+    });
+  };
+
+  const toggleTargetCollapse = () => {
+    setTargetCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('myport_target_collapsed', String(next));
+      }
+      return next;
+    });
+  };
+
+  // Eagerly fetch blueprints & quotas when activePortfolioId is available
   useEffect(() => {
     if (activePortfolioId) {
       fetchBlueprints(activePortfolioId);
+      fetchQuotas(activePortfolioId);
     }
-  }, [activePortfolioId, fetchBlueprints]);
+  }, [activePortfolioId, fetchBlueprints, fetchQuotas]);
 
   // Handle ESC key to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setDetailModalHolding(null);
+        setDetailModalTarget(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -91,6 +174,43 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   const validHoldings = useMemo(() => {
     return (holdings || []).filter((h) => h && h.quantity > 0 && h.symbol !== 'CASH');
   }, [holdings]);
+
+  // Map Target Stocks (Project 2X formula)
+  const targetStocks = useMemo(() => {
+    const sourceList = quotas && quotas.length > 0 ? quotas : DEFAULT_2X_TARGET_STOCKS;
+
+    return sourceList.map((item) => {
+      const sym = item.symbol.toUpperCase();
+      const existingHolding = validHoldings.find((h) => h.symbol.toUpperCase() === sym);
+      const ownedShares = existingHolding ? existingHolding.quantity : (item.owned_shares ?? 0);
+      const targetShares = item.target_shares ?? 0;
+      const progress = targetShares > 0 ? Math.min(100, (ownedShares / targetShares) * 100) : (ownedShares > 0 ? 100 : 0);
+      const defaultInfo = DEFAULT_2X_TARGET_STOCKS.find((d) => d.symbol === sym);
+
+      return {
+        symbol: sym,
+        name: (item as any).name || defaultInfo?.name || sym,
+        target_percent: item.target_percent,
+        category: ((item as any).category || defaultInfo?.category || 'Core') as 'Core' | 'Moonshot',
+        target_shares: targetShares,
+        owned_shares: ownedShares,
+        progress_percent: progress,
+        status: item.status || (ownedShares > 0 ? 'COLLECTING' : 'EMPTY'),
+        isOwned: Boolean(existingHolding && existingHolding.quantity > 0),
+        holding: existingHolding || null
+      };
+    });
+  }, [quotas, validHoldings]);
+
+  // Fetch prices for any target stocks not yet in price store
+  useEffect(() => {
+    const symsToFetch = targetStocks
+      .map((t) => t.symbol)
+      .filter((s) => !prices[s] && !watchlistPrices[s]);
+    if (symsToFetch.length > 0) {
+      fetchPrices(symsToFetch);
+    }
+  }, [targetStocks, prices, watchlistPrices, fetchPrices]);
 
   // Find blueprint and trade history for the modal holding
   const modalData = useMemo(() => {
@@ -159,99 +279,277 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
         </div>
       </div>
 
-      {/* 3. High-Density Holdings Rows (Height: 30px per row — Identical to Watchlist) */}
-      <div className="flex-1 overflow-y-auto divide-y divide-[#1F2233]/25 custom-scrollbar">
-        {isLoading && validHoldings.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-[13px] flex flex-col items-center justify-center gap-2">
-            <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-            <span>Loading portfolio holdings...</span>
-          </div>
-        ) : validHoldings.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-[13px]">
-            No holdings in this portfolio
-          </div>
-        ) : (
-          validHoldings.map((h) => {
-            const isSelected = h.symbol.toUpperCase() === selectedSymbol.toUpperCase();
-            const priceQuote = prices[h.symbol];
-            const change = priceQuote?.change ?? 0;
-            const percentChange = h.dayChangePercent ?? priceQuote?.percent_change ?? 0;
-            const isPositive = percentChange >= 0;
-            const isZero = percentChange === 0;
+      {/* 3. Scrollable High-Density List Container */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-[#1F2233]/40">
+        
+        {/* SECTION 1: HOLDINGS */}
+        <div className="bg-[#0F111A]">
+          {/* Section Header */}
+          <div 
+            onClick={toggleHoldingsCollapse}
+            className="h-7 px-2.5 bg-[#131724]/95 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
+          >
+            <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
+              {holdingsCollapsed ? (
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors shrink-0" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors shrink-0" />
+              )}
+              <Briefcase className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span className="tracking-wide uppercase text-slate-200 group-hover:text-white font-semibold text-[13px]">
+                Holdings
+              </span>
+              <span className="text-xs text-slate-400 font-normal shrink-0">
+                ({validHoldings.length})
+              </span>
+            </div>
 
-            return (
-              <div
-                key={h.symbol}
-                onClick={() => onSelectSymbol(h.symbol)}
-                className={clsx(
-                  'h-[30px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative select-none',
-                  isSelected
-                    ? 'bg-purple-950/40 text-white'
-                    : 'hover:bg-white/5 text-slate-200 hover:text-white'
-                )}
-              >
-                {/* Active Neon Left Border Indicator */}
-                {isSelected && (
-                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79]" />
-                )}
+            <div className="text-xs text-slate-400 font-mono">
+              {validHoldings.length > 0 ? `${validHoldings.length} Positions` : 'Empty'}
+            </div>
+          </div>
 
-                {/* Symbol Column: Dot Badge + Ticker */}
-                <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
+          {/* Section Rows */}
+          {!holdingsCollapsed && (
+            <div className="divide-y divide-[#1F2233]/25">
+              {isLoading && validHoldings.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-[13px] flex flex-col items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                  <span>Loading portfolio holdings...</span>
+                </div>
+              ) : validHoldings.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-[13px]">
+                  No holdings in this portfolio
+                </div>
+              ) : (
+                validHoldings.map((h) => {
+                  const isSelected = h.symbol.toUpperCase() === selectedSymbol.toUpperCase();
+                  const priceQuote = prices[h.symbol];
+                  const wlQuote = watchlistPrices[h.symbol];
+                  const lastPrice = h.lastPrice || priceQuote?.price || wlQuote?.price || 0;
+                  const change = priceQuote?.change ?? wlQuote?.change ?? 0;
+                  const percentChange = h.dayChangePercent ?? priceQuote?.percent_change ?? wlQuote?.percentChange ?? 0;
+                  const isPositive = percentChange >= 0;
+                  const isZero = percentChange === 0;
+
+                  return (
+                    <div
+                      key={h.symbol}
+                      onClick={() => onSelectSymbol(h.symbol)}
+                      className={clsx(
+                        'h-[30px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative select-none',
+                        isSelected
+                          ? 'bg-purple-950/40 text-white'
+                          : 'hover:bg-white/5 text-slate-200 hover:text-white'
+                      )}
+                    >
+                      {/* Active Neon Left Border Indicator */}
+                      {isSelected && (
+                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79]" />
+                      )}
+
+                      {/* Symbol Column: Dot Badge + Ticker */}
+                      <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
+                        <div
+                          className={clsx(
+                            'w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm',
+                            getSymbolBadgeGradient(h.symbol)
+                          )}
+                        >
+                          {h.symbol.slice(0, 1)}
+                        </div>
+                        <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
+                          {h.symbol}
+                        </span>
+                      </div>
+
+                      {/* Last Price Column */}
+                      <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1">
+                        {formatPriceVal(lastPrice, currency, exchangeRate)}
+                      </div>
+
+                      {/* Change Column */}
+                      <div
+                        className={clsx(
+                          'col-span-2 text-right font-mono text-[13px] font-normal truncate',
+                          isZero ? 'text-slate-400' : isPositive ? 'text-emerald-400' : 'text-rose-400'
+                        )}
+                      >
+                        {isZero ? '0.00' : `${isPositive ? '+' : ''}${change.toFixed(2)}`}
+                      </div>
+
+                      {/* Change % Column + Info Button on Hover */}
+                      <div className="col-span-2 text-right relative flex items-center justify-end pr-0.5">
+                        <span
+                          className={clsx(
+                            'font-mono text-[13px] font-normal group-hover:opacity-20 transition-opacity',
+                            isZero ? 'text-slate-400' : isPositive ? 'text-emerald-400' : 'text-rose-400'
+                          )}
+                        >
+                          {isZero ? '0.00%' : `${isPositive ? '+' : ''}${percentChange.toFixed(2)}%`}
+                        </span>
+
+                        {/* Inspect Details Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailModalHolding(h);
+                          }}
+                          className="absolute right-0 opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-white hover:bg-purple-600/30 rounded transition-all cursor-pointer"
+                          title="View Portfolio Position Details (ℹ️)"
+                        >
+                          <Info className="w-3.5 h-3.5 text-purple-300" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* SECTION 2: TARGET · PROJECT 2X */}
+        <div className="bg-[#0F111A]">
+          {/* Section Header */}
+          <div 
+            onClick={toggleTargetCollapse}
+            className="h-7 px-2.5 bg-[#131724]/95 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
+          >
+            <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
+              {targetCollapsed ? (
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors shrink-0" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors shrink-0" />
+              )}
+              <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span className="tracking-wide uppercase text-slate-200 group-hover:text-white font-semibold text-[13px]">
+                Target · Project 2X
+              </span>
+              <span className="text-xs text-slate-400 font-normal shrink-0">
+                ({targetStocks.length})
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30">
+                9 Core · 4 Moon
+              </span>
+            </div>
+          </div>
+
+          {/* Section Rows */}
+          {!targetCollapsed && (
+            <div className="divide-y divide-[#1F2233]/25">
+              {targetStocks.map((item) => {
+                const isSelected = item.symbol.toUpperCase() === selectedSymbol.toUpperCase();
+                const priceQuote = prices[item.symbol];
+                const wlQuote = watchlistPrices[item.symbol];
+                const price = priceQuote?.price ?? wlQuote?.price ?? 0;
+                const change = priceQuote?.change ?? wlQuote?.change ?? 0;
+                const percentChange = priceQuote?.percent_change ?? wlQuote?.percentChange ?? 0;
+                const isPositive = percentChange >= 0;
+                const isZero = percentChange === 0;
+                const isCore = item.category === 'Core';
+
+                return (
                   <div
+                    key={item.symbol}
+                    onClick={() => onSelectSymbol(item.symbol)}
                     className={clsx(
-                      'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm',
-                      getSymbolBadgeGradient(h.symbol)
+                      'h-[30px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative select-none',
+                      isSelected
+                        ? 'bg-cyan-950/40 text-white'
+                        : 'hover:bg-white/5 text-slate-200 hover:text-white'
                     )}
                   >
-                    {h.symbol.slice(0, 1)}
+                    {/* Active Neon Left Border Indicator */}
+                    {isSelected && (
+                      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#06B6D4] to-[#3B82F6]" />
+                    )}
+
+                    {/* Symbol Column: Dot Badge + Ticker + Target % Pill + Owned Dot */}
+                    <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
+                      <div
+                        className={clsx(
+                          'w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm',
+                          getSymbolBadgeGradient(item.symbol)
+                        )}
+                      >
+                        {item.symbol.slice(0, 1)}
+                      </div>
+
+                      <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
+                        {item.symbol}
+                      </span>
+
+                      {/* Target % Badge */}
+                      <span 
+                        className={clsx(
+                          'text-xs px-1 py-0.5 rounded font-mono font-semibold shrink-0 border leading-none',
+                          isCore 
+                            ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' 
+                            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        )}
+                        title={`${item.category} Target: ${item.target_percent}%`}
+                      >
+                        {item.target_percent}%
+                      </span>
+
+                      {/* Owned Check Indicator */}
+                      {item.isOwned && (
+                        <span 
+                          className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] shrink-0" 
+                          title={`Owned in portfolio (${item.owned_shares.toFixed(2)} shs)`}
+                        />
+                      )}
+                    </div>
+
+                    {/* Last Price Column */}
+                    <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1">
+                      {price > 0 ? formatPriceVal(price, currency, exchangeRate) : '—'}
+                    </div>
+
+                    {/* Change Column */}
+                    <div
+                      className={clsx(
+                        'col-span-2 text-right font-mono text-[13px] font-normal truncate',
+                        isZero ? 'text-slate-400' : isPositive ? 'text-emerald-400' : 'text-rose-400'
+                      )}
+                    >
+                      {price > 0 ? (isZero ? '0.00' : `${isPositive ? '+' : ''}${change.toFixed(2)}`) : '—'}
+                    </div>
+
+                    {/* Change % Column + Info Button on Hover */}
+                    <div className="col-span-2 text-right relative flex items-center justify-end pr-0.5">
+                      <span
+                        className={clsx(
+                          'font-mono text-[13px] font-normal group-hover:opacity-20 transition-opacity',
+                          isZero ? 'text-slate-400' : isPositive ? 'text-emerald-400' : 'text-rose-400'
+                        )}
+                      >
+                        {price > 0 ? (isZero ? '0.00%' : `${isPositive ? '+' : ''}${percentChange.toFixed(2)}%`) : '—'}
+                      </span>
+
+                      {/* Inspect Target Details Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetailModalTarget(item);
+                        }}
+                        className="absolute right-0 opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-white hover:bg-cyan-600/30 rounded transition-all cursor-pointer"
+                        title="View Project 2X Target Details (ℹ️)"
+                      >
+                        <Info className="w-3.5 h-3.5 text-cyan-300" />
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
-                    {h.symbol}
-                  </span>
-                </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-                {/* Last Price Column */}
-                <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1">
-                  {formatPriceVal(h.lastPrice, currency, exchangeRate)}
-                </div>
-
-                {/* Change Column */}
-                <div
-                  className={clsx(
-                    'col-span-2 text-right font-mono text-[13px] font-normal truncate',
-                    isZero ? 'text-slate-400' : isPositive ? 'text-emerald-400' : 'text-rose-400'
-                  )}
-                >
-                  {isZero ? '0.00' : `${isPositive ? '+' : ''}${change.toFixed(2)}`}
-                </div>
-
-                {/* Change % Column + Info Button on Hover */}
-                <div className="col-span-2 text-right relative flex items-center justify-end pr-0.5">
-                  <span
-                    className={clsx(
-                      'font-mono text-[13px] font-normal group-hover:opacity-20 transition-opacity',
-                      isZero ? 'text-slate-400' : isPositive ? 'text-emerald-400' : 'text-rose-400'
-                    )}
-                  >
-                    {isZero ? '0.00%' : `${isPositive ? '+' : ''}${percentChange.toFixed(2)}%`}
-                  </span>
-
-                  {/* Inspect Details Button (Visible on hover, replaces % text) */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDetailModalHolding(h);
-                    }}
-                    className="absolute right-0 opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-white hover:bg-purple-600/30 rounded transition-all cursor-pointer"
-                    title="View Portfolio Position Details (ℹ️)"
-                  >
-                    <Info className="w-3.5 h-3.5 text-purple-300" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
       </div>
 
       {/* 4. Holding Details Modal */}
@@ -431,6 +729,177 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
               <button
                 onClick={() => setDetailModalHolding(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium text-[13px] transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Target (Project 2X) Details Modal */}
+      {detailModalTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
+          {/* Backdrop */}
+          <div 
+            onClick={() => setDetailModalTarget(null)} 
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity animate-in fade-in duration-150" 
+          />
+
+          {/* Modal Card */}
+          <div className="relative w-full max-w-lg bg-[#0E121E] border border-slate-700/80 rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] flex flex-col z-10 overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-800 bg-[#121624] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div
+                  className={clsx(
+                    'w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-tr shadow-md',
+                    getSymbolBadgeGradient(detailModalTarget.symbol)
+                  )}
+                >
+                  {detailModalTarget.symbol.slice(0, 1)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-white tracking-wide font-heading">
+                      {detailModalTarget.symbol}
+                    </h3>
+                    <span className={clsx(
+                      'text-xs px-2 py-0.5 rounded-full font-semibold border',
+                      detailModalTarget.category === 'Core'
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    )}>
+                      {detailModalTarget.category === 'Core' ? '👑 Core Commander' : '🚀 Moonshot Strike'}
+                    </span>
+                  </div>
+                  <div className="text-[13px] text-slate-400 font-normal">
+                    {detailModalTarget.name} · Project 2X Target Blueprint
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setDetailModalTarget(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Close (Esc)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 overflow-y-auto max-h-[75vh] custom-scrollbar">
+              {/* Target Allocation & Quota Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {/* Target Weight */}
+                <div className="p-3 rounded-xl bg-[#141826] border border-slate-800/80">
+                  <div className="text-xs text-slate-400 font-normal mb-1">Target Allocation</div>
+                  <div className="text-base font-bold text-cyan-300 font-mono">
+                    {detailModalTarget.target_percent.toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-slate-400 font-normal mt-0.5">
+                    {detailModalTarget.category} Tier
+                  </div>
+                </div>
+
+                {/* Target Shares */}
+                <div className="p-3 rounded-xl bg-[#141826] border border-slate-800/80">
+                  <div className="text-xs text-slate-400 font-normal mb-1">Target Quota</div>
+                  <div className="text-base font-bold text-white font-mono">
+                    {detailModalTarget.target_shares > 0 ? detailModalTarget.target_shares.toFixed(2) : '—'} shs
+                  </div>
+                  <div className="text-xs text-slate-400 font-normal mt-0.5">
+                    Full Quota Target
+                  </div>
+                </div>
+
+                {/* Owned Shares */}
+                <div className="p-3 rounded-xl bg-[#141826] border border-slate-800/80">
+                  <div className="text-xs text-slate-400 font-normal mb-1">Currently Owned</div>
+                  <div className="text-base font-bold text-white font-mono">
+                    {detailModalTarget.owned_shares.toFixed(2)} shs
+                  </div>
+                  <div className="text-xs text-slate-400 font-normal mt-0.5">
+                    {detailModalTarget.isOwned ? '🟢 In Portfolio' : '⚪ Not in Port yet'}
+                  </div>
+                </div>
+
+                {/* Market Price */}
+                <div className="p-3 rounded-xl bg-[#141826] border border-slate-800/80">
+                  <div className="text-xs text-slate-400 font-normal mb-1">Market Price</div>
+                  <div className="text-base font-normal text-slate-100 font-mono">
+                    {prices[detailModalTarget.symbol]?.price 
+                      ? formatPriceVal(prices[detailModalTarget.symbol].price, currency, exchangeRate)
+                      : (watchlistPrices[detailModalTarget.symbol]?.price ? formatPriceVal(watchlistPrices[detailModalTarget.symbol].price, currency, exchangeRate) : '—')}
+                  </div>
+                </div>
+
+                {/* Quota Progress */}
+                <div className="p-3 rounded-xl bg-[#141826] border border-slate-800/80 col-span-2">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-normal mb-1">
+                    <span>Quota Accumulation Progress</span>
+                    <span className="font-mono text-cyan-300 font-bold">{detailModalTarget.progress_percent.toFixed(1)}%</span>
+                  </div>
+                  <div className="relative w-full h-2 bg-[#0E121E] rounded-full overflow-hidden border border-slate-800">
+                    <div 
+                      className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, detailModalTarget.progress_percent)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-400 font-mono mt-1">
+                    <span>Status: {detailModalTarget.status}</span>
+                    <span>{detailModalTarget.owned_shares.toFixed(2)} / {detailModalTarget.target_shares > 0 ? detailModalTarget.target_shares.toFixed(2) : '—'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* If user owns holding, show position summary */}
+              {detailModalTarget.holding && (
+                <div className="p-3.5 rounded-xl bg-[#121624] border border-purple-500/30 space-y-2">
+                  <div className="flex items-center justify-between text-[13px] font-semibold text-purple-300">
+                    <span className="flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5" />
+                      Active Position Summary
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">
+                      Weight: {detailModalTarget.holding.weightPercent.toFixed(1)}%
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1 font-mono">
+                    <div className="text-slate-300">
+                      Avg Cost: <span className="text-white">{formatPriceVal(detailModalTarget.holding.avgCost, currency, exchangeRate)}</span>
+                    </div>
+                    <div className="text-slate-300">
+                      Holding Val: <span className="text-white">{formatCurrencyVal(detailModalTarget.holding.currentValue, currency, exchangeRate)}</span>
+                    </div>
+                    <div className="text-slate-300 col-span-2">
+                      Total P&L: <span className={detailModalTarget.holding.totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                        {formatCurrencyVal(detailModalTarget.holding.totalReturn, currency, exchangeRate, true)} ({detailModalTarget.holding.totalReturnPercent >= 0 ? '+' : ''}{detailModalTarget.holding.totalReturnPercent.toFixed(2)}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="p-4 border-t border-slate-800 bg-[#121624] flex items-center justify-between shrink-0">
+              <button
+                onClick={() => {
+                  onSelectSymbol(detailModalTarget.symbol);
+                  setDetailModalTarget(null);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-[13px] transition-all shadow-md shadow-cyan-600/30 cursor-pointer"
+              >
+                <BarChart2 className="w-4 h-4" />
+                <span>Switch Chart to {detailModalTarget.symbol}</span>
+              </button>
+
+              <button
+                onClick={() => setDetailModalTarget(null)}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium text-[13px] transition-colors cursor-pointer"
               >
                 Close

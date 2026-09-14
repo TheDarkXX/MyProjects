@@ -11,6 +11,9 @@ import { PortfolioTable } from './PortfolioTable';
 import { PerformersTable } from './PerformersTable';
 import { MultiPeriodReturnStrip } from './MultiPeriodReturnStrip';
 import { PortfolioPulseBanner } from './PortfolioPulseBanner';
+import { useDeviceLayout } from '../../hooks/useDeviceLayout';
+import { MobileEquityHUD } from './MobileEquityHUD';
+import { HoldingsMobileList } from './HoldingsMobileList';
 
 export type DashboardTimeRange = '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL' | 'CUSTOM';
 
@@ -672,6 +675,32 @@ export const Dashboard = () => {
   const formatCurrency = (val: number) => {
     return formatPrimary(val);
   };
+
+  const { isCompact } = useDeviceLayout();
+
+  if (isCompact) {
+    return (
+      <div className="space-y-4 animate-fade-in-up pb-8">
+        <MobileEquityHUD
+          totalNetWorth={totalNetWorth}
+          displayPnl={displayPnl}
+          displayPnlPercent={displayPnlPercent}
+          chartData={chartData}
+          timeRange={timeRange}
+          onRangeChange={(range) => setTimeRange(range)}
+          formatPrimary={formatPrimary}
+          cashWeight={cashWeight}
+          securitiesWeight={securitiesWeight}
+          cashBalance={cashBalance}
+        />
+        <HoldingsMobileList
+          holdings={holdings}
+          formatCurrency={formatCurrency}
+          cashBalance={cashBalance}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-fade-in-up pb-12">

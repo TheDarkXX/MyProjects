@@ -21,7 +21,10 @@ import {
   Flame,
   Check,
   Briefcase,
-  GripVertical
+  GripVertical,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Sparkles
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -71,8 +74,14 @@ export const XChartWatchlistDock: React.FC = () => {
     toggleWatchlistDetail,
     fetchWatchlistQuotes,
     moveSymbol,
-    moveSection
+    moveSection,
+    toggleAllSectionsCollapse,
+    resectionBigTechAndPower
   } = useXChartStore();
+
+  const allSectionsCollapsed = useMemo(() => {
+    return watchlistSections.length > 0 && watchlistSections.every((s) => s.isCollapsed);
+  }, [watchlistSections]);
 
   const { holdings = [] } = useHoldings();
   const portHoldingsCount = useMemo(() => {
@@ -401,6 +410,32 @@ export const XChartWatchlistDock: React.FC = () => {
                 title="Create New Section"
               >
                 <FolderPlus className="w-4 h-4" />
+              </button>
+
+              {/* Toggle All Sections Collapse / Expand (Feature 2 & 3) */}
+              <button
+                onClick={toggleAllSectionsCollapse}
+                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                title={allSectionsCollapsed ? "กางทุกหมวด (Expand All Sections)" : "พับทุกหมวด (Collapse All Sections)"}
+              >
+                {allSectionsCollapsed ? (
+                  <ChevronsUpDown className="w-4 h-4 text-cyan-400" />
+                ) : (
+                  <ChevronsDownUp className="w-4 h-4 text-slate-300" />
+                )}
+              </button>
+
+              {/* Quick Re-section 2-3 (Big Tech & Power Infra) */}
+              <button
+                onClick={() => {
+                  if (confirm('ต้องการแยกจัดระเบียบหมวด 👑 BIG TECH & TITANS (9 หุ้น) และ ⚡ POWER & DATA INFRA (6 หุ้น) ออกมาใช่ไหม?')) {
+                    resectionBigTechAndPower();
+                  }
+                }}
+                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                title="จัดระเบียบหมวด 2 & 3 (Big Tech + Power Infra)"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
               </button>
             </>
           )}

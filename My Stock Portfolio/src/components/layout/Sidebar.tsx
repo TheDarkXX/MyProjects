@@ -53,7 +53,7 @@ export const Sidebar = () => {
   return (
     <aside
       className={clsx(
-        "bg-[#0F111A] border-r border-[#1F2233] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.2)] h-screen overflow-y-auto custom-scrollbar shrink-0 transition-all duration-300 ease-in-out select-none",
+        "bg-[#0F111A] border-r border-[#1F2233] hidden xl:flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.2)] h-screen overflow-y-auto custom-scrollbar shrink-0 transition-all duration-300 ease-in-out select-none",
         collapsed ? "w-[76px]" : "w-72"
       )}
     >

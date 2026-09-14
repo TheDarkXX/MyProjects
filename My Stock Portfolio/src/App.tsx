@@ -7,6 +7,8 @@ import { useUiStore } from './stores/uiStore';
 import { initSettingsSync } from './services/settingsSync';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { MobileHeader } from './components/layout/MobileHeader';
+import { MobileNavBar } from './components/layout/MobileNavBar';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { AppModal } from './components/common/AppModal';
 
@@ -112,40 +114,49 @@ const MainLayout = () => {
   const shouldShowHeader = !(activeTab === 'xchart' && xchartHideHeader);
   
   return (
-    <div className="min-h-screen bg-[#0B1220] flex font-sans">
+    <div className="min-h-screen bg-[#07090E] flex font-sans">
       <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {shouldShowHeader && <Header />}
-        <main className={clsx("flex-1 scroll-smooth", activeTab === 'xchart' ? "p-0 overflow-hidden flex flex-col" : "p-8 overflow-y-auto")}>
-          <ErrorBoundary>
-            <Suspense fallback={
-              <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-12 flex flex-col items-center justify-center min-h-[400px] shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
-                <div className="w-10 h-10 border-4 border-[#823AFD] border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-[#CBD5E1] text-sm font-semibold mt-4">Loading module...</span>
-              </div>
-            }>
-            {activeTab === 'dashboard' && <Dashboard />}
-            {activeTab === 'analysis' && <AnalysisPage />}
-            {activeTab === 'performance' && <AnalysisPage defaultTab="performance" />}
-            {activeTab === 'health' && <HealthRiskPage />}
-            {activeTab === 'scorecard' && <HealthRiskPage defaultTab="scorecard" />}
-            {activeTab === 'risk' && <HealthRiskPage defaultTab="risk" />}
-            {activeTab === 'rebalance' && <SmartRebalancePage />}
-            {activeTab === 'project2x' && <Project2xPage />}
-            {activeTab === 'xchart' && <XChartPage />}
-            {activeTab === 'transactions' && <TransactionTable />}
-            {activeTab === 'portfolios' && <PortfolioList />}
-            {activeTab === 'settings' && <SettingPage />}
-            {activeTab !== 'dashboard' && activeTab !== 'scorecard' && activeTab !== 'risk' && activeTab !== 'health' && activeTab !== 'rebalance' && activeTab !== 'project2x' && activeTab !== 'xchart' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
-              <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-8 min-h-[500px] flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
-                <p className="text-[#9898C8] text-lg font-medium">
-                  {activeTab} module is under construction.
-                </p>
-              </div>
-            )}
-          </Suspense>
-          </ErrorBoundary>
+        <MobileHeader />
+        <main className={clsx(
+          "flex-1 scroll-smooth",
+          activeTab === 'xchart' 
+            ? "p-0 overflow-hidden flex flex-col" 
+            : "p-3 sm:p-5 xl:p-8 overflow-y-auto pb-24 xl:pb-8"
+        )}>
+          <div className={clsx("w-full", activeTab !== 'xchart' && "max-w-4xl xl:max-w-none mx-auto")}>
+            <ErrorBoundary>
+              <Suspense fallback={
+                <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-12 flex flex-col items-center justify-center min-h-[400px] shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
+                  <div className="w-10 h-10 border-4 border-[#823AFD] border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-[#CBD5E1] text-sm font-semibold mt-4">Loading module...</span>
+                </div>
+              }>
+              {activeTab === 'dashboard' && <Dashboard />}
+              {activeTab === 'analysis' && <AnalysisPage />}
+              {activeTab === 'performance' && <AnalysisPage defaultTab="performance" />}
+              {activeTab === 'health' && <HealthRiskPage />}
+              {activeTab === 'scorecard' && <HealthRiskPage defaultTab="scorecard" />}
+              {activeTab === 'risk' && <HealthRiskPage defaultTab="risk" />}
+              {activeTab === 'rebalance' && <SmartRebalancePage />}
+              {activeTab === 'project2x' && <Project2xPage />}
+              {activeTab === 'xchart' && <XChartPage />}
+              {activeTab === 'transactions' && <TransactionTable />}
+              {activeTab === 'portfolios' && <PortfolioList />}
+              {activeTab === 'settings' && <SettingPage />}
+              {activeTab !== 'dashboard' && activeTab !== 'scorecard' && activeTab !== 'risk' && activeTab !== 'health' && activeTab !== 'rebalance' && activeTab !== 'project2x' && activeTab !== 'xchart' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
+                <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-8 min-h-[500px] flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
+                  <p className="text-[#9898C8] text-lg font-medium">
+                    {activeTab} module is under construction.
+                  </p>
+                </div>
+              )}
+            </Suspense>
+            </ErrorBoundary>
+          </div>
         </main>
+        <MobileNavBar />
       </div>
       <AppModal />
     </div>
