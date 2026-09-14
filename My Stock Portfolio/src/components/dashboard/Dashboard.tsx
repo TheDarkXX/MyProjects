@@ -677,44 +677,9 @@ export const Dashboard = () => {
   };
 
   const { isCompact, isTablet, isPortrait } = useDeviceLayout();
-  const isTabletLandscape = isCompact && isTablet && !isPortrait;
-
   if (isCompact) {
-    if (isTabletLandscape) {
-      return (
-        <div className="grid grid-cols-12 gap-6 items-start animate-fade-in-up pb-12">
-          {/* Left Column (col-span-6): Sticky Portfolio Command & Equity Curve */}
-          <div className="col-span-6 sticky top-2 space-y-4">
-            <MobileEquityHUD
-              totalNetWorth={totalNetWorth}
-              displayPnl={displayPnl}
-              displayPnlPercent={displayPnlPercent}
-              chartData={chartData}
-              timeRange={timeRange}
-              onRangeChange={(range) => setTimeRange(range)}
-              formatPrimary={formatPrimary}
-              cashWeight={cashWeight}
-              securitiesWeight={securitiesWeight}
-              cashBalance={cashBalance}
-              isTabletLandscape={true}
-            />
-          </div>
-
-          {/* Right Column (col-span-6): Active Holdings Stream */}
-          <div className="col-span-6 space-y-3">
-            <HoldingsMobileList
-              holdings={holdings}
-              formatCurrency={formatCurrency}
-              cashBalance={cashBalance}
-              isTabletLandscape={true}
-            />
-          </div>
-        </div>
-      );
-    }
-
     return (
-      <div className="space-y-4 animate-fade-in-up pb-8">
+      <div className="space-y-4 animate-fade-in-up pb-8 max-w-2xl mx-auto">
         <MobileEquityHUD
           totalNetWorth={totalNetWorth}
           displayPnl={displayPnl}

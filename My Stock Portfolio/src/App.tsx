@@ -130,9 +130,7 @@ const MainLayout = () => {
         )}>
           <div className={clsx(
             "w-full",
-            isCompact && activeTab !== 'xchart' && (
-              isTabletLandscape ? "max-w-[1340px] mx-auto px-1 sm:px-3" : "max-w-4xl mx-auto"
-            )
+            isCompact && activeTab !== 'xchart' && "max-w-2xl mx-auto"
           )}>
             <ErrorBoundary>
               <Suspense fallback={

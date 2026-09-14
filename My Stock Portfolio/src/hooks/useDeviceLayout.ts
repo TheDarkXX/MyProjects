@@ -76,13 +76,16 @@ function calculateLayout(): DeviceLayout {
 
   // Determine isDesktop
   let isDesktop = false;
-  if (savedMode === 'mobile') {
+  if (isIPad && modeParam !== 'desktop') {
+    // iPad Air M2 13" (and any iPad) ALWAYS defaults to mobile layout unless explicitly asked
+    isDesktop = false;
+  } else if (savedMode === 'mobile') {
     isDesktop = false;
   } else if (savedMode === 'desktop') {
     isDesktop = true;
   } else {
     // Auto Mode:
-    // Any iPad (including iPad Air M2 13" in both portrait and landscape) stays in compact/mobile/tablet layout
+    // Any iPad (including iPad Air M2 13" in both portrait and landscape) stays in compact/mobile layout
     // Any touch device with width <= 1440 stays in compact layout
     // Any screen in portrait mode stays in compact layout
     if (isIPad || isPortrait || (hasTouch && w <= 1440)) {
