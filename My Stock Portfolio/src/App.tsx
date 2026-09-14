@@ -112,8 +112,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const MainLayout = () => {
   const { activeTab, xchartHideHeader } = useUiStore();
-  const { isCompact, isDesktop } = useDeviceLayout();
+  const { isCompact, isDesktop, isTablet, isPortrait } = useDeviceLayout();
   const shouldShowHeader = !(activeTab === 'xchart' && xchartHideHeader);
+  const isTabletLandscape = isCompact && isTablet && !isPortrait;
   
   return (
     <div className="min-h-screen bg-[#07090E] flex font-sans">
@@ -127,7 +128,12 @@ const MainLayout = () => {
             ? "p-0 overflow-hidden flex flex-col" 
             : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
         )}>
-          <div className={clsx("w-full", isCompact && activeTab !== 'xchart' && "max-w-4xl mx-auto")}>
+          <div className={clsx(
+            "w-full",
+            isCompact && activeTab !== 'xchart' && (
+              isTabletLandscape ? "max-w-[1340px] mx-auto px-1 sm:px-3" : "max-w-4xl mx-auto"
+            )
+          )}>
             <ErrorBoundary>
               <Suspense fallback={
                 <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-12 flex flex-col items-center justify-center min-h-[400px] shadow-[0_8px_32px_rgba(0,0,0,0.2)]">

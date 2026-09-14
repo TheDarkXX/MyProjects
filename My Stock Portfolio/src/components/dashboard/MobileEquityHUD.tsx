@@ -18,6 +18,7 @@ interface MobileEquityHUDProps {
   securitiesWeight: number;
   cashBalance: number;
   isMarketOpen?: boolean;
+  isTabletLandscape?: boolean;
 }
 
 const TIMEFRAMES: { label: string; value: DashboardTimeRange }[] = [
@@ -42,6 +43,7 @@ export const MobileEquityHUD: React.FC<MobileEquityHUDProps> = ({
   securitiesWeight,
   cashBalance,
   isMarketOpen,
+  isTabletLandscape = false,
 }) => {
   const { currency, exchangeRate } = useUiStore();
   const isPositive = displayPnl >= 0;
@@ -51,7 +53,10 @@ export const MobileEquityHUD: React.FC<MobileEquityHUDProps> = ({
   const gradientId = isPositive ? 'equityGradGreen' : 'equityGradRed';
 
   return (
-    <div className="w-full bg-[#0D1019]/90 border border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative overflow-hidden backdrop-blur-xl transform-gpu">
+    <div className={clsx(
+      "w-full bg-[#0D1019]/90 border border-white/[0.08] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative overflow-hidden backdrop-blur-xl transform-gpu",
+      isTabletLandscape ? "p-6 lg:p-7 border-white/[0.1] shadow-[0_12px_40px_rgba(0,0,0,0.5)]" : "p-5 sm:p-6"
+    )}>
       {/* Background Ambient Glow */}
       <div 
         className={clsx(
@@ -73,7 +78,10 @@ export const MobileEquityHUD: React.FC<MobileEquityHUDProps> = ({
         </div>
 
         {/* Big Net Worth Number */}
-        <div className="text-3xl sm:text-4xl font-black tracking-tight text-white tabular-nums font-heading">
+        <div className={clsx(
+          "font-black tracking-tight text-white tabular-nums font-heading",
+          isTabletLandscape ? "text-4xl sm:text-5xl lg:text-[54px] leading-tight" : "text-3xl sm:text-4xl"
+        )}>
           {formatPrimary(totalNetWorth)}
         </div>
 
@@ -100,7 +108,10 @@ export const MobileEquityHUD: React.FC<MobileEquityHUDProps> = ({
       </div>
 
       {/* 2. Interactive Area Chart */}
-      <div className="w-full h-44 sm:h-52 my-3 relative z-10">
+      <div className={clsx(
+        "w-full my-3 relative z-10",
+        isTabletLandscape ? "h-60 sm:h-72 lg:h-[310px]" : "h-44 sm:h-52"
+      )}>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 10, right: 4, left: 4, bottom: 0 }}>

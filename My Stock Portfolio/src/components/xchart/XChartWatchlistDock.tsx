@@ -23,8 +23,7 @@ import {
   Briefcase,
   GripVertical,
   ChevronsDownUp,
-  ChevronsUpDown,
-  Sparkles
+  ChevronsUpDown
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -75,8 +74,7 @@ export const XChartWatchlistDock: React.FC = () => {
     fetchWatchlistQuotes,
     moveSymbol,
     moveSection,
-    toggleAllSectionsCollapse,
-    resectionBigTechAndPower
+    toggleAllSectionsCollapse
   } = useXChartStore();
 
   const allSectionsCollapsed = useMemo(() => {
@@ -412,30 +410,22 @@ export const XChartWatchlistDock: React.FC = () => {
                 <FolderPlus className="w-4 h-4" />
               </button>
 
-              {/* Toggle All Sections Collapse / Expand (Feature 2 & 3) */}
+              {/* Toggle All Sections Collapse / Expand (ข้อ 2 & 3) */}
               <button
                 onClick={toggleAllSectionsCollapse}
-                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                className={clsx(
+                  "p-1.5 rounded-lg transition-all cursor-pointer",
+                  allSectionsCollapsed 
+                    ? "text-purple-400 bg-purple-500/15 hover:bg-purple-500/25" 
+                    : "text-slate-300 hover:text-white hover:bg-white/10"
+                )}
                 title={allSectionsCollapsed ? "กางทุกหมวด (Expand All Sections)" : "พับทุกหมวด (Collapse All Sections)"}
               >
                 {allSectionsCollapsed ? (
-                  <ChevronsUpDown className="w-4 h-4 text-cyan-400" />
+                  <ChevronsUpDown className="w-4 h-4 text-purple-400" />
                 ) : (
                   <ChevronsDownUp className="w-4 h-4 text-slate-300" />
                 )}
-              </button>
-
-              {/* Quick Re-section 2-3 (Big Tech & Power Infra) */}
-              <button
-                onClick={() => {
-                  if (confirm('ต้องการแยกจัดระเบียบหมวด 👑 BIG TECH & TITANS (9 หุ้น) และ ⚡ POWER & DATA INFRA (6 หุ้น) ออกมาใช่ไหม?')) {
-                    resectionBigTechAndPower();
-                  }
-                }}
-                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-                title="จัดระเบียบหมวด 2 & 3 (Big Tech + Power Infra)"
-              >
-                <Sparkles className="w-4 h-4 text-amber-400" />
               </button>
             </>
           )}

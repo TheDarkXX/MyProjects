@@ -30,7 +30,7 @@ export const MobileNavBar: React.FC = () => {
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#07090E]/92 backdrop-blur-2xl border-t border-white/[0.08] pb-safe transform-gpu select-none">
-        <div className="max-w-2xl mx-auto h-14 sm:h-16 flex items-center justify-around px-2">
+        <div className="max-w-2xl md:max-w-3xl mx-auto h-14 sm:h-16 flex items-center justify-around px-2 sm:px-6">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = tab.isMore ? isMoreActive : activeTab === tab.id;

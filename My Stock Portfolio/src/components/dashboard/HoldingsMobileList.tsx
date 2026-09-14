@@ -8,6 +8,7 @@ interface HoldingsMobileListProps {
   holdings: Holding[];
   formatCurrency: (val: number, isChange?: boolean) => string;
   cashBalance: number;
+  isTabletLandscape?: boolean;
 }
 
 type MetricMode = 'return' | 'today' | 'value' | 'shares';
@@ -23,6 +24,7 @@ export const HoldingsMobileList: React.FC<HoldingsMobileListProps> = ({
   holdings,
   formatCurrency,
   cashBalance,
+  isTabletLandscape = false,
 }) => {
   const [metricMode, setMetricMode] = useState<MetricMode>('return');
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
@@ -63,8 +65,8 @@ export const HoldingsMobileList: React.FC<HoldingsMobileListProps> = ({
         </div>
       </div>
 
-      {/* 2. Holdings Card Grid: 1 col on phone (vivo X80 Pro), 2 cols on tablet (iPad Air M2) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+      {/* 2. Holdings Card Grid: 1 col on phone (vivo) & tablet landscape pane, 2 cols on tablet portrait */}
+      <div className={clsx("grid gap-2.5 sm:gap-3", isTabletLandscape ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
         {sortedHoldings.map((h) => {
           const isTotalPos = h.totalReturn >= 0;
           const isDayPos = h.dayReturn >= 0;

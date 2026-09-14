@@ -69,7 +69,6 @@ interface XChartState {
   renameSection: (sectionId: string, newName: string) => void;
   toggleSectionCollapse: (sectionId: string) => void;
   toggleAllSectionsCollapse: () => void;
-  resectionBigTechAndPower: () => void;
   setWatchlistSort: (column: WatchlistSortColumn) => void;
   setWatchlistDetailSymbol: (symbol: string | null) => void;
   moveSymbol: (sourceSectionId: string, destSectionId: string, fromIndex: number, toIndex: number) => void;
@@ -428,41 +427,6 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     }));
     set({ watchlistSections: nextSections });
     persistSections(nextSections);
-  },
-
-  resectionBigTechAndPower: () => {
-    const { watchlistSections, fetchWatchlistQuotes } = get();
-    const BIG_TECH_SYMBOLS = ['MSFT', 'AAPL', 'GOOGL', 'AMZN', 'META', 'TSLA', 'AMD', 'ARM', 'ASML'];
-    const POWER_INFRA_SYMBOLS = ['CEG', 'OKLO', 'EOSE', 'IREN', 'IONQ', 'CRWV'];
-    const extractedSet = new Set([...BIG_TECH_SYMBOLS, ...POWER_INFRA_SYMBOLS]);
-
-    // Remove extracted symbols from existing sections
-    const cleaned = watchlistSections.map((sec) => {
-      if (sec.id === 'sec-big-tech' || sec.id === 'sec-power-infra') return sec;
-      return {
-        ...sec,
-        symbols: sec.symbols.filter((sym) => !extractedSet.has(sym))
-      };
-    }).filter((sec) => sec.symbols.length > 0 && sec.id !== 'sec-big-tech' && sec.id !== 'sec-power-infra');
-
-    const bigTechSec: WatchlistSection = {
-      id: 'sec-big-tech',
-      name: '👑 BIG TECH & TITANS',
-      isCollapsed: false,
-      symbols: BIG_TECH_SYMBOLS
-    };
-
-    const powerSec: WatchlistSection = {
-      id: 'sec-power-infra',
-      name: '⚡ POWER & DATA INFRA',
-      isCollapsed: false,
-      symbols: POWER_INFRA_SYMBOLS
-    };
-
-    const nextSections = [bigTechSec, powerSec, ...cleaned];
-    set({ watchlistSections: nextSections, watchlistSortColumn: null });
-    persistSections(nextSections);
-    fetchWatchlistQuotes();
   },
 
   setWatchlistSort: (column: WatchlistSortColumn) => {
