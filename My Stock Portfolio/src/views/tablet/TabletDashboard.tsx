@@ -96,21 +96,22 @@ export const TabletDashboard: React.FC = () => {
 
   // Currency Formatter
   const formatPrimary = (val: number, isChange?: boolean) => {
-    const prefix = isChange && val > 0 ? '+' : '';
+    const num = typeof val === 'number' && !isNaN(val) ? val : 0;
+    const prefix = isChange && num > 0 ? '+' : '';
     if (currency === 'USD') {
       return `${prefix}${new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: activePortfolio?.base_currency || 'USD',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      }).format(val)}`;
+      }).format(num)}`;
     }
     return `${prefix}${new Intl.NumberFormat('th-TH', {
       style: 'currency',
       currency: 'THB',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(Math.round(val * exchangeRate))}`;
+    }).format(Math.round(num * exchangeRate))}`;
   };
 
   // 1. Calculate All Daily Points for Equity Curve

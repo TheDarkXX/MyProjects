@@ -33,7 +33,7 @@ export const WatchlistCard: React.FC<WatchlistCardProps> = ({
     // Fallback: smooth synthesized curve matching dayChangePercent
     if (points.length < 3) {
       const base = holding.lastPrice;
-      const chg = holding.dayChange;
+      const chg = (base * (holding.dayChangePercent || 0)) / 100;
       points = [base - chg * 1.5, base - chg * 0.8, base - chg * 0.4, base - chg * 0.1, base];
     }
 

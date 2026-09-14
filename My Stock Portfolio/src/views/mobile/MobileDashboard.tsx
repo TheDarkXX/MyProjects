@@ -100,21 +100,22 @@ export const MobileDashboard: React.FC = () => {
 
   // Currency Formatter
   const formatPrimary = (val: number, isChange?: boolean) => {
-    const prefix = isChange && val > 0 ? '+' : '';
+    const num = typeof val === 'number' && !isNaN(val) ? val : 0;
+    const prefix = isChange && num > 0 ? '+' : '';
     if (currency === 'USD') {
       return `${prefix}${new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: activePortfolio?.base_currency || 'USD',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      }).format(val)}`;
+      }).format(num)}`;
     }
     return `${prefix}${new Intl.NumberFormat('th-TH', {
       style: 'currency',
       currency: 'THB',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(Math.round(val * exchangeRate))}`;
+    }).format(Math.round(num * exchangeRate))}`;
   };
 
   // 1. Calculate All Daily Points for Equity Curve
@@ -201,8 +202,14 @@ export const MobileDashboard: React.FC = () => {
   const { displayPnl, displayPnlPercent } = useMemo(() => {
     if (timeRange === '1D') {
       return {
-        displayPnl: todaysProfit,
-        displayPnlPercent: todaysProfitPercent,
+        displayPnl: typeof todaysProfit === 'number' && !isNaN(todaysProfit) ? todaysProfit : 0,
+        displayPnlPercent: typeof todaysProfitPercent === 'number' && !isNaN(todaysProfitPercent) ? todaysProfitPercent : 0,
+      };
+    }
+    if (timeRange === 'ALL') {
+      return {
+        displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0,
+        displayPnlPercent: typeof totalPnlPercent === 'number' && !isNaN(totalPnlPercent) ? totalPnlPercent : 0,
       };
     }
     if (chartData.length > 0) {
@@ -210,9 +217,15 @@ export const MobileDashboard: React.FC = () => {
       const endVal = chartData[chartData.length - 1].value;
       const diff = endVal - startVal;
       const pct = startVal > 0 ? (diff / startVal) * 100 : 0;
-      return { displayPnl: diff, displayPnlPercent: pct };
+      return { 
+        displayPnl: !isNaN(diff) ? diff : 0, 
+        displayPnlPercent: !isNaN(pct) ? pct : 0 
+      };
     }
-    return { displayPnl: totalPnl, displayPnlPercent: totalPnlPercent };
+    return { 
+      displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0, 
+      displayPnlPercent: typeof totalPnlPercent === 'number' && !isNaN(totalPnlPercent) ? totalPnlPercent : 0 
+    };
   }, [timeRange, todaysProfit, todaysProfitPercent, chartData, totalPnl, totalPnlPercent]);
 
   // Sort holdings by weight descending

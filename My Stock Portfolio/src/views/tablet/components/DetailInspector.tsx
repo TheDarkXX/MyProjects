@@ -156,7 +156,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
               )}>
                 {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 <span>
-                  {formatCurrency(activeHolding.dayChange, true)} ({isPositive ? '+' : ''}{activeHolding.dayChangePercent.toFixed(2)}%) Today
+                  {formatCurrency(activeHolding.dayReturn, true)} ({isPositive ? '+' : ''}{activeHolding.dayChangePercent.toFixed(2)}%) Today
                 </span>
               </div>
             </div>
@@ -346,7 +346,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
                 </span>
               </div>
               <span className="text-xs text-slate-400 font-mono">
-                Today: {todaysProfit >= 0 ? '+' : ''}{formatCurrency(todaysProfit, true)} ({todaysProfitPercent.toFixed(2)}%)
+                Today: {formatCurrency(todaysProfit, true)} ({todaysProfitPercent >= 0 ? '+' : ''}{todaysProfitPercent.toFixed(2)}%)
               </span>
             </div>
           </div>
