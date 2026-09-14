@@ -15,7 +15,13 @@
    ========================================================================== */
 
 /* Base font for entire app: Prompt (Modern, Loopless, Clean) */
-html {
+html, body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;

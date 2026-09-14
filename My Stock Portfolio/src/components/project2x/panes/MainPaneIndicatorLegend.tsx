@@ -63,9 +63,11 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
 }) => {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('tv_main_legend_collapsed') === 'true';
+      const saved = localStorage.getItem('tv_main_legend_collapsed');
+      if (saved === null) return true; // Default auto-collapsed!
+      return saved === 'true';
     } catch (_) {
-      return false;
+      return true;
     }
   });
 

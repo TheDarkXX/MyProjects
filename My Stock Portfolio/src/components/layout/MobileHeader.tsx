@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { usePriceStore } from '../../stores/priceStore';
-import { ChevronDown, Check, RefreshCw } from 'lucide-react';
+import { ChevronDown, Check, RefreshCw, Maximize, Minimize } from 'lucide-react';
 import clsx from 'clsx';
 
 export const MobileHeader: React.FC = () => {
@@ -11,7 +11,38 @@ export const MobileHeader: React.FC = () => {
   const { exchangeRate, lastUpdated, loading, fetchExchangeRate } = usePriceStore();
   const [showPortDropdown, setShowPortDropdown] = useState(false);
   const [isMarketOpen, setIsMarketOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    const docEl = document.documentElement as any;
+    const doc = document as any;
+    if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {});
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      }
+    } else {
+      if (doc.exitFullscreen) {
+        doc.exitFullscreen().catch(() => {});
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      }
+    }
+  };
 
   // Market status checker
   useEffect(() => {
@@ -134,6 +165,15 @@ export const MobileHeader: React.FC = () => {
             $ USD
           </button>
         </div>
+
+        {/* Native Fullscreen Toggle */}
+        <button
+          onClick={toggleFullscreen}
+          className="p-1.5 px-2 rounded-xl bg-[#11141E] border border-[#2A2E45] hover:border-[#823AFD]/50 text-slate-300 hover:text-white transition-all text-xs flex items-center gap-1 cursor-pointer active:scale-95"
+          title={isFullscreen ? "ออกจากโหมดเต็มจอ" : "โหมดเต็มจอ (Native Fullscreen)"}
+        >
+          {isFullscreen ? <Minimize className="w-4 h-4 text-[#823AFD]" /> : <Maximize className="w-4 h-4 text-slate-300" />}
+        </button>
 
         {/* Desktop PC Switcher */}
         <button

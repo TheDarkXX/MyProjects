@@ -119,22 +119,22 @@ const MainLayout = () => {
   const isTabletDashboard = isTablet && activeTab === 'dashboard';
   
   return (
-    <div className="min-h-screen bg-[#07090E] flex font-sans">
+    <div className="fixed inset-0 w-full h-[100dvh] bg-[#07090E] flex font-sans overflow-hidden select-none">
       {isDesktop && <Sidebar />}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-h-0">
         {isDesktop && shouldShowHeader && <Header />}
         {isCompact && <MobileHeader />}
         <main className={clsx(
-          "flex-1 scroll-smooth",
+          "flex-1 min-h-0 scroll-smooth",
           activeTab === 'xchart' 
             ? "p-0 overflow-hidden flex flex-col" 
             : isTabletDashboard
-              ? "p-3 sm:p-5 overflow-hidden flex flex-col pb-20"
+              ? "p-2 sm:p-4 overflow-hidden flex flex-col min-h-0"
               : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
         )}>
           <div className={clsx(
             "w-full",
-            isTabletDashboard ? "h-full" :
+            isTabletDashboard ? "h-full flex flex-col min-h-0" :
             isCompact && activeTab !== 'xchart' && "max-w-2xl mx-auto"
           )}>
             <ErrorBoundary>

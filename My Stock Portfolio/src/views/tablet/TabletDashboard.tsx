@@ -195,7 +195,7 @@ export const TabletDashboard: React.FC = () => {
   }, [allDailyPoints, timeRange, earliestTxDate]);
 
   return (
-    <div className="w-full h-[calc(100vh-145px)] min-h-[550px] flex overflow-hidden border border-[#2A2E45] rounded-3xl bg-[#07090E] shadow-2xl select-none">
+    <div className="w-full h-full flex-1 min-h-0 flex overflow-hidden border border-[#2A2E45] rounded-3xl bg-[#07090E] shadow-2xl select-none">
       {/* Left Master Panel: Watchlist & Search */}
       <MasterPanel
         holdings={holdings}
