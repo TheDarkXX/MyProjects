@@ -62,14 +62,30 @@ app.route('/api/settings', settingsRoutes);
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// Cache-Control headers for SPA & static assets
+app.use('/*', async (c, next) => {
+  await next();
+  const path = c.req.path;
+  if (path.startsWith('/assets/')) {
+    // Immutable cache for fingerprinted assets
+    c.header('Cache-Control', 'public, max-age=31536000, immutable');
+  } else if (!path.startsWith('/api/')) {
+    // Explicit NO-CACHE for index.html, root, and SPA navigation
+    c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    c.header('Pragma', 'no-cache');
+    c.header('Expires', '0');
+  }
+});
+
 // Serve static frontend in production
 app.use('/*', serveStatic({ root: '../dist' }));
 app.get('*', (c) => {
   // SPA fallback
   const htmlPath = '../dist/index.html';
-  // Note: in a real Hono serveStatic setup, we might need a custom fallback.
-  // For now, this is a placeholder. If file doesn't exist, this will error in dev.
   try {
+    c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    c.header('Pragma', 'no-cache');
+    c.header('Expires', '0');
     return c.html(require('fs').readFileSync(htmlPath, 'utf-8'));
   } catch (e) {
     return c.text('API Server is running. Frontend build not found.', 200);
