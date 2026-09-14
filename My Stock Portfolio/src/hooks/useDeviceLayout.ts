@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 
 export interface DeviceLayout {
   isMobile: boolean;       // < 640px (e.g. vivo X80 Pro ~393-412px)
-  isTablet: boolean;       // Tablet mode: 640px-1023px OR iPad Air M2 13" Portrait (1024x1366)
-  isDesktop: boolean;      // Desktop / Landscape mode (>= 1024px in landscape)
+  isTablet: boolean;       // Tablet mode: 640px-1023px OR iPad Air M2 13" (Portrait & Landscape 1366x1024)
+  isDesktop: boolean;      // Desktop PC / Workstation (w > 1366, or non-touch desktop)
   isCompact: boolean;      // Mobile or Tablet layout active
   isHighDPI: boolean;      // DPR >= 2.0 (vivo X80 Pro ~3.5x, iPad Retina 2.0x)
   isPortrait: boolean;
@@ -28,12 +28,25 @@ function calculateLayout(): DeviceLayout {
   const dpr = window.devicePixelRatio || 1;
   const isPortrait = h > w;
 
+  // Detect iPad specifically (iPadOS Safari identifies as Macintosh with touch points)
+  const isIPad = (typeof navigator !== 'undefined') && (
+    /iPad/i.test(navigator.userAgent) || 
+    (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1)
+  );
+
+  const hasTouch = (typeof navigator !== 'undefined') && (
+    navigator.maxTouchPoints > 0 || 'ontouchstart' in window
+  );
+
   const isMobile = w < 640;
-  // Tablet is true if screen width is 640-1023px, OR if it is an iPad in portrait mode (w <= 1024 and h > w)
-  const isTablet = !isMobile && (w < 1024 || (w <= 1024 && isPortrait));
-  // Desktop is true when width >= 1024 in landscape
-  const isDesktop = w >= 1024 && !isPortrait;
+
+  // Desktop workstation layout is active ONLY when:
+  // 1. Not an iPad (iPad Air M2 13" in both portrait and landscape stays in mobile/tablet layout as requested)
+  // 2. Not in portrait orientation
+  // 3. Screen width exceeds 1366px (or >= 1280px without touch mouse PC)
+  const isDesktop = !isIPad && !isPortrait && (hasTouch ? w > 1366 : w >= 1280);
   const isCompact = !isDesktop;
+  const isTablet = isCompact && !isMobile;
 
   return {
     isMobile,
