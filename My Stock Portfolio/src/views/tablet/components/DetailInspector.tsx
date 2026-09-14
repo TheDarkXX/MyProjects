@@ -3,7 +3,7 @@ import { Holding } from '../../../hooks/useHoldings';
 import { Transaction } from '../../../types';
 import { DashboardTimeRange } from '../../../components/dashboard/MultiPeriodReturnStrip';
 import { 
-  ResponsiveContainer, AreaChart, Area, Tooltip, XAxis, YAxis 
+  ResponsiveContainer, AreaChart, Area, Tooltip, XAxis, YAxis, CartesianGrid 
 } from 'recharts';
 import { 
   ArrowLeft, TrendingUp, TrendingDown, Layers, Landmark, 
@@ -112,7 +112,8 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
   if (activeHolding) {
     const isPositive = activeHolding.dayChangePercent >= 0;
     const isTotalPos = activeHolding.totalReturn >= 0;
-    const strokeColor = isPositive ? '#10B981' : '#F43F5E';
+    // PC Candlestick colors: #FFE600 Gold / #C62828 Crimson Red
+    const strokeColor = isPositive ? '#FFE600' : '#C62828';
 
     return (
       <div className="flex-1 h-full overflow-y-auto custom-scrollbar p-6 space-y-6 select-none animate-fade-in">
@@ -120,7 +121,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
         <div className="flex items-center justify-between">
           <button
             onClick={onClearSelected}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer font-heading"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1A1D2D] hover:bg-[#2A2E45] border border-[#2A2E45] text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer font-heading"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Watchlist Overview</span>
@@ -132,14 +133,14 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
         </div>
 
         {/* Stock Title & Live Price */}
-        <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-3xl p-6 shadow-md relative overflow-hidden">
+        <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-md relative overflow-hidden">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <div className="text-xs font-semibold text-slate-400 font-heading">SELECTED ASSET</div>
+              <div className="text-xs font-semibold text-[#CBD5E1] font-heading">SELECTED ASSET</div>
               <h1 className="text-2xl sm:text-3xl font-black text-white font-heading tracking-tight mt-0.5">
                 {activeHolding.symbol}
               </h1>
-              <div className="text-xs text-slate-400 mt-0.5">
+              <div className="text-xs text-[#CBD5E1] mt-0.5 font-mono">
                 Holding {activeHolding.quantity} shares
               </div>
             </div>
@@ -151,8 +152,8 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
               <div className={clsx(
                 "inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold font-mono tracking-tight mt-1 border",
                 isPositive
-                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                  : "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                  ? "bg-[#FFE600]/15 text-[#FFE600] border border-[#FFE600]/30 shadow-[0_0_8px_rgba(255,230,0,0.15)]"
+                  : "bg-[#C62828]/15 text-[#FF5252] border border-[#C62828]/30 shadow-[0_0_8px_rgba(198,40,40,0.15)]"
               )}>
                 {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 <span>
@@ -162,29 +163,30 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
             </div>
           </div>
 
-          {/* Price Chart */}
+          {/* Price Chart (PC Candlestick Tone) */}
           <div className="w-full h-56 sm:h-64 mt-6">
             {stockChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={stockChartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="stockGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={strokeColor} stopOpacity={0.35}/>
-                      <stop offset="90%" stopColor={strokeColor} stopOpacity={0}/>
+                      <stop offset="5%" stopColor={strokeColor} stopOpacity={0.35}/>
+                      <stop offset="95%" stopColor={strokeColor} stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <Tooltip 
                     contentStyle={{
-                      backgroundColor: '#0D1019',
-                      borderColor: 'rgba(255,255,255,0.12)',
+                      backgroundColor: '#111418',
+                      borderColor: '#2A2E45',
                       borderRadius: '16px',
                       color: '#fff',
                       fontSize: '12px',
                     }}
+                    itemStyle={{ color: strokeColor, fontWeight: 700 }}
                     formatter={(val: number) => [formatCurrency(val), 'Price']}
                   />
-                  <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#64748B" fontSize={11} domain={['dataMin - 1', 'dataMax + 1']} orientation="right" tickLine={false} />
+                  <XAxis dataKey="name" stroke="#CBD5E1" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#CBD5E1" fontSize={11} domain={['dataMin - 1', 'dataMax + 1']} orientation="right" tickLine={false} />
                   <Area 
                     type="monotone" 
                     dataKey="price" 
@@ -226,7 +228,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
             📋 Position Details
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4">
+            <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4">
               <div className="text-[11px] text-slate-400">Shares Owned</div>
               <div className="text-lg font-black text-white font-mono mt-1">
                 {activeHolding.quantity}
@@ -236,7 +238,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
               </div>
             </div>
 
-            <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4">
+            <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4">
               <div className="text-[11px] text-slate-400">Avg Cost</div>
               <div className="text-lg font-black text-white font-mono mt-1">
                 {formatCurrency(activeHolding.avgCost)}
@@ -246,7 +248,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
               </div>
             </div>
 
-            <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4">
+            <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4">
               <div className="text-[11px] text-slate-400">Total Return</div>
               <div className={clsx("text-lg font-black font-mono mt-1", isTotalPos ? "text-emerald-400" : "text-rose-400")}>
                 {isTotalPos ? '+' : ''}{formatCurrency(activeHolding.totalReturn, true)}
@@ -256,7 +258,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
               </div>
             </div>
 
-            <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4">
+            <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4">
               <div className="text-[11px] text-slate-400">Portfolio Weight</div>
               <div className="text-lg font-black text-[#823AFD] font-mono mt-1">
                 {activeHolding.weightPercent.toFixed(2)}%
@@ -273,9 +275,9 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
           <div className="text-xs font-bold text-slate-400 font-heading">
             🕒 Recent Orders
           </div>
-          <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl overflow-hidden shadow-sm">
             {stockTransactions.length > 0 ? (
-              <div className="divide-y divide-white/[0.04]">
+              <div className="divide-y divide-[#2A2E45]/60">
                 {stockTransactions.map((tx) => (
                   <div key={tx.id} className="p-3.5 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2.5">
@@ -311,7 +313,6 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
   // MODE A: PORTFOLIO OVERVIEW (Default)
   // ==========================================
   const isPositive = totalPnl >= 0;
-  const strokeColor = isPositive ? '#10B981' : '#F43F5E';
   const TIME_RANGES: { id: DashboardTimeRange; label: string }[] = [
     { id: '1D', label: '1D' },
     { id: '1W', label: '1W' },
@@ -324,7 +325,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
   return (
     <div className="flex-1 h-full overflow-y-auto custom-scrollbar p-6 space-y-6 select-none animate-fade-in">
       {/* 1. Large Net Worth Hero Card */}
-      <div className="bg-[#0D1019]/95 border border-white/[0.08] rounded-3xl p-6 shadow-md relative overflow-hidden">
+      <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-md relative overflow-hidden">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="text-xs font-semibold text-slate-400 font-heading">
@@ -352,7 +353,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
           </div>
 
           {/* Timeframe pills */}
-          <div className="flex items-center gap-1 bg-[#07090E] p-1 rounded-2xl border border-white/[0.06]">
+          <div className="flex items-center gap-1 bg-[#07090E] p-1 rounded-2xl border border-[#2A2E45]">
             {TIME_RANGES.map((item) => (
               <button
                 key={item.id}
@@ -376,29 +377,31 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="overviewGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={strokeColor} stopOpacity={0.35}/>
-                    <stop offset="90%" stopColor={strokeColor} stopOpacity={0}/>
+                  <linearGradient id="overviewGradPC" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#823AFD" stopOpacity={0.35}/>
+                    <stop offset="95%" stopColor="#823AFD" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2A2E45" vertical={false} />
                 <Tooltip 
                   contentStyle={{
-                    backgroundColor: '#0D1019',
-                    borderColor: 'rgba(255,255,255,0.12)',
+                    backgroundColor: '#111418',
+                    borderColor: '#2A2E45',
                     borderRadius: '16px',
                     color: '#fff',
                     fontSize: '12px',
                   }}
+                  itemStyle={{ color: '#FC2D79', fontWeight: 'bold' }}
                   formatter={(val: number) => [formatCurrency(val), 'Net Worth']}
                 />
-                <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} />
-                <YAxis stroke="#64748B" fontSize={11} domain={['dataMin - 100', 'dataMax + 100']} orientation="right" tickLine={false} />
+                <XAxis dataKey="name" stroke="#CBD5E1" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#CBD5E1" fontSize={11} domain={['dataMin - 100', 'dataMax + 100']} orientation="right" tickLine={false} axisLine={false} />
                 <Area 
                   type="monotone" 
                   dataKey="value" 
-                  stroke={strokeColor} 
+                  stroke="#823AFD" 
                   strokeWidth={2.5}
-                  fill="url(#overviewGrad)"
+                  fill="url(#overviewGradPC)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -412,7 +415,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
 
       {/* 2. Key Metrics 4-Card Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4">
+        <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[11px]">Net Invested</span>
             <Landmark className="w-4 h-4 text-blue-400" />
@@ -423,7 +426,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
           <div className="text-[10px] text-slate-500 font-mono mt-0.5">Principal Base</div>
         </div>
 
-        <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4">
+        <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[11px]">Total Profit</span>
             <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -436,7 +439,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
           </div>
         </div>
 
-        <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4">
+        <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[11px]">Dividends</span>
             <Coins className="w-4 h-4 text-amber-400" />
@@ -449,10 +452,10 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
           </div>
         </div>
 
-        <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4">
+        <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[11px]">Cash Reserves</span>
-            <Activity className="w-4 h-4 text-purple-400" />
+            <Activity className="w-4 h-4 text-[#823AFD]" />
           </div>
           <div className="text-base sm:text-lg font-black text-white font-mono">
             {formatCurrency(cashBalance)}
@@ -466,10 +469,10 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
       {/* 3. Top Movers (Winners & Losers) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Winners */}
-        <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4 space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold text-emerald-400 font-heading">
+        <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold text-[#FFE600] font-heading">
             <span className="flex items-center gap-1.5">
-              <ArrowUpRight className="w-4 h-4" />
+              <ArrowUpRight className="w-4 h-4 text-[#FFE600]" />
               Top Gainers Today
             </span>
           </div>
@@ -478,7 +481,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
               topWinners.map((w) => (
                 <div key={w.symbol} className="flex items-center justify-between text-xs p-2 rounded-xl bg-white/[0.02]">
                   <span className="font-black text-white font-heading">{w.symbol}</span>
-                  <span className="font-bold text-emerald-400 font-mono">+{w.dayChangePercent.toFixed(2)}%</span>
+                  <span className="font-bold text-[#FFE600] font-mono">+{w.dayChangePercent.toFixed(2)}%</span>
                 </div>
               ))
             ) : (
@@ -488,10 +491,10 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
         </div>
 
         {/* Losers */}
-        <div className="bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-4 space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold text-rose-400 font-heading">
+        <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold text-[#C62828] font-heading">
             <span className="flex items-center gap-1.5">
-              <ArrowDownRight className="w-4 h-4" />
+              <ArrowDownRight className="w-4 h-4 text-[#C62828]" />
               Top Decliners Today
             </span>
           </div>
@@ -500,7 +503,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
               topLosers.map((l) => (
                 <div key={l.symbol} className="flex items-center justify-between text-xs p-2 rounded-xl bg-white/[0.02]">
                   <span className="font-black text-white font-heading">{l.symbol}</span>
-                  <span className="font-bold text-rose-400 font-mono">{l.dayChangePercent.toFixed(2)}%</span>
+                  <span className="font-bold text-[#C62828] font-mono">{l.dayChangePercent.toFixed(2)}%</span>
                 </div>
               ))
             ) : (

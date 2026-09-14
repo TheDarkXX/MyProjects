@@ -78,7 +78,7 @@ export const QuickStatsStrip: React.FC<QuickStatsStripProps> = ({
           return (
             <div
               key={idx}
-              className="min-w-[145px] sm:min-w-[160px] flex-1 bg-[#0D1019]/90 border border-white/[0.08] rounded-2xl p-3.5 shadow-sm snap-start shrink-0 flex flex-col justify-between"
+              className="min-w-[145px] sm:min-w-[160px] flex-1 bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-3.5 shadow-sm snap-start shrink-0 flex flex-col justify-between"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-medium text-slate-400 truncate">

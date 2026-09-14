@@ -134,10 +134,10 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
       />
 
       {/* Drawer Panel */}
-      <div className="relative w-full max-w-xl h-full bg-[#0F111A] border-l border-[#2A2E45] shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-right duration-300">
+      <div className="relative w-full max-w-xl h-full bg-[#07090E] border-l border-[#2A2E45] shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-right duration-300">
         
         {/* Header */}
-        <div className="p-6 border-b border-[#2A2E45] flex items-center justify-between bg-[#161926]/90 backdrop-blur-md shrink-0">
+        <div className="p-6 border-b border-[#2A2E45] flex items-center justify-between bg-[#111418] backdrop-blur-md shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#823AFD] via-[#FC2D79] to-[#FD5514] flex items-center justify-center text-white font-black text-lg shadow-[0_4px_16px_rgba(130,58,253,0.3)]">
               {symbol.slice(0, 3)}
@@ -166,7 +166,7 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
           
           {/* Key Metrics Banner */}
-          <div className="bg-[#161926] border border-[#2A2E45] rounded-2xl p-5 shadow-lg relative overflow-hidden">
+          <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg relative overflow-hidden">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <span className="text-xs font-semibold text-[#9898C8]">Current Market Price</span>
@@ -174,7 +174,7 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
                   {formatMoney(holding?.lastPrice || 0)}
                 </div>
                 <div className={clsx("inline-flex items-center gap-1 text-xs font-bold mt-1 px-2 py-0.5 rounded-md", 
-                  isDayProfit ? "text-emerald-400 bg-emerald-500/10" : "text-rose-400 bg-rose-500/10"
+                  isDayProfit ? "text-[#FFE600] bg-[#FFE600]/10 border border-[#FFE600]/25" : "text-[#FF5252] bg-[#C62828]/15 border border-[#C62828]/30"
                 )}>
                   {isDayProfit ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
                   <span>{holding?.dayChangePercent ? `${holding.dayChangePercent > 0 ? '+' : ''}${holding.dayChangePercent.toFixed(2)}% (Today)` : '0.00%'}</span>
@@ -218,10 +218,10 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
           </div>
 
           {/* Mini Price History Chart */}
-          <div className="bg-[#161926] border border-[#2A2E45] rounded-2xl p-5 shadow-lg">
+          <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-[#823AFD]" />
+                <TrendingUp className="w-4 h-4 text-[#FFE600]" />
                 <h4 className="text-sm font-bold text-white">Price Action</h4>
               </div>
               <div className="flex items-center bg-[#1A1D2D] p-1 rounded-xl border border-[#2A2E45] gap-1">
@@ -248,17 +248,18 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
                   <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id="drawerPriceGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#823AFD" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#823AFD" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor={isDayProfit ? '#FFE600' : '#C62828'} stopOpacity={0.4} />
+                        <stop offset="95%" stopColor={isDayProfit ? '#FFE600' : '#C62828'} stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1A1D2D', borderColor: '#2A2E45', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                      contentStyle={{ backgroundColor: '#111418', borderColor: '#2A2E45', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                      itemStyle={{ color: isDayProfit ? '#FFE600' : '#FF5252', fontWeight: 700 }}
                       formatter={(val: any) => [`$${Number(val).toFixed(2)}`, 'Price']}
                       labelFormatter={(label) => `Date: ${label}`}
                     />
                     <YAxis domain={['auto', 'auto']} hide={true} />
-                    <Area type="monotone" dataKey="price" stroke="#823AFD" strokeWidth={2} fillOpacity={1} fill="url(#drawerPriceGradient)" />
+                    <Area type="monotone" dataKey="price" stroke={isDayProfit ? '#FFE600' : '#C62828'} strokeWidth={2.5} fillOpacity={1} fill="url(#drawerPriceGradient)" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -270,7 +271,7 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
           </div>
 
           {/* Buy Lots / Transaction History */}
-          <div className="bg-[#161926] border border-[#2A2E45] rounded-2xl p-5 shadow-lg">
+          <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-5 shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#FC2D79]" />

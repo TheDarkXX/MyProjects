@@ -84,7 +84,7 @@ export const MasterPanel: React.FC<MasterPanelProps> = ({
           }
           if (points.length < 3) {
             const base = h.lastPrice;
-            const chg = h.dayChange;
+            const chg = (base * (h.dayChangePercent || 0)) / 100;
             points = [base - chg * 1.5, base - chg * 0.8, base - chg * 0.4, base - chg * 0.1, base];
           }
           const min = Math.min(...points);
@@ -104,8 +104,8 @@ export const MasterPanel: React.FC<MasterPanelProps> = ({
               className={clsx(
                 "p-3 rounded-2xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-2.5 active:scale-[0.99]",
                 isSelected
-                  ? "bg-[#823AFD]/20 border-[#823AFD] shadow-[0_0_20px_rgba(130,58,253,0.25)] ring-1 ring-[#823AFD]/50"
-                  : "bg-[#0D1019]/90 border-white/[0.06] hover:border-white/[0.15] hover:bg-[#11141E]"
+                  ? "bg-[#823AFD]/20 border-[#823AFD] shadow-[0_0_20px_rgba(130,58,253,0.3)] ring-1 ring-[#823AFD]/60"
+                  : "bg-[#111418] border-[#2A2E45]/70 hover:border-[#823AFD]/40 hover:bg-[#141724]"
               )}
             >
               {/* Symbol & Shares */}
@@ -114,25 +114,29 @@ export const MasterPanel: React.FC<MasterPanelProps> = ({
                   <span className="text-white font-black text-sm font-heading">
                     {h.symbol}
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/[0.06] text-slate-400 font-mono">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#1A1D2D] border border-[#2A2E45] text-slate-300 font-mono">
                     {h.weightPercent.toFixed(1)}%
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-400 font-mono truncate mt-0.5">
+                <div className="text-[11px] text-[#CBD5E1] font-mono truncate mt-0.5">
                   {h.quantity} sh • {formatCurrency(h.currentValue)}
                 </div>
               </div>
 
-              {/* Sparkline */}
+              {/* Sparkline (PC Candlestick Colors: #FFE600 Gold / #C62828 Red) */}
               <div className="w-14 h-6 shrink-0 flex items-center justify-center">
                 <svg width="56" height="22" className="overflow-visible">
                   <path
                     d={pathD}
                     fill="none"
-                    stroke={isPositive ? '#10B981' : '#F43F5E'}
-                    strokeWidth="1.8"
+                    stroke={isPositive ? '#FFE600' : '#C62828'}
+                    strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    className={clsx(
+                      "filter",
+                      isPositive ? "drop-shadow-[0_0_4px_rgba(255,230,0,0.35)]" : "drop-shadow-[0_0_4px_rgba(198,40,40,0.35)]"
+                    )}
                   />
                 </svg>
               </div>
@@ -145,7 +149,7 @@ export const MasterPanel: React.FC<MasterPanelProps> = ({
                 <div
                   className={clsx(
                     "text-[10px] font-bold font-mono",
-                    isPositive ? "text-emerald-400" : "text-rose-400"
+                    isPositive ? "text-[#FFE600]" : "text-[#FF5252]"
                   )}
                 >
                   {isPositive ? '+' : ''}{h.dayChangePercent.toFixed(2)}%
@@ -157,15 +161,15 @@ export const MasterPanel: React.FC<MasterPanelProps> = ({
       </div>
 
       {/* 3. Pinned Cash Card at Bottom */}
-      <div className="p-3 border-t border-white/[0.08] bg-[#07090E]/90">
-        <div className="bg-[#0D1019] border border-emerald-500/20 rounded-2xl p-3 flex items-center justify-between">
+      <div className="p-3 border-t border-[#2A2E45] bg-[#0D1019]">
+        <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <div className="w-8 h-8 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] flex items-center justify-center text-emerald-400">
               <Wallet className="w-4 h-4" />
             </div>
             <div>
               <div className="text-xs font-black text-white font-heading">CASH</div>
-              <div className="text-[10px] text-slate-400">Liquid Funds</div>
+              <div className="text-[10px] text-[#CBD5E1]">Liquid Funds</div>
             </div>
           </div>
           <div className="text-right">

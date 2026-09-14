@@ -288,14 +288,14 @@ export const MobileDashboard: React.FC = () => {
           ))}
 
           {/* Pinned Cash Card */}
-          <div className="bg-[#0D1019]/70 border border-emerald-500/20 rounded-2xl p-3.5 sm:p-4 shadow-sm flex items-center justify-between">
+          <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-3.5 sm:p-4 shadow-sm flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] flex items-center justify-center text-emerald-400 shrink-0">
                 <Wallet className="w-4 h-4" />
               </div>
               <div>
                 <div className="text-sm font-black text-white font-heading">CASH</div>
-                <div className="text-[11px] text-slate-400">Available Liquid Funds</div>
+                <div className="text-[11px] text-[#CBD5E1]">Available Liquid Funds</div>
               </div>
             </div>
             <div className="text-right">
