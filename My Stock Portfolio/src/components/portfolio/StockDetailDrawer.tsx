@@ -18,8 +18,8 @@ type ChartRange = '1M' | '3M' | '1Y' | 'ALL';
 export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, isOpen, onClose }) => {
   const { holdings } = useHoldings();
   const { transactions } = useTransactionStore();
-  const { historical, fetchHistorical } = usePriceStore();
-  const { currency, exchangeRate } = useUiStore();
+  const { historical, fetchHistorical, exchangeRate } = usePriceStore();
+  const { currency } = useUiStore();
   const [chartRange, setChartRange] = useState<ChartRange>('3M');
 
   // Close on Escape key
@@ -150,7 +150,7 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
                 </span>
               </div>
               <p className="text-xs text-[#9898C8] mt-0.5 font-medium">
-                {holding?.sector || 'Multi-Asset'} • {holding?.quantity || 0} Shares Owned
+                {holding?.sector || 'Multi-Asset'} • {holding?.quantity ? Number(holding.quantity).toLocaleString('en-US', { maximumFractionDigits: 4 }) : 0} Shares Owned
               </p>
             </div>
           </div>
@@ -211,7 +211,7 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
               <div className="bg-[#1A1D2D]/60 p-3 rounded-xl border border-[#2A2E45]/60">
                 <span className="text-[11px] font-medium text-[#9898C8] block">Portfolio Weight</span>
                 <span className="text-sm font-bold text-[#823AFD] tabular-nums mt-0.5 block">
-                  {(holding?.portfolioPercent || 0).toFixed(1)}%
+                  {(holding?.weightPercent || 0).toFixed(1)}%
                 </span>
               </div>
             </div>
@@ -312,7 +312,7 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
                           </span>
                         </td>
                         <td className="py-2.5 text-right font-bold text-white tabular-nums">
-                          {t.amount}
+                          {Number(t.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 4 })}
                         </td>
                         <td className="py-2.5 text-right text-[#CBD5E1] tabular-nums">
                           ${(t.price || 0).toFixed(2)}

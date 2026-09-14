@@ -1,7 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import { ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react';
-import type { DashboardTimeRange } from './Dashboard';
+export type { DashboardTimeRange } from './Dashboard';
 
 export interface MultiPeriodMetric {
   amount: number;

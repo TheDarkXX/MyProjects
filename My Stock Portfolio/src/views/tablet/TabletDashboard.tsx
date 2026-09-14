@@ -139,22 +139,31 @@ export const TabletDashboard: React.FC = () => {
         const eodTarget = new Date(date);
         eodTarget.setHours(23, 59, 59, 999);
         if (new Date(tx.date) <= eodTarget) {
-          const qty = Number(tx.quantity);
-          const price = Number(tx.price);
+          const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
+          const qty = Number(tx.amount || 0);
+          const price = Number(tx.price || 0);
           const fee = Number(tx.fee || 0);
 
           if (tx.type === 'BUY') {
-            dailyCash -= qty * price + fee;
-            dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) + qty;
+            if (isCash) {
+              dailyCash += qty;
+            } else {
+              dailyCash -= (qty * price) + fee;
+              dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) + qty;
+            }
           } else if (tx.type === 'SELL') {
-            dailyCash += qty * price - fee;
-            dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) - qty;
+            if (isCash) {
+              dailyCash -= qty;
+            } else {
+              dailyCash -= (qty * price) - fee;
+              dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) - qty;
+            }
           } else if (tx.type === 'DEPOSIT') {
-            dailyCash += Number(tx.amount || 0);
-          } else if (tx.type === 'WITHDRAWAL') {
-            dailyCash -= Number(tx.amount || 0);
-          } else if (tx.type === 'DIVIDEND') {
-            dailyCash += Number(tx.amount || 0);
+            dailyCash += qty;
+          } else if (tx.type === 'WITHDRAW' || tx.type === 'WITHDRAWAL') {
+            dailyCash -= qty;
+          } else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
+            dailyCash += (qty - fee);
           }
         }
       }
@@ -162,8 +171,11 @@ export const TabletDashboard: React.FC = () => {
       activeSymbols.forEach((s) => {
         if (historical[s]) {
           const dayMatch = historical[s].find((d) => d.date === date);
-          if (dayMatch && typeof dayMatch.close === 'number') {
-            lastKnownPrices[s] = dayMatch.close;
+          if (dayMatch) {
+            const p = typeof dayMatch.price === 'number' ? dayMatch.price : dayMatch.close;
+            if (typeof p === 'number' && !isNaN(p)) {
+              lastKnownPrices[s] = p;
+            }
           }
         }
         if (!lastKnownPrices[s] && prices[s]) {

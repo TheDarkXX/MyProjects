@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useXChartStore, WatchlistSortColumn } from '../../stores/xchartStore';
 import { useHoldings } from '../../hooks/useHoldings';
+import { useDeviceLayout } from '../../hooks/useDeviceLayout';
 import { MyPortWatchlist } from './myport/MyPortWatchlist';
 import { 
   ChevronRight, 
@@ -76,6 +77,8 @@ export const XChartWatchlistDock: React.FC = () => {
     moveSection,
     toggleAllSectionsCollapse
   } = useXChartStore();
+
+  const { isMobile } = useDeviceLayout();
 
   const allSectionsCollapsed = useMemo(() => {
     return watchlistSections.length > 0 && watchlistSections.every((s) => s.isCollapsed);
@@ -285,6 +288,7 @@ export const XChartWatchlistDock: React.FC = () => {
 
   // If dock is collapsed
   if (watchlistCollapsed) {
+    if (isMobile) return null;
     return (
       <aside className="w-12 bg-[#0F111A] border-l border-[#1F2233] flex flex-col items-center py-3 select-none shrink-0 justify-between">
         <button
@@ -307,22 +311,27 @@ export const XChartWatchlistDock: React.FC = () => {
     );
   }
 
-  return (
+  const dockContent = (
     <aside 
-      className="bg-[#0F111A] border-l border-[#1F2233] flex flex-col h-full select-none shrink-0 overflow-hidden font-sans relative"
-      style={{ width: `${dockWidth}px` }}
+      className={clsx(
+        "bg-[#0F111A] border-l border-[#1F2233] flex flex-col h-full select-none shrink-0 overflow-hidden font-sans relative",
+        isMobile ? "w-[88vw] max-w-[360px] shadow-2xl z-50" : ""
+      )}
+      style={isMobile ? undefined : { width: `${dockWidth}px` }}
     >
       {/* Left Resizer Drag Bar */}
-      <div
-        onMouseDown={handleResizerMouseDown}
-        className={clsx(
-          "absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-purple-500/60 transition-colors z-40 group",
-          isResizing && "bg-purple-500"
-        )}
-        title="ลากขอบซ้ายเพื่อปรับความกว้าง Watchlist"
-      >
-        <div className="w-0.5 h-8 bg-slate-600/40 group-hover:bg-purple-300 rounded-full mx-auto absolute top-1/2 -translate-y-1/2 left-0.5 pointer-events-none" />
-      </div>
+      {!isMobile && (
+        <div
+          onMouseDown={handleResizerMouseDown}
+          className={clsx(
+            "absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-purple-500/60 transition-colors z-40 group",
+            isResizing && "bg-purple-500"
+          )}
+          title="ลากขอบซ้ายเพื่อปรับความกว้าง Watchlist"
+        >
+          <div className="w-0.5 h-8 bg-slate-600/40 group-hover:bg-purple-300 rounded-full mx-auto absolute top-1/2 -translate-y-1/2 left-0.5 pointer-events-none" />
+        </div>
+      )}
       {/* 1. Dock Top Header */}
       <div className="h-11 px-2.5 border-b border-[#1F2233] flex items-center justify-between bg-[#121520] shrink-0">
         {/* Left: Twin Pill Tab Switcher */}
@@ -1069,4 +1078,18 @@ export const XChartWatchlistDock: React.FC = () => {
       )}
     </aside>
   );
+
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 z-50 flex justify-end">
+        <div 
+          onClick={toggleWatchlist} 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs" 
+        />
+        {dockContent}
+      </div>
+    );
+  }
+
+  return dockContent;
 };

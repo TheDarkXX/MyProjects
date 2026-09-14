@@ -12,13 +12,14 @@ import {
   Search,
   Check,
   PanelTopClose,
-  PanelTopOpen
+  PanelTopOpen,
+  List
 } from 'lucide-react';
 import clsx from 'clsx';
 import { CloudSyncBadge } from '../common/CloudSyncBadge';
 
 export const XChartTabBar: React.FC = () => {
-  const { tabs, activeTabId, setActiveTabId, closeTab, addTab } = useXChartStore();
+  const { tabs, activeTabId, setActiveTabId, closeTab, addTab, watchlistCollapsed, toggleWatchlist } = useXChartStore();
   const { xchartHideHeader, toggleXChartHeader } = useUiStore();
   const { exchangeRate, lastUpdated, fetchExchangeRate } = usePriceStore();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -167,6 +168,21 @@ export const XChartTabBar: React.FC = () => {
           {/* Universal Cloud Settings Sync LED Indicator */}
           <CloudSyncBadge variant="tab" />
         </div>
+
+        {/* Toggle Watchlist Dock */}
+        <button
+          onClick={toggleWatchlist}
+          className={clsx(
+            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[13px] font-bold transition-all cursor-pointer",
+            !watchlistCollapsed
+              ? "bg-purple-600 text-white border-purple-500 shadow-sm"
+              : "bg-slate-900/70 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-800"
+          )}
+          title={watchlistCollapsed ? "เปิด Watchlist (Open Watchlist)" : "ปิด Watchlist (Close Watchlist)"}
+        >
+          <List className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Watchlist</span>
+        </button>
 
         {/* Toggle Top Bar Header Button */}
         <button

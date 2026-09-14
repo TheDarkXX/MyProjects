@@ -35,17 +35,22 @@ const VALID_TABS = ['dashboard', 'scorecard', 'analysis', 'performance', 'risk',
 
 const getInitialTab = (): string => {
   if (typeof window !== 'undefined') {
-    // 1. Check URL hash (e.g. #analysis, #performance)
+    // If mobile device, ALWAYS default to 'dashboard' (Portfolio) when opening
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    if (isMobile) {
+      if (window.location.hash && window.location.hash !== '#dashboard') {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+      return 'dashboard';
+    }
+
+    // 1. Check URL hash (e.g. #analysis, #xchart) ONLY if explicitly provided in URL on desktop
     const hash = window.location.hash.replace('#', '').trim().toLowerCase();
     if (hash && VALID_TABS.includes(hash)) {
       return hash;
     }
-    // 2. Check localStorage
-    const saved = localStorage.getItem('stock_portfolio_active_tab');
-    if (saved && VALID_TABS.includes(saved)) {
-      return saved;
-    }
   }
+  // Always default to 'dashboard' (Portfolio) when opening
   return 'dashboard';
 };
 

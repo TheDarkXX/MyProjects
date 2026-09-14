@@ -244,7 +244,7 @@ const initialDetailCollapsed = typeof window !== 'undefined' ? localStorage.getI
 export const useXChartStore = create<XChartState>((set, get) => ({
   tabs: initialTabs.tabs,
   activeTabId: initialTabs.activeTabId,
-  watchlistCollapsed: false,
+  watchlistCollapsed: typeof window !== 'undefined' ? window.innerWidth < 768 : false,
 
   watchlistSections: initialSections,
   watchlistPrices: {},

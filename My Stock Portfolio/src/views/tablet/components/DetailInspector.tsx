@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Holding } from '../../../hooks/useHoldings';
-import { Transaction } from '../../../types';
+import { Transaction } from '../../../stores/transactionStore';
 import { DashboardTimeRange } from '../../../components/dashboard/MultiPeriodReturnStrip';
 import { 
   ResponsiveContainer, AreaChart, Area, Tooltip, XAxis, YAxis, CartesianGrid 
@@ -231,7 +231,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
             <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-4">
               <div className="text-[11px] text-slate-400">Shares Owned</div>
               <div className="text-lg font-black text-white font-mono mt-1">
-                {activeHolding.quantity}
+                {Number(activeHolding.quantity || 0).toLocaleString('en-US', { maximumFractionDigits: 4 })}
               </div>
               <div className="text-[10px] text-slate-500 font-mono mt-0.5">
                 Val: {formatCurrency(activeHolding.currentValue)}
@@ -292,7 +292,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
                       </span>
                     </div>
                     <div className="text-right font-mono">
-                      <span className="text-white font-bold">{tx.quantity} sh</span>
+                      <span className="text-white font-bold">{Number(tx.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 4 })} sh</span>
                       <span className="text-slate-400 ml-2">@ {formatCurrency(tx.price)}</span>
                     </div>
                   </div>

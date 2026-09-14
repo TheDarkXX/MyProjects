@@ -48,7 +48,7 @@ export const WatchlistCard: React.FC<WatchlistCardProps> = ({
     });
 
     return `M ${coords.join(' L ')}`;
-  }, [historicalData, holding.lastPrice, holding.dayChange]);
+  }, [historicalData, holding.lastPrice, holding.dayChangePercent]);
 
   return (
     <div
