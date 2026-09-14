@@ -87,7 +87,7 @@ export const MobileEquityHUD: React.FC<MobileEquityHUDProps> = ({
           )}>
             {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
             <span>
-              {isPositive ? '+' : ''}{formatPrimary(displayPnl, true)} ({isPositive ? '+' : ''}{displayPnlPercent.toFixed(2)}%)
+              {formatPrimary(displayPnl, true)} ({isPositive ? '+' : ''}{displayPnlPercent.toFixed(2)}%)
             </span>
           </div>
 

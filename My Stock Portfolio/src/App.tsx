@@ -9,6 +9,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { MobileHeader } from './components/layout/MobileHeader';
 import { MobileNavBar } from './components/layout/MobileNavBar';
+import { useDeviceLayout } from './hooks/useDeviceLayout';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { AppModal } from './components/common/AppModal';
 
@@ -111,21 +112,22 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const MainLayout = () => {
   const { activeTab, xchartHideHeader } = useUiStore();
+  const { isCompact, isDesktop } = useDeviceLayout();
   const shouldShowHeader = !(activeTab === 'xchart' && xchartHideHeader);
   
   return (
     <div className="min-h-screen bg-[#07090E] flex font-sans">
-      <Sidebar />
+      {isDesktop && <Sidebar />}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {shouldShowHeader && <Header />}
-        <MobileHeader />
+        {isDesktop && shouldShowHeader && <Header />}
+        {isCompact && <MobileHeader />}
         <main className={clsx(
           "flex-1 scroll-smooth",
           activeTab === 'xchart' 
             ? "p-0 overflow-hidden flex flex-col" 
-            : "p-3 sm:p-5 xl:p-8 overflow-y-auto pb-24 xl:pb-8"
+            : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
         )}>
-          <div className={clsx("w-full", activeTab !== 'xchart' && "max-w-4xl xl:max-w-none mx-auto")}>
+          <div className={clsx("w-full", isCompact && activeTab !== 'xchart' && "max-w-4xl mx-auto")}>
             <ErrorBoundary>
               <Suspense fallback={
                 <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-12 flex flex-col items-center justify-center min-h-[400px] shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
@@ -156,7 +158,7 @@ const MainLayout = () => {
             </ErrorBoundary>
           </div>
         </main>
-        <MobileNavBar />
+        {isCompact && <MobileNavBar />}
       </div>
       <AppModal />
     </div>

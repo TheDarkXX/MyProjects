@@ -48,7 +48,7 @@ export const MobileHeader: React.FC = () => {
   const activePort = portfolios.find(p => p.id === activePortfolioId) || portfolios[0];
 
   return (
-    <header className="xl:hidden h-14 bg-[#07090E]/90 backdrop-blur-2xl border-b border-white/[0.08] px-4 flex items-center justify-between sticky top-0 z-40 shrink-0 select-none transform-gpu">
+    <header className="h-14 bg-[#07090E]/90 backdrop-blur-2xl border-b border-white/[0.08] px-4 flex items-center justify-between sticky top-0 z-40 shrink-0 select-none transform-gpu">
       {/* 1. Left: Brand Icon + Title / Portfolio Selector */}
       <div className="flex items-center gap-2.5 relative" ref={dropdownRef}>
         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#823AFD] via-[#FC2D79] to-[#FD5514] flex items-center justify-center shadow-[0_2px_12px_rgba(130,58,253,0.35)] shrink-0">

@@ -33,16 +33,16 @@ export const HoldingsMobileList: React.FC<HoldingsMobileListProps> = ({
   return (
     <div className="w-full space-y-3 select-none">
       {/* 1. Header with One-Tap Metric Toggle */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <span className="text-white font-black text-base font-heading">⚡ รายการหุ้น</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 font-mono">
+      <div className="flex items-center justify-between gap-2 px-1">
+        <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <span className="text-white font-black text-sm sm:text-base font-heading">⚡ รายการหุ้น</span>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 font-mono">
             {holdings.length}
           </span>
         </div>
 
         {/* Metric Selector Pills */}
-        <div className="flex items-center bg-[#0D1019] border border-white/[0.08] p-0.5 rounded-xl">
+        <div className="flex items-center bg-[#0D1019] border border-white/[0.08] p-0.5 rounded-xl shrink-0 overflow-x-auto no-scrollbar">
           {METRIC_MODES.map((mode) => {
             const isSelected = metricMode === mode.id;
             return (
@@ -50,7 +50,7 @@ export const HoldingsMobileList: React.FC<HoldingsMobileListProps> = ({
                 key={mode.id}
                 onClick={() => setMetricMode(mode.id)}
                 className={clsx(
-                  "px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer font-heading",
+                  "px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-all active:scale-95 cursor-pointer font-heading whitespace-nowrap",
                   isSelected
                     ? "bg-[#823AFD] text-white shadow-sm"
                     : "text-slate-400 hover:text-white"

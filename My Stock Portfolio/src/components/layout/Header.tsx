@@ -52,7 +52,7 @@ export const Header = () => {
   }, [fetchExchangeRate, lastUpdated]);
 
   return (
-    <header className="h-20 bg-[#0F111A]/80 backdrop-blur-xl border-b border-[#1F2233] px-8 hidden xl:flex items-center justify-between sticky top-0 z-50 gap-4">
+    <header className="h-20 bg-[#0F111A]/80 backdrop-blur-xl border-b border-[#1F2233] px-8 flex items-center justify-between sticky top-0 z-50 gap-4">
       {/* 1. Left: Page Title & Greeting */}
       <div className="shrink-0 min-w-[180px]">
         <h1 className="text-2xl font-bold text-white tracking-tight">
