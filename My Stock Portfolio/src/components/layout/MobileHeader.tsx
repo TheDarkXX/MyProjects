@@ -134,6 +134,18 @@ export const MobileHeader: React.FC = () => {
             $ USD
           </button>
         </div>
+
+        {/* Desktop PC Switcher */}
+        <button
+          onClick={() => {
+            localStorage.setItem('stock_layout_mode', 'desktop');
+            window.location.href = window.location.pathname + '?mode=desktop';
+          }}
+          className="p-1.5 px-2 rounded-xl bg-[#11141E] border border-white/[0.08] hover:border-[#823AFD]/50 text-slate-400 hover:text-white transition-all text-xs flex items-center gap-1 cursor-pointer"
+          title="สลับไปโหมด Desktop (PC Version)"
+        >
+          <span className="text-sm">🖥️</span>
+        </button>
       </div>
     </header>
   );

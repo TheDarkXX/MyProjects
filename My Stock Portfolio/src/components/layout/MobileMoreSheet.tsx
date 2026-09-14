@@ -101,8 +101,23 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({ isOpen, onClos
             );
           })}
 
-          {/* Logout Button */}
+          {/* Switch to Desktop Button */}
           <div className="pt-2">
+            <button
+              onClick={() => {
+                onClose();
+                localStorage.setItem('stock_layout_mode', 'desktop');
+                window.location.href = window.location.pathname + '?mode=desktop';
+              }}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] font-bold text-xs transition-all cursor-pointer font-heading active:scale-[0.98] mb-2"
+            >
+              <span>🖥️</span>
+              <span>สลับไปหน้าจอ Desktop (PC Version)</span>
+            </button>
+          </div>
+
+          {/* Logout Button */}
+          <div>
             <button
               onClick={() => {
                 onClose();

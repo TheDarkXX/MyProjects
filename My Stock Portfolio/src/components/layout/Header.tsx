@@ -138,6 +138,19 @@ export const Header = () => {
           </button>
         </div>
 
+        {/* Mobile View Switcher */}
+        <button
+          onClick={() => {
+            localStorage.setItem('stock_layout_mode', 'mobile');
+            window.location.href = window.location.pathname + '?mode=mobile';
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#151822]/80 border border-[#2A2E45]/80 hover:border-[#823AFD]/50 text-slate-300 hover:text-white transition-all text-xs font-semibold cursor-pointer font-heading"
+          title="สลับไปโหมดมือถือ / แท็บเล็ต (Mobile & Tablet Layout)"
+        >
+          <span>📱</span>
+          <span className="hidden sm:inline">Mobile</span>
+        </button>
+
         {/* Live FX Rate Badge */}
         {exchangeRate > 0 && (
           <div className="hidden 2xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1A1D2D]/80 border border-[#2A2E45] text-xs font-semibold tabular-nums text-[#CBD5E1] shadow-inner font-heading" title="Real-time Exchange Rate (THB=X)">
