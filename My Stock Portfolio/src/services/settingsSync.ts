@@ -11,6 +11,7 @@ export const SYNC_KEYS = {
   POSITION_OVERLAY: 'xchart_position_overlay_v1',
   CHART_VIEW_P2X: 'chart_view_project2x_v1',
   CHART_VIEW_XCHART: 'chart_view_xchart_v1',
+  MYPORT_PREFERENCES: 'stock_xchart_myport_prefs_v1',
 } as const;
 
 export type SyncKey = typeof SYNC_KEYS[keyof typeof SYNC_KEYS];
@@ -203,6 +204,19 @@ function checkAndSeedMissingSettings(cloudSettings: Record<string, any>) {
       stock_xchart_enable_4h_forex: enable4H,
     };
     pushSettingImmediate(SYNC_KEYS.UI_PREFERENCES, uiPrefs);
+  }
+
+  // 7. MyPort Preferences
+  if (!cloudSettings[SYNC_KEYS.MYPORT_PREFERENCES]?.value) {
+    const local = localStorage.getItem(SYNC_KEYS.MYPORT_PREFERENCES);
+    if (local) {
+      try {
+        const parsed = JSON.parse(local);
+        if (parsed && typeof parsed === 'object') {
+          pushSettingImmediate(SYNC_KEYS.MYPORT_PREFERENCES, parsed);
+        }
+      } catch {}
+    }
   }
 }
 

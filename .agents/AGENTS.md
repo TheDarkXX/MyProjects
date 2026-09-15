@@ -1,6 +1,12 @@
 # General Behaviors
 
 - **Workspace Priority**: When executing commands (especially `git push`, `git pull`, or file searches), always prioritize the main workspace folder (Main Folder) opened in AG over the directory of the currently active document. The active document might be a file opened from outside the current workspace, so its path should not override the main workspace context unless explicitly requested by the user.
+- **Central Brain & VPS Hub (XBrain)**: เมื่อต้องติดต่อกับระบบศูนย์กลาง/เซิร์ฟเวอร์ VPS, ส่งสกิล, ก๊อปปี้ไฟล์ หรือซิงก์ข้อมูล ระบบหลักคือ **`XBrain`** (หรือชื่อเดิม `Openclaw-VPS`) มี Path เข้าถึงตรง:
+  - Fast Path: `C:\XBrain`
+  - Canonical Path: `C:\My Claw\Openclaw-VPS`
+  - เมื่อผู้ใช้สั่ง "ส่งไป XBrain", "ก๊อปไป XBrain", "ฝั่ง brain", หรือ "Openclaw-VPS" ให้ใช้ Path `C:\XBrain` (หรือ `C:\My Claw\Openclaw-VPS`) เสมอ
+  - **Spiderweb Mesh Map (พิกัดทุกโปรเจกต์):** ดูแผนที่เชื่อมโยงและ Path ของทุกโปรเจกต์ในระบบได้ที่ [`C:\XBrain\docs\PROJECT_INDEX_SPIDERWEB.md`](file:///C:/XBrain/docs/PROJECT_INDEX_SPIDERWEB.md) เมื่อต้องการส่งสกิลหรือหมุนเวียนไฟล์ข้ามโปรเจกต์ ให้เปิดดูพิกัดจากไฟล์นี้ได้ทันที
+
 - **No Browser Subagent Testing Unless Explicitly Commanded**: หลังเขียนโค้ดและดีพลอยเสร็จ ห้ามเปิด browser subagent เพื่อทดสอบหน้าเว็บเองเด็ดขาด ถ้าผู้ใช้ไม่ได้พิมพ์สั่งให้เปิดเบราว์เซอร์เทสอย่างชัดเจน เพราะทำให้เสียเวลาและอาจติดปัญหา auth/rate-limit. ให้ยืนยันความถูกต้องผ่าน `npx tsc --noEmit`, `npm run build`, และ Code Inspection โดยตรงเท่านั้น
 
 # UI & Typography Standards (Iron Rules)

@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { api } from '../../services/api';
-import { LWChart, Resolution, PortfolioOverlayConfig } from '../project2x/LWChart';
+import { LWChart, Resolution, PortfolioOverlayConfig, TimeFrame, ChartStyle } from '../project2x/LWChart';
 import { useXChartStore } from '../../stores/xchartStore';
+import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { useHoldings } from '../../hooks/useHoldings';
 import { useTransactionStore } from '../../stores/transactionStore';
@@ -43,9 +44,18 @@ interface ChartApiResponse {
 }
 
 export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfolioOverlay: propOverlay }) => {
-  const { changeSymbolOnActiveTab, tabs, updateTab } = useXChartStore();
+  const { changeSymbolOnActiveTab, tabs, updateTabChartSettings } = useXChartStore();
   const currentTab = tabs.find(t => t.id === tabId);
-  const activeResolution: Resolution = (currentTab?.resolution as Resolution) || '1D';
+  const activeResolution: Resolution = (currentTab?.settings?.resolution || currentTab?.resolution || '1D') as Resolution;
+  const activeTimeframe: TimeFrame = (currentTab?.settings?.timeframe || currentTab?.timeframe || '10M') as TimeFrame;
+  const activeChartStyle: ChartStyle = (currentTab?.settings?.chartStyle || currentTab?.chartStyle || 'CANDLE') as ChartStyle;
+
+  // On mount or tab switch, load this tab's independent indicator config
+  useEffect(() => {
+    if (currentTab?.settings?.indicatorSettings) {
+      useIndicatorStore.getState().loadTabConfig(tabId, currentTab.settings.indicatorSettings);
+    }
+  }, [tabId]);
 
   const { holdings } = useHoldings();
   const { transactions } = useTransactionStore();
@@ -175,7 +185,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
   }, [symbol, activeResolution, fetchChartData]);
 
   const handleResolutionChange = (newRes: Resolution) => {
-    updateTab(tabId, { resolution: newRes });
+    updateTabChartSettings(tabId, { resolution: newRes });
   };
 
   const handleToggleFullscreen = useCallback(() => {
@@ -263,6 +273,10 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
         retailSeries={currentData.retailSeries}
         bankerMaSeries={currentData.bankerMaSeries}
         currentPrice={currentData.currentPrice}
+        timeframe={activeTimeframe}
+        onTimeframeChange={(newTf) => updateTabChartSettings(tabId, { timeframe: newTf })}
+        chartStyle={activeChartStyle}
+        onChartStyleChange={(newStyle) => updateTabChartSettings(tabId, { chartStyle: newStyle })}
         resolution={activeResolution}
         onResolutionChange={handleResolutionChange}
         className="w-full h-full flex-1"

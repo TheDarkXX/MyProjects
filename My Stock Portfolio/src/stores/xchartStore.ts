@@ -1,19 +1,43 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
-import { pushSettingDebounced, registerSyncHandler } from '../services/settingsSync';
+import { SYNC_KEYS, pushSettingDebounced, registerSyncHandler } from '../services/settingsSync';
+import { IndicatorSettings, DEFAULT_INDICATOR_SETTINGS } from '../types/indicatorConfig';
+import { useIndicatorStore, registerTabIndicatorSync } from './useIndicatorStore';
 
 export type XChartTabType = 'STOCK' | 'CURRENCY' | 'HEATMAP' | 'MYPORT';
+
+export type TimeFrame = '7D' | '1M' | '3M' | '6M' | '10M' | '1Y' | 'ALL';
+export type ChartStyle = 'CANDLE' | 'HEIKIN_ASHI' | 'AREA';
+export type Resolution = '1D' | '1W' | '4H';
+
+export interface XChartTabChartSettings {
+  timeframe: TimeFrame;
+  chartStyle: ChartStyle;
+  resolution: Resolution;
+  indicatorSettings?: IndicatorSettings;
+}
 
 export interface XChartTab {
   id: string;
   type: XChartTabType;
   symbol: string;
   title: string;
-  timeframe?: '7D' | '1M' | '3M' | '6M' | '10M' | '1Y' | 'ALL';
-  chartStyle?: 'CANDLE' | 'HEIKIN_ASHI' | 'AREA';
-  resolution?: '1D' | '1W' | '4H';
+  timeframe?: TimeFrame;
+  chartStyle?: ChartStyle;
+  resolution?: Resolution;
   showEnvelope?: boolean;
   showSignals?: boolean;
+  settings?: XChartTabChartSettings;
+}
+
+export type MyPortSortColumn = 'symbol' | 'price' | 'change' | 'percentChange';
+export type MyPortSortDir = 'asc' | 'desc';
+
+export interface MyPortWatchlistPreferences {
+  sortColumn: MyPortSortColumn;
+  sortDir: MyPortSortDir;
+  holdingsCollapsed: boolean;
+  targetCollapsed: boolean;
 }
 
 export interface WatchlistSection {
@@ -40,10 +64,69 @@ export interface WatchlistQuote {
 export type WatchlistSortColumn = 'symbol' | 'price' | 'change' | 'percentChange' | null;
 export type WatchlistSortDir = 'asc' | 'desc';
 
+export const DEFAULT_MYPORT_PREFERENCES: MyPortWatchlistPreferences = {
+  sortColumn: 'percentChange',
+  sortDir: 'desc', // 'desc' = ติดลบเยอะสุดอยู่บนสุด as default
+  holdingsCollapsed: false,
+  targetCollapsed: false,
+};
+
+const MYPORT_PREFERENCES_KEY = SYNC_KEYS.MYPORT_PREFERENCES;
+
+export function createDefaultTabSettings(type: XChartTabType, symbol: string): XChartTabChartSettings {
+  const isCurrency = type === 'CURRENCY' || symbol.includes('=X');
+  return {
+    timeframe: isCurrency ? '1Y' : '10M',
+    chartStyle: 'CANDLE',
+    resolution: '1D',
+    indicatorSettings: {
+      ...DEFAULT_INDICATOR_SETTINGS,
+      ema1: { ...DEFAULT_INDICATOR_SETTINGS.ema1, visible: true },
+      ema2: { ...DEFAULT_INDICATOR_SETTINGS.ema2, visible: true },
+      ema3: { ...DEFAULT_INDICATOR_SETTINGS.ema3, visible: true },
+      signals: {
+        ...DEFAULT_INDICATOR_SETTINGS.signals,
+        visible: isCurrency ? false : true,
+      },
+      mcdx: {
+        ...DEFAULT_INDICATOR_SETTINGS.mcdx,
+        visible: isCurrency ? false : true,
+      },
+    },
+  };
+}
+
+export function ensureTabSettings(tab: XChartTab): XChartTab {
+  if (tab.type === 'HEATMAP') return tab;
+  const def = createDefaultTabSettings(tab.type, tab.symbol);
+  return {
+    ...tab,
+    timeframe: tab.timeframe || def.timeframe,
+    chartStyle: tab.chartStyle || def.chartStyle,
+    resolution: tab.resolution || def.resolution,
+    settings: {
+      timeframe: tab.settings?.timeframe || tab.timeframe || def.timeframe,
+      chartStyle: tab.settings?.chartStyle || tab.chartStyle || def.chartStyle,
+      resolution: tab.settings?.resolution || tab.resolution || def.resolution,
+      indicatorSettings: tab.settings?.indicatorSettings || def.indicatorSettings,
+    },
+  };
+}
+
 interface XChartState {
   tabs: XChartTab[];
   activeTabId: string;
   watchlistCollapsed: boolean;
+
+  // MyPort Watchlist preferences (Synced to Cloud)
+  myportPreferences: MyPortWatchlistPreferences;
+  setMyPortSort: (column: MyPortSortColumn) => void;
+  toggleMyPortHoldingsCollapse: () => void;
+  toggleMyPortTargetCollapse: () => void;
+  applyCloudMyPortPreferences: (prefs: Partial<MyPortWatchlistPreferences>) => void;
+
+  // Per-Tab Chart Settings
+  updateTabChartSettings: (tabId: string, settings: Partial<XChartTabChartSettings>) => void;
 
   // Watchlist state
   watchlistSections: WatchlistSection[];
@@ -96,7 +179,8 @@ const DEFAULT_TABS: XChartTab[] = [
     chartStyle: 'CANDLE',
     resolution: '1D',
     showEnvelope: false,
-    showSignals: true
+    showSignals: true,
+    settings: createDefaultTabSettings('STOCK', 'VRT'),
   },
   {
     id: 'tab-thb',
@@ -107,7 +191,8 @@ const DEFAULT_TABS: XChartTab[] = [
     chartStyle: 'CANDLE',
     resolution: '1D',
     showEnvelope: false,
-    showSignals: false
+    showSignals: false,
+    settings: createDefaultTabSettings('CURRENCY', 'THB=X'),
   },
   {
     id: 'tab-heatmap',
@@ -125,6 +210,10 @@ const DEFAULT_TABS: XChartTab[] = [
     resolution: '1D',
     showEnvelope: false,
     showSignals: true,
+    settings: {
+      ...createDefaultTabSettings('MYPORT', 'VRT'),
+      timeframe: 'ALL',
+    },
   }
 ];
 
@@ -178,6 +267,43 @@ export const TRADINGVIEW_WATCHLIST_SECTIONS: WatchlistSection[] = [
 
 const DEFAULT_SECTIONS: WatchlistSection[] = TRADINGVIEW_WATCHLIST_SECTIONS;
 
+function loadSavedMyPortPreferences(): MyPortWatchlistPreferences {
+  if (typeof window === 'undefined') return DEFAULT_MYPORT_PREFERENCES;
+  try {
+    const raw = localStorage.getItem(MYPORT_PREFERENCES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          sortColumn: parsed.sortColumn || 'percentChange',
+          sortDir: parsed.sortDir || 'desc',
+          holdingsCollapsed: Boolean(parsed.holdingsCollapsed),
+          targetCollapsed: Boolean(parsed.targetCollapsed),
+        };
+      }
+    }
+  } catch (e) {}
+  try {
+    const legH = localStorage.getItem('myport_holdings_collapsed') === 'true';
+    const legT = localStorage.getItem('myport_target_collapsed') === 'true';
+    return {
+      ...DEFAULT_MYPORT_PREFERENCES,
+      holdingsCollapsed: legH,
+      targetCollapsed: legT,
+    };
+  } catch (e) {}
+  return DEFAULT_MYPORT_PREFERENCES;
+}
+
+function persistMyPortPreferences(prefs: MyPortWatchlistPreferences) {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(MYPORT_PREFERENCES_KEY, JSON.stringify(prefs));
+      pushSettingDebounced(MYPORT_PREFERENCES_KEY, prefs);
+    } catch (e) {}
+  }
+}
+
 function loadSavedTabs(): { tabs: XChartTab[]; activeTabId: string } {
   if (typeof window === 'undefined') {
     return { tabs: DEFAULT_TABS, activeTabId: DEFAULT_TABS[0].id };
@@ -190,7 +316,8 @@ function loadSavedTabs(): { tabs: XChartTab[]; activeTabId: string } {
         const activeId = parsed.tabs.some((t: XChartTab) => t.id === parsed.activeTabId)
           ? parsed.activeTabId
           : parsed.tabs[0].id;
-        return { tabs: parsed.tabs, activeTabId: activeId };
+        const mappedTabs = parsed.tabs.map(ensureTabSettings);
+        return { tabs: mappedTabs, activeTabId: activeId };
       }
     }
   } catch (e) {
@@ -240,15 +367,101 @@ function persistSections(sections: WatchlistSection[]) {
 const initialTabs = loadSavedTabs();
 const initialSections = loadSavedSections();
 const initialDetailCollapsed = typeof window !== 'undefined' ? localStorage.getItem(DETAIL_COLLAPSED_KEY) === 'true' : false;
+const initialMyPortPrefs = loadSavedMyPortPreferences();
 
 export const useXChartStore = create<XChartState>((set, get) => ({
   tabs: initialTabs.tabs,
   activeTabId: initialTabs.activeTabId,
   watchlistCollapsed: typeof window !== 'undefined' ? window.innerWidth < 768 : false,
 
+  // MyPort Watchlist preferences (Synced to Cloud)
+  myportPreferences: initialMyPortPrefs,
+
+  setMyPortSort: (column: MyPortSortColumn) => {
+    const { myportPreferences } = get();
+    let nextDir: MyPortSortDir = 'desc';
+    if (myportPreferences.sortColumn === column) {
+      nextDir = myportPreferences.sortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+      nextDir = 'desc';
+    }
+    const nextPrefs: MyPortWatchlistPreferences = {
+      ...myportPreferences,
+      sortColumn: column,
+      sortDir: nextDir,
+    };
+    set({ myportPreferences: nextPrefs });
+    persistMyPortPreferences(nextPrefs);
+  },
+
+  toggleMyPortHoldingsCollapse: () => {
+    const { myportPreferences } = get();
+    const nextPrefs: MyPortWatchlistPreferences = {
+      ...myportPreferences,
+      holdingsCollapsed: !myportPreferences.holdingsCollapsed,
+    };
+    set({ myportPreferences: nextPrefs });
+    persistMyPortPreferences(nextPrefs);
+  },
+
+  toggleMyPortTargetCollapse: () => {
+    const { myportPreferences } = get();
+    const nextPrefs: MyPortWatchlistPreferences = {
+      ...myportPreferences,
+      targetCollapsed: !myportPreferences.targetCollapsed,
+    };
+    set({ myportPreferences: nextPrefs });
+    persistMyPortPreferences(nextPrefs);
+  },
+
+  applyCloudMyPortPreferences: (prefs) => {
+    if (!prefs || typeof prefs !== 'object') return;
+    const { myportPreferences } = get();
+    const nextPrefs: MyPortWatchlistPreferences = {
+      ...myportPreferences,
+      ...prefs,
+    };
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(MYPORT_PREFERENCES_KEY, JSON.stringify(nextPrefs));
+      } catch {}
+    }
+    set({ myportPreferences: nextPrefs });
+  },
+
+  // Per-Tab Chart Settings
+  updateTabChartSettings: (tabId: string, settingsUpdate: Partial<XChartTabChartSettings>) => {
+    const { tabs, activeTabId } = get();
+    let hasChanged = false;
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== tabId) return t;
+      hasChanged = true;
+      const currentSettings = t.settings || createDefaultTabSettings(t.type, t.symbol);
+      const nextSettings: XChartTabChartSettings = {
+        ...currentSettings,
+        ...settingsUpdate,
+        indicatorSettings: settingsUpdate.indicatorSettings
+          ? { ...(currentSettings.indicatorSettings || DEFAULT_INDICATOR_SETTINGS), ...settingsUpdate.indicatorSettings }
+          : currentSettings.indicatorSettings,
+      };
+      return {
+        ...t,
+        timeframe: nextSettings.timeframe,
+        chartStyle: nextSettings.chartStyle,
+        resolution: nextSettings.resolution,
+        settings: nextSettings,
+      };
+    });
+
+    if (hasChanged) {
+      set({ tabs: nextTabs });
+      persistTabs(nextTabs, activeTabId);
+    }
+  },
+
   watchlistSections: initialSections,
   watchlistPrices: {},
-  watchlistSortColumn: null,
+  watchlistSortColumn: 'percentChange',
   watchlistSortDir: 'desc',
   watchlistDetailSymbol: 'VRT',
   watchlistDetailCollapsed: initialDetailCollapsed,
@@ -262,6 +475,9 @@ export const useXChartStore = create<XChartState>((set, get) => ({
       const activeTab = tabs.find((t) => t.id === id);
       if (activeTab && activeTab.type !== 'HEATMAP') {
         set({ watchlistDetailSymbol: activeTab.symbol });
+        if (activeTab.settings?.indicatorSettings) {
+          useIndicatorStore.getState().loadTabConfig(id, activeTab.settings.indicatorSettings);
+        }
       }
     }
   },
@@ -273,24 +489,30 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     if (existing) {
       set({ activeTabId: existing.id, watchlistDetailSymbol: cleanSym });
       persistTabs(tabs, existing.id);
+      if (existing.settings?.indicatorSettings) {
+        useIndicatorStore.getState().loadTabConfig(existing.id, existing.settings.indicatorSettings);
+      }
       return;
     }
 
+    const defaultSettings = createDefaultTabSettings(type, cleanSym);
     const newTab: XChartTab = {
       id: `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       type,
       symbol: cleanSym,
       title: title || cleanSym,
-      timeframe: '10M',
-      chartStyle: 'CANDLE',
-      resolution: '1D',
+      timeframe: defaultSettings.timeframe,
+      chartStyle: defaultSettings.chartStyle,
+      resolution: defaultSettings.resolution,
       showEnvelope: false,
-      showSignals: type === 'STOCK'
+      showSignals: type === 'STOCK',
+      settings: defaultSettings,
     };
 
     const nextTabs = [...tabs, newTab];
     set({ tabs: nextTabs, activeTabId: newTab.id, watchlistDetailSymbol: cleanSym });
     persistTabs(nextTabs, newTab.id);
+    useIndicatorStore.getState().loadTabConfig(newTab.id, defaultSettings.indicatorSettings);
   },
 
   closeTab: (id) => {
@@ -307,11 +529,19 @@ export const useXChartStore = create<XChartState>((set, get) => ({
 
     set({ tabs: nextTabs, activeTabId: nextActiveId });
     persistTabs(nextTabs, nextActiveId);
+    const nextActive = nextTabs.find((t) => t.id === nextActiveId);
+    if (nextActive?.settings?.indicatorSettings) {
+      useIndicatorStore.getState().loadTabConfig(nextActiveId, nextActive.settings.indicatorSettings);
+    }
   },
 
   updateTab: (id, updates) => {
     const { tabs, activeTabId } = get();
-    const nextTabs = tabs.map((t) => (t.id === id ? { ...t, ...updates } : t));
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== id) return t;
+      const updatedTab = { ...t, ...updates };
+      return ensureTabSettings(updatedTab);
+    });
     set({ tabs: nextTabs });
     persistTabs(nextTabs, activeTabId);
   },
@@ -530,12 +760,17 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     const activeTabId = data.activeTabId && data.tabs.some((t) => t.id === data.activeTabId)
       ? data.activeTabId
       : data.tabs[0].id;
+    const mappedTabs = data.tabs.map(ensureTabSettings);
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify({ tabs: data.tabs, activeTabId }));
+        localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify({ tabs: mappedTabs, activeTabId }));
       } catch {}
     }
-    set({ tabs: data.tabs, activeTabId });
+    set({ tabs: mappedTabs, activeTabId });
+    const activeTab = mappedTabs.find((t) => t.id === activeTabId);
+    if (activeTab?.settings?.indicatorSettings) {
+      useIndicatorStore.getState().loadTabConfig(activeTabId, activeTab.settings.indicatorSettings);
+    }
   },
 
   applyCloudWatchlist: (sections) => {
@@ -560,6 +795,10 @@ export const useXChartStore = create<XChartState>((set, get) => ({
   },
 }));
 
+registerTabIndicatorSync((tabId, config) => {
+  useXChartStore.getState().updateTabChartSettings(tabId, { indicatorSettings: config });
+});
+
 registerSyncHandler(TABS_STORAGE_KEY, (val) => {
   useXChartStore.getState().applyCloudTabs(val);
 });
@@ -571,3 +810,8 @@ registerSyncHandler(WATCHLIST_STORAGE_KEY, (val) => {
 registerSyncHandler(DETAIL_COLLAPSED_KEY, (val) => {
   useXChartStore.getState().applyCloudDetailCollapsed(val);
 });
+
+registerSyncHandler(SYNC_KEYS.MYPORT_PREFERENCES, (val) => {
+  useXChartStore.getState().applyCloudMyPortPreferences(val);
+});
+

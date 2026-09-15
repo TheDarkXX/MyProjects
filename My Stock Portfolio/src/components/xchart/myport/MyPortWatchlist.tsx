@@ -18,9 +18,13 @@ import {
   Target,
   Clock,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from 'lucide-react';
 import clsx from 'clsx';
+import { MyPortSortColumn } from '../../../stores/xchartStore';
 
 export interface TargetStockItem {
   symbol: string;
@@ -90,7 +94,13 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   const totalPortfolioValue = rawTotalPortfolioValue ?? totalNetWorth ?? 0;
 
   const { exchangeRate, prices, fetchPrices } = usePriceStore();
-  const { watchlistPrices } = useXChartStore();
+  const { 
+    watchlistPrices, 
+    myportPreferences, 
+    setMyPortSort, 
+    toggleMyPortHoldingsCollapse, 
+    toggleMyPortTargetCollapse 
+  } = useXChartStore();
   const { currency } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
   const { transactions, fetchTransactions, loading: txLoading } = useTransactionStore();
@@ -115,39 +125,22 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     holding: Holding | null;
   } | null>(null);
 
-  // Section Collapse State
-  const [holdingsCollapsed, setHoldingsCollapsed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('myport_holdings_collapsed') === 'true';
+  // Section Collapse State (Driven by Cloud-Synced myportPreferences)
+  const holdingsCollapsed = myportPreferences.holdingsCollapsed;
+  const targetCollapsed = myportPreferences.targetCollapsed;
+  const toggleHoldingsCollapse = toggleMyPortHoldingsCollapse;
+  const toggleTargetCollapse = toggleMyPortTargetCollapse;
+
+  // Render sorting indicator arrow helper
+  const renderSortIndicator = (col: MyPortSortColumn) => {
+    if (myportPreferences.sortColumn !== col) {
+      return <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-40 group-hover:opacity-100 transition-opacity" />;
     }
-    return false;
-  });
-
-  const [targetCollapsed, setTargetCollapsed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('myport_target_collapsed') === 'true';
-    }
-    return false;
-  });
-
-  const toggleHoldingsCollapse = () => {
-    setHoldingsCollapsed((prev) => {
-      const next = !prev;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('myport_holdings_collapsed', String(next));
-      }
-      return next;
-    });
-  };
-
-  const toggleTargetCollapse = () => {
-    setTargetCollapsed((prev) => {
-      const next = !prev;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('myport_target_collapsed', String(next));
-      }
-      return next;
-    });
+    return myportPreferences.sortDir === 'asc' ? (
+      <ArrowUp className="w-3 h-3 text-purple-400" />
+    ) : (
+      <ArrowDown className="w-3 h-3 text-purple-400" />
+    );
   };
 
   // Eagerly fetch blueprints & quotas when activePortfolioId is available
@@ -201,6 +194,78 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       };
     });
   }, [quotas, validHoldings]);
+
+  // Sort validHoldings according to Cloud-Synced myportPreferences
+  const sortedHoldings = useMemo(() => {
+    const list = [...validHoldings];
+    const { sortColumn, sortDir } = myportPreferences;
+
+    return list.sort((a, b) => {
+      const quoteA = prices[a.symbol];
+      const wlQuoteA = watchlistPrices[a.symbol];
+      const priceA = a.lastPrice || quoteA?.price || wlQuoteA?.price || 0;
+      const changeA = quoteA?.change ?? wlQuoteA?.change ?? 0;
+      const pctA = a.dayChangePercent ?? quoteA?.percent_change ?? wlQuoteA?.percentChange ?? 0;
+
+      const quoteB = prices[b.symbol];
+      const wlQuoteB = watchlistPrices[b.symbol];
+      const priceB = b.lastPrice || quoteB?.price || wlQuoteB?.price || 0;
+      const changeB = quoteB?.change ?? wlQuoteB?.change ?? 0;
+      const pctB = b.dayChangePercent ?? quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
+
+      if (sortColumn === 'symbol') {
+        return sortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
+      }
+      if (sortColumn === 'price') {
+        return sortDir === 'desc' ? (priceB - priceA) : (priceA - priceB);
+      }
+      if (sortColumn === 'change') {
+        // desc = ติดลบเยอะสุดอยู่บนสุด
+        return sortDir === 'desc' ? (changeA - changeB) : (changeB - changeA);
+      }
+      if (sortColumn === 'percentChange') {
+        // desc = ติดลบเยอะสุดอยู่บนสุด (-47.87%, -2.52%, ..., +2.44%)
+        return sortDir === 'desc' ? (pctA - pctB) : (pctB - pctA);
+      }
+      return 0;
+    });
+  }, [validHoldings, prices, watchlistPrices, myportPreferences]);
+
+  // Sort targetStocks according to Cloud-Synced myportPreferences
+  const sortedTargetStocks = useMemo(() => {
+    const list = [...targetStocks];
+    const { sortColumn, sortDir } = myportPreferences;
+
+    return list.sort((a, b) => {
+      const quoteA = prices[a.symbol];
+      const wlQuoteA = watchlistPrices[a.symbol];
+      const priceA = quoteA?.price ?? wlQuoteA?.price ?? 0;
+      const changeA = quoteA?.change ?? wlQuoteA?.change ?? 0;
+      const pctA = quoteA?.percent_change ?? wlQuoteA?.percentChange ?? 0;
+
+      const quoteB = prices[b.symbol];
+      const wlQuoteB = watchlistPrices[b.symbol];
+      const priceB = quoteB?.price ?? wlQuoteB?.price ?? 0;
+      const changeB = quoteB?.change ?? wlQuoteB?.change ?? 0;
+      const pctB = quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
+
+      if (sortColumn === 'symbol') {
+        return sortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
+      }
+      if (sortColumn === 'price') {
+        return sortDir === 'desc' ? (priceB - priceA) : (priceA - priceB);
+      }
+      if (sortColumn === 'change') {
+        // desc = ติดลบเยอะสุดอยู่บนสุด
+        return sortDir === 'desc' ? (changeA - changeB) : (changeB - changeA);
+      }
+      if (sortColumn === 'percentChange') {
+        // desc = ติดลบเยอะสุดอยู่บนสุด (-47.87%, -2.52%, ..., +2.44%)
+        return sortDir === 'desc' ? (pctA - pctB) : (pctB - pctA);
+      }
+      return 0;
+    });
+  }, [targetStocks, prices, watchlistPrices, myportPreferences]);
 
   // Fetch prices for any target stocks not yet in price store
   useEffect(() => {
@@ -263,20 +328,43 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
         </div>
       </div>
 
-      {/* 2. Sort & Table Header Bar (Height: 26px — Identical to Watchlist) */}
-      <div className="h-[26px] px-3 bg-[#0E121E] border-b border-[#1F2233] grid grid-cols-12 items-center text-[13px] text-slate-400 font-medium select-none shrink-0">
-        <div className="col-span-5 flex items-center gap-1">
-          <span>Symbol</span>
-        </div>
-        <div className="col-span-3 text-right pr-1">
-          <span>Last</span>
-        </div>
-        <div className="col-span-2 text-right">
-          <span>Chg</span>
-        </div>
-        <div className="col-span-2 text-right pr-1">
-          <span>Chg%</span>
-        </div>
+      {/* 2. Sort & Table Header Bar (Height: 26px — Interactive with Cloud Sync) */}
+      <div className="h-[26px] px-3 bg-[#0E121E] border-b border-[#1F2233] grid grid-cols-12 items-center text-[11px] font-bold uppercase tracking-wider text-slate-300 shrink-0 select-none">
+        <button
+          onClick={() => setMyPortSort('symbol')}
+          className="col-span-5 flex items-center gap-1 text-left hover:text-white transition-colors group cursor-pointer"
+          title="เรียงตามตัวอักษรหุ้น (A-Z / Z-A)"
+        >
+          <span className={myportPreferences.sortColumn === 'symbol' ? 'text-white font-bold' : ''}>Symbol</span>
+          {renderSortIndicator('symbol')}
+        </button>
+
+        <button
+          onClick={() => setMyPortSort('price')}
+          className="col-span-3 flex items-center justify-end gap-1 text-right hover:text-white transition-colors group cursor-pointer pr-1"
+          title="เรียงตามราคาล่าสุด"
+        >
+          <span className={myportPreferences.sortColumn === 'price' ? 'text-white font-bold' : ''}>Last</span>
+          {renderSortIndicator('price')}
+        </button>
+
+        <button
+          onClick={() => setMyPortSort('change')}
+          className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors group cursor-pointer"
+          title="เรียงตามจำนวนเงินที่เปลี่ยน ($)"
+        >
+          <span className={myportPreferences.sortColumn === 'change' ? 'text-white font-bold' : ''}>Chg</span>
+          {renderSortIndicator('change')}
+        </button>
+
+        <button
+          onClick={() => setMyPortSort('percentChange')}
+          className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors group cursor-pointer pr-0.5"
+          title={myportPreferences.sortDir === 'desc' ? 'Chg% เรียงติดลบเยอะสุดอยู่บนสุด' : 'Chg% เรียงบวกเยอะสุดอยู่บนสุด'}
+        >
+          <span className={myportPreferences.sortColumn === 'percentChange' ? 'text-purple-300 font-extrabold' : ''}>Chg%</span>
+          {renderSortIndicator('percentChange')}
+        </button>
       </div>
 
       {/* 3. Scrollable High-Density List Container */}
@@ -322,7 +410,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                   No holdings in this portfolio
                 </div>
               ) : (
-                validHoldings.map((h) => {
+                sortedHoldings.map((h) => {
                   const isSelected = h.symbol.toUpperCase() === selectedSymbol.toUpperCase();
                   const priceQuote = prices[h.symbol];
                   const wlQuote = watchlistPrices[h.symbol];
@@ -441,7 +529,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           {/* Section Rows */}
           {!targetCollapsed && (
             <div className="divide-y divide-[#1F2233]/25">
-              {targetStocks.map((item) => {
+              {sortedTargetStocks.map((item) => {
                 const isSelected = item.symbol.toUpperCase() === selectedSymbol.toUpperCase();
                 const priceQuote = prices[item.symbol];
                 const wlQuote = watchlistPrices[item.symbol];

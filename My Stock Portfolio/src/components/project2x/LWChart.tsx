@@ -102,6 +102,10 @@ export interface LWChartProps {
   blueprint?: BlueprintEntry | null;
   onOpenHoldingDrawer?: () => void;
   chartContext?: ChartContext;
+  timeframe?: TimeFrame;
+  onTimeframeChange?: (tf: TimeFrame) => void;
+  chartStyle?: ChartStyle;
+  onChartStyleChange?: (style: ChartStyle) => void;
 }
 
 export const LWChart: React.FC<LWChartProps> = ({
@@ -134,6 +138,10 @@ export const LWChart: React.FC<LWChartProps> = ({
   blueprint,
   onOpenHoldingDrawer,
   chartContext,
+  timeframe: propTimeframe,
+  onTimeframeChange: propOnTimeframeChange,
+  chartStyle: propChartStyle,
+  onChartStyleChange: propOnChartStyleChange,
 }) => {
   const { isMobile: layoutIsMobile } = useDeviceLayout();
   const isMobile = propIsMobile ?? layoutIsMobile;
@@ -149,8 +157,8 @@ export const LWChart: React.FC<LWChartProps> = ({
   const { currency } = useUiStore();
   const { exchangeRate } = usePriceStore();
 
-  // States with localStorage persistence
-  const [timeframe, setTimeframe] = useState<TimeFrame>(() => {
+  // States with localStorage persistence or parent-controlled per-tab settings
+  const [internalTimeframe, setInternalTimeframe] = useState<TimeFrame>(() => {
     try {
       const saved = localStorage.getItem('p2x_lw_timeframe');
       if (saved && ['7D', '1M', '3M', '6M', '10M', '1Y', '5Y', 'ALL'].includes(saved)) {
@@ -160,13 +168,31 @@ export const LWChart: React.FC<LWChartProps> = ({
     return '10M';
   });
 
-  const [chartStyle, setChartStyle] = useState<ChartStyle>(() => {
+  const timeframe = propTimeframe !== undefined ? propTimeframe : internalTimeframe;
+  const setTimeframe = (newTf: TimeFrame) => {
+    if (propOnTimeframeChange) {
+      propOnTimeframeChange(newTf);
+    } else {
+      setInternalTimeframe(newTf);
+    }
+  };
+
+  const [internalChartStyle, setInternalChartStyle] = useState<ChartStyle>(() => {
     try {
       const saved = localStorage.getItem('p2x_lw_style');
       if (saved === 'CANDLE' || saved === 'HEIKIN_ASHI' || saved === 'AREA') return saved;
     } catch (e) {}
     return 'CANDLE';
   });
+
+  const chartStyle = propChartStyle !== undefined ? propChartStyle : internalChartStyle;
+  const setChartStyle = (newStyle: ChartStyle) => {
+    if (propOnChartStyleChange) {
+      propOnChartStyleChange(newStyle);
+    } else {
+      setInternalChartStyle(newStyle);
+    }
+  };
 
   const { xchartEnable4HForex } = useUiStore();
   const isForex = symbol === 'THB=X' || symbol.endsWith('=X') || symbol.includes('USD/THB');
@@ -319,24 +345,30 @@ export const LWChart: React.FC<LWChartProps> = ({
   } | null>(null);
   const [candleSeriesReady, setCandleSeriesReady] = useState(0);
 
-  // Save states to localStorage
+  // Save states to localStorage (only when uncontrolled by parent)
   useEffect(() => {
-    try {
-      localStorage.setItem('p2x_lw_timeframe', timeframe);
-    } catch (e) {}
-  }, [timeframe]);
+    if (propTimeframe === undefined) {
+      try {
+        localStorage.setItem('p2x_lw_timeframe', timeframe);
+      } catch (e) {}
+    }
+  }, [timeframe, propTimeframe]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('p2x_lw_style', chartStyle);
-    } catch (e) {}
-  }, [chartStyle]);
+    if (propChartStyle === undefined) {
+      try {
+        localStorage.setItem('p2x_lw_style', chartStyle);
+      } catch (e) {}
+    }
+  }, [chartStyle, propChartStyle]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('p2x_lw_resolution', resolution);
-    } catch (e) {}
-  }, [resolution]);
+    if (propResolution === undefined) {
+      try {
+        localStorage.setItem('p2x_lw_resolution', resolution);
+      } catch (e) {}
+    }
+  }, [resolution, propResolution]);
 
   // Sync with native browser fullscreen state
   useEffect(() => {

@@ -110,11 +110,26 @@ function loadSavedConfig(): IndicatorSettings {
   }
 }
 
+let tabSyncListener: ((tabId: string, config: IndicatorSettings) => void) | null = null;
+
+export function registerTabIndicatorSync(fn: (tabId: string, config: IndicatorSettings) => void) {
+  tabSyncListener = fn;
+}
+
 function saveConfig(config: IndicatorSettings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     pushSettingDebounced(STORAGE_KEY, config);
   } catch (e) {}
+
+  if (tabSyncListener) {
+    try {
+      const currentTabId = useIndicatorStore.getState?.()?.activeTabId;
+      if (currentTabId) {
+        tabSyncListener(currentTabId, config);
+      }
+    } catch (e) {}
+  }
 }
 
 function pushIndicatorToggleHistory(
@@ -136,6 +151,8 @@ function pushIndicatorToggleHistory(
 
 interface IndicatorState {
   config: IndicatorSettings;
+  activeTabId: string;
+  loadTabConfig: (tabId: string, tabConfig?: IndicatorSettings) => void;
   applyCloudConfig: (cloudConfig: Partial<IndicatorSettings>) => void;
   addCustomColor: (color: string) => void;
   setCustomColors: (colors: string[]) => void;
@@ -179,6 +196,12 @@ interface IndicatorState {
 
 export const useIndicatorStore = create<IndicatorState>((set, get) => ({
   config: loadSavedConfig(),
+  activeTabId: 'tab-main',
+
+  loadTabConfig: (tabId: string, tabConfig?: IndicatorSettings) => {
+    const targetConfig = tabConfig || loadSavedConfig();
+    set({ config: targetConfig, activeTabId: tabId });
+  },
 
   addCustomColor: (color: string) => {
     if (!color) return;

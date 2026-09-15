@@ -591,9 +591,20 @@ export const XChartWatchlistDock: React.FC = () => {
               return watchlistSortDir === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
             }
 
-            const valA = quoteA?.[watchlistSortColumn] ?? -Infinity;
-            const valB = quoteB?.[watchlistSortColumn] ?? -Infinity;
-            return watchlistSortDir === 'asc' ? (valA > valB ? 1 : -1) : (valB > valA ? 1 : -1);
+            if (watchlistSortColumn === 'price') {
+              const priceA = quoteA?.price ?? 0;
+              const priceB = quoteB?.price ?? 0;
+              return watchlistSortDir === 'desc' ? (priceB - priceA) : (priceA - priceB);
+            }
+
+            if (watchlistSortColumn === 'change' || watchlistSortColumn === 'percentChange') {
+              const valA = quoteA?.[watchlistSortColumn] ?? 0;
+              const valB = quoteB?.[watchlistSortColumn] ?? 0;
+              // desc: ติดลบเยอะสุดอยู่บนสุด (เช่น -47% ก่อน -2% ก่อน +5%)
+              return watchlistSortDir === 'desc' ? (valA - valB) : (valB - valA);
+            }
+
+            return 0;
           });
 
           const isEditing = editingSectionId === section.id;
