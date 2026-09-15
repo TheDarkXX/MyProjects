@@ -29,6 +29,7 @@ const PortfolioList = lazy(() => import('./components/portfolio/PortfolioList').
 const SettingPage = lazy(() => import('./components/settings/SettingPage').then(m => ({ default: m.SettingPage })));
 const Project2xPage = lazy(() => import('./components/project2x/Project2xPage').then(m => ({ default: m.Project2xPage })));
 const XChartPage = lazy(() => import('./components/xchart/XChartPage').then(m => ({ default: m.XChartPage })));
+const NewsIntelPage = lazy(() => import('./components/news/NewsIntelPage').then(m => ({ default: m.NewsIntelPage })));
 
 // Temporary placeholder components until Phase 5 UI Revamp
 const Login = () => {
@@ -160,10 +161,11 @@ const MainLayout = () => {
               {activeTab === 'xchart' && (
                 isMobile ? <MobileChartPage /> : <XChartPage />
               )}
+              {activeTab === 'news' && <NewsIntelPage />}
               {activeTab === 'transactions' && <TransactionTable />}
               {activeTab === 'portfolios' && <PortfolioList />}
               {activeTab === 'settings' && <SettingPage />}
-              {activeTab !== 'dashboard' && activeTab !== 'scorecard' && activeTab !== 'risk' && activeTab !== 'health' && activeTab !== 'rebalance' && activeTab !== 'project2x' && activeTab !== 'xchart' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
+              {activeTab !== 'dashboard' && activeTab !== 'news' && activeTab !== 'scorecard' && activeTab !== 'risk' && activeTab !== 'health' && activeTab !== 'rebalance' && activeTab !== 'project2x' && activeTab !== 'xchart' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
                 <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-8 min-h-[500px] flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
                   <p className="text-[#9898C8] text-lg font-medium">
                     {activeTab} module is under construction.

@@ -27,6 +27,7 @@ import { chartRoutes } from './routes/chart.js';
 import { marketRoutes } from './routes/market.js';
 import { drawingsRoutes } from './routes/drawings.js';
 import { settingsRoutes } from './routes/settings.js';
+import { newsRoutes } from './routes/news.js';
 
 const app = new Hono();
 
@@ -58,6 +59,7 @@ app.route('/api/chart', chartRoutes);
 app.route('/api/market', marketRoutes);
 app.route('/api/drawings', drawingsRoutes);
 app.route('/api/settings', settingsRoutes);
+app.route('/api/news', newsRoutes);
 
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));

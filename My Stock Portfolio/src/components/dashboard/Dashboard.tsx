@@ -149,7 +149,8 @@ export const Dashboard = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
   const { transactions, fetchTransactions } = useTransactionStore();
   const { prices, historical, exchangeRate, fetchPrices, fetchHistorical, fetchExchangeRate } = usePriceStore();
-  const { currency, setCurrency } = useUiStore();
+  const { currency, setCurrency, setActiveTab } = useUiStore();
+  const [theMustCount, setTheMustCount] = useState(0);
 
   const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
 
@@ -158,6 +159,16 @@ export const Dashboard = () => {
       fetchTransactions(activePortfolioId);
     }
     fetchExchangeRate('USD', 'THB');
+
+    // Check for The Must unread news
+    fetch('/api/news/stats')
+      .then(r => r.json())
+      .then(data => {
+        if (data && typeof data.theMustUnread === 'number') {
+          setTheMustCount(data.theMustUnread);
+        }
+      })
+      .catch(() => {});
   }, [activePortfolioId, fetchTransactions, fetchExchangeRate]);
 
   const { 
@@ -702,7 +713,35 @@ export const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in-up pb-12">
+    <div className="space-y-6 animate-fade-in-up pb-12">
+      {/* Peaceful THE MUST News Alert Banner */}
+      {theMustCount > 0 && (
+        <div 
+          onClick={() => setActiveTab('news')}
+          className="bg-rose-950/25 border border-rose-500/40 hover:border-rose-500 rounded-2xl px-5 py-3 flex items-center justify-between gap-4 cursor-pointer transition-all shadow-[0_4px_20px_rgba(244,63,94,0.12)] group select-none"
+        >
+          <div className="flex items-center gap-3">
+            <span className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-sm font-bold shrink-0">
+              🔥
+            </span>
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-2 font-heading">
+                มี {theMustCount} ข่าวสำคัญระดับ The Must ที่ยังไม่ได้อ่าน
+                <span className="text-[10px] font-semibold text-rose-400 uppercase tracking-wider bg-rose-500/15 px-2 py-0.5 rounded-full border border-rose-500/30">
+                  Smart Priority
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                ข่าวที่อาจกระทบต่อพื้นฐานหรือคูเมืองของหุ้นในพอร์ต • คลิกเพื่อเปิดอ่านบทสรุปคมๆ
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 text-xs font-bold text-rose-400 group-hover:translate-x-1 transition-transform shrink-0">
+            เปิดอ่าน News Intel →
+          </div>
+        </div>
+      )}
+
       {/* Multi-Period Return Strip (Unified Timeframe & Returns) */}
       <MultiPeriodReturnStrip
         activeRange={timeRange}

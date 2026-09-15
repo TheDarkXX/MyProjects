@@ -303,6 +303,43 @@ export function initDb() {
         setting_value TEXT NOT NULL,
         updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    -- News Intelligence & Radar Feed
+    CREATE TABLE IF NOT EXISTS seen_articles (
+        slug TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        source TEXT DEFAULT 'beehiiv',
+        published_at TEXT,
+        published_day_of_week TEXT,
+        published_hour INTEGER,
+        detected_at TEXT NOT NULL DEFAULT (datetime('now')),
+        tickers TEXT,
+        is_premium INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS news_intelligence (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticker TEXT NOT NULL,
+        company_name TEXT,
+        headline TEXT NOT NULL,
+        source_name TEXT,
+        source_url TEXT,
+        summary_th TEXT NOT NULL,
+        sentiment TEXT DEFAULT 'neutral',
+        reading_priority TEXT NOT NULL DEFAULT 'GOOD_TO_KNOW',
+        priority_reason TEXT,
+        impact_level TEXT DEFAULT 'routine',
+        portfolio_tag TEXT NOT NULL DEFAULT 'global',
+        related_portfolio_id TEXT,
+        is_read INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_news_ticker ON news_intelligence(ticker);
+    CREATE INDEX IF NOT EXISTS idx_news_portfolio ON news_intelligence(portfolio_tag);
+    CREATE INDEX IF NOT EXISTS idx_news_priority ON news_intelligence(reading_priority);
+    CREATE INDEX IF NOT EXISTS idx_news_is_read ON news_intelligence(is_read);
+    CREATE INDEX IF NOT EXISTS idx_news_created ON news_intelligence(created_at);
   `);
 
   // Migration for historical_prices OHLCV columns
