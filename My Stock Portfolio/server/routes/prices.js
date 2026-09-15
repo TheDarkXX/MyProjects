@@ -197,14 +197,18 @@ pricesRoutes.post('/quote-batch', async (c) => {
         const quoteArray = Array.isArray(quotes) ? quotes : (quotes ? [quotes] : []);
         for (const q of quoteArray) {
           if (!q || !q.symbol) continue;
-          const symKey = q.symbol.toUpperCase();
           const item = {
             symbol: symKey,
             price: Number((q.regularMarketPrice ?? 0).toFixed(4)),
-            change: Number((q.regularMarketChange ?? 0).toFixed(4)),
-            percentChange: Number((q.regularMarketChangePercent ?? 0).toFixed(2)),
+            open: q.regularMarketOpen != null 
+              ? Number(q.regularMarketOpen.toFixed(4)) 
+              : (q.regularMarketPreviousClose != null ? Number(q.regularMarketPreviousClose.toFixed(4)) : Number((q.regularMarketPrice ?? 0).toFixed(4))),
             dayHigh: q.regularMarketDayHigh != null ? Number(q.regularMarketDayHigh.toFixed(4)) : (q.dayHigh != null ? Number(q.dayHigh.toFixed(4)) : null),
             dayLow: q.regularMarketDayLow != null ? Number(q.regularMarketDayLow.toFixed(4)) : (q.dayLow != null ? Number(q.dayLow.toFixed(4)) : null),
+            marketDate: q.regularMarketTime ? new Date(q.regularMarketTime).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            volume: q.regularMarketVolume != null ? Number(q.regularMarketVolume) : 0,
+            change: Number((q.regularMarketChange ?? 0).toFixed(4)),
+            percentChange: Number((q.regularMarketChangePercent ?? 0).toFixed(2)),
             fiftyTwoWeekHigh: q.fiftyTwoWeekHigh != null ? Number(q.fiftyTwoWeekHigh.toFixed(4)) : null,
             fiftyTwoWeekLow: q.fiftyTwoWeekLow != null ? Number(q.fiftyTwoWeekLow.toFixed(4)) : null,
             shortName: q.shortName || q.longName || symKey,

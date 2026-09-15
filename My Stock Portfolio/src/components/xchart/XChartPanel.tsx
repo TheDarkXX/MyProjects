@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { api } from '../../services/api';
 import { LWChart, Resolution, PortfolioOverlayConfig, TimeFrame, ChartStyle } from '../project2x/LWChart';
 import { useXChartStore } from '../../stores/xchartStore';
@@ -133,6 +133,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
   }, [holding, blueprint]);
 
   const [cacheByRes, setCacheByRes] = useState<Record<string, ChartApiResponse>>({});
+  const lastFetchedRef = useRef<Record<string, number>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -144,29 +145,33 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
     const reqRes = res === '4H' ? '4H' : '1D';
     const key = `${sym}_${reqRes}`;
 
-    // 1. If already in React state cache, return immediately
+    // 1. If already in React state cache, show immediately (0ms)
     if (cacheByRes[key]) {
       setLoading(false);
-      return;
-    }
-
-    // 2. Check IndexedDB persistent local cache for instant snappy load
-    try {
-      const idbData = await getCachedCandles<ChartApiResponse>(sym, reqRes);
-      if (idbData && idbData.closes && idbData.closes.length > 0) {
-        setCacheByRes(prev => ({ ...prev, [key]: idbData }));
-        setLoading(false);
-        // Continue to background revalidate with fresh API data
-      } else {
+      // Skip background revalidation if fetched within the last 30 seconds
+      if (Date.now() - (lastFetchedRef.current[key] || 0) < 30000) {
+        return;
+      }
+    } else {
+      // 2. Check IndexedDB persistent local cache for instant snappy load
+      try {
+        const idbData = await getCachedCandles<ChartApiResponse>(sym, reqRes);
+        if (idbData && idbData.closes && idbData.closes.length > 0) {
+          setCacheByRes(prev => ({ ...prev, [key]: idbData }));
+          setLoading(false);
+          // Continue to background revalidate with fresh API data
+        } else {
+          setLoading(true);
+        }
+      } catch (e) {
         setLoading(true);
       }
-    } catch (e) {
-      setLoading(true);
     }
 
     setError(null);
     try {
       const result = await api.chart.get(sym, 36500, reqRes);
+      lastFetchedRef.current[key] = Date.now();
       setCacheByRes(prev => ({ ...prev, [key]: result }));
       // Save to IndexedDB for next time
       setCachedCandles(sym, reqRes, result);
@@ -182,6 +187,13 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
 
   useEffect(() => {
     fetchChartData(symbol, activeResolution);
+
+    // Periodic 60s background revalidation to keep live candles and indicators fresh
+    const interval = setInterval(() => {
+      fetchChartData(symbol, activeResolution);
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, [symbol, activeResolution, fetchChartData]);
 
   const handleResolutionChange = (newRes: Resolution) => {
@@ -274,7 +286,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
         bankerMaSeries={currentData.bankerMaSeries}
         currentPrice={currentData.currentPrice}
         timeframe={activeTimeframe}
-        onTimeframeChange={(newTf) => updateTabChartSettings(tabId, { timeframe: newTf })}
+        onTimeframeChange={(newTf) => updateTabChartSettings(tabId, { timeframe: newTf as any })}
         chartStyle={activeChartStyle}
         onChartStyleChange={(newStyle) => updateTabChartSettings(tabId, { chartStyle: newStyle })}
         resolution={activeResolution}

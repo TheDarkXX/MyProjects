@@ -51,6 +51,12 @@ export async function fetchYahooHistorical(symbol, from, to) {
 }
 
 /**
+ * In-memory short TTL cache for realtime quotes (10 seconds)
+ */
+const realtimeQuoteCache = new Map();
+const REALTIME_CACHE_TTL = 10 * 1000;
+
+/**
  * Fetch latest price for a symbol.
  * @param {string} symbol 
  */
@@ -64,6 +70,65 @@ export async function fetchYahooLatest(symbol) {
     };
   } catch (error) {
     console.error(`[Yahoo] Error fetching latest for ${symbol}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Fetch full real-time OHLCV quote for a symbol with short 10s caching.
+ * @param {string} symbol 
+ */
+export async function fetchYahooRealtimeQuote(symbol) {
+  if (!symbol) return null;
+  const upper = symbol.trim().toUpperCase();
+  const now = Date.now();
+
+  const cached = realtimeQuoteCache.get(upper);
+  if (cached && (now - cached.timestamp < REALTIME_CACHE_TTL)) {
+    return cached.data;
+  }
+
+  try {
+    const quote = await yahooFinance.quote(upper);
+    if (!quote || quote.regularMarketPrice == null) {
+      return null;
+    }
+
+    const price = Number(quote.regularMarketPrice);
+    const open = quote.regularMarketOpen != null 
+      ? Number(quote.regularMarketOpen) 
+      : (quote.regularMarketPreviousClose != null ? Number(quote.regularMarketPreviousClose) : price);
+    const high = quote.regularMarketDayHigh != null 
+      ? Math.max(Number(quote.regularMarketDayHigh), price, open) 
+      : Math.max(price, open);
+    const low = quote.regularMarketDayLow != null 
+      ? Math.min(Number(quote.regularMarketDayLow), price, open) 
+      : Math.min(price, open);
+    const volume = quote.regularMarketVolume != null ? Number(quote.regularMarketVolume) : 0;
+
+    const marketTime = quote.regularMarketTime ? new Date(quote.regularMarketTime) : new Date();
+    const dateStr = marketTime.toISOString().split('T')[0];
+
+    const result = {
+      symbol: upper,
+      date: dateStr,
+      price,
+      open,
+      high,
+      low,
+      close: price,
+      volume,
+      change: quote.regularMarketChange != null ? Number(quote.regularMarketChange) : 0,
+      percent_change: quote.regularMarketChangePercent != null ? Number(quote.regularMarketChangePercent) : 0,
+      prevClose: quote.regularMarketPreviousClose != null ? Number(quote.regularMarketPreviousClose) : null,
+      marketState: quote.marketState || 'REGULAR',
+      updatedAt: marketTime.toISOString(),
+    };
+
+    realtimeQuoteCache.set(upper, { timestamp: now, data: result });
+    return result;
+  } catch (error) {
+    console.warn(`[Yahoo] Error fetching realtime quote for ${upper}:`, error.message);
     return null;
   }
 }

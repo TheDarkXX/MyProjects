@@ -7,6 +7,7 @@ import {
   calcEMASeries,
   calcMcdxSeries
 } from '../services/technicalAnalysis.js';
+import { fetchYahooRealtimeQuote } from '../services/yahoo.js';
 
 export const chartRoutes = new Hono();
 
@@ -43,6 +44,17 @@ chartRoutes.get('/:symbol', async (c) => {
       const highs = candles4h.map((c) => Number((c.high ?? c.close ?? c.price).toFixed(4)));
       const lows = candles4h.map((c) => Number((c.low ?? c.close ?? c.price).toFixed(4)));
       const volumes = candles4h.map((c) => Number(c.volume ?? 0));
+
+      // Attempt live pulse update on latest 4H candle
+      try {
+        const liveQuote4h = await fetchYahooRealtimeQuote(symbol);
+        if (liveQuote4h && liveQuote4h.price && closes.length > 0) {
+          const lastIdx = closes.length - 1;
+          closes[lastIdx] = Number(liveQuote4h.price.toFixed(4));
+          highs[lastIdx] = Math.max(highs[lastIdx], closes[lastIdx]);
+          lows[lastIdx] = Math.min(lows[lastIdx], closes[lastIdx]);
+        }
+      } catch (e) {}
 
       const ema50 = calcEMASeries(closes, 50);
       const ema150 = calcEMASeries(closes, 150);
@@ -108,6 +120,45 @@ chartRoutes.get('/:symbol', async (c) => {
       return c.json({ error: `No historical data available for ${symbol}` }, 404);
     }
 
+    // Fetch real-time quote to inject/update today's live trading candle
+    let liveQuote = null;
+    try {
+      liveQuote = await fetchYahooRealtimeQuote(symbol);
+      if (liveQuote && liveQuote.price != null && liveQuote.date) {
+        const lastDbDate = dbCandles[dbCandles.length - 1]?.date;
+        if (lastDbDate && liveQuote.date > lastDbDate) {
+          // A new trading day session in progress -> Append today's live candle
+          dbCandles.push({
+            date: liveQuote.date,
+            price: liveQuote.price,
+            open: liveQuote.open,
+            high: liveQuote.high,
+            low: liveQuote.low,
+            close: liveQuote.price,
+            volume: liveQuote.volume,
+            isLive: true,
+          });
+        } else if (lastDbDate && liveQuote.date === lastDbDate) {
+          // Today's candle is already in DB -> Update with live intraday ticks
+          const last = dbCandles[dbCandles.length - 1];
+          last.close = liveQuote.price;
+          last.price = liveQuote.price;
+          last.high = Math.max(last.high ?? liveQuote.price, liveQuote.high);
+          last.low = Math.min(last.low ?? liveQuote.price, liveQuote.low);
+          if (liveQuote.volume > (last.volume ?? 0)) last.volume = liveQuote.volume;
+          last.isLive = true;
+        }
+
+        // Also refresh latest_prices table in DB for portfolio/watchlist sync
+        db.prepare(`
+          INSERT OR REPLACE INTO latest_prices (symbol, price, change, percent_change, updated_at)
+          VALUES (?, ?, ?, ?, datetime('now'))
+        `).run(symbol, liveQuote.price, liveQuote.change, liveQuote.percent_change);
+      }
+    } catch (err) {
+      console.warn(`[chartRoutes] Realtime quote injection failed for ${symbol}:`, err.message);
+    }
+
     const dates = dbCandles.map((c) => c.date);
     const closes = dbCandles.map((c) => Number((c.close ?? c.price).toFixed(4)));
     const opens = dbCandles.map((c) => Number((c.open ?? c.close ?? c.price).toFixed(4)));
@@ -115,12 +166,12 @@ chartRoutes.get('/:symbol', async (c) => {
     const lows = dbCandles.map((c) => Number((c.low ?? c.close ?? c.price).toFixed(4)));
     const volumes = dbCandles.map((c) => Number(c.volume ?? 0));
 
-    // Compute EMAs across full series
+    // Compute EMAs across full series (including today's live candle)
     const ema50 = calcEMASeries(closes, 50);
     const ema150 = calcEMASeries(closes, 150);
     const ema200 = calcEMASeries(closes, 200);
 
-    // Compute MCDX across full series (100% of historical depth)
+    // Compute MCDX across full series (including today's live candle)
     const mcdxData = calcMcdxSeries(closes);
 
     // Latest price & day change
@@ -135,10 +186,10 @@ chartRoutes.get('/:symbol', async (c) => {
     const computedChange = Number((lastClose - prevClose).toFixed(4));
     const computedPct = prevClose > 0 ? Number(((computedChange / prevClose) * 100).toFixed(2)) : 0;
 
-    const currentPrice = latestPriceRow?.price ?? lastClose;
-    const change = latestPriceRow?.change ?? computedChange;
-    const percentChange = latestPriceRow?.percent_change ?? computedPct;
-    const lastUpdated = latestPriceRow?.updated_at ?? new Date().toISOString();
+    const currentPrice = liveQuote?.price ?? latestPriceRow?.price ?? lastClose;
+    const change = liveQuote?.change ?? latestPriceRow?.change ?? computedChange;
+    const percentChange = liveQuote?.percent_change ?? latestPriceRow?.percent_change ?? computedPct;
+    const lastUpdated = liveQuote?.updatedAt ?? latestPriceRow?.updated_at ?? new Date().toISOString();
 
     return c.json({
       symbol,
