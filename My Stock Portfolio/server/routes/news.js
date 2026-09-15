@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../db/init.js';
-import { runNewsScan, getPublicationTimingStats } from '../services/newsRadar.js';
+import { runNewsScan, getPublicationTimingStats, getTriageStats, getWatchlistTickers } from '../services/newsRadar.js';
 
 const newsRoutes = new Hono();
 
@@ -148,6 +148,92 @@ newsRoutes.post('/scan', async (c) => {
   } catch (error) {
     console.error('[newsRoutes] Scan error:', error.message);
     return c.json({ error: 'Scan failed', details: error.message }, 500);
+  }
+});
+
+// GET /api/news/triage-stats — Pre-filter triage funnel stats
+newsRoutes.get('/triage-stats', (c) => {
+  try {
+    const stats = getTriageStats();
+    return c.json(stats);
+  } catch (error) {
+    console.error('[newsRoutes] Error fetching triage stats:', error.message);
+    return c.json({ error: 'Failed to fetch triage stats' }, 500);
+  }
+});
+
+// GET /api/news/triage-log — Recent articles evaluated by triage engine
+newsRoutes.get('/triage-log', (c) => {
+  try {
+    const limit = Math.min(parseInt(c.req.query('limit') || '30', 10), 100);
+    const action = c.req.query('action'); // FULL_PIPELINE, TITLE_ONLY, DROPPED
+    let query = 'SELECT slug, title, triage_score, triage_action, triage_tags, detected_at FROM seen_articles';
+    const params = [];
+    if (action) {
+      query += ' WHERE triage_action = ?';
+      params.push(action);
+    }
+    query += ' ORDER BY detected_at DESC LIMIT ?';
+    params.push(limit);
+
+    const rows = db.prepare(query).all(...params);
+    return c.json({
+      success: true,
+      count: rows.length,
+      data: rows.map(r => ({
+        ...r,
+        triage_tags: typeof r.triage_tags === 'string' ? JSON.parse(r.triage_tags || '[]') : r.triage_tags
+      }))
+    });
+  } catch (error) {
+    console.error('[newsRoutes] Error fetching triage log:', error.message);
+    return c.json({ error: 'Failed to fetch triage log' }, 500);
+  }
+});
+
+// GET /api/news/watchlist — View current watchlist tickers
+newsRoutes.get('/watchlist', (c) => {
+  try {
+    const tickers = Array.from(getWatchlistTickers());
+    const rows = db.prepare('SELECT symbol, note, added_at FROM watchlist_tickers ORDER BY symbol ASC').all();
+    return c.json({
+      success: true,
+      allWatchlist: tickers,
+      customList: rows
+    });
+  } catch (error) {
+    return c.json({ error: 'Failed to fetch watchlist' }, 500);
+  }
+});
+
+// POST /api/news/watchlist — Add ticker to watchlist
+newsRoutes.post('/watchlist', async (c) => {
+  try {
+    const body = await c.req.json();
+    const symbol = (body.symbol || '').trim().toUpperCase();
+    const note = body.note || '';
+    if (!symbol) return c.json({ error: 'Symbol is required' }, 400);
+
+    db.prepare(`
+      INSERT INTO watchlist_tickers (symbol, note, added_at)
+      VALUES (?, ?, datetime('now'))
+      ON CONFLICT(symbol) DO UPDATE SET note = excluded.note
+    `).run(symbol, note);
+
+    return c.json({ success: true, symbol, note });
+  } catch (error) {
+    return c.json({ error: 'Failed to add ticker to watchlist' }, 500);
+  }
+});
+
+// DELETE /api/news/watchlist/:symbol — Remove ticker from watchlist
+newsRoutes.delete('/watchlist/:symbol', (c) => {
+  try {
+    const symbol = c.req.param('symbol').toUpperCase();
+    db.prepare('DELETE FROM watchlist_tickers WHERE symbol = ?').run(symbol);
+    return c.json({ success: true, symbol });
+  } catch (error) {
+    return c.json({ error: 'Failed to delete ticker from watchlist' }, 500);
   }
 });
 

@@ -59,6 +59,54 @@ const KNOWN_TICKER_MAP = {
 };
 
 /**
+ * Ecosystem and competitor relationship mapping for portfolio stocks
+ */
+export const ECOSYSTEM_MAP = {
+  'NVDA': ['AMD', 'TSM', 'ASML', 'ARM', 'AVGO', 'SMCI', 'MRVL', 'MSFT', 'AMZN', 'GOOGL', 'META'],
+  'CRWD': ['PANW', 'FTNT', 'ZS', 'S', 'MSFT', 'OKTA', 'NET', 'CYBR'],
+  'RBRK': ['COMM', 'CVLT', 'PANW', 'CRWD', 'MSFT', 'AMZN'],
+  'HIMS': ['AMZN', 'CVS', 'WBA', 'TDOC', 'LLY', 'NVO'],
+  'MELI': ['AMZN', 'SE', 'BABA', 'NU', 'CPNG', 'STNE'],
+  'META': ['GOOGL', 'SNAP', 'PINS', 'MSFT', 'AAPL', 'AMZN', 'TTD', 'RDDT'],
+  'SCHG': ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'META', 'GOOGL', 'GOOG', 'AVGO', 'TSLA', 'LLY']
+};
+
+export const MACRO_KEYWORDS = [
+  // Thai Macro Keywords
+  'เฟด', 'พาวเวลล์', 'ขึ้นดอกเบี้ย', 'ลดดอกเบี้ย', 'อัตราดอกเบี้ย', 
+  'เงินเฟ้อ', 'เศรษฐกิจถดถอย', 'ถดถอย', 'สงคราม', 'ภาษีศุลกากร', 
+  'กำแพงภาษี', 'จ้างงาน', 'วิกฤต', 'ตราสารหนี้', 'บอนด์ยีลด์', 
+  'ดอลลาร์', 'จีดีพี', 'เพดานหนี้',
+  // English Macro Keywords
+  'fed', 'federal reserve', 'powell', 'interest rate', 'rate cut', 
+  'rate hike', 'inflation', 'cpi', 'pce', 'recession', 'tariff', 
+  'tariffs', 'trade war', 'war', 'yield curve', 'bond yield', 
+  'fomc', 'gdp', 'unemployment', 'treasury'
+];
+
+export const MARKET_SUMMARY_KEYWORDS = [
+  'สรุปตลาด', 'สรุปภาพรวม', 'สรุปภาวะตลาด', 'ปิดตลาด', 'สรุปข่าวเด่น', 
+  'market wrap', 'market summary', 'daily wrap', 'roundup', 'wall street wrap', 'morning brief'
+];
+
+export const CATALYST_PATTERNS = [
+  // Price swing with percentage (e.g. พุ่ง 16%, ร่วง 12%, +15%, -8%)
+  /(?:พุ่ง|ร่วง|ดิ่ง|บวก|ลบ|ทะยาน|ทรุด|ดิ่งเหว|กระฉูด|crash|surge|plunge|spike|jump|drop|slump|tumble|soar|skyrocket)\s*(?:กว่า|เกือบ|ทะลุ)?\s*\d+(?:\.\d+)?%/i,
+  /(?:\+|\-)\d+(?:\.\d+)?%/,
+  // Management shakeups, legal/SEC, M&A, bankruptcy
+  /(?:ลาออก|ปลด|สอบสวน|ฟ้อง|ก\.ล\.ต\.|ควบรวม|ซื้อกิจการ|ล้มละลาย|resigns?|fired|sec investigation|lawsuit|antitrust|merger|acquisition|buyout|takeover|bankruptcy|subpoena)/i,
+  // Earnings surprises
+  /(?:งบเซอร์ไพรส์|กำไรพุ่ง|ขาดทุนหนัก|earnings beat|earnings miss|revenue warning|guidance cut|guidance boost)/i
+];
+
+export const NOISE_KEYWORDS = [
+  'หุ้นเด็ด', '5 หุ้น', '10 หุ้น', '3 หุ้น', '7 หุ้น', 'น่าช้อน', 'น่าซื้อ', 
+  'ต้องมีติดพอร์ต', 'กูรูชี้', 'เซียนหุ้น', 'รวยแน่', 'ลายแทง', 
+  'ลับเฉพาะ', 'ชี้เป้า', 'รีบสอย', 'เปิดโผ', 'ส่องหุ้น', 
+  'top 5 stocks', 'top 10 stocks', 'stocks to buy now', 'get rich', 'secret stock'
+];
+
+/**
  * Get active holdings categorized by portfolio:
  * Main: Doctorbank Growth
  * Sub: Tiger
@@ -93,6 +141,25 @@ export function getPortfolioHoldings() {
     mainHoldings,
     tigerHoldings
   };
+}
+
+/**
+ * Get dynamic watchlist tickers from database
+ */
+export function getWatchlistTickers() {
+  const list = new Set(['AMD', 'GOOGL', 'AVGO', 'TSM', 'AMZN', 'MSFT', 'PANW', 'PLTR']);
+  try {
+    // 1. Check portfolio_blueprints
+    const blueprintRows = db.prepare("SELECT symbol FROM portfolio_blueprints WHERE status = 'WATCHLIST'").all();
+    blueprintRows.forEach(r => list.add(r.symbol.toUpperCase()));
+
+    // 2. Check watchlist_tickers table
+    const dbRows = db.prepare("SELECT symbol FROM watchlist_tickers").all();
+    dbRows.forEach(r => list.add(r.symbol.toUpperCase()));
+  } catch (err) {
+    console.warn('[NewsRadar] Error reading watchlist tickers:', err.message);
+  }
+  return list;
 }
 
 /**
@@ -277,23 +344,167 @@ export async function fetchFinnhubNews(symbol) {
 }
 
 /**
+ * 6-Gate Pre-Filter Triage Engine
+ * Calculates relevance score (0-100) and routes articles:
+ * Score >= 70 -> FULL_PIPELINE
+ * Score 30-69 -> TITLE_ONLY
+ * Score < 30  -> DROPPED
+ */
+export function triageArticle(article, context) {
+  const { mainHoldings, tigerHoldings, watchlist, ecosystemMap } = context;
+  const title = article.title || '';
+  const slug = article.slug || '';
+  const textToCheck = `${title} ${slug}`.toLowerCase();
+  
+  let score = 0;
+  const tags = [];
+  const breakdown = {};
+  const matchedTickers = [];
+  let isMarketSummary = false;
+
+  // Gate 1: Portfolio VIP Hit
+  let isVip = false;
+  let isWatchlist = false;
+  for (const ticker of article.tickers) {
+    const sym = ticker.toUpperCase();
+    if (mainHoldings.has(sym) || tigerHoldings.has(sym)) {
+      isVip = true;
+      matchedTickers.push(sym);
+      tags.push(`VIP:${sym}`);
+    } else if (watchlist.has(sym)) {
+      isWatchlist = true;
+      matchedTickers.push(sym);
+      tags.push(`WATCHLIST:${sym}`);
+    }
+  }
+
+  if (isVip) {
+    score += 80;
+    breakdown.vip = 80;
+  } else if (isWatchlist) {
+    score += 50;
+    breakdown.watchlist = 50;
+  }
+
+  // Gate 1.5: Ecosystem Scan
+  const allHeld = new Set([...mainHoldings, ...tigerHoldings]);
+  const matchedEcosystem = [];
+  for (const [heldStock, relatedList] of Object.entries(ecosystemMap || ECOSYSTEM_MAP)) {
+    if (!allHeld.has(heldStock)) continue;
+    for (const ticker of article.tickers) {
+      const sym = ticker.toUpperCase();
+      if (sym !== heldStock && relatedList.includes(sym)) {
+        matchedEcosystem.push(`${sym}->${heldStock}`);
+        tags.push(`ECO:${heldStock}`);
+        if (!matchedTickers.includes(sym)) matchedTickers.push(sym);
+      }
+    }
+  }
+  if (matchedEcosystem.length > 0) {
+    score += 60;
+    breakdown.ecosystem = 60;
+    breakdown.ecosystem_matches = matchedEcosystem;
+  }
+
+  // Gate 2: Macro Shield & Market Summary
+  let hasMacro = false;
+  for (const kw of MACRO_KEYWORDS) {
+    if (textToCheck.includes(kw.toLowerCase())) {
+      hasMacro = true;
+      break;
+    }
+  }
+  if (hasMacro) {
+    score += 50;
+    tags.push('MACRO');
+    breakdown.macro = 50;
+  }
+
+  for (const kw of MARKET_SUMMARY_KEYWORDS) {
+    if (textToCheck.includes(kw.toLowerCase())) {
+      isMarketSummary = true;
+      tags.push('MARKET_SUMMARY');
+      breakdown.market_summary = true;
+      if (!hasMacro && !isVip && !isWatchlist) {
+        score += 40;
+        breakdown.market_summary_score = 40;
+      }
+      break;
+    }
+  }
+
+  // Gate 3: Catalyst / High-Impact Trigger
+  let hasCatalyst = false;
+  for (const pattern of CATALYST_PATTERNS) {
+    if (pattern.test(title)) {
+      hasCatalyst = true;
+      break;
+    }
+  }
+  if (hasCatalyst) {
+    score += 40;
+    tags.push('CATALYST');
+    breakdown.catalyst = 40;
+  }
+
+  // Gate 4: Noise / Clickbait Penalty
+  let hasNoise = false;
+  for (const kw of NOISE_KEYWORDS) {
+    if (textToCheck.includes(kw.toLowerCase())) {
+      hasNoise = true;
+      break;
+    }
+  }
+  if (hasNoise) {
+    score -= 40;
+    tags.push('NOISE_PENALTY');
+    breakdown.noise_penalty = -40;
+  }
+
+  // Clamp score [0, 100]
+  const finalScore = Math.max(0, Math.min(100, score));
+
+  // Determine Action
+  let action = 'DROPPED';
+  if (finalScore >= 70) {
+    action = 'FULL_PIPELINE';
+  } else if (finalScore >= 30) {
+    action = 'TITLE_ONLY';
+  } else {
+    action = 'DROPPED';
+  }
+
+  return {
+    score: finalScore,
+    rawScore: score,
+    action,
+    tags,
+    breakdown,
+    matchedTickers,
+    isMarketSummary
+  };
+}
+
+/**
  * Call Codex GPT-5.6 Terra (free subscription tier) via Brain Gateway
  */
-export async function synthesizeWithAI({ ticker, headline, newsItems, portfolioTag, isHolding }) {
+export async function synthesizeWithAI({ ticker, headline, newsItems, portfolioTag, isHolding, relevanceScore = 50, triageTags = [] }) {
   const contextText = newsItems.map((n, i) => `[ข่าว ${i+1}] (${n.publisher}): ${n.title}\n${n.summary || ''}`).join('\n\n');
 
   const systemPrompt = `You are the Ruthless Investment Intelligence AI for My Stock Portfolio. Always reply with a valid raw JSON object matching the requested schema. Do not include markdown fences, backticks, or any explanation text outside JSON.`;
 
   const userMessage = `Stock Ticker: ${ticker}
 Holding Status: ${isHolding ? `HELD IN PORTFOLIO (${portfolioTag.toUpperCase()})` : 'WATCHLIST / NOT IN PORTFOLIO'}
+Triage Relevance Score: ${relevanceScore}/100
+Triage Tags: ${triageTags.join(', ') || 'NONE'}
 Headline: "${headline}"
 
 Recent News Context:
 ${contextText || headline}
 
 Rules for reading_priority:
-1. "THE_MUST": News directly impacting business moat, regulatory bans, severe earnings swing, high-level leadership shakeup, or major catalysts threatening/boosting held stocks (${portfolioTag.toUpperCase()}).
-2. "GOOD_TO_KNOW": Normal business updates, analyst price target changes, routine product announcements, moderate growth/earnings news.
+1. "THE_MUST": News directly impacting business moat, regulatory bans, severe earnings swing, high-level leadership shakeup, or major catalysts threatening/boosting held stocks (${portfolioTag.toUpperCase()}). Relevance Score >= 75 for held stocks should strongly favor THE_MUST if impact is significant.
+2. "GOOD_TO_KNOW": Normal business updates, analyst price target changes, routine product announcements, moderate growth/earnings news, or ecosystem partner news.
 3. "OPTIONAL": Routine scheduled insider selling (Rule 10b5-1), generic macro opinion, or stocks not in portfolio.
 
 Output ONLY a JSON object:
@@ -343,10 +554,19 @@ Output ONLY a JSON object:
       formattedSummary = `• ${headline}`;
     }
 
+    let calculatedPriority = ['THE_MUST', 'GOOD_TO_KNOW', 'OPTIONAL'].includes(parsed.reading_priority) 
+      ? parsed.reading_priority 
+      : (isHolding ? 'GOOD_TO_KNOW' : 'OPTIONAL');
+
+    // Elevate to THE_MUST if holding + score >= 80 + significant/moat_breaker impact
+    if (isHolding && relevanceScore >= 80 && (parsed.impact_level === 'significant' || parsed.impact_level === 'moat_breaker')) {
+      calculatedPriority = 'THE_MUST';
+    }
+
     return {
       summary_th: formattedSummary,
       sentiment: ['bullish', 'bearish', 'neutral'].includes(parsed.sentiment) ? parsed.sentiment : 'neutral',
-      reading_priority: ['THE_MUST', 'GOOD_TO_KNOW', 'OPTIONAL'].includes(parsed.reading_priority) ? parsed.reading_priority : (isHolding ? 'GOOD_TO_KNOW' : 'OPTIONAL'),
+      reading_priority: calculatedPriority,
       priority_reason: parsed.priority_reason || (isHolding ? 'ข่าวสารหุ้นในพอร์ต' : 'ข่าวทั่วไป'),
       impact_level: ['routine', 'significant', 'moat_breaker'].includes(parsed.impact_level) ? parsed.impact_level : 'routine'
     };
@@ -355,7 +575,7 @@ Output ONLY a JSON object:
     return {
       summary_th: `• ${headline}\n• ข้อมูลดึงจาก Yahoo Finance & Finnhub\n• สามารถคลิกอ่านรายละเอียดจากลิงก์ข่าวต้นฉบับได้โดยตรง`,
       sentiment: 'neutral',
-      reading_priority: isHolding ? 'GOOD_TO_KNOW' : 'OPTIONAL',
+      reading_priority: isHolding && relevanceScore >= 80 ? 'THE_MUST' : (isHolding ? 'GOOD_TO_KNOW' : 'OPTIONAL'),
       priority_reason: isHolding ? 'ข่าวสารหุ้นในพอร์ต' : 'ข่าวทั่วไปนอกพอร์ต',
       impact_level: 'routine'
     };
@@ -363,28 +583,41 @@ Output ONLY a JSON object:
 }
 
 /**
- * Execute full scan:
+ * Execute full scan with 6-gate pre-filter triage:
  * 1. Scrape Beehiiv
- * 2. Save seen articles & timing stats
- * 3. Extract tickers & map to portfolios
- * 4. Aggregate Yahoo & Finnhub news
+ * 2. 6-Gate Triage Scoring (0-100)
+ * 3. Route: Dropped (<30), Title-Only (30-69), Full Pipeline (>=70)
+ * 4. Aggregate Yahoo & Finnhub for Full Pipeline items
  * 5. Synthesize with GPT-5.6 Terra
- * 6. Store in news_intelligence table
+ * 6. Store in seen_articles and news_intelligence tables
  */
 export async function runNewsScan() {
-  console.log('[NewsRadar] Starting news intelligence scan...');
+  console.log('[NewsRadar] 🚀 Starting news intelligence scan with 6-Gate Pre-Filter...');
   const portfolioInfo = getPortfolioHoldings();
+  const watchlist = getWatchlistTickers();
+  const triageContext = {
+    ...portfolioInfo,
+    watchlist,
+    ecosystemMap: ECOSYSTEM_MAP
+  };
+
   const articles = await fetchBeehiivArticles();
   console.log(`[NewsRadar] Fetched ${articles.length} articles from Beehiiv`);
 
   const insertSeen = db.prepare(`
-    INSERT INTO seen_articles (slug, title, source, published_at, published_day_of_week, published_hour, detected_at, tickers, is_premium)
-    VALUES (?, ?, 'beehiiv', ?, ?, ?, datetime('now'), ?, ?)
+    INSERT INTO seen_articles (
+      slug, title, source, published_at, published_day_of_week, published_hour, 
+      detected_at, tickers, is_premium, triage_score, triage_action, triage_tags
+    )
+    VALUES (?, ?, 'beehiiv', ?, ?, ?, datetime('now'), ?, ?, ?, ?, ?)
     ON CONFLICT(slug) DO UPDATE SET
       published_at = COALESCE(excluded.published_at, seen_articles.published_at),
       published_day_of_week = COALESCE(excluded.published_day_of_week, seen_articles.published_day_of_week),
       published_hour = COALESCE(excluded.published_hour, seen_articles.published_hour),
-      tickers = excluded.tickers
+      tickers = excluded.tickers,
+      triage_score = excluded.triage_score,
+      triage_action = excluded.triage_action,
+      triage_tags = excluded.triage_tags
   `);
 
   const findIntel = db.prepare('SELECT id FROM news_intelligence WHERE ticker = ? AND headline = ?');
@@ -392,15 +625,28 @@ export async function runNewsScan() {
     INSERT INTO news_intelligence (
       ticker, company_name, headline, source_name, source_url,
       summary_th, sentiment, reading_priority, priority_reason, impact_level,
-      portfolio_tag, related_portfolio_id, is_read, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+      portfolio_tag, related_portfolio_id, relevance_score, triage_tags, is_read, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
   `);
 
   let newArticlesCount = 0;
   let newIntelCount = 0;
+  let droppedCount = 0;
+  let titleOnlyCount = 0;
+  let fullPipelineCount = 0;
 
   for (const article of articles) {
-    // 1. Record seen article with timing stats
+    // Gate 0: Check if article has already been processed with triage
+    const existingSeen = db.prepare('SELECT slug, triage_action, triage_score FROM seen_articles WHERE slug = ?').get(article.slug);
+    if (existingSeen && existingSeen.triage_action && existingSeen.triage_action !== 'PENDING') {
+      // Already evaluated in a previous scan
+      continue;
+    }
+
+    // Run 6-Gate Triage Scoring
+    const triage = triageArticle(article, triageContext);
+
+    // Save seen article with triage metrics
     insertSeen.run(
       article.slug,
       article.title,
@@ -408,22 +654,70 @@ export async function runNewsScan() {
       article.dayOfWeek,
       article.hour,
       JSON.stringify(article.tickers),
-      article.isPremium
+      article.isPremium,
+      triage.score,
+      triage.action,
+      JSON.stringify(triage.tags)
     );
 
-    // 2. Process each ticker found in this article
-    const tickers = article.tickers.length > 0 ? article.tickers : ['MARKET'];
+    console.log(`[NewsRadar] Article: "${article.title}" -> Score: ${triage.score} (${triage.action}) [${triage.tags.join(', ')}]`);
 
-    for (const ticker of tickers) {
+    // Route based on triage action
+    if (triage.action === 'DROPPED') {
+      droppedCount++;
+      newArticlesCount++;
+      continue;
+    }
+
+    if (triage.action === 'TITLE_ONLY') {
+      titleOnlyCount++;
+      const tickersToProcess = triage.matchedTickers.length > 0 
+        ? triage.matchedTickers 
+        : (article.tickers.length > 0 ? article.tickers : (triage.isMarketSummary ? ['MARKET'] : ['MACRO']));
+
+      for (const ticker of tickersToProcess) {
+        const existing = findIntel.get(ticker, article.title);
+        if (existing) continue;
+
+        const portMapping = getTickerPortfolioTag(ticker, portfolioInfo);
+        insertIntel.run(
+          ticker,
+          ticker,
+          article.title,
+          'Beehiiv',
+          article.url,
+          `• ${article.title}\n• คะแนนคัดกรอง: ${triage.score}/100\n• ป้ายกำกับ: ${triage.tags.join(', ') || 'ทั่วไป'}\n• หมายเหตุ: ข่าวสารระดับกลาง (บันทึกเฉพาะหัวข้อโดยไม่เรียก AI สรุปเพื่อประหยัดทรัพยากร สามารถคลิกอ่านรายละเอียดจากลิงก์ต้นฉบับได้)`,
+          'neutral',
+          'OPTIONAL',
+          `คัดกรองระดับกลาง (${triage.score} คะแนน): ${triage.tags.join(', ')}`,
+          'routine',
+          portMapping.tag,
+          portMapping.portfolioId,
+          triage.score,
+          JSON.stringify(triage.tags)
+        );
+        newIntelCount++;
+      }
+      newArticlesCount++;
+      continue;
+    }
+
+    // Action === 'FULL_PIPELINE' (Score >= 70)
+    fullPipelineCount++;
+    const tickersToProcess = triage.matchedTickers.length > 0 
+      ? triage.matchedTickers 
+      : (article.tickers.length > 0 ? article.tickers : (triage.isMarketSummary ? ['MARKET'] : ['MACRO']));
+
+    for (const ticker of tickersToProcess) {
       const existing = findIntel.get(ticker, article.title);
-      if (existing) continue; // skip already recorded
+      if (existing) continue;
 
       const portMapping = getTickerPortfolioTag(ticker, portfolioInfo);
       const isHolding = portMapping.tag !== 'global';
 
-      // 3. Fetch supplementary sources (Yahoo + Finnhub)
+      // Supplementary news
       let supplementaryNews = [];
-      if (ticker !== 'MARKET') {
+      if (ticker !== 'MARKET' && ticker !== 'MACRO') {
         const [yhNews, fhNews] = await Promise.all([
           fetchYahooNews(ticker),
           fetchFinnhubNews(ticker)
@@ -431,19 +725,20 @@ export async function runNewsScan() {
         supplementaryNews = [...yhNews, ...fhNews];
       }
 
-      // 4. Synthesize with AI
+      // AI Synthesis with GPT-5.6 Terra
       const aiResult = await synthesizeWithAI({
         ticker,
         headline: article.title,
         newsItems: supplementaryNews,
         portfolioTag: portMapping.tag,
-        isHolding
+        isHolding,
+        relevanceScore: triage.score,
+        triageTags: triage.tags
       });
 
-      // 5. Insert into DB
       insertIntel.run(
         ticker,
-        ticker, // company name fallback
+        ticker,
         article.title,
         'Beehiiv / Yahoo / Finnhub',
         article.url,
@@ -453,11 +748,13 @@ export async function runNewsScan() {
         aiResult.priority_reason,
         aiResult.impact_level,
         portMapping.tag,
-        portMapping.portfolioId
+        portMapping.portfolioId,
+        triage.score,
+        JSON.stringify(triage.tags)
       );
 
       newIntelCount++;
-      console.log(`[NewsRadar] Processed ${ticker} [${portMapping.tag.toUpperCase()}] -> Priority: ${aiResult.reading_priority}`);
+      console.log(`[NewsRadar] ✨ Full Intel Processed: ${ticker} [${portMapping.tag.toUpperCase()}] -> Priority: ${aiResult.reading_priority} (Score: ${triage.score})`);
     }
 
     newArticlesCount++;
@@ -468,6 +765,11 @@ export async function runNewsScan() {
     articlesScanned: articles.length,
     newArticlesCount,
     newIntelCount,
+    triageSummary: {
+      fullPipelineCount,
+      titleOnlyCount,
+      droppedCount
+    },
     timestamp: new Date().toISOString()
   };
 }
@@ -498,5 +800,28 @@ export function getPublicationTimingStats() {
     totalArticles: total?.total || 0,
     byDay,
     byHour
+  };
+}
+
+/**
+ * Get triage filtering statistics (Full Pipeline vs Title-Only vs Dropped)
+ */
+export function getTriageStats() {
+  const byAction = db.prepare(`
+    SELECT triage_action as action, COUNT(*) as count, ROUND(AVG(triage_score), 1) as avgScore
+    FROM seen_articles
+    GROUP BY triage_action
+  `).all();
+
+  const recentTriage = db.prepare(`
+    SELECT slug, title, triage_score, triage_action, triage_tags, detected_at
+    FROM seen_articles
+    ORDER BY detected_at DESC
+    LIMIT 20
+  `).all();
+
+  return {
+    byAction,
+    recentTriage
   };
 }

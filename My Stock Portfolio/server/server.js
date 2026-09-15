@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { serveStatic } from '@hono/node-server/serve-static';
+import fs from 'fs';
 
 // Initialize DB first
 import { initDb } from './db/init.js';
@@ -88,7 +89,7 @@ app.get('*', (c) => {
     c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     c.header('Pragma', 'no-cache');
     c.header('Expires', '0');
-    return c.html(require('fs').readFileSync(htmlPath, 'utf-8'));
+    return c.html(fs.readFileSync(htmlPath, 'utf-8'));
   } catch (e) {
     return c.text('API Server is running. Frontend build not found.', 200);
   }

@@ -314,7 +314,10 @@ export function initDb() {
         published_hour INTEGER,
         detected_at TEXT NOT NULL DEFAULT (datetime('now')),
         tickers TEXT,
-        is_premium INTEGER DEFAULT 0
+        is_premium INTEGER DEFAULT 0,
+        triage_score INTEGER DEFAULT 0,
+        triage_action TEXT DEFAULT 'PENDING',
+        triage_tags TEXT DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS news_intelligence (
@@ -331,8 +334,16 @@ export function initDb() {
         impact_level TEXT DEFAULT 'routine',
         portfolio_tag TEXT NOT NULL DEFAULT 'global',
         related_portfolio_id TEXT,
+        relevance_score INTEGER DEFAULT 0,
+        triage_tags TEXT DEFAULT '[]',
         is_read INTEGER DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS watchlist_tickers (
+        symbol TEXT PRIMARY KEY,
+        note TEXT DEFAULT '',
+        added_at TEXT DEFAULT (datetime('now'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_news_ticker ON news_intelligence(ticker);
@@ -341,6 +352,25 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_news_is_read ON news_intelligence(is_read);
     CREATE INDEX IF NOT EXISTS idx_news_created ON news_intelligence(created_at);
   `);
+
+  // Migration for seen_articles & news_intelligence triage columns
+  try {
+    const existingSeenCols = new Set(db.pragma('table_info(seen_articles)').map(col => col.name));
+    if (!existingSeenCols.has('triage_score')) db.exec("ALTER TABLE seen_articles ADD COLUMN triage_score INTEGER DEFAULT 0;");
+    if (!existingSeenCols.has('triage_action')) db.exec("ALTER TABLE seen_articles ADD COLUMN triage_action TEXT DEFAULT 'PENDING';");
+    if (!existingSeenCols.has('triage_tags')) db.exec("ALTER TABLE seen_articles ADD COLUMN triage_tags TEXT DEFAULT '[]';");
+
+    const existingNewsCols = new Set(db.pragma('table_info(news_intelligence)').map(col => col.name));
+    if (!existingNewsCols.has('relevance_score')) db.exec("ALTER TABLE news_intelligence ADD COLUMN relevance_score INTEGER DEFAULT 0;");
+    if (!existingNewsCols.has('triage_tags')) db.exec("ALTER TABLE news_intelligence ADD COLUMN triage_tags TEXT DEFAULT '[]';");
+
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_news_score ON news_intelligence(relevance_score);
+      CREATE INDEX IF NOT EXISTS idx_seen_triage_action ON seen_articles(triage_action);
+    `);
+  } catch (err) {
+    console.error('[DB] Migration error on news tables:', err.message);
+  }
 
   // Migration for historical_prices OHLCV columns
   const histCols = [

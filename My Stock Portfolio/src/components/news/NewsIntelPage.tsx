@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Flame, Sparkles, Filter, CheckCheck, RefreshCw, ExternalLink, 
   Clock, ShieldAlert, BookOpen, Layers, Search, Check, ChevronDown, 
-  ChevronUp, BarChart2, Eye, EyeOff
+  ChevronUp, BarChart2, Eye, EyeOff, Target, Star, Trash2, Plus, Zap
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -20,6 +20,8 @@ interface NewsItem {
   impact_level: 'routine' | 'significant' | 'moat_breaker';
   portfolio_tag: 'main' | 'tiger' | 'dual' | 'global';
   related_portfolio_id: string | null;
+  relevance_score?: number;
+  triage_tags?: string | string[];
   is_read: number;
   created_at: string;
 }
@@ -39,13 +41,27 @@ interface TimingStats {
   byHour: { hour: number; count: number }[];
 }
 
+interface TriageStats {
+  byAction: { action: string; count: number; avgScore: number }[];
+  recentTriage: any[];
+}
+
 export const NewsIntelPage: React.FC = () => {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [stats, setStats] = useState<NewsStats | null>(null);
   const [timingStats, setTimingStats] = useState<TimingStats | null>(null);
+  const [triageStats, setTriageStats] = useState<TriageStats | null>(null);
+  const [triageLog, setTriageLog] = useState<any[]>([]);
+  const [triageActionFilter, setTriageActionFilter] = useState<string>('all');
+  const [watchlistData, setWatchlistData] = useState<{ allWatchlist: string[]; customList: any[] }>({ allWatchlist: [], customList: [] });
+  const [newWatchlistTicker, setNewWatchlistTicker] = useState('');
+  const [newWatchlistNote, setNewWatchlistNote] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [showTimingModal, setShowTimingModal] = useState(false);
+  const [showTriageModal, setShowTriageModal] = useState(false);
+  const [showWatchlistModal, setShowWatchlistModal] = useState(false);
 
   // Filters
   const [selectedPortfolio, setSelectedPortfolio] = useState<'all' | 'main' | 'tiger' | 'global'>('all');
@@ -95,6 +111,60 @@ export const NewsIntelPage: React.FC = () => {
       }
     } catch (err) {
       console.error('[NewsIntel] Timing fetch error:', err);
+    }
+  };
+
+  const fetchTriageData = async () => {
+    try {
+      const [sRes, lRes] = await Promise.all([
+        fetch('/api/news/triage-stats'),
+        fetch('/api/news/triage-log?limit=50')
+      ]);
+      if (sRes.ok) setTriageStats(await sRes.json());
+      if (lRes.ok) {
+        const lJson = await lRes.json();
+        setTriageLog(lJson.data || []);
+      }
+    } catch (err) {
+      console.error('[NewsIntel] Triage fetch error:', err);
+    }
+  };
+
+  const fetchWatchlistData = async () => {
+    try {
+      const res = await fetch('/api/news/watchlist');
+      if (res.ok) {
+        const json = await res.json();
+        setWatchlistData(json);
+      }
+    } catch (err) {
+      console.error('[NewsIntel] Watchlist fetch error:', err);
+    }
+  };
+
+  const handleAddWatchlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWatchlistTicker.trim()) return;
+    try {
+      await fetch('/api/news/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol: newWatchlistTicker.trim(), note: newWatchlistNote.trim() })
+      });
+      setNewWatchlistTicker('');
+      setNewWatchlistNote('');
+      fetchWatchlistData();
+    } catch (err) {
+      console.error('Failed to add ticker to watchlist:', err);
+    }
+  };
+
+  const handleDeleteWatchlist = async (symbol: string) => {
+    try {
+      await fetch(`/api/news/watchlist/${symbol}`, { method: 'DELETE' });
+      fetchWatchlistData();
+    } catch (err) {
+      console.error('Failed to delete ticker:', err);
     }
   };
 
@@ -164,6 +234,24 @@ export const NewsIntelPage: React.FC = () => {
 
         {/* Quick Action Buttons */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={() => { fetchTriageData(); setShowTriageModal(true); }}
+            className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-[#94A3B8] hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all"
+            title="ดูกระบวนการคัดกรอง 6 ประตู (Triage Radar Funnel)"
+          >
+            <Target className="w-4 h-4 text-rose-400" />
+            Triage Radar
+          </button>
+
+          <button
+            onClick={() => { fetchWatchlistData(); setShowWatchlistModal(true); }}
+            className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-[#94A3B8] hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all"
+            title="จัดการหุ้นใน Watchlist"
+          >
+            <Star className="w-4 h-4 text-amber-400" />
+            Watchlist
+          </button>
+
           <button
             onClick={() => { fetchTiming(); setShowTimingModal(true); }}
             className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-[#94A3B8] hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all"
@@ -494,6 +582,50 @@ export const NewsIntelPage: React.FC = () => {
                       )}>
                         {item.sentiment === 'bullish' ? '🟢 เชิงบวก' : item.sentiment === 'bearish' ? '🔴 เชิงลบ' : '⚪ เป็นกลาง'}
                       </span>
+
+                      {/* Triage Relevance Score */}
+                      {item.relevance_score !== undefined && item.relevance_score > 0 && (
+                        <span className={clsx(
+                          "px-2 py-0.5 rounded-lg text-[11px] font-mono font-black flex items-center gap-1 border",
+                          item.relevance_score >= 80 
+                            ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]" 
+                            : item.relevance_score >= 60 
+                              ? "bg-[#823AFD]/20 text-[#C4B5FD] border-[#823AFD]/40" 
+                              : "bg-slate-800 text-slate-400 border-slate-700"
+                        )}>
+                          <Zap className="w-3 h-3" /> {item.relevance_score} pts
+                        </span>
+                      )}
+
+                      {/* Triage Tags */}
+                      {(() => {
+                        let tags: string[] = [];
+                        if (Array.isArray(item.triage_tags)) tags = item.triage_tags;
+                        else if (typeof item.triage_tags === 'string') {
+                          try { tags = JSON.parse(item.triage_tags); } catch {}
+                        }
+                        return tags.map((t, idx) => {
+                          const isVip = t.startsWith('VIP');
+                          const isEco = t.startsWith('ECO');
+                          const isMacro = t === 'MACRO' || t === 'MARKET_SUMMARY';
+                          const isCatalyst = t === 'CATALYST';
+                          return (
+                            <span 
+                              key={idx}
+                              className={clsx(
+                                "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
+                                isVip && "bg-rose-500/15 text-rose-300 border-rose-500/30",
+                                isEco && "bg-blue-500/15 text-blue-300 border-blue-500/30",
+                                isMacro && "bg-amber-500/15 text-amber-300 border-amber-500/30",
+                                isCatalyst && "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+                                !isVip && !isEco && !isMacro && !isCatalyst && "bg-slate-800 text-slate-400 border-slate-700"
+                              )}
+                            >
+                              {t}
+                            </span>
+                          );
+                        });
+                      })()}
                     </div>
 
                     {/* Timestamp & Read Toggle */}
@@ -627,6 +759,210 @@ export const NewsIntelPage: React.FC = () => {
               <span>
                 บทความส่วนใหญ่ปล่อยวัน <strong>อังคารและจันทร์</strong> ในช่วง <strong>14:00 - 16:00 น.</strong> รอบ Cron เช้า-เย็น (08:30 น. และ 20:30 น.) จึงครอบคลุมได้สมบูรณ์แบบโดยไม่ต้องยิงถี่
               </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. 6-Gate Triage Radar Funnel Modal */}
+      {showTriageModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl max-w-4xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-[#2A2E45] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white font-heading">6-Gate Pre-Filter Triage Radar</h3>
+                  <p className="text-xs text-slate-400">ระบบกรองสัญญาณอัจฉริยะ 6 ประตู ป้องกัน Noise ขยะ และส่งต่อเฉพาะของจริง</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTriageModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Funnel Metrics */}
+            <div className="grid grid-cols-3 gap-3">
+              {(() => {
+                const full = triageStats?.byAction?.find(a => a.action === 'FULL_PIPELINE');
+                const titleOnly = triageStats?.byAction?.find(a => a.action === 'TITLE_ONLY');
+                const dropped = triageStats?.byAction?.find(a => a.action === 'DROPPED');
+                return (
+                  <>
+                    <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-4 text-center space-y-1">
+                      <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider">🚀 Full Pipeline (≥70)</div>
+                      <div className="text-2xl font-black text-white">{full?.count || 0}</div>
+                      <div className="text-[11px] text-slate-400">ดึงข่าวเสริม + สรุป AI เต็มสูบ</div>
+                    </div>
+                    <div className="bg-amber-950/20 border border-amber-500/30 rounded-2xl p-4 text-center space-y-1">
+                      <div className="text-xs font-bold text-amber-400 uppercase tracking-wider">📝 Title-Only (30-69)</div>
+                      <div className="text-2xl font-black text-white">{titleOnly?.count || 0}</div>
+                      <div className="text-[11px] text-slate-400">บันทึกหัวข้อ/Macro ประหยัดโควต้า</div>
+                    </div>
+                    <div className="bg-rose-950/20 border border-rose-500/30 rounded-2xl p-4 text-center space-y-1">
+                      <div className="text-xs font-bold text-rose-400 uppercase tracking-wider">🚫 Silent Drop (&lt;30)</div>
+                      <div className="text-2xl font-black text-white">{dropped?.count || 0}</div>
+                      <div className="text-[11px] text-slate-400">ปัดตก Noise/Clickbait ทันที</div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Filter Pills for Log */}
+            <div className="flex items-center justify-between gap-3 border-b border-[#1F2233] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-400">คัดกรอง:</span>
+                {['all', 'FULL_PIPELINE', 'TITLE_ONLY', 'DROPPED'].map((act) => (
+                  <button
+                    key={act}
+                    onClick={() => setTriageActionFilter(act)}
+                    className={clsx(
+                      "px-3 py-1 rounded-lg text-xs font-bold transition-all",
+                      triageActionFilter === act
+                        ? "bg-[#823AFD] text-white"
+                        : "bg-[#0F111A] text-slate-400 hover:text-white border border-[#1F2233]"
+                    )}
+                  >
+                    {act === 'all' ? 'ทั้งหมด' : act}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={fetchTriageData}
+                className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> รีเฟรช
+              </button>
+            </div>
+
+            {/* Triage Log Table */}
+            <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+              {triageLog
+                .filter(item => triageActionFilter === 'all' || item.triage_action === triageActionFilter)
+                .map((row, idx) => (
+                  <div 
+                    key={idx} 
+                    className="bg-[#0A0C12] border border-[#1F2233] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="space-y-1 max-w-xl">
+                      <div className="font-semibold text-white leading-snug">{row.title}</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] text-slate-500">{row.detected_at}</span>
+                        {Array.isArray(row.triage_tags) && row.triage_tags.map((tg: string, i: number) => (
+                          <span key={i} className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
+                            {tg}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={clsx(
+                        "px-2.5 py-1 rounded-lg font-mono font-black text-xs border",
+                        row.triage_score >= 70 ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" :
+                        row.triage_score >= 30 ? "bg-amber-500/15 text-amber-300 border-amber-500/30" :
+                        "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                      )}>
+                        {row.triage_score} pts
+                      </span>
+                      <span className={clsx(
+                        "px-2.5 py-1 rounded-lg font-bold text-xs uppercase tracking-wider border",
+                        row.triage_action === 'FULL_PIPELINE' ? "bg-emerald-600/20 text-emerald-300 border-emerald-500/40" :
+                        row.triage_action === 'TITLE_ONLY' ? "bg-amber-600/20 text-amber-300 border-amber-500/40" :
+                        "bg-slate-800 text-slate-400 border-slate-700"
+                      )}>
+                        {row.triage_action}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Watchlist Manager Modal */}
+      {showWatchlistModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#2A2E45] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                  <Star className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white font-heading">Watchlist Manager</h3>
+                  <p className="text-xs text-slate-400">หุ้นใน Watchlist จะได้รับคะแนน Triage +50 pts อัตโนมัติ</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWatchlistModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Add New Ticker Form */}
+            <form onSubmit={handleAddWatchlist} className="bg-[#0F111A] border border-[#1F2233] p-4 rounded-2xl space-y-3">
+              <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                <Plus className="w-3.5 h-3.5 text-[#823AFD]" /> เพิ่มหุ้นเฝ้าระวังใหม่
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  placeholder="เช่น PLTR"
+                  value={newWatchlistTicker}
+                  onChange={(e) => setNewWatchlistTicker(e.target.value.toUpperCase())}
+                  className="bg-[#0A0C12] border border-[#1F2233] focus:border-[#823AFD] text-xs text-white px-3 py-2 rounded-xl outline-none font-mono"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="หมายเหตุ (เช่น รอจังหวะย่อ)"
+                  value={newWatchlistNote}
+                  onChange={(e) => setNewWatchlistNote(e.target.value)}
+                  className="col-span-2 bg-[#0A0C12] border border-[#1F2233] focus:border-[#823AFD] text-xs text-white px-3 py-2 rounded-xl outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2 rounded-xl bg-[#823AFD] hover:bg-[#6D28D9] text-white text-xs font-bold transition-all"
+              >
+                + บันทึกเข้า Watchlist
+              </button>
+            </form>
+
+            {/* Active Watchlist Chips */}
+            <div className="space-y-2">
+              <div className="text-xs font-bold text-slate-300">หุ้นทั้งหมดในระบบ Watchlist:</div>
+              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                {watchlistData.allWatchlist.map((sym) => {
+                  const isCustom = watchlistData.customList.some(c => c.symbol === sym);
+                  return (
+                    <div 
+                      key={sym}
+                      className="px-3 py-1.5 rounded-xl bg-[#0F111A] border border-[#1F2233] flex items-center gap-2 text-xs font-mono"
+                    >
+                      <span className="font-black text-white">{sym}</span>
+                      {isCustom && (
+                        <button
+                          onClick={() => handleDeleteWatchlist(sym)}
+                          className="text-slate-500 hover:text-rose-400 transition-all"
+                          title="ลบออกจาก Watchlist"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
