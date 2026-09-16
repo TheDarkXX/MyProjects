@@ -737,34 +737,9 @@ export async function runNewsScan() {
 
     if (triage.action === 'TITLE_ONLY') {
       titleOnlyCount++;
-      const tickersToProcess = triage.matchedTickers.length > 0 
-        ? triage.matchedTickers 
-        : (article.tickers.length > 0 ? article.tickers : (triage.isMarketSummary ? ['MARKET'] : ['MACRO']));
-
-      for (const ticker of tickersToProcess) {
-        const existing = findIntel.get(ticker, article.title);
-        if (existing) continue;
-
-        const portMapping = getTickerPortfolioTag(ticker, portfolioInfo);
-        insertIntel.run(
-          ticker,
-          ticker,
-          article.title,
-          `[${ticker}] ${article.title}`,
-          'Beehiiv',
-          article.url,
-          `• ${article.title}\n• คะแนนคัดกรอง: ${triage.score}/100\n• ป้ายกำกับ: ${triage.tags.join(', ') || 'ทั่วไป'}\n• หมายเหตุ: ข่าวสารระดับกลาง (บันทึกเฉพาะหัวข้อโดยไม่เรียก AI สรุปเพื่อประหยัดทรัพยากร สามารถคลิกอ่านรายละเอียดจากลิงก์ต้นฉบับได้)`,
-          'neutral',
-          'OPTIONAL',
-          `คัดกรองระดับกลาง (${triage.score} คะแนน): ${triage.tags.join(', ')}`,
-          'routine',
-          portMapping.tag,
-          portMapping.portfolioId,
-          triage.score,
-          JSON.stringify(triage.tags)
-        );
-        newIntelCount++;
-      }
+      // High Signal Rule: Never pollute news_intelligence with empty stubs or developer notes.
+      // Low-score mentions (30-69) are already safely archived in seen_articles for deduplication.
+      // Only high-signal articles that pass FULL_PIPELINE with verified AI synthesis enter the feed.
       newArticlesCount++;
       continue;
     }
