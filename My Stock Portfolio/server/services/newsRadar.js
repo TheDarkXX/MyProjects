@@ -105,9 +105,11 @@ export const CATALYST_PATTERNS = [
 
 export const NOISE_KEYWORDS = [
   'หุ้นเด็ด', '5 หุ้น', '10 หุ้น', '3 หุ้น', '7 หุ้น', 'น่าช้อน', 'น่าซื้อ', 
-  'ต้องมีติดพอร์ต', 'กูรูชี้', 'เซียนหุ้น', 'รวยแน่', 'ลายแทง', 
+  'ต้องมีติดพอร์ต', 'กูรูชี้', 'เซียนหุ้น', 'เซียน', 'รวยแน่', 'ลายแทง', 
   'ลับเฉพาะ', 'ชี้เป้า', 'รีบสอย', 'เปิดโผ', 'ส่องหุ้น', 
-  'top 5 stocks', 'top 10 stocks', 'stocks to buy now', 'get rich', 'secret stock'
+  'มหาเศรษฐี', 'เกลี้ยงพอร์ต', 'ขายหมดพอร์ต', 'ทิ้งหุ้น', 'อัดเงินซื้อ', 'สลับพอร์ต', 'พอร์ตแตก',
+  'top 5 stocks', 'top 10 stocks', 'stocks to buy now', 'get rich', 'secret stock',
+  'billionaire', 'whale', '13f', 'dollar cost averaging', 'dca', 'jepq'
 ];
 
 /**
@@ -466,7 +468,12 @@ export function triageArticle(article, context) {
   }
 
   // Clamp score [0, 100]
-  const finalScore = Math.max(0, Math.min(100, score));
+  let finalScore = Math.max(0, Math.min(100, score));
+
+  // Hard Cap for Noise: Gossip, retail clickbait, and 13F whale articles can NEVER score high
+  if (hasNoise) {
+    finalScore = Math.min(35, finalScore);
+  }
 
   // Determine Action
   let action = 'DROPPED';
@@ -615,8 +622,10 @@ Output ONLY a JSON object:
       }
     }
 
-    // 2. Pure opinion/commentary/op-ed articles should be CHATTER
-    const isOpinionOrCommentary = /opinion|columnist|motley fool|seeking alpha contributor|trades at \d|is the stock a bargain|whoever spends smarter|why investors should/i.test(headline);
+    // 2. Pure opinion/commentary/op-ed articles, retail clickbait, and billionaire 13F moves should be CHATTER
+    const isOpinionOrCommentary = /opinion|columnist|motley fool|seeking alpha contributor|trades at \d|is the stock a bargain|whoever spends smarter|why investors should|มหาเศรษฐี|เกลี้ยงพอร์ต|ขายหมดพอร์ต|อัดเงินซื้อ|เซียน|พอร์ตแตก|สลับพอร์ต|13f|jepq|dollar cost averaging/i.test(headline)
+      || /ไม่ใช่เหตุการณ์ที่กระทบปัจจัยพื้นฐาน|ไม่มีผลต่อปัจจัยพื้นฐาน|ปรับพอร์ตของนักลงทุนรายหนึ่ง|ไม่กระทบปัจจัยพื้นฐาน/i.test(parsed.priority_reason || '');
+
     if (isOpinionOrCommentary) {
       calculatedPriority = 'CHATTER';
     }
