@@ -3,7 +3,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
   Rocket, Scale, PieChart, ShieldCheck, ReceiptText, Briefcase, 
-  Settings, LogOut, X, ChevronRight, Sparkles 
+  Settings, LogOut, X, ChevronRight, Sparkles, Newspaper 
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -34,6 +34,7 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   const NAV_ITEMS = [
+    { id: 'news', label: 'News Intel Feed', desc: 'AI-curated news & radar', icon: Newspaper, color: 'text-rose-400' },
     { id: 'project2x', label: 'Project 2X Simulator', desc: 'Compounding forecast & goals', icon: Rocket, color: 'text-orange-400' },
     { id: 'rebalance', label: 'Smart Rebalance', desc: 'AI-driven asset allocation', icon: Scale, color: 'text-blue-400' },
     { id: 'analysis', label: 'Analysis & Returns', desc: 'Performance attribution & sectors', icon: PieChart, color: 'text-cyan-400' },
