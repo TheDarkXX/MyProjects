@@ -9,6 +9,8 @@ import {
   ChevronRight, 
   ChevronDown, 
   ChevronLeft, 
+  ChevronsDownUp,
+  ChevronsUpDown,
   Hash, 
   Filter, 
   Check,
@@ -19,7 +21,6 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useXChartStore } from '../../stores/xchartStore';
-import { useHoldings } from '../../hooks/useHoldings';
 import { usePriceStore } from '../../stores/priceStore';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { usePortfolioStore } from '../../stores/portfolioStore';
@@ -132,6 +133,7 @@ interface DockSection {
   icon: React.ReactNode;
   stocks: StockItem[];
   badge?: string;
+  isCollapsed?: boolean;
 }
 
 export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
@@ -151,19 +153,38 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortCol, setSortCol] = useState<SortColumn>('symbol');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  
+  // Local collapse dictionary for portfolio sections
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('news_ticker_dock_sections_collapsed');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
 
-  // 1. Pull Watchlist from X-Chart Store directly
-  const { watchlistSections, watchlistPrices, fetchWatchlistQuotes } = useXChartStore();
+  // 1. Pull Watchlist from X-Chart Store directly (with collapse functions)
+  const { 
+    watchlistSections, 
+    watchlistPrices, 
+    fetchWatchlistQuotes,
+    toggleSectionCollapse,
+    toggleAllSectionsCollapse
+  } = useXChartStore();
+
   // 2. Pull Live Prices from usePriceStore
   const { prices, fetchPrices } = usePriceStore();
   // 3. Transactions & Portfolios to resolve actual dynamic holdings
   const { transactions } = useTransactionStore();
   const { portfolios } = usePortfolioStore();
 
-  const toggleSection = (id: string) => {
-    setCollapsedSections(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  // Persist local collapsed state
+  useEffect(() => {
+    try {
+      localStorage.setItem('news_ticker_dock_sections_collapsed', JSON.stringify(collapsedSections));
+    } catch {}
+  }, [collapsedSections]);
 
   // Helper to dynamically detect holdings for a specific portfolio from transactions
   const getDynamicHoldings = (portKeyword: string, fallback: StockItem[]): StockItem[] => {
@@ -201,17 +222,19 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
         title: 'Holdings (ถือครอง)',
         icon: <Briefcase className="w-3.5 h-3.5 text-purple-400 shrink-0" />,
         stocks: dynamicHoldings,
-        badge: `${dynamicHoldings.length} Positions`
+        badge: `${dynamicHoldings.length} Positions`,
+        isCollapsed: Boolean(collapsedSections['main-holdings'])
       },
       {
         id: 'main-target',
         title: 'Target (เป้าหมาย)',
         icon: <Target className="w-3.5 h-3.5 text-indigo-400 shrink-0" />,
         stocks: DEFAULT_MAIN_TARGETS,
-        badge: `${DEFAULT_MAIN_TARGETS.length} Target`
+        badge: `${DEFAULT_MAIN_TARGETS.length} Target`,
+        isCollapsed: Boolean(collapsedSections['main-target'])
       }
     ];
-  }, [transactions, portfolios]);
+  }, [transactions, portfolios, collapsedSections]);
 
   // 🐯 Tiger 2X Sections: Holdings (2 หุ้น) vs Target (Project 2X)
   const tigerSections = useMemo<DockSection[]>(() => {
@@ -232,17 +255,19 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
         title: 'Holdings (ถือครอง)',
         icon: <Briefcase className="w-3.5 h-3.5 text-amber-400 shrink-0" />,
         stocks: dynamicTigerHoldings,
-        badge: `${dynamicTigerHoldings.length} Positions`
+        badge: `${dynamicTigerHoldings.length} Positions`,
+        isCollapsed: Boolean(collapsedSections['tiger-holdings'])
       },
       {
         id: 'tiger-target',
         title: 'Target · Project 2X',
         icon: <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />,
         stocks: remainingTargets,
-        badge: `${remainingTargets.length} Targets`
+        badge: `${remainingTargets.length} Targets`,
+        isCollapsed: Boolean(collapsedSections['tiger-target'])
       }
     ];
-  }, [transactions, portfolios]);
+  }, [transactions, portfolios, collapsedSections]);
 
   // ⭐ Watchlist Sections: Pulled from X-Chart Store sections + Custom Watchlist
   const watchlistSectionsList = useMemo<DockSection[]>(() => {
@@ -256,7 +281,8 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
           name: sym,
           category: 'Watchlist'
         })),
-        badge: `${sec.symbols.length}`
+        badge: `${sec.symbols.length}`,
+        isCollapsed: Boolean(sec.isCollapsed)
       }));
     }
 
@@ -276,10 +302,11 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
         title: 'Watchlist ทั้งหมด',
         icon: <Star className="w-3.5 h-3.5 text-blue-400 shrink-0" />,
         stocks: list,
-        badge: `${list.length}`
+        badge: `${list.length}`,
+        isCollapsed: Boolean(collapsedSections['wl-default'])
       }
     ];
-  }, [watchlistSections, customWatchlist]);
+  }, [watchlistSections, customWatchlist, collapsedSections]);
 
   // Active raw sections based on current tab
   const activeRawSections = useMemo(() => {
@@ -287,6 +314,48 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
     if (activeTab === 'tiger') return tigerSections;
     return watchlistSectionsList;
   }, [activeTab, mainSections, tigerSections, watchlistSectionsList]);
+
+  // Calculate if all sections in the active tab are collapsed (Exact X-Chart logic)
+  const isAllSectionsCollapsed = useMemo(() => {
+    if (activeTab === 'watchlist') {
+      if (watchlistSections && watchlistSections.length > 0) {
+        return watchlistSections.every(s => s.isCollapsed);
+      }
+      return Boolean(collapsedSections['wl-default']);
+    }
+    const currentSections = activeTab === 'main' ? mainSections : tigerSections;
+    return currentSections.length > 0 && currentSections.every(s => Boolean(s.isCollapsed));
+  }, [activeTab, watchlistSections, mainSections, tigerSections, collapsedSections]);
+
+  // Toggle individual section collapse (Exact X-Chart synchronization)
+  const handleToggleSection = (sectionId: string) => {
+    if (activeTab === 'watchlist' && sectionId.startsWith('wl-') && typeof toggleSectionCollapse === 'function') {
+      const originalSecId = sectionId.replace('wl-', '');
+      toggleSectionCollapse(originalSecId);
+    }
+    setCollapsedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
+  };
+
+  // Toggle all sections collapse / expand (Exact X-Chart synchronization)
+  const handleToggleAllSections = () => {
+    if (activeTab === 'watchlist' && typeof toggleAllSectionsCollapse === 'function') {
+      toggleAllSectionsCollapse();
+      return;
+    }
+
+    const currentSections = activeTab === 'main' ? mainSections : tigerSections;
+    const nextState = !isAllSectionsCollapsed;
+    setCollapsedSections(prev => {
+      const updated = { ...prev };
+      currentSections.forEach(s => {
+        updated[s.id] = nextState;
+      });
+      return updated;
+    });
+  };
 
   // Apply search query and sorting within each section
   const processedSections = useMemo(() => {
@@ -395,7 +464,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
       "w-80 sm:w-[330px] bg-[#0D1019] border-l border-[#1F2233] flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.3)] select-none shrink-0 transition-all text-xs",
       className
     )}>
-      {/* 1. Header with Title & Collapse */}
+      {/* 1. Header with Title, Collapse All Sections Button, and Dock Collapse Button */}
       <div className="p-3 border-b border-[#1F2233] flex items-center justify-between gap-2 bg-[#0A0C14]">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-[#823AFD]/20 border border-[#823AFD]/40 flex items-center justify-center text-[#823AFD]">
@@ -419,6 +488,24 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
               <X className="w-3 h-3" /> ล้าง
             </button>
           )}
+
+          {/* Toggle All Sections Collapse / Expand (Exact X-Chart Duplication) */}
+          <button
+            onClick={handleToggleAllSections}
+            className={clsx(
+              "p-1.5 rounded-lg transition-all cursor-pointer",
+              isAllSectionsCollapsed 
+                ? "text-purple-400 bg-purple-500/20 border border-purple-500/30 shadow-[0_0_8px_rgba(168,85,247,0.3)]" 
+                : "text-slate-300 hover:text-white hover:bg-white/10"
+            )}
+            title={isAllSectionsCollapsed ? "กางทุกหมวด (Expand All Sections)" : "พับทุกหมวด (Collapse All Sections)"}
+          >
+            {isAllSectionsCollapsed ? (
+              <ChevronsUpDown className="w-4 h-4 text-purple-400" />
+            ) : (
+              <ChevronsDownUp className="w-4 h-4 text-slate-300" />
+            )}
+          </button>
 
           {onToggleCollapse && (
             <button
@@ -560,17 +647,18 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
         </button>
       </div>
 
-      {/* 5. High-Density Stream with Collapsible Holdings & Target Sections */}
+      {/* 5. High-Density Stream with Collapsible Holdings & Target Sections (100% X-Chart Duplication) */}
       <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 divide-y divide-[#1F2233]/40">
         {processedSections.map((section) => {
-          const isCollapsed = collapsedSections[section.id];
+          const isCollapsed = Boolean(section.isCollapsed);
 
           return (
             <div key={section.id} className="bg-[#0F111A]">
-              {/* Collapsible Section Header Bar (Height: 28px) */}
+              {/* Collapsible Section Header Bar (Height: 28px — Interactive) */}
               <div 
-                onClick={() => toggleSection(section.id)}
+                onClick={() => handleToggleSection(section.id)}
                 className="h-7 px-2.5 bg-[#131724]/95 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
+                title={isCollapsed ? `คลิกเพื่อกางหมวด ${section.title}` : `คลิกเพื่อพับหมวด ${section.title}`}
               >
                 <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
                   {isCollapsed ? (
@@ -594,9 +682,9 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
                 )}
               </div>
 
-              {/* Stock Rows in this section */}
+              {/* Stock Rows in this section (Hidden when collapsed) */}
               {!isCollapsed && (
-                <div className="divide-y divide-[#1F2233]/25">
+                <div className="divide-y divide-[#1F2233]/25 animate-in fade-in duration-150">
                   {section.stocks.length === 0 ? (
                     <div className="px-6 py-2.5 text-xs text-slate-400 italic text-center">
                       ไม่มีหุ้นในกลุ่มนี้
