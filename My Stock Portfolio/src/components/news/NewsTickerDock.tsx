@@ -58,28 +58,28 @@ const DEFAULT_MAIN_HOLDINGS: StockItem[] = [
   { symbol: 'CRWD', name: 'CrowdStrike Holdings', category: 'Security' },
   { symbol: 'HIMS', name: 'Hims & Hers Health', category: 'Healthcare' },
   { symbol: 'MELI', name: 'MercadoLibre Inc', category: 'E-Commerce' },
+  { symbol: 'META', name: 'Meta Platforms', category: 'Social / AI' },
   { symbol: 'NVDA', name: 'NVIDIA Corp', category: 'Semiconductor' },
   { symbol: 'RBRK', name: 'Rubrik Inc', category: 'AI Security' },
 ];
 
-const DEFAULT_MAIN_TARGETS: StockItem[] = [
-  { symbol: 'META', name: 'Meta Platforms', category: 'Social / AI' },
-];
-
-// 🐯 Tiger 2X Definitions (2 Holdings + 12 Project 2X Targets)
-const DEFAULT_TIGER_HOLDINGS: StockItem[] = [
-  { symbol: 'NVDA', name: 'NVIDIA Corp', category: 'Core' },
-  { symbol: 'SCHG', name: 'Schwab US Large-Cap Growth', category: 'ETF' },
-];
-
-const DEFAULT_TIGER_TARGETS: StockItem[] = DEFAULT_2X_TARGET_STOCKS
-  .filter(t => t.symbol !== 'NVDA') // NVDA is already in holdings
+const DEFAULT_MAIN_TARGETS: StockItem[] = DEFAULT_2X_TARGET_STOCKS
+  .filter(t => !['CRWD', 'MELI', 'NVDA'].includes(t.symbol))
   .map(t => ({
     symbol: t.symbol,
     name: t.name,
     category: t.category,
     targetPercent: t.target_percent
-  }));
+  }))
+  .concat([
+    { symbol: 'GOOGL', name: 'Alphabet Inc', category: 'Compounders', targetPercent: 15 }
+  ]);
+
+// 🐯 Tiger Definitions (พอร์ตลูก: 2 หุ้นถือครองเท่านั้น)
+const DEFAULT_TIGER_HOLDINGS: StockItem[] = [
+  { symbol: 'NVDA', name: 'NVIDIA Corp', category: 'Core' },
+  { symbol: 'SCHG', name: 'Schwab US Large-Cap Growth', category: 'ETF' },
+];
 
 const DEFAULT_WATCHLIST_STOCKS: StockItem[] = [
   { symbol: 'AVGO', name: 'Broadcom Inc' },
@@ -213,9 +213,28 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
     });
   };
 
-  // 🏢 Main Port Sections: Holdings vs Target
+  // 🏢 Main Port Sections: Holdings vs Target · Project 2X
   const mainSections = useMemo<DockSection[]>(() => {
     const dynamicHoldings = getDynamicHoldings('Doctorbank', DEFAULT_MAIN_HOLDINGS);
+    const holdingSyms = new Set(dynamicHoldings.map(h => h.symbol.toUpperCase()));
+
+    // Target stocks: Project 2X unheld targets + Blueprint targets
+    const project2xTargets: StockItem[] = DEFAULT_2X_TARGET_STOCKS
+      .filter(t => !holdingSyms.has(t.symbol.toUpperCase()))
+      .map(t => ({
+        symbol: t.symbol,
+        name: t.name,
+        category: t.category,
+        targetPercent: t.target_percent
+      }));
+
+    const extraBlueprints: StockItem[] = [
+      { symbol: 'GOOGL', name: 'Alphabet Inc', category: 'Compounders', targetPercent: 15 }
+    ].filter(b => !holdingSyms.has(b.symbol.toUpperCase()) && !project2xTargets.some(t => t.symbol === b.symbol));
+
+    const allMainTargets = [...project2xTargets, ...extraBlueprints];
+    const targetsList = allMainTargets.length > 0 ? allMainTargets : DEFAULT_MAIN_TARGETS;
+
     return [
       {
         id: 'main-holdings',
@@ -227,27 +246,18 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
       },
       {
         id: 'main-target',
-        title: 'Target (เป้าหมาย)',
-        icon: <Target className="w-3.5 h-3.5 text-indigo-400 shrink-0" />,
-        stocks: DEFAULT_MAIN_TARGETS,
-        badge: `${DEFAULT_MAIN_TARGETS.length} Target`,
+        title: 'Target · Project 2X',
+        icon: <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />,
+        stocks: targetsList,
+        badge: `${targetsList.length} Targets`,
         isCollapsed: Boolean(collapsedSections['main-target'])
       }
     ];
   }, [transactions, portfolios, collapsedSections]);
 
-  // 🐯 Tiger 2X Sections: Holdings (2 หุ้น) vs Target (Project 2X)
+  // 🐯 Tiger Sections: Holdings ONLY (2 หุ้นถือครอง: NVDA, SCHG)
   const tigerSections = useMemo<DockSection[]>(() => {
     const dynamicTigerHoldings = getDynamicHoldings('Tiger', DEFAULT_TIGER_HOLDINGS);
-    const holdingSyms = new Set(dynamicTigerHoldings.map(h => h.symbol));
-    const remainingTargets = DEFAULT_2X_TARGET_STOCKS
-      .filter(t => !holdingSyms.has(t.symbol))
-      .map(t => ({
-        symbol: t.symbol,
-        name: t.name,
-        category: t.category,
-        targetPercent: t.target_percent
-      }));
 
     return [
       {
@@ -257,14 +267,6 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
         stocks: dynamicTigerHoldings,
         badge: `${dynamicTigerHoldings.length} Positions`,
         isCollapsed: Boolean(collapsedSections['tiger-holdings'])
-      },
-      {
-        id: 'tiger-target',
-        title: 'Target · Project 2X',
-        icon: <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />,
-        stocks: remainingTargets,
-        badge: `${remainingTargets.length} Targets`,
-        isCollapsed: Boolean(collapsedSections['tiger-target'])
       }
     ];
   }, [transactions, portfolios, collapsedSections]);

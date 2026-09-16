@@ -402,7 +402,7 @@ export const NewsIntelPage: React.FC = () => {
               🐯 พอร์ตลูก
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 font-bold border border-orange-500/30">
-              Tiger 2X
+              Tiger
             </span>
           </div>
           <div className="mt-2 text-xl font-black text-white">
