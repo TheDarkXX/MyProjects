@@ -140,12 +140,14 @@ const MainLayout = () => {
             ? clsx("p-0 overflow-hidden flex flex-col", isCompact && "pb-14 sm:pb-16") 
             : isTabletDashboard
               ? "p-2 sm:p-4 overflow-hidden flex flex-col min-h-0"
-              : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
+              : activeTab === 'news'
+                ? "p-2 sm:p-4 md:p-5 overflow-y-auto"
+                : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
         )}>
           <div className={clsx(
             "w-full",
             (isTabletDashboard || activeTab === 'xchart') ? "h-full flex flex-col min-h-0" :
-            isCompact && activeTab !== 'xchart' && "max-w-2xl mx-auto"
+            isCompact && activeTab !== 'xchart' && activeTab !== 'news' && "max-w-2xl mx-auto"
           )}>
             <ErrorBoundary>
               <Suspense fallback={

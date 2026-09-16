@@ -63,14 +63,14 @@ const DEFAULT_MAIN_HOLDINGS: StockItem[] = [
   { symbol: 'RBRK', name: 'Rubrik Inc', category: 'AI Security' },
 ];
 
-const DEFAULT_MAIN_TARGETS: StockItem[] = DEFAULT_2X_TARGET_STOCKS
+const DEFAULT_MAIN_TARGETS: StockItem[] = (DEFAULT_2X_TARGET_STOCKS
   .filter(t => !['CRWD', 'MELI', 'NVDA'].includes(t.symbol))
   .map(t => ({
     symbol: t.symbol,
     name: t.name,
-    category: t.category,
+    category: t.category as string,
     targetPercent: t.target_percent
-  }))
+  })) as StockItem[])
   .concat([
     { symbol: 'GOOGL', name: 'Alphabet Inc', category: 'Compounders', targetPercent: 15 }
   ]);

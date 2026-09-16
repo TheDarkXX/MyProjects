@@ -7,47 +7,12 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { NewsTickerDock } from './NewsTickerDock';
-
-interface NewsItem {
-  id: number;
-  ticker: string;
-  company_name: string;
-  headline: string;
-  headline_th?: string | null;
-  source_name: string;
-  source_url: string;
-  summary_th: string;
-  sentiment: 'bullish' | 'bearish' | 'neutral';
-  reading_priority: 'THE_MUST' | 'GOOD_TO_KNOW' | 'OPTIONAL';
-  priority_reason: string;
-  impact_level: 'routine' | 'significant' | 'moat_breaker';
-  portfolio_tag: 'main' | 'tiger' | 'dual' | 'global';
-  related_portfolio_id: string | null;
-  relevance_score?: number;
-  triage_tags?: string | string[];
-  is_read: number;
-  created_at: string;
-}
-
-interface NewsStats {
-  theMustUnread: number;
-  goodToKnowUnread: number;
-  mainUnread: number;
-  tigerUnread: number;
-  totalUnread: number;
-  totalArticles: number;
-}
-
-interface TimingStats {
-  totalArticles: number;
-  byDay: { day: string; count: number }[];
-  byHour: { hour: number; count: number }[];
-}
-
-interface TriageStats {
-  byAction: { action: string; count: number; avgScore: number }[];
-  recentTriage: any[];
-}
+import { NewsToolbar } from './NewsToolbar';
+import { NewsRowList } from './views/NewsRowList';
+import { NewsCardMini } from './views/NewsCardMini';
+import { NewsCardBig } from './views/NewsCardBig';
+import { NewsCardFull } from './views/NewsCardFull';
+import { NewsItem, NewsStats, TimingStats, TriageStats, ViewMode, SortKey, SortOrder } from './types';
 
 export const NewsIntelPage: React.FC = () => {
   const [items, setItems] = useState<NewsItem[]>([]);
@@ -76,6 +41,79 @@ export const NewsIntelPage: React.FC = () => {
   const [tickerStats, setTickerStats] = useState<Record<string, any>>({});
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [showMobileDock, setShowMobileDock] = useState(false);
+
+  // View & Sorting Modes with localStorage persistence
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    return (localStorage.getItem('news_intel_view_mode') as ViewMode) || 'list';
+  });
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    return (localStorage.getItem('news_intel_sort_by') as SortKey) || 'date';
+  });
+  const [sortOrder, setSortOrder] = useState<SortOrder>(() => {
+    return (localStorage.getItem('news_intel_sort_order') as SortOrder) || 'desc';
+  });
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('news_intel_view_mode', mode);
+  };
+
+  const handleSortKeyChange = (key: SortKey) => {
+    setSortKey(key);
+    localStorage.setItem('news_intel_sort_by', key);
+  };
+
+  const handleToggleSortOrder = () => {
+    const next = sortOrder === 'desc' ? 'asc' : 'desc';
+    setSortOrder(next);
+    localStorage.setItem('news_intel_sort_order', next);
+  };
+
+  // Client-side Smart Sorting Engine
+  const sortedItems = useMemo(() => {
+    const list = [...items];
+    const priorityWeights: Record<string, number> = {
+      THE_MUST: 3,
+      GOOD_TO_KNOW: 2,
+      OPTIONAL: 1,
+    };
+    const sentimentWeights: Record<string, number> = {
+      bullish: 3,
+      neutral: 2,
+      bearish: 1,
+    };
+
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'date') {
+        cmp = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else if (sortKey === 'ticker') {
+        cmp = a.ticker.localeCompare(b.ticker);
+      } else if (sortKey === 'priority') {
+        const pA = priorityWeights[a.reading_priority] || 0;
+        const pB = priorityWeights[b.reading_priority] || 0;
+        cmp = pB - pA;
+      } else if (sortKey === 'score') {
+        const sA = a.relevance_score || 0;
+        const sB = b.relevance_score || 0;
+        cmp = sB - sA;
+      } else if (sortKey === 'sentiment') {
+        const stA = sentimentWeights[a.sentiment] || 0;
+        const stB = sentimentWeights[b.sentiment] || 0;
+        cmp = stB - stA;
+      }
+
+      if (sortOrder === 'asc') {
+        if (sortKey === 'ticker') return cmp;
+        return -cmp;
+      } else {
+        if (sortKey === 'ticker') return -cmp;
+        return cmp;
+      }
+    });
+
+    return list;
+  }, [items, sortKey, sortOrder]);
 
   const fetchNews = useCallback(async () => {
     try {
@@ -235,7 +273,7 @@ export const NewsIntelPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6 max-w-[1680px] mx-auto pb-12 items-start">
+    <div className="flex flex-col xl:flex-row gap-5 w-full pb-12 items-start">
       {/* Left Column: Main News Feed */}
       <div className="flex-1 min-w-0 space-y-6 w-full">
         {/* 1. Header & Title Bar */}
@@ -550,258 +588,94 @@ export const NewsIntelPage: React.FC = () => {
         </div>
       )}
 
+      {/* View Switcher & Smart Sorting Toolbar */}
+      <NewsToolbar
+        viewMode={viewMode}
+        onChangeViewMode={handleViewModeChange}
+        sortKey={sortKey}
+        onChangeSortKey={handleSortKeyChange}
+        sortOrder={sortOrder}
+        onToggleSortOrder={handleToggleSortOrder}
+        totalCount={sortedItems.length}
+      />
+
       {/* 4. News Feed Card Stream */}
       {loading ? (
         <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-16 flex flex-col items-center justify-center text-center">
           <div className="w-8 h-8 border-3 border-[#823AFD] border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-xs text-slate-400 mt-4 font-semibold">กำลังดึงข้อมูลข่าวสารอัจฉริยะ...</span>
+          <span className="text-xs text-slate-300 mt-4 font-semibold">กำลังดึงข้อมูลข่าวสารอัจฉริยะ...</span>
         </div>
-      ) : items.length === 0 ? (
+      ) : sortedItems.length === 0 ? (
         <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-16 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-slate-800/60 border border-slate-700 flex items-center justify-center mx-auto text-xl">
             ☕
           </div>
           <h3 className="text-base font-bold text-white font-heading">ไม่มีข่าวที่ตรงกับเงื่อนไขในขณะนี้</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
+          <p className="text-xs text-slate-300 max-w-md mx-auto">
             เคลียร์หมดจด สบายใจได้! ไม่มีข่าวระดับ The Must ที่ยังค้างอยู่ หรือกดปุ่ม "Check Radar Now" เพื่อตรวจจับหัวข้อใหม่สดๆ จาก Beehiiv
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {items.map((item) => {
-            const isMust = item.reading_priority === 'THE_MUST';
-            const isGood = item.reading_priority === 'GOOD_TO_KNOW';
-            const isRead = item.is_read === 1;
-
-            return (
-              <div
-                key={item.id}
-                className={clsx(
-                  "rounded-2xl border transition-all relative overflow-hidden",
-                  isMust
-                    ? isRead
-                      ? "bg-[#111418] border-rose-500/30 opacity-80 hover:opacity-100"
-                      : "bg-[#16121D] border-rose-500 shadow-[0_4px_24px_rgba(244,63,94,0.18)]"
-                    : isGood
-                      ? isRead
-                        ? "bg-[#111418] border-[#2A2E45] opacity-80 hover:opacity-100"
-                        : "bg-[#111418] border-amber-500/30 hover:border-amber-500/60"
-                      : "bg-[#0D1017] border-[#1F2233] opacity-75 hover:opacity-100"
-                )}
-              >
-                {/* Top Accent Stripe for The Must */}
-                {isMust && !isRead && (
-                  <div className="h-1 w-full bg-gradient-to-r from-rose-500 via-orange-500 to-[#FC2D79]" />
-                )}
-
-                <div className="p-5 sm:p-6 space-y-4">
-                  {/* Card Header: Badges & Ticker */}
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Priority Badge */}
-                      {isMust ? (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/50 flex items-center gap-1 animate-pulse">
-                          <Flame className="w-3.5 h-3.5 text-rose-400" /> THE MUST
-                        </span>
-                      ) : isGood ? (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-400" /> GOOD TO KNOW
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
-                          ☕ OPTIONAL
-                        </span>
-                      )}
-
-                      {/* Portfolio Tag Badge */}
-                      {item.portfolio_tag === 'main' && (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                          🏢 พอร์ตหลัก
-                        </span>
-                      )}
-                      {item.portfolio_tag === 'tiger' && (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-orange-500/20 text-orange-300 border border-orange-500/30">
-                          🐯 พอร์ตลูก
-                        </span>
-                      )}
-                      {item.portfolio_tag === 'dual' && (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                          ⚡ มีใน 2 พอร์ต
-                        </span>
-                      )}
-                      {item.portfolio_tag === 'global' && (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800/80 text-slate-400 border border-slate-700">
-                          🌐 Watchlist
-                        </span>
-                      )}
-
-                      {/* Ticker Pill / Interactive Hashtag */}
-                      <button
-                        onClick={() => {
-                          if (selectedTicker === item.ticker) {
-                            setSelectedTicker(null);
-                          } else {
-                            setSelectedTicker(item.ticker);
-                            setSelectedTag(null);
-                          }
-                        }}
-                        className={clsx(
-                          "px-2.5 py-1 rounded-lg text-xs font-mono font-black border transition-all cursor-pointer flex items-center gap-1",
-                          selectedTicker === item.ticker
-                            ? "bg-[#823AFD] text-white border-white/30 shadow-[0_0_12px_rgba(130,58,253,0.5)] ring-1 ring-white"
-                            : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-white border-white/15"
-                        )}
-                        title={`คลิกเพื่อกรองข่าวเฉพาะหุ้น #${item.ticker}`}
-                      >
-                        #{item.ticker}
-                      </button>
-
-                      {/* Sentiment */}
-                      <span className={clsx(
-                        "px-2.5 py-0.5 rounded-full text-[11px] font-bold",
-                        item.sentiment === 'bullish' && "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20",
-                        item.sentiment === 'bearish' && "text-rose-400 bg-rose-500/10 border border-rose-500/20",
-                        item.sentiment === 'neutral' && "text-slate-400 bg-slate-800 border border-slate-700"
-                      )}>
-                        {item.sentiment === 'bullish' ? '🟢 เชิงบวก' : item.sentiment === 'bearish' ? '🔴 เชิงลบ' : '⚪ เป็นกลาง'}
-                      </span>
-
-                      {/* Triage Relevance Score */}
-                      {item.relevance_score !== undefined && item.relevance_score > 0 && (
-                        <span className={clsx(
-                          "px-2 py-0.5 rounded-lg text-[11px] font-mono font-black flex items-center gap-1 border",
-                          item.relevance_score >= 80 
-                            ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]" 
-                            : item.relevance_score >= 60 
-                              ? "bg-[#823AFD]/20 text-[#C4B5FD] border-[#823AFD]/40" 
-                              : "bg-slate-800 text-slate-400 border-slate-700"
-                        )}>
-                          <Zap className="w-3 h-3" /> {item.relevance_score} pts
-                        </span>
-                      )}
-
-                      {/* Triage Tags (Interactive Hashtags) */}
-                      {(() => {
-                        let tags: string[] = [];
-                        if (Array.isArray(item.triage_tags)) tags = item.triage_tags;
-                        else if (typeof item.triage_tags === 'string') {
-                          try { tags = JSON.parse(item.triage_tags); } catch {}
-                        }
-                        return tags.map((t, idx) => {
-                          const isVip = t.startsWith('VIP');
-                          const isEco = t.startsWith('ECO');
-                          const isMacro = t === 'MACRO' || t === 'MARKET_SUMMARY';
-                          const isCatalyst = t === 'CATALYST';
-                          const isTagActive = selectedTag === t;
-                          return (
-                            <button 
-                              key={idx}
-                              onClick={() => {
-                                if (selectedTag === t) {
-                                  setSelectedTag(null);
-                                } else {
-                                  setSelectedTag(t);
-                                  setSelectedTicker(null);
-                                }
-                              }}
-                              className={clsx(
-                                "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-0.5",
-                                isTagActive
-                                  ? "bg-[#823AFD] text-white border-white/30 shadow-[0_0_10px_rgba(130,58,253,0.4)]"
-                                  : clsx(
-                                      isVip && "bg-rose-500/15 text-rose-300 border-rose-500/30 hover:bg-rose-500/25",
-                                      isEco && "bg-blue-500/15 text-blue-300 border-blue-500/30 hover:bg-blue-500/25",
-                                      isMacro && "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25",
-                                      isCatalyst && "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25",
-                                      !isVip && !isEco && !isMacro && !isCatalyst && "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
-                                    )
-                              )}
-                              title={`คลิกเพื่อกรองข่าวตามแท็ก #${t}`}
-                            >
-                              <span>#{t}</span>
-                            </button>
-                          );
-                        });
-                      })()}
-                    </div>
-
-                    {/* Timestamp & Read Toggle */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-slate-500 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" />
-                        {new Date(item.created_at).toLocaleString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <button
-                        onClick={() => handleMarkAsRead(item.id, item.is_read)}
-                        className={clsx(
-                          "px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-all",
-                          isRead
-                            ? "bg-slate-800/50 text-slate-500 border-slate-700 hover:text-slate-300"
-                            : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25"
-                        )}
-                        title={isRead ? "คลิกเพื่อเปลี่ยนเป็นยังไม่อ่าน" : "คลิกเพื่อทำเครื่องหมายว่าอ่านแล้ว"}
-                      >
-                        {isRead ? <EyeOff className="w-3 h-3" /> : <Check className="w-3 h-3" />}
-                        {isRead ? 'อ่านแล้ว' : 'Mark read'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Headline Title: Primary Catchy Thai or original */}
-                  <div className="space-y-1">
-                    <h2 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight">
-                      {item.headline_th || item.headline}
-                    </h2>
-                    {item.headline_th && item.headline_th !== item.headline && (
-                      <p className="text-[13px] text-slate-400 font-normal italic leading-snug flex items-center gap-1.5 line-clamp-1">
-                        <span className="shrink-0 text-slate-400 font-medium not-italic">ต้นฉบับ:</span>
-                        <span className="truncate">{item.headline}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Priority Reason Banner (if present) */}
-                  {item.priority_reason && (
-                    <div className={clsx(
-                      "text-xs px-3.5 py-2 rounded-xl flex items-start gap-2 border",
-                      isMust
-                        ? "bg-rose-950/30 border-rose-500/30 text-rose-200"
-                        : "bg-[#1A1D2D] border-[#2A2E45] text-slate-300"
-                    )}>
-                      <span className="font-bold shrink-0">💡 เหตุผลที่คัดเกรด:</span>
-                      <span>{item.priority_reason}</span>
-                    </div>
-                  )}
-
-                  {/* AI Summary Box (3 bullets Thai) */}
-                  <div className="bg-[#0A0C12] border border-[#1F2233] rounded-xl p-4 space-y-2">
-                    <div className="text-[11px] font-bold text-[#823AFD] uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      AI Synthesized Summary (GPT-5.6 Terra)
-                    </div>
-                    <div className="text-xs text-slate-200 leading-relaxed font-body whitespace-pre-line">
-                      {item.summary_th}
-                    </div>
-                  </div>
-
-                  {/* Card Footer: Source Link */}
-                  <div className="flex items-center justify-between pt-1 border-t border-white/5 text-xs text-slate-500">
-                    <span>แหล่งอ้างอิง: <span className="text-slate-400 font-medium">{item.source_name}</span></span>
-                    {item.source_url && (
-                      <a
-                        href={item.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#823AFD] hover:text-[#A78BFA] font-bold flex items-center gap-1 transition-colors"
-                      >
-                        เปิดอ่านต้นฉบับ <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="w-full transition-all duration-200">
+          {viewMode === 'list' && (
+            <NewsRowList
+              items={sortedItems}
+              selectedTicker={selectedTicker}
+              selectedTag={selectedTag}
+              onSelectTicker={(t) => {
+                setSelectedTicker(prev => prev === t ? null : t);
+                setSelectedTag(null);
+              }}
+              onSelectTag={(t) => {
+                setSelectedTag(prev => prev === t ? null : t);
+                setSelectedTicker(null);
+              }}
+              onToggleRead={handleMarkAsRead}
+            />
+          )}
+          {viewMode === 'mini_card' && (
+            <NewsCardMini
+              items={sortedItems}
+              selectedTicker={selectedTicker}
+              onSelectTicker={(t) => {
+                setSelectedTicker(prev => prev === t ? null : t);
+                setSelectedTag(null);
+              }}
+              onToggleRead={handleMarkAsRead}
+            />
+          )}
+          {viewMode === 'big_card' && (
+            <NewsCardBig
+              items={sortedItems}
+              selectedTicker={selectedTicker}
+              selectedTag={selectedTag}
+              onSelectTicker={(t) => {
+                setSelectedTicker(prev => prev === t ? null : t);
+                setSelectedTag(null);
+              }}
+              onSelectTag={(t) => {
+                setSelectedTag(prev => prev === t ? null : t);
+                setSelectedTicker(null);
+              }}
+              onToggleRead={handleMarkAsRead}
+            />
+          )}
+          {viewMode === 'full' && (
+            <NewsCardFull
+              items={sortedItems}
+              selectedTicker={selectedTicker}
+              selectedTag={selectedTag}
+              onSelectTicker={(t) => {
+                setSelectedTicker(prev => prev === t ? null : t);
+                setSelectedTag(null);
+              }}
+              onSelectTag={(t) => {
+                setSelectedTag(prev => prev === t ? null : t);
+                setSelectedTicker(null);
+              }}
+              onToggleRead={handleMarkAsRead}
+            />
+          )}
         </div>
       )}
       </div>
