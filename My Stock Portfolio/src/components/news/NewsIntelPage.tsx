@@ -13,6 +13,7 @@ import { NewsTextList } from './views/NewsTextList';
 import { NewsCardMini } from './views/NewsCardMini';
 import { NewsCardBig } from './views/NewsCardBig';
 import { NewsCardFull } from './views/NewsCardFull';
+import { NewsDetailModal } from './NewsDetailModal';
 import { NewsItem, NewsStats, TimingStats, TriageStats, ViewMode, SortKey, SortOrder } from './types';
 
 export const NewsIntelPage: React.FC = () => {
@@ -31,6 +32,7 @@ export const NewsIntelPage: React.FC = () => {
   const [showTimingModal, setShowTimingModal] = useState(false);
   const [showTriageModal, setShowTriageModal] = useState(false);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
+  const [selectedDetailItem, setSelectedDetailItem] = useState<NewsItem | null>(null);
 
   // Filters
   const [selectedPortfolio, setSelectedPortfolio] = useState<'all' | 'main' | 'tiger' | 'global'>('all');
@@ -743,6 +745,7 @@ export const NewsIntelPage: React.FC = () => {
                 setSelectedTicker(null);
               }}
               onToggleRead={handleMarkAsRead}
+              onOpenDetail={setSelectedDetailItem}
             />
           )}
           {viewMode === 'text' && (
@@ -759,6 +762,7 @@ export const NewsIntelPage: React.FC = () => {
                 setSelectedTicker(null);
               }}
               onToggleRead={handleMarkAsRead}
+              onOpenDetail={setSelectedDetailItem}
             />
           )}
           {viewMode === 'mini_card' && (
@@ -770,6 +774,7 @@ export const NewsIntelPage: React.FC = () => {
                 setSelectedTag(null);
               }}
               onToggleRead={handleMarkAsRead}
+              onOpenDetail={setSelectedDetailItem}
             />
           )}
           {viewMode === 'big_card' && (
@@ -786,6 +791,7 @@ export const NewsIntelPage: React.FC = () => {
                 setSelectedTicker(null);
               }}
               onToggleRead={handleMarkAsRead}
+              onOpenDetail={setSelectedDetailItem}
             />
           )}
           {viewMode === 'full' && (
@@ -802,6 +808,7 @@ export const NewsIntelPage: React.FC = () => {
                 setSelectedTicker(null);
               }}
               onToggleRead={handleMarkAsRead}
+              onOpenDetail={setSelectedDetailItem}
             />
           )}
         </div>
@@ -1150,6 +1157,23 @@ export const NewsIntelPage: React.FC = () => {
           </div>
         </div>
       )}
+      {/* 5. Master-Detail Executive Reader Modal */}
+      <NewsDetailModal
+        isOpen={selectedDetailItem !== null}
+        onClose={() => setSelectedDetailItem(null)}
+        activeItem={selectedDetailItem}
+        items={sortedItems}
+        onSelectItem={setSelectedDetailItem}
+        onToggleRead={handleMarkAsRead}
+        onSelectTicker={(t) => {
+          setSelectedTicker(prev => prev === t ? null : t);
+          setSelectedTag(null);
+        }}
+        onSelectTag={(t) => {
+          setSelectedTag(prev => prev === t ? null : t);
+          setSelectedTicker(null);
+        }}
+      />
     </div>
   );
 };

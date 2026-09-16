@@ -10,6 +10,7 @@ interface NewsRowListProps {
   onSelectTicker: (ticker: string) => void;
   onSelectTag: (tag: string) => void;
   onToggleRead: (id: number, currentRead: number) => void;
+  onOpenDetail?: (item: NewsItem) => void;
 }
 
 export const NewsRowList: React.FC<NewsRowListProps> = ({
@@ -19,6 +20,7 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
   onSelectTicker,
   onSelectTag,
   onToggleRead,
+  onOpenDetail,
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 w-full">
@@ -31,8 +33,9 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
         return (
           <div
             key={item.id}
+            onClick={() => onOpenDetail?.(item)}
             className={clsx(
-              "rounded-xl border transition-all duration-150 relative overflow-hidden flex flex-col justify-between p-2.5 sm:p-3 group",
+              "rounded-xl border transition-all duration-150 relative overflow-hidden flex flex-col justify-between p-2.5 sm:p-3 group cursor-pointer hover:border-[#823AFD]/50",
               isMust
                 ? isRead
                   ? "bg-[#111418] border-rose-500/30 opacity-85 hover:opacity-100"
@@ -57,7 +60,10 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
                 <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                   {/* Ticker Pill */}
                   <button
-                    onClick={() => onSelectTicker(item.ticker)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectTicker(item.ticker);
+                    }}
                     className={clsx(
                       "px-2 py-0.5 rounded-md text-xs font-mono font-normal border transition-all cursor-pointer",
                       selectedTicker === item.ticker
@@ -120,7 +126,10 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
 
                 {/* Mark Read Button */}
                 <button
-                  onClick={() => onToggleRead(item.id, item.is_read)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleRead(item.id, item.is_read);
+                  }}
                   className={clsx(
                     "p-1 rounded-md text-xs border transition-all cursor-pointer shrink-0",
                     isRead
@@ -157,6 +166,7 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
                     href={item.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="text-[#A78BFA] hover:text-white"
                     title="เปิดอ่านต้นฉบับ"
                   >

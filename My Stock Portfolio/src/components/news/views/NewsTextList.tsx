@@ -10,6 +10,7 @@ interface NewsTextListProps {
   onSelectTicker: (ticker: string) => void;
   onSelectTag: (tag: string) => void;
   onToggleRead: (id: number, currentRead: number) => void;
+  onOpenDetail?: (item: NewsItem) => void;
 }
 
 export const NewsTextList: React.FC<NewsTextListProps> = ({
@@ -19,6 +20,7 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
   onSelectTicker,
   onSelectTag,
   onToggleRead,
+  onOpenDetail,
 }) => {
   return (
     <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl divide-y divide-[#1F2233] overflow-hidden w-full shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
@@ -37,8 +39,9 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
         return (
           <div
             key={item.id}
+            onClick={() => onOpenDetail?.(item)}
             className={clsx(
-              "p-3 sm:px-4 sm:py-3 transition-all duration-150 flex flex-col md:flex-row md:items-center justify-between gap-2.5 group hover:bg-[#161A24]",
+              "p-3 sm:px-4 sm:py-3 transition-all duration-150 flex flex-col md:flex-row md:items-center justify-between gap-2.5 group hover:bg-[#161A24] cursor-pointer",
               isRead ? "opacity-75" : "opacity-100",
               isMust && !isRead && "bg-rose-950/10 border-l-2 border-l-rose-500"
             )}
@@ -58,7 +61,10 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
 
               {/* Ticker Badge */}
               <button
-                onClick={() => onSelectTicker(item.ticker)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectTicker(item.ticker);
+                }}
                 className={clsx(
                   "px-2 py-0.5 rounded-md text-xs font-mono font-normal border transition-all cursor-pointer shrink-0",
                   selectedTicker === item.ticker
@@ -107,7 +113,10 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
                   return (
                     <button
                       key={idx}
-                      onClick={() => onSelectTag(t)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectTag(t);
+                      }}
                       className={clsx(
                         "px-1.5 py-0.5 rounded text-xs font-bold uppercase transition-all cursor-pointer border",
                         isTagActive
@@ -145,6 +154,7 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
                   href={item.source_url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   className="text-[#A78BFA] hover:text-white transition-colors"
                   title="เปิดอ่านต้นฉบับ"
                 >
@@ -153,7 +163,10 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
               )}
 
               <button
-                onClick={() => onToggleRead(item.id, item.is_read)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleRead(item.id, item.is_read);
+                }}
                 className={clsx(
                   "px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-all cursor-pointer",
                   isRead

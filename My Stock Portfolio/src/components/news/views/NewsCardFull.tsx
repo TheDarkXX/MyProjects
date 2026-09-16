@@ -10,6 +10,7 @@ interface NewsCardFullProps {
   onSelectTicker: (ticker: string) => void;
   onSelectTag: (tag: string) => void;
   onToggleRead: (id: number, currentRead: number) => void;
+  onOpenDetail?: (item: NewsItem) => void;
 }
 
 export const NewsCardFull: React.FC<NewsCardFullProps> = ({
@@ -19,6 +20,7 @@ export const NewsCardFull: React.FC<NewsCardFullProps> = ({
   onSelectTicker,
   onSelectTag,
   onToggleRead,
+  onOpenDetail,
 }) => {
   return (
     <div className="space-y-4 w-full">
@@ -194,8 +196,11 @@ export const NewsCardFull: React.FC<NewsCardFullProps> = ({
               </div>
 
               {/* Headline Title */}
-              <div className="space-y-1">
-                <h2 className="text-base sm:text-lg font-normal text-slate-300 leading-snug tracking-normal">
+              <div 
+                onClick={() => onOpenDetail?.(item)} 
+                className="space-y-1 cursor-pointer group/title"
+              >
+                <h2 className="text-base sm:text-lg font-normal text-slate-300 leading-snug tracking-normal group-hover/title:text-white transition-colors">
                   {item.headline_th || item.headline}
                 </h2>
                 {item.headline_th && item.headline_th !== item.headline && (
