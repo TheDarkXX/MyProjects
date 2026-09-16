@@ -28,6 +28,8 @@ const KNOWN_TICKER_MAP = {
   'nvda': 'NVDA',
   'schwab': 'SCHG',
   'schg': 'SCHG',
+  'qqqm': 'QQQM',
+  'qqq': 'QQQM',
   'apple': 'AAPL',
   'aapl': 'AAPL',
   'tesla': 'TSLA',
@@ -68,7 +70,8 @@ export const ECOSYSTEM_MAP = {
   'HIMS': ['AMZN', 'CVS', 'WBA', 'TDOC', 'LLY', 'NVO'],
   'MELI': ['AMZN', 'SE', 'BABA', 'NU', 'CPNG', 'STNE'],
   'META': ['GOOGL', 'SNAP', 'PINS', 'MSFT', 'AAPL', 'AMZN', 'TTD', 'RDDT'],
-  'SCHG': ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'META', 'GOOGL', 'GOOG', 'AVGO', 'TSLA', 'LLY']
+  'SCHG': ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'META', 'GOOGL', 'GOOG', 'AVGO', 'TSLA', 'LLY'],
+  'QQQM': ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'META', 'GOOGL', 'GOOG', 'AVGO', 'TSLA', 'COST']
 };
 
 export const MACRO_KEYWORDS = [

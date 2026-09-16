@@ -75,10 +75,17 @@ const DEFAULT_MAIN_TARGETS: StockItem[] = DEFAULT_2X_TARGET_STOCKS
     { symbol: 'GOOGL', name: 'Alphabet Inc', category: 'Compounders', targetPercent: 15 }
   ]);
 
-// 🐯 Tiger Definitions (พอร์ตลูก: 2 หุ้นถือครองเท่านั้น)
+// 🐯 Tiger Definitions (พอร์ตลูก: 2 หุ้นถือครอง + แผนเป้าหมาย 5 จตุรเทพ DCA)
 const DEFAULT_TIGER_HOLDINGS: StockItem[] = [
   { symbol: 'NVDA', name: 'NVIDIA Corp', category: 'Core' },
   { symbol: 'SCHG', name: 'Schwab US Large-Cap Growth', category: 'ETF' },
+];
+
+const DEFAULT_TIGER_TARGETS: StockItem[] = [
+  { symbol: 'TSM', name: 'Taiwan Semiconductor', category: 'Foundry 20%', targetPercent: 20 },
+  { symbol: 'AVGO', name: 'Broadcom Inc', category: 'ASIC/Net 15%', targetPercent: 15 },
+  { symbol: 'VRT', name: 'Vertiv Holdings', category: 'Cooling 15%', targetPercent: 15 },
+  { symbol: 'QQQM', name: 'Invesco NASDAQ 100 ETF', category: 'Index 30%', targetPercent: 30 },
 ];
 
 const DEFAULT_WATCHLIST_STOCKS: StockItem[] = [
@@ -255,9 +262,13 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
     ];
   }, [transactions, portfolios, collapsedSections]);
 
-  // 🐯 Tiger Sections: Holdings ONLY (2 หุ้นถือครอง: NVDA, SCHG)
+  // 🐯 Tiger Sections: Holdings (NVDA, SCHG) + Target (5 จตุรเทพ DCA)
   const tigerSections = useMemo<DockSection[]>(() => {
     const dynamicTigerHoldings = getDynamicHoldings('Tiger', DEFAULT_TIGER_HOLDINGS);
+    const holdingSyms = new Set(dynamicTigerHoldings.map(h => h.symbol.toUpperCase()));
+
+    // Target stocks from 5-Pillar Architecture (filter out any already held)
+    const targets = DEFAULT_TIGER_TARGETS.filter(t => !holdingSyms.has(t.symbol.toUpperCase()));
 
     return [
       {
@@ -267,6 +278,14 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
         stocks: dynamicTigerHoldings,
         badge: `${dynamicTigerHoldings.length} Positions`,
         isCollapsed: Boolean(collapsedSections['tiger-holdings'])
+      },
+      {
+        id: 'tiger-target',
+        title: 'Target · 5 จตุรเทพ DCA',
+        icon: <Target className="w-3.5 h-3.5 text-orange-400 shrink-0" />,
+        stocks: targets,
+        badge: `${targets.length} Targets`,
+        isCollapsed: Boolean(collapsedSections['tiger-target'])
       }
     ];
   }, [transactions, portfolios, collapsedSections]);
