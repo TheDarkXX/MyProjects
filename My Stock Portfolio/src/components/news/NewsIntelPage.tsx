@@ -2,9 +2,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Flame, Sparkles, Filter, CheckCheck, RefreshCw, ExternalLink, 
   Clock, ShieldAlert, BookOpen, Layers, Search, Check, ChevronDown, 
-  ChevronUp, BarChart2, Eye, EyeOff, Target, Star, Trash2, Plus, Zap
+  ChevronUp, BarChart2, Eye, EyeOff, Target, Star, Trash2, Plus, Zap,
+  Hash, X
 } from 'lucide-react';
 import clsx from 'clsx';
+import { NewsTickerDock } from './NewsTickerDock';
 
 interface NewsItem {
   id: number;
@@ -68,6 +70,11 @@ export const NewsIntelPage: React.FC = () => {
   const [selectedPriority, setSelectedPriority] = useState<'all' | 'the_must' | 'focus' | 'good_to_know' | 'optional'>('focus');
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [tickerStats, setTickerStats] = useState<Record<string, any>>({});
+  const [dockCollapsed, setDockCollapsed] = useState(false);
+  const [showMobileDock, setShowMobileDock] = useState(false);
 
   const fetchNews = useCallback(async () => {
     try {
@@ -77,6 +84,8 @@ export const NewsIntelPage: React.FC = () => {
       if (selectedPriority !== 'all') params.append('priority', selectedPriority);
       if (unreadOnly) params.append('unread_only', 'true');
       if (searchQuery.trim()) params.append('ticker', searchQuery.trim().toUpperCase());
+      if (selectedTicker) params.append('ticker', selectedTicker);
+      if (selectedTag) params.append('tag', selectedTag);
 
       const res = await fetch(`/api/news?${params.toString()}`);
       if (res.ok) {
@@ -88,7 +97,7 @@ export const NewsIntelPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedPortfolio, selectedPriority, unreadOnly, searchQuery]);
+  }, [selectedPortfolio, selectedPriority, unreadOnly, searchQuery, selectedTicker, selectedTag]);
 
   const fetchStats = async () => {
     try {
@@ -99,6 +108,18 @@ export const NewsIntelPage: React.FC = () => {
       }
     } catch (err) {
       console.error('[NewsIntel] Stats fetch error:', err);
+    }
+  };
+
+  const fetchTickerStats = async () => {
+    try {
+      const res = await fetch('/api/news/ticker-stats');
+      if (res.ok) {
+        const json = await res.json();
+        setTickerStats(json.data || {});
+      }
+    } catch (err) {
+      console.error('[NewsIntel] Ticker stats fetch error:', err);
     }
   };
 
@@ -171,6 +192,7 @@ export const NewsIntelPage: React.FC = () => {
   useEffect(() => {
     fetchNews();
     fetchStats();
+    fetchTickerStats();
   }, [fetchNews]);
 
   const handleMarkAsRead = async (id: number, currentRead: number) => {
@@ -179,6 +201,7 @@ export const NewsIntelPage: React.FC = () => {
       setItems(prev => prev.map(item => item.id === id ? { ...item, is_read: currentRead ? 0 : 1 } : item));
       await fetch(`/api/news/${id}/read`, { method: 'POST' });
       fetchStats();
+      fetchTickerStats();
     } catch (err) {
       console.error('Failed to toggle read:', err);
     }
@@ -190,6 +213,7 @@ export const NewsIntelPage: React.FC = () => {
       await fetch(`/api/news/mark-all-read${p}`, { method: 'POST' });
       setItems(prev => prev.map(item => ({ ...item, is_read: 1 })));
       fetchStats();
+      fetchTickerStats();
     } catch (err) {
       console.error('Failed to mark all read:', err);
     }
@@ -200,7 +224,7 @@ export const NewsIntelPage: React.FC = () => {
       setScanning(true);
       const res = await fetch('/api/news/scan', { method: 'POST' });
       if (res.ok) {
-        await Promise.all([fetchNews(), fetchStats(), fetchTiming()]);
+        await Promise.all([fetchNews(), fetchStats(), fetchTiming(), fetchTickerStats()]);
       }
     } catch (err) {
       console.error('Scan failed:', err);
@@ -210,8 +234,10 @@ export const NewsIntelPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* 1. Header & Title Bar */}
+    <div className="flex flex-col xl:flex-row gap-6 max-w-[1680px] mx-auto pb-12 items-start">
+      {/* Left Column: Main News Feed */}
+      <div className="flex-1 min-w-0 space-y-6 w-full">
+        {/* 1. Header & Title Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#111418] border border-[#2A2E45] rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
         <div>
           <div className="flex items-center gap-3">
@@ -234,6 +260,15 @@ export const NewsIntelPage: React.FC = () => {
 
         {/* Quick Action Buttons */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={() => setShowMobileDock(true)}
+            className="xl:hidden px-3.5 py-2 rounded-xl bg-[#823AFD]/20 hover:bg-[#823AFD]/30 text-[#C4B5FD] border border-[#823AFD]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            title="เปิดเมนูกรองหุ้น 3 พอร์ต"
+          >
+            <Hash className="w-4 h-4 text-[#FC2D79]" />
+            หุ้น & พอร์ต (3 Tabs)
+          </button>
+
           <button
             onClick={() => { fetchTriageData(); setShowTriageModal(true); }}
             className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-[#94A3B8] hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all"
@@ -483,6 +518,37 @@ export const NewsIntelPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Active Hashtag / Ticker Filter Banner */}
+      {(selectedTicker || selectedTag) && (
+        <div className="bg-[#16121D] border border-[#823AFD]/50 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-[0_4px_24px_rgba(130,58,253,0.2)] animate-fade-in">
+          <div className="flex items-center gap-3">
+            <span className="w-8 h-8 rounded-xl bg-[#823AFD]/20 text-[#C4B5FD] flex items-center justify-center font-bold text-sm shrink-0 border border-[#823AFD]/40">
+              #
+            </span>
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-2 font-heading">
+                กำลังกรองเฉพาะ:
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#823AFD] text-white font-mono font-black text-xs shadow-[0_0_12px_rgba(130,58,253,0.5)]">
+                  {selectedTicker ? `#${selectedTicker}` : `#${selectedTag}`}
+                </span>
+                <span className="text-[11px] text-slate-400 font-normal">
+                  (พบ {items.length} ข่าว)
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                แสดงเฉพาะบทความที่มีสัญญาณเกี่ยวกับตัวนี้ • คลิกปุ่มขวามือเพื่อดูข่าวทั้งหมด
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setSelectedTicker(null); setSelectedTag(null); }}
+            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 border border-white/10"
+          >
+            <X className="w-3.5 h-3.5" /> ล้างตัวกรอง
+          </button>
+        </div>
+      )}
+
       {/* 4. News Feed Card Stream */}
       {loading ? (
         <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl p-16 flex flex-col items-center justify-center text-center">
@@ -568,10 +634,26 @@ export const NewsIntelPage: React.FC = () => {
                         </span>
                       )}
 
-                      {/* Ticker Pill */}
-                      <span className="px-3 py-1 rounded-lg text-xs font-mono font-black bg-white/10 text-white border border-white/15">
-                        {item.ticker}
-                      </span>
+                      {/* Ticker Pill / Interactive Hashtag */}
+                      <button
+                        onClick={() => {
+                          if (selectedTicker === item.ticker) {
+                            setSelectedTicker(null);
+                          } else {
+                            setSelectedTicker(item.ticker);
+                            setSelectedTag(null);
+                          }
+                        }}
+                        className={clsx(
+                          "px-2.5 py-1 rounded-lg text-xs font-mono font-black border transition-all cursor-pointer flex items-center gap-1",
+                          selectedTicker === item.ticker
+                            ? "bg-[#823AFD] text-white border-white/30 shadow-[0_0_12px_rgba(130,58,253,0.5)] ring-1 ring-white"
+                            : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-white border-white/15"
+                        )}
+                        title={`คลิกเพื่อกรองข่าวเฉพาะหุ้น #${item.ticker}`}
+                      >
+                        #{item.ticker}
+                      </button>
 
                       {/* Sentiment */}
                       <span className={clsx(
@@ -597,7 +679,7 @@ export const NewsIntelPage: React.FC = () => {
                         </span>
                       )}
 
-                      {/* Triage Tags */}
+                      {/* Triage Tags (Interactive Hashtags) */}
                       {(() => {
                         let tags: string[] = [];
                         if (Array.isArray(item.triage_tags)) tags = item.triage_tags;
@@ -609,20 +691,34 @@ export const NewsIntelPage: React.FC = () => {
                           const isEco = t.startsWith('ECO');
                           const isMacro = t === 'MACRO' || t === 'MARKET_SUMMARY';
                           const isCatalyst = t === 'CATALYST';
+                          const isTagActive = selectedTag === t;
                           return (
-                            <span 
+                            <button 
                               key={idx}
+                              onClick={() => {
+                                if (selectedTag === t) {
+                                  setSelectedTag(null);
+                                } else {
+                                  setSelectedTag(t);
+                                  setSelectedTicker(null);
+                                }
+                              }}
                               className={clsx(
-                                "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
-                                isVip && "bg-rose-500/15 text-rose-300 border-rose-500/30",
-                                isEco && "bg-blue-500/15 text-blue-300 border-blue-500/30",
-                                isMacro && "bg-amber-500/15 text-amber-300 border-amber-500/30",
-                                isCatalyst && "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-                                !isVip && !isEco && !isMacro && !isCatalyst && "bg-slate-800 text-slate-400 border-slate-700"
+                                "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-0.5",
+                                isTagActive
+                                  ? "bg-[#823AFD] text-white border-white/30 shadow-[0_0_10px_rgba(130,58,253,0.4)]"
+                                  : clsx(
+                                      isVip && "bg-rose-500/15 text-rose-300 border-rose-500/30 hover:bg-rose-500/25",
+                                      isEco && "bg-blue-500/15 text-blue-300 border-blue-500/30 hover:bg-blue-500/25",
+                                      isMacro && "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25",
+                                      isCatalyst && "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25",
+                                      !isVip && !isEco && !isMacro && !isCatalyst && "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
+                                    )
                               )}
+                              title={`คลิกเพื่อกรองข่าวตามแท็ก #${t}`}
                             >
-                              {t}
-                            </span>
+                              <span>#{t}</span>
+                            </button>
                           );
                         });
                       })()}
@@ -697,6 +793,82 @@ export const NewsIntelPage: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+      </div>
+
+      {/* Right Column: Sticky News Ticker Dock (Desktop) */}
+      <div className={clsx(
+        "hidden xl:block sticky top-6 shrink-0 transition-all duration-300 rounded-2xl overflow-hidden border border-[#1F2233]",
+        dockCollapsed ? "w-12" : "w-80"
+      )}>
+        <NewsTickerDock
+          selectedTicker={selectedTicker}
+          selectedTag={selectedTag}
+          tickerStats={tickerStats}
+          customWatchlist={watchlistData.allWatchlist}
+          onSelectTicker={(ticker) => {
+            setSelectedTicker(ticker);
+            setSelectedTag(null);
+          }}
+          onSelectTag={(tag) => {
+            setSelectedTag(tag);
+            setSelectedTicker(null);
+          }}
+          onClearFilter={() => {
+            setSelectedTicker(null);
+            setSelectedTag(null);
+          }}
+          onManageWatchlist={() => setShowWatchlistModal(true)}
+          collapsed={dockCollapsed}
+          onToggleCollapse={() => setDockCollapsed(!dockCollapsed)}
+        />
+      </div>
+
+      {/* Mobile News Ticker Dock Drawer */}
+      {showMobileDock && (
+        <div className="fixed inset-0 z-50 xl:hidden bg-black/80 backdrop-blur-sm flex justify-end">
+          <div className="w-full max-w-sm h-full bg-[#0D1019] p-4 flex flex-col shadow-2xl animate-fade-in border-l border-[#1F2233]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2233] mb-3">
+              <span className="text-sm font-bold text-white flex items-center gap-2">
+                <Hash className="w-4 h-4 text-[#823AFD]" /> Ticker Navigator
+              </span>
+              <button
+                onClick={() => setShowMobileDock(false)}
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <NewsTickerDock
+                selectedTicker={selectedTicker}
+                selectedTag={selectedTag}
+                tickerStats={tickerStats}
+                customWatchlist={watchlistData.allWatchlist}
+                onSelectTicker={(ticker) => {
+                  setSelectedTicker(ticker);
+                  setSelectedTag(null);
+                  setShowMobileDock(false);
+                }}
+                onSelectTag={(tag) => {
+                  setSelectedTag(tag);
+                  setSelectedTicker(null);
+                  setShowMobileDock(false);
+                }}
+                onClearFilter={() => {
+                  setSelectedTicker(null);
+                  setSelectedTag(null);
+                  setShowMobileDock(false);
+                }}
+                onManageWatchlist={() => {
+                  setShowMobileDock(false);
+                  setShowWatchlistModal(true);
+                }}
+                collapsed={false}
+              />
+            </div>
+          </div>
         </div>
       )}
 

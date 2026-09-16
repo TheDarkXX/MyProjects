@@ -42,10 +42,15 @@ newsRoutes.get('/', (c) => {
       query += ` AND is_read = 0`;
     }
 
-    // Filter by specific ticker
+    // Filter by specific ticker or tag
+    const tag = c.req.query('tag');
     if (ticker) {
-      query += ` AND ticker = ?`;
-      params.push(ticker.toUpperCase());
+      query += ` AND (ticker = ? OR triage_tags LIKE ?)`;
+      params.push(ticker.toUpperCase(), `%"${ticker.toUpperCase()}"%`);
+    }
+    if (tag) {
+      query += ` AND (triage_tags LIKE ? OR headline LIKE ? OR summary_th LIKE ?)`;
+      params.push(`%${tag}%`, `%${tag}%`, `%${tag}%`);
     }
 
     // Priority ordering: THE_MUST (1) > GOOD_TO_KNOW (2) > OPTIONAL (3), then by newest created_at
@@ -98,6 +103,37 @@ newsRoutes.get('/stats', (c) => {
   } catch (error) {
     console.error('[newsRoutes] Error fetching stats:', error.message);
     return c.json({ error: 'Failed to fetch news stats' }, 500);
+  }
+});
+
+// GET /api/news/ticker-stats — Count of articles and unread status per ticker
+newsRoutes.get('/ticker-stats', (c) => {
+  try {
+    const rows = db.prepare(`
+      SELECT 
+        ticker,
+        COUNT(*) as total,
+        SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread,
+        SUM(CASE WHEN reading_priority = 'THE_MUST' AND is_read = 0 THEN 1 ELSE 0 END) as theMustUnread
+      FROM news_intelligence
+      GROUP BY ticker
+    `).all();
+
+    const stats = {};
+    rows.forEach(r => {
+      if (r.ticker) {
+        stats[r.ticker] = {
+          total: r.total,
+          unread: r.unread,
+          theMustUnread: r.theMustUnread
+        };
+      }
+    });
+
+    return c.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('[newsRoutes] Error fetching ticker stats:', error.message);
+    return c.json({ error: 'Failed to fetch ticker stats' }, 500);
   }
 });
 
