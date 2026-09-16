@@ -276,7 +276,7 @@ export const Project2xPage: React.FC = () => {
     }
   }
 
-  const coreQuotas = quotas.filter(q => q.category === 'Core');
+  const coreQuotas = quotas.filter(q => q.category === 'Core' || q.category === 'Index');
   const moonshotQuotas = quotas.filter(q => q.category === 'Moonshot');
 
   // Sorted and filtered watchlist rows
@@ -1152,10 +1152,12 @@ export const Project2xPage: React.FC = () => {
               <span className="text-3xl">🧸</span>
               <div>
                 <h2 className="text-lg font-black text-white">
-                  Holographic Sticker Album (อัลบั้มสะสมของเล่น 12 ตัว)
+                  Holographic Sticker Album ({activePortfolio?.name?.toLowerCase().includes('tiger') ? '5 จตุรเทพ DYNASTY' : `อัลบั้มสะสมของเล่น ${quotas.length} ตัว`})
                 </h2>
                 <p className="text-[13px] text-slate-300 mt-0.5">
-                  Collect all 12 toy cards to 100% quota • 100% completed cards glow with Rainbow Gold Shimmer 🏆
+                  {activePortfolio?.name?.toLowerCase().includes('tiger')
+                    ? 'Collect all 5 dynasty pillars to 100% quota • QQQM (30%), NVDA (20%), TSM (20%), AVGO (15%), VRT (15%)'
+                    : 'Collect all 12 toy cards to 100% quota • 100% completed cards glow with Rainbow Gold Shimmer 🏆'}
                 </p>
               </div>
             </div>
@@ -1163,14 +1165,17 @@ export const Project2xPage: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <button
                 onClick={() => {
-                  if (activePortfolioId && confirm('Reset quotas to standard 12 Project 2X Commander stocks?')) {
+                  const confirmMsg = activePortfolio?.name?.toLowerCase().includes('tiger')
+                    ? 'Reset quotas to 5 จตุรเทพ (Tiger Dynasty Plan)?'
+                    : 'Reset quotas to standard 12 Project 2X Commander stocks?';
+                  if (activePortfolioId && confirm(confirmMsg)) {
                     resetQuotas(activePortfolioId);
                   }
                 }}
                 className="px-4 py-2 rounded-xl bg-[#2A2E39] hover:bg-[#363A45] text-slate-200 text-[13px] font-bold transition-all flex items-center gap-2 cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Reset to 12 Commanders</span>
+                <span>{activePortfolio?.name?.toLowerCase().includes('tiger') ? 'Reset to 5 จตุรเทพ' : 'Reset to 12 Commanders'}</span>
               </button>
             </div>
           </div>
@@ -1179,7 +1184,11 @@ export const Project2xPage: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-sm uppercase tracking-wider">
               <Crown className="w-4 h-4" />
-              <span>CORE COMMANDERS (83% of Portfolio)</span>
+              <span>
+                {activePortfolio?.name?.toLowerCase().includes('tiger')
+                  ? '5 จตุรเทพ DYNASTY (100% of Tiger Portfolio)'
+                  : 'CORE COMMANDERS (83% of Portfolio)'}
+              </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -1283,93 +1292,95 @@ export const Project2xPage: React.FC = () => {
           </div>
 
           {/* Moonshots Album */}
-          <div className="space-y-4 pt-4">
-            <div className="flex items-center gap-2 text-purple-400 font-extrabold text-sm uppercase tracking-wider">
-              <Rocket className="w-4 h-4" />
-              <span>MOONSHOT ROCKETS (11% of Portfolio)</span>
-            </div>
+          {moonshotQuotas.length > 0 && (
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center gap-2 text-purple-400 font-extrabold text-sm uppercase tracking-wider">
+                <Rocket className="w-4 h-4" />
+                <span>MOONSHOT ROCKETS (11% of Portfolio)</span>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {moonshotQuotas.map((q) => {
-                const radarMatch = radar?.rows.find(r => r.symbol === q.symbol);
-                const isBuyZone = radarMatch?.traffic_light === 'BUY_ZONE';
-                const isLocked = q.progress_percent >= 100 || q.status === 'LOCKED';
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                {moonshotQuotas.map((q) => {
+                  const radarMatch = radar?.rows.find(r => r.symbol === q.symbol);
+                  const isBuyZone = radarMatch?.traffic_light === 'BUY_ZONE';
+                  const isLocked = q.progress_percent >= 100 || q.status === 'LOCKED';
 
-                return (
-                  <div
-                    key={q.id}
-                    className={`group relative rounded-3xl p-5 transition-all duration-300 border flex flex-col justify-between overflow-hidden shadow-xl hover:-translate-y-1 ${
-                      isLocked
-                        ? 'bg-gradient-to-br from-purple-500/20 via-[#1E222D] to-amber-500/20 border-purple-400/60 shadow-[0_0_24px_rgba(130,58,253,0.3)]'
-                        : isBuyZone
-                        ? 'bg-[#1E222D] border-cyan-400/50 shadow-[0_0_16px_rgba(0,229,255,0.15)]'
-                        : 'bg-[#1E222D] border-white/10 hover:border-white/30'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between relative z-10">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-black text-white tracking-tight">
-                            🚀 {q.symbol}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-md text-xs font-extrabold bg-purple-500/20 text-purple-300">
-                            {q.target_percent}%
+                  return (
+                    <div
+                      key={q.id}
+                      className={`group relative rounded-3xl p-5 transition-all duration-300 border flex flex-col justify-between overflow-hidden shadow-xl hover:-translate-y-1 ${
+                        isLocked
+                          ? 'bg-gradient-to-br from-purple-500/20 via-[#1E222D] to-amber-500/20 border-purple-400/60 shadow-[0_0_24px_rgba(130,58,253,0.3)]'
+                          : isBuyZone
+                          ? 'bg-[#1E222D] border-cyan-400/50 shadow-[0_0_16px_rgba(0,229,255,0.15)]'
+                          : 'bg-[#1E222D] border-white/10 hover:border-white/30'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between relative z-10">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-black text-white tracking-tight">
+                              🚀 {q.symbol}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md text-xs font-extrabold bg-purple-500/20 text-purple-300">
+                              {q.target_percent}%
+                            </span>
+                          </div>
+                          <span className="text-[13px] text-slate-400 mt-0.5 block">
+                            Market: <strong className="text-slate-200">${(radarMatch?.currentPrice || q.base_price).toFixed(2)}</strong>
                           </span>
                         </div>
-                        <span className="text-[13px] text-slate-400 mt-0.5 block">
-                          Market: <strong className="text-slate-200">${(radarMatch?.currentPrice || q.base_price).toFixed(2)}</strong>
-                        </span>
+
+                        {isLocked ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-400 text-slate-950">
+                            FULL! 🏆
+                          </span>
+                        ) : isBuyZone ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                            🔷 BUY
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300">
+                            🟡 WAIT
+                          </span>
+                        )}
                       </div>
 
-                      {isLocked ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-400 text-slate-950">
-                          FULL! 🏆
-                        </span>
-                      ) : isBuyZone ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                          🔷 BUY
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300">
-                          🟡 WAIT
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="my-5 space-y-2 relative z-10">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-300">Progress</span>
-                        <span className="text-base font-black text-white tabular-nums">
-                          {q.progress_percent.toFixed(1)}%
-                        </span>
+                      <div className="my-5 space-y-2 relative z-10">
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <span className="text-slate-300">Progress</span>
+                          <span className="text-base font-black text-white tabular-nums">
+                            {q.progress_percent.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full h-3.5 rounded-full bg-slate-900 p-0.5 border border-white/10 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-700"
+                            style={{ width: `${Math.min(100, q.progress_percent)}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full h-3.5 rounded-full bg-slate-900 p-0.5 border border-white/10 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-700"
-                          style={{ width: `${Math.min(100, q.progress_percent)}%` }}
-                        />
+
+                      <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 relative z-10">
+                        <span>{q.owned_shares.toFixed(1)} / {q.target_shares} sh</span>
+                        <button
+                          onClick={() => {
+                            setSelectedTab('inflow');
+                            if (activePortfolioId) {
+                              calculateRecommendation(activePortfolioId, Number(inflowAmountInput) || 35000);
+                            }
+                          }}
+                          className="text-purple-300 font-bold hover:underline cursor-pointer"
+                        >
+                          + Inflow →
+                        </button>
                       </div>
                     </div>
-
-                    <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 relative z-10">
-                      <span>{q.owned_shares.toFixed(1)} / {q.target_shares} sh</span>
-                      <button
-                        onClick={() => {
-                          setSelectedTab('inflow');
-                          if (activePortfolioId) {
-                            calculateRecommendation(activePortfolioId, Number(inflowAmountInput) || 35000);
-                          }
-                        }}
-                        className="text-purple-300 font-bold hover:underline cursor-pointer"
-                      >
-                        + Inflow →
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

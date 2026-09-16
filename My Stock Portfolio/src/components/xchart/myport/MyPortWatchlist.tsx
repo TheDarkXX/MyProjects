@@ -521,7 +521,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30">
-                9 Core · 4 Moon
+                {activePortfolio?.name?.toLowerCase().includes('tiger')
+                  ? '5 จตุรเทพ DCA'
+                  : `${targetStocks.filter(t => t.category === 'Core').length} Core · ${targetStocks.filter(t => t.category === 'Moonshot').length} Moon`}
               </span>
             </div>
           </div>

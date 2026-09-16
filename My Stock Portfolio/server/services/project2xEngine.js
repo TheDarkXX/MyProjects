@@ -20,6 +20,14 @@ export const DEFAULT_2X_STOCKS = [
   { symbol: 'RKLB', name: 'Rocket Lab', target_percent: 2.0, category: 'Moonshot' }
 ];
 
+export const DEFAULT_TIGER_2X_STOCKS = [
+  { symbol: 'QQQM', name: 'Invesco NASDAQ 100 ETF', target_percent: 30.0, category: 'Core' },
+  { symbol: 'NVDA', name: 'NVIDIA Corp', target_percent: 20.0, category: 'Core' },
+  { symbol: 'TSM', name: 'Taiwan Semiconductor', target_percent: 20.0, category: 'Core' },
+  { symbol: 'AVGO', name: 'Broadcom Inc', target_percent: 15.0, category: 'Core' },
+  { symbol: 'VRT', name: 'Vertiv Holdings', target_percent: 15.0, category: 'Core' }
+];
+
 export const DEFAULT_CONFIG = {
   goal_amount_thb: 10000000,
   target_cagr: 0.26,
@@ -155,18 +163,25 @@ export async function syncShareQuotas(portfolioId, forceDefault = false) {
 
   const targetUsdTotal = config.goal_amount_thb / fxRate;
 
+  // Check if portfolio is Tiger
+  const port = db.prepare('SELECT id, name FROM portfolios WHERE id = ?').get(portfolioId);
+  const isTiger = port && /tiger/i.test(port.name);
+  const targetStockList = isTiger ? DEFAULT_TIGER_2X_STOCKS : DEFAULT_2X_STOCKS;
+
   // Check existing quotas
   const existing = db.prepare('SELECT * FROM project2x_share_quotas WHERE portfolio_id = ?').all(portfolioId);
 
   if (existing.length === 0 || forceDefault) {
-    // Seed with DEFAULT_2X_STOCKS
+    // If resetting or seeding, clear existing quotas for this portfolio
+    db.prepare('DELETE FROM project2x_share_quotas WHERE portfolio_id = ?').run(portfolioId);
+
     const insert = db.prepare(`
       INSERT OR REPLACE INTO project2x_share_quotas (
         portfolio_id, symbol, category, target_percent, base_price, split_factor, target_shares, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    for (const stock of DEFAULT_2X_STOCKS) {
+    for (const stock of targetStockList) {
       // Get current price or last close to anchor base_price
       let basePrice = 100;
       try {
@@ -203,7 +218,16 @@ export async function syncShareQuotas(portfolioId, forceDefault = false) {
 
   const enriched = [];
   for (const q of quotas) {
-    const ownedShares = holdings[q.symbol]?.shares || 0;
+    let ownedShares = holdings[q.symbol]?.shares || 0;
+
+    // In Tiger portfolio, if QQQM is not yet bought, check SCHG (proxy from playbook)
+    if (isTiger && q.symbol === 'QQQM' && ownedShares === 0 && holdings['SCHG']?.shares > 0) {
+      const schgShares = holdings['SCHG'].shares;
+      const schgPrice = holdings['SCHG'].currentPrice || 35.0;
+      const qqqmPrice = q.base_price || 520.0;
+      ownedShares = Number(((schgShares * schgPrice) / qqqmPrice).toFixed(4));
+    }
+
     const progress = q.target_shares > 0 ? Number(((ownedShares / q.target_shares) * 100).toFixed(1)) : 0;
     
     let status = 'COLLECTING';
