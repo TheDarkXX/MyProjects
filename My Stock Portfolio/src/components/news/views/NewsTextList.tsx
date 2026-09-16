@@ -79,9 +79,9 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
                 </span>
               ) : null}
 
-              {/* Headline (16px) */}
+              {/* Headline (16px Normal Weight, Soft Off-White ~75-80% Brightness) */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-[16px] font-bold text-white leading-snug tracking-tight group-hover:text-[#C4B5FD] transition-colors truncate">
+                <h3 className="text-[16px] font-normal text-slate-300 leading-snug tracking-normal group-hover:text-white transition-colors truncate">
                   {item.headline_th || item.headline}
                 </h3>
               </div>
