@@ -115,6 +115,29 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
     try { tags = JSON.parse(activeItem.triage_tags); } catch {}
   }
 
+  // Normalizer: Convert raw inline bullets ('•', '\n', etc.) into standard Markdown list items ('- ...')
+  const normalizedSummary = useMemo(() => {
+    if (!activeItem?.summary_th) return '';
+    const raw = activeItem.summary_th;
+
+    // Split by Unicode bullet symbols or newlines
+    const rawItems = raw
+      .split(/(?:[\r\n]+|[•·●\u2022]\s*)/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    // If it's just a single sentence without any bullet marks, keep as is
+    if (rawItems.length <= 1 && !raw.includes('•')) {
+      return raw;
+    }
+
+    // Otherwise, turn each discrete item into a clean Markdown bullet item
+    return rawItems
+      .map(item => `- ${item.replace(/^[-*•·●\u2022\s]+/, '').trim()}`)
+      .filter(line => line.length > 2)
+      .join('\n');
+  }, [activeItem?.summary_th]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       {/* Click outside to close backdrop */}
@@ -133,8 +156,8 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               <h2 className="text-sm sm:text-base font-bold text-white truncate">
                 News Intelligence Deep Dive
               </h2>
-              {currentIndex >= 0 && (
-                <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700 hidden sm:inline-block shrink-0">
+              {currentIndex !== -1 && (
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded-md text-xs font-mono bg-white/5 border border-white/10 text-slate-400">
                   ข่าว {currentIndex + 1} จาก {items.length}
                 </span>
               )}
@@ -247,7 +270,7 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           {/* RIGHT CANVAS (72% - 75%): Full Deep Dive with DrView Typography */}
           <div 
             ref={readingCanvasRef}
-            className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-5 bg-[#090C12]"
+            className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 bg-[#090C12]"
           >
             {/* Executive Badges Strip */}
             <div className="flex items-center justify-between gap-2 flex-wrap pb-3 border-b border-[#1F2233]">
@@ -369,32 +392,8 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               )}
             </div>
 
-            {/* DrView Alert Box: AI Priority Reason */}
-            {activeItem.priority_reason && (
-              <div className={clsx(
-                "p-4 rounded-xl border flex items-start gap-3 shadow-md",
-                isMust
-                  ? "bg-rose-950/25 border-rose-500/40 text-rose-200"
-                  : isCatalyst
-                    ? "bg-amber-950/25 border-amber-500/40 text-amber-200"
-                    : isWatchlist
-                      ? "bg-sky-950/25 border-sky-500/40 text-sky-200"
-                      : "bg-[#141724] border-[#2A2E45] text-slate-200"
-              )}>
-                <span className="text-lg shrink-0">💡</span>
-                <div className="space-y-0.5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider opacity-80">
-                    เหตุผลที่คัดเกรด (AI Priority Reason):
-                  </h4>
-                  <p className="text-[14px] sm:text-[15px] font-normal leading-relaxed">
-                    {activeItem.priority_reason}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* DrView Markdown Content Canvas */}
-            <div className="space-y-4 pt-1">
+            {/* 1. DrView Markdown Content Canvas (Executive Summary FIRST) */}
+            <div className="space-y-3.5 pt-1">
               <div className="flex items-center gap-2 border-b border-[#1F2233] pb-2">
                 <h3 className="text-[17px] font-bold text-[#58A6FF]">
                   📌 บทสรุปและบริบทข่าว (Executive Summary)
@@ -429,17 +428,17 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                     p: ({ node, ...props }) => (
                       <p className="text-[#C9D1D9] leading-relaxed my-2" {...props} />
                     ),
-                    // List and List Item with Glowing Amber Dot
+                    // List and List Item with Glowing Amber Dot & Clear Vertical Spacing
                     ul: ({ node, ...props }) => (
-                      <ul className="space-y-2.5 my-3 pl-1" {...props} />
+                      <ul className="space-y-3 my-2.5 pl-0 list-none" {...props} />
                     ),
                     ol: ({ node, ...props }) => (
-                      <ol className="space-y-2.5 my-3 pl-5 list-decimal text-slate-300" {...props} />
+                      <ol className="space-y-3 my-2.5 pl-5 list-decimal text-slate-300" {...props} />
                     ),
                     li: ({ node, ...props }) => (
-                      <li className="flex items-start gap-2.5 text-[#C9D1D9] leading-relaxed">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#FFA657] mt-2 shrink-0 shadow-[0_0_8px_rgba(255,166,87,0.7)]" />
-                        <div className="flex-1">{props.children}</div>
+                      <li className="flex items-start gap-3 text-[#C9D1D9] leading-relaxed my-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#FFA657] mt-2.5 shrink-0 shadow-[0_0_8px_rgba(255,166,87,0.8)]" />
+                        <div className="flex-1 text-[15px] sm:text-[15.5px] leading-relaxed">{props.children}</div>
                       </li>
                     ),
                     // Blockquote
@@ -448,12 +447,36 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                     ),
                   }}
                 >
-                  {activeItem.summary_th}
+                  {normalizedSummary}
                 </ReactMarkdown>
               </div>
             </div>
 
-            {/* Tags Strip */}
+            {/* 2. DrView Alert Box: AI Priority Reason (Placed at BOTTOM as analysis takeaway) */}
+            {activeItem.priority_reason && (
+              <div className={clsx(
+                "p-4 rounded-xl border flex items-start gap-3 shadow-md mt-4",
+                isMust
+                  ? "bg-rose-950/25 border-rose-500/40 text-rose-200"
+                  : isCatalyst
+                    ? "bg-amber-950/25 border-amber-500/40 text-amber-200"
+                    : isWatchlist
+                      ? "bg-sky-950/25 border-sky-500/40 text-sky-200"
+                      : "bg-[#141724] border-[#2A2E45] text-slate-200"
+              )}>
+                <span className="text-lg shrink-0">💡</span>
+                <div className="space-y-0.5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider opacity-80">
+                    เหตุผลที่คัดเกรด (AI Priority Reason):
+                  </h4>
+                  <p className="text-[14px] sm:text-[15px] font-normal leading-relaxed">
+                    {activeItem.priority_reason}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Tags Strip */}
             {tags.length > 0 && (
               <div className="pt-4 border-t border-[#1F2233] flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs text-slate-400 flex items-center gap-1 mr-1">
