@@ -2,6 +2,13 @@
 
 This log tracks all major updates and features added to the application.
 
+### [v3.0.0] gfin Deep Web Radar, Mozilla Readability Engine, Semantic Relevance Guard & 5D Matrix v2 Date: 2026-09-16T20:50:00Z
+- **📡 Autonomous Deep Web Radar (`gfin`)**: Solved the paywall/teaser bottleneck for curated investment headlines (`wethaiinvest.beehiiv.com`). Automatically triggers Google News RSS & Yahoo Finance RSS to hunt down full-text articles (800-2,500 words) from Tier-1 global news publishers.
+- **📰 Mozilla Readability Engine**: Upgraded article extraction to Mozilla Readability + Linkedom with custom 128KB HTTP header support to eliminate Header Overflow errors from Yahoo Finance.
+- **🛡️ Semantic Relevance Guard**: Added AI-powered semantic matching gate (relevance threshold >= 65) ensuring fetched articles report on the exact corporate event as the seed headline.
+- **🔍 72h Deduplication & Provenance**: Implemented 72-hour event fingerprint deduplication, multi-source consensus counting, and database provenance tracking (`content_source`, `content_source_url`, `content_relevance_score`).
+- **📌 Anti-Hallucination Evidence Quotes**: Anchored 5D scoring matrix with mandatory quoted sentences from article text for Financial and Moat dimensions.
+
 ### [v2.9.0] Human-First Execution Strategies, Capital Funding Engine & Portfolio Archetype Alignment Date: 2026-09-07T20:45:00Z
 - **🎯 Human-First Execution UI**: Redesigned Actionable Execution Cards to focus on clarity and speed: User Cost Basis vs Live Market Price, 4 Plain Action decision blocks (Entry Zone, Stop Loss, Dip Catch, Target), Tranche Step boxes, and a collapsible accordion for technical metrics (RSI, ATR, Trailing Stop).
 - **💰 Capital Funding Engine**: Integrated deterministic funding logic (`capitalFlowSummary`) showing exactly where capital originates for each trade (e.g. 100% orphan stock liquidation, existing cash buffer, or scheduled DCA cash injection).
