@@ -54,7 +54,8 @@ type SortOrder = 'ASC' | 'DESC';
 type TableSortColumn = 'SYMBOL' | 'PRICE' | 'WEIGHT' | 'EMA150' | 'EMA200' | 'BANKER' | 'PE' | 'PEG' | 'CAGR' | 'BEAT' | 'STATUS';
 
 export const Project2xPage: React.FC = () => {
-  const { activePortfolioId } = usePortfolioStore();
+  const { activePortfolioId, portfolios } = usePortfolioStore();
+  const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
   const { currency } = useUiStore();
   const p2xViewProfile = useChartViewStore((s) => s.profiles.project2x);
   const toggleP2XVisibility = useChartViewStore((s) => s.toggleVisibility);

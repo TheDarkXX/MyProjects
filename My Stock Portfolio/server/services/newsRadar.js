@@ -4,8 +4,9 @@ import YahooFinance from 'yahoo-finance2';
 const yahooFinance = new YahooFinance();
 
 const FINNHUB_KEY = process.env.FINNHUB_API_KEY || 'd383nj1r01qlbdj3p8q0d383nj1r01qlbdj3p8qg';
-const BRAIN_GATEWAY_URL = 'https://brain.doctorbankonline.com/api/ai/chat';
-const BRAIN_GATEWAY_TOKEN = 'ZIvyWp4BTqcX2Gm1aDHR7lwz0i8PrVqug5KWBX53wqI';
+const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || 'http://127.0.0.1:18810/openai/v1/chat/completions';
+const BRAIN_GATEWAY_URL = process.env.BRAIN_GATEWAY_URL || 'https://brain.doctorbankonline.com/api/ai/chat';
+const BRAIN_GATEWAY_TOKEN = process.env.BRAIN_GATEWAY_TOKEN || 'ZIvyWp4BTqcX2Gm1aDHR7lwz0i8PrVqug5KWBX53wqI';
 
 // Known Ticker Mappings for Thai/English text
 const KNOWN_TICKER_MAP = {
@@ -520,26 +521,48 @@ Output ONLY a JSON object:
 }`;
 
   try {
-    const res = await fetch(BRAIN_GATEWAY_URL, {
+    let reply = '';
+    let res = await fetch(AI_GATEWAY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${BRAIN_GATEWAY_TOKEN}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'gpt-5.6-terra',
-        context: systemPrompt,
-        message: userMessage
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ]
       }),
-      signal: AbortSignal.timeout(30000)
-    });
+      signal: AbortSignal.timeout(25000)
+    }).catch(() => null);
 
-    if (!res.ok) {
-      throw new Error(`AI Gateway error status ${res.status}`);
+    if (res && res.ok) {
+      const data = await res.json();
+      reply = data.choices?.[0]?.message?.content || data.reply || '';
+    } else {
+      // Secondary fallback to external gateway if configured
+      const fbRes = await fetch(BRAIN_GATEWAY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${BRAIN_GATEWAY_TOKEN}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-5.6-terra',
+          context: systemPrompt,
+          message: userMessage
+        }),
+        signal: AbortSignal.timeout(25000)
+      }).catch(() => null);
+
+      if (fbRes && fbRes.ok) {
+        const fbData = await fbRes.json();
+        reply = fbData.reply || fbData.choices?.[0]?.message?.content || '';
+      }
     }
 
-    const data = await res.json();
-    let reply = data.reply || '';
+    if (!reply) {
+      throw new Error('No AI response from primary or secondary gateway');
+    }
 
     // Robust JSON extraction
     const jsonMatch = reply.match(/\{[\s\S]*\}/);
