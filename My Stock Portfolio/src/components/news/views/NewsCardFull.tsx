@@ -106,10 +106,10 @@ export const NewsCardFull: React.FC<NewsCardFullProps> = ({
                   <button
                     onClick={() => onSelectTicker(item.ticker)}
                     className={clsx(
-                      "px-2.5 py-1 rounded-lg text-xs font-mono font-black border transition-all cursor-pointer flex items-center gap-1",
+                      "px-2.5 py-1 rounded-lg text-xs font-mono font-normal border transition-all cursor-pointer flex items-center gap-1",
                       selectedTicker === item.ticker
                         ? "bg-[#823AFD] text-white border-white/30 shadow-[0_0_12px_rgba(130,58,253,0.5)] ring-1 ring-white"
-                        : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-white border-white/15"
+                        : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-slate-300 hover:text-white border-white/15"
                     )}
                     title={`คลิกเพื่อกรองข่าวเฉพาะหุ้น #${item.ticker}`}
                   >
@@ -195,7 +195,7 @@ export const NewsCardFull: React.FC<NewsCardFullProps> = ({
 
               {/* Headline Title */}
               <div className="space-y-1">
-                <h2 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight">
+                <h2 className="text-base sm:text-lg font-normal text-slate-300 leading-snug tracking-normal">
                   {item.headline_th || item.headline}
                 </h2>
                 {item.headline_th && item.headline_th !== item.headline && (

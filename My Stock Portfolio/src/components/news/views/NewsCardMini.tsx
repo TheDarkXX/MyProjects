@@ -58,10 +58,10 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
                   <button
                     onClick={() => onSelectTicker(item.ticker)}
                     className={clsx(
-                      "px-2 py-0.5 rounded-lg text-xs font-mono font-black border transition-all cursor-pointer",
+                      "px-2 py-0.5 rounded-lg text-xs font-mono font-normal border transition-all cursor-pointer",
                       selectedTicker === item.ticker
                         ? "bg-[#823AFD] text-white border-white/40 shadow-[0_0_8px_rgba(130,58,253,0.5)]"
-                        : "bg-white/10 hover:bg-[#823AFD]/20 text-white border-white/15"
+                        : "bg-white/10 hover:bg-[#823AFD]/20 text-slate-300 hover:text-white border-white/15"
                     )}
                   >
                     #{item.ticker}
@@ -109,7 +109,7 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
 
               {/* Title */}
               <div>
-                <h4 className="text-[14px] font-bold text-white leading-snug line-clamp-2 group-hover:text-[#C4B5FD] transition-colors">
+                <h4 className="text-[14px] font-normal text-slate-300 leading-snug tracking-normal line-clamp-2 group-hover:text-white transition-colors">
                   {item.headline_th || item.headline}
                 </h4>
                 {item.headline_th && item.headline_th !== item.headline && (

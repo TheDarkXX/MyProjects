@@ -59,10 +59,10 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
                   <button
                     onClick={() => onSelectTicker(item.ticker)}
                     className={clsx(
-                      "px-2 py-0.5 rounded-md text-xs font-mono font-black border transition-all cursor-pointer",
+                      "px-2 py-0.5 rounded-md text-xs font-mono font-normal border transition-all cursor-pointer",
                       selectedTicker === item.ticker
                         ? "bg-[#823AFD] text-white border-white/40 shadow-[0_0_8px_rgba(130,58,253,0.5)] ring-1 ring-white"
-                        : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-white border-white/15"
+                        : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-slate-300 hover:text-white border-white/15"
                     )}
                     title={`กรองเฉพาะ #${item.ticker}`}
                   >
@@ -135,7 +135,7 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
 
               {/* Title Only (Ultra Compact) */}
               <div>
-                <h3 className="text-[13.5px] sm:text-[14px] font-bold text-white leading-snug tracking-tight line-clamp-2 group-hover:text-[#C4B5FD] transition-colors">
+                <h3 className="text-[13.5px] sm:text-[14px] font-normal text-slate-300 leading-snug tracking-normal line-clamp-2 group-hover:text-white transition-colors">
                   {item.headline_th || item.headline}
                 </h3>
               </div>

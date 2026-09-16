@@ -60,10 +60,10 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
               <button
                 onClick={() => onSelectTicker(item.ticker)}
                 className={clsx(
-                  "px-2 py-0.5 rounded-md text-xs font-mono font-black border transition-all cursor-pointer shrink-0",
+                  "px-2 py-0.5 rounded-md text-xs font-mono font-normal border transition-all cursor-pointer shrink-0",
                   selectedTicker === item.ticker
                     ? "bg-[#823AFD] text-white border-white/40 shadow-[0_0_8px_rgba(130,58,253,0.5)] ring-1 ring-white"
-                    : "bg-white/10 hover:bg-[#823AFD]/25 text-white border-white/15"
+                    : "bg-white/10 hover:bg-[#823AFD]/25 text-slate-300 hover:text-white border-white/15"
                 )}
                 title={`กรองเฉพาะ #${item.ticker}`}
               >

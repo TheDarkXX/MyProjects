@@ -50,9 +50,15 @@ export const NewsIntelPage: React.FC = () => {
     localStorage.setItem('news_intel_priority', priority);
   };
 
-  // View & Sorting Modes with localStorage persistence
+  // View & Sorting Modes with localStorage persistence (Default: text view)
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    return (localStorage.getItem('news_intel_view_mode') as ViewMode) || 'list';
+    const migrated = localStorage.getItem('news_intel_view_mode_v2_migrated');
+    if (!migrated) {
+      localStorage.setItem('news_intel_view_mode_v2_migrated', 'true');
+      localStorage.setItem('news_intel_view_mode', 'text');
+      return 'text';
+    }
+    return (localStorage.getItem('news_intel_view_mode') as ViewMode) || 'text';
   });
   const [sortKey, setSortKey] = useState<SortKey>(() => {
     return (localStorage.getItem('news_intel_sort_by') as SortKey) || 'date';
