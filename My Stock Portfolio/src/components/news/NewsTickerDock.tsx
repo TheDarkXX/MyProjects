@@ -5,7 +5,9 @@ import {
   Flame, 
   Star, 
   Briefcase, 
+  Target,
   ChevronRight, 
+  ChevronDown, 
   ChevronLeft, 
   Hash, 
   Filter, 
@@ -19,6 +21,8 @@ import clsx from 'clsx';
 import { useXChartStore } from '../../stores/xchartStore';
 import { useHoldings } from '../../hooks/useHoldings';
 import { usePriceStore } from '../../stores/priceStore';
+import { useTransactionStore } from '../../stores/transactionStore';
+import { usePortfolioStore } from '../../stores/portfolioStore';
 import { DEFAULT_2X_TARGET_STOCKS } from '../xchart/myport/MyPortWatchlist';
 
 // Deterministic gradient colors for symbol badges (TradingView / X-Chart style)
@@ -45,17 +49,36 @@ interface StockItem {
   symbol: string;
   name: string;
   category?: string;
+  targetPercent?: number;
 }
 
-// Fallback Portfolios & Watchlist Definitions
-const DEFAULT_MAIN_PORTFOLIO_STOCKS: StockItem[] = [
+// 🏢 Doctorbank Growth Definitions
+const DEFAULT_MAIN_HOLDINGS: StockItem[] = [
   { symbol: 'CRWD', name: 'CrowdStrike Holdings', category: 'Security' },
   { symbol: 'HIMS', name: 'Hims & Hers Health', category: 'Healthcare' },
   { symbol: 'MELI', name: 'MercadoLibre Inc', category: 'E-Commerce' },
-  { symbol: 'META', name: 'Meta Platforms', category: 'Social / AI' },
   { symbol: 'NVDA', name: 'NVIDIA Corp', category: 'Semiconductor' },
   { symbol: 'RBRK', name: 'Rubrik Inc', category: 'AI Security' },
 ];
+
+const DEFAULT_MAIN_TARGETS: StockItem[] = [
+  { symbol: 'META', name: 'Meta Platforms', category: 'Social / AI' },
+];
+
+// 🐯 Tiger 2X Definitions (2 Holdings + 12 Project 2X Targets)
+const DEFAULT_TIGER_HOLDINGS: StockItem[] = [
+  { symbol: 'NVDA', name: 'NVIDIA Corp', category: 'Core' },
+  { symbol: 'SCHG', name: 'Schwab US Large-Cap Growth', category: 'ETF' },
+];
+
+const DEFAULT_TIGER_TARGETS: StockItem[] = DEFAULT_2X_TARGET_STOCKS
+  .filter(t => t.symbol !== 'NVDA') // NVDA is already in holdings
+  .map(t => ({
+    symbol: t.symbol,
+    name: t.name,
+    category: t.category,
+    targetPercent: t.target_percent
+  }));
 
 const DEFAULT_WATCHLIST_STOCKS: StockItem[] = [
   { symbol: 'AVGO', name: 'Broadcom Inc' },
@@ -103,6 +126,14 @@ interface NewsTickerDockProps {
 type SortColumn = 'symbol' | 'price' | 'change' | 'percentChange';
 type SortDir = 'asc' | 'desc';
 
+interface DockSection {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  stocks: StockItem[];
+  badge?: string;
+}
+
 export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
   selectedTicker,
   selectedTag,
@@ -120,128 +151,198 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortCol, setSortCol] = useState<SortColumn>('symbol');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   // 1. Pull Watchlist from X-Chart Store directly
   const { watchlistSections, watchlistPrices, fetchWatchlistQuotes } = useXChartStore();
-  // 2. Pull Main Portfolio Holdings from useHoldings
-  const { holdings = [] } = useHoldings();
-  // 3. Pull Live Prices from usePriceStore
+  // 2. Pull Live Prices from usePriceStore
   const { prices, fetchPrices } = usePriceStore();
+  // 3. Transactions & Portfolios to resolve actual dynamic holdings
+  const { transactions } = useTransactionStore();
+  const { portfolios } = usePortfolioStore();
 
-  // Dynamic Watchlist: merge X-Chart sections + DB custom watchlist + defaults
-  const mergedWatchlist = useMemo<StockItem[]>(() => {
+  const toggleSection = (id: string) => {
+    setCollapsedSections(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Helper to dynamically detect holdings for a specific portfolio from transactions
+  const getDynamicHoldings = (portKeyword: string, fallback: StockItem[]): StockItem[] => {
+    const port = portfolios.find(p => p.name.toLowerCase().includes(portKeyword.toLowerCase()));
+    if (!port || !transactions || transactions.length === 0) return fallback;
+
+    const holds: Record<string, number> = {};
+    transactions
+      .filter(t => t && t.portfolio_id === port.id && t.symbol && t.symbol !== 'CASH' && (!t.status || t.status.toUpperCase() === 'CONFIRMED'))
+      .forEach(t => {
+        if (!holds[t.symbol]) holds[t.symbol] = 0;
+        if (t.type === 'BUY') holds[t.symbol] += (t.amount || 0);
+        else if (t.type === 'SELL') holds[t.symbol] -= (t.amount || 0);
+      });
+
+    const activeSymbols = Object.keys(holds).filter(s => holds[s] > 0.0001);
+    if (activeSymbols.length === 0) return fallback;
+
+    return activeSymbols.map(sym => {
+      const fb = fallback.find(f => f.symbol === sym);
+      return {
+        symbol: sym,
+        name: fb?.name || sym,
+        category: fb?.category || 'Holding'
+      };
+    });
+  };
+
+  // 🏢 Main Port Sections: Holdings vs Target
+  const mainSections = useMemo<DockSection[]>(() => {
+    const dynamicHoldings = getDynamicHoldings('Doctorbank', DEFAULT_MAIN_HOLDINGS);
+    return [
+      {
+        id: 'main-holdings',
+        title: 'Holdings (ถือครอง)',
+        icon: <Briefcase className="w-3.5 h-3.5 text-purple-400 shrink-0" />,
+        stocks: dynamicHoldings,
+        badge: `${dynamicHoldings.length} Positions`
+      },
+      {
+        id: 'main-target',
+        title: 'Target (เป้าหมาย)',
+        icon: <Target className="w-3.5 h-3.5 text-indigo-400 shrink-0" />,
+        stocks: DEFAULT_MAIN_TARGETS,
+        badge: `${DEFAULT_MAIN_TARGETS.length} Target`
+      }
+    ];
+  }, [transactions, portfolios]);
+
+  // 🐯 Tiger 2X Sections: Holdings (2 หุ้น) vs Target (Project 2X)
+  const tigerSections = useMemo<DockSection[]>(() => {
+    const dynamicTigerHoldings = getDynamicHoldings('Tiger', DEFAULT_TIGER_HOLDINGS);
+    const holdingSyms = new Set(dynamicTigerHoldings.map(h => h.symbol));
+    const remainingTargets = DEFAULT_2X_TARGET_STOCKS
+      .filter(t => !holdingSyms.has(t.symbol))
+      .map(t => ({
+        symbol: t.symbol,
+        name: t.name,
+        category: t.category,
+        targetPercent: t.target_percent
+      }));
+
+    return [
+      {
+        id: 'tiger-holdings',
+        title: 'Holdings (ถือครอง)',
+        icon: <Briefcase className="w-3.5 h-3.5 text-amber-400 shrink-0" />,
+        stocks: dynamicTigerHoldings,
+        badge: `${dynamicTigerHoldings.length} Positions`
+      },
+      {
+        id: 'tiger-target',
+        title: 'Target · Project 2X',
+        icon: <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />,
+        stocks: remainingTargets,
+        badge: `${remainingTargets.length} Targets`
+      }
+    ];
+  }, [transactions, portfolios]);
+
+  // ⭐ Watchlist Sections: Pulled from X-Chart Store sections + Custom Watchlist
+  const watchlistSectionsList = useMemo<DockSection[]>(() => {
+    if (watchlistSections && watchlistSections.length > 0) {
+      return watchlistSections.map(sec => ({
+        id: `wl-${sec.id}`,
+        title: sec.name,
+        icon: <Star className="w-3.5 h-3.5 text-blue-400 shrink-0" />,
+        stocks: (sec.symbols || []).map(sym => ({
+          symbol: sym,
+          name: sym,
+          category: 'Watchlist'
+        })),
+        badge: `${sec.symbols.length}`
+      }));
+    }
+
+    // Fallback if no sections in store
     const list: StockItem[] = [...DEFAULT_WATCHLIST_STOCKS];
     const seen = new Set(list.map(s => s.symbol));
-
-    // Pull from X-Chart Store sections
-    (watchlistSections || []).forEach(sec => {
-      (sec.symbols || []).forEach(sym => {
-        if (!seen.has(sym)) {
-          seen.add(sym);
-          list.push({ symbol: sym, name: `${sym} (${sec.name})` });
-        }
-      });
-    });
-
-    // Pull from Custom Watchlist (DB)
     (customWatchlist || []).forEach(sym => {
       if (!seen.has(sym)) {
         seen.add(sym);
-        list.push({ symbol: sym, name: `${sym} Watchlist` });
+        list.push({ symbol: sym, name: `${sym} Watchlist`, category: 'Watchlist' });
       }
     });
 
-    return list;
+    return [
+      {
+        id: 'wl-default',
+        title: 'Watchlist ทั้งหมด',
+        icon: <Star className="w-3.5 h-3.5 text-blue-400 shrink-0" />,
+        stocks: list,
+        badge: `${list.length}`
+      }
+    ];
   }, [watchlistSections, customWatchlist]);
 
-  // Main Portfolio: Pull from active holdings or fallback
-  const mainPortfolioStocks = useMemo<StockItem[]>(() => {
-    const activeHoldings = (holdings || []).filter(h => h && h.quantity > 0 && h.symbol !== 'CASH');
-    if (activeHoldings.length > 0) {
-      const seen = new Set<string>();
-      const list: StockItem[] = [];
-      activeHoldings.forEach(h => {
-        if (!seen.has(h.symbol)) {
-          seen.add(h.symbol);
-          const fallbackName = DEFAULT_MAIN_PORTFOLIO_STOCKS.find(d => d.symbol === h.symbol)?.name || h.symbol;
-          list.push({ symbol: h.symbol, name: fallbackName, category: 'Holding' });
-        }
-      });
-      // Ensure key watchlist core tickers are visible
-      DEFAULT_MAIN_PORTFOLIO_STOCKS.forEach(d => {
-        if (!seen.has(d.symbol)) {
-          seen.add(d.symbol);
-          list.push(d);
-        }
-      });
-      return list;
-    }
-    return DEFAULT_MAIN_PORTFOLIO_STOCKS;
-  }, [holdings]);
+  // Active raw sections based on current tab
+  const activeRawSections = useMemo(() => {
+    if (activeTab === 'main') return mainSections;
+    if (activeTab === 'tiger') return tigerSections;
+    return watchlistSectionsList;
+  }, [activeTab, mainSections, tigerSections, watchlistSectionsList]);
 
-  // Tiger 2X Portfolio: from DEFAULT_2X_TARGET_STOCKS
-  const tigerPortfolioStocks = useMemo<StockItem[]>(() => {
-    return DEFAULT_2X_TARGET_STOCKS.map(t => ({
-      symbol: t.symbol,
-      name: t.name,
-      category: t.category
-    }));
-  }, []);
-
-  // Filtered stocks based on active tab and search query
-  const filteredStockList = useMemo(() => {
-    let list: StockItem[] = [];
-    if (activeTab === 'main') list = mainPortfolioStocks;
-    else if (activeTab === 'tiger') list = tigerPortfolioStocks;
-    else list = mergedWatchlist;
-
-    if (!searchQuery.trim()) return list;
-
+  // Apply search query and sorting within each section
+  const processedSections = useMemo(() => {
     const q = searchQuery.trim().toUpperCase();
-    return list.filter((s) => s.symbol.includes(q) || s.name.toUpperCase().includes(q));
-  }, [activeTab, mainPortfolioStocks, tigerPortfolioStocks, mergedWatchlist, searchQuery]);
 
-  // Sort stocks (TradingView / X-Chart style)
-  const sortedStockList = useMemo(() => {
-    const list = [...filteredStockList];
-    return list.sort((a, b) => {
-      const quoteA = watchlistPrices[a.symbol] || prices[a.symbol];
-      const quoteB = watchlistPrices[b.symbol] || prices[b.symbol];
+    return activeRawSections.map(sec => {
+      // 1. Filter by search query
+      let filtered = sec.stocks;
+      if (q) {
+        filtered = filtered.filter(s => s.symbol.includes(q) || s.name.toUpperCase().includes(q));
+      }
 
-      if (sortCol === 'symbol') {
-        return sortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
-      }
-      if (sortCol === 'price') {
-        const priceA = quoteA?.price ?? 0;
-        const priceB = quoteB?.price ?? 0;
-        return sortDir === 'desc' ? (priceB - priceA) : (priceA - priceB);
-      }
-      if (sortCol === 'change') {
-        const changeA = quoteA?.change ?? 0;
-        const changeB = quoteB?.change ?? 0;
-        return sortDir === 'desc' ? (changeB - changeA) : (changeA - changeB);
-      }
-      if (sortCol === 'percentChange') {
-        const pctA = (quoteA as any)?.percentChange ?? (quoteA as any)?.percent_change ?? 0;
-        const pctB = (quoteB as any)?.percentChange ?? (quoteB as any)?.percent_change ?? 0;
-        return sortDir === 'desc' ? (pctB - pctA) : (pctA - pctB);
-      }
-      return 0;
+      // 2. Sort stocks
+      const sorted = [...filtered].sort((a, b) => {
+        const quoteA = watchlistPrices[a.symbol] || prices[a.symbol];
+        const quoteB = watchlistPrices[b.symbol] || prices[b.symbol];
+
+        if (sortCol === 'symbol') {
+          return sortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
+        }
+        if (sortCol === 'price') {
+          const priceA = quoteA?.price ?? 0;
+          const priceB = quoteB?.price ?? 0;
+          return sortDir === 'desc' ? (priceB - priceA) : (priceA - priceB);
+        }
+        if (sortCol === 'change') {
+          const changeA = quoteA?.change ?? 0;
+          const changeB = quoteB?.change ?? 0;
+          return sortDir === 'desc' ? (changeB - changeA) : (changeA - changeB);
+        }
+        if (sortCol === 'percentChange') {
+          const pctA = (quoteA as any)?.percentChange ?? (quoteA as any)?.percent_change ?? 0;
+          const pctB = (quoteB as any)?.percentChange ?? (quoteB as any)?.percent_change ?? 0;
+          return sortDir === 'desc' ? (pctB - pctA) : (pctA - pctB);
+        }
+        return 0;
+      });
+
+      return {
+        ...sec,
+        stocks: sorted
+      };
     });
-  }, [filteredStockList, sortCol, sortDir, watchlistPrices, prices]);
+  }, [activeRawSections, searchQuery, sortCol, sortDir, watchlistPrices, prices]);
 
   // Auto-fetch missing prices
   useEffect(() => {
     if (typeof fetchWatchlistQuotes === 'function') {
       fetchWatchlistQuotes();
     }
-    const symsToFetch = filteredStockList
-      .map(s => s.symbol)
-      .filter(s => !watchlistPrices[s] && !prices[s]);
+    const allSymbols = activeRawSections.flatMap(s => s.stocks.map(st => st.symbol));
+    const symsToFetch = allSymbols.filter(s => !watchlistPrices[s] && !prices[s]);
     if (symsToFetch.length > 0 && typeof fetchPrices === 'function') {
       fetchPrices(symsToFetch);
     }
-  }, [filteredStockList, fetchWatchlistQuotes, fetchPrices, watchlistPrices, prices]);
+  }, [activeRawSections, fetchWatchlistQuotes, fetchPrices, watchlistPrices, prices]);
 
   const handleSort = (col: SortColumn) => {
     if (sortCol === col) {
@@ -459,122 +560,162 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
         </button>
       </div>
 
-      {/* 5. Compact Stock Rows Stream (Height: 32px per row, Exact X-Chart Density) */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-[#1F2233]/30 min-h-0">
-        {sortedStockList.length === 0 ? (
-          <div className="py-8 text-center text-slate-400 text-xs">
-            ไม่พบหุ้นที่ตรงกับคำค้นหา
-          </div>
-        ) : (
-          sortedStockList.map((stock) => {
-            const isSelected = selectedTicker === stock.symbol;
-            const stat = tickerStats[stock.symbol];
-            const hasTheMust = stat?.theMustUnread && stat.theMustUnread > 0;
-            const unreadCount = stat?.unread || 0;
-            const totalNews = stat?.total || 0;
+      {/* 5. High-Density Stream with Collapsible Holdings & Target Sections */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 divide-y divide-[#1F2233]/40">
+        {processedSections.map((section) => {
+          const isCollapsed = collapsedSections[section.id];
 
-            const quote = watchlistPrices[stock.symbol] || prices[stock.symbol];
-            const price = quote?.price ?? 0;
-            const change = quote?.change ?? 0;
-            const percentChange = (quote as any)?.percentChange ?? (quote as any)?.percent_change ?? 0;
-            const isPositive = percentChange > 0;
-            const isZero = percentChange === 0 || !quote;
-
-            // Format price according to scale
-            let formattedPrice = price > 0 ? price.toFixed(2) : '—';
-            if (price >= 1000) {
-              formattedPrice = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            } else if (price < 1 && price > 0) {
-              formattedPrice = price.toFixed(4);
-            }
-
-            return (
-              <div
-                key={stock.symbol}
-                onClick={() => onSelectTicker(isSelected ? null : stock.symbol)}
-                className={clsx(
-                  "h-[32px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative select-none",
-                  isSelected
-                    ? "bg-purple-950/40 text-white"
-                    : "hover:bg-white/5 text-slate-200 hover:text-white"
-                )}
+          return (
+            <div key={section.id} className="bg-[#0F111A]">
+              {/* Collapsible Section Header Bar (Height: 28px) */}
+              <div 
+                onClick={() => toggleSection(section.id)}
+                className="h-7 px-2.5 bg-[#131724]/95 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
               >
-                {/* Active Neon Left Border Indicator */}
-                {isSelected && (
-                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79]" />
-                )}
-
-                {/* Symbol Column: Circular Dot Badge + Ticker + News Count / The Must Flame */}
-                <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
-                  <div
-                    className={clsx(
-                      "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm",
-                      getSymbolBadgeGradient(stock.symbol)
-                    )}
-                  >
-                    {stock.symbol.slice(0, 1)}
-                  </div>
-
-                  <span className={clsx(
-                    "text-[13px] font-normal tracking-tight truncate font-mono",
-                    isSelected ? "text-white font-bold" : "text-slate-100 group-hover:text-white"
-                  )}>
-                    {stock.symbol}
-                  </span>
-
-                  {/* News Indicators */}
-                  {hasTheMust ? (
-                    <span className="px-1 py-0.2 rounded bg-rose-500/25 text-rose-300 font-black text-[9px] border border-rose-500/40 flex items-center gap-0.5 animate-pulse shrink-0">
-                      <Flame className="w-2.5 h-2.5 text-rose-400" />
-                    </span>
-                  ) : unreadCount > 0 ? (
-                    <span className="px-1.5 py-0.2 rounded-full bg-[#823AFD]/30 text-[#C4B5FD] font-mono font-bold text-[9px] shrink-0 border border-[#823AFD]/40">
-                      {unreadCount}
-                    </span>
-                  ) : totalNews > 0 ? (
-                    <span className="text-[9px] font-mono text-slate-400 opacity-60 shrink-0">
-                      {totalNews}
-                    </span>
-                  ) : null}
-                </div>
-
-                {/* Last Price Column */}
-                <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1 truncate">
-                  {price > 0 ? formattedPrice : '—'}
-                </div>
-
-                {/* Change Column */}
-                <div 
-                  className={clsx(
-                    "col-span-2 text-right font-mono text-[13px] font-normal truncate",
-                    isZero 
-                      ? "text-slate-300" 
-                      : isPositive 
-                      ? "text-emerald-400" 
-                      : "text-rose-400"
+                <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
+                  {isCollapsed ? (
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors shrink-0" />
                   )}
-                >
-                  {price > 0 ? (isPositive && change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2)) : '—'}
-                </div>
-
-                {/* Change % Column */}
-                <div className="col-span-2 text-right font-mono text-[13px] font-normal truncate">
-                  <span 
-                    className={clsx(
-                      isZero 
-                        ? "text-slate-300" 
-                        : isPositive 
-                        ? "text-emerald-400" 
-                        : "text-rose-400"
-                    )}
-                  >
-                    {price > 0 ? (isPositive && percentChange > 0 ? `+${percentChange.toFixed(2)}%` : `${percentChange.toFixed(2)}%`) : '—'}
+                  {section.icon}
+                  <span className="tracking-wide uppercase text-slate-200 group-hover:text-white font-semibold text-[12px] truncate">
+                    {section.title}
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-normal shrink-0">
+                    ({section.stocks.length})
                   </span>
                 </div>
+
+                {section.badge && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-semibold border leading-none bg-cyan-500/15 text-cyan-300 border-cyan-500/30 shrink-0">
+                    {section.badge}
+                  </span>
+                )}
               </div>
-            );
-          })
-        )}
+
+              {/* Stock Rows in this section */}
+              {!isCollapsed && (
+                <div className="divide-y divide-[#1F2233]/25">
+                  {section.stocks.length === 0 ? (
+                    <div className="px-6 py-2.5 text-xs text-slate-400 italic text-center">
+                      ไม่มีหุ้นในกลุ่มนี้
+                    </div>
+                  ) : (
+                    section.stocks.map((stock) => {
+                      const isSelected = selectedTicker === stock.symbol;
+                      const stat = tickerStats[stock.symbol];
+                      const hasTheMust = stat?.theMustUnread && stat.theMustUnread > 0;
+                      const unreadCount = stat?.unread || 0;
+                      const totalNews = stat?.total || 0;
+
+                      const quote = watchlistPrices[stock.symbol] || prices[stock.symbol];
+                      const price = quote?.price ?? 0;
+                      const change = quote?.change ?? 0;
+                      const percentChange = (quote as any)?.percentChange ?? (quote as any)?.percent_change ?? 0;
+                      const isPositive = percentChange > 0;
+                      const isZero = percentChange === 0 || !quote;
+
+                      // Format price
+                      let formattedPrice = price > 0 ? price.toFixed(2) : '—';
+                      if (price >= 1000) {
+                        formattedPrice = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      } else if (price < 1 && price > 0) {
+                        formattedPrice = price.toFixed(4);
+                      }
+
+                      return (
+                        <div
+                          key={stock.symbol}
+                          onClick={() => onSelectTicker(isSelected ? null : stock.symbol)}
+                          className={clsx(
+                            "h-[32px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative select-none",
+                            isSelected
+                              ? "bg-purple-950/40 text-white"
+                              : "hover:bg-white/5 text-slate-200 hover:text-white"
+                          )}
+                        >
+                          {/* Active Neon Left Indicator */}
+                          {isSelected && (
+                            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79]" />
+                          )}
+
+                          {/* Symbol Column: Dot Badge + Ticker + News Count / The Must Flame */}
+                          <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
+                            <div
+                              className={clsx(
+                                "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm",
+                                getSymbolBadgeGradient(stock.symbol)
+                              )}
+                            >
+                              {stock.symbol.slice(0, 1)}
+                            </div>
+
+                            <span className={clsx(
+                              "text-[13px] font-normal tracking-tight truncate font-mono",
+                              isSelected ? "text-white font-bold" : "text-slate-100 group-hover:text-white"
+                            )}>
+                              {stock.symbol}
+                            </span>
+
+                            {/* News Indicators */}
+                            {hasTheMust ? (
+                              <span className="px-1 py-0.2 rounded bg-rose-500/25 text-rose-300 font-black text-[9px] border border-rose-500/40 flex items-center gap-0.5 animate-pulse shrink-0">
+                                <Flame className="w-2.5 h-2.5 text-rose-400" />
+                              </span>
+                            ) : unreadCount > 0 ? (
+                              <span className="px-1.5 py-0.2 rounded-full bg-[#823AFD]/30 text-[#C4B5FD] font-mono font-bold text-[9px] shrink-0 border border-[#823AFD]/40">
+                                {unreadCount}
+                              </span>
+                            ) : totalNews > 0 ? (
+                              <span className="text-[9px] font-mono text-slate-400 opacity-60 shrink-0">
+                                {totalNews}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {/* Last Price Column */}
+                          <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1 truncate">
+                            {price > 0 ? formattedPrice : '—'}
+                          </div>
+
+                          {/* Change Column */}
+                          <div 
+                            className={clsx(
+                              "col-span-2 text-right font-mono text-[13px] font-normal truncate",
+                              isZero 
+                                ? "text-slate-300" 
+                                : isPositive 
+                                ? "text-emerald-400" 
+                                : "text-rose-400"
+                            )}
+                          >
+                            {price > 0 ? (isPositive && change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2)) : '—'}
+                          </div>
+
+                          {/* Change % Column */}
+                          <div className="col-span-2 text-right font-mono text-[13px] font-normal truncate">
+                            <span 
+                              className={clsx(
+                                isZero 
+                                  ? "text-slate-300" 
+                                  : isPositive 
+                                  ? "text-emerald-400" 
+                                  : "text-rose-400"
+                              )}
+                            >
+                              {price > 0 ? (isPositive && percentChange > 0 ? `+${percentChange.toFixed(2)}%` : `${percentChange.toFixed(2)}%`) : '—'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* 6. Thematic Hashtag Strip (Footer) */}
