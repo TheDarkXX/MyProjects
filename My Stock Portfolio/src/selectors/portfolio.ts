@@ -69,7 +69,7 @@ export function buildPortfolioSelector(
   }
   let marketValue = 0, unrealizedPnL = 0; const positionsList: Position[] = [];
   positions.forEach((p, symbol) => {
-    if (p.shares <= 0) return; const px = latestPrices[symbol] ?? 0;
+    if (p.shares <= 0.0001) return; const px = latestPrices[symbol] ?? 0;
     const mv = p.shares * px; const upnl = mv - p.totalCost; marketValue += mv; unrealizedPnL += upnl;
     positionsList.push({
       symbol, shares: p.shares, avgCost: +p.avgCost.toFixed(6),
