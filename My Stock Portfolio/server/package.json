@@ -13,10 +13,12 @@
   "license": "ISC",
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "@mozilla/readability": "^0.6.0",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "hono": "^4.6.9",
+    "linkedom": "^0.18.13",
     "yahoo-finance2": "^4.0.2"
   }
 }

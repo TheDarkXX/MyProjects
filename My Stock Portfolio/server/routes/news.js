@@ -1,6 +1,13 @@
 import { Hono } from 'hono';
 import { db } from '../db/init.js';
-import { runNewsScan, getPublicationTimingStats, getTriageStats, getWatchlistTickers } from '../services/newsRadar.js';
+import { 
+  runNewsScan, 
+  getPublicationTimingStats, 
+  getTriageStats, 
+  getWatchlistTickers,
+  rescoreArticle,
+  rescoreRecentArticles
+} from '../services/newsRadar.js';
 
 const newsRoutes = new Hono();
 
@@ -199,6 +206,61 @@ newsRoutes.post('/scan', async (c) => {
   } catch (error) {
     console.error('[newsRoutes] Scan error:', error.message);
     return c.json({ error: 'Scan failed', details: error.message }, 500);
+  }
+});
+
+// POST /api/news/rescore/:id — Re-score a specific article with 5D matrix
+newsRoutes.post('/rescore/:id', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    const result = await rescoreArticle(id);
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error(`[newsRoutes] Rescore error for article ${c.req.param('id')}:`, error.message);
+    return c.json({ error: 'Rescore failed', details: error.message }, 500);
+  }
+});
+
+// POST /api/news/rescore-all — Re-score recent articles in bulk with 5D matrix
+newsRoutes.post('/rescore-all', async (c) => {
+  try {
+    const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 50);
+    const results = await rescoreRecentArticles(limit);
+    return c.json({ success: true, count: results.length, data: results });
+  } catch (error) {
+    console.error('[newsRoutes] Bulk rescore error:', error.message);
+    return c.json({ error: 'Bulk rescore failed', details: error.message }, 500);
+  }
+});
+
+// POST /api/news/gfin-search — Test gfin autonomous hunter on-demand
+newsRoutes.post('/gfin-search', async (c) => {
+  try {
+    const body = await c.req.json();
+    const ticker = (body.ticker || 'GLOBAL').trim().toUpperCase();
+    const headline = body.headline || '';
+    if (!headline) return c.json({ error: 'Headline is required' }, 400);
+
+    const { fetchFullStoryForHeadline } = await import('../services/gfinSearcher.js');
+    const result = await fetchFullStoryForHeadline({ ticker, headline, beehiivUrl: body.url || null });
+    return c.json({ success: true, ticker, headline, data: result });
+  } catch (error) {
+    console.error('[newsRoutes] gfin search error:', error.message);
+    return c.json({ error: 'gfin search failed', details: error.message }, 500);
+  }
+});
+
+// POST /api/news/re-enrich/:id — Force gfin to hunt full story & re-score an existing article
+newsRoutes.post('/re-enrich/:id', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    // clear full_content to force re-enrichment
+    db.prepare('UPDATE news_intelligence SET full_content = NULL WHERE id = ?').run(id);
+    const result = await rescoreArticle(id);
+    return c.json({ success: true, message: 'Article re-enriched with gfin', data: result });
+  } catch (error) {
+    console.error(`[newsRoutes] Re-enrich error for article ${c.req.param('id')}:`, error.message);
+    return c.json({ error: 'Re-enrich failed', details: error.message }, 500);
   }
 });
 

@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useMemo, useCallback, useRef, useState } from 'react';
 import { 
   X, ChevronLeft, ChevronRight, ExternalLink, Clock, Flame, 
-  Zap, Check, EyeOff, Building, Tag, ArrowUp, ArrowDown, BookOpen
+  Zap, Check, EyeOff, Building, Tag, ArrowUp, ArrowDown, BookOpen,
+  FileText, ChevronDown, ChevronUp, Target, AlertTriangle
 } from 'lucide-react';
 import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { NewsItem } from './types';
+import { NewsItem, ScoreBreakdown } from './types';
 
 interface NewsDetailModalProps {
   isOpen: boolean;
@@ -125,6 +126,31 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       .filter(line => line.length > 2)
       .join('\n');
   }, [activeItem?.summary_th]);
+
+  // Full article accordion state
+  const [isFullArticleOpen, setIsFullArticleOpen] = useState(false);
+
+  // Reset full article open state on activeItem switch
+  useEffect(() => {
+    setIsFullArticleOpen(false);
+  }, [activeItem?.id]);
+
+  // Parse 5D Score Breakdown safely
+  const scoreData: ScoreBreakdown | null = useMemo(() => {
+    if (!activeItem?.score_breakdown) return null;
+    if (typeof activeItem.score_breakdown === 'object') return activeItem.score_breakdown as ScoreBreakdown;
+    try {
+      return JSON.parse(activeItem.score_breakdown);
+    } catch {
+      return null;
+    }
+  }, [activeItem?.score_breakdown]);
+
+  // Count words in full content
+  const fullContentWordCount = useMemo(() => {
+    if (!activeItem?.full_content) return 0;
+    return activeItem.full_content.trim().split(/\s+/).filter(Boolean).length;
+  }, [activeItem?.full_content]);
 
   if (!isOpen || !activeItem) return null;
 
@@ -453,7 +479,211 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               </div>
             </div>
 
-            {/* 2. DrView Alert Box: AI Priority Reason (Placed at BOTTOM as analysis takeaway) */}
+            {/* 1.5 Full Article Body Accordion */}
+            {activeItem.full_content ? (
+              <div className="rounded-2xl border border-[#212638] bg-[#0D1019] overflow-hidden transition-all shadow-md">
+                <button
+                  type="button"
+                  onClick={() => setIsFullArticleOpen(!isFullArticleOpen)}
+                  className="w-full p-3.5 sm:p-4 bg-[#111522] hover:bg-[#151A2B] flex items-center justify-between text-left transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-1.5 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                      <FileText className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-[14px] sm:text-[15px] font-bold text-slate-200 group-hover:text-white flex items-center gap-2">
+                        <span>เนื้อหาบทความฉบับเต็มจากต้นทาง</span>
+                        <span className="text-xs font-mono font-normal text-[#58A6FF] bg-[#58A6FF]/10 px-2 py-0.5 rounded-md border border-[#58A6FF]/20">
+                          {fullContentWordCount} คำ
+                        </span>
+                        {activeItem.content_source && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 flex items-center gap-1">
+                            <span>📡 {activeItem.content_source.replace('_', ' ')}</span>
+                            {activeItem.source_count && activeItem.source_count > 1 ? (
+                              <span className="text-[11px] text-emerald-400">({activeItem.source_count} แหล่ง)</span>
+                            ) : null}
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {isFullArticleOpen ? 'คลิกเพื่อย่อเนื้อหา' : 'คลิกเพื่อเปิดอ่านเนื้อหาบทความแบบละเอียด'}
+                        {activeItem.content_source_url ? ` • แหล่งที่มา: ${new URL(activeItem.content_source_url).hostname}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-white/5 text-slate-300 group-hover:text-white border border-white/10 transition-transform">
+                    {isFullArticleOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </div>
+                </button>
+
+                {isFullArticleOpen && (
+                  <div className="p-4 sm:p-6 border-t border-[#1F2233] bg-[#090C12] text-[14.5px] sm:text-[15px] text-[#C9D1D9] leading-relaxed whitespace-pre-line font-normal space-y-4 select-text">
+                    {activeItem.full_content}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {/* 2. 5-Dimension Content-Driven Score Matrix Card */}
+            {scoreData && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#0E121D] border border-[#212638] shadow-lg space-y-3.5">
+                <div className="flex items-center justify-between gap-3 flex-wrap border-b border-[#1C2030] pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-1.5 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                      <Target className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-[14.5px] sm:text-[15.5px] font-bold text-slate-200 flex items-center gap-2">
+                        <span>เกณฑ์ประเมิน 5 มิติ (5D Content-Driven Matrix)</span>
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        คะแนนคำนวณจากเนื้อหาจริงของบทความ ไม่ใช้ตัวเลขสุ่ม
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Total Score Badge */}
+                  <div className={clsx(
+                    "px-3 py-1 rounded-xl text-xs sm:text-sm font-mono font-black border flex items-center gap-1.5 shadow-sm",
+                    scoreData.total >= 85 ? "bg-rose-500/20 text-rose-300 border-rose-500/50" :
+                    scoreData.total >= 60 ? "bg-amber-500/20 text-amber-300 border-amber-500/40" :
+                    scoreData.total >= 40 ? "bg-sky-500/20 text-sky-300 border-sky-500/40" :
+                    "bg-slate-800 text-slate-300 border-slate-700"
+                  )}>
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span>คะแนนรวม: {scoreData.total} / 100</span>
+                  </div>
+                </div>
+
+                {/* 5 Dimension Progress Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-1">
+                  {/* 1. Financial */}
+                  <div className="p-2.5 rounded-xl bg-[#141824] border border-[#212638] space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-300 flex items-center gap-1 font-medium">
+                        💰 งบ & ไกด์แดนซ์
+                      </span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        {scoreData.financial}/30
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, (scoreData.financial / 30) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 2. Moat & Risk */}
+                  <div className="p-2.5 rounded-xl bg-[#141824] border border-[#212638] space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-300 flex items-center gap-1 font-medium">
+                        🏰 คูเมือง & เสี่ยง
+                      </span>
+                      <span className="font-mono font-bold text-indigo-400">
+                        {scoreData.moat}/25
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, (scoreData.moat / 25) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 3. Ownership */}
+                  <div className="p-2.5 rounded-xl bg-[#141824] border border-[#212638] space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-300 flex items-center gap-1 font-medium">
+                        💼 สถานะพอร์ต
+                      </span>
+                      <span className="font-mono font-bold text-purple-400">
+                        {scoreData.ownership}/20
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, (scoreData.ownership / 20) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 4. Actionability */}
+                  <div className="p-2.5 rounded-xl bg-[#141824] border border-[#212638] space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-300 flex items-center gap-1 font-medium">
+                        🎯 ตัดสินใจ
+                      </span>
+                      <span className="font-mono font-bold text-amber-400">
+                        {scoreData.actionability}/15
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, (scoreData.actionability / 15) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 5. Source */}
+                  <div className="p-2.5 rounded-xl bg-[#141824] border border-[#212638] space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-300 flex items-center gap-1 font-medium">
+                        📰 แหล่งข่าว
+                      </span>
+                      <span className="font-mono font-bold text-sky-400">
+                        {scoreData.source}/10
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-sky-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, (scoreData.source / 10) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Penalties or Notes */}
+                {scoreData.penalties && scoreData.penalties.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap pt-1 text-xs text-rose-300 bg-rose-950/25 border border-rose-500/30 px-3 py-2 rounded-xl">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                    <span className="font-bold">เงื่อนไขตัดคะแนน:</span>
+                    {scoreData.penalties.map((p, idx) => (
+                      <span key={idx} className="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-200">
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Evidence Quotes (Anti-Hallucination Proof) */}
+                {scoreData.evidence_quotes && (scoreData.evidence_quotes.financial || scoreData.evidence_quotes.moat) && (
+                  <div className="p-3 rounded-xl bg-[#141824] border border-[#212638] text-xs space-y-2 pt-2">
+                    <div className="font-bold text-slate-300 flex items-center gap-1.5">
+                      <span>📌 ข้อความหลักฐานจากบทความ (Anti-Hallucination Evidence):</span>
+                    </div>
+                    {scoreData.evidence_quotes.financial && (
+                      <div className="text-slate-300 italic bg-slate-900/70 p-2.5 rounded-lg border-l-3 border-emerald-400">
+                        <span className="text-emerald-400 font-semibold not-italic">[มิติด้านการเงิน]</span> "{scoreData.evidence_quotes.financial}"
+                      </div>
+                    )}
+                    {scoreData.evidence_quotes.moat && (
+                      <div className="text-slate-300 italic bg-slate-900/70 p-2.5 rounded-lg border-l-3 border-indigo-400">
+                        <span className="text-indigo-400 font-semibold not-italic">[มิติด้าน Moat]</span> "{scoreData.evidence_quotes.moat}"
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. DrView Alert Box: AI Priority Reason (Placed at BOTTOM as analysis takeaway) */}
             {activeItem.priority_reason && (
               <div className={clsx(
                 "p-4 rounded-xl border flex items-start gap-3 shadow-md mt-4",

@@ -1,3 +1,18 @@
+export interface ScoreBreakdown {
+  financial: number;
+  moat: number;
+  ownership: number;
+  actionability: number;
+  source: number;
+  total: number;
+  penalties?: string[];
+  notes?: string;
+  evidence_quotes?: {
+    financial?: string;
+    moat?: string;
+  };
+}
+
 export interface NewsItem {
   id: number;
   ticker: string;
@@ -15,6 +30,14 @@ export interface NewsItem {
   related_portfolio_id: string | null;
   relevance_score?: number;
   triage_tags?: string | string[];
+  score_breakdown?: string | ScoreBreakdown | null;
+  full_content?: string | null;
+  content_source?: string | null;
+  content_source_url?: string | null;
+  content_fetched_at?: string | null;
+  content_relevance_score?: number | null;
+  source_count?: number;
+  event_fingerprint?: string | null;
   is_read: number;
   created_at: string;
 }
