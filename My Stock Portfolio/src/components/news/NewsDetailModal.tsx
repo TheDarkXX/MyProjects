@@ -102,20 +102,8 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose, handlePrev, handleNext, activeItem, onToggleRead]);
 
-  if (!isOpen || !activeItem) return null;
-
-  const isMust = activeItem.reading_priority === 'THE_MUST';
-  const isCatalyst = activeItem.reading_priority === 'CATALYST' || activeItem.reading_priority === 'GOOD_TO_KNOW';
-  const isWatchlist = activeItem.reading_priority === 'WATCHLIST';
-  const isRead = activeItem.is_read === 1;
-
-  let tags: string[] = [];
-  if (Array.isArray(activeItem.triage_tags)) tags = activeItem.triage_tags;
-  else if (typeof activeItem.triage_tags === 'string') {
-    try { tags = JSON.parse(activeItem.triage_tags); } catch {}
-  }
-
   // Normalizer: Convert raw inline bullets ('•', '\n', etc.) into standard Markdown list items ('- ...')
+  // MUST be defined above early return to obey React Rules of Hooks!
   const normalizedSummary = useMemo(() => {
     if (!activeItem?.summary_th) return '';
     const raw = activeItem.summary_th;
@@ -137,6 +125,19 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       .filter(line => line.length > 2)
       .join('\n');
   }, [activeItem?.summary_th]);
+
+  if (!isOpen || !activeItem) return null;
+
+  const isMust = activeItem.reading_priority === 'THE_MUST';
+  const isCatalyst = activeItem.reading_priority === 'CATALYST' || activeItem.reading_priority === 'GOOD_TO_KNOW';
+  const isWatchlist = activeItem.reading_priority === 'WATCHLIST';
+  const isRead = activeItem.is_read === 1;
+
+  let tags: string[] = [];
+  if (Array.isArray(activeItem.triage_tags)) tags = activeItem.triage_tags;
+  else if (typeof activeItem.triage_tags === 'string') {
+    try { tags = JSON.parse(activeItem.triage_tags); } catch {}
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
