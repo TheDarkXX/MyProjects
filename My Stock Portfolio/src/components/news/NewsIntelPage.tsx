@@ -800,7 +800,7 @@ export const NewsIntelPage: React.FC = () => {
       {/* Right Column: Sticky News Ticker Dock (Desktop) */}
       <div className={clsx(
         "hidden xl:block sticky top-6 shrink-0 transition-all duration-300 rounded-2xl overflow-hidden border border-[#1F2233]",
-        dockCollapsed ? "w-12" : "w-80"
+        dockCollapsed ? "w-12" : "w-[330px]"
       )}>
         <NewsTickerDock
           selectedTicker={selectedTicker}

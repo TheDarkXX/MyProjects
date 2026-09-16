@@ -1,22 +1,24 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
   X, 
   Flame, 
-  Sparkles, 
   Star, 
   Briefcase, 
   ChevronRight, 
   ChevronLeft, 
   Hash, 
   Filter, 
-  Layers,
   Check,
-  Plus
+  Plus,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useXChartStore } from '../../stores/xchartStore';
 import { useHoldings } from '../../hooks/useHoldings';
+import { usePriceStore } from '../../stores/priceStore';
 import { DEFAULT_2X_TARGET_STOCKS } from '../xchart/myport/MyPortWatchlist';
 
 // Deterministic gradient colors for symbol badges (TradingView / X-Chart style)
@@ -98,6 +100,9 @@ interface NewsTickerDockProps {
   className?: string;
 }
 
+type SortColumn = 'symbol' | 'price' | 'change' | 'percentChange';
+type SortDir = 'asc' | 'desc';
+
 export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
   selectedTicker,
   selectedTag,
@@ -113,11 +118,15 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'main' | 'tiger' | 'watchlist'>('main');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortCol, setSortCol] = useState<SortColumn>('symbol');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
-  // 1. Pull Watchlist from X-Chart Store directly (unified with X-Chart dock)
-  const { watchlistSections } = useXChartStore();
+  // 1. Pull Watchlist from X-Chart Store directly
+  const { watchlistSections, watchlistPrices, fetchWatchlistQuotes } = useXChartStore();
   // 2. Pull Main Portfolio Holdings from useHoldings
   const { holdings = [] } = useHoldings();
+  // 3. Pull Live Prices from usePriceStore
+  const { prices, fetchPrices } = usePriceStore();
 
   // Dynamic Watchlist: merge X-Chart sections + DB custom watchlist + defaults
   const mergedWatchlist = useMemo<StockItem[]>(() => {
@@ -179,8 +188,8 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
     }));
   }, []);
 
-  // Current stocks based on active tab
-  const currentStockList = useMemo(() => {
+  // Filtered stocks based on active tab and search query
+  const filteredStockList = useMemo(() => {
     let list: StockItem[] = [];
     if (activeTab === 'main') list = mainPortfolioStocks;
     else if (activeTab === 'tiger') list = tigerPortfolioStocks;
@@ -192,6 +201,68 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
     return list.filter((s) => s.symbol.includes(q) || s.name.toUpperCase().includes(q));
   }, [activeTab, mainPortfolioStocks, tigerPortfolioStocks, mergedWatchlist, searchQuery]);
 
+  // Sort stocks (TradingView / X-Chart style)
+  const sortedStockList = useMemo(() => {
+    const list = [...filteredStockList];
+    return list.sort((a, b) => {
+      const quoteA = watchlistPrices[a.symbol] || prices[a.symbol];
+      const quoteB = watchlistPrices[b.symbol] || prices[b.symbol];
+
+      if (sortCol === 'symbol') {
+        return sortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
+      }
+      if (sortCol === 'price') {
+        const priceA = quoteA?.price ?? 0;
+        const priceB = quoteB?.price ?? 0;
+        return sortDir === 'desc' ? (priceB - priceA) : (priceA - priceB);
+      }
+      if (sortCol === 'change') {
+        const changeA = quoteA?.change ?? 0;
+        const changeB = quoteB?.change ?? 0;
+        return sortDir === 'desc' ? (changeB - changeA) : (changeA - changeB);
+      }
+      if (sortCol === 'percentChange') {
+        const pctA = (quoteA as any)?.percentChange ?? (quoteA as any)?.percent_change ?? 0;
+        const pctB = (quoteB as any)?.percentChange ?? (quoteB as any)?.percent_change ?? 0;
+        return sortDir === 'desc' ? (pctB - pctA) : (pctA - pctB);
+      }
+      return 0;
+    });
+  }, [filteredStockList, sortCol, sortDir, watchlistPrices, prices]);
+
+  // Auto-fetch missing prices
+  useEffect(() => {
+    if (typeof fetchWatchlistQuotes === 'function') {
+      fetchWatchlistQuotes();
+    }
+    const symsToFetch = filteredStockList
+      .map(s => s.symbol)
+      .filter(s => !watchlistPrices[s] && !prices[s]);
+    if (symsToFetch.length > 0 && typeof fetchPrices === 'function') {
+      fetchPrices(symsToFetch);
+    }
+  }, [filteredStockList, fetchWatchlistQuotes, fetchPrices, watchlistPrices, prices]);
+
+  const handleSort = (col: SortColumn) => {
+    if (sortCol === col) {
+      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortCol(col);
+      setSortDir(col === 'symbol' ? 'asc' : 'desc');
+    }
+  };
+
+  const renderSortIndicator = (col: SortColumn) => {
+    if (sortCol !== col) {
+      return <ArrowUpDown className="w-2.5 h-2.5 text-slate-500 opacity-40 group-hover:opacity-100 transition-opacity" />;
+    }
+    return sortDir === 'asc' ? (
+      <ArrowUp className="w-2.5 h-2.5 text-purple-400" />
+    ) : (
+      <ArrowDown className="w-2.5 h-2.5 text-purple-400" />
+    );
+  };
+
   // Check if any filter is active
   const hasActiveFilter = Boolean(selectedTicker || selectedTag);
 
@@ -200,14 +271,14 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
       <aside className={clsx("w-12 bg-[#0D1019] border-l border-[#1F2233] flex flex-col items-center py-4 select-none shrink-0 transition-all", className)}>
         <button
           onClick={onToggleCollapse}
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
           title="Expand Ticker Navigator"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <div className="mt-8 flex flex-col items-center gap-4 text-slate-500">
+        <div className="mt-8 flex flex-col items-center gap-4 text-slate-400">
           <Hash className="w-4 h-4 text-[#823AFD]" />
-          <span className="text-[10px] font-mono [writing-mode:vertical-lr] tracking-widest text-slate-400 font-bold uppercase">
+          <span className="text-[11px] font-mono [writing-mode:vertical-lr] tracking-widest text-slate-300 font-bold uppercase">
             Radar Tickers
           </span>
           {hasActiveFilter && (
@@ -220,20 +291,20 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
 
   return (
     <aside className={clsx(
-      "w-72 sm:w-80 bg-[#0D1019] border-l border-[#1F2233] flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.3)] select-none shrink-0 transition-all text-xs",
+      "w-80 sm:w-[330px] bg-[#0D1019] border-l border-[#1F2233] flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.3)] select-none shrink-0 transition-all text-xs",
       className
     )}>
       {/* 1. Header with Title & Collapse */}
-      <div className="p-3.5 border-b border-[#1F2233] flex items-center justify-between gap-2 bg-[#0A0C14]">
+      <div className="p-3 border-b border-[#1F2233] flex items-center justify-between gap-2 bg-[#0A0C14]">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-[#823AFD]/20 border border-[#823AFD]/40 flex items-center justify-center text-[#823AFD]">
             <Hash className="w-3.5 h-3.5" />
           </div>
           <div>
             <h3 className="text-xs font-bold text-white font-heading tracking-tight flex items-center gap-1.5">
-              Radar Navigator
+              Ticker Navigator
             </h3>
-            <p className="text-[10px] text-slate-400">กรองข่าวสารตามหุ้น & พอร์ต</p>
+            <p className="text-[11px] text-slate-400">กรองข่าวสารตามหุ้น & พอร์ต</p>
           </div>
         </div>
 
@@ -241,7 +312,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
           {hasActiveFilter && (
             <button
               onClick={onClearFilter}
-              className="px-2 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+              className="px-2 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
               title="ล้างตัวกรองเพื่อดูข่าวทั้งหมด"
             >
               <X className="w-3 h-3" /> ล้าง
@@ -251,7 +322,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
           {onToggleCollapse && (
             <button
               onClick={onToggleCollapse}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
               title="Collapse Dock"
             >
               <ChevronRight className="w-4 h-4" />
@@ -268,7 +339,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
             "py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer",
             activeTab === 'main'
               ? "bg-[#823AFD] text-white shadow-[0_0_12px_rgba(130,58,253,0.4)]"
-              : "text-slate-400 hover:text-white hover:bg-white/5"
+              : "text-slate-300 hover:text-white hover:bg-white/5"
           )}
         >
           <span>🏢</span>
@@ -281,7 +352,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
             "py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer",
             activeTab === 'tiger'
               ? "bg-amber-600 text-white shadow-[0_0_12px_rgba(245,158,11,0.4)]"
-              : "text-slate-400 hover:text-white hover:bg-white/5"
+              : "text-slate-300 hover:text-white hover:bg-white/5"
           )}
         >
           <span>🐯</span>
@@ -294,7 +365,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
             "py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer",
             activeTab === 'watchlist'
               ? "bg-blue-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.4)]"
-              : "text-slate-400 hover:text-white hover:bg-white/5"
+              : "text-slate-300 hover:text-white hover:bg-white/5"
           )}
         >
           <span>⭐</span>
@@ -303,9 +374,9 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
       </div>
 
       {/* 3. Search Box */}
-      <div className="p-2.5 border-b border-[#1F2233] bg-[#0A0C14]">
+      <div className="p-2 border-b border-[#1F2233] bg-[#0A0C14]">
         <div className="relative">
-          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="ค้นหาหุ้น (เช่น NVDA)..."
@@ -327,10 +398,10 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
       {/* Quick Watchlist Manage link */}
       {activeTab === 'watchlist' && onManageWatchlist && (
         <div className="px-3 py-1.5 bg-[#0A0C14] border-b border-[#1F2233] flex items-center justify-between">
-          <span className="text-[10px] text-slate-400">ซิงก์จาก X-Chart & DB</span>
+          <span className="text-[11px] text-slate-300">ซิงก์จาก X-Chart & DB</span>
           <button
             onClick={onManageWatchlist}
-            className="text-[10px] text-[#823AFD] hover:text-[#A78BFA] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+            className="text-[11px] text-[#A78BFA] hover:text-white font-bold flex items-center gap-1 transition-colors cursor-pointer"
           >
             <Plus className="w-3 h-3" /> จัดการ Watchlist
           </button>
@@ -340,95 +411,165 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
       {/* Active Filter Notification Ribbon */}
       {hasActiveFilter && (
         <div className="px-3 py-2 bg-[#16121D] border-b border-[#823AFD]/30 flex items-center justify-between text-[11px]">
-          <span className="text-slate-300 flex items-center gap-1.5 font-medium">
+          <span className="text-slate-200 flex items-center gap-1.5 font-medium">
             <Filter className="w-3 h-3 text-[#FC2D79]" />
             กำลังกรอง: <strong className="text-white font-mono">{selectedTicker ? `#${selectedTicker}` : `#${selectedTag}`}</strong>
           </span>
           <button
             onClick={onClearFilter}
-            className="text-[10px] text-[#FC2D79] hover:underline font-bold"
+            className="text-[11px] text-[#FC2D79] hover:underline font-bold"
           >
             ดูทั้งหมด
           </button>
         </div>
       )}
 
-      {/* 4. Stock List Stream */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
-        {currentStockList.length === 0 ? (
-          <div className="py-8 text-center text-slate-500 text-xs">
+      {/* 4. High-Density X-Chart Style Column Headers (Height: 28px) */}
+      <div className="h-7 px-3 bg-[#0B0D14] border-b border-[#1F2233] grid grid-cols-12 items-center text-[11px] font-bold uppercase tracking-wider text-slate-300 shrink-0 select-none">
+        <button
+          onClick={() => handleSort('symbol')}
+          className="col-span-5 flex items-center gap-1 text-left hover:text-white transition-colors group cursor-pointer"
+        >
+          <span>Symbol</span>
+          {renderSortIndicator('symbol')}
+        </button>
+
+        <button
+          onClick={() => handleSort('price')}
+          className="col-span-3 flex items-center justify-end gap-1 text-right hover:text-white transition-colors group cursor-pointer pr-1"
+        >
+          <span>Last</span>
+          {renderSortIndicator('price')}
+        </button>
+
+        <button
+          onClick={() => handleSort('change')}
+          className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors group cursor-pointer"
+        >
+          <span>Chg</span>
+          {renderSortIndicator('change')}
+        </button>
+
+        <button
+          onClick={() => handleSort('percentChange')}
+          className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors group cursor-pointer"
+        >
+          <span>%</span>
+          {renderSortIndicator('percentChange')}
+        </button>
+      </div>
+
+      {/* 5. Compact Stock Rows Stream (Height: 32px per row, Exact X-Chart Density) */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-[#1F2233]/30 min-h-0">
+        {sortedStockList.length === 0 ? (
+          <div className="py-8 text-center text-slate-400 text-xs">
             ไม่พบหุ้นที่ตรงกับคำค้นหา
           </div>
         ) : (
-          currentStockList.map((stock) => {
+          sortedStockList.map((stock) => {
             const isSelected = selectedTicker === stock.symbol;
             const stat = tickerStats[stock.symbol];
             const hasTheMust = stat?.theMustUnread && stat.theMustUnread > 0;
             const unreadCount = stat?.unread || 0;
             const totalNews = stat?.total || 0;
-            const gradient = getSymbolBadgeGradient(stock.symbol);
+
+            const quote = watchlistPrices[stock.symbol] || prices[stock.symbol];
+            const price = quote?.price ?? 0;
+            const change = quote?.change ?? 0;
+            const percentChange = (quote as any)?.percentChange ?? (quote as any)?.percent_change ?? 0;
+            const isPositive = percentChange > 0;
+            const isZero = percentChange === 0 || !quote;
+
+            // Format price according to scale
+            let formattedPrice = price > 0 ? price.toFixed(2) : '—';
+            if (price >= 1000) {
+              formattedPrice = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else if (price < 1 && price > 0) {
+              formattedPrice = price.toFixed(4);
+            }
 
             return (
               <div
                 key={stock.symbol}
                 onClick={() => onSelectTicker(isSelected ? null : stock.symbol)}
                 className={clsx(
-                  "p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5 group select-none",
+                  "h-[32px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative select-none",
                   isSelected
-                    ? "bg-[#1E1830] border-[#823AFD] shadow-[0_0_16px_rgba(130,58,253,0.35)] ring-1 ring-[#823AFD]"
-                    : "bg-[#0F111A] border-[#1F2233] hover:border-slate-700 hover:bg-[#151824]"
+                    ? "bg-purple-950/40 text-white"
+                    : "hover:bg-white/5 text-slate-200 hover:text-white"
                 )}
               >
-                {/* Left: Badge + Symbol + Name */}
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className={clsx(
-                    "w-7 h-7 rounded-lg bg-gradient-to-br flex items-center justify-center font-black text-white text-[10px] shrink-0 shadow-sm",
-                    gradient
-                  )}>
-                    {stock.symbol.slice(0, 2)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className={clsx(
-                        "font-black text-xs font-mono tracking-tight",
-                        isSelected ? "text-white" : "text-slate-200 group-hover:text-white"
-                      )}>
-                        {stock.symbol}
-                      </span>
-                      {hasTheMust ? (
-                        <span className="px-1.5 py-0.2 rounded-md bg-rose-500/20 text-rose-400 font-bold text-[9px] border border-rose-500/30 flex items-center gap-0.5 animate-pulse">
-                          <Flame className="w-2.5 h-2.5" /> THE MUST
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="text-[10px] text-slate-400 truncate max-w-[140px]">
-                      {stock.name}
-                    </div>
-                  </div>
-                </div>
+                {/* Active Neon Left Border Indicator */}
+                {isSelected && (
+                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79]" />
+                )}
 
-                {/* Right: Unread / Total News Count Badge */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {unreadCount > 0 ? (
-                    <span className={clsx(
-                      "px-2 py-0.5 rounded-full text-[10px] font-black border",
-                      hasTheMust 
-                        ? "bg-rose-500 text-white border-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.6)]"
-                        : "bg-[#823AFD]/25 text-[#A78BFA] border-[#823AFD]/40"
-                    )}>
+                {/* Symbol Column: Circular Dot Badge + Ticker + News Count / The Must Flame */}
+                <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
+                  <div
+                    className={clsx(
+                      "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm",
+                      getSymbolBadgeGradient(stock.symbol)
+                    )}
+                  >
+                    {stock.symbol.slice(0, 1)}
+                  </div>
+
+                  <span className={clsx(
+                    "text-[13px] font-normal tracking-tight truncate font-mono",
+                    isSelected ? "text-white font-bold" : "text-slate-100 group-hover:text-white"
+                  )}>
+                    {stock.symbol}
+                  </span>
+
+                  {/* News Indicators */}
+                  {hasTheMust ? (
+                    <span className="px-1 py-0.2 rounded bg-rose-500/25 text-rose-300 font-black text-[9px] border border-rose-500/40 flex items-center gap-0.5 animate-pulse shrink-0">
+                      <Flame className="w-2.5 h-2.5 text-rose-400" />
+                    </span>
+                  ) : unreadCount > 0 ? (
+                    <span className="px-1.5 py-0.2 rounded-full bg-[#823AFD]/30 text-[#C4B5FD] font-mono font-bold text-[9px] shrink-0 border border-[#823AFD]/40">
                       {unreadCount}
                     </span>
                   ) : totalNews > 0 ? (
-                    <span className="text-[10px] font-mono text-slate-400 group-hover:text-slate-200">
+                    <span className="text-[9px] font-mono text-slate-400 opacity-60 shrink-0">
                       {totalNews}
                     </span>
-                  ) : (
-                    <span className="text-[10px] font-mono text-slate-400 opacity-60">0</span>
-                  )}
+                  ) : null}
+                </div>
 
-                  {isSelected && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#FC2D79] shadow-[0_0_6px_rgba(252,45,121,0.8)]" />
+                {/* Last Price Column */}
+                <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1 truncate">
+                  {price > 0 ? formattedPrice : '—'}
+                </div>
+
+                {/* Change Column */}
+                <div 
+                  className={clsx(
+                    "col-span-2 text-right font-mono text-[13px] font-normal truncate",
+                    isZero 
+                      ? "text-slate-300" 
+                      : isPositive 
+                      ? "text-emerald-400" 
+                      : "text-rose-400"
                   )}
+                >
+                  {price > 0 ? (isPositive && change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2)) : '—'}
+                </div>
+
+                {/* Change % Column */}
+                <div className="col-span-2 text-right font-mono text-[13px] font-normal truncate">
+                  <span 
+                    className={clsx(
+                      isZero 
+                        ? "text-slate-300" 
+                        : isPositive 
+                        ? "text-emerald-400" 
+                        : "text-rose-400"
+                    )}
+                  >
+                    {price > 0 ? (isPositive && percentChange > 0 ? `+${percentChange.toFixed(2)}%` : `${percentChange.toFixed(2)}%`) : '—'}
+                  </span>
                 </div>
               </div>
             );
@@ -436,12 +577,12 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
         )}
       </div>
 
-      {/* 5. Thematic Hashtag Strip (Footer) */}
-      <div className="p-3 border-t border-[#1F2233] bg-[#0A0C14] space-y-2">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+      {/* 6. Thematic Hashtag Strip (Footer) */}
+      <div className="p-2.5 border-t border-[#1F2233] bg-[#0A0C14] space-y-1.5">
+        <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
           <Hash className="w-3 h-3 text-[#FC2D79]" /> Thematic Hashtags:
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {THEMATIC_TAGS.map(({ tag, label, color }) => {
             const isTagActive = selectedTag === tag;
             return (
@@ -449,7 +590,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
                 key={tag}
                 onClick={() => onSelectTag(isTagActive ? null : tag)}
                 className={clsx(
-                  "px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1",
+                  "px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1",
                   isTagActive
                     ? "bg-[#823AFD] text-white border-white/20 shadow-[0_0_12px_rgba(130,58,253,0.5)]"
                     : clsx(color, "hover:brightness-125")
