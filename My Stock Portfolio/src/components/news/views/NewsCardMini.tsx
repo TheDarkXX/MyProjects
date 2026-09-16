@@ -20,7 +20,8 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5 w-full">
       {items.map((item) => {
         const isMust = item.reading_priority === 'THE_MUST';
-        const isGood = item.reading_priority === 'GOOD_TO_KNOW';
+        const isCatalyst = item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW';
+        const isWatchlist = item.reading_priority === 'WATCHLIST';
         const isRead = item.is_read === 1;
 
         const summaryFirstBullet = item.summary_th
@@ -36,11 +37,13 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
                 ? isRead
                   ? "bg-[#111418] border-rose-500/30 opacity-85 hover:opacity-100"
                   : "bg-[#16121D] border-rose-500 shadow-[0_4px_16px_rgba(244,63,94,0.16)]"
-                : isGood
+                : isCatalyst
                   ? isRead
                     ? "bg-[#111418] border-[#2A2E45] opacity-85 hover:opacity-100"
                     : "bg-[#111418] border-amber-500/30 hover:border-amber-500/50"
-                  : "bg-[#0D1017] border-[#1F2233] opacity-80 hover:opacity-100"
+                  : isWatchlist
+                    ? "bg-[#0D1017] border-sky-500/25 opacity-85 hover:opacity-100"
+                    : "bg-[#0D1017] border-[#1F2233] opacity-80 hover:opacity-100"
             )}
           >
             {/* Top Accent Stripe */}
@@ -64,15 +67,24 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
                     #{item.ticker}
                   </button>
 
+                  {/* 4-Tier Priority Badge */}
                   {isMust ? (
                     <span className="px-1.5 py-0.5 rounded text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-0.5">
                       <Flame className="w-3 h-3 text-rose-400" /> MUST
                     </span>
-                  ) : isGood ? (
+                  ) : isCatalyst ? (
                     <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-0.5">
-                      <Sparkles className="w-3 h-3 text-amber-400" /> FOCUS
+                      <Zap className="w-3 h-3 text-amber-400" /> CATALYST
                     </span>
-                  ) : null}
+                  ) : isWatchlist ? (
+                    <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                      WATCHLIST
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded text-xs font-normal bg-slate-800 text-slate-400 border border-slate-700">
+                      CHATTER
+                    </span>
+                  )}
 
                   {item.relevance_score !== undefined && item.relevance_score > 0 && (
                     <span className="px-1.5 py-0.5 rounded text-xs font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-0.5">

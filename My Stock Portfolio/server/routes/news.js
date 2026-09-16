@@ -25,16 +25,22 @@ newsRoutes.get('/', (c) => {
       query += ` AND portfolio_tag = 'global'`;
     }
 
-    // Filter by reading priority
+    // Filter by reading priority (4-Tier Support + Legacy compatibility)
     if (priority === 'the_must') {
       query += ` AND reading_priority = 'THE_MUST'`;
-    } else if (priority === 'good_to_know') {
-      query += ` AND reading_priority = 'GOOD_TO_KNOW'`;
-    } else if (priority === 'optional') {
-      query += ` AND reading_priority = 'OPTIONAL'`;
+    } else if (priority === 'catalyst') {
+      query += ` AND reading_priority = 'CATALYST'`;
+    } else if (priority === 'watchlist') {
+      query += ` AND reading_priority = 'WATCHLIST'`;
+    } else if (priority === 'chatter') {
+      query += ` AND reading_priority = 'CHATTER'`;
     } else if (priority === 'focus') {
-      // The Must + Good to Know (hide noise)
-      query += ` AND reading_priority IN ('THE_MUST', 'GOOD_TO_KNOW')`;
+      // The Must + Catalysts (all in-portfolio high-signal news)
+      query += ` AND reading_priority IN ('THE_MUST', 'CATALYST')`;
+    } else if (priority === 'good_to_know') {
+      query += ` AND reading_priority IN ('CATALYST', 'GOOD_TO_KNOW')`;
+    } else if (priority === 'optional') {
+      query += ` AND reading_priority IN ('CHATTER', 'OPTIONAL')`;
     }
 
     // Filter by unread
@@ -53,13 +59,16 @@ newsRoutes.get('/', (c) => {
       params.push(`%${tag}%`, `%${tag}%`, `%${tag}%`, `%${tag}%`);
     }
 
-    // Priority ordering: THE_MUST (1) > GOOD_TO_KNOW (2) > OPTIONAL (3), then by newest created_at
+    // Priority ordering: THE_MUST (1) > CATALYST (2) > WATCHLIST (3) > CHATTER (4)
     query += `
       ORDER BY 
         CASE reading_priority 
           WHEN 'THE_MUST' THEN 1 
-          WHEN 'GOOD_TO_KNOW' THEN 2 
-          ELSE 3 
+          WHEN 'CATALYST' THEN 2 
+          WHEN 'WATCHLIST' THEN 3 
+          WHEN 'CHATTER' THEN 4 
+          WHEN 'GOOD_TO_KNOW' THEN 2
+          ELSE 5 
         END ASC,
         created_at DESC
       LIMIT ?
@@ -84,7 +93,10 @@ newsRoutes.get('/stats', (c) => {
     const stats = db.prepare(`
       SELECT 
         SUM(CASE WHEN reading_priority = 'THE_MUST' AND is_read = 0 THEN 1 ELSE 0 END) as theMustUnread,
-        SUM(CASE WHEN reading_priority = 'GOOD_TO_KNOW' AND is_read = 0 THEN 1 ELSE 0 END) as goodToKnowUnread,
+        SUM(CASE WHEN reading_priority = 'CATALYST' AND is_read = 0 THEN 1 ELSE 0 END) as catalystUnread,
+        SUM(CASE WHEN reading_priority = 'WATCHLIST' AND is_read = 0 THEN 1 ELSE 0 END) as watchlistUnread,
+        SUM(CASE WHEN reading_priority = 'CHATTER' AND is_read = 0 THEN 1 ELSE 0 END) as chatterUnread,
+        SUM(CASE WHEN reading_priority IN ('CATALYST', 'GOOD_TO_KNOW') AND is_read = 0 THEN 1 ELSE 0 END) as goodToKnowUnread,
         SUM(CASE WHEN portfolio_tag IN ('main', 'dual') AND is_read = 0 THEN 1 ELSE 0 END) as mainUnread,
         SUM(CASE WHEN portfolio_tag IN ('tiger', 'dual') AND is_read = 0 THEN 1 ELSE 0 END) as tigerUnread,
         SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as totalUnread,
@@ -94,6 +106,9 @@ newsRoutes.get('/stats', (c) => {
 
     return c.json({
       theMustUnread: stats?.theMustUnread || 0,
+      catalystUnread: stats?.catalystUnread || 0,
+      watchlistUnread: stats?.watchlistUnread || 0,
+      chatterUnread: stats?.chatterUnread || 0,
       goodToKnowUnread: stats?.goodToKnowUnread || 0,
       mainUnread: stats?.mainUnread || 0,
       tigerUnread: stats?.tigerUnread || 0,

@@ -34,7 +34,7 @@ export const NewsIntelPage: React.FC = () => {
 
   // Filters
   const [selectedPortfolio, setSelectedPortfolio] = useState<'all' | 'main' | 'tiger' | 'global'>('all');
-  const [selectedPriority, setSelectedPriority] = useState<'all' | 'the_must' | 'focus' | 'good_to_know' | 'optional'>(() => {
+  const [selectedPriority, setSelectedPriority] = useState<'all' | 'the_must' | 'catalyst' | 'watchlist' | 'chatter' | 'focus'>(() => {
     return (localStorage.getItem('news_intel_priority') as any) || 'the_must';
   });
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -45,7 +45,7 @@ export const NewsIntelPage: React.FC = () => {
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [showMobileDock, setShowMobileDock] = useState(false);
 
-  const handlePriorityChange = (priority: 'all' | 'the_must' | 'focus' | 'good_to_know' | 'optional') => {
+  const handlePriorityChange = (priority: 'all' | 'the_must' | 'catalyst' | 'watchlist' | 'chatter' | 'focus') => {
     setSelectedPriority(priority);
     localStorage.setItem('news_intel_priority', priority);
   };
@@ -90,15 +90,18 @@ export const NewsIntelPage: React.FC = () => {
       list = list.filter(item => item.portfolio_tag === 'global');
     }
 
-    // 2. Filter Priority
+    // 2. Filter Priority (4-Tier)
     if (selectedPriority === 'the_must') {
       list = list.filter(item => item.reading_priority === 'THE_MUST');
-    } else if (selectedPriority === 'good_to_know') {
-      list = list.filter(item => item.reading_priority === 'GOOD_TO_KNOW');
-    } else if (selectedPriority === 'optional') {
-      list = list.filter(item => item.reading_priority === 'OPTIONAL');
+    } else if (selectedPriority === 'catalyst') {
+      list = list.filter(item => item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW');
+    } else if (selectedPriority === 'watchlist') {
+      list = list.filter(item => item.reading_priority === 'WATCHLIST');
+    } else if (selectedPriority === 'chatter') {
+      list = list.filter(item => item.reading_priority === 'CHATTER' || item.reading_priority === 'OPTIONAL');
     } else if (selectedPriority === 'focus') {
-      list = list.filter(item => item.reading_priority === 'THE_MUST' || item.reading_priority === 'GOOD_TO_KNOW');
+      // Focus Mode = All in-portfolio high-signal (Tier 1 + Tier 2)
+      list = list.filter(item => item.reading_priority === 'THE_MUST' || item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW');
     }
 
     // 3. Filter Unread Only
@@ -150,8 +153,11 @@ export const NewsIntelPage: React.FC = () => {
     // 7. Client-side Sort (5 dimensions)
     const sorted = [...list];
     const priorityWeights: Record<string, number> = {
-      THE_MUST: 3,
-      GOOD_TO_KNOW: 2,
+      THE_MUST: 4,
+      CATALYST: 3,
+      GOOD_TO_KNOW: 3,
+      WATCHLIST: 2,
+      CHATTER: 1,
       OPTIONAL: 1,
     };
     const sentimentWeights: Record<string, number> = {
@@ -441,36 +447,36 @@ export const NewsIntelPage: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1">
-              <Flame className="w-4 h-4" /> The Must
+              <Flame className="w-4 h-4" /> 🚨 The Must
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
               {stats?.theMustUnread || 0} Unread
             </span>
           </div>
           <div className="mt-2 text-xl font-black text-white">
-            {stats?.theMustUnread ? `🔥 ${stats.theMustUnread} ข่าวต้องอ่าน` : 'สะอาด เคลียร์หมด'}
+            {stats?.theMustUnread ? `🔥 ${stats.theMustUnread} ข่าวด่วนพอร์ต` : 'สะอาด ไร้วิกฤต'}
           </div>
         </div>
 
         <div 
-          onClick={() => { handlePriorityChange('good_to_know'); setUnreadOnly(false); }}
+          onClick={() => { handlePriorityChange('catalyst'); setUnreadOnly(false); }}
           className={clsx(
             "p-4 rounded-xl border transition-all cursor-pointer select-none",
-            selectedPriority === 'good_to_know'
+            selectedPriority === 'catalyst'
               ? "bg-amber-950/40 border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
               : "bg-[#111418] border-[#2A2E45] hover:border-amber-500/50"
           )}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-4 h-4" /> Good to Know
+              <Zap className="w-4 h-4" /> ⚡ Catalysts
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-              {stats?.goodToKnowUnread || 0}
+              {stats?.catalystUnread ?? stats?.goodToKnowUnread ?? 0} Unread
             </span>
           </div>
           <div className="mt-2 text-xl font-black text-white">
-            {stats?.goodToKnowUnread || 0} ข่าวอัปเดต
+            {(stats?.catalystUnread ?? stats?.goodToKnowUnread ?? 0)} งบ & สัญญา
           </div>
         </div>
 
@@ -528,7 +534,7 @@ export const NewsIntelPage: React.FC = () => {
             <button
               onClick={() => setSelectedPortfolio('all')}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                 selectedPortfolio === 'all' ? "bg-[#1F2233] text-white shadow-sm" : "text-slate-400 hover:text-white"
               )}
             >
@@ -537,7 +543,7 @@ export const NewsIntelPage: React.FC = () => {
             <button
               onClick={() => setSelectedPortfolio('main')}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1",
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
                 selectedPortfolio === 'main' ? "bg-indigo-600 text-white shadow-sm" : "text-slate-400 hover:text-white"
               )}
             >
@@ -546,7 +552,7 @@ export const NewsIntelPage: React.FC = () => {
             <button
               onClick={() => setSelectedPortfolio('tiger')}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1",
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
                 selectedPortfolio === 'tiger' ? "bg-orange-600 text-white shadow-sm" : "text-slate-400 hover:text-white"
               )}
             >
@@ -555,7 +561,7 @@ export const NewsIntelPage: React.FC = () => {
             <button
               onClick={() => setSelectedPortfolio('global')}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                 selectedPortfolio === 'global' ? "bg-[#1F2233] text-white shadow-sm" : "text-slate-400 hover:text-white"
               )}
             >
@@ -565,35 +571,66 @@ export const NewsIntelPage: React.FC = () => {
 
           <div className="h-6 w-px bg-[#2A2E45] hidden sm:block" />
 
-          {/* Priority Filter */}
-          <div className="bg-[#0F111A] p-1 rounded-xl border border-[#1F2233] flex items-center">
+          {/* 4-Tier Priority Filter */}
+          <div className="bg-[#0F111A] p-1 rounded-xl border border-[#1F2233] flex items-center gap-1 flex-wrap">
             <button
               onClick={() => handlePriorityChange('the_must')}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1",
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
                 selectedPriority === 'the_must' ? "bg-rose-600 text-white shadow-sm" : "text-rose-400 hover:text-rose-300"
               )}
+              title="Tier 1: 🚨 เรื่องคอขาดบาดตาย มีผลต่อการถือ/ขายหุ้นโดยตรง"
             >
-              <Flame className="w-3.5 h-3.5" /> The Must
+              <Flame className="w-3.5 h-3.5" /> 🚨 The Must
+            </button>
+            <button
+              onClick={() => handlePriorityChange('catalyst')}
+              className={clsx(
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
+                selectedPriority === 'catalyst' ? "bg-amber-600 text-white shadow-sm" : "text-amber-400 hover:text-amber-300"
+              )}
+              title="Tier 2: ⚡ ข่าวผลประกอบการจริง สัญญาใหม่ ARR หุ้นในพอร์ต"
+            >
+              <Zap className="w-3.5 h-3.5" /> ⚡ Catalysts
+            </button>
+            <button
+              onClick={() => handlePriorityChange('watchlist')}
+              className={clsx(
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
+                selectedPriority === 'watchlist' ? "bg-sky-600 text-white shadow-sm" : "text-sky-400 hover:text-sky-300"
+              )}
+              title="Tier 3: 🌐 หุ้นนอกพอร์ตใน Watchlist และความเคลื่อนไหวกลุ่ม"
+            >
+              <Target className="w-3.5 h-3.5" /> 🌐 Watchlist
+            </button>
+            <button
+              onClick={() => handlePriorityChange('chatter')}
+              className={clsx(
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
+                selectedPriority === 'chatter' ? "bg-slate-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-300"
+              )}
+              title="Tier 4: 💬 บทวิเคราะห์ ความเห็นโบรกเกอร์ ข่าวลือ"
+            >
+              <BookOpen className="w-3.5 h-3.5" /> 💬 Chatter
             </button>
             <button
               onClick={() => handlePriorityChange('focus')}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                selectedPriority === 'focus' ? "bg-[#823AFD] text-white shadow-sm" : "text-slate-400 hover:text-white"
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
+                selectedPriority === 'focus' ? "bg-[#823AFD] text-white shadow-sm" : "text-purple-400 hover:text-white"
               )}
-              title="เฉพาะ The Must และ Good to Know (ซ่อน Noise)"
+              title="🎯 Focus Mode: รวม Tier 1 + Tier 2 (เฉพาะหุ้นในพอร์ตทั้งหมด ตัดเสียงรบกวน 100%)"
             >
-              Focus Mode
+              <Sparkles className="w-3.5 h-3.5" /> Focus (Port)
             </button>
             <button
               onClick={() => handlePriorityChange('all')}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                 selectedPriority === 'all' ? "bg-[#1F2233] text-white shadow-sm" : "text-slate-400 hover:text-white"
               )}
             >
-              All News
+              All
             </button>
           </div>
         </div>

@@ -24,7 +24,8 @@ export const NewsCardBig: React.FC<NewsCardBigProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
       {items.map((item) => {
         const isMust = item.reading_priority === 'THE_MUST';
-        const isGood = item.reading_priority === 'GOOD_TO_KNOW';
+        const isCatalyst = item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW';
+        const isWatchlist = item.reading_priority === 'WATCHLIST';
         const isRead = item.is_read === 1;
 
         let tags: string[] = [];
@@ -42,11 +43,13 @@ export const NewsCardBig: React.FC<NewsCardBigProps> = ({
                 ? isRead
                   ? "bg-[#111418] border-rose-500/30 opacity-85 hover:opacity-100"
                   : "bg-[#16121D] border-rose-500 shadow-[0_4px_24px_rgba(244,63,94,0.18)]"
-                : isGood
+                : isCatalyst
                   ? isRead
                     ? "bg-[#111418] border-[#2A2E45] opacity-85 hover:opacity-100"
                     : "bg-[#111418] border-amber-500/30 hover:border-amber-500/60"
-                  : "bg-[#0D1017] border-[#1F2233] opacity-80 hover:opacity-100"
+                  : isWatchlist
+                    ? "bg-[#0D1017] border-sky-500/25 opacity-85 hover:opacity-100"
+                    : "bg-[#0D1017] border-[#1F2233] opacity-80 hover:opacity-100"
             )}
           >
             {/* Top Accent Stripe for The Must */}
@@ -58,18 +61,22 @@ export const NewsCardBig: React.FC<NewsCardBigProps> = ({
               {/* Card Header: Badges & Ticker */}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Priority Badge */}
+                  {/* 4-Tier Priority Badge */}
                   {isMust ? (
                     <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/50 flex items-center gap-1">
-                      <Flame className="w-3.5 h-3.5 text-rose-400" /> THE MUST
+                      <Flame className="w-3.5 h-3.5 text-rose-400" /> 🚨 THE MUST
                     </span>
-                  ) : isGood ? (
+                  ) : isCatalyst ? (
                     <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" /> GOOD TO KNOW
+                      <Zap className="w-3.5 h-3.5 text-amber-400" /> ⚡ CATALYST
+                    </span>
+                  ) : isWatchlist ? (
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-1">
+                      🌐 WATCHLIST
                     </span>
                   ) : (
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                      ☕ OPTIONAL
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                      💬 CHATTER
                     </span>
                   )}
 

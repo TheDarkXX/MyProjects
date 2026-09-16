@@ -8,7 +8,7 @@ export interface NewsItem {
   source_url: string;
   summary_th: string;
   sentiment: 'bullish' | 'bearish' | 'neutral';
-  reading_priority: 'THE_MUST' | 'GOOD_TO_KNOW' | 'OPTIONAL';
+  reading_priority: 'THE_MUST' | 'CATALYST' | 'WATCHLIST' | 'CHATTER' | 'GOOD_TO_KNOW' | 'OPTIONAL';
   priority_reason: string;
   impact_level: 'routine' | 'significant' | 'moat_breaker';
   portfolio_tag: 'main' | 'tiger' | 'dual' | 'global';
@@ -27,7 +27,10 @@ export type SortOrder = 'desc' | 'asc';
 
 export interface NewsStats {
   theMustUnread: number;
-  goodToKnowUnread: number;
+  catalystUnread: number;
+  watchlistUnread: number;
+  chatterUnread: number;
+  goodToKnowUnread?: number;
   mainUnread: number;
   tigerUnread: number;
   totalUnread: number;

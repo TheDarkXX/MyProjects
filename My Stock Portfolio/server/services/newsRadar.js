@@ -506,24 +506,35 @@ Headline: "${headline}"
 Recent News Context:
 ${contextText || headline}
 
-Rules for reading_priority:
+Rules for reading_priority (4 Tiers):
 1. "THE_MUST": RED-ALERT ONLY. Must have a DIRECT, IMMEDIATE IMPACT ON THE DECISION TO HOLD, SELL, TRIM, OR CUT LOSS on a stock HELD IN PORTFOLIO (${portfolioTag.toUpperCase()}).
 Only 4 categories qualify:
-  a) Capital Dilution / Financial Distress: ATM share offering (>5% dilution), debt default risk, bankruptcy.
+  a) Capital Dilution / Debt Distress: ATM share offering (>5% dilution), severe debt default, bankruptcy risk.
   b) Regulatory / Legal Moat Breaker: FTC/DOJ antitrust lawsuit, FDA rejection, product/model ban, C-suite indictment.
   c) Severe Earnings/Guidance Shock: Massive earnings miss, guidance cut, severe gross margin collapse, sudden CEO firing.
   d) Existential Moat Threat / Solvency Risk: Core business model obsolete, systemic credit/NPL contagion.
-CRITICAL: If it's a good earnings report, routine revenue release, analyst upgrade/downgrade, CEO interview, normal contract win, or general market opinion, it is NOT "THE_MUST" — classify it as "GOOD_TO_KNOW".
-2. "GOOD_TO_KNOW": Solid earnings beats, contract wins, monthly revenues, analyst targets, routine product launches, or Watchlist news.
-3. "OPTIONAL": Routine insider trading (Rule 10b5-1), peripheral noise, or minor commentary.
+
+2. "CATALYST": Core fundamental catalysts for stocks HELD IN PORTFOLIO (${portfolioTag.toUpperCase()}).
+  - Official quarterly earnings reports (beats, misses within expectations), ARR growth, verified revenue releases.
+  - Major commercial contract wins (defense deals, large enterprise cloud deals, multimillion deals).
+  - Flagship product launches, major data center/factory expansions, strategic investments.
+
+3. "WATCHLIST": News regarding stocks in WATCHLIST or ECOSYSTEM PEERS (stocks NOT in portfolio, e.g. ${portfolioTag === 'global' ? 'Global Watchlist' : 'Watchlist'}).
+  - Earnings, product launches, or market updates for companies not currently held in the portfolio.
+  - Competitor developments and industry supply chain trends.
+
+4. "CHATTER": Market opinions, analyst ratings, commentary, and peripheral noise.
+  - Wall Street analyst price target tweaks, upgrades, downgrades.
+  - Op-ed opinion columns, blog commentary, valuation multiple debate articles (e.g. Seeking Alpha, Motley Fool).
+  - Routine scheduled insider selling (Rule 10b5-1).
 
 Output ONLY a JSON object:
 {
   "headline_th": "[${ticker}] พาดหัวภาษาไทยกระชับ คม เข้าใจใน 1 วินาที (10-18 คำ ไม่ใช้คำหลอกลวง)",
   "summary_th": ["ประเด็น 1 (ภาษาไทย)", "ประเด็น 2 (ภาษาไทย)", "ประเด็น 3 (ภาษาไทย)"],
   "sentiment": "bullish" | "bearish" | "neutral",
-  "reading_priority": "THE_MUST" | "GOOD_TO_KNOW" | "OPTIONAL",
-  "priority_reason": "เหตุผลสั้นๆ 1 ประโยคภาษาไทย (ชี้ชัดว่ากระทบการตัดสินใจถือหุ้นอย่างไร)",
+  "reading_priority": "THE_MUST" | "CATALYST" | "WATCHLIST" | "CHATTER",
+  "priority_reason": "เหตุผลสั้นๆ 1 ประโยคภาษาไทย (ชี้ชัดว่าทำไมถึงจัดอยู่ Tier นี้)",
   "impact_level": "routine" | "significant" | "moat_breaker"
 }`;
 
@@ -587,31 +598,33 @@ Output ONLY a JSON object:
       formattedSummary = `• ${headline}`;
     }
 
-    let calculatedPriority = ['THE_MUST', 'GOOD_TO_KNOW', 'OPTIONAL'].includes(parsed.reading_priority) 
+    let calculatedPriority = ['THE_MUST', 'CATALYST', 'WATCHLIST', 'CHATTER'].includes(parsed.reading_priority) 
       ? parsed.reading_priority 
-      : (isHolding ? 'GOOD_TO_KNOW' : 'OPTIONAL');
+      : (isHolding ? 'CATALYST' : 'WATCHLIST');
 
     // Elevate to THE_MUST ONLY if holding + score >= 85 + moat_breaker impact
     if (isHolding && relevanceScore >= 85 && parsed.impact_level === 'moat_breaker') {
       calculatedPriority = 'THE_MUST';
     }
 
-    // Iron Clad Guardrails for THE_MUST:
-    // 1. Non-holding stocks (Watchlist/Global) can NEVER be THE_MUST
-    if (!isHolding && calculatedPriority === 'THE_MUST') {
-      calculatedPriority = 'GOOD_TO_KNOW';
+    // Iron Clad Guardrails:
+    // 1. Non-holding stocks (Watchlist/Global) can NEVER be THE_MUST or CATALYST
+    if (!isHolding) {
+      if (calculatedPriority === 'THE_MUST' || calculatedPriority === 'CATALYST') {
+        calculatedPriority = 'WATCHLIST';
+      }
     }
 
-    // 2. Pure opinion/commentary/op-ed articles should not be THE_MUST
+    // 2. Pure opinion/commentary/op-ed articles should be CHATTER
     const isOpinionOrCommentary = /opinion|columnist|motley fool|seeking alpha contributor|trades at \d|is the stock a bargain|whoever spends smarter|why investors should/i.test(headline);
-    if (isOpinionOrCommentary && calculatedPriority === 'THE_MUST') {
-      calculatedPriority = 'GOOD_TO_KNOW';
+    if (isOpinionOrCommentary) {
+      calculatedPriority = 'CHATTER';
     }
 
-    // 3. Normal positive contract wins, price target upgrades, and routine financial beats are GOOD_TO_KNOW
-    const isNormalPositiveOrAnalyst = /rating upgrade|price target|keeps landing|quarterly revenue|august revenues|july revenues|subscription arr/i.test(headline);
-    if (isNormalPositiveOrAnalyst && calculatedPriority === 'THE_MUST' && parsed.impact_level !== 'moat_breaker') {
-      calculatedPriority = 'GOOD_TO_KNOW';
+    // 3. Wall Street rating tweaks/price targets are CHATTER
+    const isAnalystRating = /rating upgrade|rating downgrade|price target|analyst upgrade|initiates coverage|downgrades to|upgrades to/i.test(headline);
+    if (isAnalystRating && calculatedPriority !== 'THE_MUST') {
+      calculatedPriority = 'CHATTER';
     }
 
     return {

@@ -24,7 +24,8 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 w-full">
       {items.map((item) => {
         const isMust = item.reading_priority === 'THE_MUST';
-        const isGood = item.reading_priority === 'GOOD_TO_KNOW';
+        const isCatalyst = item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW';
+        const isWatchlist = item.reading_priority === 'WATCHLIST';
         const isRead = item.is_read === 1;
 
         return (
@@ -36,11 +37,13 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
                 ? isRead
                   ? "bg-[#111418] border-rose-500/30 opacity-85 hover:opacity-100"
                   : "bg-[#16121D] border-rose-500/80 shadow-[0_2px_14px_rgba(244,63,94,0.14)]"
-                : isGood
+                : isCatalyst
                   ? isRead
                     ? "bg-[#111418] border-[#2A2E45] opacity-85 hover:opacity-100"
                     : "bg-[#111418] border-amber-500/30 hover:border-amber-500/50"
-                  : "bg-[#0D1017] border-[#1F2233] opacity-80 hover:opacity-100"
+                  : isWatchlist
+                    ? "bg-[#0D1017] border-sky-500/25 opacity-85 hover:opacity-100"
+                    : "bg-[#0D1017] border-[#1F2233] opacity-80 hover:opacity-100"
             )}
           >
             {/* Top Accent Stripe for The Must */}
@@ -66,16 +69,24 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
                     #{item.ticker}
                   </button>
 
-                  {/* Priority Badge */}
+                  {/* 4-Tier Priority Badge */}
                   {isMust ? (
                     <span className="px-1.5 py-0.5 rounded-md text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-0.5">
                       <Flame className="w-3 h-3 text-rose-400" /> MUST
                     </span>
-                  ) : isGood ? (
+                  ) : isCatalyst ? (
                     <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-0.5">
-                      <Sparkles className="w-3 h-3 text-amber-400" /> FOCUS
+                      <Zap className="w-3 h-3 text-amber-400" /> CATALYST
                     </span>
-                  ) : null}
+                  ) : isWatchlist ? (
+                    <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                      WATCHLIST
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded-md text-xs font-normal bg-slate-800 text-slate-400 border border-slate-700">
+                      CHATTER
+                    </span>
+                  )}
 
                   {/* Portfolio Tag */}
                   {item.portfolio_tag === 'main' && (
