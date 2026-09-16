@@ -8,6 +8,7 @@ interface NewsCardMiniProps {
   selectedTicker: string | null;
   onSelectTicker: (ticker: string) => void;
   onToggleRead: (id: number, currentRead: number) => void;
+  onOpenDetail?: (item: NewsItem) => void;
 }
 
 export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
@@ -15,6 +16,7 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
   selectedTicker,
   onSelectTicker,
   onToggleRead,
+  onOpenDetail,
 }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5 w-full">
@@ -31,8 +33,9 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
         return (
           <div
             key={item.id}
+            onClick={() => onOpenDetail?.(item)}
             className={clsx(
-              "rounded-2xl border transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-4 group",
+              "rounded-2xl border transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-4 group cursor-pointer hover:border-[#823AFD]/50",
               isMust
                 ? isRead
                   ? "bg-[#111418] border-rose-500/30 opacity-85 hover:opacity-100"
@@ -56,12 +59,15 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
               <div className="flex items-center justify-between gap-1.5 flex-wrap">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button
-                    onClick={() => onSelectTicker(item.ticker)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectTicker(item.ticker);
+                    }}
                     className={clsx(
-                      "px-2 py-0.5 rounded-lg text-xs font-mono font-black border transition-all cursor-pointer",
+                      "px-2 py-0.5 rounded-lg text-xs font-mono font-normal border transition-all cursor-pointer",
                       selectedTicker === item.ticker
                         ? "bg-[#823AFD] text-white border-white/40 shadow-[0_0_8px_rgba(130,58,253,0.5)]"
-                        : "bg-white/10 hover:bg-[#823AFD]/20 text-white border-white/15"
+                        : "bg-white/10 hover:bg-[#823AFD]/20 text-slate-300 hover:text-white border-white/15"
                     )}
                   >
                     #{item.ticker}
@@ -94,7 +100,10 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
                 </div>
 
                 <button
-                  onClick={() => onToggleRead(item.id, item.is_read)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleRead(item.id, item.is_read);
+                  }}
                   className={clsx(
                     "p-1.5 rounded-lg text-xs border transition-all cursor-pointer",
                     isRead
@@ -109,7 +118,7 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
 
               {/* Title */}
               <div>
-                <h4 className="text-[14px] font-bold text-white leading-snug line-clamp-2 group-hover:text-[#C4B5FD] transition-colors">
+                <h4 className="text-[14px] font-normal text-slate-300 leading-snug tracking-normal line-clamp-2 group-hover:text-white transition-colors">
                   {item.headline_th || item.headline}
                 </h4>
                 {item.headline_th && item.headline_th !== item.headline && (
@@ -142,6 +151,7 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
                     href={item.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="text-[#A78BFA] hover:text-white"
                   >
                     <ExternalLink className="w-3 h-3" />

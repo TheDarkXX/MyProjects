@@ -1,5 +1,6 @@
 import { db } from '../db/init.js';
 import YahooFinance from 'yahoo-finance2';
+import { fetchFullStoryForHeadline, generateEventFingerprint } from './gfinSearcher.js';
 
 const yahooFinance = new YahooFinance();
 
@@ -105,9 +106,11 @@ export const CATALYST_PATTERNS = [
 
 export const NOISE_KEYWORDS = [
   'หุ้นเด็ด', '5 หุ้น', '10 หุ้น', '3 หุ้น', '7 หุ้น', 'น่าช้อน', 'น่าซื้อ', 
-  'ต้องมีติดพอร์ต', 'กูรูชี้', 'เซียนหุ้น', 'รวยแน่', 'ลายแทง', 
+  'ต้องมีติดพอร์ต', 'กูรูชี้', 'เซียนหุ้น', 'เซียน', 'รวยแน่', 'ลายแทง', 
   'ลับเฉพาะ', 'ชี้เป้า', 'รีบสอย', 'เปิดโผ', 'ส่องหุ้น', 
-  'top 5 stocks', 'top 10 stocks', 'stocks to buy now', 'get rich', 'secret stock'
+  'มหาเศรษฐี', 'เกลี้ยงพอร์ต', 'ขายหมดพอร์ต', 'ทิ้งหุ้น', 'อัดเงินซื้อ', 'สลับพอร์ต', 'พอร์ตแตก',
+  'top 5 stocks', 'top 10 stocks', 'stocks to buy now', 'get rich', 'secret stock',
+  'billionaire', 'whale', '13f', 'dollar cost averaging', 'dca', 'jepq'
 ];
 
 /**
@@ -305,6 +308,81 @@ export async function fetchBeehiivArticles() {
 }
 
 /**
+ * Extract full article content from URL (Beehiiv, Yahoo, Finnhub redirects)
+ */
+export async function extractFullArticleContent(url, source = 'generic') {
+  if (!url) return null;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      },
+      signal: AbortSignal.timeout(7000)
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+
+    // 1. Beehiiv articles
+    if (url.includes('beehiiv.com')) {
+      const isPaywalled = html.includes('Subscribe to Default to read the rest') || 
+                          html.includes('Subscribe to read the rest') ||
+                          html.includes('to read the full story') ||
+                          html.includes('Upgrade to paid');
+      
+      const paragraphs = [];
+      const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+      let match;
+      while ((match = pRegex.exec(html)) !== null) {
+        const text = match[1]
+          .replace(/<[^>]+>/g, '')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#x27;/g, "'")
+          .replace(/&nbsp;/g, ' ')
+          .trim();
+        if (text.length > 25 && !text.includes('Subscribe to') && !text.includes('All rights reserved') && !text.includes('Terms of Service')) {
+          paragraphs.push(text);
+        }
+      }
+      const fullText = paragraphs.join('\n\n');
+      return {
+        fullText: fullText.slice(0, 10000),
+        isPaywalled,
+        wordCount: fullText.split(/\s+/).filter(Boolean).length
+      };
+    }
+
+    // 2. Generic HTML / Yahoo Finance / Finnhub articles
+    const cleanHtml = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
+    const paragraphs = [];
+    const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+    let match;
+    while ((match = pRegex.exec(cleanHtml)) !== null) {
+      const text = match[1]
+        .replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .trim();
+      if (text.length > 40 && !text.includes('Terms of Service') && !text.includes('Privacy Policy') && !text.includes('Cookie')) {
+        paragraphs.push(text);
+      }
+    }
+    const fullText = paragraphs.join('\n\n');
+    return {
+      fullText: fullText.slice(0, 8000),
+      isPaywalled: false,
+      wordCount: fullText.split(/\s+/).filter(Boolean).length
+    };
+  } catch (err) {
+    console.warn(`[NewsRadar] Article extraction error for ${url}:`, err.message);
+    return null;
+  }
+}
+
+/**
  * Fetch supplementary news from Yahoo Finance
  */
 export async function fetchYahooNews(symbol) {
@@ -466,7 +544,12 @@ export function triageArticle(article, context) {
   }
 
   // Clamp score [0, 100]
-  const finalScore = Math.max(0, Math.min(100, score));
+  let finalScore = Math.max(0, Math.min(100, score));
+
+  // Hard Cap for Noise: Gossip, retail clickbait, and 13F whale articles can NEVER score high
+  if (hasNoise) {
+    finalScore = Math.min(35, finalScore);
+  }
 
   // Determine Action
   let action = 'DROPPED';
@@ -490,49 +573,92 @@ export function triageArticle(article, context) {
 }
 
 /**
- * Call Codex GPT-5.6 Terra (free subscription tier) via Brain Gateway
+ * Call Codex GPT-5.6 Terra with Content-Driven 5-Dimension Scoring Matrix
  */
-export async function synthesizeWithAI({ ticker, headline, newsItems, portfolioTag, isHolding, relevanceScore = 50, triageTags = [] }) {
-  const contextText = newsItems.map((n, i) => `[ข่าว ${i+1}] (${n.publisher}): ${n.title}\n${n.summary || ''}`).join('\n\n');
+export async function synthesizeWithAI({ 
+  ticker, 
+  headline, 
+  newsItems = [], 
+  portfolioTag = 'global', 
+  isHolding = false, 
+  relevanceScore = 50, 
+  triageTags = [],
+  fullContent = null,
+  isPaywalled = false,
+  sourceCount = 1
+}) {
+  const contextNews = newsItems.map((n, i) => `[ข่าวเสริม ${i+1}] (${n.publisher}): ${n.title}\n${n.summary || ''}`).join('\n\n');
+  const contextFull = fullContent ? `\n\n[เนื้อหาบทความฉบับเต็ม]:\n${fullContent.slice(0, 3500)}` : '';
 
-  const systemPrompt = `You are the Ruthless Investment Intelligence AI for My Stock Portfolio. Always reply with a valid raw JSON object matching the requested schema. Do not include markdown fences, backticks, or any explanation text outside JSON.`;
+  const systemPrompt = `You are the Ruthless Investment Intelligence AI for My Stock Portfolio. Evaluate news strictly based on real fundamentals and article content. Reply ONLY with a valid raw JSON object matching the requested schema. Do not include markdown fences or any explanation text outside JSON.`;
 
   const userMessage = `Stock Ticker: ${ticker}
 Holding Status: ${isHolding ? `HELD IN PORTFOLIO (${portfolioTag.toUpperCase()})` : 'WATCHLIST / NOT IN PORTFOLIO'}
-Triage Relevance Score: ${relevanceScore}/100
+Triage Score: ${relevanceScore}/100
 Triage Tags: ${triageTags.join(', ') || 'NONE'}
+Is Paywalled Teaser: ${isPaywalled ? 'YES (LOCKED/NO REAL CONTENT)' : 'NO (FULL CONTENT ACCESSIBLE)'}
+Multi-Source Consensus: ${sourceCount} independent reputable publisher(s) reported this event.
 Headline: "${headline}"
 
-Recent News Context:
-${contextText || headline}
+Article Content & Context:
+${contextFull || headline}
 
-Rules for reading_priority (4 Tiers):
-1. "THE_MUST": RED-ALERT ONLY. Must have a DIRECT, IMMEDIATE IMPACT ON THE DECISION TO HOLD, SELL, TRIM, OR CUT LOSS on a stock HELD IN PORTFOLIO (${portfolioTag.toUpperCase()}).
-Only 4 categories qualify:
-  a) Capital Dilution / Debt Distress: ATM share offering (>5% dilution), severe debt default, bankruptcy risk.
-  b) Regulatory / Legal Moat Breaker: FTC/DOJ antitrust lawsuit, FDA rejection, product/model ban, C-suite indictment.
-  c) Severe Earnings/Guidance Shock: Massive earnings miss, guidance cut, severe gross margin collapse, sudden CEO firing.
-  d) Existential Moat Threat / Solvency Risk: Core business model obsolete, systemic credit/NPL contagion.
+Supplementary Context:
+${contextNews || 'None'}
 
-2. "CATALYST": Core fundamental catalysts for stocks HELD IN PORTFOLIO (${portfolioTag.toUpperCase()}).
-  - Official quarterly earnings reports (beats, misses within expectations), ARR growth, verified revenue releases.
-  - Major commercial contract wins (defense deals, large enterprise cloud deals, multimillion deals).
-  - Flagship product launches, major data center/factory expansions, strategic investments.
+Evaluate the news across 5 Content-Driven Dimensions (100 Points Total):
+1. "financial" (0-30): Direct revenue, earnings, guidance, margin impact.
+   - 25-30: Massive fundamental change (>=20% delta in earnings/revenue/guidance beat/miss).
+   - 15-24: Significant financial delta (5-19% delta, margin shift).
+   - 5-14: Routine financial updates, standard estimates.
+   - 0: No direct financial figures, general commentary, or gossip.
+2. "moat" (0-25): Business moat and existential risk.
+   - 20-25: FTC/DOJ antitrust action, product/model ban, ATM equity dilution >5%, debt default, severe legal crisis, or multi-billion strategic moat expansion.
+   - 12-19: Major enterprise commercial contract win, flagship tech release.
+   - 5-11: Routine product iteration.
+   - 0: Gossip, rumors, opinion pieces, 13F whale portfolio moves.
+3. "ownership" (0-20): Portfolio ownership status.
+   - 20: Stock is held in main portfolio (${portfolioTag === 'main' || portfolioTag === 'dual' ? 'MATCHED CORE' : 'NOT CORE'}).
+   - 12: Stock is held in tiger portfolio (${portfolioTag === 'tiger' ? 'MATCHED TIGER' : 'NOT TIGER'}).
+   - 5: Watchlist / ecosystem peer.
+   - 0: Outside watchlist and outside portfolio.
+4. "actionability" (0-15): Decision urgency.
+   - 12-15: Immediate decision needed (trigger to Buy, Sell, Trim, or Cut Loss).
+   - 6-11: Tactical monitoring for next 1-2 quarters.
+   - 0-5: Pure informational noise, no portfolio action required.
+5. "source" (0-10): Source credibility.
+   - 10: SEC 8-K/10-Q, official company press release, sworn regulatory filing.
+   - 7-9: Tier-1 wire (Bloomberg, Reuters, WSJ, CNBC, FT).
+   - 4-6: Reputable newsletter / verified analysis.
+   - Multi-Source Consensus Bonus: ${sourceCount > 1 ? `Confirmed by ${sourceCount} sources (+${Math.min(3, sourceCount)} bonus)` : 'Single source'}. Max capped at 10.
+   - 0: Retail blog, Seeking Alpha contributor, Motley Fool clickbait.
+   - Penalty: If clickbait/whale gossip/speculative fluff, source score is 0.
 
-3. "WATCHLIST": News regarding stocks in WATCHLIST or ECOSYSTEM PEERS (stocks NOT in portfolio, e.g. ${portfolioTag === 'global' ? 'Global Watchlist' : 'Watchlist'}).
-  - Earnings, product launches, or market updates for companies not currently held in the portfolio.
-  - Competitor developments and industry supply chain trends.
-
-4. "CHATTER": Market opinions, analyst ratings, commentary, and peripheral noise.
-  - Wall Street analyst price target tweaks, upgrades, downgrades.
-  - Op-ed opinion columns, blog commentary, valuation multiple debate articles (e.g. Seeking Alpha, Motley Fool).
-  - Routine scheduled insider selling (Rule 10b5-1).
+Strict Rules for reading_priority (4 Tiers):
+- "THE_MUST": Held stock ONLY + Total Score >= 85 + (Financial >= 20 OR Moat >= 20) + Actionability >= 12 + impact_level "moat_breaker".
+- "CATALYST": Held stock ONLY + Total Score >= 60 + verified company fundamental event.
+- "WATCHLIST": Watchlist / ecosystem peers (Total Score >= 40, or non-held stocks).
+- "CHATTER": Market opinions, 13F whale gossip, retail clickbait, blogs, or Total Score < 40.
 
 Output ONLY a JSON object:
 {
   "headline_th": "[${ticker}] พาดหัวภาษาไทยกระชับ คม เข้าใจใน 1 วินาที (10-18 คำ ไม่ใช้คำหลอกลวง)",
   "summary_th": ["ประเด็น 1 (ภาษาไทย)", "ประเด็น 2 (ภาษาไทย)", "ประเด็น 3 (ภาษาไทย)"],
   "sentiment": "bullish" | "bearish" | "neutral",
+  "score_breakdown": {
+    "financial": 0,
+    "moat": 0,
+    "ownership": 0,
+    "actionability": 0,
+    "source": 0,
+    "total": 0,
+    "penalties": [],
+    "notes": "เหตุผลสั้นๆ สำหรับคะแนน"
+  },
+  "evidence_quotes": {
+    "financial": "Quote from article supporting financial score (or empty)",
+    "moat": "Quote from article supporting moat score (or empty)"
+  },
   "reading_priority": "THE_MUST" | "CATALYST" | "WATCHLIST" | "CHATTER",
   "priority_reason": "เหตุผลสั้นๆ 1 ประโยคภาษาไทย (ชี้ชัดว่าทำไมถึงจัดอยู่ Tier นี้)",
   "impact_level": "routine" | "significant" | "moat_breaker"
@@ -598,34 +724,76 @@ Output ONLY a JSON object:
       formattedSummary = `• ${headline}`;
     }
 
-    let calculatedPriority = ['THE_MUST', 'CATALYST', 'WATCHLIST', 'CHATTER'].includes(parsed.reading_priority) 
-      ? parsed.reading_priority 
-      : (isHolding ? 'CATALYST' : 'WATCHLIST');
+    // Process 5D Score Breakdown
+    const sb = parsed.score_breakdown || {};
+    let financial = Math.max(0, Math.min(30, Number(sb.financial) || 0));
+    let moat = Math.max(0, Math.min(25, Number(sb.moat) || 0));
+    let defaultOwnership = isHolding ? (portfolioTag === 'tiger' ? 12 : 20) : 5;
+    let ownership = Math.max(0, Math.min(20, Number(sb.ownership) || defaultOwnership));
+    let actionability = Math.max(0, Math.min(15, Number(sb.actionability) || 0));
+    let source = Math.max(0, Math.min(10, Number(sb.source) || 5));
+    const penalties = Array.isArray(sb.penalties) ? [...sb.penalties] : [];
 
-    // Elevate to THE_MUST ONLY if holding + score >= 85 + moat_breaker impact
-    if (isHolding && relevanceScore >= 85 && parsed.impact_level === 'moat_breaker') {
-      calculatedPriority = 'THE_MUST';
+    // Enforce Ownership Limits
+    if (!isHolding) {
+      ownership = Math.min(5, ownership);
     }
 
-    // Iron Clad Guardrails:
-    // 1. Non-holding stocks (Watchlist/Global) can NEVER be THE_MUST or CATALYST
+    let calculatedTotal = financial + moat + ownership + actionability + source;
+
+    // Detect Clickbait / Whale Gossip / Retail fluff
+    const isOpinionOrCommentary = /opinion|columnist|motley fool|seeking alpha contributor|trades at \d|is the stock a bargain|whoever spends smarter|why investors should|มหาเศรษฐี|เกลี้ยงพอร์ต|ขายหมดพอร์ต|อัดเงินซื้อ|เซียน|พอร์ตแตก|สลับพอร์ต|13f|jepq|dollar cost averaging/i.test(headline)
+      || /ไม่ใช่เหตุการณ์ที่กระทบปัจจัยพื้นฐาน|ไม่มีผลต่อปัจจัยพื้นฐาน|ปรับพอร์ตของนักลงทุนรายหนึ่ง|ไม่กระทบปัจจัยพื้นฐาน/i.test(parsed.priority_reason || '');
+
+    const isAnalystRating = /rating upgrade|rating downgrade|price target|analyst upgrade|initiates coverage|downgrades to|upgrades to/i.test(headline);
+
+    if (isPaywalled) {
+      penalties.push('PAYWALLED_TEASER');
+      calculatedTotal = Math.min(35, calculatedTotal);
+    }
+
+    if (isOpinionOrCommentary) {
+      penalties.push('CLICKBAIT_OR_WHALE_GOSSIP');
+      calculatedTotal = Math.min(35, calculatedTotal);
+    }
+
+    if (isAnalystRating) {
+      penalties.push('ANALYST_OPINION_ONLY');
+      calculatedTotal = Math.min(45, calculatedTotal);
+    }
+
+    calculatedTotal = Math.max(0, Math.min(100, Math.round(calculatedTotal)));
+
+    // Determine strict tier
+    let calculatedPriority = 'CHATTER';
+    if (isHolding && calculatedTotal >= 85 && (financial >= 20 || moat >= 20) && actionability >= 12 && parsed.impact_level === 'moat_breaker') {
+      calculatedPriority = 'THE_MUST';
+    } else if (isHolding && calculatedTotal >= 60 && !isOpinionOrCommentary && !isPaywalled) {
+      calculatedPriority = 'CATALYST';
+    } else if (calculatedTotal >= 40 && !isOpinionOrCommentary && !isPaywalled) {
+      calculatedPriority = 'WATCHLIST';
+    } else {
+      calculatedPriority = 'CHATTER';
+    }
+
+    // Non-holding stocks can NEVER be THE_MUST or CATALYST
     if (!isHolding) {
       if (calculatedPriority === 'THE_MUST' || calculatedPriority === 'CATALYST') {
-        calculatedPriority = 'WATCHLIST';
+        calculatedPriority = calculatedTotal >= 40 ? 'WATCHLIST' : 'CHATTER';
       }
     }
 
-    // 2. Pure opinion/commentary/op-ed articles should be CHATTER
-    const isOpinionOrCommentary = /opinion|columnist|motley fool|seeking alpha contributor|trades at \d|is the stock a bargain|whoever spends smarter|why investors should/i.test(headline);
-    if (isOpinionOrCommentary) {
-      calculatedPriority = 'CHATTER';
-    }
-
-    // 3. Wall Street rating tweaks/price targets are CHATTER
-    const isAnalystRating = /rating upgrade|rating downgrade|price target|analyst upgrade|initiates coverage|downgrades to|upgrades to/i.test(headline);
-    if (isAnalystRating && calculatedPriority !== 'THE_MUST') {
-      calculatedPriority = 'CHATTER';
-    }
+    const finalScoreBreakdown = {
+      financial,
+      moat,
+      ownership,
+      actionability,
+      source,
+      total: calculatedTotal,
+      penalties,
+      notes: sb.notes || parsed.priority_reason || '',
+      evidence_quotes: parsed.evidence_quotes || null
+    };
 
     return {
       headline_th: parsed.headline_th || `[${ticker}] ${headline}`,
@@ -633,32 +801,48 @@ Output ONLY a JSON object:
       sentiment: ['bullish', 'bearish', 'neutral'].includes(parsed.sentiment) ? parsed.sentiment : 'neutral',
       reading_priority: calculatedPriority,
       priority_reason: parsed.priority_reason || (isHolding ? 'ข่าวสารหุ้นในพอร์ต' : 'ข่าวทั่วไป'),
-      impact_level: ['routine', 'significant', 'moat_breaker'].includes(parsed.impact_level) ? parsed.impact_level : 'routine'
+      impact_level: ['routine', 'significant', 'moat_breaker'].includes(parsed.impact_level) ? parsed.impact_level : 'routine',
+      score_breakdown: finalScoreBreakdown,
+      total_score: calculatedTotal
     };
   } catch (err) {
     console.error(`[NewsRadar] AI synthesis error for ${ticker}:`, err.message);
+    const fallbackScore = isHolding ? 60 : 35;
+    const fallbackPriority = isHolding ? 'CATALYST' : 'CHATTER';
     return {
       headline_th: `[${ticker}] ${headline}`,
       summary_th: `• ${headline}\n• ข้อมูลดึงจาก Yahoo Finance & Finnhub\n• สามารถคลิกอ่านรายละเอียดจากลิงก์ข่าวต้นฉบับได้โดยตรง`,
       sentiment: 'neutral',
-      reading_priority: isHolding && relevanceScore >= 80 ? 'THE_MUST' : (isHolding ? 'GOOD_TO_KNOW' : 'OPTIONAL'),
-      priority_reason: isHolding ? 'ข่าวสารหุ้นในพอร์ต' : 'ข่าวทั่วไปนอกพอร์ต',
-      impact_level: 'routine'
+      reading_priority: fallbackPriority,
+      priority_reason: isHolding ? 'ข่าวสารหุ้นในพอร์ต (ระบบสำรอง)' : 'ข่าวทั่วไปนอกพอร์ต (ระบบสำรอง)',
+      impact_level: 'routine',
+      score_breakdown: {
+        financial: isHolding ? 15 : 5,
+        moat: isHolding ? 15 : 5,
+        ownership: isHolding ? (portfolioTag === 'tiger' ? 12 : 20) : 5,
+        actionability: 5,
+        source: 5,
+        total: fallbackScore,
+        penalties: ['AI_SYNTHESIS_FALLBACK'],
+        notes: 'ประเมินโดยระบบสำรองเนื่องจาก AI Gateway ขัดข้อง'
+      },
+      total_score: fallbackScore
     };
   }
 }
 
 /**
- * Execute full scan with 6-gate pre-filter triage:
+ * Execute full scan with 6-gate pre-filter triage and 5D scoring:
  * 1. Scrape Beehiiv
  * 2. 6-Gate Triage Scoring (0-100)
  * 3. Route: Dropped (<30), Title-Only (30-69), Full Pipeline (>=70)
- * 4. Aggregate Yahoo & Finnhub for Full Pipeline items
- * 5. Synthesize with GPT-5.6 Terra
- * 6. Store in seen_articles and news_intelligence tables
+ * 4. Extract full article content from source URL
+ * 5. Aggregate Yahoo & Finnhub for Full Pipeline items
+ * 6. Synthesize with GPT-5.6 Terra with 5D Content-Driven Scoring
+ * 7. Store in seen_articles and news_intelligence tables
  */
 export async function runNewsScan() {
-  console.log('[NewsRadar] 🚀 Starting news intelligence scan with 6-Gate Pre-Filter...');
+  console.log('[NewsRadar] 🚀 Starting news intelligence scan with 6-Gate Pre-Filter & 5D Scoring...');
   const portfolioInfo = getPortfolioHoldings();
   const watchlist = getWatchlistTickers();
   const triageContext = {
@@ -691,8 +875,11 @@ export async function runNewsScan() {
     INSERT INTO news_intelligence (
       ticker, company_name, headline, headline_th, source_name, source_url,
       summary_th, sentiment, reading_priority, priority_reason, impact_level,
-      portfolio_tag, related_portfolio_id, relevance_score, triage_tags, is_read, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+      portfolio_tag, related_portfolio_id, relevance_score, triage_tags,
+      score_breakdown, full_content, content_source, content_source_url,
+      content_fetched_at, content_relevance_score, source_count, event_fingerprint,
+      is_read, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
   `);
 
   let newArticlesCount = 0;
@@ -737,34 +924,8 @@ export async function runNewsScan() {
 
     if (triage.action === 'TITLE_ONLY') {
       titleOnlyCount++;
-      const tickersToProcess = triage.matchedTickers.length > 0 
-        ? triage.matchedTickers 
-        : (article.tickers.length > 0 ? article.tickers : (triage.isMarketSummary ? ['MARKET'] : ['MACRO']));
-
-      for (const ticker of tickersToProcess) {
-        const existing = findIntel.get(ticker, article.title);
-        if (existing) continue;
-
-        const portMapping = getTickerPortfolioTag(ticker, portfolioInfo);
-        insertIntel.run(
-          ticker,
-          ticker,
-          article.title,
-          `[${ticker}] ${article.title}`,
-          'Beehiiv',
-          article.url,
-          `• ${article.title}\n• คะแนนคัดกรอง: ${triage.score}/100\n• ป้ายกำกับ: ${triage.tags.join(', ') || 'ทั่วไป'}\n• หมายเหตุ: ข่าวสารระดับกลาง (บันทึกเฉพาะหัวข้อโดยไม่เรียก AI สรุปเพื่อประหยัดทรัพยากร สามารถคลิกอ่านรายละเอียดจากลิงก์ต้นฉบับได้)`,
-          'neutral',
-          'OPTIONAL',
-          `คัดกรองระดับกลาง (${triage.score} คะแนน): ${triage.tags.join(', ')}`,
-          'routine',
-          portMapping.tag,
-          portMapping.portfolioId,
-          triage.score,
-          JSON.stringify(triage.tags)
-        );
-        newIntelCount++;
-      }
+      // High Signal Rule: Never pollute news_intelligence with empty stubs or developer notes.
+      // Low-score mentions (30-69) are already safely archived in seen_articles for deduplication.
       newArticlesCount++;
       continue;
     }
@@ -775,9 +936,64 @@ export async function runNewsScan() {
       ? triage.matchedTickers 
       : (article.tickers.length > 0 ? article.tickers : (triage.isMarketSummary ? ['MARKET'] : ['MACRO']));
 
+    // Extract Full Article Body from Source URL
+    let fullContentText = null;
+    let isPaywalled = false;
+    let contentSource = 'beehiiv_direct';
+    let contentSourceUrl = article.url;
+    let contentFetchedAt = new Date().toISOString();
+    let contentRelevanceScore = 100;
+    let sourceCount = 1;
+
+    try {
+      const extracted = await extractFullArticleContent(article.url, 'beehiiv');
+      if (extracted) {
+        fullContentText = extracted.fullText;
+        isPaywalled = extracted.isPaywalled;
+      }
+    } catch (extractErr) {
+      console.warn(`[NewsRadar] Extraction warning for ${article.url}:`, extractErr.message);
+    }
+
+    // Phase 4: Autonomous gfin Ingestion when Paywalled or Teaser is too short (< 250 words)
+    const wordCount = fullContentText ? fullContentText.split(/\s+/).filter(Boolean).length : 0;
+    if (isPaywalled || wordCount < 250) {
+      console.log(`[NewsRadar] ⚡ Triggering gfin for "${article.title}" (Paywalled: ${isPaywalled}, Words: ${wordCount})`);
+      try {
+        const leadTicker = tickersToProcess[0] || 'GLOBAL';
+        const gfinStory = await fetchFullStoryForHeadline({
+          ticker: leadTicker,
+          headline: article.title,
+          beehiivUrl: article.url
+        });
+        if (gfinStory && gfinStory.fullText && gfinStory.wordCount >= 180) {
+          console.log(`[NewsRadar] 🎯 gfin enriched story for "${article.title}" from ${gfinStory.sourceName} (${gfinStory.wordCount} words, Score: ${gfinStory.relevanceScore})`);
+          fullContentText = gfinStory.fullText;
+          contentSource = gfinStory.contentSource || 'gfin_google';
+          contentSourceUrl = gfinStory.sourceUrl;
+          contentFetchedAt = new Date().toISOString();
+          contentRelevanceScore = gfinStory.relevanceScore;
+          sourceCount = gfinStory.sourceCount || 1;
+          isPaywalled = false; // Paywall unlocked!
+        }
+      } catch (gfinErr) {
+        console.warn(`[NewsRadar] gfin search error for ${article.title}:`, gfinErr.message);
+      }
+    }
+
     for (const ticker of tickersToProcess) {
-      const existing = findIntel.get(ticker, article.title);
-      if (existing) continue;
+      const eventFingerprint = generateEventFingerprint(ticker, article.title);
+
+      // Phase 5: Event Deduplication (72h window)
+      const existingEvent = db.prepare(`
+        SELECT id, reading_priority, relevance_score, full_content
+        FROM news_intelligence
+        WHERE event_fingerprint = ? AND created_at >= datetime('now', '-3 days')
+        ORDER BY id DESC LIMIT 1
+      `).get(eventFingerprint);
+
+      const existingLegacy = findIntel.get(ticker, article.title);
+      const matchedExisting = existingEvent || existingLegacy;
 
       const portMapping = getTickerPortfolioTag(ticker, portfolioInfo);
       const isHolding = portMapping.tag !== 'global';
@@ -792,7 +1008,64 @@ export async function runNewsScan() {
         supplementaryNews = [...yhNews, ...fhNews];
       }
 
-      // AI Synthesis with GPT-5.6 Terra
+      if (matchedExisting) {
+        // If existing record lacked full content and we now have full content from gfin:
+        if ((!matchedExisting.full_content || matchedExisting.full_content.length < 500) && fullContentText && fullContentText.length >= 500) {
+          console.log(`[NewsRadar] 🔄 Deduplication: Merging/enriching existing record id=${matchedExisting.id} with full content from ${contentSource}`);
+          const aiResult = await synthesizeWithAI({
+            ticker,
+            headline: article.title,
+            newsItems: supplementaryNews,
+            portfolioTag: portMapping.tag,
+            isHolding,
+            relevanceScore: triage.score,
+            triageTags: triage.tags,
+            fullContent: fullContentText,
+            isPaywalled: false,
+            sourceCount
+          });
+
+          db.prepare(`
+            UPDATE news_intelligence SET
+              headline_th = ?,
+              summary_th = ?,
+              sentiment = ?,
+              reading_priority = ?,
+              priority_reason = ?,
+              impact_level = ?,
+              relevance_score = ?,
+              score_breakdown = ?,
+              full_content = ?,
+              content_source = ?,
+              content_source_url = ?,
+              content_fetched_at = ?,
+              content_relevance_score = ?,
+              source_count = ?
+            WHERE id = ?
+          `).run(
+            aiResult.headline_th,
+            aiResult.summary_th,
+            aiResult.sentiment,
+            aiResult.reading_priority,
+            aiResult.priority_reason,
+            aiResult.impact_level,
+            aiResult.total_score,
+            JSON.stringify(aiResult.score_breakdown),
+            fullContentText,
+            contentSource,
+            contentSourceUrl,
+            contentFetchedAt,
+            contentRelevanceScore,
+            sourceCount,
+            matchedExisting.id
+          );
+        } else {
+          console.log(`[NewsRadar] ⏩ Deduplication: Event for ${ticker} ("${article.title}") already processed within 72h. Skipping.`);
+        }
+        continue;
+      }
+
+      // AI Synthesis with GPT-5.6 Terra (5D Content-Driven Scoring + Multi-Source Consensus)
       const aiResult = await synthesizeWithAI({
         ticker,
         headline: article.title,
@@ -800,7 +1073,10 @@ export async function runNewsScan() {
         portfolioTag: portMapping.tag,
         isHolding,
         relevanceScore: triage.score,
-        triageTags: triage.tags
+        triageTags: triage.tags,
+        fullContent: fullContentText,
+        isPaywalled,
+        sourceCount
       });
 
       insertIntel.run(
@@ -808,7 +1084,7 @@ export async function runNewsScan() {
         ticker,
         article.title,
         aiResult.headline_th || `[${ticker}] ${article.title}`,
-        'Beehiiv / Yahoo / Finnhub',
+        contentSource === 'beehiiv_direct' ? 'Beehiiv / Yahoo / Finnhub' : `${contentSource} (${contentSourceUrl ? new URL(contentSourceUrl).hostname : 'web'})`,
         article.url,
         aiResult.summary_th,
         aiResult.sentiment,
@@ -817,12 +1093,20 @@ export async function runNewsScan() {
         aiResult.impact_level,
         portMapping.tag,
         portMapping.portfolioId,
-        triage.score,
-        JSON.stringify(triage.tags)
+        aiResult.total_score,
+        JSON.stringify(triage.tags),
+        JSON.stringify(aiResult.score_breakdown || null),
+        fullContentText,
+        contentSource,
+        contentSourceUrl,
+        contentFetchedAt,
+        contentRelevanceScore,
+        sourceCount,
+        eventFingerprint
       );
 
       newIntelCount++;
-      console.log(`[NewsRadar] ✨ Full Intel Processed: ${ticker} [${portMapping.tag.toUpperCase()}] -> Priority: ${aiResult.reading_priority} (Score: ${triage.score})`);
+      console.log(`[NewsRadar] ✨ Full Intel Processed: ${ticker} [${portMapping.tag.toUpperCase()}] -> Priority: ${aiResult.reading_priority} (5D Score: ${aiResult.total_score}) [Source: ${contentSource}]`);
     }
 
     newArticlesCount++;
@@ -840,6 +1124,148 @@ export async function runNewsScan() {
     },
     timestamp: new Date().toISOString()
   };
+}
+
+/**
+ * Re-score an existing article in news_intelligence using the 5D Content-Driven engine
+ */
+export async function rescoreArticle(id) {
+  const row = db.prepare('SELECT * FROM news_intelligence WHERE id = ?').get(id);
+  if (!row) throw new Error(`Article ${id} not found`);
+
+  const portfolioInfo = getPortfolioHoldings();
+  const portMapping = getTickerPortfolioTag(row.ticker, portfolioInfo);
+  const isHolding = portMapping.tag !== 'global';
+
+  // Extract full content if not already stored or if paywalled
+  let fullContent = row.full_content;
+  let isPaywalled = false;
+  let contentSource = row.content_source || 'beehiiv_direct';
+  let contentSourceUrl = row.content_source_url || row.source_url;
+  let contentFetchedAt = row.content_fetched_at || new Date().toISOString();
+  let contentRelevanceScore = row.content_relevance_score || 100;
+  let sourceCount = row.source_count || 1;
+
+  if (!fullContent && row.source_url) {
+    const extracted = await extractFullArticleContent(row.source_url, 'beehiiv');
+    if (extracted) {
+      fullContent = extracted.fullText;
+      isPaywalled = extracted.isPaywalled;
+    }
+  }
+
+  const wordCount = fullContent ? fullContent.split(/\s+/).filter(Boolean).length : 0;
+  if (isPaywalled || wordCount < 250) {
+    try {
+      const gfinStory = await fetchFullStoryForHeadline({
+        ticker: row.ticker,
+        headline: row.headline,
+        beehiivUrl: row.source_url
+      });
+      if (gfinStory && gfinStory.fullText && gfinStory.wordCount >= 180) {
+        fullContent = gfinStory.fullText;
+        contentSource = gfinStory.contentSource || 'gfin_google';
+        contentSourceUrl = gfinStory.sourceUrl;
+        contentFetchedAt = new Date().toISOString();
+        contentRelevanceScore = gfinStory.relevanceScore;
+        sourceCount = gfinStory.sourceCount || 1;
+        isPaywalled = false;
+      }
+    } catch (e) {
+      console.warn(`[NewsRadar] Rescore gfin enrichment error:`, e.message);
+    }
+  }
+
+  // Supplementary news
+  let supplementaryNews = [];
+  if (row.ticker !== 'MARKET' && row.ticker !== 'MACRO') {
+    const [yhNews, fhNews] = await Promise.all([
+      fetchYahooNews(row.ticker),
+      fetchFinnhubNews(row.ticker)
+    ]);
+    supplementaryNews = [...yhNews, ...fhNews];
+  }
+
+  let triageTags = [];
+  try { triageTags = JSON.parse(row.triage_tags || '[]'); } catch {}
+
+  const aiResult = await synthesizeWithAI({
+    ticker: row.ticker,
+    headline: row.headline,
+    newsItems: supplementaryNews,
+    portfolioTag: portMapping.tag,
+    isHolding,
+    relevanceScore: row.relevance_score || 50,
+    triageTags,
+    fullContent,
+    isPaywalled,
+    sourceCount
+  });
+
+  db.prepare(`
+    UPDATE news_intelligence SET
+      headline_th = ?,
+      summary_th = ?,
+      sentiment = ?,
+      reading_priority = ?,
+      priority_reason = ?,
+      impact_level = ?,
+      portfolio_tag = ?,
+      related_portfolio_id = ?,
+      relevance_score = ?,
+      score_breakdown = ?,
+      full_content = ?,
+      content_source = ?,
+      content_source_url = ?,
+      content_fetched_at = ?,
+      content_relevance_score = ?,
+      source_count = ?
+    WHERE id = ?
+  `).run(
+    aiResult.headline_th || row.headline_th,
+    aiResult.summary_th,
+    aiResult.sentiment,
+    aiResult.reading_priority,
+    aiResult.priority_reason,
+    aiResult.impact_level,
+    portMapping.tag,
+    portMapping.portfolioId,
+    aiResult.total_score,
+    JSON.stringify(aiResult.score_breakdown),
+    fullContent,
+    contentSource,
+    contentSourceUrl,
+    contentFetchedAt,
+    contentRelevanceScore,
+    sourceCount,
+    id
+  );
+
+  return {
+    id,
+    ticker: row.ticker,
+    headline_th: aiResult.headline_th,
+    reading_priority: aiResult.reading_priority,
+    score_breakdown: aiResult.score_breakdown,
+    total_score: aiResult.total_score
+  };
+}
+
+/**
+ * Re-score recent articles in bulk
+ */
+export async function rescoreRecentArticles(limit = 15) {
+  const rows = db.prepare('SELECT id FROM news_intelligence ORDER BY id DESC LIMIT ?').all(limit);
+  const results = [];
+  for (const r of rows) {
+    try {
+      const res = await rescoreArticle(r.id);
+      results.push(res);
+    } catch (e) {
+      console.error(`[NewsRadar] Failed to rescore article ${r.id}:`, e.message);
+    }
+  }
+  return results;
 }
 
 /**

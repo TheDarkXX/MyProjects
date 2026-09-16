@@ -33,7 +33,22 @@ export const NewsToolbar: React.FC<NewsToolbarProps> = ({
           มุมมอง:
         </span>
         <div className="bg-[#0F111A] p-1 rounded-xl border border-[#1F2233] flex items-center gap-1">
-          {/* List View (3 cols) - DEFAULT */}
+          {/* Bullet Text View (16px) - DEFAULT */}
+          <button
+            onClick={() => onChangeViewMode('text')}
+            className={clsx(
+              "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+              viewMode === 'text'
+                ? "bg-[#823AFD] text-white shadow-[0_0_12px_rgba(130,58,253,0.4)]"
+                : "text-slate-300 hover:text-white hover:bg-white/5"
+            )}
+            title="Text View [ค่าเริ่มต้น] — สไตล์ Bullet List หัวข้อ 16px + Key Tags"
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>Text (16px)</span>
+          </button>
+
+          {/* List View (3 cols) */}
           <button
             onClick={() => onChangeViewMode('list')}
             className={clsx(
@@ -46,21 +61,6 @@ export const NewsToolbar: React.FC<NewsToolbarProps> = ({
           >
             <LayoutList className="w-3.5 h-3.5" />
             <span>List (3 Col)</span>
-          </button>
-
-          {/* Bullet Text View (16px) */}
-          <button
-            onClick={() => onChangeViewMode('text')}
-            className={clsx(
-              "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
-              viewMode === 'text'
-                ? "bg-[#823AFD] text-white shadow-[0_0_12px_rgba(130,58,253,0.4)]"
-                : "text-slate-300 hover:text-white hover:bg-white/5"
-            )}
-            title="Text View — สไตล์ Bullet List หัวข้อ 16px + Key Tags"
-          >
-            <List className="w-3.5 h-3.5" />
-            <span>Text (16px)</span>
           </button>
 
           {/* Mini Card View (3-4 cols) */}

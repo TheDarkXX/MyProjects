@@ -337,6 +337,14 @@ export function initDb() {
         related_portfolio_id TEXT,
         relevance_score INTEGER DEFAULT 0,
         triage_tags TEXT DEFAULT '[]',
+        score_breakdown TEXT DEFAULT NULL,
+        full_content TEXT DEFAULT NULL,
+        content_source TEXT DEFAULT 'beehiiv_direct',
+        content_source_url TEXT DEFAULT NULL,
+        content_fetched_at TEXT DEFAULT NULL,
+        content_relevance_score INTEGER DEFAULT NULL,
+        source_count INTEGER DEFAULT 1,
+        event_fingerprint TEXT DEFAULT NULL,
         is_read INTEGER DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -352,6 +360,8 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_news_priority ON news_intelligence(reading_priority);
     CREATE INDEX IF NOT EXISTS idx_news_is_read ON news_intelligence(is_read);
     CREATE INDEX IF NOT EXISTS idx_news_created ON news_intelligence(created_at);
+    CREATE INDEX IF NOT EXISTS idx_news_fingerprint ON news_intelligence(event_fingerprint);
+    CREATE INDEX IF NOT EXISTS idx_news_source ON news_intelligence(content_source);
   `);
 
   // Migration for seen_articles & news_intelligence triage columns
@@ -365,10 +375,20 @@ export function initDb() {
     if (!existingNewsCols.has('relevance_score')) db.exec("ALTER TABLE news_intelligence ADD COLUMN relevance_score INTEGER DEFAULT 0;");
     if (!existingNewsCols.has('triage_tags')) db.exec("ALTER TABLE news_intelligence ADD COLUMN triage_tags TEXT DEFAULT '[]';");
     if (!existingNewsCols.has('headline_th')) db.exec("ALTER TABLE news_intelligence ADD COLUMN headline_th TEXT DEFAULT NULL;");
+    if (!existingNewsCols.has('score_breakdown')) db.exec("ALTER TABLE news_intelligence ADD COLUMN score_breakdown TEXT DEFAULT NULL;");
+    if (!existingNewsCols.has('full_content')) db.exec("ALTER TABLE news_intelligence ADD COLUMN full_content TEXT DEFAULT NULL;");
+    if (!existingNewsCols.has('content_source')) db.exec("ALTER TABLE news_intelligence ADD COLUMN content_source TEXT DEFAULT 'beehiiv_direct';");
+    if (!existingNewsCols.has('content_source_url')) db.exec("ALTER TABLE news_intelligence ADD COLUMN content_source_url TEXT DEFAULT NULL;");
+    if (!existingNewsCols.has('content_fetched_at')) db.exec("ALTER TABLE news_intelligence ADD COLUMN content_fetched_at TEXT DEFAULT NULL;");
+    if (!existingNewsCols.has('content_relevance_score')) db.exec("ALTER TABLE news_intelligence ADD COLUMN content_relevance_score INTEGER DEFAULT NULL;");
+    if (!existingNewsCols.has('source_count')) db.exec("ALTER TABLE news_intelligence ADD COLUMN source_count INTEGER DEFAULT 1;");
+    if (!existingNewsCols.has('event_fingerprint')) db.exec("ALTER TABLE news_intelligence ADD COLUMN event_fingerprint TEXT DEFAULT NULL;");
 
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_news_score ON news_intelligence(relevance_score);
       CREATE INDEX IF NOT EXISTS idx_seen_triage_action ON seen_articles(triage_action);
+      CREATE INDEX IF NOT EXISTS idx_news_fingerprint ON news_intelligence(event_fingerprint);
+      CREATE INDEX IF NOT EXISTS idx_news_source ON news_intelligence(content_source);
     `);
   } catch (err) {
     console.error('[DB] Migration error on news tables:', err.message);

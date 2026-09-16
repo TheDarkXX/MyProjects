@@ -10,6 +10,7 @@ interface NewsRowListProps {
   onSelectTicker: (ticker: string) => void;
   onSelectTag: (tag: string) => void;
   onToggleRead: (id: number, currentRead: number) => void;
+  onOpenDetail?: (item: NewsItem) => void;
 }
 
 export const NewsRowList: React.FC<NewsRowListProps> = ({
@@ -19,6 +20,7 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
   onSelectTicker,
   onSelectTag,
   onToggleRead,
+  onOpenDetail,
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 w-full">
@@ -31,8 +33,9 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
         return (
           <div
             key={item.id}
+            onClick={() => onOpenDetail?.(item)}
             className={clsx(
-              "rounded-xl border transition-all duration-150 relative overflow-hidden flex flex-col justify-between p-2.5 sm:p-3 group",
+              "rounded-xl border transition-all duration-150 relative overflow-hidden flex flex-col justify-between p-2.5 sm:p-3 group cursor-pointer hover:border-[#823AFD]/50",
               isMust
                 ? isRead
                   ? "bg-[#111418] border-rose-500/30 opacity-85 hover:opacity-100"
@@ -57,12 +60,15 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
                 <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                   {/* Ticker Pill */}
                   <button
-                    onClick={() => onSelectTicker(item.ticker)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectTicker(item.ticker);
+                    }}
                     className={clsx(
-                      "px-2 py-0.5 rounded-md text-xs font-mono font-black border transition-all cursor-pointer",
+                      "px-2 py-0.5 rounded-md text-xs font-mono font-normal border transition-all cursor-pointer",
                       selectedTicker === item.ticker
                         ? "bg-[#823AFD] text-white border-white/40 shadow-[0_0_8px_rgba(130,58,253,0.5)] ring-1 ring-white"
-                        : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-white border-white/15"
+                        : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-slate-300 hover:text-white border-white/15"
                     )}
                     title={`กรองเฉพาะ #${item.ticker}`}
                   >
@@ -120,7 +126,10 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
 
                 {/* Mark Read Button */}
                 <button
-                  onClick={() => onToggleRead(item.id, item.is_read)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleRead(item.id, item.is_read);
+                  }}
                   className={clsx(
                     "p-1 rounded-md text-xs border transition-all cursor-pointer shrink-0",
                     isRead
@@ -135,7 +144,7 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
 
               {/* Title Only (Ultra Compact) */}
               <div>
-                <h3 className="text-[13.5px] sm:text-[14px] font-bold text-white leading-snug tracking-tight line-clamp-2 group-hover:text-[#C4B5FD] transition-colors">
+                <h3 className="text-[13.5px] sm:text-[14px] font-normal text-slate-300 leading-snug tracking-normal line-clamp-2 group-hover:text-white transition-colors">
                   {item.headline_th || item.headline}
                 </h3>
               </div>
@@ -157,6 +166,7 @@ export const NewsRowList: React.FC<NewsRowListProps> = ({
                     href={item.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="text-[#A78BFA] hover:text-white"
                     title="เปิดอ่านต้นฉบับ"
                   >

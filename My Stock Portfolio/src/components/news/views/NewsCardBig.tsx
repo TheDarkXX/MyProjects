@@ -10,6 +10,7 @@ interface NewsCardBigProps {
   onSelectTicker: (ticker: string) => void;
   onSelectTag: (tag: string) => void;
   onToggleRead: (id: number, currentRead: number) => void;
+  onOpenDetail?: (item: NewsItem) => void;
 }
 
 export const NewsCardBig: React.FC<NewsCardBigProps> = ({
@@ -19,6 +20,7 @@ export const NewsCardBig: React.FC<NewsCardBigProps> = ({
   onSelectTicker,
   onSelectTag,
   onToggleRead,
+  onOpenDetail,
 }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
@@ -37,8 +39,9 @@ export const NewsCardBig: React.FC<NewsCardBigProps> = ({
         return (
           <div
             key={item.id}
+            onClick={() => onOpenDetail?.(item)}
             className={clsx(
-              "rounded-2xl border transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-5 space-y-4 group",
+              "rounded-2xl border transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-5 space-y-4 group cursor-pointer hover:border-[#823AFD]/50",
               isMust
                 ? isRead
                   ? "bg-[#111418] border-rose-500/30 opacity-85 hover:opacity-100"
@@ -99,12 +102,15 @@ export const NewsCardBig: React.FC<NewsCardBigProps> = ({
 
                   {/* Ticker Pill */}
                   <button
-                    onClick={() => onSelectTicker(item.ticker)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectTicker(item.ticker);
+                    }}
                     className={clsx(
-                      "px-2.5 py-1 rounded-lg text-xs font-mono font-black border transition-all cursor-pointer",
+                      "px-2.5 py-1 rounded-lg text-xs font-mono font-normal border transition-all cursor-pointer",
                       selectedTicker === item.ticker
                         ? "bg-[#823AFD] text-white border-white/30 shadow-[0_0_10px_rgba(130,58,253,0.5)] ring-1 ring-white"
-                        : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-white border-white/15"
+                        : "bg-white/10 hover:bg-[#823AFD]/25 hover:border-[#823AFD] text-slate-300 hover:text-white border-white/15"
                     )}
                   >
                     #{item.ticker}
@@ -130,7 +136,10 @@ export const NewsCardBig: React.FC<NewsCardBigProps> = ({
 
                 {/* Read Action */}
                 <button
-                  onClick={() => onToggleRead(item.id, item.is_read)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleRead(item.id, item.is_read);
+                  }}
                   className={clsx(
                     "px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-all cursor-pointer",
                     isRead
@@ -145,7 +154,7 @@ export const NewsCardBig: React.FC<NewsCardBigProps> = ({
 
               {/* Headline Title */}
               <div className="space-y-1">
-                <h3 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight group-hover:text-[#C4B5FD] transition-colors">
+                <h3 className="text-base sm:text-lg font-normal text-slate-300 leading-snug tracking-normal group-hover:text-white transition-colors">
                   {item.headline_th || item.headline}
                 </h3>
                 {item.headline_th && item.headline_th !== item.headline && (
@@ -196,6 +205,7 @@ export const NewsCardBig: React.FC<NewsCardBigProps> = ({
                   href={item.source_url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   className="text-[#823AFD] hover:text-[#A78BFA] font-bold flex items-center gap-1 transition-colors text-xs"
                 >
                   เปิดอ่านต้นฉบับ <ExternalLink className="w-3.5 h-3.5" />
