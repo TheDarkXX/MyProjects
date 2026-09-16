@@ -507,10 +507,15 @@ Recent News Context:
 ${contextText || headline}
 
 Rules for reading_priority:
-1. "THE_MUST": STRICTLY for stocks HELD IN PORTFOLIO (${portfolioTag.toUpperCase()}) facing game-changing fundamental catalysts: Direct corporate SEC filings, unexpected earnings beats/misses, major guidance raises/cuts, capital dilution / ATM stock offerings, high-stakes regulatory/legal threats (FTC/DOJ/bans), or fundamental moat disruptions.
-CRITICAL: Watchlist stocks (NOT in portfolio), pure valuation commentary/op-eds (e.g. P/S or P/E debate articles), commentator blog posts, and generic price target adjustments MUST NEVER be classified as "THE_MUST".
-2. "GOOD_TO_KNOW": Watchlist earnings/updates, normal business developments, analyst price target adjustments, or commentary/opinion pieces on held stocks.
-3. "OPTIONAL": Routine scheduled insider selling (Rule 10b5-1), minor mentions, generic macro opinion, or peripheral noise.
+1. "THE_MUST": RED-ALERT ONLY. Must have a DIRECT, IMMEDIATE IMPACT ON THE DECISION TO HOLD, SELL, TRIM, OR CUT LOSS on a stock HELD IN PORTFOLIO (${portfolioTag.toUpperCase()}).
+Only 4 categories qualify:
+  a) Capital Dilution / Financial Distress: ATM share offering (>5% dilution), debt default risk, bankruptcy.
+  b) Regulatory / Legal Moat Breaker: FTC/DOJ antitrust lawsuit, FDA rejection, product/model ban, C-suite indictment.
+  c) Severe Earnings/Guidance Shock: Massive earnings miss, guidance cut, severe gross margin collapse, sudden CEO firing.
+  d) Existential Moat Threat / Solvency Risk: Core business model obsolete, systemic credit/NPL contagion.
+CRITICAL: If it's a good earnings report, routine revenue release, analyst upgrade/downgrade, CEO interview, normal contract win, or general market opinion, it is NOT "THE_MUST" — classify it as "GOOD_TO_KNOW".
+2. "GOOD_TO_KNOW": Solid earnings beats, contract wins, monthly revenues, analyst targets, routine product launches, or Watchlist news.
+3. "OPTIONAL": Routine insider trading (Rule 10b5-1), peripheral noise, or minor commentary.
 
 Output ONLY a JSON object:
 {
@@ -518,7 +523,7 @@ Output ONLY a JSON object:
   "summary_th": ["ประเด็น 1 (ภาษาไทย)", "ประเด็น 2 (ภาษาไทย)", "ประเด็น 3 (ภาษาไทย)"],
   "sentiment": "bullish" | "bearish" | "neutral",
   "reading_priority": "THE_MUST" | "GOOD_TO_KNOW" | "OPTIONAL",
-  "priority_reason": "เหตุผลสั้นๆ 1 ประโยคภาษาไทย",
+  "priority_reason": "เหตุผลสั้นๆ 1 ประโยคภาษาไทย (ชี้ชัดว่ากระทบการตัดสินใจถือหุ้นอย่างไร)",
   "impact_level": "routine" | "significant" | "moat_breaker"
 }`;
 
@@ -586,8 +591,8 @@ Output ONLY a JSON object:
       ? parsed.reading_priority 
       : (isHolding ? 'GOOD_TO_KNOW' : 'OPTIONAL');
 
-    // Elevate to THE_MUST if holding + score >= 80 + significant/moat_breaker impact
-    if (isHolding && relevanceScore >= 80 && (parsed.impact_level === 'significant' || parsed.impact_level === 'moat_breaker')) {
+    // Elevate to THE_MUST ONLY if holding + score >= 85 + moat_breaker impact
+    if (isHolding && relevanceScore >= 85 && parsed.impact_level === 'moat_breaker') {
       calculatedPriority = 'THE_MUST';
     }
 
@@ -598,8 +603,14 @@ Output ONLY a JSON object:
     }
 
     // 2. Pure opinion/commentary/op-ed articles should not be THE_MUST
-    const isOpinionOrCommentary = /opinion|columnist|motley fool|seeking alpha contributor|trades at \d|is the stock a bargain|whoever spends smarter/i.test(headline);
+    const isOpinionOrCommentary = /opinion|columnist|motley fool|seeking alpha contributor|trades at \d|is the stock a bargain|whoever spends smarter|why investors should/i.test(headline);
     if (isOpinionOrCommentary && calculatedPriority === 'THE_MUST') {
+      calculatedPriority = 'GOOD_TO_KNOW';
+    }
+
+    // 3. Normal positive contract wins, price target upgrades, and routine financial beats are GOOD_TO_KNOW
+    const isNormalPositiveOrAnalyst = /rating upgrade|price target|keeps landing|quarterly revenue|august revenues|july revenues|subscription arr/i.test(headline);
+    if (isNormalPositiveOrAnalyst && calculatedPriority === 'THE_MUST' && parsed.impact_level !== 'moat_breaker') {
       calculatedPriority = 'GOOD_TO_KNOW';
     }
 
