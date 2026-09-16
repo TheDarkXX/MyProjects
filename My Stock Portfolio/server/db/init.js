@@ -360,8 +360,6 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_news_priority ON news_intelligence(reading_priority);
     CREATE INDEX IF NOT EXISTS idx_news_is_read ON news_intelligence(is_read);
     CREATE INDEX IF NOT EXISTS idx_news_created ON news_intelligence(created_at);
-    CREATE INDEX IF NOT EXISTS idx_news_fingerprint ON news_intelligence(event_fingerprint);
-    CREATE INDEX IF NOT EXISTS idx_news_source ON news_intelligence(content_source);
   `);
 
   // Migration for seen_articles & news_intelligence triage columns
