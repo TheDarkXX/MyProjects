@@ -11,7 +11,7 @@ newsRoutes.get('/', (c) => {
     const priority = c.req.query('priority') || 'all';   // all | the_must | good_to_know | optional
     const unreadOnly = c.req.query('unread_only') === 'true';
     const ticker = c.req.query('ticker');
-    const limit = Math.min(parseInt(c.req.query('limit') || '50', 10), 200);
+    const limit = Math.min(parseInt(c.req.query('limit') || '200', 10), 1000);
 
     let query = 'SELECT * FROM news_intelligence WHERE 1=1';
     const params = [];

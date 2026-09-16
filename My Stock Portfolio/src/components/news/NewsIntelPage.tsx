@@ -70,9 +70,78 @@ export const NewsIntelPage: React.FC = () => {
     localStorage.setItem('news_intel_sort_order', next);
   };
 
-  // Client-side Smart Sorting Engine
+  // Client-side Instant Filter & Smart Sorting Engine (0ms Latency)
   const sortedItems = useMemo(() => {
-    const list = [...items];
+    let list = items;
+
+    // 1. Filter Portfolio
+    if (selectedPortfolio === 'main') {
+      list = list.filter(item => item.portfolio_tag === 'main' || item.portfolio_tag === 'dual');
+    } else if (selectedPortfolio === 'tiger') {
+      list = list.filter(item => item.portfolio_tag === 'tiger' || item.portfolio_tag === 'dual');
+    } else if (selectedPortfolio === 'global') {
+      list = list.filter(item => item.portfolio_tag === 'global');
+    }
+
+    // 2. Filter Priority
+    if (selectedPriority === 'the_must') {
+      list = list.filter(item => item.reading_priority === 'THE_MUST');
+    } else if (selectedPriority === 'good_to_know') {
+      list = list.filter(item => item.reading_priority === 'GOOD_TO_KNOW');
+    } else if (selectedPriority === 'optional') {
+      list = list.filter(item => item.reading_priority === 'OPTIONAL');
+    } else if (selectedPriority === 'focus') {
+      list = list.filter(item => item.reading_priority === 'THE_MUST' || item.reading_priority === 'GOOD_TO_KNOW');
+    }
+
+    // 3. Filter Unread Only
+    if (unreadOnly) {
+      list = list.filter(item => item.is_read === 0);
+    }
+
+    // 4. Filter Selected Ticker
+    if (selectedTicker) {
+      const targetTicker = selectedTicker.toUpperCase();
+      list = list.filter(item => {
+        if (item.ticker.toUpperCase() === targetTicker) return true;
+        let tags: string[] = [];
+        if (Array.isArray(item.triage_tags)) tags = item.triage_tags;
+        else if (typeof item.triage_tags === 'string') {
+          try { tags = JSON.parse(item.triage_tags); } catch {}
+        }
+        return tags.some(t => t.toUpperCase() === targetTicker);
+      });
+    }
+
+    // 5. Filter Selected Tag
+    if (selectedTag) {
+      const targetTag = selectedTag.toUpperCase();
+      list = list.filter(item => {
+        let tags: string[] = [];
+        if (Array.isArray(item.triage_tags)) tags = item.triage_tags;
+        else if (typeof item.triage_tags === 'string') {
+          try { tags = JSON.parse(item.triage_tags); } catch {}
+        }
+        return tags.some(t => t.toUpperCase() === targetTag) ||
+               (item.headline && item.headline.toUpperCase().includes(targetTag)) ||
+               (item.headline_th && item.headline_th.toUpperCase().includes(targetTag)) ||
+               (item.summary_th && item.summary_th.toUpperCase().includes(targetTag));
+      });
+    }
+
+    // 6. Filter Search Query
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toUpperCase();
+      list = list.filter(item => {
+        return item.ticker.toUpperCase().includes(q) ||
+               (item.headline && item.headline.toUpperCase().includes(q)) ||
+               (item.headline_th && item.headline_th.toUpperCase().includes(q)) ||
+               (item.summary_th && item.summary_th.toUpperCase().includes(q));
+      });
+    }
+
+    // 7. Client-side Sort (5 dimensions)
+    const sorted = [...list];
     const priorityWeights: Record<string, number> = {
       THE_MUST: 3,
       GOOD_TO_KNOW: 2,
@@ -84,7 +153,7 @@ export const NewsIntelPage: React.FC = () => {
       bearish: 1,
     };
 
-    list.sort((a, b) => {
+    sorted.sort((a, b) => {
       let cmp = 0;
       if (sortKey === 'date') {
         cmp = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -113,21 +182,13 @@ export const NewsIntelPage: React.FC = () => {
       }
     });
 
-    return list;
-  }, [items, sortKey, sortOrder]);
+    return sorted;
+  }, [items, selectedPortfolio, selectedPriority, unreadOnly, selectedTicker, selectedTag, searchQuery, sortKey, sortOrder]);
 
   const fetchNews = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedPortfolio !== 'all') params.append('portfolio', selectedPortfolio);
-      if (selectedPriority !== 'all') params.append('priority', selectedPriority);
-      if (unreadOnly) params.append('unread_only', 'true');
-      if (searchQuery.trim()) params.append('ticker', searchQuery.trim().toUpperCase());
-      if (selectedTicker) params.append('ticker', selectedTicker);
-      if (selectedTag) params.append('tag', selectedTag);
-
-      const res = await fetch(`/api/news?${params.toString()}`);
+      const res = await fetch('/api/news?limit=500&portfolio=all&priority=all');
       if (res.ok) {
         const json = await res.json();
         setItems(json.data || []);
@@ -137,7 +198,7 @@ export const NewsIntelPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedPortfolio, selectedPriority, unreadOnly, searchQuery, selectedTicker, selectedTag]);
+  }, []);
 
   const fetchStats = async () => {
     try {
