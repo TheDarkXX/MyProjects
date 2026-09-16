@@ -628,16 +628,16 @@ Evaluate the news across 5 Content-Driven Dimensions (100 Points Total):
    - 0: Retail blog, Seeking Alpha contributor, Motley Fool clickbait.
    - Penalty: If clickbait/whale gossip/speculative fluff, source score is 0.
 
-Strict Rules for reading_priority (4 Tiers):
-- "THE_MUST": Held stock ONLY + Total Score >= 85 + (Financial >= 20 OR Moat >= 20) + Actionability >= 12 + impact_level "moat_breaker".
-- "CATALYST": Held stock ONLY + Total Score >= 60 + verified company fundamental event.
-- "WATCHLIST": Watchlist / ecosystem peers (Total Score >= 40, or non-held stocks).
-- "CHATTER": Market opinions, 13F whale gossip, retail clickbait, blogs, or Total Score < 40.
+Strict Rules for reading_priority (4 Tiers) & Summary Length:
+- "THE_MUST": Held stock ONLY + Total Score >= 85 + (Financial >= 20 OR Moat >= 20) + Actionability >= 12. (Summary: 5-7 detailed points + analysis)
+- "CATALYST": Held stock ONLY + Total Score >= 60 + verified company fundamental event. (Summary: 5-7 detailed points)
+- "WATCHLIST": Watchlist / ecosystem peers (Total Score >= 40, or non-held stocks). (Summary: 3-5 points)
+- "CHATTER": Market opinions, 13F whale gossip, retail clickbait, blogs, or Total Score < 40. (Summary: 2-3 short points)
 
 Output ONLY a JSON object:
 {
   "headline_th": "[${ticker}] พาดหัวภาษาไทยกระชับ คม เข้าใจใน 1 วินาที (10-18 คำ ไม่ใช้คำหลอกลวง)",
-  "summary_th": ["ประเด็น 1 (ภาษาไทย)", "ประเด็น 2 (ภาษาไทย)", "ประเด็น 3 (ภาษาไทย)"],
+  "summary_th": ["Array ของบทสรุป 2 ถึง 7 ข้อ (ปรับจำนวนตาม Tier ความสำคัญที่กำหนดด้านบน)"],
   "sentiment": "bullish" | "bearish" | "neutral",
   "score_breakdown": {
     "financial": 0,
