@@ -3,6 +3,7 @@ import { parseHTML } from 'linkedom';
 import crypto from 'crypto';
 import https from 'node:https';
 import http from 'node:http';
+import { decodeGoogleNewsUrl as npmDecodeGoogleNewsUrl } from 'decode-google-news-url';
 
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || 'http://127.0.0.1:18810/openai/v1/chat/completions';
 const BRAIN_GATEWAY_URL = process.env.BRAIN_GATEWAY_URL || 'https://brain.doctorbankonline.com/api/ai/chat';
@@ -46,6 +47,66 @@ export function extractSearchKeywords(headline, ticker) {
 }
 
 /**
+ * Use AI to translate and expand Thai headlines into precise English search queries
+ */
+export async function generateSmartSearchQuery(headline, ticker) {
+  if (!headline) return ticker || '';
+  const isThai = /[\u0E00-\u0E7F]/.test(headline);
+  
+  if (!isThai) {
+    return extractSearchKeywords(headline, ticker);
+  }
+
+  const prompt = `You are a financial news researcher. Translate this Thai headline into a VERY BROAD English search query (max 2-3 words). Use ONLY the Ticker and 1-2 core English nouns (e.g., "AVGO AI", "Broadcom revenue"). Do NOT translate clickbait adjectives or full sentences.
+Headline: "${headline}"
+Ticker: "${ticker}"
+Return ONLY the raw string search query. No quotes. No JSON.`;
+
+  try {
+    let reply = '';
+    const res = await fetch(AI_GATEWAY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-5.6-terra',
+        messages: [{ role: 'user', content: prompt }]
+      }),
+      signal: AbortSignal.timeout(8000)
+    }).catch(() => null);
+
+    if (res && res.ok) {
+      const data = await res.json();
+      reply = data.choices?.[0]?.message?.content || data.reply || '';
+    } else {
+      const fbRes = await fetch(BRAIN_GATEWAY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${BRAIN_GATEWAY_TOKEN}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-5.6-terra',
+          message: prompt
+        }),
+        signal: AbortSignal.timeout(8000)
+      }).catch(() => null);
+      if (fbRes && fbRes.ok) {
+        const fbData = await fbRes.json();
+        reply = fbData.reply || fbData.choices?.[0]?.message?.content || '';
+      }
+    }
+    
+    if (reply && reply.trim().length > 3) {
+      return reply.replace(/["']/g, '').trim();
+    }
+  } catch (err) {
+    console.warn('[gfin] AI Query generation failed, using fallback:', err.message);
+  }
+
+  return extractSearchKeywords(headline, ticker);
+}
+
+/**
  * Generate normalized event fingerprint for deduplication (72h window)
  */
 export function generateEventFingerprint(ticker, headline) {
@@ -69,7 +130,8 @@ export function generateEventFingerprint(ticker, headline) {
  */
 export async function searchGoogleNewsRSS(ticker, headline) {
   try {
-    const query = extractSearchKeywords(headline, ticker);
+    const query = await generateSmartSearchQuery(headline, ticker);
+    console.log(`[gfin] 🔎 Smart Query for [${ticker}]: "${query}"`);
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
     
     const res = await fetch(url, {
@@ -86,10 +148,10 @@ export async function searchGoogleNewsRSS(ticker, headline) {
     const items = [];
     const itemBlocks = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
     const now = Date.now();
-    const maxAgeMs = 72 * 60 * 60 * 1000; // 72 Hours
+    const maxAgeMs = 14 * 24 * 60 * 60 * 1000; // 14 Days
 
     for (const blockMatch of itemBlocks) {
-      if (items.length >= 8) break;
+      if (items.length >= 15) break;
       const block = blockMatch[1];
       const rawTitle = block.match(/<title>([\s\S]*?)<\/title>/i)?.[1]
         ?.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
@@ -150,7 +212,7 @@ export async function searchYahooNewsRSS(ticker) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'application/rss+xml, application/xml, text/xml;q=0.9'
       },
-      signal: AbortSignal.timeout(8000)
+      signal: AbortSignal.timeout(15000)
     });
 
     if (!res.ok) return [];
@@ -159,10 +221,10 @@ export async function searchYahooNewsRSS(ticker) {
     const items = [];
     const itemBlocks = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
     const now = Date.now();
-    const maxAgeMs = 72 * 60 * 60 * 1000;
+    const maxAgeMs = 14 * 24 * 60 * 60 * 1000; // 14 Days
 
     for (const blockMatch of itemBlocks) {
-      if (items.length >= 6) break;
+      if (items.length >= 15) break;
       const block = blockMatch[1];
       const rawTitle = block.match(/<title>([\s\S]*?)<\/title>/i)?.[1]
         ?.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
@@ -428,6 +490,25 @@ Respond ONLY with raw JSON:
 }
 
 /**
+ * Decode Google News RSS wrapper tokens into direct publisher URLs
+ * Using external decode-google-news-url package for robustness against Google's changes
+ */
+export async function decodeGoogleNewsUrl(sourceUrl) {
+  try {
+    if (!sourceUrl.includes('news.google.com/rss/articles/')) return sourceUrl;
+    
+    const decodedUrl = await npmDecodeGoogleNewsUrl(sourceUrl);
+    if (decodedUrl && decodedUrl.startsWith('http')) {
+      return decodedUrl;
+    }
+    return sourceUrl;
+  } catch (err) {
+    console.warn('[gfin] Google News URL Decode Error:', err.message);
+    return sourceUrl;
+  }
+}
+
+/**
  * Main Autonomous Orchestrator:
  * Hunt and ingest full article story for paywalled/short Beehiiv headline
  */
@@ -453,10 +534,20 @@ export async function fetchFullStoryForHeadline({ ticker, headline, beehiivUrl }
   const consensusCount = Math.max(1, publisherSet.size);
 
   // Step 2: Iterate and Extract Articles with Semantic Guard
-  for (const candidate of allCandidates.slice(0, 4)) {
-    console.log(`[gfin] Inspecting candidate: [${candidate.source}] "${candidate.title}" (${candidate.link})`);
+  const validArticles = [];
+  for (const candidate of allCandidates.slice(0, 12)) {
+    console.log(`[gfin] Inspecting candidate: [${candidate.source}] "${candidate.title}"`);
 
-    const extracted = await extractArticleWithReadability(candidate.link);
+    // Decode Google News URL if needed
+    const directUrl = candidate.provider === 'google_news' 
+      ? await decodeGoogleNewsUrl(candidate.link)
+      : candidate.link;
+      
+    if (directUrl !== candidate.link) {
+      console.log(`[gfin] Decoded Google wrapper to: ${directUrl}`);
+    }
+
+    const extracted = await extractArticleWithReadability(directUrl);
     if (!extracted || !extracted.content || extracted.wordCount < 150) {
       console.log(`[gfin] Skipped: Insufficient content (${extracted?.wordCount || 0} words)`);
       continue;
@@ -473,17 +564,30 @@ export async function fetchFullStoryForHeadline({ ticker, headline, beehiivUrl }
     console.log(`[gfin] Semantic Guard for "${candidate.title}": Score ${semantic.relevanceScore}/100 (Relevant: ${semantic.isRelevant})`);
 
     if (semantic.isRelevant) {
-      return {
-        fullText: extracted.content,
-        wordCount: extracted.wordCount,
-        sourceName: candidate.source,
-        sourceUrl: extracted.resolvedUrl || candidate.link,
-        contentSource: candidate.provider === 'yahoo_rss' ? 'gfin_yahoo' : 'gfin_google',
-        relevanceScore: semantic.relevanceScore,
-        sourceCount: consensusCount,
-        extractionMethod: extracted.extractionMethod
-      };
+      validArticles.push({ extracted, candidate, semantic });
+      if (validArticles.length >= 7) {
+        console.log(`[gfin] Reached maximum consensus (7 articles). Stopping scan.`);
+        break;
+      }
     }
+  }
+
+  if (validArticles.length > 0) {
+    const combinedText = validArticles.map((a, i) => `--- SOURCE ${i+1}: ${a.candidate.source} ---\n${a.extracted.content}`).join('\n\n');
+    const totalWords = validArticles.reduce((sum, a) => sum + a.extracted.wordCount, 0);
+    const avgScore = Math.round(validArticles.reduce((sum, a) => sum + a.semantic.relevanceScore, 0) / validArticles.length);
+    const combinedSources = validArticles.map(a => a.candidate.source).join(' + ');
+
+    return {
+      fullText: combinedText,
+      wordCount: totalWords,
+      sourceName: combinedSources,
+      sourceUrl: validArticles[0].extracted.resolvedUrl || validArticles[0].candidate.link,
+      contentSource: 'multi_source_aggregated',
+      relevanceScore: avgScore,
+      sourceCount: validArticles.length,
+      extractionMethod: 'multi_source_aggregated'
+    };
   }
 
   console.log(`[gfin] No candidates passed the Semantic Relevance Gate for [${ticker}]`);

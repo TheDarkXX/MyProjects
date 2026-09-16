@@ -588,7 +588,7 @@ export async function synthesizeWithAI({
   sourceCount = 1
 }) {
   const contextNews = newsItems.map((n, i) => `[ข่าวเสริม ${i+1}] (${n.publisher}): ${n.title}\n${n.summary || ''}`).join('\n\n');
-  const contextFull = fullContent ? `\n\n[เนื้อหาบทความฉบับเต็ม]:\n${fullContent.slice(0, 3500)}` : '';
+  const contextFull = fullContent ? `\n\n[เนื้อหาบทความฉบับเต็ม]:\n${fullContent.slice(0, 8000)}` : '';
 
   const systemPrompt = `You are the Ruthless Investment Intelligence AI for My Stock Portfolio. Evaluate news strictly based on real fundamentals and article content. Reply ONLY with a valid raw JSON object matching the requested schema. Do not include markdown fences or any explanation text outside JSON.`;
 
@@ -617,20 +617,14 @@ Evaluate the news across 5 Content-Driven Dimensions (100 Points Total):
    - 12-19: Major enterprise commercial contract win, flagship tech release.
    - 5-11: Routine product iteration.
    - 0: Gossip, rumors, opinion pieces, 13F whale portfolio moves.
-3. "ownership" (0-20): Portfolio ownership status.
-   - 20: Stock is held in main portfolio (${portfolioTag === 'main' || portfolioTag === 'dual' ? 'MATCHED CORE' : 'NOT CORE'}).
-   - 12: Stock is held in tiger portfolio (${portfolioTag === 'tiger' ? 'MATCHED TIGER' : 'NOT TIGER'}).
-   - 5: Watchlist / ecosystem peer.
-   - 0: Outside watchlist and outside portfolio.
 4. "actionability" (0-15): Decision urgency.
    - 12-15: Immediate decision needed (trigger to Buy, Sell, Trim, or Cut Loss).
    - 6-11: Tactical monitoring for next 1-2 quarters.
    - 0-5: Pure informational noise, no portfolio action required.
-5. "source" (0-10): Source credibility.
+5. "source" (0-20): Source credibility (AI evaluates up to 10 points, Server adds consensus bonus).
    - 10: SEC 8-K/10-Q, official company press release, sworn regulatory filing.
    - 7-9: Tier-1 wire (Bloomberg, Reuters, WSJ, CNBC, FT).
    - 4-6: Reputable newsletter / verified analysis.
-   - Multi-Source Consensus Bonus: ${sourceCount > 1 ? `Confirmed by ${sourceCount} sources (+${Math.min(3, sourceCount)} bonus)` : 'Single source'}. Max capped at 10.
    - 0: Retail blog, Seeking Alpha contributor, Motley Fool clickbait.
    - Penalty: If clickbait/whale gossip/speculative fluff, source score is 0.
 
@@ -648,7 +642,6 @@ Output ONLY a JSON object:
   "score_breakdown": {
     "financial": 0,
     "moat": 0,
-    "ownership": 0,
     "actionability": 0,
     "source": 0,
     "total": 0,
@@ -728,15 +721,21 @@ Output ONLY a JSON object:
     const sb = parsed.score_breakdown || {};
     let financial = Math.max(0, Math.min(30, Number(sb.financial) || 0));
     let moat = Math.max(0, Math.min(25, Number(sb.moat) || 0));
-    let defaultOwnership = isHolding ? (portfolioTag === 'tiger' ? 12 : 20) : 5;
-    let ownership = Math.max(0, Math.min(20, Number(sb.ownership) || defaultOwnership));
     let actionability = Math.max(0, Math.min(15, Number(sb.actionability) || 0));
     let source = Math.max(0, Math.min(10, Number(sb.source) || 5));
     const penalties = Array.isArray(sb.penalties) ? [...sb.penalties] : [];
+    
+    // Multi-source consensus bonus (Server Enforced)
+    if (sourceCount > 1) {
+      source = Math.min(20, source + (sourceCount * 2)); // Up to +10 bonus for multiple sources
+    }
 
-    // Enforce Ownership Limits
-    if (!isHolding) {
-      ownership = Math.min(5, ownership);
+    // Ownership computed strictly on the server
+    let ownership = 0;
+    if (isHolding) {
+      ownership = (portfolioTag === 'tiger') ? 12 : 20;
+    } else if (portfolioTag !== 'global') {
+      ownership = 5; // Watchlist / Ecosystem
     }
 
     let calculatedTotal = financial + moat + ownership + actionability + source;
@@ -807,8 +806,8 @@ Output ONLY a JSON object:
     };
   } catch (err) {
     console.error(`[NewsRadar] AI synthesis error for ${ticker}:`, err.message);
-    const fallbackScore = isHolding ? 60 : 35;
-    const fallbackPriority = isHolding ? 'CATALYST' : 'CHATTER';
+    const fallbackScore = isHolding ? 45 : 30;
+    const fallbackPriority = isHolding ? 'WATCHLIST' : 'CHATTER';
     return {
       headline_th: `[${ticker}] ${headline}`,
       summary_th: `• ${headline}\n• ข้อมูลดึงจาก Yahoo Finance & Finnhub\n• สามารถคลิกอ่านรายละเอียดจากลิงก์ข่าวต้นฉบับได้โดยตรง`,
