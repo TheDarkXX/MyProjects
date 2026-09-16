@@ -19,7 +19,7 @@ export interface NewsItem {
   created_at: string;
 }
 
-export type ViewMode = 'list' | 'mini_card' | 'big_card' | 'full';
+export type ViewMode = 'list' | 'mini_card' | 'big_card' | 'full' | 'text';
 
 export type SortKey = 'date' | 'ticker' | 'priority' | 'score' | 'sentiment';
 

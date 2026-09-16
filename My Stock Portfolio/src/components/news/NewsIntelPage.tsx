@@ -9,6 +9,7 @@ import clsx from 'clsx';
 import { NewsTickerDock } from './NewsTickerDock';
 import { NewsToolbar } from './NewsToolbar';
 import { NewsRowList } from './views/NewsRowList';
+import { NewsTextList } from './views/NewsTextList';
 import { NewsCardMini } from './views/NewsCardMini';
 import { NewsCardBig } from './views/NewsCardBig';
 import { NewsCardFull } from './views/NewsCardFull';
@@ -619,6 +620,22 @@ export const NewsIntelPage: React.FC = () => {
         <div className="w-full transition-all duration-200">
           {viewMode === 'list' && (
             <NewsRowList
+              items={sortedItems}
+              selectedTicker={selectedTicker}
+              selectedTag={selectedTag}
+              onSelectTicker={(t) => {
+                setSelectedTicker(prev => prev === t ? null : t);
+                setSelectedTag(null);
+              }}
+              onSelectTag={(t) => {
+                setSelectedTag(prev => prev === t ? null : t);
+                setSelectedTicker(null);
+              }}
+              onToggleRead={handleMarkAsRead}
+            />
+          )}
+          {viewMode === 'text' && (
+            <NewsTextList
               items={sortedItems}
               selectedTicker={selectedTicker}
               selectedTag={selectedTag}
