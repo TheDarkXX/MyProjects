@@ -13,6 +13,7 @@ interface NewsItem {
   ticker: string;
   company_name: string;
   headline: string;
+  headline_th?: string | null;
   source_name: string;
   source_url: string;
   summary_th: string;
@@ -746,10 +747,18 @@ export const NewsIntelPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Headline Title */}
-                  <h2 className="text-lg font-bold text-white leading-snug tracking-tight">
-                    {item.headline}
-                  </h2>
+                  {/* Headline Title: Primary Catchy Thai or original */}
+                  <div className="space-y-1">
+                    <h2 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight">
+                      {item.headline_th || item.headline}
+                    </h2>
+                    {item.headline_th && item.headline_th !== item.headline && (
+                      <p className="text-[13px] text-slate-400 font-normal italic leading-snug flex items-center gap-1.5 line-clamp-1">
+                        <span className="shrink-0 text-slate-400 font-medium not-italic">ต้นฉบับ:</span>
+                        <span className="truncate">{item.headline}</span>
+                      </p>
+                    )}
+                  </div>
 
                   {/* Priority Reason Banner (if present) */}
                   {item.priority_reason && (

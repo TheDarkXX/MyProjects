@@ -513,6 +513,7 @@ Rules for reading_priority:
 
 Output ONLY a JSON object:
 {
+  "headline_th": "[${ticker}] พาดหัวภาษาไทยกระชับ คม เข้าใจใน 1 วินาที (10-18 คำ ไม่ใช้คำหลอกลวง)",
   "summary_th": ["ประเด็น 1 (ภาษาไทย)", "ประเด็น 2 (ภาษาไทย)", "ประเด็น 3 (ภาษาไทย)"],
   "sentiment": "bullish" | "bearish" | "neutral",
   "reading_priority": "THE_MUST" | "GOOD_TO_KNOW" | "OPTIONAL",
@@ -590,6 +591,7 @@ Output ONLY a JSON object:
     }
 
     return {
+      headline_th: parsed.headline_th || `[${ticker}] ${headline}`,
       summary_th: formattedSummary,
       sentiment: ['bullish', 'bearish', 'neutral'].includes(parsed.sentiment) ? parsed.sentiment : 'neutral',
       reading_priority: calculatedPriority,
@@ -599,6 +601,7 @@ Output ONLY a JSON object:
   } catch (err) {
     console.error(`[NewsRadar] AI synthesis error for ${ticker}:`, err.message);
     return {
+      headline_th: `[${ticker}] ${headline}`,
       summary_th: `• ${headline}\n• ข้อมูลดึงจาก Yahoo Finance & Finnhub\n• สามารถคลิกอ่านรายละเอียดจากลิงก์ข่าวต้นฉบับได้โดยตรง`,
       sentiment: 'neutral',
       reading_priority: isHolding && relevanceScore >= 80 ? 'THE_MUST' : (isHolding ? 'GOOD_TO_KNOW' : 'OPTIONAL'),
@@ -649,10 +652,10 @@ export async function runNewsScan() {
   const findIntel = db.prepare('SELECT id FROM news_intelligence WHERE ticker = ? AND headline = ?');
   const insertIntel = db.prepare(`
     INSERT INTO news_intelligence (
-      ticker, company_name, headline, source_name, source_url,
+      ticker, company_name, headline, headline_th, source_name, source_url,
       summary_th, sentiment, reading_priority, priority_reason, impact_level,
       portfolio_tag, related_portfolio_id, relevance_score, triage_tags, is_read, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
   `);
 
   let newArticlesCount = 0;
@@ -710,6 +713,7 @@ export async function runNewsScan() {
           ticker,
           ticker,
           article.title,
+          `[${ticker}] ${article.title}`,
           'Beehiiv',
           article.url,
           `• ${article.title}\n• คะแนนคัดกรอง: ${triage.score}/100\n• ป้ายกำกับ: ${triage.tags.join(', ') || 'ทั่วไป'}\n• หมายเหตุ: ข่าวสารระดับกลาง (บันทึกเฉพาะหัวข้อโดยไม่เรียก AI สรุปเพื่อประหยัดทรัพยากร สามารถคลิกอ่านรายละเอียดจากลิงก์ต้นฉบับได้)`,
@@ -766,6 +770,7 @@ export async function runNewsScan() {
         ticker,
         ticker,
         article.title,
+        aiResult.headline_th || `[${ticker}] ${article.title}`,
         'Beehiiv / Yahoo / Finnhub',
         article.url,
         aiResult.summary_th,

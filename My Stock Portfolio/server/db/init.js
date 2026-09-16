@@ -325,6 +325,7 @@ export function initDb() {
         ticker TEXT NOT NULL,
         company_name TEXT,
         headline TEXT NOT NULL,
+        headline_th TEXT,
         source_name TEXT,
         source_url TEXT,
         summary_th TEXT NOT NULL,
@@ -363,6 +364,7 @@ export function initDb() {
     const existingNewsCols = new Set(db.pragma('table_info(news_intelligence)').map(col => col.name));
     if (!existingNewsCols.has('relevance_score')) db.exec("ALTER TABLE news_intelligence ADD COLUMN relevance_score INTEGER DEFAULT 0;");
     if (!existingNewsCols.has('triage_tags')) db.exec("ALTER TABLE news_intelligence ADD COLUMN triage_tags TEXT DEFAULT '[]';");
+    if (!existingNewsCols.has('headline_th')) db.exec("ALTER TABLE news_intelligence ADD COLUMN headline_th TEXT DEFAULT NULL;");
 
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_news_score ON news_intelligence(relevance_score);

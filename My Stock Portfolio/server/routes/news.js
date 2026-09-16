@@ -49,8 +49,8 @@ newsRoutes.get('/', (c) => {
       params.push(ticker.toUpperCase(), `%"${ticker.toUpperCase()}"%`);
     }
     if (tag) {
-      query += ` AND (triage_tags LIKE ? OR headline LIKE ? OR summary_th LIKE ?)`;
-      params.push(`%${tag}%`, `%${tag}%`, `%${tag}%`);
+      query += ` AND (triage_tags LIKE ? OR headline LIKE ? OR headline_th LIKE ? OR summary_th LIKE ?)`;
+      params.push(`%${tag}%`, `%${tag}%`, `%${tag}%`, `%${tag}%`);
     }
 
     // Priority ordering: THE_MUST (1) > GOOD_TO_KNOW (2) > OPTIONAL (3), then by newest created_at
