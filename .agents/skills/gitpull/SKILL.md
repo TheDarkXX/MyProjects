@@ -18,6 +18,7 @@ description: Safe Git Sync, Auto-Commit Pending Work, Executive Briefing, and Un
 ---
 
 ## ⛔ PRE-FLIGHT CHECKLIST (กฎเหล็กก่อนรัน)
+- **Workspace Auto-Detection & Scope Isolation (Iron Rule):** ตรวจจับ Path โฟลเดอร์ปัจจุบันเสมอ สแกนเฉพาะงานของ MyProjects (My Stock Portfolio, HyperCut, App Builder ฯลฯ ในสังกัด MyProjects) ห้ามข้ามเขตไปดึงงานของ Openclaw-VPS หรือ DoctorBank-Brand เด็ดขาด
 - **Main Workspace Priority (Iron Rule):** คำสั่ง Git ทั้งหมดต้องรันที่ Workspace Root เสมอ (`C:\My Claw\MyProjects`) ห้ามรันใน Subfolder ของแอปย่อย
 - **Target Remote Awareness:** ใน Repo นี้ Remote หลักคือ `origin` (GitHub `https://github.com/TheDarkXX/MyProjects.git`) และมีรีโมตรอง `vps` สำหรับ Stock Portfolio คำสั่งดึงหลักคือ `git pull origin master`
 - **No Blind Overwrite:** หากมีไฟล์ที่ยังไม่ได้ commit ห้ามสั่ง pull ข้ามหัวหรือ stash หายสาบสูญ ให้ทำตามขั้นตอน Phase 1 เสมอ
