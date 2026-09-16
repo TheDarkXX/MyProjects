@@ -33,7 +33,7 @@ export const NewsToolbar: React.FC<NewsToolbarProps> = ({
           มุมมอง:
         </span>
         <div className="bg-[#0F111A] p-1 rounded-xl border border-[#1F2233] flex items-center gap-1">
-          {/* List View (2 cols) - DEFAULT */}
+          {/* List View (3 cols) - DEFAULT */}
           <button
             onClick={() => onChangeViewMode('list')}
             className={clsx(
@@ -42,10 +42,10 @@ export const NewsToolbar: React.FC<NewsToolbarProps> = ({
                 ? "bg-[#823AFD] text-white shadow-[0_0_12px_rgba(130,58,253,0.4)]"
                 : "text-slate-300 hover:text-white hover:bg-white/5"
             )}
-            title="List View (2 คอลัมน์) — กวาดตาเร็วที่สุด"
+            title="List View (3 คอลัมน์) — กะทัดรัด โชว์เฉพาะหัวข้อ"
           >
             <LayoutList className="w-3.5 h-3.5" />
-            <span>List (2 Col)</span>
+            <span>List (3 Col)</span>
           </button>
 
           {/* Mini Card View (3-4 cols) */}
