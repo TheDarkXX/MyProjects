@@ -3,6 +3,7 @@ import { ISeriesApi, Time } from 'lightweight-charts';
 import { api } from '../../../services/api';
 import { RawBarItem, isUsMarketOpen } from '../../../types/chart';
 import { usePriceStore } from '../../../stores/priceStore';
+import { useXChartStore } from '../../../stores/xchartStore';
 
 export interface UseChartLivePulseProps {
   symbol: string;
@@ -70,6 +71,14 @@ export function useChartLivePulse({
             lastUpdated: new Date(),
           }));
 
+          // Also update watchlistPrices in xchartStore for synchronous dock view
+          useXChartStore.setState((state) => ({
+            watchlistPrices: {
+              ...state.watchlistPrices,
+              [symKey]: quote,
+            },
+          }));
+
           // Update or Append today's live candle in real-time
           if (candleSeriesRef.current && displayBars.length > 0) {
             const lastBar = displayBars[displayBars.length - 1];
@@ -127,8 +136,8 @@ export function useChartLivePulse({
     // Run pulse immediately
     pollLiveQuote();
 
-    // Fast heartbeat (12s) when market is open or crypto/forex, 60s when closed
-    const pollInterval = (isCryptoOrForex || isUsMarketOpen()) ? 12000 : 60000;
+    // Fast heartbeat (6s) when market is open or crypto/forex, 60s when closed
+    const pollInterval = (isCryptoOrForex || isUsMarketOpen()) ? 6000 : 60000;
     timer = setInterval(pollLiveQuote, pollInterval);
 
     const handleVisibility = () => {

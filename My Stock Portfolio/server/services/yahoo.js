@@ -51,10 +51,10 @@ export async function fetchYahooHistorical(symbol, from, to) {
 }
 
 /**
- * In-memory short TTL cache for realtime quotes (10 seconds)
+ * In-memory short TTL cache for realtime quotes (5 seconds)
  */
 const realtimeQuoteCache = new Map();
-const REALTIME_CACHE_TTL = 10 * 1000;
+const REALTIME_CACHE_TTL = 5 * 1000;
 
 /**
  * Fetch latest price for a symbol.

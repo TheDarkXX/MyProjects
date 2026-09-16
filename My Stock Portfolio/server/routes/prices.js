@@ -6,7 +6,7 @@ import { authMiddleware } from './auth.js';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 const quoteCache = new Map();
-const QUOTE_CACHE_TTL = 30 * 1000;
+const QUOTE_CACHE_TTL = 5 * 1000; // 5 seconds cache for snappy 6s real-time pulse
 
 const pricesRoutes = new Hono();
 
