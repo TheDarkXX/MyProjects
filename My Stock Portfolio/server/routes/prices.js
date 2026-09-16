@@ -197,6 +197,7 @@ pricesRoutes.post('/quote-batch', async (c) => {
         const quoteArray = Array.isArray(quotes) ? quotes : (quotes ? [quotes] : []);
         for (const q of quoteArray) {
           if (!q || !q.symbol) continue;
+          const symKey = q.symbol.toUpperCase();
           const item = {
             symbol: symKey,
             price: Number((q.regularMarketPrice ?? 0).toFixed(4)),

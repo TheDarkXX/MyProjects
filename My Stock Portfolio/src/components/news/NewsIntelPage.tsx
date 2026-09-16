@@ -34,7 +34,9 @@ export const NewsIntelPage: React.FC = () => {
 
   // Filters
   const [selectedPortfolio, setSelectedPortfolio] = useState<'all' | 'main' | 'tiger' | 'global'>('all');
-  const [selectedPriority, setSelectedPriority] = useState<'all' | 'the_must' | 'focus' | 'good_to_know' | 'optional'>('focus');
+  const [selectedPriority, setSelectedPriority] = useState<'all' | 'the_must' | 'focus' | 'good_to_know' | 'optional'>(() => {
+    return (localStorage.getItem('news_intel_priority') as any) || 'the_must';
+  });
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
@@ -42,6 +44,11 @@ export const NewsIntelPage: React.FC = () => {
   const [tickerStats, setTickerStats] = useState<Record<string, any>>({});
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [showMobileDock, setShowMobileDock] = useState(false);
+
+  const handlePriorityChange = (priority: 'all' | 'the_must' | 'focus' | 'good_to_know' | 'optional') => {
+    setSelectedPriority(priority);
+    localStorage.setItem('news_intel_priority', priority);
+  };
 
   // View & Sorting Modes with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -424,7 +431,7 @@ export const NewsIntelPage: React.FC = () => {
       {/* 2. Stat Badges Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div 
-          onClick={() => { setSelectedPriority('the_must'); setUnreadOnly(false); }}
+          onClick={() => { handlePriorityChange('the_must'); setUnreadOnly(false); }}
           className={clsx(
             "p-4 rounded-xl border transition-all cursor-pointer select-none",
             selectedPriority === 'the_must'
@@ -446,7 +453,7 @@ export const NewsIntelPage: React.FC = () => {
         </div>
 
         <div 
-          onClick={() => { setSelectedPriority('good_to_know'); setUnreadOnly(false); }}
+          onClick={() => { handlePriorityChange('good_to_know'); setUnreadOnly(false); }}
           className={clsx(
             "p-4 rounded-xl border transition-all cursor-pointer select-none",
             selectedPriority === 'good_to_know'
@@ -561,7 +568,7 @@ export const NewsIntelPage: React.FC = () => {
           {/* Priority Filter */}
           <div className="bg-[#0F111A] p-1 rounded-xl border border-[#1F2233] flex items-center">
             <button
-              onClick={() => setSelectedPriority('the_must')}
+              onClick={() => handlePriorityChange('the_must')}
               className={clsx(
                 "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1",
                 selectedPriority === 'the_must' ? "bg-rose-600 text-white shadow-sm" : "text-rose-400 hover:text-rose-300"
@@ -570,7 +577,7 @@ export const NewsIntelPage: React.FC = () => {
               <Flame className="w-3.5 h-3.5" /> The Must
             </button>
             <button
-              onClick={() => setSelectedPriority('focus')}
+              onClick={() => handlePriorityChange('focus')}
               className={clsx(
                 "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
                 selectedPriority === 'focus' ? "bg-[#823AFD] text-white shadow-sm" : "text-slate-400 hover:text-white"
@@ -580,7 +587,7 @@ export const NewsIntelPage: React.FC = () => {
               Focus Mode
             </button>
             <button
-              onClick={() => setSelectedPriority('all')}
+              onClick={() => handlePriorityChange('all')}
               className={clsx(
                 "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
                 selectedPriority === 'all' ? "bg-[#1F2233] text-white shadow-sm" : "text-slate-400 hover:text-white"

@@ -507,9 +507,10 @@ Recent News Context:
 ${contextText || headline}
 
 Rules for reading_priority:
-1. "THE_MUST": News directly impacting business moat, regulatory bans, severe earnings swing, high-level leadership shakeup, or major catalysts threatening/boosting held stocks (${portfolioTag.toUpperCase()}). Relevance Score >= 75 for held stocks should strongly favor THE_MUST if impact is significant.
-2. "GOOD_TO_KNOW": Normal business updates, analyst price target changes, routine product announcements, moderate growth/earnings news, or ecosystem partner news.
-3. "OPTIONAL": Routine scheduled insider selling (Rule 10b5-1), generic macro opinion, or stocks not in portfolio.
+1. "THE_MUST": STRICTLY for stocks HELD IN PORTFOLIO (${portfolioTag.toUpperCase()}) facing game-changing fundamental catalysts: Direct corporate SEC filings, unexpected earnings beats/misses, major guidance raises/cuts, capital dilution / ATM stock offerings, high-stakes regulatory/legal threats (FTC/DOJ/bans), or fundamental moat disruptions.
+CRITICAL: Watchlist stocks (NOT in portfolio), pure valuation commentary/op-eds (e.g. P/S or P/E debate articles), commentator blog posts, and generic price target adjustments MUST NEVER be classified as "THE_MUST".
+2. "GOOD_TO_KNOW": Watchlist earnings/updates, normal business developments, analyst price target adjustments, or commentary/opinion pieces on held stocks.
+3. "OPTIONAL": Routine scheduled insider selling (Rule 10b5-1), minor mentions, generic macro opinion, or peripheral noise.
 
 Output ONLY a JSON object:
 {
@@ -588,6 +589,18 @@ Output ONLY a JSON object:
     // Elevate to THE_MUST if holding + score >= 80 + significant/moat_breaker impact
     if (isHolding && relevanceScore >= 80 && (parsed.impact_level === 'significant' || parsed.impact_level === 'moat_breaker')) {
       calculatedPriority = 'THE_MUST';
+    }
+
+    // Iron Clad Guardrails for THE_MUST:
+    // 1. Non-holding stocks (Watchlist/Global) can NEVER be THE_MUST
+    if (!isHolding && calculatedPriority === 'THE_MUST') {
+      calculatedPriority = 'GOOD_TO_KNOW';
+    }
+
+    // 2. Pure opinion/commentary/op-ed articles should not be THE_MUST
+    const isOpinionOrCommentary = /opinion|columnist|motley fool|seeking alpha contributor|trades at \d|is the stock a bargain|whoever spends smarter/i.test(headline);
+    if (isOpinionOrCommentary && calculatedPriority === 'THE_MUST') {
+      calculatedPriority = 'GOOD_TO_KNOW';
     }
 
     return {

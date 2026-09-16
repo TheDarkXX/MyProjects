@@ -1,124 +1,148 @@
 ---
 name: save
-description: "Migrated save skill"
+description: "High-Speed Auto-Save & Deploy Pipeline V3 (Single Atomic Deploy + Zero Double-Push)"
 ---
-# ๐’พ Skill: `/save`
+# 💾 Skill: `/save`
 
 ## Objective
-The ultimate end-of-task pipeline. This unifies Quick Save context gathering, file status handling, cache-busting, and VPS deployment into a single seamless, friction-less flow.
+The ultimate high-performance end-of-task pipeline. Unifies Quick Save context gathering, reciprocal backlinks, quality gates, conditional cache-busting, single atomic git commit, and VPS deployment into a frictionless flow that deploys to VPS in **under 15–20 seconds** with **ZERO double-pushing**.
 
 ## 🛑 End-of-Session Iron Rule
-**งานเสร็จแล้ว อัปเดต Changelog ในไฟล์ Quick Save และอัปเดต SOT/Manifest ก่อนปิดแชทเสมอ**
+**งานเสร็จแล้ว อัปเดต Changelog/Quick Save และ Deploy ขึ้น VPS ไม้เดียวจบก่อนปิดแชทเสมอ**
 ห้ามให้มันทำงานเสร็จแล้วทิ้งไว้ในแชทเด็ดขาด ทุกข้อตกลงใหม่หรือท่าแปลกๆ ที่เราเพิ่งคิดกันออก ต้องถูกย้อนกลับไปเขียนลงไฟล์ทันที
-
-## ⛔ PRE-SAVE CHECKLIST — MANDATORY (Do NOT skip ANY step)
-
-Before writing a single word to any Quick Save file, you MUST execute these steps IN ORDER:
-
-1. **Enumerate ALL Artifacts (list_dir FIRST — Iron Rule):**
-   - You MUST run `list_dir` on the artifact directory (`<appDataDir>\brain\<conversation-id>/`) FIRST.
-   - Then call `view_file` on **EVERY** `.md` file found — not just `implementation_plan.md` and `task.md`. This includes `walkthrough.md`, `dev_proposal_review.md`, `analysis_results.md`, and ANY other file the session created.
-   - Also check the `scratch/` subfolder for any scratch scripts or data files that contain implementation logic.
-   - ⛔ **DO NOT assume you know which artifacts exist.** You MUST `list_dir` to discover them. Skipping this step is why data gets lost.
-
-2. **Capture ALL Changed Files (git diff — Iron Rule):**
-   - Run `git diff --name-only HEAD~10` (or appropriate range) in the project workspace to get a concrete list of every file modified during this session.
-   - This list MUST be included in the Quick Save file under a `## 📋 Files Changed This Session` section.
-   - For each file changed, note: file path, what was changed, and why.
-   - ⛔ **If you skip this step, you WILL forget files that were silently modified.**
-
-3. **Mine the Conversation for Implementation Details:**
-   - Read conversation log at `C:\Users\Admin\.gemini\antigravity-ide\brain\{conversation-id}\.system_generated\logs\transcript.jsonl` (or use transcript history).
-   - Specifically search for `tool_calls` containing `replace_file_content`, `multi_replace_file_content`, `write_to_file`, and `run_command` — these contain the ACTUAL code changes and commands that were executed.
-   - Extract ALL decisions, alternatives considered, error messages encountered, and solutions applied that are NOT already captured in artifacts.
-   - ⛔ **The conversation often contains implementation details (exact code, exact commands, exact error messages) that artifacts miss. You MUST mine these.**
-
-4. **List ALL plans discussed** in this session. Every plan that was talked about — even if it ended up in a separate file — must be cross-referenced in `related_plans_same_conversation`.
-
-5. **Apply Compiled Truth + Timeline Pattern:** Restructure the document into two halves. Top half: "Compiled Truth" (Current finalized logic, rules, architecture, exact code). Bottom half: "Timeline" (Append-only changelog, debugging history, iterations).
-
-6. **Generate GBRAIN Backlinks (Bidirectional):** Search for and identify 3-5 related files from the archive (`Quick Save/Complete/` or `docs/`). Add a link at the bottom of YOUR document, AND you MUST go edit those target files to add a link back to your new document (Bidirectional). Use the format: `- **YYYY-MM-DD HH:MM** | [page title](path) -- context`.
-
-7. **Update MOC Hubs:** If the component matches an existing Map of Content (e.g., `MOC_hydra.md`, `MOC_ui.md`, `MOC_infra.md`), append a link to your new file in the Hub file.
-
-8. **Verify Full-Detail Rule:** Ask yourself: "If AG returns in 3 months and reads this file, can it reconstruct ALL decisions, alternatives considered, code snippets, and reasoning WITHOUT going back to the conversation?" If NO — expand the file until YES.
-
-> ⛔ **Iron Rule:** A summary paragraph is NEVER acceptable for a Deep Study, Architecture, or Implementation session. Paste the content. Do NOT abbreviate.
 
 ---
 
-## Execution Steps
+## ⚡ Execution Pipeline (V3 Single Atomic Deploy)
 
-### Phase 1: Intelligent Context Saving
+```mermaid
+graph TD
+    P0[Phase 0: Fast Path Detection] --> P1[Phase 1: Local Prep & Complete Context Assembly]
+    P1 --> P2[Phase 2: Single Atomic Deploy Pipeline]
+    P2 -->|MANDATORY TURN STOP| P3[Instant User Notification & Finish]
+```
+
+---
+
+### Phase 0: Fast Path & Scope Detection (0ms overhead)
+ก่อนเริ่มลงมือ ให้เช็คเงื่อนไขเหล่านี้เพื่อข้ามขั้นตอนที่ไม่จำเป็น:
+1. **Conditional Cache-Bust Check:**
+   - ตรวจดูว่าในเซสชันนี้มีการแก้ไขไฟล์ในโฟลเดอร์ `public/` (JS/CSS/HTML) หรือไม่
+   - หาก **ไม่มีการแก้ไขไฟล์ใน `public/`** (เช่น ทำงานเอกสาร, study, backend API, scripts) ➔ **ข้าม `node bump-cache.js` ใน Phase 2 ทันที (ประหยัด 2-3 วินาที)**
+2. **Conditional Transcript Mining:**
+   - หากในโฟลเดอร์ Artifacts (`<appDataDir>\brain\<conv-id>/`) มี `dev_proposal_review.md`, `implementation_plan.md` และ/หรือ `walkthrough.md` อยู่แล้ว ➔ **ข้ามการสแกน `transcript.jsonl` ทั้งเล่ม** ให้อ่านแค่ artifacts + git diff ตรงๆ (ประหยัด 15-30 วินาที)
+3. **Hard-Skip Origin:**
+   - Remote `origin` ไม่มีในโปรเจกต์นี้ (มีเฉพาะ `vps`) ➔ **ห้ามเสียเวลารัน `git remote` เพื่อเช็ค `origin` เด็ดขาด**
+
+---
+
+### Phase 1: Local Preparation & Complete Context Assembly
+*(ทุกงานเขียนไฟล์บนเครื่อง Local ให้ทำใน Phase นี้ให้เสร็จทั้งหมด 100% ก่อนเริ่ม Commit)*
+
 1. **Intelligent Session Lock (Iron Rule):**
-   - Determine the project's subfolder under `Quick Save/Complete/` (e.g., `The-Viral/` for The Viral project, `Core-VPS/` for core Openclaw-VPS tasks, or `Shared/` for shared tasks). 
-   - **CRITICAL (DoctorBank-Brand):** If the workspace is DoctorBank-Brand, you MUST use its Component structure. Map the file to one of the 6 Components based on context: `Avatar/`, `Brand/`, `Content/`, `Media/`, `Products/`, `System/`. Do NOT use or create `0_Latest_Save` or any other root folder.
-   - Scan that subfolder and `Quick Save/Active/` for files matching the current `conversation` ID.
-   - **IF FOUND:** Do NOT bump version. Do NOT create a new file. You MUST **UPDATE the existing file** by appending a `## Changelog` section at the bottom (e.g. `### Update X โ€” HH:MM` -> `- โ… Completed task Y`).
-   - **IF NOT FOUND:** Proceed to create a new file (Step 4).
-2. **Locate Active File:** Check if there is an active file in `Quick Save/Active/`.
-3. **VS Code Buffer Check:** If an active file exists, PAUSE and ask the user perfectly: "เนเธเธฃเธ”เธเธดเธ”เนเธ—เนเธเนเธเธฅเนเนเธ VS Code เธเนเธญเธเธขเนเธฒเธขเน€เธเนเธฒ Complete เธเธฃเธฑเธ" Wait for confirmation.
-4. **Extract Deep Context (RAW DUMP REQUIRED):** 
-   - You MUST structure your save file EXACTLY like this template:
+   - ตรวจหาโฟลเดอร์ปลายทางใน `Quick Save/Complete/` (เช่น `Core-VPS/` สำหรับ Openclaw-VPS หรือ Component ย่อยสำหรับโปรเจกต์อื่น)
+   - ค้นหาว่ามีไฟล์ใน `Quick Save/Complete/<Subfolder>/` หรือ `Quick Save/Active/` ที่มี `conversation: "<current-conv-id>"` อยู่แล้วหรือไม่
+   - **IF FOUND:** ห้าม bump version! ให้อัปเดตไฟล์เดิมโดย append `## Changelog` หรือ `## Timeline` ที่ท้ายไฟล์
+   - **IF NOT FOUND:** สร้างไฟล์ใหม่ตาม Step 3-5
+
+2. **Auto-Cleanup (5-7 Rule - Iron Rule):**
+   - ตรวจนับไฟล์ที่ลอยอยู่ที่ root ของ `Quick Save/Complete/<Subfolder>/`
+   - หากมีไฟล์เวอร์ชันปัจจุบันลอยอยู่ $\ge 7$ ไฟล์ ให้ `git mv` ไฟล์ที่เก่ากว่าเข้าไปในโฟลเดอร์ย่อย (เช่น `V13/`) ให้เหลือลอยอยู่เพียง 5 ไฟล์ล่าสุด (ใช้ Semantic Versioning `[version]` ใน PowerShell เรียงลำดับเสมอ)
+
+3. **Fast Context Gathering:**
+   - รัน `list_dir` ในโฟลเดอร์ Artifacts (`<appDataDir>\brain\<conversation-id>/`)
+   - เรียก `view_file` อ่านไฟล์ `.md` ทุกตัวที่พบ
+   - รัน `git diff --name-only HEAD~5` หรือ `git status -s` เพื่อดึงรายชื่อไฟล์ที่ถูกแก้ไขในเซสชันนี้
+
+4. **Write Quick Save File (Full Depth Required):**
+   - เขียนไฟล์ Quick Save ตรงเข้าไปยัง `Quick Save/Complete/<Subfolder>/` (หรือ `Active/` หากงานยังไม่เสร็จสมบูรณ์) ตามโครงสร้างมาตรฐาน:
      ```markdown
      ---
-     (YAML Frontmatter)
+     version: "13.x.x"
+     type: impl          # impl | study | hotfix | design | infra | spike
+     status: complete    # complete | active | rejected
+     outcome: shipped    # shipped | pending | rejected
+     date: YYYY-MM-DD
+     aliases: [tag1, tag2]
+     conversation: "conversation-id-here"
+     summary: >
+       One paragraph summary of what was built and deployed.
      ---
      # [Title]
 
      ## 📌 Context & Implementation (Compiled Truth)
-     (Explain WHY this was done. ⛔ DO NOT SUMMARIZE CODE. You MUST copy the EXACT code snippets, commands, and configurations that were discussed or implemented during the chat into this section.)
+     (เหตุผลเชิงสถาปัตยกรรม + โค้ดสำคัญ ห้ามย่อ)
 
      ## 📋 Files Changed This Session
-     (Output of `git diff --name-only`. For EACH file list: path, what changed, why.)
      | File | What Changed | Why |
      |------|-------------|-----|
-     | `path/to/file.js` | Added X function | To support feature Y |
+     | `path/to/file` | รายละเอียด | เหตุผล |
 
      ## 📦 RAW ARTIFACT BACKUP (Iron Rule)
-     (PASTE 100% OF THE ARTIFACT TEXT HERE. DO NOT SUMMARIZE. If > 1000 lines, use <details> tags. Do NOT abbreviate.)
+     (วางเนื้อหาเต็ม 100% จาก artifacts ทุกตัว ห้ามตัดทอน)
 
      ## 🔬 Timeline & Debugging Log
-     (Changelog, iterations, and exact error messages + solutions discussed)
+     (บันทึกการแก้ปัญหา ข้อผิดพลาดที่เจอ และการตัดสินใจ)
 
      ## 🔗 GBRAIN Backlinks
-     (Bidirectional links)
+     - **YYYY-MM-DD HH:MM** | [page title](file:///C:/path/to/file.md) -- context
      ```
-   - If you summarize the artifact, or if you omit the actual implementation code/scripts discussed in chat, you have failed the Iron Rule.
-5. **Version Bump (Smart Versioning v2), Naming, & Aliases:**
-   - **Format:** `V{x.y.z}_[type]_component_clear-description.md` (or `EVO-{id}_[study]...md` if unapproved)
-   - **Patch (+0.0.1):** Use for `[study]`, `[design]`, `[hotfix]`, `[docs]`, `[spike]`.
-   - **Minor (+0.1.0):** Use for shipped `[impl]`, `[infra]`. (Unlimited range, e.g., V12.99.0 is valid).
-   - **Major (Auto Milestone):** Check if cumulative shipped `[impl]` + `[infra]` reaches 20 since last major, or if there is a massive architectural breaking change. If yes, bump Major.
-   - The `component` keyword (e.g., `hydra`, `watchdog`, `ui`) is MANDATORY for AI grepping.
-   - **Aliases:** You MUST include `aliases: [keyword1, keyword2]` in the YAML frontmatter to make it easily searchable.
-   - **Rolling Archive Check:** If the version bumps to a new Major Version (e.g., hitting `V13.0.0`), you MUST create a folder for the previous era (e.g. `V12/`) inside your project's subfolder (e.g., `Quick Save/Complete/The-Viral/V12/`) and `git mv` all old version files into it to keep the root directory clean.
-   - **Auto-Cleanup (5-7 Rule - Iron Rule):** BEFORE creating your new save file, you MUST count the files floating at the root of the project subfolder. If there are โฅ 7 files of the current major version, you MUST `git mv` the oldest ones into their major version subfolder (e.g., `V13/`) so that ONLY the latest 5 files remain floating. Do this FIRST before you write the new file.
-6. **GBRAIN Backlink Generation (Iron Rule - Bidirectional):**
-   - At the absolute bottom of the document, append a `## ๐”— GBRAIN Backlinks` section.
-   - Actively search (`grep_search` or `list_dir`) for 3-5 historically related files in `Quick Save/Complete/<Project-Subfolder>/` or `docs/` that share architectural similarities or context.
-   - Use categorized lists: `### depends_on`, `### enables`, `### related_to`.
-   - **Format:** `- **YYYY-MM-DD HH:MM** | [page title](file:///C:/absolute/path/to/file.md) -- context` (You MUST use the `file:///` Absolute URI format so it is clickable in the IDE).
-   - **Bidirectional Requirement:** For every file you link to, you MUST open that target file and add a backlink pointing to your new file.
-7. **Update MOC Hubs & MASTER_ROADMAP:**
-   - If the `component` keyword matches an existing Map of Content (MOC) file (e.g., `MOC_hydra.md`, `MOC_ui.md`, `MOC_infra.md` in `Quick Save/Complete/`), append your new file's link to the appropriate section of the MOC Hub.
-   - **MUST DO:** Open `c:\My Claw\Openclaw-VPS\MASTER_ROADMAP.md` and update the status of the current Feature/Component (move it to Completed if done, or update Active Phase context).
-8. **File Creation / Move:**
-   - If an `Active/` file existed, `git mv` it to the correct project subfolder under `Complete/` (e.g., `Quick Save/Complete/The-Viral/`).
-   - If forming a new record, write the comprehensively mapped document directly into the project subfolder under `Complete/` (e.g., `Quick Save/Complete/The-Viral/`, or the mapped Component folder for DoctorBank-Brand), skipping the Active folder entirely.
-9. **Universal Search Indexing (Auto-Update):**
-   - Run `node scripts/qs-indexer.js --incremental` in `c:\My Claw\Openclaw-VPS` to instantly update `search-manifest.md` with your newly created/updated file.
 
-### Phase 2: Deployment Pipeline
-*(Note: All commands in this phase must be executed within `c:\My Claw\Openclaw-VPS`)*
-10. **Pre-flight Sync:** Run `git pull vps master --no-rebase` to securely fetch incoming Piggyback files or background tasks generated by VPS agents. This completely prevents phantom conflicts that block pushes.
-11. **Quality Gate Verification (Iron Rule):** Execute `node scripts/verify-qs.js "<path-to-your-new-save-file>"`. This script strictly enforces that `## 📦 RAW ARTIFACT BACKUP` is present and NOT empty/summarized, that any `implementation_plan.md` or `walkthrough.md` generated during the session is 100% embedded, that all 5 mandatory sections exist, and that the file size is sufficient. If this gate fails, you MUST fix the Quick Save file before continuing.
-12. **Commit Current Changes:** `git add .` and `git commit -m "[AG] Auto-Save & Deploy <version>"`.
-13. **Cache Busting (Iron Rule):** Execute `node bump-cache.js`.
-14. **Commit Cache:** `git add .` and `git commit -m "chore: bump cache"`.
-15. **Launch:** Run `git push vps`.
-16. **Sync Logs:** Run `node scripts/sync-ag-logs.js` to securely push transcript logs to the VPS for the Daily Journal cron.
-17. **Post-Deploy Verification:** Execute `ssh root@185.250.38.247 "grep '?v=' /root/brain-app/public/index.html"` to empirically prove that the VPS server successfully triggered its git hook and copied the bumped cache file to production. (If this is stale, the push failed)
-18. **Backup (Conditional):** Check if `origin` remote exists first (`git remote`). If it exists, run `git push origin`. If not, gracefully ignore to prevent phantom errors.
-19. **Final Clean Tree Audit (Iron Rule):** Execute `git status` to verify that the local working tree is 100% clean (`nothing to commit, working tree clean`), all files have been committed, no rogue untracked files remain, and the branch is fully up-to-date with remote.
-20. **Report:** Inform the user that the save, deployment, live-verification, and final git status audit are all successfully concluded, printing the clean tree status confirmation.
+5. **Reciprocal GBRAIN Backlinks & Roadmap (ทำบน Local ทันทีใน Phase นี้!):**
+   - ⛔ **กฎเหล็กห้าม Double Push:** ให้เปิดไฟล์ที่เกี่ยวข้อง 1-2 ไฟล์แล้วเติม Reciprocal Backlink ชี้มายังไฟล์ Quick Save ใหม่ตอนนี้เลยบน Local Disk (ใช้เวลาแค่ 50ms)
+   - อัปเดต `MASTER_ROADMAP.md` (ถ้ามี) ให้เสร็จในขั้นตอนนี้เลย เพื่อให้ถูกรวมใน Commit เดียว
+
+6. **Universal Search Indexing:**
+   - รัน `node scripts/qs-indexer.js --incremental` เพื่ออัปเดต `search-manifest.md` ทันที
+
+---
+
+### Phase 2: Single Atomic Deploy Pipeline (Target: 10–15 วินาที)
+*(ทุกคำสั่งใน Phase นี้ให้รันใน `C:\My Claw\Openclaw-VPS`)*
+
+7. **Pre-flight Sync:**
+   ```powershell
+   git pull vps master --no-rebase
+   ```
+
+8. **Quality Gate Verification (Iron Rule):**
+   ```powershell
+   node scripts/verify-qs.js "<path-to-your-save-file>"
+   ```
+   *(ตรวจเช็คความสมบูรณ์ของ RAW ARTIFACT BACKUP, Mandatory sections, และไฟล์ขนาด $\ge 4KB$)*
+
+9. **Conditional Cache Busting:**
+   - หากตรวจพบการเปลี่ยนแปลงใน `public/` ให้รัน:
+     ```powershell
+     node bump-cache.js
+     ```
+   - หากไม่มีไฟล์ใน `public/` เปลี่ยน ➔ **ข้ามขั้นตอนนี้ได้เลย**
+
+10. **Single Atomic Commit (Iron Rule - รวมทุกไฟล์ในไม้เดียว):**
+    ```powershell
+    git add .
+    git commit -m "[AG] Auto-Save & Deploy <version>"
+    ```
+
+11. **Launch Deployment (ONE PUSH ONLY - ห้ามมี Push รอบสองเด็ดขาด):**
+    ```powershell
+    git push vps master
+    ```
+    *(ตรวจสอบผลการ deploy จาก stdout ของ Git hook โดยตรง)*
+
+12. **High-Speed Log Sync (State Ledger Engine):**
+    ```powershell
+    node scripts/sync-ag-logs.js
+    ```
+    *(เสร็จสิ้นใน 1-3 วินาทีผ่าน State Ledger Caching และ Parallel Metadata Sync)*
+
+13. **Final Clean Tree Audit:**
+    ```powershell
+    git status
+    ```
+    *(ยืนยันว่า Working Tree สะอาด 100%)*
+
+14. **🛑 MANDATORY TURN STOP & INSTANT NOTIFICATION (Iron Rule):**
+    - **ห้ามเรียกเครื่องมือใดๆ ต่ออีกเด็ดขาด! จบขั้นตอนแล้วต้องหยุดเรียก Tools ทันที!**
+    - แจ้งสรุปผลให้ผู้ใช้ทราบทันทีว่าระบบทำการเซฟและ Deploy ขึ้น Production VPS เรียบร้อยแล้ว!
+    - ⛔ **ห้ามมี Phase 3, ห้ามกลับไปแก้ไฟล์, ห้ามสั่ง `git push` ซ้ำรอบสองเด็ดขาด!**
