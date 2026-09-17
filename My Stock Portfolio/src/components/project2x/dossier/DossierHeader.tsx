@@ -109,44 +109,42 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
 
         {/* Right Actions: Column Layout Mode + Refresh + Close */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Ultra-Wide Column Switcher: Only show on multi-column tabs (Cockpit & Financials) */}
-          {activeSubTab !== 'thesis' && (
-            <div className="flex items-center bg-[#0A0E1A] p-1 rounded-xl border border-white/10 shadow-inner">
-              <button
-                onClick={() => setColumnMode(2)}
-                className={`px-2.5 py-1 rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
-                  columnMode === 2
-                    ? 'bg-violet-600 text-white shadow-[0_0_10px_rgba(130,58,253,0.5)] font-semibold'
-                    : 'text-slate-300 hover:text-white hover:bg-violet-950/40'
-                }`}
-                title="แสดง 2 คอลัมน์"
-              >
-                2 Col
-              </button>
-              <button
-                onClick={() => setColumnMode(3)}
-                className={`px-2.5 py-1 rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
-                  columnMode === 3
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-[0_0_12px_rgba(130,58,253,0.6)] font-semibold'
-                    : 'text-slate-300 hover:text-white hover:bg-violet-950/40'
-                }`}
-                title="แสดง 3 คอลัมน์ (แนะนำสำหรับ Ultra-Wide)"
-              >
-                3 Col ⭐
-              </button>
-              <button
-                onClick={() => setColumnMode(4)}
-                className={`px-2.5 py-1 rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
-                  columnMode === 4
-                    ? 'bg-gradient-to-r from-indigo-600 to-pink-600 text-white shadow-[0_0_12px_rgba(252,45,121,0.5)] font-semibold'
-                    : 'text-slate-300 hover:text-white hover:bg-violet-950/40'
-                }`}
-                title="แสดง 4 คอลัมน์ (Ultra-Wide พาโนรามา)"
-              >
-                4 Col ⚡
-              </button>
-            </div>
-          )}
+          {/* Ultra-Wide Column Switcher: Available on all tabs */}
+          <div className="flex items-center bg-[#0A0E1A] p-1 rounded-xl border border-white/10 shadow-inner">
+            <button
+              onClick={() => setColumnMode(2)}
+              className={`px-2.5 py-1 rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
+                columnMode === 2
+                  ? 'bg-violet-600 text-white shadow-[0_0_10px_rgba(130,58,253,0.5)] font-semibold'
+                  : 'text-slate-300 hover:text-white hover:bg-violet-950/40'
+              }`}
+              title="แสดง 2 คอลัมน์"
+            >
+              2 Col
+            </button>
+            <button
+              onClick={() => setColumnMode(3)}
+              className={`px-2.5 py-1 rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
+                columnMode === 3
+                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-[0_0_12px_rgba(130,58,253,0.6)] font-semibold'
+                  : 'text-slate-300 hover:text-white hover:bg-violet-950/40'
+              }`}
+              title="แสดง 3 คอลัมน์ (แนะนำสำหรับ Ultra-Wide)"
+            >
+              3 Col ⭐
+            </button>
+            <button
+              onClick={() => setColumnMode(4)}
+              className={`px-2.5 py-1 rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
+                columnMode === 4
+                  ? 'bg-gradient-to-r from-indigo-600 to-pink-600 text-white shadow-[0_0_12px_rgba(252,45,121,0.5)] font-semibold'
+                  : 'text-slate-300 hover:text-white hover:bg-violet-950/40'
+              }`}
+              title="แสดง 4 คอลัมน์ (Ultra-Wide พาโนรามา)"
+            >
+              4 Col ⚡
+            </button>
+          </div>
 
           {/* Toggle Sidebar Button */}
           <button
@@ -326,11 +324,11 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
         onClick={() => setActiveSubTab('financials')}
         className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
           activeSubTab === 'financials'
-            ? 'bg-gradient-to-r from-indigo-800 via-blue-700 to-violet-700 text-white font-semibold shadow-[0_0_16px_rgba(37,99,235,0.4)] border border-blue-400/30'
+            ? 'bg-gradient-to-r from-violet-800 via-fuchsia-700 to-violet-900 text-white font-semibold shadow-[0_0_16px_rgba(130,58,253,0.4)] border border-violet-400/40'
             : 'text-slate-300 hover:text-white hover:bg-violet-950/40'
         }`}
       >
-        <LineChart className="w-4 h-4 text-blue-300" />
+        <LineChart className="w-4 h-4 text-violet-300" />
         <span>2. Financial Pulse (ตรวจงบ 8Q & กระแสเงินสด)</span>
       </button>
 
@@ -338,11 +336,11 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
         onClick={() => setActiveSubTab('thesis')}
         className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
           activeSubTab === 'thesis'
-            ? 'bg-gradient-to-r from-violet-900 via-pink-900 to-orange-900 text-white font-semibold shadow-[0_0_16px_rgba(253,85,20,0.35)] border border-orange-500/30'
+            ? 'bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 text-white font-semibold shadow-[0_0_16px_rgba(253,85,20,0.4)] border border-orange-400/50'
             : 'text-slate-300 hover:text-white hover:bg-violet-950/40'
         }`}
       >
-        <BrainCircuit className="w-4 h-4 text-orange-300" />
+        <BrainCircuit className="w-4 h-4 text-orange-200" />
         <span>3. 2X Thesis & Moat (เรื่องเล่า & คาดการณ์กี่เด้ง)</span>
       </button>
       </div>
