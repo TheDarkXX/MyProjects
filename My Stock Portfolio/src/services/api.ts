@@ -126,6 +126,9 @@ export const api = {
     backfillStatus: (portfolioId: string) => authFetch(`/project-2x/backfill-status/${portfolioId}`),
     fundamentals: (portfolioId: string) => authFetch(`/project-2x/fundamentals/${portfolioId}`),
     updateFundamentals: (portfolioId: string, data: { symbol: string; expected_cagr_3y?: number; consecutive_eps_qs?: number }) => authFetch(`/project-2x/fundamentals/${portfolioId}`, { method: 'POST', body: JSON.stringify(data) }),
+    dossier: (portfolioId: string, symbol: string) => authFetch(`/project-2x/dossier/${portfolioId}/${encodeURIComponent(symbol)}`),
+    saveDriver: (portfolioId: string, symbol: string, data: any) => authFetch(`/project-2x/dossier/${portfolioId}/${encodeURIComponent(symbol)}/driver`, { method: 'POST', body: JSON.stringify(data) }),
+    refreshFinancials: (portfolioId: string, symbol: string) => authFetch(`/project-2x/dossier/${portfolioId}/${encodeURIComponent(symbol)}/refresh-financials`, { method: 'POST' }),
   },
   chart: {
     get: (symbol: string, days = 36500, resolution = '1D') => 

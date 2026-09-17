@@ -12,6 +12,11 @@ import {
   getAllFundamentals,
   updateFundamentalsOverride
 } from '../services/project2xEngine.js';
+import {
+  getDossierData,
+  saveSpecificDriver,
+  syncQuarterlyFinancials
+} from '../services/dossierService.js';
 
 const project2xRoutes = new Hono();
 
@@ -186,6 +191,55 @@ project2xRoutes.post('/fundamentals/:pid', async (c) => {
     return c.json(updated);
   } catch (error) {
     return c.json({ error: error.message }, 500);
+  }
+});
+
+/**
+ * GET /api/project-2x/dossier/:pid/:symbol
+ * Single-payload Dossier for a stock
+ */
+project2xRoutes.get('/dossier/:pid/:symbol', async (c) => {
+  const pid = c.req.param('pid');
+  const symbol = c.req.param('symbol');
+  try {
+    const data = await getDossierData(pid, symbol);
+    return c.json(data);
+  } catch (error) {
+    console.error('[Project2X API] Dossier error:', error);
+    return c.json({ error: error.message || 'Failed to fetch stock dossier' }, 500);
+  }
+});
+
+/**
+ * POST /api/project-2x/dossier/:pid/:symbol/driver
+ * Save specific driver override
+ */
+project2xRoutes.post('/dossier/:pid/:symbol/driver', async (c) => {
+  const symbol = c.req.param('symbol');
+  try {
+    const body = await c.req.json();
+    const updated = saveSpecificDriver(symbol, body);
+    return c.json(updated);
+  } catch (error) {
+    console.error('[Project2X API] Driver update error:', error);
+    return c.json({ error: error.message || 'Failed to update driver' }, 500);
+  }
+});
+
+/**
+ * POST /api/project-2x/dossier/:pid/:symbol/refresh-financials
+ * On-demand refresh of quarterly financials from Yahoo into SQLite
+ */
+project2xRoutes.post('/dossier/:pid/:symbol/refresh-financials', async (c) => {
+  const pid = c.req.param('pid');
+  const symbol = c.req.param('symbol');
+  try {
+    await syncQuarterlyFinancials(symbol);
+    const updatedData = await getDossierData(pid, symbol);
+    return c.json(updatedData);
+  } catch (error) {
+    console.error('[Project2X API] Refresh financials error:', error);
+    return c.json({ error: error.message || 'Failed to refresh financials' }, 500);
   }
 });
 

@@ -287,6 +287,51 @@ export function initDb() {
         updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    -- Project 2X Dossier Data Storage
+    CREATE TABLE IF NOT EXISTS quarterly_financials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        fiscal_quarter TEXT NOT NULL,
+        report_date TEXT,
+        revenue_usd REAL,
+        yoy_revenue_growth_pct REAL,
+        eps_actual REAL,
+        eps_estimate REAL,
+        eps_surprise_pct REAL,
+        gross_margin_pct REAL,
+        source TEXT DEFAULT 'yahoo',
+        updated_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(symbol, fiscal_quarter)
+    );
+    CREATE INDEX IF NOT EXISTS idx_qf_sym_q ON quarterly_financials(symbol, fiscal_quarter DESC);
+
+    CREATE TABLE IF NOT EXISTS fundamentals_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        snapshot_date TEXT NOT NULL,
+        price_at_snapshot REAL NOT NULL,
+        pe_trailing REAL,
+        pe_forward REAL,
+        peg_ratio REAL,
+        updated_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(symbol, snapshot_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_fh_sym_d ON fundamentals_history(symbol, snapshot_date DESC);
+
+    CREATE TABLE IF NOT EXISTS project2x_specific_drivers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        metric_key TEXT NOT NULL,
+        metric_label TEXT NOT NULL,
+        metric_value REAL NOT NULL,
+        metric_unit TEXT NOT NULL,
+        safe_threshold REAL,
+        danger_threshold REAL,
+        updated_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(symbol, metric_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_spec_drivers_sym ON project2x_specific_drivers(symbol);
+
     CREATE INDEX IF NOT EXISTS idx_historical_prices_sym_date ON historical_prices(symbol, date DESC);
 
     -- Chart Drawings Cloud Sync (Horizontal lines, Trendlines, etc.)

@@ -1,0 +1,196 @@
+import { create } from 'zustand';
+import { api } from '../services/api';
+
+export interface QuarterlyFinancialItem {
+  fiscal_quarter: string;
+  report_date: string;
+  revenue_usd: number;
+  yoy_revenue_growth_pct: number | null;
+  eps_actual: number | null;
+  eps_estimate: number | null;
+  eps_surprise_pct: number | null;
+  gross_margin_pct: number | null;
+}
+
+export interface PEHistoryItem {
+  date: string;
+  price: number;
+  pe: number;
+  pe_forward: number | null;
+  peg_ratio: number | null;
+}
+
+export interface SpecificDriverItem {
+  metric_key: string;
+  metric_label: string;
+  metric_value: number;
+  metric_unit: string;
+  safe_threshold: number | null;
+  danger_threshold: number | null;
+}
+
+export interface DossierPayload {
+  symbol: string;
+  name: string;
+  category: 'Core' | 'Moonshot';
+  liveQuote: {
+    price: number;
+    change: number;
+    percent_change: number;
+    dayHigh: number;
+    dayLow: number;
+    volume: number;
+  };
+  currentPrice: number;
+  basePrice: number;
+  targetPrice3Y: number;
+  doublerProgressPct: number;
+  verdict: 'BUY_ADD' | 'HOLD_RIDE' | 'TRIM_SELL';
+  verdictReason: string;
+  holding: {
+    shares: number;
+    avgCost: number;
+    totalInvested: number;
+    marketValue: number;
+    unrealizedPnl: number;
+    unrealizedPnlPct: number;
+    targetShares: number;
+    quotaProgressPct: number;
+    quotaSharesRemaining: number;
+    lots: Array<{
+      id: string;
+      date: string;
+      type: string;
+      shares: number;
+      price: number;
+      fee: number;
+      note?: string;
+    }>;
+  };
+  radar: {
+    scenario: number;
+    trafficLight: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+    ema50: number | null;
+    ema150: number | null;
+    ema200: number | null;
+    bankerFlow: number;
+    sellSignal: string | null;
+    actionSuggested: string;
+  };
+  vitalSigns: {
+    revenueGrowthYoY: number;
+    revenueGrowthStatus: 'HYPER_GROWTH' | 'STEADY' | 'DECELERATING';
+    epsBeatStreak: number;
+    grossMarginPct: number;
+    grossMarginStatus: 'STRONG' | 'MOAT_BREAKER';
+    peForward: number;
+    pegRatio: number;
+    valuationStatus: 'UNDERVALUED' | 'FAIR' | 'STRETCHED';
+  };
+  quarterlyFinancials: QuarterlyFinancialItem[];
+  peHistory: PEHistoryItem[];
+  specificDriver: SpecificDriverItem | null;
+  moatAutoFlags: {
+    grossMarginDeclining3Q: boolean;
+    epsBeatStreak: number;
+  };
+}
+
+interface DossierState {
+  isOpen: boolean;
+  selectedSymbol: string | null;
+  portfolioId: string | null;
+  data: DossierPayload | null;
+  isLoading: boolean;
+  isRefreshing: boolean;
+  error: string | null;
+
+  openDossier: (portfolioId: string, symbol: string) => Promise<void>;
+  closeDossier: () => void;
+  selectSymbol: (symbol: string) => Promise<void>;
+  refreshFinancials: () => Promise<void>;
+  updateDriver: (metric_key: string, metric_value: number) => Promise<void>;
+}
+
+export const useDossierStore = create<DossierState>((set, get) => ({
+  isOpen: false,
+  selectedSymbol: null,
+  portfolioId: null,
+  data: null,
+  isLoading: false,
+  isRefreshing: false,
+  error: null,
+
+  openDossier: async (portfolioId: string, symbol: string) => {
+    set({
+      isOpen: true,
+      portfolioId,
+      selectedSymbol: symbol.toUpperCase(),
+      isLoading: true,
+      error: null
+    });
+
+    try {
+      const data = await api.project2x.dossier(portfolioId, symbol);
+      set({ data, isLoading: false });
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to load dossier', isLoading: false });
+    }
+  },
+
+  closeDossier: () => {
+    set({ isOpen: false });
+  },
+
+  selectSymbol: async (symbol: string) => {
+    const { portfolioId } = get();
+    if (!portfolioId) return;
+
+    set({ selectedSymbol: symbol.toUpperCase(), isLoading: true, error: null });
+    try {
+      const data = await api.project2x.dossier(portfolioId, symbol);
+      set({ data, isLoading: false });
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to switch stock', isLoading: false });
+    }
+  },
+
+  refreshFinancials: async () => {
+    const { portfolioId, selectedSymbol } = get();
+    if (!portfolioId || !selectedSymbol) return;
+
+    set({ isRefreshing: true, error: null });
+    try {
+      const data = await api.project2x.refreshFinancials(portfolioId, selectedSymbol);
+      set({ data, isRefreshing: false });
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to refresh financials', isRefreshing: false });
+    }
+  },
+
+  updateDriver: async (metric_key: string, metric_value: number) => {
+    const { portfolioId, selectedSymbol, data } = get();
+    if (!portfolioId || !selectedSymbol) return;
+
+    try {
+      const updated = await api.project2x.saveDriver(portfolioId, selectedSymbol, {
+        metric_key,
+        metric_value
+      });
+
+      if (data && data.specificDriver) {
+        set({
+          data: {
+            ...data,
+            specificDriver: {
+              ...data.specificDriver,
+              metric_value: Number(metric_value)
+            }
+          }
+        });
+      }
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to save driver' });
+    }
+  }
+}));

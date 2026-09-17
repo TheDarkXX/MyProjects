@@ -46,8 +46,9 @@ import { useBlueprintStore } from '../../stores/blueprintStore';
 import { useDrawingStore } from '../../stores/drawingStore';
 import { ProgressRing } from './ProgressRing';
 import { MiniSparkline } from './MiniSparkline';
-import { TradingViewChart } from './TradingViewChart';
 import { LWChart, PortfolioOverlayConfig } from './LWChart';
+import { StockDossierModal } from './dossier/StockDossierModal';
+import { useDossierStore } from '../../stores/dossierStore';
 
 type SortKey = 'STATUS' | 'PROGRESS' | 'VALUE' | 'WEIGHT' | 'NAME';
 type SortOrder = 'ASC' | 'DESC';
@@ -84,6 +85,8 @@ export const Project2xPage: React.FC = () => {
     updateFundamentalItem,
     refreshAll
   } = useProject2xStore();
+
+  const openDossier = useDossierStore((s) => s.openDossier);
 
   // Default to Auto band (calculated via actual MWRR / Safety Guard)
   const [selectedBand, setSelectedBand] = useState<'Conservative' | 'Base' | 'Bull' | 'Auto'>('Auto');
@@ -942,6 +945,19 @@ export const Project2xPage: React.FC = () => {
                     {Boolean(p2xViewProfile?.showSMC || p2xViewProfile?.showVWAP) ? <Eye className="w-3.5 h-3.5 text-emerald-400" /> : <EyeOff className="w-3.5 h-3.5" />}
                     <span>SMC & VWAP</span>
                   </button>
+
+                  {/* Commander Stock Dossier Button */}
+                  <button
+                    onClick={() => {
+                      if (activePortfolioId && activeStockRow?.symbol) {
+                        openDossier(activePortfolioId, activeStockRow.symbol);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-black bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/50 shadow-sm shadow-cyan-500/25 transition-all cursor-pointer"
+                    title="เปิด Stock Dossier เชิงลึก สรุปพื้นฐานและการตัดสินใจ"
+                  >
+                    <span>📋 Dossier</span>
+                  </button>
                 </div>
 
                 <span className="text-[11px] text-slate-400 font-mono">
@@ -1215,9 +1231,15 @@ export const Project2xPage: React.FC = () => {
                     <div className="flex items-start justify-between relative z-10">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-2xl font-black text-white tracking-tight">
+                          <button
+                            onClick={() => {
+                              if (activePortfolioId) openDossier(activePortfolioId, q.symbol);
+                            }}
+                            className="text-2xl font-black text-white hover:text-cyan-300 tracking-tight cursor-pointer transition-colors text-left"
+                            title="เปิด Commander Stock Dossier"
+                          >
                             {q.symbol}
-                          </span>
+                          </button>
                           <span className="px-2 py-0.5 rounded-md text-xs font-extrabold bg-white/10 text-slate-200">
                             {q.target_percent}%
                           </span>
@@ -1320,10 +1342,17 @@ export const Project2xPage: React.FC = () => {
                       <div className="flex items-start justify-between relative z-10">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-2xl font-black text-white tracking-tight">
-                              🚀 {q.symbol}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md text-xs font-extrabold bg-purple-500/20 text-purple-300">
+                          <button
+                            onClick={() => {
+                              if (activePortfolioId) openDossier(activePortfolioId, q.symbol);
+                            }}
+                            className="text-2xl font-black text-white hover:text-purple-300 tracking-tight cursor-pointer transition-colors text-left flex items-center gap-1.5"
+                            title="เปิด Commander Stock Dossier"
+                          >
+                            <span>🚀</span>
+                            <span>{q.symbol}</span>
+                          </button>
+                          <span className="px-2 py-0.5 rounded-md text-xs font-extrabold bg-purple-500/20 text-purple-300">
                               {q.target_percent}%
                             </span>
                           </div>
@@ -1723,7 +1752,9 @@ export const Project2xPage: React.FC = () => {
                     return (
                       <tr
                         key={row.symbol}
-                        onClick={() => setDetailModalStock(row)}
+                        onClick={() => {
+                          if (activePortfolioId) openDossier(activePortfolioId, row.symbol);
+                        }}
                         className="hover:bg-white/5 cursor-pointer transition-colors"
                       >
                         <td className="p-3.5">
@@ -1814,9 +1845,11 @@ export const Project2xPage: React.FC = () => {
                               <span>Chart</span>
                             </button>
                             <button
-                              onClick={() => setDetailModalStock(row)}
-                              className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white cursor-pointer"
-                              title="View Full Fundamentals"
+                              onClick={() => {
+                                if (activePortfolioId) openDossier(activePortfolioId, row.symbol);
+                              }}
+                              className="p-1 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors"
+                              title="เปิด Commander Stock Dossier"
                             >
                               <Info className="w-3.5 h-3.5" />
                             </button>
@@ -2264,6 +2297,9 @@ export const Project2xPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Commander Stock Dossier Immersive Modal */}
+      <StockDossierModal />
     </div>
   );
 };
