@@ -336,11 +336,11 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
         onClick={() => setActiveSubTab('thesis')}
         className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
           activeSubTab === 'thesis'
-            ? 'bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 text-white font-semibold shadow-[0_0_16px_rgba(253,85,20,0.4)] border border-orange-400/50'
+            ? 'bg-gradient-to-r from-violet-800 via-purple-700 to-pink-700 text-white font-semibold shadow-[0_0_16px_rgba(130,58,253,0.4)] border border-violet-400/40'
             : 'text-slate-300 hover:text-white hover:bg-violet-950/40'
         }`}
       >
-        <BrainCircuit className="w-4 h-4 text-orange-200" />
+        <BrainCircuit className="w-4 h-4 text-violet-300" />
         <span>3. 2X Thesis & Moat (เรื่องเล่า & คาดการณ์กี่เด้ง)</span>
       </button>
       </div>

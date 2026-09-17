@@ -555,7 +555,7 @@ export const DossierThesisTab: React.FC = () => {
         )}
         <div className="bg-[#0A0E1A] border border-white/10 rounded-xl px-3.5 py-2 flex flex-col">
           <span className="text-xs text-slate-400 font-medium">Market Share</span>
-          <span className="text-lg font-black font-mono text-orange-300">
+          <span className="text-lg font-black font-mono text-pink-300">
             ~{profile.marketSharePct}%
           </span>
         </div>
@@ -587,12 +587,12 @@ export const DossierThesisTab: React.FC = () => {
           <div className="text-xs text-slate-400 font-medium mt-1">ขนาดตลาดปัจจุบัน</div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-gradient-to-br from-orange-950/30 to-[#0A0E1A] border border-orange-500/30">
-          <div className="text-orange-300 text-xs font-medium">ศักยภาพ 3-5 ปี</div>
-          <div className="text-2xl font-black font-mono text-orange-300 mt-1">
+        <div className="p-3.5 rounded-xl bg-gradient-to-br from-pink-950/30 to-[#0A0E1A] border border-[#FC2D79]/40">
+          <div className="text-pink-300 text-xs font-medium">ศักยภาพ 3-5 ปี</div>
+          <div className="text-2xl font-black font-mono text-white mt-1">
             ${profile.tamFuture3YB}{profile.tamUnit}
           </div>
-          <div className="text-xs text-orange-400 font-bold mt-1">
+          <div className="text-xs text-pink-400 font-bold mt-1">
             เติบโต {(profile.tamFuture3YB / profile.tamCurrentB).toFixed(1)}x เท่า 🚀
           </div>
         </div>
@@ -749,34 +749,34 @@ export const DossierThesisTab: React.FC = () => {
           </p>
         </div>
 
-        {/* Base Case (Target 2X Doubler - Electric Violet to Burnt Orange) */}
-        <div className="p-3.5 rounded-xl bg-gradient-to-br from-violet-950/50 via-[#12162B] to-orange-950/30 border border-violet-500/60 shadow-[0_0_20px_rgba(130,58,253,0.25)]">
+        {/* Base Case (Target 2X Doubler - Electric Violet to Hot Pink) */}
+        <div className="p-3.5 rounded-xl bg-gradient-to-br from-violet-950/50 via-[#12162B] to-pink-950/30 border border-violet-500/60 shadow-[0_0_20px_rgba(130,58,253,0.25)]">
           <div className="flex items-center justify-between mb-1">
             <span className="text-violet-200 text-base font-bold flex items-center gap-1">
               🥈 Base Case (เป้าหมาย 1 เด้ง)
             </span>
-            <span className="text-orange-300 font-mono font-black text-base">
-              {profile.scenarios.base.multiple} ({profile.scenarios.base.cagr})
+            <span className="text-white font-mono font-black text-base">
+              {profile.scenarios.base.multiple} <span className="text-violet-300 font-semibold">({profile.scenarios.base.cagr})</span>
             </span>
           </div>
           <div className="w-full h-2 bg-[#0A0E1A] rounded-full mb-2 overflow-hidden border border-white/5">
-            <div className="h-full bg-gradient-to-r from-violet-600 via-purple-500 to-orange-500 rounded-full shadow-[0_0_10px_rgba(253,85,20,0.6)]" style={{ width: '70%' }} />
+            <div className="h-full bg-gradient-to-r from-violet-600 via-purple-500 to-[#FC2D79] rounded-full shadow-[0_0_10px_rgba(252,45,121,0.5)]" style={{ width: '70%' }} />
           </div>
           <p className="text-slate-200 text-xs leading-relaxed">
             {profile.scenarios.base.desc}
           </p>
         </div>
 
-        {/* Bull Case (Burnt Orange) */}
-        <div className="p-3 rounded-xl bg-gradient-to-br from-orange-950/30 to-[#0A0E1A] border border-orange-500/40 shadow-sm">
+        {/* Bull Case (Hot Pink / Magenta Glow) */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-pink-950/30 via-[#12162B] to-[#0A0E1A] border border-[#FC2D79]/40 shadow-sm">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-orange-300 text-sm font-bold">🥇 Bull Case (เร่งตัวสุดขีด)</span>
-            <span className="text-orange-300 font-mono font-bold text-sm">
+            <span className="text-pink-200 text-sm font-bold">🥇 Bull Case (เร่งตัวสุดขีด)</span>
+            <span className="text-pink-300 font-mono font-bold text-sm">
               {profile.scenarios.bull.multiple} ({profile.scenarios.bull.cagr})
             </span>
           </div>
           <div className="w-full h-1.5 bg-[#0A0E1A] rounded-full mb-1.5 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-orange-600 via-orange-500 to-amber-400 rounded-full shadow-[0_0_8px_rgba(253,85,20,0.6)]" style={{ width: '100%' }} />
+            <div className="h-full bg-gradient-to-r from-violet-500 via-[#FC2D79] to-pink-400 rounded-full shadow-[0_0_8px_rgba(252,45,121,0.6)]" style={{ width: '100%' }} />
           </div>
           <p className="text-slate-300 text-xs leading-relaxed">
             {profile.scenarios.bull.desc}
