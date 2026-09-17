@@ -125,7 +125,8 @@ export async function getDossierData(portfolioId, symbol) {
   const fundRow = db.prepare(`
     SELECT pe_trailing, pe_forward, revenue_growth, profit_margin, 
            target_mean_price, target_high_price, target_low_price,
-           eps_growth_next_year, revenue_growth_estimate, earnings_beat_streak
+           eps_growth_next_year, revenue_growth_estimate, earnings_beat_streak,
+           market_cap
     FROM symbol_fundamentals
     WHERE symbol = ?
   `).get(upper) || {};
@@ -203,6 +204,7 @@ export async function getDossierData(portfolioId, symbol) {
     symbol: upper,
     name: upper,
     category: quota.category || 'Core',
+    marketCap: fundRow.market_cap || null,
     liveQuote,
     currentPrice,
     basePrice,

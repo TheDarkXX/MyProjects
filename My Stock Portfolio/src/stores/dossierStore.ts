@@ -29,10 +29,38 @@ export interface SpecificDriverItem {
   danger_threshold: number | null;
 }
 
+export interface ThesisScenario {
+  cagr: number;
+  multiple: number;
+  targetPrice: number;
+  thesis: string;
+}
+
+export interface ThesisData {
+  secularTrend: string;
+  catalysts: Array<{ quarter: string; title: string; desc: string }>;
+  tamCurrentB: number;
+  tamFuture3YB: number;
+  marketSharePct: number;
+  moatBreakdown: {
+    scaleAdvantage: { score: number; maxScore: number; reason: string };
+    switchingCost: { score: number; maxScore: number; reason: string };
+    networkEffect: { score: number; maxScore: number; reason: string };
+  };
+  scenarios: {
+    bear: ThesisScenario;
+    base: ThesisScenario;
+    bull: ThesisScenario;
+  };
+  milestones: Array<{ year: string; target: string; status: 'DONE' | 'IN_PROGRESS' | 'PENDING' }>;
+}
+
 export interface DossierPayload {
   symbol: string;
   name: string;
   category: 'Core' | 'Moonshot';
+  marketCap?: number;
+  thesis?: ThesisData;
   liveQuote: {
     price: number;
     change: number;
@@ -105,6 +133,9 @@ interface DossierState {
   isRefreshing: boolean;
   error: string | null;
 
+  activeSubTab: 'cockpit' | 'financials' | 'thesis';
+  setActiveSubTab: (tab: 'cockpit' | 'financials' | 'thesis') => void;
+
   columnMode: 2 | 3 | 4;
   setColumnMode: (mode: 2 | 3 | 4) => void;
   openDossier: (portfolioIdOrSymbol: string, symbol?: string) => Promise<void>;
@@ -122,7 +153,13 @@ export const useDossierStore = create<DossierState>((set, get) => ({
   isLoading: false,
   isRefreshing: false,
   error: null,
+  activeSubTab: (localStorage.getItem('xray_sub_tab') as 'cockpit' | 'financials' | 'thesis') || 'cockpit',
   columnMode: (Number(localStorage.getItem('xray_column_mode')) as 2 | 3 | 4) || 3,
+
+  setActiveSubTab: (tab: 'cockpit' | 'financials' | 'thesis') => {
+    localStorage.setItem('xray_sub_tab', tab);
+    set({ activeSubTab: tab });
+  },
 
   setColumnMode: (mode: 2 | 3 | 4) => {
     localStorage.setItem('xray_column_mode', String(mode));
