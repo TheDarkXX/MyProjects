@@ -125,44 +125,72 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
   const ema50Cushion = ema50 && currentPrice > 0 ? ((currentPrice - ema50) / ema50) * 100 : null;
   const ema200Cushion = ema200 && currentPrice > 0 ? ((currentPrice - ema200) / ema200) * 100 : null;
 
+  // Crosshair Hover State
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (candles.length === 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left - margin.left;
+    const boundedX = Math.max(0, Math.min(innerWidth, mouseX));
+    const idx = Math.min(candles.length - 1, Math.max(0, Math.round((boundedX / innerWidth) * (candles.length - 1))));
+    setHoveredIndex(idx);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredIndex(null);
+  };
+
+  const hoveredCandle = hoveredIndex !== null ? candles[hoveredIndex] : null;
+
   return (
-    <div className={`bg-[#0A1022]/90 border border-blue-900/40 rounded-2xl p-3.5 shadow-lg backdrop-blur-md ${className}`}>
+    <div className={`bg-[#0A1022]/90 border border-blue-900/40 rounded-2xl p-4 shadow-lg backdrop-blur-md ${className}`}>
       {/* Header Bar */}
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-cyan-400" />
-          <h4 className="text-[15px] font-medium text-slate-200 tracking-wide uppercase">
-            Tactical Price Pulse (1Y)
-          </h4>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+          <div>
+            <h4 className="text-base font-bold text-slate-100 tracking-wide">
+              TACTICAL PRICE PULSE — 52 Week
+            </h4>
+            <p className="text-xs text-slate-400">
+              ย้อนหลัง 1 ปี {candles.length > 0 ? `• ${candles.length} วันทำการ` : ''}
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-[13px]">
+        <div className="flex items-center gap-2 text-sm">
           {bankerFlow > 0 && (
-            <span className="flex items-center gap-1 text-rose-300 font-medium bg-rose-500/10 px-2.5 py-0.5 rounded border border-rose-500/25">
-              <Flame className="w-3.5 h-3.5 text-rose-400" />
+            <span className="flex items-center gap-1 text-rose-300 font-semibold bg-rose-500/15 px-2.5 py-1 rounded-lg border border-rose-500/30">
+              <Flame className="w-4 h-4 text-rose-400" />
               <span>Banker {bankerFlow.toFixed(0)}%</span>
             </span>
           )}
           {avgCost > 0 && (
-            <span className="flex items-center gap-1 text-amber-200 font-medium bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/25">
-              <Target className="w-3.5 h-3.5 text-amber-400" />
-              <span>ทุน ${avgCost.toFixed(1)}</span>
+            <span className="flex items-center gap-1 text-amber-200 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-lg border border-amber-500/30">
+              <Target className="w-4 h-4 text-amber-400" />
+              <span>ทุนเฉลี่ย ${avgCost.toFixed(2)}</span>
             </span>
           )}
         </div>
       </div>
 
       {/* SVG Chart Area */}
-      <div className="relative w-full h-[120px]">
+      <div className="relative w-full h-[130px]">
         {isLoading ? (
-          <div className="w-full h-full flex items-center justify-center text-slate-300 text-[14px] font-normal">
-            กำลังโหลดข้อมูลราคา 1 ปี...
+          <div className="w-full h-full flex items-center justify-center text-slate-300 text-sm font-normal">
+            กำลังโหลดข้อมูลราคา 52 สัปดาห์...
           </div>
         ) : (
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            className="w-full h-full overflow-visible cursor-crosshair"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
             <defs>
               <linearGradient id="miniPulseGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.30" />
+                <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.35" />
                 <stop offset="100%" stopColor="#0284C7" stopOpacity="0.00" />
               </linearGradient>
             </defs>
@@ -182,20 +210,69 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
               )}
 
               {/* Price Line */}
-              {pathD && <path d={pathD} fill="none" stroke="#38BDF8" strokeWidth={2} />}
+              {pathD && <path d={pathD} fill="none" stroke="#38BDF8" strokeWidth={2.2} />}
 
               {/* Current Price Dot & Label */}
-              {currentX > 0 && (
+              {currentX > 0 && hoveredIndex === null && (
                 <>
-                  <circle cx={currentX} cy={currentY} r={4} fill="#FFFFFF" stroke="#0284C7" strokeWidth={2} />
+                  <circle cx={currentX} cy={currentY} r={4.5} fill="#FFFFFF" stroke="#0284C7" strokeWidth={2} />
                   <text
                     x={innerWidth + 6}
                     y={currentY}
                     dy="0.32em"
-                    className="fill-white text-[13px] font-mono font-semibold"
+                    className="fill-white text-[13px] font-mono font-bold"
                   >
                     ${currentPrice.toFixed(1)}
                   </text>
+                </>
+              )}
+
+              {/* Hover Crosshair */}
+              {hoveredCandle && (
+                <>
+                  {(() => {
+                    const hX = (hoveredIndex! / (candles.length - 1)) * innerWidth;
+                    const closes = candles.map(c => c.close);
+                    const low = Math.min(...closes);
+                    const high = Math.max(...closes);
+                    const yMin = Math.min(low, avgCost > 0 ? avgCost : low) * 0.96;
+                    const yMax = Math.max(high, avgCost > 0 ? avgCost : high) * 1.04;
+                    const hY = innerHeight - ((hoveredCandle.close - yMin) / (yMax - yMin)) * innerHeight;
+                    const dateStr = hoveredCandle.date.toISOString().split('T')[0];
+
+                    return (
+                      <g>
+                        <line x1={hX} x2={hX} y1={0} y2={innerHeight} stroke="#38BDF8" strokeDasharray="2,2" strokeWidth={1} />
+                        <circle cx={hX} cy={hY} r={5} fill="#38BDF8" stroke="#FFFFFF" strokeWidth={2} />
+                        <rect
+                          x={Math.min(innerWidth - 75, Math.max(0, hX - 35))}
+                          y={Math.max(0, hY - 26)}
+                          width={75}
+                          height={20}
+                          rx={4}
+                          fill="#141E38"
+                          stroke="#38BDF8"
+                          strokeWidth={1}
+                        />
+                        <text
+                          x={Math.min(innerWidth - 75, Math.max(0, hX - 35)) + 37.5}
+                          y={Math.max(0, hY - 26) + 14}
+                          textAnchor="middle"
+                          className="fill-slate-100 font-mono text-[11px] font-bold"
+                        >
+                          ${hoveredCandle.close.toFixed(1)}
+                        </text>
+                        <text
+                          x={Math.min(innerWidth - 75, Math.max(0, hX - 35)) + 37.5}
+                          y={innerHeight + 14}
+                          textAnchor="middle"
+                          className="fill-slate-400 font-mono text-[10px]"
+                        >
+                          {dateStr}
+                        </text>
+                      </g>
+                    );
+                  })()}
                 </>
               )}
             </g>
@@ -204,30 +281,32 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
       </div>
 
       {/* 52-Week Range Bar & EMA Cushions */}
-      <div className="mt-1 pt-2 border-t border-blue-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[13px] text-slate-200">
+      <div className="mt-2 pt-2.5 border-t border-blue-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-sm text-slate-200">
         {/* 52W Range Visual Slider */}
-        <div className="flex items-center gap-2 flex-1">
-          <span className="font-mono text-slate-300">${low52.toFixed(0)}</span>
-          <div className="relative flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div className="flex items-center gap-2.5 flex-1">
+          <span className="font-mono text-slate-300 font-medium">${low52.toFixed(1)}</span>
+          <div className="relative flex-1 h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
             <div
-              className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full"
+              className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 rounded-full transition-all duration-500"
               style={{ width: `${rangePct}%` }}
             />
           </div>
-          <span className="font-mono text-slate-300">${high52.toFixed(0)}</span>
-          <span className="text-[12px] text-slate-300 font-medium">52W</span>
+          <span className="font-mono text-slate-300 font-medium">${high52.toFixed(1)}</span>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">
+            52W Range
+          </span>
         </div>
 
         {/* EMA Cushions */}
-        <div className="flex items-center gap-2 flex-shrink-0 text-[13px]">
+        <div className="flex items-center gap-2 flex-shrink-0 text-sm">
           {ema50Cushion !== null && (
-            <span className={`px-2 py-0.5 rounded font-mono font-medium ${ema50Cushion >= 0 ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/25' : 'bg-rose-500/10 text-rose-300 border border-rose-500/25'}`}>
+            <span className={`px-2.5 py-1 rounded-lg font-mono font-medium ${ema50Cushion >= 0 ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'}`}>
               EMA50: {ema50Cushion >= 0 ? '+' : ''}{ema50Cushion.toFixed(1)}%
             </span>
           )}
           {ema200Cushion !== null && (
-            <span className={`px-2 py-0.5 rounded font-mono font-medium flex items-center gap-1 ${ema200Cushion >= 0 ? 'bg-cyan-500/10 text-cyan-200 border border-cyan-500/25' : 'bg-rose-500/20 text-rose-200 border border-rose-500/40'}`}>
-              <Shield className="w-3.5 h-3.5" />
+            <span className={`px-2.5 py-1 rounded-lg font-mono font-medium flex items-center gap-1.5 ${ema200Cushion >= 0 ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-500/30' : 'bg-rose-500/20 text-rose-200 border border-rose-500/40'}`}>
+              <Shield className="w-4 h-4 text-cyan-400" />
               <span>EMA200: {ema200Cushion >= 0 ? '+' : ''}{ema200Cushion.toFixed(1)}%</span>
             </span>
           )}

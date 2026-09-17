@@ -55,11 +55,35 @@ export interface ThesisData {
   milestones: Array<{ year: string; target: string; status: 'DONE' | 'IN_PROGRESS' | 'PENDING' }>;
 }
 
+export interface AnalystConsensus {
+  targetMean: number;
+  targetHigh: number;
+  targetLow: number;
+  recommendationKey: string;
+  recommendationMean: number;
+  analystOpinionsCount: number;
+  epsGrowthNextYear: number;
+  revenueGrowthEstimate: number;
+}
+
+export interface FinancialMetrics {
+  freeCashFlow: number;
+  operatingCashFlow: number;
+  operatingMargin: number;
+  sharesOutstanding: number;
+  sharesDilutionPct: number;
+  sbcRevenuePct: number;
+  earningsDate: string;
+}
+
 export interface DossierPayload {
   symbol: string;
   name: string;
   category: 'Core' | 'Moonshot';
   marketCap?: number;
+  portfolioWeightPct?: number;
+  analystConsensus?: AnalystConsensus;
+  financialMetrics?: FinancialMetrics;
   thesis?: ThesisData;
   liveQuote: {
     price: number;
@@ -145,6 +169,21 @@ interface DossierState {
   updateDriver: (metric_key: string, metric_value: number) => Promise<void>;
 }
 
+const getInitialTab = (): 'cockpit' | 'financials' | 'thesis' => {
+  const saved = localStorage.getItem('xray_sub_tab');
+  return (saved === 'cockpit' || saved === 'financials' || saved === 'thesis') ? saved : 'cockpit';
+};
+
+const getInitialColMode = (tab: 'cockpit' | 'financials' | 'thesis'): 2 | 3 | 4 => {
+  const perTab = localStorage.getItem(`xray_col_${tab}`);
+  if (perTab && [2, 3, 4].includes(Number(perTab))) {
+    return Number(perTab) as 2 | 3 | 4;
+  }
+  return tab === 'cockpit' ? 2 : 3;
+};
+
+const initialTab = getInitialTab();
+
 export const useDossierStore = create<DossierState>((set, get) => ({
   isOpen: false,
   selectedSymbol: null,
@@ -153,16 +192,20 @@ export const useDossierStore = create<DossierState>((set, get) => ({
   isLoading: false,
   isRefreshing: false,
   error: null,
-  activeSubTab: (localStorage.getItem('xray_sub_tab') as 'cockpit' | 'financials' | 'thesis') || 'cockpit',
-  columnMode: (Number(localStorage.getItem('xray_column_mode')) as 2 | 3 | 4) || 3,
+  activeSubTab: initialTab,
+  columnMode: getInitialColMode(initialTab),
 
   setActiveSubTab: (tab: 'cockpit' | 'financials' | 'thesis') => {
     localStorage.setItem('xray_sub_tab', tab);
-    set({ activeSubTab: tab });
+    const targetCol = getInitialColMode(tab);
+    localStorage.setItem('xray_column_mode', String(targetCol));
+    set({ activeSubTab: tab, columnMode: targetCol });
   },
 
   setColumnMode: (mode: 2 | 3 | 4) => {
+    const { activeSubTab } = get();
     localStorage.setItem('xray_column_mode', String(mode));
+    localStorage.setItem(`xray_col_${activeSubTab}`, String(mode));
     set({ columnMode: mode });
   },
 

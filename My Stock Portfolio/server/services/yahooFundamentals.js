@@ -51,7 +51,8 @@ export async function fetchFundamentals(symbol) {
       'assetProfile',
       'earningsTrend',
       'earningsHistory',
-      'recommendationTrend'
+      'recommendationTrend',
+      'calendarEvents'
     ];
     
     // Also fetch regular quote for current price
@@ -103,6 +104,25 @@ export async function fetchFundamentals(symbol) {
       else break;
     }
 
+    const cal = summary.calendarEvents || {};
+    const earningsDates = cal.earnings?.earningsDate || [];
+    const earnings_date = earningsDates[0] ? new Date(earningsDates[0]).toISOString().split('T')[0] : '';
+
+    const free_cash_flow = fin.freeCashflow || 0;
+    const operating_cash_flow = fin.operatingCashflow || 0;
+    const operating_margin = (fin.operatingMargins != null) ? Number((fin.operatingMargins * 100).toFixed(2)) : 0;
+    const shares_outstanding = stat.sharesOutstanding || 0;
+    
+    let shares_dilution_pct = 0;
+    try {
+      const prevRow = db.prepare('SELECT shares_outstanding FROM symbol_fundamentals WHERE symbol = ?').get(upper);
+      if (prevRow?.shares_outstanding > 0 && shares_outstanding > 0) {
+        shares_dilution_pct = Number((((shares_outstanding - prevRow.shares_outstanding) / prevRow.shares_outstanding) * 100).toFixed(2));
+      }
+    } catch (_) {}
+
+    const sbc_revenue_pct = 0;
+
     const data = {
       symbol: upper,
       sector: prof.sector || 'Other',
@@ -143,6 +163,13 @@ export async function fetchFundamentals(symbol) {
       earnings_q3_surprise,
       earnings_q4_surprise,
       earnings_beat_streak: beat_streak,
+      free_cash_flow,
+      operating_cash_flow,
+      operating_margin,
+      shares_outstanding,
+      shares_dilution_pct,
+      sbc_revenue_pct,
+      earnings_date,
       fetched_at: new Date().toISOString()
     };
 
@@ -157,7 +184,9 @@ export async function fetchFundamentals(symbol) {
           recommendation_key, recommendation_mean, num_analyst_opinions, eps_current_estimate,
           eps_next_year_estimate, eps_growth_next_year, revenue_growth_estimate, rec_strong_buy,
           rec_buy, rec_hold, rec_sell, earnings_q1_surprise, earnings_q2_surprise,
-          earnings_q3_surprise, earnings_q4_surprise, earnings_beat_streak, fetched_at
+          earnings_q3_surprise, earnings_q4_surprise, earnings_beat_streak,
+          free_cash_flow, operating_cash_flow, operating_margin, shares_outstanding,
+          shares_dilution_pct, sbc_revenue_pct, earnings_date, fetched_at
         ) VALUES (
           @symbol, @sector, @industry, @current_price, @pe_trailing, @pe_forward, @pb_ratio, 
           @roe, @revenue_growth, @profit_margin, @debt_to_equity, @beta, @div_yield, 
@@ -166,7 +195,9 @@ export async function fetchFundamentals(symbol) {
           @recommendation_key, @recommendation_mean, @num_analyst_opinions, @eps_current_estimate,
           @eps_next_year_estimate, @eps_growth_next_year, @revenue_growth_estimate, @rec_strong_buy,
           @rec_buy, @rec_hold, @rec_sell, @earnings_q1_surprise, @earnings_q2_surprise,
-          @earnings_q3_surprise, @earnings_q4_surprise, @earnings_beat_streak, @fetched_at
+          @earnings_q3_surprise, @earnings_q4_surprise, @earnings_beat_streak,
+          @free_cash_flow, @operating_cash_flow, @operating_margin, @shares_outstanding,
+          @shares_dilution_pct, @sbc_revenue_pct, @earnings_date, @fetched_at
         )
         ON CONFLICT(symbol) DO UPDATE SET
           sector = excluded.sector,
@@ -207,6 +238,13 @@ export async function fetchFundamentals(symbol) {
           earnings_q3_surprise = excluded.earnings_q3_surprise,
           earnings_q4_surprise = excluded.earnings_q4_surprise,
           earnings_beat_streak = excluded.earnings_beat_streak,
+          free_cash_flow = excluded.free_cash_flow,
+          operating_cash_flow = excluded.operating_cash_flow,
+          operating_margin = excluded.operating_margin,
+          shares_outstanding = excluded.shares_outstanding,
+          shares_dilution_pct = excluded.shares_dilution_pct,
+          sbc_revenue_pct = excluded.sbc_revenue_pct,
+          earnings_date = excluded.earnings_date,
           fetched_at = excluded.fetched_at
       `);
       insertStmt.run(data);

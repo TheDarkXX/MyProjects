@@ -34,45 +34,69 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
   return (
     <div className="bg-[#0A1022]/90 border border-blue-900/40 rounded-2xl p-3.5 shadow-lg backdrop-blur-md">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-2.5">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-cyan-400" />
-          <h4 className="text-[15px] font-medium text-slate-200 tracking-wide uppercase">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+          <h4 className="text-base font-bold text-slate-100 tracking-wide uppercase">
             Execution Slip & Actions
           </h4>
         </div>
-        <div className="text-[13px] text-slate-300 font-mono">
-          โควตา: <span className="text-cyan-300 font-semibold">{ownedShares}</span> / {targetShares} หุ้น ({holding.quotaProgressPct}%)
+        <div className="text-sm text-slate-300 font-mono flex items-center gap-2">
+          <span>โควตาเป้าหมาย:</span>
+          <span className="text-cyan-300 font-bold text-base">{ownedShares}</span>
+          <span>/ {targetShares} หุ้น</span>
+          <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 font-bold text-xs border border-cyan-500/30">
+            {holding.quotaProgressPct}%
+          </span>
         </div>
       </div>
 
       {/* Position Snapshot Bar (Subtle, Clean Tiles) */}
-      <div className="grid grid-cols-4 gap-2 p-2.5 bg-[#060A16]/80 rounded-xl border border-blue-900/30 mb-3">
-        <div>
-          <span className="text-[13px] text-slate-300">หุ้นที่ถือ:</span>
-          <div className="text-[16px] font-semibold text-white font-mono">
-            {ownedShares.toLocaleString()}
+      {ownedShares === 0 ? (
+        <div className="p-3.5 bg-blue-950/30 rounded-xl border border-blue-800/40 mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="text-lg">🎯</span>
+            <div>
+              <div className="text-sm font-bold text-slate-200">ยังไม่มีสถานะถือครองในพอร์ทนี้</div>
+              <div className="text-xs text-slate-400">โควตาแนะนำ {targetShares} หุ้น (${buyCostNeeded.toLocaleString('en-US', { maximumFractionDigits: 0 })})</div>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+            รอจังหวะสะสมโควตา
+          </span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 gap-2.5 p-3 bg-[#060A16]/80 rounded-xl border border-blue-900/40 mb-3">
+          <div>
+            <span className="text-xs text-slate-400 font-medium">หุ้นที่ถือ:</span>
+            <div className="text-lg font-bold text-white font-mono">
+              {ownedShares.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+            </div>
+          </div>
+          <div>
+            <span className="text-xs text-slate-400 font-medium">ต้นทุนเฉลี่ย:</span>
+            <div className="text-lg font-bold text-amber-300 font-mono">
+              {avgCost > 0 ? `$${avgCost.toFixed(2)}` : (
+                <span className="text-xs text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40">
+                  ไม่ได้กำหนด
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <span className="text-xs text-slate-400 font-medium">มูลค่าตลาด:</span>
+            <div className="text-lg font-bold text-slate-100 font-mono">
+              ${marketVal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </div>
+          </div>
+          <div>
+            <span className="text-xs text-slate-400 font-medium">กำไร/ขาดทุน (PnL):</span>
+            <div className={`text-lg font-bold font-mono ${isPnlPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {isPnlPositive ? '+' : ''}${pnl.toFixed(0)} ({isPnlPositive ? '+' : ''}{pnlPct.toFixed(1)}%)
+            </div>
           </div>
         </div>
-        <div>
-          <span className="text-[13px] text-slate-300">ต้นทุน:</span>
-          <div className="text-[16px] font-semibold text-amber-300 font-mono">
-            ${avgCost.toFixed(2)}
-          </div>
-        </div>
-        <div>
-          <span className="text-[13px] text-slate-300">มูลค่าตลาด:</span>
-          <div className="text-[16px] font-semibold text-white font-mono">
-            ${marketVal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </div>
-        </div>
-        <div>
-          <span className="text-[13px] text-slate-300">PnL รวม:</span>
-          <div className={`text-[16px] font-semibold font-mono ${isPnlPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {isPnlPositive ? '+' : ''}${pnl.toFixed(0)} ({isPnlPositive ? '+' : ''}{pnlPct.toFixed(1)}%)
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* 3 Intelligent Action Instruments */}
       <div className="grid grid-cols-3 gap-2 mb-2">

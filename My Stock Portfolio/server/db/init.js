@@ -151,6 +151,13 @@ export function initDb() {
         earnings_q3_surprise REAL DEFAULT 0,
         earnings_q4_surprise REAL DEFAULT 0,
         earnings_beat_streak INTEGER DEFAULT 0,
+        free_cash_flow REAL DEFAULT 0,
+        operating_cash_flow REAL DEFAULT 0,
+        operating_margin REAL DEFAULT 0,
+        shares_outstanding REAL DEFAULT 0,
+        shares_dilution_pct REAL DEFAULT 0,
+        sbc_revenue_pct REAL DEFAULT 0,
+        earnings_date TEXT DEFAULT '',
         fetched_at TEXT DEFAULT (datetime('now')),
         UNIQUE(symbol)
     );
@@ -479,7 +486,14 @@ export function initDb() {
     'earnings_q2_surprise REAL DEFAULT 0',
     'earnings_q3_surprise REAL DEFAULT 0',
     'earnings_q4_surprise REAL DEFAULT 0',
-    'earnings_beat_streak INTEGER DEFAULT 0'
+    'earnings_beat_streak INTEGER DEFAULT 0',
+    'free_cash_flow REAL DEFAULT 0',
+    'operating_cash_flow REAL DEFAULT 0',
+    'operating_margin REAL DEFAULT 0',
+    'shares_outstanding REAL DEFAULT 0',
+    'shares_dilution_pct REAL DEFAULT 0',
+    'sbc_revenue_pct REAL DEFAULT 0',
+    'earnings_date TEXT DEFAULT ""'
   ];
 
   try {

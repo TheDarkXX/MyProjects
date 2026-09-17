@@ -33,20 +33,63 @@ export async function getDossierData(portfolioId, symbol) {
   const currentPrice = liveQuote.price || 0;
 
   // 2. Holdings & Quota from internal DB ledger
-  const { holdings } = getPortfolioHoldings(portfolioId);
-  const holding = holdings[upper] || {
-    shares: 0,
-    avgCost: 0,
-    totalInvested: 0,
-    marketValue: 0,
-    unrealizedPnl: 0,
-    unrealizedPnlPct: 0
-  };
+  let actualPortfolioId = portfolioId;
+  if (!actualPortfolioId || actualPortfolioId === 'default') {
+    const portWithTx = db.prepare(`
+      SELECT portfolio_id FROM transactions 
+      GROUP BY portfolio_id ORDER BY count(*) DESC LIMIT 1
+    `).get();
+    actualPortfolioId = portWithTx?.portfolio_id || db.prepare('SELECT id FROM portfolios LIMIT 1').get()?.id || portfolioId;
+  }
+
+  const { holdings } = getPortfolioHoldings(actualPortfolioId);
+  const rawHolding = holdings[upper] || { shares: 0, totalCost: 0 };
+  const holdingShares = rawHolding.shares || 0;
+  const holdingTotalCost = rawHolding.totalCost || 0;
+  let avgCost = holdingShares > 0 ? Number((holdingTotalCost / holdingShares).toFixed(2)) : 0;
+
+  // Fallback: If shares > 0 but avgCost === 0, reverse calculate from BUY transactions
+  if (holdingShares > 0 && avgCost === 0) {
+    const buyTxs = db.prepare(`
+      SELECT amount, price, fee FROM transactions 
+      WHERE portfolio_id = ? AND symbol = ? AND type = 'BUY'
+    `).all(actualPortfolioId, upper);
+    if (buyTxs.length > 0) {
+      let totalB = 0;
+      let totalAmt = 0;
+      for (const b of buyTxs) {
+        totalB += (b.amount * b.price) + (b.fee || 0);
+        totalAmt += b.amount;
+      }
+      if (totalAmt > 0) {
+        avgCost = Number((totalB / totalAmt).toFixed(2));
+      }
+    }
+  }
+
+  const marketValue = Number((holdingShares * currentPrice).toFixed(2));
+  const totalInvested = Number(holdingTotalCost.toFixed(2));
+  const unrealizedPnl = holdingShares > 0 ? Number((marketValue - totalInvested).toFixed(2)) : 0;
+  const unrealizedPnlPct = (totalInvested > 0 && holdingShares > 0)
+    ? Number(((unrealizedPnl / totalInvested) * 100).toFixed(2))
+    : 0;
+
+  // Total Portfolio Market Value for Portfolio Weight %
+  let totalPortValue = 0;
+  for (const [sym, h] of Object.entries(holdings)) {
+    if (h.shares > 0) {
+      const price = (sym === upper) ? currentPrice : (h.totalCost / h.shares);
+      totalPortValue += (h.shares * price);
+    }
+  }
+  const portfolioWeightPct = (totalPortValue > 0 && marketValue > 0)
+    ? Number(((marketValue / totalPortValue) * 100).toFixed(1))
+    : 0;
 
   const quota = db.prepare(`
     SELECT * FROM project2x_share_quotas 
     WHERE portfolio_id = ? AND symbol = ?
-  `).get(portfolioId, upper) || {
+  `).get(actualPortfolioId, upper) || {
     target_shares: 0,
     target_percent: 10.0,
     base_price: currentPrice || 100,
@@ -54,16 +97,18 @@ export async function getDossierData(portfolioId, symbol) {
     status: 'COLLECTING'
   };
 
-  // Target 1-Doubler Price (Base Price * 2)
-  const basePrice = quota.base_price > 0 ? quota.base_price : (holding.avgCost > 0 ? holding.avgCost : currentPrice);
+  // Target 1-Doubler Price: Prioritize avgCost if owned, else quota.base_price, else currentPrice
+  const basePrice = (avgCost > 0)
+    ? avgCost
+    : (quota.base_price > 0 ? quota.base_price : (currentPrice || 100));
   const targetPrice3Y = Number((basePrice * 2).toFixed(2));
   const doublerProgressPct = targetPrice3Y > 0 
     ? Number(Math.min(100, Math.max(0, (currentPrice / targetPrice3Y) * 100)).toFixed(1))
     : 0;
 
-  const quotaSharesRemaining = Math.max(0, (quota.target_shares || 0) - (holding.shares || 0));
+  const quotaSharesRemaining = Math.max(0, (quota.target_shares || 0) - holdingShares);
   const quotaProgressPct = quota.target_shares > 0
-    ? Number(Math.min(100, ((holding.shares || 0) / quota.target_shares) * 100).toFixed(1))
+    ? Number(Math.min(100, (holdingShares / quota.target_shares) * 100).toFixed(1))
     : 0;
 
   // Lots history for execution slip
@@ -72,14 +117,14 @@ export async function getDossierData(portfolioId, symbol) {
     FROM transactions
     WHERE portfolio_id = ? AND symbol = ? AND type IN ('BUY', 'SELL')
     ORDER BY date DESC LIMIT 10
-  `).all(portfolioId, upper);
+  `).all(actualPortfolioId, upper);
 
   // 3. Technical Signals & Radar Row
   const signalRow = db.prepare(`
     SELECT * FROM project2x_signals
     WHERE portfolio_id = ? AND symbol = ?
     ORDER BY date DESC LIMIT 1
-  `).get(portfolioId, upper) || {};
+  `).get(actualPortfolioId, upper) || {};
 
   // 4. Quarterly Financials (8-12 quarters)
   let quarterlyFinancials = db.prepare(`
@@ -122,14 +167,39 @@ export async function getDossierData(portfolioId, symbol) {
   `).get(upper) || null;
 
   // 7. General Fundamentals (from symbol_fundamentals and project2x_fundamentals)
-  const fundRow = db.prepare(`
+  let fundRow = db.prepare(`
     SELECT pe_trailing, pe_forward, revenue_growth, profit_margin, 
            target_mean_price, target_high_price, target_low_price,
+           recommendation_key, recommendation_mean, num_analyst_opinions,
            eps_growth_next_year, revenue_growth_estimate, earnings_beat_streak,
-           market_cap
+           market_cap, free_cash_flow, operating_cash_flow, operating_margin,
+           shares_outstanding, shares_dilution_pct, sbc_revenue_pct, earnings_date
     FROM symbol_fundamentals
     WHERE symbol = ?
-  `).get(upper) || {};
+  `).get(upper);
+
+  // If fundRow is missing or missing forward targets, auto-fetch from Yahoo
+  if (!fundRow || !fundRow.target_mean_price) {
+    try {
+      const { fetchFundamentals } = await import('./yahooFundamentals.js');
+      const fetched = await fetchFundamentals(upper);
+      if (fetched) {
+        fundRow = db.prepare(`
+          SELECT pe_trailing, pe_forward, revenue_growth, profit_margin, 
+                 target_mean_price, target_high_price, target_low_price,
+                 recommendation_key, recommendation_mean, num_analyst_opinions,
+                 eps_growth_next_year, revenue_growth_estimate, earnings_beat_streak,
+                 market_cap, free_cash_flow, operating_cash_flow, operating_margin,
+                 shares_outstanding, shares_dilution_pct, sbc_revenue_pct, earnings_date
+          FROM symbol_fundamentals
+          WHERE symbol = ?
+        `).get(upper) || fetched;
+      }
+    } catch (fErr) {
+      console.warn(`[DossierService] fetchFundamentals fallback error for ${upper}:`, fErr.message);
+    }
+  }
+  fundRow = fundRow || {};
 
   const p2xFund = db.prepare(`
     SELECT peg_ratio, expected_cagr_3y, consecutive_eps_qs
@@ -179,13 +249,13 @@ export async function getDossierData(portfolioId, symbol) {
   let verdict = 'HOLD_RIDE';
   let verdictReason = 'ราคาอยู่ในกรอบปกติ นั่งทับมือถือตามแผน ไม่ต้องเทรดพร่ำเพรื่อ';
 
-  const isFreeRideEligible = (holding.unrealizedPnlPct || 0) >= 100.0;
+  const isFreeRideEligible = (unrealizedPnlPct || 0) >= 100.0;
   const isEma200Broken = signalRow.ema200 && currentPrice < signalRow.ema200;
   const isDangerTraffic = signalRow.traffic_light === 'DANGER';
 
   if (isFreeRideEligible) {
     verdict = 'TRIM_SELL';
-    verdictReason = `กำไรครบ 100% (+${holding.unrealizedPnlPct.toFixed(1)}%) — แนะนำกดปุ่ม Free-Ride 50% ดึงทุนคืน เล่นด้วยกำไรฟรี!`;
+    verdictReason = `กำไรครบ 100% (+${unrealizedPnlPct.toFixed(1)}%) — แนะนำกดปุ่ม Free-Ride 50% ดึงทุนคืน เล่นด้วยกำไรฟรี!`;
   } else if (grossMarginDeclining3Q) {
     verdict = 'TRIM_SELL';
     verdictReason = 'Moat Breaker Alert: Gross Margin ลดลง 3 ไตรมาสติดต่อกัน ส่อแววโดนตัดราคา แนะนำพิจารณาตัดลดความเสี่ยง';
@@ -212,17 +282,37 @@ export async function getDossierData(portfolioId, symbol) {
     doublerProgressPct,
     verdict,
     verdictReason,
+    portfolioWeightPct,
     holding: {
-      shares: holding.shares || 0,
-      avgCost: holding.avgCost || 0,
-      totalInvested: holding.totalInvested || 0,
-      marketValue: holding.marketValue || 0,
-      unrealizedPnl: holding.unrealizedPnl || 0,
-      unrealizedPnlPct: holding.unrealizedPnlPct || 0,
+      shares: holdingShares,
+      avgCost,
+      totalInvested,
+      marketValue,
+      unrealizedPnl,
+      unrealizedPnlPct,
       targetShares: quota.target_shares || 0,
       quotaProgressPct,
       quotaSharesRemaining,
       lots
+    },
+    analystConsensus: {
+      targetMean: fundRow.target_mean_price || 0,
+      targetHigh: fundRow.target_high_price || 0,
+      targetLow: fundRow.target_low_price || 0,
+      recommendationKey: fundRow.recommendation_key || 'hold',
+      recommendationMean: fundRow.recommendation_mean || 2.5,
+      analystOpinionsCount: fundRow.num_analyst_opinions || 0,
+      epsGrowthNextYear: fundRow.eps_growth_next_year || 0,
+      revenueGrowthEstimate: fundRow.revenue_growth_estimate || 0
+    },
+    financialMetrics: {
+      freeCashFlow: fundRow.free_cash_flow || 0,
+      operatingCashFlow: fundRow.operating_cash_flow || 0,
+      operatingMargin: fundRow.operating_margin || (latestGrossMargin ? Number((latestGrossMargin * 0.7).toFixed(1)) : 0),
+      sharesOutstanding: fundRow.shares_outstanding || 0,
+      sharesDilutionPct: fundRow.shares_dilution_pct || 0,
+      sbcRevenuePct: fundRow.sbc_revenue_pct || 0,
+      earningsDate: fundRow.earnings_date || ''
     },
     radar: {
       scenario: signalRow.scenario || 1,

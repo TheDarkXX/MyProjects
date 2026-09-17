@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import * as d3 from 'd3';
 import { BarChart3 } from 'lucide-react';
 import type { PEHistoryItem } from '../../../../stores/dossierStore';
@@ -16,6 +16,7 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
   currentPE = 0,
   currentPEG = 0,
 }) => {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const width = 440;
   const height = 160;
   const margin = { top: 16, right: 48, bottom: 24, left: 36 };
@@ -124,11 +125,22 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
       </div>
 
       {/* SVG Chart */}
-      <div className="relative w-full h-[160px]">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+      <div className="relative w-full h-[170px]">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full h-full overflow-visible cursor-crosshair"
+          onMouseMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left - margin.left;
+            const boundedX = Math.max(0, Math.min(innerW, mouseX));
+            const idx = Math.min(peHistory.length - 1, Math.max(0, Math.round((boundedX / innerW) * (peHistory.length - 1))));
+            setHoverIdx(idx);
+          }}
+          onMouseLeave={() => setHoverIdx(null)}
+        >
           <defs>
             <linearGradient id={`corridorBand_${symbol}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.15" />
+              <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.20" />
               <stop offset="100%" stopColor="#6D28D9" stopOpacity="0.05" />
             </linearGradient>
           </defs>
@@ -141,42 +153,80 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
             <line
               x1={0} x2={innerW}
               y1={chartData.meanLineY} y2={chartData.meanLineY}
-              stroke="#A78BFA" strokeDasharray="4,4" strokeWidth={1} opacity={0.6}
+              stroke="#A78BFA" strokeDasharray="4,4" strokeWidth={1.2} opacity={0.7}
             />
-            <text x={innerW + 4} y={chartData.meanLineY} dy="0.35em" className="fill-purple-300 text-[12px] font-mono font-medium">
+            <text x={innerW + 6} y={chartData.meanLineY} dy="0.35em" className="fill-purple-300 text-xs font-mono font-medium">
               Mean {chartData.meanPE}x
             </text>
 
             {/* Forward PE Line */}
             {chartData.fwdLine && (
-              <path d={chartData.fwdLine} fill="none" stroke="#38BDF8" strokeWidth={1.5} strokeDasharray="3,3" opacity={0.7} />
+              <path d={chartData.fwdLine} fill="none" stroke="#38BDF8" strokeWidth={1.8} strokeDasharray="3,3" opacity={0.8} />
             )}
 
             {/* Trailing PE Line */}
-            <path d={chartData.peLine} fill="none" stroke="#C084FC" strokeWidth={2} />
+            <path d={chartData.peLine} fill="none" stroke="#C084FC" strokeWidth={2.2} />
 
             {/* Latest PE Dot */}
-            <circle cx={chartData.lastX} cy={chartData.lastY} r={4} fill="#fff" stroke="#C084FC" strokeWidth={2} />
-            <text x={innerW + 4} y={chartData.lastY} dy="0.35em" className="fill-white text-[13px] font-mono font-semibold">
-              {chartData.lastPE}x
-            </text>
+            {hoverIdx === null && (
+              <>
+                <circle cx={chartData.lastX} cy={chartData.lastY} r={4.5} fill="#fff" stroke="#C084FC" strokeWidth={2} />
+                <text x={innerW + 6} y={chartData.lastY} dy="0.35em" className="fill-white text-sm font-mono font-bold">
+                  {chartData.lastPE}x
+                </text>
+              </>
+            )}
+
+            {/* Hover Indicator */}
+            {hoverIdx !== null && peHistory[hoverIdx] && (
+              <g>
+                {(() => {
+                  const item = peHistory[hoverIdx];
+                  const hX = (hoverIdx / (peHistory.length - 1)) * innerW;
+                  return (
+                    <>
+                      <line x1={hX} x2={hX} y1={0} y2={innerH} stroke="#C084FC" strokeDasharray="2,2" strokeWidth={1} />
+                      <circle cx={hX} cy={chartData.lastY} r={5} fill="#C084FC" stroke="#FFFFFF" strokeWidth={2} />
+                      <rect
+                        x={Math.min(innerW - 75, Math.max(0, hX - 35))}
+                        y={Math.max(0, chartData.lastY - 26)}
+                        width={75}
+                        height={20}
+                        rx={4}
+                        fill="#141E38"
+                        stroke="#C084FC"
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={Math.min(innerW - 75, Math.max(0, hX - 35)) + 37.5}
+                        y={Math.max(0, chartData.lastY - 26) + 14}
+                        textAnchor="middle"
+                        className="fill-slate-100 font-mono text-[11px] font-bold"
+                      >
+                        PE {item.pe.toFixed(1)}x
+                      </text>
+                    </>
+                  );
+                })()}
+              </g>
+            )}
           </g>
         </svg>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-between mt-1 text-[14px]">
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800 text-sm">
         <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-0.5 rounded bg-purple-400 inline-block" />
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="w-3 h-1 rounded bg-purple-400 inline-block shadow-sm" />
             <span className="text-slate-300">Trailing PE</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-0.5 rounded bg-cyan-400 inline-block" style={{ borderTop: '1px dashed' }} />
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="w-3 h-1 rounded bg-cyan-400 inline-block" style={{ borderTop: '1px dashed' }} />
             <span className="text-slate-300">Forward PE</span>
           </span>
         </div>
-        <div className="flex items-center gap-3 font-mono text-[14px]">
+        <div className="flex items-center gap-3 font-mono text-sm font-semibold">
           <span className="text-purple-300">Band: {chartData.lowerBand}x – {chartData.upperBand}x</span>
         </div>
       </div>
