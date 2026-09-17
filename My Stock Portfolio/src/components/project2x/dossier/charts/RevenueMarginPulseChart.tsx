@@ -50,7 +50,7 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
         <div className="flex items-center gap-2.5 text-sm">
           <span className="text-slate-400 font-medium">ล่าสุด:</span>
           <span className="text-cyan-300 font-mono font-bold text-base">${latestRev.toFixed(1)}B</span>
-          <span className="text-emerald-400 font-mono font-bold bg-emerald-500/15 px-2.5 py-0.5 rounded-md border border-emerald-500/30">
+          <span className="text-orange-400 font-mono font-bold bg-orange-500/15 px-2.5 py-0.5 rounded-md border border-orange-500/30">
             {latestMargin.toFixed(1)}% Moat
           </span>
         </div>
@@ -83,14 +83,14 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
                 tickFormatter={(val) => `$${val}B`}
               />
 
-              {/* Right Y-Axis: Gross Margin % */}
+              {/* Right Y-Axis: Gross Margin % (Vibrant Orange) */}
               <YAxis
                 yAxisId="right"
                 orientation="right"
                 domain={[0, 100]}
-                stroke="#34D399"
-                tick={{ fill: '#34D399', fontSize: 13, fontFamily: 'monospace', fontWeight: 600 }}
-                axisLine={{ stroke: '#059669' }}
+                stroke="#F97316"
+                tick={{ fill: '#FB923C', fontSize: 13, fontFamily: 'monospace', fontWeight: 600 }}
+                axisLine={{ stroke: '#EA580C' }}
                 tickFormatter={(val) => `${val}%`}
               />
 
@@ -101,13 +101,13 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
                   if (!item) return null;
                   const customRows = [
                     { label: 'ยอดขาย (Revenue):', value: `$${item.revenueB.toFixed(2)}B`, color: '#38BDF8' },
-                    { label: 'Gross Margin:', value: `${item.grossMargin.toFixed(1)}%`, color: '#34D399' }
+                    { label: 'Gross Margin:', value: `${item.grossMargin.toFixed(1)}%`, color: '#FB923C' }
                   ];
                   if (item.yoyRevGrowth != null) {
                     customRows.push({
                       label: 'YoY Growth:',
                       value: `${item.yoyRevGrowth >= 0 ? '+' : ''}${item.yoyRevGrowth.toFixed(1)}%`,
-                      color: item.yoyRevGrowth >= 25 ? '#10B981' : item.yoyRevGrowth >= 0 ? '#F97316' : '#EF4444'
+                      color: item.yoyRevGrowth >= 25 ? '#38BDF8' : item.yoyRevGrowth >= 0 ? '#F97316' : '#EF4444'
                     });
                   }
                   return (
@@ -133,16 +133,16 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
                 className="hover:opacity-85 transition-opacity cursor-pointer"
               />
 
-              {/* Gross Margin % Line (Light Green with glow) */}
+              {/* Gross Margin % Line (Vibrant Orange with glow) */}
               <Line
                 yAxisId="right"
                 type="monotone"
                 dataKey="grossMargin"
                 name="Gross Margin (%)"
-                stroke="#34D399"
+                stroke="#F97316"
                 strokeWidth={2.8}
-                dot={{ r: 4, fill: '#34D399', stroke: '#0B1226', strokeWidth: 2 }}
-                activeDot={{ r: 6, fill: '#10B981', stroke: '#FFFFFF', strokeWidth: 2 }}
+                dot={{ r: 4, fill: '#FB923C', stroke: '#0B1226', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: '#F97316', stroke: '#FFFFFF', strokeWidth: 2 }}
                 animationDuration={900}
               />
             </ComposedChart>
@@ -156,8 +156,8 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
           <span className="flex items-center gap-1.5 text-blue-300 font-medium">
             <span className="w-2.5 h-2.5 bg-[#1D4ED8] rounded-sm inline-block shadow-sm" /> Revenue ($B)
           </span>
-          <span className="flex items-center gap-1.5 text-emerald-300 font-medium">
-            <span className="w-2.5 h-2.5 bg-[#34D399] rounded-full inline-block shadow-[0_0_6px_rgba(52,211,153,0.6)]" /> Gross Margin (%)
+          <span className="flex items-center gap-1.5 text-orange-300 font-medium">
+            <span className="w-2.5 h-2.5 bg-[#F97316] rounded-full inline-block shadow-[0_0_6px_rgba(249,115,22,0.6)]" /> Gross Margin (%)
           </span>
         </div>
         <span className="text-xs text-slate-400">Moat แกร่งเมื่อ Margin ยืนเหนือ 50%</span>

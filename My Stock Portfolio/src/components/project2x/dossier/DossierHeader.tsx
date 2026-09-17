@@ -56,10 +56,10 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
   // Verdict Styling
   const verdictConfig = {
     BUY_ADD: {
-      bg: 'bg-gradient-to-r from-emerald-950/60 via-[#0B162C] to-[#070E1F] border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]',
-      pill: 'bg-emerald-500 text-slate-950',
-      title: '🟢 BUY ADD ZONE (สะสมเพิ่มได้)',
-      icon: <ShieldCheck className="w-5 h-5 text-emerald-400" />
+      bg: 'bg-gradient-to-r from-blue-950/80 via-[#0B1A3A] to-[#070E1F] border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.15)]',
+      pill: 'bg-cyan-500 text-slate-950',
+      title: '🔵 BUY ADD ZONE (สะสมเพิ่มได้)',
+      icon: <ShieldCheck className="w-5 h-5 text-cyan-400" />
     },
     HOLD_RIDE: {
       bg: 'bg-gradient-to-r from-blue-950/60 via-[#0B162C] to-[#14081E] border-blue-500/50 shadow-[0_0_20px_rgba(56,189,248,0.15)]',
@@ -338,11 +338,11 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           onClick={() => setActiveSubTab('thesis')}
           className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeSubTab === 'thesis'
-              ? 'bg-gradient-to-r from-blue-800 via-emerald-700 to-emerald-600 text-white font-semibold shadow-[0_0_16px_rgba(16,185,129,0.35)] border border-emerald-400/30'
+              ? 'bg-gradient-to-r from-blue-900 via-indigo-700 to-orange-500 text-white font-semibold shadow-[0_0_16px_rgba(249,115,22,0.35)] border border-orange-400/30'
               : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
           }`}
         >
-          <BrainCircuit className="w-4 h-4 text-emerald-300" />
+          <BrainCircuit className="w-4 h-4 text-orange-300" />
           <span>3. 2X Thesis & Moat (เรื่องเล่า & คาดการณ์กี่เด้ง)</span>
         </button>
       </div>

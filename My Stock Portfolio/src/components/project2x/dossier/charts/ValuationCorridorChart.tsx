@@ -233,7 +233,7 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
         </div>
         <div className="flex items-center gap-2 font-mono text-sm font-semibold">
           <span className="text-slate-400">Band:</span>
-          <span className="text-emerald-400">{chartData.lowerBand}x</span>
+          <span className="text-cyan-400">{chartData.lowerBand}x</span>
           <span className="text-slate-500">–</span>
           <span className="text-rose-400">{chartData.upperBand}x</span>
         </div>

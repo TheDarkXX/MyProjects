@@ -163,13 +163,13 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
             <span
               className={`flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg border ${
                 bankerFlow >= 50
-                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  ? 'bg-orange-500/20 text-orange-300 border-orange-500/40 shadow-[0_0_8px_rgba(249,115,22,0.35)]'
                   : bankerFlow >= 25
                   ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                   : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
               }`}
             >
-              <Flame className="w-4 h-4" />
+              <Flame className="w-4 h-4 text-orange-400" />
               <span>Banker {bankerFlow.toFixed(0)}%</span>
             </span>
           )}
@@ -295,11 +295,11 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
           <span className="font-mono text-rose-300 font-medium">${low52.toFixed(1)}</span>
           <div className="relative flex-1 h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
             <div
-              className="absolute top-0 bottom-0 bg-gradient-to-r from-rose-600 via-amber-400 to-emerald-400 rounded-full transition-all duration-500"
+              className="absolute top-0 bottom-0 bg-gradient-to-r from-rose-600 via-amber-500 to-orange-400 rounded-full transition-all duration-500"
               style={{ width: `${rangePct}%` }}
             />
           </div>
-          <span className="font-mono text-emerald-300 font-medium">${high52.toFixed(1)}</span>
+          <span className="font-mono text-orange-300 font-medium">${high52.toFixed(1)}</span>
           <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-950/60 text-cyan-300 border border-blue-800/60">
             52W Range
           </span>
@@ -322,11 +322,11 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
             <span
               className={`px-2.5 py-1 rounded-lg font-mono font-medium flex items-center gap-1.5 border ${
                 ema200Cushion >= 0
-                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  ? 'bg-blue-500/15 text-cyan-300 border-blue-500/30'
                   : 'bg-rose-600/25 text-rose-300 border-rose-500/50 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
               }`}
             >
-              <Shield className={`w-4 h-4 ${ema200Cushion >= 0 ? 'text-emerald-400' : 'text-rose-400'}`} />
+              <Shield className={`w-4 h-4 ${ema200Cushion >= 0 ? 'text-cyan-400' : 'text-rose-400'}`} />
               <span>EMA200: {ema200Cushion >= 0 ? '+' : ''}{ema200Cushion.toFixed(1)}%</span>
             </span>
           )}

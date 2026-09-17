@@ -191,7 +191,7 @@ export const DossierThesisTab: React.FC = () => {
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
               <path
-                className={moatCompositePct >= 85 ? 'text-emerald-400' : moatCompositePct >= 70 ? 'text-cyan-400' : 'text-amber-400'}
+                className={moatCompositePct >= 85 ? 'text-cyan-400' : moatCompositePct >= 70 ? 'text-blue-400' : 'text-amber-400'}
                 strokeDasharray={`${moatCompositePct}, 100`}
                 strokeWidth="3.5"
                 strokeLinecap="round"
@@ -229,9 +229,9 @@ export const DossierThesisTab: React.FC = () => {
               </span>
             </div>
           )}
-          <div className="bg-[#141E38] border border-emerald-800/50 rounded-xl px-3.5 py-2 flex flex-col">
+          <div className="bg-[#141E38] border border-orange-800/50 rounded-xl px-3.5 py-2 flex flex-col">
             <span className="text-xs text-slate-400 font-medium">Market Share</span>
-            <span className="text-lg font-black font-mono text-emerald-400">
+            <span className="text-lg font-black font-mono text-orange-400">
               ~{profile.marketSharePct}%
             </span>
           </div>
@@ -246,10 +246,10 @@ export const DossierThesisTab: React.FC = () => {
           <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Globe2 className="w-5 h-5 text-emerald-400" />
+                <Globe2 className="w-5 h-5 text-orange-400" />
                 <span className="text-slate-100 text-base font-bold">TAM (Total Addressable Market)</span>
               </div>
-              <span className="text-emerald-300 text-sm font-mono font-bold">
+              <span className="text-orange-300 text-sm font-mono font-bold">
                 Share: ~{profile.marketSharePct}%
               </span>
             </div>
@@ -265,10 +265,10 @@ export const DossierThesisTab: React.FC = () => {
 
               <div className="p-3.5 rounded-xl bg-[#081024] border border-blue-900/30">
                 <div className="text-slate-400 text-xs font-medium">ศักยภาพ 3-5 ปี</div>
-                <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
+                <div className="text-2xl font-black font-mono text-orange-400 mt-1">
                   ${profile.tamFuture3YB}{profile.tamUnit}
                 </div>
-                <div className="text-xs text-emerald-300 font-bold mt-1">
+                <div className="text-xs text-orange-300 font-bold mt-1">
                   เติบโต {(profile.tamFuture3YB / profile.tamCurrentB).toFixed(1)}x เท่า 🚀
                 </div>
               </div>
@@ -282,7 +282,7 @@ export const DossierThesisTab: React.FC = () => {
               </div>
               <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden shadow-inner">
                 <div
-                  className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 rounded-full transition-all duration-1000"
+                  className="h-full bg-gradient-to-r from-blue-800 via-blue-600 to-orange-400 rounded-full transition-all duration-1000"
                   style={{ width: `${Math.min(100, (profile.tamCurrentB / profile.tamFuture3YB) * 100)}%` }}
                 />
               </div>
@@ -342,7 +342,7 @@ export const DossierThesisTab: React.FC = () => {
                   </p>
                   <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 rounded-full transition-all duration-700"
+                      className="h-full bg-gradient-to-r from-blue-700 via-blue-500 to-orange-400 rounded-full transition-all duration-700"
                       style={{ width: `${(m.score / m.maxScore) * 100}%` }}
                     />
                   </div>
@@ -374,7 +374,7 @@ export const DossierThesisTab: React.FC = () => {
 
         {/* Column 3: Doubler Scenario Matrix & Milestones */}
         <div className="flex flex-col gap-4">
-          {/* Scenarios Matrix: Bear (Deep Red) / Base (Deep Blue-Cyan) / Bull (Light Green) */}
+          {/* Scenarios Matrix: Bear (Deep Red) / Base (Deep Blue-Cyan) / Bull (Sunset Orange) */}
           <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -414,23 +414,23 @@ export const DossierThesisTab: React.FC = () => {
                   </span>
                 </div>
                 <div className="w-full h-2 bg-slate-800 rounded-full mb-2 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.5)]" style={{ width: '70%' }} />
+                  <div className="h-full bg-gradient-to-r from-blue-700 via-blue-500 to-cyan-400 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.5)]" style={{ width: '70%' }} />
                 </div>
                 <p className="text-slate-200 text-xs leading-relaxed">
                   {profile.scenarios.base.desc}
                 </p>
               </div>
 
-              {/* Bull Case (Light Green) */}
-              <div className="p-3 rounded-xl bg-emerald-950/25 border border-emerald-800/40">
+              {/* Bull Case (Sunset Orange) */}
+              <div className="p-3 rounded-xl bg-orange-950/25 border border-orange-800/40">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-emerald-300 text-sm font-bold">🥇 Bull Case (เร่งตัวสุดขีด)</span>
-                  <span className="text-emerald-300 font-mono font-bold text-sm">
+                  <span className="text-orange-300 text-sm font-bold">🥇 Bull Case (เร่งตัวสุดขีด)</span>
+                  <span className="text-orange-300 font-mono font-bold text-sm">
                     {profile.scenarios.bull.multiple} ({profile.scenarios.bull.cagr})
                   </span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-800 rounded-full mb-1.5 overflow-hidden">
-                  <div className="h-full bg-emerald-400 rounded-full" style={{ width: '100%' }} />
+                  <div className="h-full bg-gradient-to-r from-orange-600 via-amber-500 to-amber-300 rounded-full" style={{ width: '100%' }} />
                 </div>
                 <p className="text-slate-300 text-xs leading-relaxed">
                   {profile.scenarios.bull.desc}
@@ -442,7 +442,7 @@ export const DossierThesisTab: React.FC = () => {
           {/* Milestones Roadmap (Spin fix -> Pulse) */}
           <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <Flag className="w-5 h-5 text-emerald-400" />
+              <Flag className="w-5 h-5 text-cyan-400" />
               <span className="text-slate-100 text-base font-bold">Milestone Roadmap</span>
             </div>
 
@@ -451,7 +451,7 @@ export const DossierThesisTab: React.FC = () => {
                 <div key={idx} className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2.5">
                     {m.status === 'DONE' ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
                     ) : m.status === 'PROGRESS' ? (
                       <Clock className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
                     ) : (
@@ -462,7 +462,7 @@ export const DossierThesisTab: React.FC = () => {
                   </div>
                   <span className={`px-2.5 py-0.5 rounded text-xs font-mono font-bold ${
                     m.status === 'DONE'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      ? 'bg-blue-500/20 text-cyan-300 border border-blue-500/30'
                       : m.status === 'PROGRESS'
                       ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                       : 'bg-slate-800 text-slate-400 border border-slate-700'

@@ -54,10 +54,10 @@ export const DossierFinancialsTab: React.FC = () => {
     <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Coins className="w-5 h-5 text-emerald-400" />
+          <Coins className="w-5 h-5 text-cyan-400" />
           <span className="text-slate-100 text-base font-bold">Free Cash Flow Machine</span>
         </div>
-        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold">
+        <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-cyan-300 border border-blue-500/30 text-xs font-bold">
           Cash Generation
         </span>
       </div>
@@ -68,7 +68,7 @@ export const DossierFinancialsTab: React.FC = () => {
           <div className="text-2xl font-black font-mono text-white mt-1">
             {fcfB !== '-' ? `$${fcfB}B` : '-'}
           </div>
-          <div className="text-xs text-emerald-400 font-mono mt-1 font-medium">
+          <div className="text-xs text-cyan-400 font-mono mt-1 font-medium">
             {fcfRaw > 0 ? 'High Cash Conversion' : 'กำลังรวบรวมข้อมูลงบ'}
           </div>
         </div>
@@ -84,7 +84,7 @@ export const DossierFinancialsTab: React.FC = () => {
 
       <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
         <span className="text-slate-200 font-medium">P/FCF Yield เทียบมูลค่ากิจการ:</span>
-        <span className="text-emerald-300 font-mono font-bold">{fcfYieldPct}</span>
+        <span className="text-cyan-300 font-mono font-bold">{fcfYieldPct}</span>
       </div>
     </div>
   );
@@ -113,17 +113,17 @@ export const DossierFinancialsTab: React.FC = () => {
 
         <div className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
           <div className="text-slate-300 text-sm font-medium">สัดส่วนการเจือจาง (Dilution YoY)</div>
-          <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
+          <div className="text-2xl font-black font-mono text-cyan-300 mt-1">
             {dilutionPct !== 0 ? `${dilutionPct >= 0 ? '+' : ''}${dilutionPct}%` : 'Stable (<1%)'}
           </div>
-          <div className="text-xs text-emerald-300 font-medium mt-1">เกณฑ์ปลอดภัย (&lt; 2.5%) ✅</div>
+          <div className="text-xs text-cyan-300 font-medium mt-1">เกณฑ์ปลอดภัย (&lt; 2.5%) ✅</div>
         </div>
       </div>
 
       <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
         <span className="text-slate-200 font-medium">สถานะการคุ้มครองผู้ถือหุ้น:</span>
         <span className="text-cyan-300 font-medium flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <ShieldCheck className="w-4 h-4 text-cyan-400" />
           ไม่มีความเสี่ยง Dilution ร้ายแรง
         </span>
       </div>
@@ -144,7 +144,7 @@ export const DossierFinancialsTab: React.FC = () => {
           </div>
           <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
             data.vitalSigns?.valuationStatus === 'UNDERVALUED'
-              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+              ? 'bg-blue-600/25 text-cyan-300 border-blue-500/35'
               : data.vitalSigns?.valuationStatus === 'STRETCHED'
               ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
               : 'bg-blue-500/15 text-cyan-300 border-blue-500/30'
@@ -168,7 +168,7 @@ export const DossierFinancialsTab: React.FC = () => {
           </div>
           <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 text-center">
             <div className="text-slate-300 text-xs font-medium">P/FCF Yield</div>
-            <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
+            <div className="text-2xl font-black font-mono text-cyan-300 mt-1">
               {fcfYieldPct}
             </div>
           </div>
@@ -206,17 +206,17 @@ export const DossierFinancialsTab: React.FC = () => {
 
         <div className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
           <div className="text-slate-300 text-sm font-medium">Operating Margin (จริง)</div>
-          <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
+          <div className="text-2xl font-black font-mono text-cyan-300 mt-1">
             {opMarginReal > 0 ? `${opMarginReal.toFixed(1)}%` : '-'}
           </div>
-          <div className="text-xs text-emerald-400 font-medium mt-1">ดึงข้อมูลจริงจากระบบงบการเงิน</div>
+          <div className="text-xs text-cyan-400 font-medium mt-1">ดึงข้อมูลจริงจากระบบงบการเงิน</div>
         </div>
       </div>
 
       <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
         <span className="text-slate-200 font-medium">Guidance Beat & Raise Cadence</span>
-        <span className="text-emerald-300 font-bold flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+        <span className="text-cyan-300 font-bold flex items-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-cyan-400" />
           Consistent Beat & Raise
         </span>
       </div>

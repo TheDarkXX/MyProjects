@@ -35,12 +35,12 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
 
   if (recKey.includes('strong_buy') || recMean <= 1.5) {
     recLabel = 'STRONG BUY (ซื้อเชิงรุก)';
-    recBadgeBg = 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]';
-    recDotColor = '#10B981';
+    recBadgeBg = 'bg-blue-600/25 border-cyan-400/50 text-cyan-200 shadow-[0_0_15px_rgba(56,189,248,0.3)]';
+    recDotColor = '#38BDF8';
   } else if (recKey.includes('buy') || recMean <= 2.5) {
     recLabel = 'BUY (ซื้อสะสม)';
-    recBadgeBg = 'bg-blue-500/20 border-blue-400/50 text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.2)]';
-    recDotColor = '#38BDF8';
+    recBadgeBg = 'bg-blue-900/30 border-blue-500/50 text-cyan-300';
+    recDotColor = '#0284C7';
   } else if (recKey.includes('sell') || recMean >= 3.5) {
     recLabel = 'UNDERPERFORM / SELL (ลดน้ำหนัก)';
     recBadgeBg = 'bg-rose-500/20 border-rose-400/50 text-rose-300 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
@@ -98,7 +98,7 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
                 <span
                   className={`text-sm font-bold font-mono px-2 py-0.5 rounded-md ${
                     upsidePct >= 0
-                      ? 'text-emerald-300 bg-emerald-500/15 border border-emerald-500/30'
+                      ? 'text-cyan-300 bg-blue-500/15 border border-blue-500/30'
                       : 'text-rose-300 bg-rose-500/15 border border-rose-500/30'
                   }`}
                 >
@@ -122,7 +122,7 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
           </div>
         </div>
 
-        {/* Visual Target Range Bar (Deep Red -> Yellow -> Light Green) */}
+        {/* Visual Target Range Bar (Deep Red -> Orange -> Amber Gold) */}
         {targetHigh > targetLow && (
           <div className="mb-5 bg-[#141E38]/50 border border-blue-900/50 rounded-xl p-4">
             <div className="flex items-center justify-between text-sm text-slate-300 mb-2 font-medium">
@@ -132,18 +132,18 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
               <span className="text-amber-300 font-semibold">
                 Mean: <strong className="font-mono text-white">${targetMean.toFixed(2)}</strong>
               </span>
-              <span className="text-emerald-300">
+              <span className="text-orange-300">
                 High: <strong className="font-mono text-slate-100">${targetHigh.toFixed(2)}</strong>
               </span>
             </div>
 
             {/* Range Track */}
             <div className="relative h-3 w-full bg-slate-900 rounded-full overflow-hidden my-2 shadow-inner">
-              {/* Gradient Track: Deep Red -> Yellow -> Light Green */}
+              {/* Gradient Track: Deep Red -> Orange -> Amber Gold */}
               <div
                 className="absolute top-0 bottom-0 left-0 right-0 rounded-full opacity-90"
                 style={{
-                  background: 'linear-gradient(90deg, #DC2626 0%, #EAB308 50%, #10B981 100%)'
+                  background: 'linear-gradient(90deg, #DC2626 0%, #EA580C 50%, #FBBF24 100%)'
                 }}
               />
             </div>
@@ -177,7 +177,7 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#141E38]/70 border border-blue-900/40 rounded-xl p-3">
             <span className="text-sm text-slate-400 block mb-1">EPS Est. Growth (Next FY)</span>
-            <span className="text-base font-bold font-mono text-emerald-400 flex items-center gap-1">
+            <span className="text-base font-bold font-mono text-orange-400 flex items-center gap-1">
               <TrendingUp className="w-4 h-4" />
               {epsGrowth !== 0 ? `+${epsGrowth.toFixed(1)}%` : 'N/A'}
             </span>

@@ -88,8 +88,8 @@ export const CagrTrajectoryChart: React.FC<CagrTrajectoryChartProps> = ({
     {
       label: 'EPS Growth YoY',
       value: metrics.epsCagr,
-      color: metrics.epsCagr >= targetCagr ? 'from-emerald-700 via-emerald-500 to-emerald-400' : 'from-amber-700 to-amber-500',
-      textColor: metrics.epsCagr >= targetCagr ? 'text-emerald-300' : 'text-amber-300',
+      color: metrics.epsCagr >= targetCagr ? 'from-orange-700 via-orange-500 to-amber-400' : 'from-rose-800 to-rose-600',
+      textColor: metrics.epsCagr >= targetCagr ? 'text-orange-300' : 'text-rose-400',
     },
     {
       label: `2X Threshold Benchmark`,
@@ -112,8 +112,8 @@ export const CagrTrajectoryChart: React.FC<CagrTrajectoryChartProps> = ({
           <span
             className={`px-2.5 py-0.5 rounded-lg text-[12px] font-semibold border ${
               isDoublerPaced
-                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                ? 'bg-orange-500/15 text-orange-300 border-orange-500/30'
+                : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
             }`}
           >
             {isDoublerPaced ? '🔥 On Track 2X' : '⚠️ Slower Pace'}
@@ -163,7 +163,7 @@ export const CagrTrajectoryChart: React.FC<CagrTrajectoryChartProps> = ({
       {/* Footer Info */}
       <div className="mt-3 pt-2 border-t border-blue-900/40 flex items-center justify-between text-xs text-slate-400">
         <span>เป้าหมาย 2X ต้องการ CAGR $\ge$ 26% ต่อปี ต่อเนื่อง 3 ปี</span>
-        <span className="font-mono text-emerald-400">Avg GM: {metrics.grossMargin.toFixed(1)}%</span>
+        <span className="font-mono text-orange-400 font-semibold">Avg GM: {metrics.grossMargin.toFixed(1)}%</span>
       </div>
     </div>
   );

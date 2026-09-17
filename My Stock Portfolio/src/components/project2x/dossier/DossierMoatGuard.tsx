@@ -63,7 +63,7 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
             </div>
             <div className="relative h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 rounded-full transition-all duration-700"
+                className="h-full bg-gradient-to-r from-blue-700 via-blue-500 to-orange-400 rounded-full transition-all duration-700"
                 style={{ width: `${Math.min(100, (m.score / m.maxScore) * 100)}%` }}
               />
             </div>
@@ -76,14 +76,14 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
         {/* Protocol 1: Free-Ride 50% */}
         <div className="p-2.5 bg-[#070D1F] rounded-xl border border-blue-900/40 flex items-center justify-between text-[13px]">
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isFreeRideReady ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+            <span className={`w-2 h-2 rounded-full ${isFreeRideReady ? 'bg-orange-400 animate-pulse' : 'bg-slate-500'}`} />
             <span className="text-slate-200 font-medium">Free-Ride 50%:</span>
             <span className="text-slate-300 text-[13px] font-normal">เป้าหมายกำไรแตะ +100%</span>
           </div>
           <span
             className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
               isFreeRideReady
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold'
+                ? 'bg-orange-500/20 text-orange-300 border-orange-500/40 font-semibold'
                 : 'bg-slate-800 text-slate-300 border-slate-700 font-medium'
             }`}
           >
@@ -98,7 +98,7 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
           }`}
         >
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isMoatBreaker ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400'}`} />
+            <span className={`w-2 h-2 rounded-full ${isMoatBreaker ? 'bg-rose-500 animate-pulse' : 'bg-cyan-400'}`} />
             <span className="font-medium">Moat Breaker:</span>
             <span className="text-slate-300 text-[13px] font-normal">Gross Margin ลดลง 3Q ติด</span>
           </div>
@@ -106,7 +106,7 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
             className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
               isMoatBreaker
                 ? 'bg-rose-500/30 text-rose-200 border-rose-500/60 font-semibold animate-pulse'
-                : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25 font-medium'
+                : 'bg-blue-500/15 text-cyan-300 border-blue-500/30 font-medium'
             }`}
           >
             {isMoatBreaker ? '🚨 BREACHED' : '🛡️ SAFE'}

@@ -101,7 +101,7 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="p-1 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40 cursor-pointer"
+                className="p-1 rounded-lg bg-blue-600/30 text-cyan-300 hover:bg-blue-600/50 border border-blue-500/50 cursor-pointer"
                 title="บันทึก"
               >
                 <Check className="w-3.5 h-3.5" />
@@ -137,12 +137,12 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
               strokeWidth="12"
               strokeLinecap="round"
             />
-            {/* Value Progress Arc (Deep Red / Orange / Light Green) */}
+            {/* Value Progress Arc (Deep Red / Orange / Electric Cyan) */}
             <path
               d="M 15 80 A 65 65 0 0 1 145 80"
               fill="none"
-              stroke={isHealthy ? '#34D399' : isDanger ? '#EF4444' : '#F97316'}
-              strokeWidth="12"
+              stroke={isHealthy ? '#38BDF8' : isDanger ? '#EF4444' : '#F97316'}
+              strokeWidth={12}
               strokeLinecap="round"
               strokeDasharray={204}
               strokeDashoffset={204 - (percent / 100) * 204}
@@ -169,7 +169,7 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
               <div className="flex items-baseline justify-center gap-1">
                 <span
                   className={`text-3xl font-black font-mono tracking-tight drop-shadow-md ${
-                    isHealthy ? 'text-emerald-400' : isDanger ? 'text-rose-400' : 'text-amber-300'
+                    isHealthy ? 'text-cyan-300' : isDanger ? 'text-rose-400' : 'text-amber-300'
                   }`}
                 >
                   {value}
@@ -195,8 +195,8 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
           </div>
         )}
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
-          <span className="text-emerald-300">ปลอดภัย: &ge;{safe}{unit}</span>
+          <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(56,189,248,0.7)]" />
+          <span className="text-cyan-300">ปลอดภัย: &ge;{safe}{unit}</span>
         </div>
       </div>
     </div>

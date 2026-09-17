@@ -55,7 +55,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
               <span className="text-slate-100 font-semibold font-mono">{formatMarketCap(marketCap)}</span>
             </div>
           ) : null}
-          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-[12px] font-medium">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-950/60 border border-blue-600/40 text-cyan-300 text-[12px] font-medium">
             <span>CAGR 26% / 3Y</span>
           </div>
         </div>
@@ -65,13 +65,13 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
           {avgCost > 0 && (
             <div className="flex items-center gap-1.5 font-mono">
               <span className="text-slate-400 font-normal">จากทุน:</span>
-              <span className={`font-semibold ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <span className={`font-semibold ${isProfit ? 'text-cyan-300' : 'text-rose-400'}`}>
                 {isProfit ? '+' : ''}{pnlPct.toFixed(1)}%
               </span>
             </div>
           )}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-700/40 text-cyan-300 text-[14px] font-semibold font-mono">
-            <Flame className="w-4 h-4 text-amber-400" />
+            <Flame className="w-4 h-4 text-orange-400" />
             <span>{doublerProgressPct.toFixed(0)}% สู่เป้าหมาย</span>
           </div>
         </div>
@@ -83,8 +83,8 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
         <div
           className={`absolute left-0 top-0 bottom-0 blur-md transition-all duration-1000 ${
             isProfit
-              ? 'bg-gradient-to-r from-blue-600/30 via-cyan-500/35 to-emerald-500/45'
-              : 'bg-gradient-to-r from-rose-700/30 via-rose-600/30 to-amber-500/30'
+              ? 'bg-gradient-to-r from-blue-900/40 via-blue-600/35 to-orange-500/30'
+              : 'bg-gradient-to-r from-rose-950/40 via-rose-700/35 to-red-600/30'
           }`}
           style={{ width: `${Math.max(5, tubeFillPct)}%` }}
         />
@@ -93,8 +93,8 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
         <div
           className={`relative h-full rounded-lg shadow-[0_0_16px_rgba(56,189,248,0.5)] transition-all duration-1000 flex items-center justify-end px-2.5 ${
             isProfit
-              ? 'bg-gradient-to-r from-blue-700 via-cyan-400 to-emerald-400'
-              : 'bg-gradient-to-r from-rose-700 via-rose-500 to-amber-400'
+              ? 'bg-gradient-to-r from-blue-800 via-blue-500 to-orange-400'
+              : 'bg-gradient-to-r from-rose-950 via-rose-700 to-red-600'
           }`}
           style={{ width: `${Math.max(4, tubeFillPct)}%` }}
         >
@@ -114,10 +114,10 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
           </div>
         )}
 
-        {/* Milestone Pin: 2X Goal (Light Green / Emerald) */}
+        {/* Milestone Pin: 2X Goal (Radiant Orange Gold) */}
         <div className="absolute right-2.5 flex items-center gap-1 z-10 pointer-events-none">
           <Trophy className="w-4 h-4 text-amber-300 drop-shadow" />
-          <span className="text-emerald-300 text-sm font-bold font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+          <span className="text-orange-300 text-sm font-bold font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
             เป้า 2X: ${targetPrice3Y.toFixed(1)}
           </span>
         </div>
@@ -129,7 +129,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
           {avgCost > 0 ? `ทุนเฉลี่ย: $${avgCost.toFixed(2)}` : `Base: $${effectiveCost.toFixed(2)}`}
         </span>
         <span className="text-cyan-300 font-bold">ราคาปัจจุบัน: ${currentPrice.toFixed(2)}</span>
-        <span className="text-emerald-400 font-bold">เป้าหมาย 1 เด้ง: ${targetPrice3Y.toFixed(2)}</span>
+        <span className="text-orange-400 font-bold">เป้าหมาย 1 เด้ง: ${targetPrice3Y.toFixed(2)}</span>
       </div>
     </div>
   );

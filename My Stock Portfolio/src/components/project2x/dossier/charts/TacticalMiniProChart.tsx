@@ -281,8 +281,8 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
         </div>
         <div className="flex items-center gap-2">
           {ema50 && (
-            <span className={`px-2.5 py-0.5 rounded-md font-black text-[13px] ${currentPrice >= ema50 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}`}>
-              {currentPrice >= ema50 ? '🟢 เหนือ EMA 50' : '🟡 ใต้ EMA 50'}
+            <span className={`px-2.5 py-0.5 rounded-md font-black text-[13px] ${currentPrice >= ema50 ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}`}>
+              {currentPrice >= ema50 ? '⚡ เหนือ EMA 50' : '🟡 ใต้ EMA 50'}
             </span>
           )}
           {ema200 && (

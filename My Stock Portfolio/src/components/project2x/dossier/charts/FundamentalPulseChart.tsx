@@ -57,15 +57,15 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
       {/* Header with Vital Badge */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
           <h4 className="text-sm font-black text-white uppercase tracking-wider">
             Fundamental Pulse ({symbol})
           </h4>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
-            🟢 Beat {beatStreak}Q ซ้อน
+          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-blue-600/20 border border-blue-500/40 text-cyan-300">
+            ⚡ Beat {beatStreak}Q ซ้อน
           </span>
           <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-mono">
             🛡️ Margin: {latestMargin.toFixed(1)}%
@@ -145,7 +145,7 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={entry.isBeat ? '#10B981' : '#F43F5E'} 
+                    fill={entry.isBeat ? '#0284C7' : '#DC2626'} 
                   />
                 ))}
               </Bar>
@@ -156,7 +156,7 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
                 dataKey="epsEstimate" 
                 name="EPS Estimate" 
                 fill="#334155" 
-                opacity={0.5}
+                opacity={0.5} 
                 radius={[4, 4, 0, 0]}
                 barSize={18}
               />
@@ -180,7 +180,7 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
       {/* Bottom Insights Footnote */}
       <div className="mt-2 pt-2.5 border-t border-blue-900/40 flex items-center justify-between text-[13px] text-white">
         <div>
-          ความสม่ำเสมอ: <span className="text-emerald-300 font-black">Beat {beatStreak}Q ซ้อน</span>
+          ความสม่ำเสมอ: <span className="text-cyan-300 font-black">Beat {beatStreak}Q ซ้อน</span>
         </div>
         <div>
           Gross Margin: <span className="text-cyan-200 font-black font-mono">{latestMargin.toFixed(1)}%</span>
