@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { QuarterlyFinancialItem } from '../../../../stores/dossierStore';
 import { DossierTooltip } from '../shared/DossierTooltip';
+import { DollarSign } from 'lucide-react';
 
 interface RevenueMarginPulseChartProps {
   symbol: string;
