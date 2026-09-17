@@ -53,20 +53,20 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
           <h4 className="text-base font-bold text-slate-100 tracking-wide uppercase">
             EPS Beat & Consensus ({symbol})
           </h4>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-blue-500/15 border border-blue-500/30 text-cyan-300">
+          <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-blue-600/20 border border-blue-500/40 text-blue-300">
             Beat {beatStreak}Q ซ้อน
           </span>
           {latestBeat && (
             <span
               className={`text-sm font-mono font-semibold ${
-                latestBeat.surprisePct >= 0 ? 'text-cyan-300' : 'text-rose-400'
+                latestBeat.surprisePct >= 0 ? 'text-blue-300' : 'text-rose-400'
               }`}
             >
               Surprise {latestBeat.surprisePct >= 0 ? '+' : ''}{latestBeat.surprisePct.toFixed(1)}%
@@ -110,16 +110,16 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
                       active={active}
                       title={`ไตรมาส ${label}`}
                       customRows={[
-                        { label: 'EPS จริง (Actual):', value: `$${item.epsActual.toFixed(2)}`, color: item.isBeat ? '#38BDF8' : '#EF4444' },
+                        { label: 'EPS จริง (Actual):', value: `$${item.epsActual.toFixed(2)}`, color: item.isBeat ? '#60A5FA' : '#DC2626' },
                         { label: 'EPS คาดการณ์ (Est):', value: `$${item.epsEstimate.toFixed(2)}`, color: '#94A3B8' },
-                        { label: 'Surprise:', value: `${item.surprisePct >= 0 ? '+' : ''}${item.surprisePct.toFixed(1)}%`, color: item.isBeat ? '#38BDF8' : '#EF4444' }
+                        { label: 'Surprise:', value: `${item.surprisePct >= 0 ? '+' : ''}${item.surprisePct.toFixed(1)}%`, color: item.isBeat ? '#60A5FA' : '#DC2626' }
                       ]}
                     />
                   );
                 }}
               />
 
-              {/* EPS Actual Bar (Electric Cyan/Blue beat / Deep Red miss) */}
+              {/* EPS Actual Bar (Institutional Blue beat / Deep Red miss) */}
               <Bar
                 dataKey="epsActual"
                 name="EPS Actual"
@@ -131,7 +131,7 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
                 {chartData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.isBeat ? '#0284C7' : '#DC2626'}
+                    fill={entry.isBeat ? '#3B82F6' : '#DC2626'}
                     className="hover:opacity-80 transition-opacity cursor-pointer"
                   />
                 ))}
@@ -156,8 +156,8 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
       {/* Subtle Legend */}
       <div className="mt-2 pt-2 border-t border-blue-900/40 flex items-center justify-between text-sm text-slate-300">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-cyan-300 font-medium">
-            <span className="w-2.5 h-2.5 bg-[#0284C7] rounded-sm inline-block shadow-[0_0_6px_rgba(56,189,248,0.5)]" /> Actual (ชนะเป้า)
+          <span className="flex items-center gap-1.5 text-blue-300 font-medium">
+            <span className="w-2.5 h-2.5 bg-[#3B82F6] rounded-sm inline-block shadow-[0_0_6px_rgba(59,130,246,0.5)]" /> Actual (ชนะเป้า)
           </span>
           <span className="flex items-center gap-1.5 text-slate-400 font-medium">
             <span className="w-2.5 h-2.5 bg-[#1E293B] border border-slate-600 rounded-sm inline-block" /> Estimate (เป้าคาด)

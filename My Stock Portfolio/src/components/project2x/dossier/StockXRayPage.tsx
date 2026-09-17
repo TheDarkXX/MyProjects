@@ -46,7 +46,7 @@ export const StockXRayPage: React.FC = () => {
       {/* Top Banner: Breadcrumb & Ergonomic Typography */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-[#060A1A] via-[#0A132E] to-[#1A0818] border border-blue-800/40 rounded-2xl p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600/25 to-rose-600/20 border border-blue-500/30 flex items-center justify-center text-cyan-300 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600/25 to-rose-600/20 border border-blue-500/30 flex items-center justify-center text-blue-300 shadow-sm">
             <ScanSearch className="w-5 h-5" />
           </div>
           <div>
@@ -66,8 +66,8 @@ export const StockXRayPage: React.FC = () => {
 
         <div className="flex items-center gap-2 self-start sm:self-center">
           <div className="px-3 py-1 rounded-xl bg-[#060A16]/80 border border-blue-900/40 text-[13px] text-slate-300 flex items-center gap-2 font-normal">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>ใช้ปุ่ม <kbd className="px-1.5 py-0.5 rounded bg-blue-950 text-cyan-300 font-mono text-[12px] border border-blue-800">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-blue-950 text-cyan-300 font-mono text-[12px] border border-blue-800">→</kbd> สลับหุ้น</span>
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            <span>ใช้ปุ่ม <kbd className="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 font-mono text-[12px] border border-blue-800">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 font-mono text-[12px] border border-blue-800">→</kbd> สลับหุ้น</span>
           </div>
         </div>
       </div>
@@ -79,8 +79,8 @@ export const StockXRayPage: React.FC = () => {
 
         {/* Loading State */}
         {isLoading && !data && (
-          <div className="py-24 flex flex-col items-center justify-center gap-3 text-cyan-300">
-            <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <div className="py-24 flex flex-col items-center justify-center gap-3 text-blue-300">
+            <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
             <span className="text-[13px] font-medium tracking-wide text-slate-300">กำลังสแกนข้อมูลเอ็กซเรย์ {selectedSymbol}...</span>
           </div>
         )}

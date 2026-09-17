@@ -57,17 +57,17 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
       {/* Header with Vital Badge */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
           <h4 className="text-sm font-black text-white uppercase tracking-wider">
             Fundamental Pulse ({symbol})
           </h4>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-blue-600/20 border border-blue-500/40 text-cyan-300">
+          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-blue-600/20 border border-blue-500/40 text-blue-300">
             ⚡ Beat {beatStreak}Q ซ้อน
           </span>
-          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-mono">
+          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-blue-900/40 border border-blue-700/50 text-slate-200 font-mono">
             🛡️ Margin: {latestMargin.toFixed(1)}%
           </span>
         </div>
@@ -105,9 +105,9 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
                 yAxisId="right"
                 orientation="right"
                 domain={[0, 100]}
-                stroke="#38BDF8" 
-                tick={{ fill: '#38BDF8', fontSize: 13, fontFamily: 'monospace', fontWeight: 'bold' }}
-                axisLine={{ stroke: '#0284C7' }}
+                stroke="#60A5FA" 
+                tick={{ fill: '#60A5FA', fontSize: 13, fontFamily: 'monospace', fontWeight: 'bold' }}
+                axisLine={{ stroke: '#3B82F6' }}
                 tickFormatter={(val) => `${val}%`}
               />
 
@@ -145,7 +145,7 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={entry.isBeat ? '#0284C7' : '#DC2626'} 
+                    fill={entry.isBeat ? '#3B82F6' : '#DC2626'} 
                   />
                 ))}
               </Bar>
@@ -167,10 +167,10 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
                 type="monotone" 
                 dataKey="grossMargin" 
                 name="Gross Margin %" 
-                stroke="#38BDF8" 
+                stroke="#60A5FA" 
                 strokeWidth={3}
-                dot={{ fill: '#0284C7', r: 4, stroke: '#FFFFFF', strokeWidth: 2 }}
-                activeDot={{ r: 6, fill: '#38BDF8' }}
+                dot={{ fill: '#3B82F6', r: 4, stroke: '#FFFFFF', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: '#60A5FA' }}
               />
             </ComposedChart>
           </ResponsiveContainer>
@@ -180,10 +180,10 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
       {/* Bottom Insights Footnote */}
       <div className="mt-2 pt-2.5 border-t border-blue-900/40 flex items-center justify-between text-[13px] text-white">
         <div>
-          ความสม่ำเสมอ: <span className="text-cyan-300 font-black">Beat {beatStreak}Q ซ้อน</span>
+          ความสม่ำเสมอ: <span className="text-blue-300 font-black">Beat {beatStreak}Q ซ้อน</span>
         </div>
         <div>
-          Gross Margin: <span className="text-cyan-200 font-black font-mono">{latestMargin.toFixed(1)}%</span>
+          Gross Margin: <span className="text-slate-200 font-black font-mono">{latestMargin.toFixed(1)}%</span>
         </div>
         <div>
           Moat: <span className="text-white font-black">🛡️ แข็งแกร่ง</span>

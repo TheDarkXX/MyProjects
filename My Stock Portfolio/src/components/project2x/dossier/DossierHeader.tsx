@@ -56,20 +56,20 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
   // Verdict Styling
   const verdictConfig = {
     BUY_ADD: {
-      bg: 'bg-gradient-to-r from-blue-950/80 via-[#0B1A3A] to-[#070E1F] border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.15)]',
-      pill: 'bg-cyan-500 text-slate-950',
+      bg: 'bg-gradient-to-r from-blue-950/80 via-[#0B1A3A] to-[#070E1F] border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]',
+      pill: 'bg-blue-600 text-white',
       title: '🔵 BUY ADD ZONE (สะสมเพิ่มได้)',
-      icon: <ShieldCheck className="w-5 h-5 text-cyan-400" />
+      icon: <ShieldCheck className="w-5 h-5 text-blue-400" />
     },
     HOLD_RIDE: {
-      bg: 'bg-gradient-to-r from-blue-950/60 via-[#0B162C] to-[#14081E] border-blue-500/50 shadow-[0_0_20px_rgba(56,189,248,0.15)]',
-      pill: 'bg-cyan-500 text-slate-950',
-      title: '🟡 HOLD & RIDE TREND (ถือทับมือ)',
-      icon: <ShieldCheck className="w-5 h-5 text-cyan-400" />
+      bg: 'bg-gradient-to-r from-blue-950/60 via-[#0B162C] to-[#14081E] border-blue-600/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]',
+      pill: 'bg-slate-700 text-white',
+      title: '⚪ HOLD & RIDE TREND (ถือทับมือ)',
+      icon: <ShieldCheck className="w-5 h-5 text-blue-400" />
     },
     TRIM_SELL: {
       bg: 'bg-gradient-to-r from-rose-950/70 via-[#180814] to-[#0B162C] border-rose-500/60 shadow-[0_0_25px_rgba(244,63,94,0.25)]',
-      pill: 'bg-rose-500 text-white',
+      pill: 'bg-rose-600 text-white',
       title: '🔴 TRIM / SELL ALERT (แจ้งเตือนความเสี่ยง)',
       icon: <AlertTriangle className="w-5 h-5 text-rose-400" />
     }
@@ -94,7 +94,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
                 onClick={() => selectSymbol(s.symbol)}
                 className={`px-3 py-1.5 rounded-xl text-[14px] font-medium transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                   isActive
-                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-rose-600 text-white shadow-[0_0_16px_rgba(59,130,246,0.4)] scale-105 border border-white/30 font-semibold'
+                    ? 'bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-600 text-white shadow-[0_0_16px_rgba(59,130,246,0.4)] scale-105 border border-blue-400/40 font-semibold'
                     : 'bg-[#0B1226]/90 text-slate-300 hover:text-white hover:bg-[#131D38] border border-blue-900/40'
                 }`}
               >
@@ -154,14 +154,14 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
             className={clsx(
               "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[13px] font-medium transition-all cursor-pointer",
               collapsed
-                ? "bg-cyan-950/70 border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.25)] hover:bg-cyan-900/60 font-semibold"
+                ? "bg-blue-950/70 border-blue-500/50 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.25)] hover:bg-blue-900/60 font-semibold"
                 : "bg-[#0B1226] border-blue-900/50 text-slate-300 hover:text-white hover:bg-blue-950/50"
             )}
             title={collapsed ? "กาง Sidebar ด้านซ้าย (Expand Sidebar)" : "ย่อ Sidebar ด้านซ้าย (Collapse Sidebar)"}
           >
             {collapsed ? (
               <>
-                <PanelLeftOpen className="w-3.5 h-3.5 text-cyan-400" />
+                <PanelLeftOpen className="w-3.5 h-3.5 text-blue-400" />
                 <span className="hidden xl:inline">กาง Sidebar</span>
               </>
             ) : (
@@ -199,10 +199,10 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           <button
             onClick={() => refreshFinancials()}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[14px] font-medium bg-[#0B1226] border border-blue-900/50 hover:border-cyan-500/60 text-slate-200 hover:text-cyan-300 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[14px] font-medium bg-[#0B1226] border border-blue-900/50 hover:border-blue-500/60 text-slate-200 hover:text-blue-300 transition-colors cursor-pointer"
             title="ดึงงบการเงินล่าสุดจาก Yahoo Finance เข้า SQLite"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : 'text-cyan-400'}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-400' : 'text-blue-400'}`} />
             <span className="hidden sm:inline">อัปเดตงบ</span>
           </button>
 
@@ -213,10 +213,10 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
                   onClose();
                   setActiveTab('xray');
                 }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[13px] font-medium bg-[#0B1226] border border-blue-900/50 hover:border-cyan-500/60 text-slate-300 hover:text-cyan-300 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[13px] font-medium bg-[#0B1226] border border-blue-900/50 hover:border-blue-500/60 text-slate-300 hover:text-blue-300 transition-colors cursor-pointer"
                 title="เปิดในแท็บ Stock X-Ray เต็มหน้าจอ (Open as Full Page)"
               >
-                <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+                <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
                 <span className="hidden sm:inline">เปิดเต็มหน้า</span>
               </button>
 
@@ -243,7 +243,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
               </h2>
               <span className={`px-2.5 py-0.5 rounded text-[12px] font-medium ${
                 data.category === 'Core'
-                  ? 'bg-amber-500/15 text-amber-200 border border-amber-500/30'
+                  ? 'bg-blue-600/20 text-blue-200 border border-blue-500/40'
                   : 'bg-rose-500/15 text-rose-200 border border-rose-500/30'
               }`}>
                 {data.category === 'Core' ? 'Core 👑' : 'Moonshot 🚀'}
@@ -259,7 +259,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
             <div className="text-3xl font-bold text-white font-mono tracking-tight">
               ${currentPrice.toFixed(2)}
             </div>
-            <div className={`flex items-center gap-1 text-[14px] font-medium font-mono mt-0.5 ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <div className={`flex items-center gap-1 text-[14px] font-medium font-mono mt-0.5 ${isUp ? 'text-blue-400' : 'text-rose-400'}`}>
               {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
               <span>{isUp ? '+' : ''}{change.toFixed(2)} ({isUp ? '+' : ''}{changePct.toFixed(2)}%)</span>
             </div>
@@ -290,7 +290,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
               <span className="text-[15px] font-medium tracking-wide text-slate-200">
                 {verdictConfig.title}
               </span>
-              <span className="text-[12px] px-2 py-0.5 rounded bg-[#060A16] border border-blue-800/50 text-cyan-200 font-mono font-medium">
+              <span className="text-[12px] px-2 py-0.5 rounded bg-[#060A16] border border-blue-800/50 text-blue-300 font-mono font-medium">
                 Scenario {data.radar?.scenario || 1}
               </span>
             </div>
@@ -302,7 +302,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
 
         <div className="flex items-center gap-2 self-end sm:self-center">
           <span className="text-[14px] text-slate-300 font-normal">โควตา:</span>
-          <span className="text-[14px] font-medium font-mono text-cyan-300">
+          <span className="text-[14px] font-medium font-mono text-blue-300">
             {data.holding?.shares || 0} / {data.holding?.targetShares || 0} หุ้น ({data.holding?.quotaProgressPct || 0}%)
           </span>
         </div>
@@ -314,11 +314,11 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           onClick={() => setActiveSubTab('cockpit')}
           className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeSubTab === 'cockpit'
-              ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 text-white font-semibold shadow-[0_0_16px_rgba(59,130,246,0.4)] border border-white/20'
+              ? 'bg-gradient-to-r from-blue-800 via-blue-700 to-indigo-700 text-white font-semibold shadow-[0_0_16px_rgba(59,130,246,0.4)] border border-blue-400/30'
               : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
           }`}
         >
-          <LayoutDashboard className="w-4 h-4 text-cyan-300" />
+          <LayoutDashboard className="w-4 h-4 text-blue-300" />
           <span>1. Mission Control (ค็อกพิทสั่งการ)</span>
         </button>
 
@@ -326,11 +326,11 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           onClick={() => setActiveSubTab('financials')}
           className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeSubTab === 'financials'
-              ? 'bg-gradient-to-r from-blue-700 via-indigo-600 to-amber-600 text-white font-semibold shadow-[0_0_16px_rgba(245,158,11,0.35)] border border-amber-400/30'
+              ? 'bg-gradient-to-r from-blue-900 via-indigo-800 to-blue-700 text-white font-semibold shadow-[0_0_16px_rgba(59,130,246,0.35)] border border-blue-400/30'
               : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
           }`}
         >
-          <LineChart className="w-4 h-4 text-amber-300" />
+          <LineChart className="w-4 h-4 text-blue-300" />
           <span>2. Financial Pulse (ตรวจงบ 8Q & กระแสเงินสด)</span>
         </button>
 
@@ -338,11 +338,11 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           onClick={() => setActiveSubTab('thesis')}
           className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeSubTab === 'thesis'
-              ? 'bg-gradient-to-r from-blue-900 via-indigo-700 to-orange-500 text-white font-semibold shadow-[0_0_16px_rgba(249,115,22,0.35)] border border-orange-400/30'
+              ? 'bg-gradient-to-r from-indigo-900 via-blue-900 to-rose-900 text-white font-semibold shadow-[0_0_16px_rgba(59,130,246,0.35)] border border-rose-500/30'
               : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
           }`}
         >
-          <BrainCircuit className="w-4 h-4 text-orange-300" />
+          <BrainCircuit className="w-4 h-4 text-slate-200" />
           <span>3. 2X Thesis & Moat (เรื่องเล่า & คาดการณ์กี่เด้ง)</span>
         </button>
       </div>

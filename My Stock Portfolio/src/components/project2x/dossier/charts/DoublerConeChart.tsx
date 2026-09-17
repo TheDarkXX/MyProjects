@@ -151,17 +151,17 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       {/* Header Info */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
           <h4 className="text-[15px] font-semibold text-slate-100 uppercase tracking-wide">
             3-Year Doubler Cone ({symbol})
           </h4>
         </div>
         <div className="flex items-center gap-1.5 text-[12px]">
-          <span className="flex items-center gap-1 text-orange-300 font-medium bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/30">
-            <span className="w-1.5 h-1.5 bg-orange-400 rounded-full inline-block" /> Bull +38%
+          <span className="flex items-center gap-1 text-blue-200 font-medium bg-blue-900/40 px-2 py-0.5 rounded border border-blue-700/50">
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full inline-block" /> Bull +38%
           </span>
-          <span className="flex items-center gap-1 text-cyan-200 font-medium bg-blue-500/20 px-2 py-0.5 rounded border border-cyan-400/40">
-            <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full inline-block" /> Base +26% (2X)
+          <span className="flex items-center gap-1 text-slate-200 font-medium bg-blue-950/60 px-2 py-0.5 rounded border border-blue-800/50">
+            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full inline-block" /> Base +26% (2X)
           </span>
           <span className="flex items-center gap-1 text-rose-300 font-normal bg-rose-950/40 px-2 py-0.5 rounded border border-rose-800/40">
             <span className="w-1.5 h-1.5 bg-rose-400 rounded-full inline-block" /> Bear +14%
@@ -178,12 +178,12 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
           <defs>
             <linearGradient id="doublerConeGrad" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.45" />
-              <stop offset="60%" stopColor="#0284C7" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#EA580C" stopOpacity="0.18" />
+              <stop offset="60%" stopColor="#1E40AF" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.15" />
             </linearGradient>
             <linearGradient id="historyLineGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#38BDF8" stopOpacity="1" />
+              <stop offset="0%" stopColor="#1D4ED8" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#60A5FA" stopOpacity="1" />
             </linearGradient>
             <filter id="doublerGlow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="3" result="glow" />
@@ -202,18 +202,18 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
               </g>
             ))}
 
-            {/* Target 2X Horizontal Reference Line (Radiant Flame Orange) */}
+            {/* Target 2X Horizontal Reference Line (Steel Blue) */}
             <g transform={`translate(0, ${chartData.targetY})`}>
-              <line x1={0} x2={innerWidth} stroke="#F97316" strokeWidth={2} strokeDasharray="5,4" />
-              <text x={innerWidth - 125} dy="-8" className="fill-orange-400 text-[13px] font-bold font-mono">
+              <line x1={0} x2={innerWidth} stroke="#3B82F6" strokeWidth={2} strokeDasharray="5,4" />
+              <text x={innerWidth - 125} dy="-8" className="fill-blue-400 text-[13px] font-bold font-mono">
                 2X Goal (${finalTarget.toFixed(1)})
               </text>
             </g>
 
-            {/* Cost Basis Reference Line (Yellow Gold) */}
+            {/* Cost Basis Reference Line (Muted Slate) */}
             <g transform={`translate(0, ${chartData.costY})`}>
-              <line x1={0} x2={innerWidth} stroke="#EAB308" strokeWidth={1.5} strokeDasharray="4,3" strokeOpacity={0.85} />
-              <text x={innerWidth - 125} dy="15" className="fill-amber-300 text-[12px] font-medium font-mono">
+              <line x1={0} x2={innerWidth} stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4,3" strokeOpacity={0.85} />
+              <text x={innerWidth - 125} dy="15" className="fill-slate-300 text-[12px] font-medium font-mono">
                 My Cost (${costBasis.toFixed(1)})
               </text>
             </g>
@@ -221,10 +221,10 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             {/* The Shaded Cone */}
             <path d={chartData.areaPath} fill="url(#doublerConeGrad)" />
 
-            {/* Cone Outline Lines: Bull = Sunset Orange, Base = Deep Blue/Cyan, Bear = Deep Red */}
-            <path d={chartData.bullPath} fill="none" stroke="#FB923C" strokeWidth={2} strokeOpacity={0.95} />
-            <path d={chartData.basePath} fill="none" stroke="#38BDF8" strokeWidth={3} filter="url(#doublerGlow)" />
-            <path d={chartData.bearPath} fill="none" stroke="#EF4444" strokeWidth={1.8} strokeOpacity={0.85} />
+            {/* Cone Outline Lines: Bull = Light Blue, Base = Primary Blue, Bear = Deep Red */}
+            <path d={chartData.bullPath} fill="none" stroke="#60A5FA" strokeWidth={2} strokeOpacity={0.95} />
+            <path d={chartData.basePath} fill="none" stroke="#3B82F6" strokeWidth={2.5} filter="url(#doublerGlow)" />
+            <path d={chartData.bearPath} fill="none" stroke="#DC2626" strokeWidth={1.8} strokeOpacity={0.85} />
 
             {/* Historical Price Line */}
             {chartData.histPath && (
@@ -236,7 +236,7 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
               cx={chartData.currentX}
               cy={chartData.currentY}
               r={8}
-              fill="#38BDF8"
+              fill="#60A5FA"
               className="animate-ping opacity-60"
             />
             <circle
@@ -244,13 +244,13 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
               cy={chartData.currentY}
               r={5}
               fill="#FFFFFF"
-              stroke="#0284C7"
+              stroke="#1D4ED8"
               strokeWidth={3}
             />
 
             {/* Label for Current Price */}
             <g transform={`translate(${chartData.currentX}, ${chartData.currentY - 14})`}>
-              <rect x={-42} y={-18} width={84} height={22} rx={6} fill="#060A16" stroke="#38BDF8" strokeWidth={1.5} />
+              <rect x={-42} y={-18} width={84} height={22} rx={6} fill="#060A16" stroke="#3B82F6" strokeWidth={1.5} />
               <text textAnchor="middle" dy="-2" className="fill-white text-[13px] font-semibold font-mono">
                 ${startP.toFixed(1)}
               </text>
@@ -272,22 +272,22 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       {/* Bottom Summary Bar */}
       <div className="mt-1 pt-2.5 border-t border-blue-900/40 flex flex-wrap items-center justify-between gap-2 text-[14px] text-slate-300 font-normal">
         <div>
-          ทุนเฉลี่ย: <span className="font-mono font-semibold text-amber-300">${costBasis.toFixed(1)}</span>
+          ทุนเฉลี่ย: <span className="font-mono font-semibold text-slate-200">${costBasis.toFixed(1)}</span>
         </div>
         <div>
           ราคาปัจจุบัน:{' '}
           <span className="font-mono font-semibold text-white">${startP.toFixed(1)}</span>{' '}
-          <span className={`text-[12px] font-mono font-medium ${pnlPct >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
+          <span className={`text-[12px] font-mono font-medium ${pnlPct >= 0 ? 'text-blue-300' : 'text-rose-400'}`}>
             ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
           </span>
         </div>
         <div>
           เป้า 1 เด้ง:{' '}
-          <span className="font-mono font-semibold text-orange-400">${finalTarget.toFixed(0)}</span>{' '}
-          <span className="text-orange-400/80 text-[12px]">(+100%)</span>
+          <span className="font-mono font-semibold text-blue-300">${finalTarget.toFixed(0)}</span>{' '}
+          <span className="text-blue-400/80 text-[12px]">(+100%)</span>
         </div>
         <div>
-          CAGR ฐาน: <span className="font-mono font-semibold text-cyan-300">26.0% / ปี</span>
+          CAGR ฐาน: <span className="font-mono font-semibold text-slate-200">26.0% / ปี</span>
         </div>
       </div>
     </div>

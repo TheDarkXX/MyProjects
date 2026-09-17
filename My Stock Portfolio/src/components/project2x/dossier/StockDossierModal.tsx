@@ -72,8 +72,8 @@ export const StockDossierModal: React.FC = () => {
 
             {/* Loading State */}
             {isLoading && !data && (
-              <div className="py-24 flex flex-col items-center justify-center gap-3 text-cyan-300">
-                <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+              <div className="py-24 flex flex-col items-center justify-center gap-3 text-blue-300">
+                <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                 <span className="text-[13px] font-medium tracking-wide text-slate-300">กำลังประมวลผลข้อมูลเอ็กซเรย์ {selectedSymbol}...</span>
               </div>
             )}

@@ -43,12 +43,12 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5">
-          <ShieldCheck className="w-4 h-4 text-cyan-400" />
+          <ShieldCheck className="w-4 h-4 text-blue-400" />
           <h4 className="text-sm font-bold text-slate-100 tracking-wide uppercase">
             Moat Radar & Defense Protocols
           </h4>
         </div>
-        <span className="text-xs font-semibold text-cyan-200 bg-blue-600/20 px-2.5 py-1 rounded-lg border border-blue-500/30 truncate max-w-[220px]">
+        <span className="text-xs font-semibold text-blue-200 bg-blue-600/20 px-2.5 py-1 rounded-lg border border-blue-500/30 truncate max-w-[220px]">
           {staticData.businessMoat}
         </span>
       </div>
@@ -59,11 +59,11 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
           <div key={idx}>
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="text-slate-300 font-medium truncate">{m.title}</span>
-              <span className="text-amber-300 font-mono font-bold">{m.score}/{m.maxScore}</span>
+              <span className="text-slate-200 font-mono font-bold">{m.score}/{m.maxScore}</span>
             </div>
             <div className="relative h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-blue-700 via-blue-500 to-orange-400 rounded-full transition-all duration-700"
+                className="h-full bg-gradient-to-r from-blue-800 via-blue-600 to-blue-400 rounded-full transition-all duration-700"
                 style={{ width: `${Math.min(100, (m.score / m.maxScore) * 100)}%` }}
               />
             </div>
@@ -76,14 +76,14 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
         {/* Protocol 1: Free-Ride 50% */}
         <div className="p-2.5 bg-[#070D1F] rounded-xl border border-blue-900/40 flex items-center justify-between text-[13px]">
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isFreeRideReady ? 'bg-orange-400 animate-pulse' : 'bg-slate-500'}`} />
+            <span className={`w-2 h-2 rounded-full ${isFreeRideReady ? 'bg-blue-400 animate-pulse' : 'bg-slate-500'}`} />
             <span className="text-slate-200 font-medium">Free-Ride 50%:</span>
             <span className="text-slate-300 text-[13px] font-normal">เป้าหมายกำไรแตะ +100%</span>
           </div>
           <span
             className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
               isFreeRideReady
-                ? 'bg-orange-500/20 text-orange-300 border-orange-500/40 font-semibold'
+                ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 font-semibold'
                 : 'bg-slate-800 text-slate-300 border-slate-700 font-medium'
             }`}
           >
@@ -98,7 +98,7 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
           }`}
         >
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isMoatBreaker ? 'bg-rose-500 animate-pulse' : 'bg-cyan-400'}`} />
+            <span className={`w-2 h-2 rounded-full ${isMoatBreaker ? 'bg-rose-500 animate-pulse' : 'bg-blue-400'}`} />
             <span className="font-medium">Moat Breaker:</span>
             <span className="text-slate-300 text-[13px] font-normal">Gross Margin ลดลง 3Q ติด</span>
           </div>
@@ -106,7 +106,7 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
             className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
               isMoatBreaker
                 ? 'bg-rose-500/30 text-rose-200 border-rose-500/60 font-semibold animate-pulse'
-                : 'bg-blue-500/15 text-cyan-300 border-blue-500/30 font-medium'
+                : 'bg-blue-600/20 text-blue-300 border-blue-500/30 font-medium'
             }`}
           >
             {isMoatBreaker ? '🚨 BREACHED' : '🛡️ SAFE'}
@@ -116,14 +116,14 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
         {/* Protocol 3: Trailing Stop Cushion */}
         <div className="p-2.5 bg-[#070D1F] rounded-xl border border-blue-900/40 flex items-center justify-between text-[13px]">
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${stopCushionPct >= 0 ? 'bg-cyan-400' : 'bg-rose-500'}`} />
+            <span className={`w-2 h-2 rounded-full ${stopCushionPct >= 0 ? 'bg-blue-400' : 'bg-rose-500'}`} />
             <span className="text-slate-200 font-medium">Trailing Stop:</span>
             <span className="text-slate-300 text-[13px] font-normal">EMA 200 (${stopLevel.toFixed(1)})</span>
           </div>
           <span
             className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
               stopCushionPct >= 0
-                ? 'bg-cyan-500/10 text-cyan-200 border-cyan-500/25 font-medium'
+                ? 'bg-blue-600/15 text-blue-200 border-blue-500/30 font-medium'
                 : 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold'
             }`}
           >

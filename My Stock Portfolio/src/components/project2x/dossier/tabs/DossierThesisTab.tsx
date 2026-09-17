@@ -191,7 +191,7 @@ export const DossierThesisTab: React.FC = () => {
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
               <path
-                className={moatCompositePct >= 85 ? 'text-cyan-400' : moatCompositePct >= 70 ? 'text-blue-400' : 'text-amber-400'}
+                className={moatCompositePct >= 85 ? 'text-blue-400' : moatCompositePct >= 70 ? 'text-blue-500' : 'text-slate-400'}
                 strokeDasharray={`${moatCompositePct}, 100`}
                 strokeWidth="3.5"
                 strokeLinecap="round"
@@ -209,7 +209,7 @@ export const DossierThesisTab: React.FC = () => {
           <div>
             <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2.5">
               <span>{profile.trendTitle}</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-cyan-300 border border-blue-500/30 text-xs font-semibold">
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800 text-xs font-semibold">
                 Moat Score: {moatCompositePct}/100
               </span>
             </h3>
@@ -224,14 +224,14 @@ export const DossierThesisTab: React.FC = () => {
           {data.portfolioWeightPct !== undefined && data.portfolioWeightPct > 0 && (
             <div className="bg-[#141E38] border border-blue-800/50 rounded-xl px-3.5 py-2 flex flex-col">
               <span className="text-xs text-slate-400 font-medium">สัดส่วนในพอร์ท</span>
-              <span className="text-lg font-black font-mono text-cyan-300">
+              <span className="text-lg font-black font-mono text-blue-300">
                 {data.portfolioWeightPct.toFixed(1)}%
               </span>
             </div>
           )}
-          <div className="bg-[#141E38] border border-orange-800/50 rounded-xl px-3.5 py-2 flex flex-col">
+          <div className="bg-[#141E38] border border-blue-900/50 rounded-xl px-3.5 py-2 flex flex-col">
             <span className="text-xs text-slate-400 font-medium">Market Share</span>
-            <span className="text-lg font-black font-mono text-orange-400">
+            <span className="text-lg font-black font-mono text-blue-300">
               ~{profile.marketSharePct}%
             </span>
           </div>
@@ -246,10 +246,10 @@ export const DossierThesisTab: React.FC = () => {
           <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Globe2 className="w-5 h-5 text-orange-400" />
+                <Globe2 className="w-5 h-5 text-blue-400" />
                 <span className="text-slate-100 text-base font-bold">TAM (Total Addressable Market)</span>
               </div>
-              <span className="text-orange-300 text-sm font-mono font-bold">
+              <span className="text-blue-300 text-sm font-mono font-bold">
                 Share: ~{profile.marketSharePct}%
               </span>
             </div>
@@ -265,10 +265,10 @@ export const DossierThesisTab: React.FC = () => {
 
               <div className="p-3.5 rounded-xl bg-[#081024] border border-blue-900/30">
                 <div className="text-slate-400 text-xs font-medium">ศักยภาพ 3-5 ปี</div>
-                <div className="text-2xl font-black font-mono text-orange-400 mt-1">
+                <div className="text-2xl font-black font-mono text-blue-300 mt-1">
                   ${profile.tamFuture3YB}{profile.tamUnit}
                 </div>
-                <div className="text-xs text-orange-300 font-bold mt-1">
+                <div className="text-xs text-blue-400 font-bold mt-1">
                   เติบโต {(profile.tamFuture3YB / profile.tamCurrentB).toFixed(1)}x เท่า 🚀
                 </div>
               </div>
@@ -278,11 +278,11 @@ export const DossierThesisTab: React.FC = () => {
             <div className="space-y-1.5 mt-1">
               <div className="flex justify-between text-xs text-slate-300 font-medium">
                 <span>Room to Run</span>
-                <span className="text-cyan-300 font-mono">ยังมีที่ว่างให้โตอีกมหาศาล</span>
+                <span className="text-blue-300 font-mono">ยังมีที่ว่างให้โตอีกมหาศาล</span>
               </div>
               <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden shadow-inner">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-800 via-blue-600 to-orange-400 rounded-full transition-all duration-1000"
+                  className="h-full bg-gradient-to-r from-blue-800 via-blue-600 to-blue-400 rounded-full transition-all duration-1000"
                   style={{ width: `${Math.min(100, (profile.tamCurrentB / profile.tamFuture3YB) * 100)}%` }}
                 />
               </div>
@@ -292,7 +292,7 @@ export const DossierThesisTab: React.FC = () => {
           {/* Catalyst Timeline with Visual Connector */}
           <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-400" />
+              <Sparkles className="w-5 h-5 text-blue-400" />
               <span className="text-slate-100 text-base font-bold">Catalyst Timeline (ตัวเร่งการเติบโต)</span>
             </div>
 
@@ -300,10 +300,10 @@ export const DossierThesisTab: React.FC = () => {
               {profile.catalysts.map((c, i) => (
                 <div key={i} className="relative p-3 rounded-xl bg-[#081024] border border-blue-900/30 flex items-start gap-3">
                   {/* Timeline Dot */}
-                  <span className="absolute -left-[19px] top-4 w-3 h-3 rounded-full bg-cyan-400 border-2 border-[#060B1C] shadow-[0_0_6px_rgba(56,189,248,0.8)]" />
+                  <span className="absolute -left-[19px] top-4 w-3 h-3 rounded-full bg-blue-400 border-2 border-[#060B1C] shadow-[0_0_6px_rgba(96,165,250,0.8)]" />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 rounded bg-blue-950 text-cyan-300 border border-blue-800 text-xs font-mono font-bold">
+                      <span className="px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 text-xs font-mono font-bold">
                         {c.period}
                       </span>
                       <h4 className="text-slate-100 text-sm font-bold">{c.title}</h4>
@@ -317,15 +317,14 @@ export const DossierThesisTab: React.FC = () => {
         </div>
 
         {/* Column 2: Deep Moat Architecture */}
-        {/* Column 2: Deep Moat Architecture */}
         <div className="flex flex-col gap-4">
           <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-cyan-400" />
+                <ShieldCheck className="w-5 h-5 text-blue-400" />
                 <span className="text-slate-100 text-base font-bold">Deep Moat Architecture</span>
               </div>
-              <span className="px-2.5 py-1 rounded-lg bg-blue-600/20 text-cyan-300 border border-blue-500/30 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-lg bg-blue-950 text-blue-300 border border-blue-800 text-xs font-bold">
                 คูเมือง 3 มิติ
               </span>
             </div>
@@ -335,14 +334,14 @@ export const DossierThesisTab: React.FC = () => {
                 <div key={idx} className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-slate-100 text-sm font-bold">{m.title}</span>
-                    <span className="text-amber-300 text-sm font-mono font-bold">{m.score}/{m.maxScore}</span>
+                    <span className="text-blue-300 text-sm font-mono font-bold">{m.score}/{m.maxScore}</span>
                   </div>
                   <p className="text-slate-300 text-xs leading-relaxed mb-2">
                     {m.reason}
                   </p>
                   <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-700 via-blue-500 to-orange-400 rounded-full transition-all duration-700"
+                      className="h-full bg-gradient-to-r from-blue-800 via-blue-600 to-blue-400 rounded-full transition-all duration-700"
                       style={{ width: `${(m.score / m.maxScore) * 100}%` }}
                     />
                   </div>
@@ -374,14 +373,14 @@ export const DossierThesisTab: React.FC = () => {
 
         {/* Column 3: Doubler Scenario Matrix & Milestones */}
         <div className="flex flex-col gap-4">
-          {/* Scenarios Matrix: Bear (Deep Red) / Base (Deep Blue-Cyan) / Bull (Sunset Orange) */}
+          {/* Scenarios Matrix: Bear (Deep Red) / Base (Midnight Blue) / Bull (Deep Indigo) */}
           <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-amber-400" />
+                <Target className="w-5 h-5 text-blue-400" />
                 <span className="text-slate-100 text-base font-bold">Doubler Scenario Matrix (3Y)</span>
               </div>
-              <span className="px-2.5 py-1 rounded-lg bg-blue-950 text-cyan-300 border border-blue-800 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-lg bg-blue-950 text-blue-300 border border-blue-800 text-xs font-bold">
                 กรอบ 3 ปี
               </span>
             </div>
@@ -403,34 +402,34 @@ export const DossierThesisTab: React.FC = () => {
                 </p>
               </div>
 
-              {/* Base Case (Target 2X - Deep Blue with Cyan Glow) */}
-              <div className="p-3.5 rounded-xl bg-blue-950/50 border border-cyan-400/60 shadow-[0_0_20px_rgba(56,189,248,0.2)]">
+              {/* Base Case (Target 2X - Institutional Blue) */}
+              <div className="p-3.5 rounded-xl bg-blue-950/50 border border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-cyan-300 text-base font-bold flex items-center gap-1">
+                  <span className="text-blue-300 text-base font-bold flex items-center gap-1">
                     🥈 Base Case (เป้าหมาย 1 เด้ง)
                   </span>
-                  <span className="text-cyan-200 font-mono font-black text-base">
+                  <span className="text-white font-mono font-black text-base">
                     {profile.scenarios.base.multiple} ({profile.scenarios.base.cagr})
                   </span>
                 </div>
                 <div className="w-full h-2 bg-slate-800 rounded-full mb-2 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-blue-700 via-blue-500 to-cyan-400 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.5)]" style={{ width: '70%' }} />
+                  <div className="h-full bg-gradient-to-r from-blue-800 via-blue-600 to-blue-400 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.3)]" style={{ width: '70%' }} />
                 </div>
                 <p className="text-slate-200 text-xs leading-relaxed">
                   {profile.scenarios.base.desc}
                 </p>
               </div>
 
-              {/* Bull Case (Sunset Orange) */}
-              <div className="p-3 rounded-xl bg-orange-950/25 border border-orange-800/40">
+              {/* Bull Case (Deep Indigo/Blue) */}
+              <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-700/50">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-orange-300 text-sm font-bold">🥇 Bull Case (เร่งตัวสุดขีด)</span>
-                  <span className="text-orange-300 font-mono font-bold text-sm">
+                  <span className="text-indigo-200 text-sm font-bold">🥇 Bull Case (เร่งตัวสุดขีด)</span>
+                  <span className="text-indigo-200 font-mono font-bold text-sm">
                     {profile.scenarios.bull.multiple} ({profile.scenarios.bull.cagr})
                   </span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-800 rounded-full mb-1.5 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-orange-600 via-amber-500 to-amber-300 rounded-full" style={{ width: '100%' }} />
+                  <div className="h-full bg-gradient-to-r from-indigo-700 via-blue-600 to-blue-400 rounded-full" style={{ width: '100%' }} />
                 </div>
                 <p className="text-slate-300 text-xs leading-relaxed">
                   {profile.scenarios.bull.desc}
@@ -442,7 +441,7 @@ export const DossierThesisTab: React.FC = () => {
           {/* Milestones Roadmap (Spin fix -> Pulse) */}
           <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <Flag className="w-5 h-5 text-cyan-400" />
+              <Flag className="w-5 h-5 text-blue-400" />
               <span className="text-slate-100 text-base font-bold">Milestone Roadmap</span>
             </div>
 
@@ -451,9 +450,9 @@ export const DossierThesisTab: React.FC = () => {
                 <div key={idx} className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2.5">
                     {m.status === 'DONE' ? (
-                      <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
                     ) : m.status === 'PROGRESS' ? (
-                      <Clock className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+                      <Clock className="w-4 h-4 text-blue-300 shrink-0 animate-pulse" />
                     ) : (
                       <div className="w-4 h-4 rounded-full border border-slate-600 shrink-0" />
                     )}
@@ -462,9 +461,9 @@ export const DossierThesisTab: React.FC = () => {
                   </div>
                   <span className={`px-2.5 py-0.5 rounded text-xs font-mono font-bold ${
                     m.status === 'DONE'
-                      ? 'bg-blue-500/20 text-cyan-300 border border-blue-500/30'
+                      ? 'bg-blue-950 text-blue-300 border border-blue-800'
                       : m.status === 'PROGRESS'
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      ? 'bg-blue-900/40 text-blue-200 border border-blue-700'
                       : 'bg-slate-800 text-slate-400 border border-slate-700'
                   }`}>
                     {m.status}

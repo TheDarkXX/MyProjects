@@ -32,7 +32,7 @@ export const DossierTooltip: React.FC<DossierTooltipProps> = ({
   const headerTitle = title || label;
 
   return (
-    <div className="bg-[#141E38]/95 backdrop-blur-md border border-cyan-500/40 rounded-xl px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.85)] min-w-[180px] z-50 pointer-events-none transition-all duration-150 animate-in fade-in-50 zoom-in-95">
+    <div className="bg-[#141E38]/95 backdrop-blur-md border border-blue-500/40 rounded-xl px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.85)] min-w-[180px] z-50 pointer-events-none transition-all duration-150 animate-in fade-in-50 zoom-in-95">
       {headerTitle && (
         <div className="text-slate-200 text-sm font-semibold tracking-wider pb-1.5 mb-2 border-b border-slate-700/60 flex items-center justify-between">
           <span>{headerTitle}</span>
@@ -62,7 +62,7 @@ export const DossierTooltip: React.FC<DossierTooltipProps> = ({
                 <span className="text-slate-300 font-medium flex items-center gap-1.5">
                   <span
                     className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-sm"
-                    style={{ backgroundColor: entry.color || '#38BDF8' }}
+                    style={{ backgroundColor: entry.color || '#60A5FA' }}
                   />
                   {entry.name || 'Value'}:
                 </span>

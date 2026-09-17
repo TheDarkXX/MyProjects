@@ -65,19 +65,19 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
       <div className="bg-[#0B1226]/95 border border-blue-900/60 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md hover:border-blue-700/60 transition-all">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-sm font-bold tracking-wide uppercase flex items-center gap-1.5 text-slate-100">
-            <TrendingUp className="w-4 h-4 text-cyan-400" />
+            <TrendingUp className="w-4 h-4 text-blue-400" />
             รายได้โต YoY
           </span>
           <span
             className={`px-2.5 py-0.5 rounded-lg text-xs font-bold border ${
               isHyperGrowth
-                ? 'bg-orange-500/20 text-orange-300 border-orange-500/40'
+                ? 'bg-blue-600/25 text-blue-200 border-blue-500/40'
                 : isSteady
-                ? 'bg-blue-500/15 text-cyan-300 border-blue-500/30'
+                ? 'bg-blue-900/30 text-blue-300 border-blue-700/40'
                 : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
             }`}
           >
-            {isHyperGrowth ? '🔥 Hyper' : isSteady ? '⚡ Steady' : '⚠️ Slow'}
+            {isHyperGrowth ? '🚀 Hyper' : isSteady ? '⚡ Steady' : '⚠️ Slow'}
           </span>
         </div>
 
@@ -90,12 +90,12 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
               YoY Revenue Acceleration
             </p>
           </div>
-          {renderMiniSparkline(rev4Q, '#38BDF8', '#1D4ED8')}
+          {renderMiniSparkline(rev4Q, '#60A5FA', '#1D4ED8')}
         </div>
 
         <div className="pt-2 border-t border-blue-900/40 text-xs text-slate-300 flex items-center justify-between">
           <span className="text-slate-400">เกณฑ์:</span>
-          <span className="font-bold text-orange-400">&gt; 30% ถือยาว</span>
+          <span className="font-bold text-slate-200">&gt; 30% ถือยาว</span>
         </div>
       </div>
 
@@ -103,16 +103,16 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
       <div className="bg-[#0B1226]/95 border border-blue-900/60 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md hover:border-blue-700/60 transition-all">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-sm font-bold tracking-wide uppercase flex items-center gap-1.5 text-slate-100">
-            <Target className="w-4 h-4 text-cyan-400" />
+            <Target className="w-4 h-4 text-blue-400" />
             ชนะเป้า EPS
           </span>
-          <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-600/20 text-cyan-300 border border-blue-500/40">
+          <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-600/20 text-blue-300 border border-blue-500/40">
             Beat {streak}Q
           </span>
         </div>
 
         <div className="my-2">
-          <div className="text-3xl font-black font-mono text-cyan-300 tracking-tight">
+          <div className="text-3xl font-black font-mono text-blue-300 tracking-tight">
             {streak} ไตรมาส
           </div>
           {/* Dot Trail Visual */}
@@ -121,7 +121,7 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
               <span
                 key={idx}
                 className={`w-2.5 h-2.5 rounded-full flex items-center justify-center ${
-                  isBeat ? 'bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]' : 'bg-slate-700'
+                  isBeat ? 'bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]' : 'bg-slate-700'
                 }`}
                 title={`ไตรมาสที่ -${idx + 1}`}
               />
@@ -132,7 +132,7 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
 
         <div className="pt-2 border-t border-blue-900/40 text-xs text-slate-300 flex items-center justify-between">
           <span className="text-slate-400">สถิติ:</span>
-          <span className="font-bold text-cyan-300">ชนะเป้าต่อเนื่อง</span>
+          <span className="font-bold text-blue-300">ชนะเป้าต่อเนื่อง</span>
         </div>
       </div>
 
@@ -146,14 +146,14 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
       >
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-sm font-bold tracking-wide uppercase flex items-center gap-1.5 text-slate-100">
-            <Shield className={`w-4 h-4 ${isMoatBreaker ? 'text-rose-400' : 'text-orange-400'}`} />
+            <Shield className={`w-4 h-4 ${isMoatBreaker ? 'text-rose-400' : 'text-blue-400'}`} />
             คูเมือง (Margin)
           </span>
           <span
             className={`px-2.5 py-0.5 rounded-lg text-xs font-bold border ${
               isMoatBreaker
                 ? 'bg-rose-500/25 text-rose-200 border-rose-500/50 animate-pulse'
-                : 'bg-orange-500/15 text-orange-300 border-orange-500/30'
+                : 'bg-blue-600/20 text-blue-300 border-blue-500/30'
             }`}
           >
             {isMoatBreaker ? '🚨 Breached' : '🛡️ แข็งแกร่ง'}
@@ -169,7 +169,7 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
               Pricing Power Moat
             </p>
           </div>
-          {renderMiniSparkline(gm4Q, '#F97316', '#C2410C')}
+          {renderMiniSparkline(gm4Q, '#60A5FA', '#1D4ED8')}
         </div>
 
         <div className="pt-2 border-t border-blue-900/40 text-xs text-slate-300 flex items-center justify-between">
@@ -182,19 +182,19 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
       <div className="bg-[#0B1226]/95 border border-blue-900/60 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md hover:border-blue-700/60 transition-all">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-sm font-bold tracking-wide uppercase flex items-center gap-1.5 text-slate-100">
-            <Tag className="w-4 h-4 text-cyan-400" />
+            <Tag className="w-4 h-4 text-blue-400" />
             ความคุ้มค่า (PEG)
           </span>
           <span
             className={`px-2.5 py-0.5 rounded-lg text-xs font-bold border ${
               isUndervalued
-                ? 'bg-blue-600/25 text-cyan-300 border-blue-500/40'
+                ? 'bg-blue-600/25 text-blue-200 border-blue-500/40'
                 : isStretched
                 ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                : 'bg-slate-800/60 text-slate-200 border-slate-600/50'
             }`}
           >
-            {isUndervalued ? '💎 คุ้มค่า' : isStretched ? '🔴 ตึงตัว' : '🟡 เหมาะสม'}
+            {isUndervalued ? '💎 คุ้มค่า' : isStretched ? '🔴 ตึงตัว' : '⚪ เหมาะสม'}
           </span>
         </div>
 
@@ -203,7 +203,7 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
             <span className="text-3xl font-black font-mono text-white tracking-tight">
               {peg > 0 ? peg.toFixed(2) : '-'}
             </span>
-            <span className="text-sm font-bold text-cyan-300 font-mono">
+            <span className="text-sm font-bold text-blue-300 font-mono">
               PEG
             </span>
           </div>
@@ -214,7 +214,7 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
 
         <div className="pt-2 border-t border-blue-900/40 text-xs text-slate-300 flex items-center justify-between">
           <span className="text-slate-400">เกณฑ์เก็บ:</span>
-          <span className="font-bold text-cyan-400">PEG &lt; 1.5</span>
+          <span className="font-bold text-blue-300">PEG &lt; 1.5</span>
         </div>
       </div>
     </div>

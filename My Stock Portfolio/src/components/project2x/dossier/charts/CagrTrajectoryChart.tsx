@@ -59,7 +59,7 @@ export const CagrTrajectoryChart: React.FC<CagrTrajectoryChartProps> = ({
     return (
       <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl">
         <div className="flex items-center gap-2 mb-2">
-          <TrendingUp className="w-4 h-4 text-cyan-400" />
+          <TrendingUp className="w-4 h-4 text-blue-400" />
           <span className="text-slate-100 text-[16px] font-semibold">CAGR Trajectory</span>
         </div>
         <div className="h-16 flex items-center justify-center text-slate-400 text-[14px]">
@@ -82,20 +82,20 @@ export const CagrTrajectoryChart: React.FC<CagrTrajectoryChartProps> = ({
     {
       label: 'Revenue CAGR',
       value: metrics.revenueCagr,
-      color: metrics.revenueCagr >= targetCagr ? 'from-blue-700 via-blue-600 to-cyan-400' : 'from-blue-900 to-blue-700',
-      textColor: metrics.revenueCagr >= targetCagr ? 'text-cyan-300' : 'text-blue-300',
+      color: metrics.revenueCagr >= targetCagr ? 'from-blue-700 via-blue-600 to-blue-400' : 'from-blue-900 to-blue-700',
+      textColor: metrics.revenueCagr >= targetCagr ? 'text-blue-300' : 'text-slate-300',
     },
     {
       label: 'EPS Growth YoY',
       value: metrics.epsCagr,
-      color: metrics.epsCagr >= targetCagr ? 'from-orange-700 via-orange-500 to-amber-400' : 'from-rose-800 to-rose-600',
-      textColor: metrics.epsCagr >= targetCagr ? 'text-orange-300' : 'text-rose-400',
+      color: metrics.epsCagr >= targetCagr ? 'from-blue-800 via-blue-600 to-blue-400' : 'from-rose-900 to-rose-700',
+      textColor: metrics.epsCagr >= targetCagr ? 'text-blue-300' : 'text-rose-400',
     },
     {
       label: `2X Threshold Benchmark`,
       value: targetCagr,
-      color: 'from-amber-600 to-yellow-400',
-      textColor: 'text-amber-300',
+      color: 'from-slate-700 to-slate-400',
+      textColor: 'text-slate-200',
       isTarget: true,
     },
   ];
@@ -105,20 +105,20 @@ export const CagrTrajectoryChart: React.FC<CagrTrajectoryChartProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
           <span className="text-slate-100 text-[16px] font-semibold">CAGR Trajectory vs 2X Target</span>
         </div>
         <div className="flex items-center gap-2">
           <span
             className={`px-2.5 py-0.5 rounded-lg text-[12px] font-semibold border ${
               isDoublerPaced
-                ? 'bg-orange-500/15 text-orange-300 border-orange-500/30'
+                ? 'bg-blue-600/20 text-blue-300 border-blue-500/40'
                 : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
             }`}
           >
-            {isDoublerPaced ? '🔥 On Track 2X' : '⚠️ Slower Pace'}
+            {isDoublerPaced ? '🚀 On Track 2X' : '⚠️ Slower Pace'}
           </span>
-          <span className="px-2 py-0.5 rounded-full bg-blue-950/60 text-cyan-300 border border-blue-800/60 text-[12px] font-medium font-mono">
+          <span className="px-2 py-0.5 rounded-full bg-blue-950/60 text-blue-300 border border-blue-800/60 text-[12px] font-medium font-mono">
             {metrics.quartersUsed}Q
           </span>
         </div>
@@ -131,7 +131,7 @@ export const CagrTrajectoryChart: React.FC<CagrTrajectoryChartProps> = ({
           return (
             <div key={idx}>
               <div className="flex items-center justify-between mb-1">
-                <span className={`text-[14px] font-medium ${bar.isTarget ? 'text-amber-300' : 'text-slate-300'}`}>
+                <span className={`text-[14px] font-medium ${bar.isTarget ? 'text-slate-200' : 'text-slate-300'}`}>
                   {bar.label}
                 </span>
                 <span className={`text-[15px] font-semibold font-mono ${bar.textColor}`}>
@@ -140,16 +140,16 @@ export const CagrTrajectoryChart: React.FC<CagrTrajectoryChartProps> = ({
               </div>
               <div className="relative w-full h-5 bg-[#070D1F] rounded-lg overflow-hidden border border-blue-900/40">
                 <div
-                  className={`h-full bg-gradient-to-r ${bar.color} rounded-lg transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(56,189,248,0.2)]`}
+                  className={`h-full bg-gradient-to-r ${bar.color} rounded-lg transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(59,130,246,0.2)]`}
                   style={{
                     width: `${widthPct}%`,
-                    ...(bar.isTarget ? { opacity: 0.85, borderRight: '2px dashed rgba(250,204,21,0.9)' } : {}),
+                    ...(bar.isTarget ? { opacity: 0.85, borderRight: '2px dashed rgba(255,255,255,0.7)' } : {}),
                   }}
                 />
                 {/* 2X threshold marker line */}
                 {!bar.isTarget && (
                   <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-amber-400/90 shadow-[0_0_6px_rgba(250,204,21,0.8)]"
+                    className="absolute top-0 bottom-0 w-0.5 bg-slate-300/90 shadow-[0_0_6px_rgba(255,255,255,0.8)]"
                     style={{ left: `${Math.min(98, (targetCagr / maxValue) * 100)}%` }}
                     title={`2X Target Threshold: ${targetCagr}%`}
                   />
@@ -163,7 +163,7 @@ export const CagrTrajectoryChart: React.FC<CagrTrajectoryChartProps> = ({
       {/* Footer Info */}
       <div className="mt-3 pt-2 border-t border-blue-900/40 flex items-center justify-between text-xs text-slate-400">
         <span>เป้าหมาย 2X ต้องการ CAGR $\ge$ 26% ต่อปี ต่อเนื่อง 3 ปี</span>
-        <span className="font-mono text-orange-400 font-semibold">Avg GM: {metrics.grossMargin.toFixed(1)}%</span>
+        <span className="font-mono text-slate-200 font-semibold">Avg GM: {metrics.grossMargin.toFixed(1)}%</span>
       </div>
     </div>
   );

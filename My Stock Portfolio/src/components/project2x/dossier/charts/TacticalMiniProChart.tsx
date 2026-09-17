@@ -96,8 +96,8 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
           },
           crosshair: {
             mode: CrosshairMode.Normal,
-            vertLine: { color: '#38BDF8', width: 1, style: LineStyle.Dashed },
-            horzLine: { color: '#38BDF8', width: 1, style: LineStyle.Dashed }
+            vertLine: { color: '#60A5FA', width: 1, style: LineStyle.Dashed },
+            horzLine: { color: '#60A5FA', width: 1, style: LineStyle.Dashed }
           },
           timeScale: {
             borderColor: '#1E293B',
@@ -108,15 +108,15 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         chartRef.current = chart;
 
-        // 1. Candlestick Series (Neon Green & Deep Crimson Red)
+        // 1. Candlestick Series (Institutional Blue & Deep Red)
         const candleSeries = chart.addSeries(CandlestickSeries, {
-          upColor: '#10B981',
-          downColor: '#F43F5E',
+          upColor: '#3B82F6',
+          downColor: '#DC2626',
           borderVisible: true,
-          borderUpColor: '#10B981',
-          borderDownColor: '#F43F5E',
-          wickUpColor: '#10B981',
-          wickDownColor: '#F43F5E'
+          borderUpColor: '#3B82F6',
+          borderDownColor: '#DC2626',
+          wickUpColor: '#3B82F6',
+          wickDownColor: '#DC2626'
         });
         candleSeries.setData(formattedCandles);
 
@@ -124,7 +124,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
         if (avgCost > 0) {
           candleSeries.createPriceLine({
             price: avgCost,
-            color: '#F59E0B',
+            color: '#94A3B8',
             lineWidth: 2,
             lineStyle: LineStyle.Dashed,
             axisLabelVisible: true,
@@ -151,7 +151,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         if (ema50Data.length > 0) {
           const s50 = chart.addSeries(LineSeries, {
-            color: '#38BDF8',
+            color: '#60A5FA',
             lineWidth: 2,
             title: 'EMA 50'
           });
@@ -160,7 +160,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         if (ema150Data.length > 0) {
           const s150 = chart.addSeries(LineSeries, {
-            color: '#F59E0B',
+            color: '#818CF8',
             lineWidth: 2,
             title: 'EMA 150'
           });
@@ -169,7 +169,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         if (ema200Data.length > 0) {
           const s200 = chart.addSeries(LineSeries, {
-            color: '#A855F7',
+            color: '#C084FC',
             lineWidth: 2,
             title: 'EMA 200'
           });
@@ -178,7 +178,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         // 4. Volume Histogram Series at bottom
         const volumeSeries = chart.addSeries(HistogramSeries, {
-          color: '#26a69a',
+          color: '#3B82F6',
           priceFormat: { type: 'volume' },
           priceScaleId: 'volume',
         });
@@ -188,7 +188,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
         volumeSeries.setData(formattedCandles.map(c => ({
           time: c.time,
           value: c.volume,
-          color: c.close >= c.open ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'
+          color: c.close >= c.open ? 'rgba(59, 130, 246, 0.45)' : 'rgba(220, 38, 38, 0.45)'
         })));
 
         chart.timeScale().fitContent();
@@ -227,29 +227,29 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
       {/* Top Header & Legend Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
           <h4 className="text-sm font-black text-white uppercase tracking-wider">
             Tactical Pro Chart ({symbol})
           </h4>
-          <span className="px-2 py-0.5 rounded text-[13px] font-mono font-bold bg-[#060A16] border border-blue-900/60 text-cyan-200">
+          <span className="px-2 py-0.5 rounded text-[13px] font-mono font-bold bg-[#060A16] border border-blue-900/60 text-blue-300">
             1D Candle
           </span>
         </div>
 
         {/* Legend Pills */}
         <div className="flex flex-wrap items-center gap-2 text-[13px]">
-          <span className="flex items-center gap-1.5 text-sky-300 font-bold bg-sky-500/15 px-2 py-0.5 rounded border border-sky-500/30">
-            <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" /> EMA 50
+          <span className="flex items-center gap-1.5 text-blue-300 font-bold bg-blue-500/15 px-2 py-0.5 rounded border border-blue-500/30">
+            <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> EMA 50
           </span>
-          <span className="flex items-center gap-1.5 text-amber-300 font-bold bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
-            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> EMA 150
+          <span className="flex items-center gap-1.5 text-indigo-300 font-bold bg-indigo-500/15 px-2 py-0.5 rounded border border-indigo-500/30">
+            <span className="w-2 h-2 rounded-full bg-indigo-400 inline-block" /> EMA 150
           </span>
           <span className="flex items-center gap-1.5 text-purple-300 font-bold bg-purple-500/15 px-2 py-0.5 rounded border border-purple-500/30">
             <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" /> EMA 200
           </span>
           {avgCost > 0 && (
-            <span className="flex items-center gap-1.5 text-yellow-200 font-black bg-yellow-500/20 px-2 py-0.5 rounded border border-yellow-500/40">
-              <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> ทุน: ${avgCost.toFixed(2)}
+            <span className="flex items-center gap-1.5 text-slate-200 font-black bg-slate-800/80 px-2 py-0.5 rounded border border-slate-600/50">
+              <span className="w-2 h-2 rounded-full bg-slate-300 inline-block" /> ทุน: ${avgCost.toFixed(2)}
             </span>
           )}
           {bankerFlow > 0 && (
@@ -264,8 +264,8 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
       <div className="relative w-full h-[400px]">
         {isLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#060A16]/80 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-cyan-300 text-sm font-bold">
-              <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center gap-2 text-blue-300 text-sm font-bold">
+              <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
               กำลังโหลดกราฟเทคนิค {symbol}...
             </div>
           </div>
@@ -281,12 +281,12 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
         </div>
         <div className="flex items-center gap-2">
           {ema50 && (
-            <span className={`px-2.5 py-0.5 rounded-md font-black text-[13px] ${currentPrice >= ema50 ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}`}>
-              {currentPrice >= ema50 ? '⚡ เหนือ EMA 50' : '🟡 ใต้ EMA 50'}
+            <span className={`px-2.5 py-0.5 rounded-md font-black text-[13px] ${currentPrice >= ema50 ? 'bg-blue-600/20 text-blue-200 border border-blue-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}`}>
+              {currentPrice >= ema50 ? '⚡ เหนือ EMA 50' : '🔴 ใต้ EMA 50'}
             </span>
           )}
           {ema200 && (
-            <span className={`px-2.5 py-0.5 rounded-md font-black text-[13px] ${currentPrice >= ema200 ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40' : 'bg-rose-500/30 text-rose-200 border border-rose-500/60 animate-pulse'}`}>
+            <span className={`px-2.5 py-0.5 rounded-md font-black text-[13px] ${currentPrice >= ema200 ? 'bg-blue-600/20 text-blue-200 border border-blue-500/40' : 'bg-rose-500/30 text-rose-200 border border-rose-500/60 animate-pulse'}`}>
               {currentPrice >= ema200 ? '🛡️ เหนือ EMA 200' : '🚨 หลุด EMA 200'}
             </span>
           )}

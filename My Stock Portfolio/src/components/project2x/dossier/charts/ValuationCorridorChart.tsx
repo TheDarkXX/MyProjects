@@ -99,7 +99,7 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
     return (
       <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl">
         <div className="flex items-center gap-2 mb-2">
-          <BarChart3 className="w-4 h-4 text-cyan-400" />
+          <BarChart3 className="w-4 h-4 text-blue-400" />
           <span className="text-slate-100 text-[16px] font-semibold">PE Valuation Corridor (3Y)</span>
         </div>
         <div className="h-20 flex items-center justify-center text-slate-400 text-[14px]">
@@ -114,11 +114,11 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
           <span className="text-slate-100 text-[16px] font-semibold">PE Valuation Corridor (3Y)</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-0.5 rounded-full bg-blue-950/70 text-cyan-300 border border-blue-800/60 text-[12px] font-mono font-medium">
+          <span className="px-2.5 py-0.5 rounded-full bg-blue-950/70 text-blue-300 border border-blue-800/60 text-[12px] font-mono font-medium">
             {chartData.totalPoints} snapshots
           </span>
         </div>
@@ -149,33 +149,33 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
             {/* Mean Band Shading (Deep Blue) */}
             <path d={chartData.bandArea} fill={`url(#corridorBand_${symbol})`} />
 
-            {/* Mean Line (Yellow Gold) */}
+            {/* Mean Line (Slate 400 Dashed) */}
             <line
               x1={0}
               x2={innerW}
               y1={chartData.meanLineY}
               y2={chartData.meanLineY}
-              stroke="#FACC15"
+              stroke="#94A3B8"
               strokeDasharray="4,4"
               strokeWidth={1.4}
               opacity={0.85}
             />
-            <text x={innerW + 6} y={chartData.meanLineY} dy="0.35em" className="fill-amber-300 text-xs font-mono font-semibold">
+            <text x={innerW + 6} y={chartData.meanLineY} dy="0.35em" className="fill-slate-300 text-xs font-mono font-semibold">
               Mean {chartData.meanPE}x
             </text>
 
-            {/* Forward PE Line (Cyan Dashed) */}
+            {/* Forward PE Line (Indigo Dashed) */}
             {chartData.fwdLine && (
-              <path d={chartData.fwdLine} fill="none" stroke="#38BDF8" strokeWidth={1.8} strokeDasharray="3,3" opacity={0.85} />
+              <path d={chartData.fwdLine} fill="none" stroke="#818CF8" strokeWidth={1.8} strokeDasharray="3,3" opacity={0.85} />
             )}
 
-            {/* Trailing PE Line (Orange Vibrant) */}
-            <path d={chartData.peLine} fill="none" stroke="#F97316" strokeWidth={2.4} />
+            {/* Trailing PE Line (Primary Institutional Blue) */}
+            <path d={chartData.peLine} fill="none" stroke="#3B82F6" strokeWidth={2.4} />
 
             {/* Latest PE Dot */}
             {hoverIdx === null && (
               <>
-                <circle cx={chartData.lastX} cy={chartData.lastY} r={4.5} fill="#FFFFFF" stroke="#F97316" strokeWidth={2.5} />
+                <circle cx={chartData.lastX} cy={chartData.lastY} r={4.5} fill="#FFFFFF" stroke="#3B82F6" strokeWidth={2.5} />
                 <text x={innerW + 6} y={chartData.lastY} dy="0.35em" className="fill-white text-sm font-mono font-bold">
                   {chartData.lastPE}x
                 </text>
@@ -190,8 +190,8 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
                   const hX = (hoverIdx / (peHistory.length - 1)) * innerW;
                   return (
                     <>
-                      <line x1={hX} x2={hX} y1={0} y2={innerH} stroke="#F97316" strokeDasharray="2,2" strokeWidth={1} />
-                      <circle cx={hX} cy={chartData.lastY} r={5} fill="#F97316" stroke="#FFFFFF" strokeWidth={2} />
+                      <line x1={hX} x2={hX} y1={0} y2={innerH} stroke="#3B82F6" strokeDasharray="2,2" strokeWidth={1} />
+                      <circle cx={hX} cy={chartData.lastY} r={5} fill="#3B82F6" stroke="#FFFFFF" strokeWidth={2} />
                       <rect
                         x={Math.min(innerW - 80, Math.max(0, hX - 40))}
                         y={Math.max(0, chartData.lastY - 26)}
@@ -199,14 +199,14 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
                         height={20}
                         rx={4}
                         fill="#141E38"
-                        stroke="#F97316"
+                        stroke="#3B82F6"
                         strokeWidth={1}
                       />
                       <text
                         x={Math.min(innerW - 80, Math.max(0, hX - 40)) + 40}
                         y={Math.max(0, chartData.lastY - 26) + 14}
                         textAnchor="middle"
-                        className="fill-slate-100 font-mono text-[11px] font-bold"
+                        className="fill-slate-100 font-mono text-[12px] font-bold"
                       >
                         PE {item.pe.toFixed(1)}x
                       </text>
@@ -223,17 +223,17 @@ export const ValuationCorridorChart: React.FC<ValuationCorridorChartProps> = ({
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-900/40 text-sm">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5 font-medium">
-            <span className="w-3 h-1 rounded bg-orange-500 inline-block shadow-sm" />
+            <span className="w-3 h-1 rounded bg-blue-500 inline-block shadow-sm" />
             <span className="text-slate-300">Trailing PE</span>
           </span>
           <span className="flex items-center gap-1.5 font-medium">
-            <span className="w-3 h-1 rounded bg-cyan-400 inline-block" style={{ borderTop: '1px dashed' }} />
+            <span className="w-3 h-1 rounded bg-indigo-400 inline-block" style={{ borderTop: '1px dashed' }} />
             <span className="text-slate-300">Forward PE</span>
           </span>
         </div>
         <div className="flex items-center gap-2 font-mono text-sm font-semibold">
           <span className="text-slate-400">Band:</span>
-          <span className="text-cyan-400">{chartData.lowerBand}x</span>
+          <span className="text-blue-300">{chartData.lowerBand}x</span>
           <span className="text-slate-500">–</span>
           <span className="text-rose-400">{chartData.upperBand}x</span>
         </div>

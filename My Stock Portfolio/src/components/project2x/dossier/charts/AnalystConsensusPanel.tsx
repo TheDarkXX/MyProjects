@@ -30,21 +30,21 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
 
   // Determine Recommendation Badge
   let recLabel = 'HOLD (ถือรอจังหวะ)';
-  let recBadgeBg = 'bg-amber-500/15 border-amber-500/40 text-amber-300';
-  let recDotColor = '#FACC15';
+  let recBadgeBg = 'bg-slate-800/60 border-slate-600/50 text-slate-200';
+  let recDotColor = '#94A3B8';
 
   if (recKey.includes('strong_buy') || recMean <= 1.5) {
     recLabel = 'STRONG BUY (ซื้อเชิงรุก)';
-    recBadgeBg = 'bg-blue-600/25 border-cyan-400/50 text-cyan-200 shadow-[0_0_15px_rgba(56,189,248,0.3)]';
-    recDotColor = '#38BDF8';
+    recBadgeBg = 'bg-blue-600/30 border-blue-400/50 text-blue-200 shadow-[0_0_15px_rgba(59,130,246,0.3)]';
+    recDotColor = '#60A5FA';
   } else if (recKey.includes('buy') || recMean <= 2.5) {
     recLabel = 'BUY (ซื้อสะสม)';
-    recBadgeBg = 'bg-blue-900/30 border-blue-500/50 text-cyan-300';
-    recDotColor = '#0284C7';
+    recBadgeBg = 'bg-blue-900/40 border-blue-600/50 text-blue-300';
+    recDotColor = '#3B82F6';
   } else if (recKey.includes('sell') || recMean >= 3.5) {
     recLabel = 'UNDERPERFORM / SELL (ลดน้ำหนัก)';
     recBadgeBg = 'bg-rose-500/20 border-rose-400/50 text-rose-300 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
-    recDotColor = '#EF4444';
+    recDotColor = '#DC2626';
   }
 
   // Position of current price on Low -> High scale
@@ -62,13 +62,13 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
       <div>
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-cyan-400 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0">
               <Target className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
                 Analyst Consensus
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-950 text-cyan-300 border border-cyan-500/30">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-750/40">
                   Wall Street
                 </span>
               </h3>
@@ -87,7 +87,7 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
         <div className="grid grid-cols-2 gap-3 mb-5">
           <div className="bg-[#141E38]/80 border border-blue-900/40 rounded-xl p-3.5 flex flex-col justify-between">
             <span className="text-sm font-medium text-slate-300 flex items-center gap-1.5">
-              <Award className="w-4 h-4 text-cyan-400" />
+              <Award className="w-4 h-4 text-blue-400" />
               เป้าหมายเฉลี่ย (Mean Target)
             </span>
             <div className="flex items-baseline gap-2 mt-1">
@@ -98,7 +98,7 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
                 <span
                   className={`text-sm font-bold font-mono px-2 py-0.5 rounded-md ${
                     upsidePct >= 0
-                      ? 'text-cyan-300 bg-blue-500/15 border border-blue-500/30'
+                      ? 'text-blue-300 bg-blue-600/20 border border-blue-500/40'
                       : 'text-rose-300 bg-rose-500/15 border border-rose-500/30'
                   }`}
                 >
@@ -110,7 +110,7 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
 
           <div className="bg-[#141E38]/80 border border-blue-900/40 rounded-xl p-3.5 flex flex-col justify-between">
             <span className="text-sm font-medium text-slate-300 flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-cyan-400" />
+              <Users className="w-4 h-4 text-blue-400" />
               สถาบันวิเคราะห์ (Coverage)
             </span>
             <div className="flex items-baseline gap-2 mt-1">
@@ -122,50 +122,49 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
           </div>
         </div>
 
-        {/* Visual Target Range Bar (Deep Red -> Orange -> Amber Gold) */}
+        {/* Visual Target Range Bar (Deep Red -> Deep Blue) */}
         {targetHigh > targetLow && (
           <div className="mb-5 bg-[#141E38]/50 border border-blue-900/50 rounded-xl p-4">
             <div className="flex items-center justify-between text-sm text-slate-300 mb-2 font-medium">
               <span className="text-rose-300">
                 Low: <strong className="font-mono text-slate-100">${targetLow.toFixed(2)}</strong>
               </span>
-              <span className="text-amber-300 font-semibold">
+              <span className="text-slate-200 font-semibold">
                 Mean: <strong className="font-mono text-white">${targetMean.toFixed(2)}</strong>
               </span>
-              <span className="text-orange-300">
+              <span className="text-blue-300">
                 High: <strong className="font-mono text-slate-100">${targetHigh.toFixed(2)}</strong>
               </span>
             </div>
 
-            {/* Range Track */}
+            {/* Range Track: Deep Red -> Deep Blue */}
             <div className="relative h-3 w-full bg-slate-900 rounded-full overflow-hidden my-2 shadow-inner">
-              {/* Gradient Track: Deep Red -> Orange -> Amber Gold */}
               <div
                 className="absolute top-0 bottom-0 left-0 right-0 rounded-full opacity-90"
                 style={{
-                  background: 'linear-gradient(90deg, #DC2626 0%, #EA580C 50%, #FBBF24 100%)'
+                  background: 'linear-gradient(90deg, #991B1B 0%, #1E3A8A 50%, #2563EB 100%)'
                 }}
               />
             </div>
 
             {/* Range Markers */}
             <div className="relative w-full h-6">
-              {/* Mean Marker (Yellow) */}
+              {/* Mean Marker (White/Slate) */}
               <div
                 className="absolute -top-3 transform -translate-x-1/2 flex flex-col items-center"
                 style={{ left: `${meanPosPct}%` }}
               >
-                <div className="w-0.5 h-3 bg-amber-400 shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
-                <span className="text-[11px] font-mono text-amber-300 font-bold">Mean</span>
+                <div className="w-0.5 h-3 bg-slate-300 shadow-[0_0_4px_rgba(255,255,255,0.8)]" />
+                <span className="text-xs font-mono text-slate-300 font-bold">Mean</span>
               </div>
 
-              {/* Current Price Marker */}
+              {/* Current Price Marker (Blue) */}
               <div
                 className="absolute -top-3 transform -translate-x-1/2 flex flex-col items-center z-10"
                 style={{ left: `${currentPosPct}%` }}
               >
-                <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 border-2 border-slate-950 shadow-[0_0_8px_rgba(56,189,248,0.9)]" />
-                <span className="text-xs font-mono font-black text-cyan-200 mt-0.5 whitespace-nowrap">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-400 border-2 border-slate-950 shadow-[0_0_8px_rgba(96,165,250,0.9)]" />
+                <span className="text-xs font-mono font-black text-white mt-0.5 whitespace-nowrap">
                   Current ${currentPrice.toFixed(2)}
                 </span>
               </div>
@@ -177,7 +176,7 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#141E38]/70 border border-blue-900/40 rounded-xl p-3">
             <span className="text-sm text-slate-400 block mb-1">EPS Est. Growth (Next FY)</span>
-            <span className="text-base font-bold font-mono text-orange-400 flex items-center gap-1">
+            <span className="text-base font-bold font-mono text-blue-400 flex items-center gap-1">
               <TrendingUp className="w-4 h-4" />
               {epsGrowth !== 0 ? `+${epsGrowth.toFixed(1)}%` : 'N/A'}
             </span>
@@ -185,7 +184,7 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
 
           <div className="bg-[#141E38]/70 border border-blue-900/40 rounded-xl p-3">
             <span className="text-sm text-slate-400 block mb-1">Rev Est. Growth (Next FY)</span>
-            <span className="text-base font-bold font-mono text-cyan-400 flex items-center gap-1">
+            <span className="text-base font-bold font-mono text-slate-200 flex items-center gap-1">
               <TrendingUp className="w-4 h-4" />
               {revGrowth !== 0 ? `+${revGrowth.toFixed(1)}%` : 'N/A'}
             </span>
@@ -197,7 +196,7 @@ export const AnalystConsensusPanel: React.FC<AnalystConsensusPanelProps> = ({
       {earningsDate && (
         <div className="mt-4 pt-3 border-t border-blue-900/40 flex items-center justify-between text-sm">
           <span className="text-slate-400 flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-cyan-400" />
+            <Calendar className="w-4 h-4 text-blue-400" />
             วันประกาศงบไตรมาสถัดไป:
           </span>
           <span className="font-mono font-bold text-slate-200 bg-blue-950/70 px-2.5 py-1 rounded-lg border border-blue-800/60">

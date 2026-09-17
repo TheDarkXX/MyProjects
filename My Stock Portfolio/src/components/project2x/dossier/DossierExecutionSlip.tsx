@@ -36,22 +36,22 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
           <h4 className="text-base font-bold text-slate-100 tracking-wide uppercase">
             Execution Slip & Actions
           </h4>
         </div>
         <div className="text-sm text-slate-300 font-mono flex items-center gap-2">
           <span>โควตาเป้าหมาย:</span>
-          <span className="text-cyan-300 font-bold text-base">{ownedShares}</span>
+          <span className="text-blue-300 font-bold text-base">{ownedShares}</span>
           <span>/ {targetShares} หุ้น</span>
-          <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 font-bold text-xs border border-cyan-500/30">
+          <span className="px-2 py-0.5 rounded-md bg-blue-600/20 text-blue-300 font-bold text-xs border border-blue-500/40">
             {holding.quotaProgressPct}%
           </span>
         </div>
       </div>
 
-      {/* Position Snapshot Bar (Deep Blue / Yellow / Light Green) */}
+      {/* Position Snapshot Bar (Deep Blue / White / Slate) */}
       {ownedShares === 0 ? (
         <div className="p-3.5 bg-blue-950/40 rounded-xl border border-blue-800/40 mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -61,7 +61,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
               <div className="text-xs text-slate-400">โควตาแนะนำ {targetShares} หุ้น (${buyCostNeeded.toLocaleString('en-US', { maximumFractionDigits: 0 })})</div>
             </div>
           </div>
-          <span className="px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+          <span className="px-3 py-1 rounded-lg bg-slate-800/60 border border-slate-600/50 text-slate-200 text-xs font-semibold">
             รอจังหวะสะสมโควตา
           </span>
         </div>
@@ -75,9 +75,9 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
           </div>
           <div>
             <span className="text-xs text-slate-400 font-medium">ต้นทุนเฉลี่ย:</span>
-            <div className="text-lg font-bold text-amber-300 font-mono">
+            <div className="text-lg font-bold text-slate-200 font-mono">
               {avgCost > 0 ? `$${avgCost.toFixed(2)}` : (
-                <span className="text-xs text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40">
+                <span className="text-xs text-slate-300 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
                   ไม่ได้กำหนด
                 </span>
               )}
@@ -91,7 +91,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
           </div>
           <div>
             <span className="text-xs text-slate-400 font-medium">กำไร/ขาดทุน (PnL):</span>
-            <div className={`text-lg font-bold font-mono ${isPnlPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <div className={`text-lg font-bold font-mono ${isPnlPositive ? 'text-blue-400' : 'text-rose-400'}`}>
               {isPnlPositive ? '+' : ''}${pnl.toFixed(0)} ({isPnlPositive ? '+' : ''}{pnlPct.toFixed(1)}%)
             </div>
           </div>
@@ -108,16 +108,16 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
             missingShares <= 0
               ? 'bg-[#060A16]/30 border-slate-800 opacity-40 cursor-not-allowed'
               : activeAction === 'BUY'
-                ? 'bg-orange-500/15 border-orange-500/60 shadow-md shadow-orange-500/10'
-                : 'bg-[#070D1F] hover:bg-[#0E1A38] border-blue-900/40 hover:border-orange-500/40'
+                ? 'bg-blue-600/20 border-blue-400 shadow-md shadow-blue-500/10'
+                : 'bg-[#070D1F] hover:bg-[#0E1A38] border-blue-900/40 hover:border-blue-500/40'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[14px] font-semibold text-orange-300 flex items-center gap-1">
+            <span className="text-[14px] font-semibold text-blue-200 flex items-center gap-1">
               <ShoppingCart className="w-3.5 h-3.5" />
               1. เติมโควตา
             </span>
-            <span className="text-[12px] font-mono font-medium px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/30">
+            <span className="text-[12px] font-mono font-medium px-1.5 py-0.5 rounded bg-blue-600/20 text-blue-200 border border-blue-500/30">
               {holding.quotaProgressPct}%
             </span>
           </div>
@@ -131,21 +131,21 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
           onClick={() => setActiveAction(activeAction === 'HOLD' ? null : 'HOLD')}
           className={`p-2.5 rounded-xl border transition-all text-left flex flex-col justify-between cursor-pointer ${
             activeAction === 'HOLD'
-              ? 'bg-blue-600/20 border-cyan-400 shadow-md shadow-cyan-500/10'
-              : 'bg-[#070D1F] hover:bg-[#0E1A38] border-blue-900/40 hover:border-cyan-500/40'
+              ? 'bg-blue-600/20 border-blue-400 shadow-md shadow-blue-500/10'
+              : 'bg-[#070D1F] hover:bg-[#0E1A38] border-blue-900/40 hover:border-blue-500/40'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[14px] font-semibold text-cyan-200 flex items-center gap-1">
+            <span className="text-[14px] font-semibold text-blue-200 flex items-center gap-1">
               <PauseCircle className="w-3.5 h-3.5" />
               2. ถือตามแผน
             </span>
-            <span className="text-[12px] font-mono font-medium px-1.5 py-0.5 rounded bg-blue-500/20 text-cyan-300 border border-blue-500/40">
+            <span className="text-[12px] font-mono font-medium px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
               Safe
             </span>
           </div>
           <div className="text-[13px] text-slate-300 font-mono">
-            Cushion: <span className="text-cyan-300 font-semibold">+{stopCushionPct.toFixed(1)}%</span>
+            Cushion: <span className="text-blue-300 font-semibold">+{stopCushionPct.toFixed(1)}%</span>
           </div>
         </button>
 
@@ -181,11 +181,11 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
 
       {/* Expanded Slip Panel */}
       {activeAction === 'BUY' && missingShares > 0 && (
-        <div className="p-2.5 bg-orange-950/30 border border-orange-500/35 rounded-xl mb-2 flex items-center justify-between text-[13px]">
+        <div className="p-2.5 bg-blue-950/40 border border-blue-500/40 rounded-xl mb-2 flex items-center justify-between text-[13px]">
           <div>
-            <span className="text-orange-400 font-medium">คำนวณเติมโควตา:</span>
+            <span className="text-blue-300 font-medium">คำนวณเติมโควตา:</span>
             <span className="text-slate-200 font-mono ml-1.5">
-              ซื้อ <span className="font-semibold text-white">{missingShares.toFixed(0)} หุ้น</span> @ ~${currentPrice.toFixed(1)} = <span className="text-orange-300 font-semibold">${buyCostNeeded.toFixed(0)}</span>
+              ซื้อ <span className="font-semibold text-white">{missingShares.toFixed(0)} หุ้น</span> @ ~${currentPrice.toFixed(1)} = <span className="text-blue-200 font-semibold">${buyCostNeeded.toFixed(0)}</span>
             </span>
           </div>
           <span className="text-[12px] text-slate-300 font-mono bg-slate-900 px-2.5 py-0.5 rounded border border-slate-700">
@@ -195,18 +195,18 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
       )}
 
       {activeAction === 'HOLD' && (
-        <div className="p-2.5 bg-blue-950/35 border border-cyan-500/35 rounded-xl mb-2 text-[13px] text-slate-200">
-          <span className="text-cyan-400 font-medium">จุดตัดขาดทุน Stoploss:</span>
-          <span className="font-mono text-amber-300 ml-1.5 font-semibold">${stopPrice.toFixed(2)}</span>
+        <div className="p-2.5 bg-blue-950/35 border border-blue-500/35 rounded-xl mb-2 text-[13px] text-slate-200">
+          <span className="text-blue-400 font-medium">จุดตัดขาดทุน Stoploss:</span>
+          <span className="font-mono text-slate-100 ml-1.5 font-semibold">${stopPrice.toFixed(2)}</span>
           <span className="text-slate-300 ml-2 font-normal">ตราบใดที่ไม่หลุด EMA 200 และ Gross Margin ไม่ตก 3Q ติด ให้นั่งทับมือ</span>
         </div>
       )}
 
       {activeAction === 'FREERIDE' && (
-        <div className="p-2.5 bg-amber-950/30 border border-amber-500/35 rounded-xl mb-2 text-[13px] text-slate-200">
-          <span className="text-amber-400 font-medium">ดึงเงินต้นคืน:</span>
+        <div className="p-2.5 bg-rose-950/30 border border-rose-500/35 rounded-xl mb-2 text-[13px] text-slate-200">
+          <span className="text-rose-300 font-medium">ดึงเงินต้นคืน:</span>
           <span className="text-slate-200 font-mono ml-1.5">
-            ขาย <span className="font-semibold text-white">{freeRideShares} หุ้น</span> ได้เงินสดคืน <span className="text-amber-300 font-semibold">${freeRideCashReturn.toFixed(0)}</span> เหลืออีก <span className="text-cyan-300 font-semibold">{ownedShares - freeRideShares} หุ้น</span> ต้นทุนเป็น $0.00 ตลอดไป
+            ขาย <span className="font-semibold text-white">{freeRideShares} หุ้น</span> ได้เงินสดคืน <span className="text-rose-200 font-semibold">${freeRideCashReturn.toFixed(0)}</span> เหลืออีก <span className="text-blue-300 font-semibold">{ownedShares - freeRideShares} หุ้น</span> ต้นทุนเป็น $0.00 ตลอดไป
           </span>
         </div>
       )}
@@ -214,19 +214,19 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
       {holding.lots && holding.lots.length > 0 && (
         <div className="mt-2 pt-2 border-t border-blue-900/40">
           <div className="flex items-center gap-1 text-[13px] font-medium text-slate-300 mb-1.5">
-            <History className="w-3.5 h-3.5 text-cyan-400" />
+            <History className="w-3.5 h-3.5 text-blue-400" />
             <span>ประวัติการทำรายการ ({holding.lots.length} รายการล่าสุด)</span>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {holding.lots.slice(0, 3).map((lot) => (
               <div key={lot.id} className="p-1.5 bg-[#070D1F] rounded-lg border border-blue-900/40 text-[12px] flex items-center justify-between">
                 <div>
-                  <span className={`font-semibold ${lot.type === 'BUY' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  <span className={`font-semibold ${lot.type === 'BUY' ? 'text-blue-400' : 'text-rose-400'}`}>
                     {lot.type}
                   </span>
                   <span className="text-slate-200 font-mono ml-1">{lot.shares} หุ้น</span>
                 </div>
-                <div className="text-cyan-200 font-mono">
+                <div className="text-slate-200 font-mono">
                   @${lot.price.toFixed(1)}
                 </div>
               </div>
