@@ -44,9 +44,9 @@ export const StockXRayPage: React.FC = () => {
   return (
     <div className="w-full max-w-[99vw] 2xl:max-w-[2100px] mx-auto space-y-3.5 pb-20 select-none">
       {/* Top Banner: Breadcrumb & Ergonomic Typography */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-[#060A1A] via-[#0A132E] to-[#1A0818] border border-blue-800/40 rounded-2xl p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-[#080818] via-[#0A0E1A] to-[#12162B] border border-white/10 rounded-2xl p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600/25 to-rose-600/20 border border-blue-500/30 flex items-center justify-center text-blue-300 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600/25 to-[#FC2D79]/20 border border-violet-500/30 flex items-center justify-center text-violet-300 shadow-sm">
             <ScanSearch className="w-5 h-5" />
           </div>
           <div>
@@ -54,7 +54,7 @@ export const StockXRayPage: React.FC = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight">
                 Stock X-Ray
               </h1>
-              <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-600/30 to-rose-600/30 text-slate-200 border border-blue-400/40 text-[12px] font-medium">
+              <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-600/30 to-[#FC2D79]/30 text-slate-200 border border-violet-400/40 text-[12px] font-medium">
                 Ultra-Wide Command Deck
               </span>
             </div>
@@ -65,29 +65,29 @@ export const StockXRayPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-center">
-          <div className="px-3 py-1 rounded-xl bg-[#060A16]/80 border border-blue-900/40 text-[13px] text-slate-300 flex items-center gap-2 font-normal">
-            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-            <span>ใช้ปุ่ม <kbd className="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 font-mono text-[12px] border border-blue-800">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 font-mono text-[12px] border border-blue-800">→</kbd> สลับหุ้น</span>
+          <div className="px-3 py-1 rounded-xl bg-[#0A0E1A]/80 border border-white/10 text-[13px] text-slate-300 flex items-center gap-2 font-normal">
+            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+            <span>ใช้ปุ่ม <kbd className="px-1.5 py-0.5 rounded bg-violet-950/60 text-violet-300 font-mono text-[12px] border border-violet-800/60">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-violet-950/60 text-violet-300 font-mono text-[12px] border border-violet-800/60">→</kbd> สลับหุ้น</span>
           </div>
         </div>
       </div>
 
       {/* Main Container Card */}
-      <div className="bg-gradient-to-br from-[#040714] via-[#070D22] to-[#120716] border border-blue-900/40 rounded-3xl p-3.5 sm:p-4 shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#080818] via-[#0A0E1A] to-[#12162B] border border-white/10 rounded-3xl p-3.5 sm:p-4 shadow-2xl relative overflow-hidden">
         {/* Header with 13-Stock Switcher, Power Tube & 3 Sub-tabs */}
         <DossierHeader />
 
         {/* Loading State */}
         {isLoading && !data && (
-          <div className="py-24 flex flex-col items-center justify-center gap-3 text-blue-300">
-            <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          <div className="py-24 flex flex-col items-center justify-center gap-3 text-violet-300">
+            <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
             <span className="text-[13px] font-medium tracking-wide text-slate-300">กำลังสแกนข้อมูลเอ็กซเรย์ {selectedSymbol}...</span>
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="p-3 my-3 rounded-xl bg-rose-500/15 border border-rose-500/35 text-rose-200 text-[13px] font-medium">
+          <div className="p-3 my-3 rounded-xl bg-[#FC2D79]/15 border border-[#FC2D79]/35 text-rose-200 text-[13px] font-medium">
             ⚠️ เกิดข้อผิดพลาด: {error}
           </div>
         )}

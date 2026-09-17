@@ -17,10 +17,10 @@ export const DossierCockpitTab: React.FC = () => {
   const recent4Q = (data.quarterlyFinancials || []).slice(0, 4).reverse();
 
   const renderMiniMomentumStrip = () => (
-    <div className="bg-[#0B1226]/95 p-3.5 rounded-2xl border border-blue-900/60 shadow-xl">
+    <div className="bg-[#0E1326]/95 p-3.5 rounded-2xl border border-white/10 shadow-xl">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-blue-400" />
+          <TrendingUp className="w-4 h-4 text-violet-400" />
           <span className="text-slate-100 text-[15px] font-medium">Revenue YoY Momentum (4Q ล่าสุด)</span>
         </div>
         <span className="text-[13px] text-slate-300 font-normal">ดูตัวเต็ม 8Q ได้ที่แท็บ Financial Pulse</span>
@@ -32,10 +32,10 @@ export const DossierCockpitTab: React.FC = () => {
           return (
             <div
               key={q.fiscal_quarter || idx}
-              className="p-2.5 rounded-xl bg-[#070D1F] border border-blue-900/40 text-center"
+              className="p-2.5 rounded-xl bg-[#0A0E1A] border border-white/5 text-center"
             >
               <div className="text-slate-300 text-[13px] font-mono">{q.fiscal_quarter}</div>
-              <div className={`text-[15px] font-semibold font-mono mt-0.5 flex items-center justify-center gap-0.5 ${isPos ? 'text-blue-400' : 'text-rose-400'}`}>
+              <div className={`text-[15px] font-semibold font-mono mt-0.5 flex items-center justify-center gap-0.5 ${isPos ? 'text-violet-400' : 'text-[#FC2D79]'}`}>
                 {isPos && <ArrowUpRight className="w-3.5 h-3.5" />}
                 <span>{isPos ? '+' : ''}{yoy.toFixed(0)}%</span>
               </div>

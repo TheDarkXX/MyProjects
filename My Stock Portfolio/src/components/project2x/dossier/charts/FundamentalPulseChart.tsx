@@ -53,21 +53,21 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
   const latestMargin = chartData[chartData.length - 1]?.grossMargin || 0;
 
   return (
-    <div className={`bg-[#0B1226]/95 border border-blue-900/50 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
-      {/* Header with Vital Badge */}
+    <div className={`bg-[#12162B]/95 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md flex flex-col justify-between ${className}`}>
+      {/* Header Info */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
+          <span className="w-2.5 h-2.5 rounded-full bg-violet-400 animate-pulse" />
           <h4 className="text-sm font-black text-white uppercase tracking-wider">
             Fundamental Pulse ({symbol})
           </h4>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-blue-600/20 border border-blue-500/40 text-blue-300">
+          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-violet-600/20 border border-violet-500/40 text-violet-200">
             ⚡ Beat {beatStreak}Q ซ้อน
           </span>
-          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-blue-900/40 border border-blue-700/50 text-slate-200 font-mono">
+          <span className="px-2.5 py-0.5 rounded-md text-[13px] font-black bg-orange-950/40 border border-orange-700/50 text-orange-200 font-mono">
             🛡️ Margin: {latestMargin.toFixed(1)}%
           </span>
         </div>
@@ -94,27 +94,27 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
               {/* Left Axis: EPS ($) */}
               <YAxis 
                 yAxisId="left"
-                stroke="#64748B" 
-                tick={{ fill: '#FFFFFF', fontSize: 13, fontFamily: 'monospace', fontWeight: 'bold' }}
-                axisLine={{ stroke: '#334155' }}
+                stroke="#823AFD" 
+                tick={{ fill: '#C090FF', fontSize: 13, fontFamily: 'monospace', fontWeight: 'bold' }}
+                axisLine={{ stroke: '#823AFD' }}
                 tickFormatter={(val) => `$${val.toFixed(2)}`}
               />
 
               {/* Right Axis: Gross Margin (%) */}
               <YAxis 
-                yAxisId="right"
+                yAxisId="right" 
                 orientation="right"
                 domain={[0, 100]}
-                stroke="#60A5FA" 
-                tick={{ fill: '#60A5FA', fontSize: 13, fontFamily: 'monospace', fontWeight: 'bold' }}
-                axisLine={{ stroke: '#3B82F6' }}
+                stroke="#FD5514" 
+                tick={{ fill: '#FF7844', fontSize: 13, fontFamily: 'monospace', fontWeight: 'bold' }}
+                axisLine={{ stroke: '#FD5514' }}
                 tickFormatter={(val) => `${val}%`}
               />
 
               <Tooltip 
                 contentStyle={{
-                  backgroundColor: '#0F172A',
-                  borderColor: '#334155',
+                  backgroundColor: '#141430',
+                  borderColor: 'rgba(255,255,255,0.1)',
                   borderRadius: '12px',
                   color: '#F8FAFC',
                   fontSize: '13px',
@@ -134,7 +134,7 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
                 wrapperStyle={{ fontSize: '13px', color: '#CBD5E1', paddingBottom: '4px' }}
               />
 
-              {/* EPS Actual Bar (Colored dynamically based on Beat / Miss) */}
+              {/* EPS Actual Bar (Electric Violet beat / Hot Pink miss) */}
               <Bar 
                 yAxisId="left" 
                 dataKey="epsActual" 
@@ -145,7 +145,7 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={entry.isBeat ? '#3B82F6' : '#DC2626'} 
+                    fill={entry.isBeat ? '#823AFD' : '#FC2D79'} 
                   />
                 ))}
               </Bar>
@@ -155,8 +155,9 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
                 yAxisId="left" 
                 dataKey="epsEstimate" 
                 name="EPS Estimate" 
-                fill="#334155" 
-                opacity={0.5} 
+                fill="#1A1A3C" 
+                stroke="#2D2D5E"
+                opacity={0.6} 
                 radius={[4, 4, 0, 0]}
                 barSize={18}
               />
@@ -167,10 +168,10 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
                 type="monotone" 
                 dataKey="grossMargin" 
                 name="Gross Margin %" 
-                stroke="#60A5FA" 
+                stroke="#FD5514" 
                 strokeWidth={3}
-                dot={{ fill: '#3B82F6', r: 4, stroke: '#FFFFFF', strokeWidth: 2 }}
-                activeDot={{ r: 6, fill: '#60A5FA' }}
+                dot={{ fill: '#FD5514', r: 4, stroke: '#FFFFFF', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: '#FF7844' }}
               />
             </ComposedChart>
           </ResponsiveContainer>
@@ -178,12 +179,12 @@ export const FundamentalPulseChart: React.FC<FundamentalPulseChartProps> = ({
       </div>
 
       {/* Bottom Insights Footnote */}
-      <div className="mt-2 pt-2.5 border-t border-blue-900/40 flex items-center justify-between text-[13px] text-white">
+      <div className="mt-2 pt-2.5 border-t border-white/10 flex items-center justify-between text-[13px] text-white">
         <div>
-          ความสม่ำเสมอ: <span className="text-blue-300 font-black">Beat {beatStreak}Q ซ้อน</span>
+          ความสม่ำเสมอ: <span className="text-violet-300 font-black">Beat {beatStreak}Q ซ้อน</span>
         </div>
         <div>
-          Gross Margin: <span className="text-slate-200 font-black font-mono">{latestMargin.toFixed(1)}%</span>
+          Gross Margin: <span className="text-orange-300 font-black font-mono">{latestMargin.toFixed(1)}%</span>
         </div>
         <div>
           Moat: <span className="text-white font-black">🛡️ แข็งแกร่ง</span>

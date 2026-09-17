@@ -147,24 +147,24 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
   }, [projection, historicalPrices, costBasis, finalTarget, startP, innerWidth, innerHeight]);
 
   return (
-    <div className={`relative bg-[#0B1226]/95 border border-blue-900/60 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
+    <div className={`relative bg-[#12162B]/95 border border-white/10 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
       {/* Header Info */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(130,58,253,0.8)]" />
           <h4 className="text-[15px] font-semibold text-slate-100 uppercase tracking-wide">
             3-Year Doubler Cone ({symbol})
           </h4>
         </div>
         <div className="flex items-center gap-1.5 text-[12px]">
-          <span className="flex items-center gap-1 text-blue-200 font-medium bg-blue-900/40 px-2 py-0.5 rounded border border-blue-700/50">
-            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full inline-block" /> Bull +38%
+          <span className="flex items-center gap-1 text-orange-200 font-medium bg-orange-950/40 px-2 py-0.5 rounded border border-orange-700/50">
+            <span className="w-1.5 h-1.5 bg-orange-400 rounded-full inline-block" /> Bull +38%
           </span>
-          <span className="flex items-center gap-1 text-slate-200 font-medium bg-blue-950/60 px-2 py-0.5 rounded border border-blue-800/50">
-            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full inline-block" /> Base +26% (2X)
+          <span className="flex items-center gap-1 text-violet-200 font-medium bg-violet-950/60 px-2 py-0.5 rounded border border-violet-800/50">
+            <span className="w-1.5 h-1.5 bg-[#823AFD] rounded-full inline-block" /> Base +26% (2X)
           </span>
-          <span className="flex items-center gap-1 text-rose-300 font-normal bg-rose-950/40 px-2 py-0.5 rounded border border-rose-800/40">
-            <span className="w-1.5 h-1.5 bg-rose-400 rounded-full inline-block" /> Bear +14%
+          <span className="flex items-center gap-1 text-pink-300 font-normal bg-pink-950/40 px-2 py-0.5 rounded border border-[#FC2D79]/40">
+            <span className="w-1.5 h-1.5 bg-[#FC2D79] rounded-full inline-block" /> Bear +14%
           </span>
         </div>
       </div>
@@ -177,13 +177,13 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
         >
           <defs>
             <linearGradient id="doublerConeGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.45" />
-              <stop offset="60%" stopColor="#1E40AF" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.15" />
+              <stop offset="0%" stopColor="#823AFD" stopOpacity="0.40" />
+              <stop offset="60%" stopColor="#A855F7" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#FD5514" stopOpacity="0.15" />
             </linearGradient>
             <linearGradient id="historyLineGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#1D4ED8" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#60A5FA" stopOpacity="1" />
+              <stop offset="0%" stopColor="#823AFD" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#C090FF" stopOpacity="1" />
             </linearGradient>
             <filter id="doublerGlow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="3" result="glow" />
@@ -202,17 +202,17 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
               </g>
             ))}
 
-            {/* Target 2X Horizontal Reference Line (Steel Blue) */}
+            {/* Target 2X Horizontal Reference Line (Burnt Orange) */}
             <g transform={`translate(0, ${chartData.targetY})`}>
-              <line x1={0} x2={innerWidth} stroke="#3B82F6" strokeWidth={2} strokeDasharray="5,4" />
-              <text x={innerWidth - 125} dy="-8" className="fill-blue-400 text-[13px] font-bold font-mono">
+              <line x1={0} x2={innerWidth} stroke="#FD5514" strokeWidth={2} strokeDasharray="5,4" />
+              <text x={innerWidth - 125} dy="-8" className="fill-orange-400 text-[13px] font-bold font-mono">
                 2X Goal (${finalTarget.toFixed(1)})
               </text>
             </g>
 
             {/* Cost Basis Reference Line (Muted Slate) */}
             <g transform={`translate(0, ${chartData.costY})`}>
-              <line x1={0} x2={innerWidth} stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4,3" strokeOpacity={0.85} />
+              <line x1={0} x2={innerWidth} stroke="#9898C8" strokeWidth={1.5} strokeDasharray="4,3" strokeOpacity={0.85} />
               <text x={innerWidth - 125} dy="15" className="fill-slate-300 text-[12px] font-medium font-mono">
                 My Cost (${costBasis.toFixed(1)})
               </text>
@@ -221,10 +221,10 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             {/* The Shaded Cone */}
             <path d={chartData.areaPath} fill="url(#doublerConeGrad)" />
 
-            {/* Cone Outline Lines: Bull = Light Blue, Base = Primary Blue, Bear = Deep Red */}
-            <path d={chartData.bullPath} fill="none" stroke="#60A5FA" strokeWidth={2} strokeOpacity={0.95} />
-            <path d={chartData.basePath} fill="none" stroke="#3B82F6" strokeWidth={2.5} filter="url(#doublerGlow)" />
-            <path d={chartData.bearPath} fill="none" stroke="#DC2626" strokeWidth={1.8} strokeOpacity={0.85} />
+            {/* Cone Outline Lines: Bull = Burnt Orange, Base = Electric Violet, Bear = Hot Pink */}
+            <path d={chartData.bullPath} fill="none" stroke="#FD5514" strokeWidth={2} strokeOpacity={0.95} />
+            <path d={chartData.basePath} fill="none" stroke="#823AFD" strokeWidth={2.5} filter="url(#doublerGlow)" />
+            <path d={chartData.bearPath} fill="none" stroke="#FC2D79" strokeWidth={1.8} strokeOpacity={0.85} />
 
             {/* Historical Price Line */}
             {chartData.histPath && (
@@ -236,7 +236,7 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
               cx={chartData.currentX}
               cy={chartData.currentY}
               r={8}
-              fill="#60A5FA"
+              fill="#823AFD"
               className="animate-ping opacity-60"
             />
             <circle
@@ -244,13 +244,13 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
               cy={chartData.currentY}
               r={5}
               fill="#FFFFFF"
-              stroke="#1D4ED8"
+              stroke="#823AFD"
               strokeWidth={3}
             />
 
             {/* Label for Current Price */}
             <g transform={`translate(${chartData.currentX}, ${chartData.currentY - 14})`}>
-              <rect x={-42} y={-18} width={84} height={22} rx={6} fill="#060A16" stroke="#3B82F6" strokeWidth={1.5} />
+              <rect x={-42} y={-18} width={84} height={22} rx={6} fill="#080818" stroke="#823AFD" strokeWidth={1.5} />
               <text textAnchor="middle" dy="-2" className="fill-white text-[13px] font-semibold font-mono">
                 ${startP.toFixed(1)}
               </text>

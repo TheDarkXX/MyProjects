@@ -49,11 +49,11 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
   };
 
   return (
-    <div className={`relative bg-[#0B1226]/95 border border-blue-900/60 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
+    <div className={`relative bg-[#12162B]/95 border border-white/10 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
       {/* Top Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(130,58,253,0.8)]" />
           <div className="flex items-center gap-1.5">
             <h4 className="text-[15px] font-semibold text-slate-100 uppercase tracking-wide">
               Key Driver: {driver.metric_label}
@@ -63,14 +63,14 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
               <button
                 type="button"
                 onClick={() => setShowInfo(!showInfo)}
-                className="text-slate-400 hover:text-blue-300 transition-colors p-0.5"
+                className="text-slate-400 hover:text-violet-300 transition-colors p-0.5"
                 title="คลิกเพื่อดูคำอธิบาย"
               >
                 <HelpCircle className="w-3.5 h-3.5" />
               </button>
               {showInfo && (
-                <div className="absolute left-0 top-6 z-30 w-64 p-2.5 bg-[#141E38] border border-blue-600/40 rounded-xl shadow-2xl text-[12px] text-slate-200 leading-relaxed backdrop-blur-md">
-                  <p className="font-semibold text-blue-300 mb-1">📌 ตัวเร่งเฉพาะตัว (Thesis KPI)</p>
+                <div className="absolute left-0 top-6 z-30 w-64 p-2.5 bg-[#141430] border border-violet-500/40 rounded-xl shadow-2xl text-[12px] text-slate-200 leading-relaxed backdrop-blur-md">
+                  <p className="font-semibold text-violet-300 mb-1">📌 ตัวเร่งเฉพาะตัว (Thesis KPI)</p>
                   <p>
                     ตัวชี้วัดพิเศษที่ชี้เป็นชี้ตายความได้เปรียบทางธุรกิจ (ไม่มี API ภายนอกดึงอัตโนมัติ) สามารถกดไอคอนดินสอเพื่ออัปเดตตัวเลขหลังฟัง Oppday หรืออ่านงบการเงิน
                   </p>
@@ -91,7 +91,7 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
                 setEditValue(String(driver.metric_value));
                 setIsEditing(true);
               }}
-              className="p-1 text-slate-400 hover:text-blue-300 hover:bg-blue-600/20 rounded-lg transition-colors border border-transparent hover:border-blue-500/30 cursor-pointer"
+              className="p-1 text-slate-400 hover:text-violet-300 hover:bg-violet-600/20 rounded-lg transition-colors border border-transparent hover:border-violet-500/30 cursor-pointer"
               title="แก้ไขตัวเลขหลังอ่านงบ"
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -101,7 +101,7 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="p-1 rounded-lg bg-blue-600/30 text-blue-200 hover:bg-blue-600/50 border border-blue-500/50 cursor-pointer"
+                className="p-1 rounded-lg bg-violet-600/30 text-violet-200 hover:bg-violet-600/50 border border-violet-500/50 cursor-pointer"
                 title="บันทึก"
               >
                 <Check className="w-3.5 h-3.5" />
@@ -137,11 +137,11 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
               strokeWidth="12"
               strokeLinecap="round"
             />
-            {/* Value Progress Arc (Deep Red / Deep Blue) */}
+            {/* Value Progress Arc (Hot Pink / Electric Violet / Burnt Orange) */}
             <path
               d="M 15 80 A 65 65 0 0 1 145 80"
               fill="none"
-              stroke={isHealthy ? '#3B82F6' : isDanger ? '#DC2626' : '#64748B'}
+              stroke={isHealthy ? '#823AFD' : isDanger ? '#FC2D79' : '#FD5514'}
               strokeWidth={12}
               strokeLinecap="round"
               strokeDasharray={204}
@@ -160,16 +160,16 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
                   step="any"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="w-22 bg-[#060A16] border border-blue-400 rounded px-2 py-0.5 text-center text-xl font-bold text-white focus:outline-none"
+                  className="w-22 bg-[#080818] border border-violet-400 rounded px-2 py-0.5 text-center text-xl font-bold text-white focus:outline-none"
                   autoFocus
                 />
-                <span className="text-sm text-blue-300 font-bold">{unit}</span>
+                <span className="text-sm text-violet-300 font-bold">{unit}</span>
               </div>
             ) : (
               <div className="flex items-baseline justify-center gap-1">
                 <span
                   className={`text-3xl font-black font-mono tracking-tight drop-shadow-md ${
-                    isHealthy ? 'text-blue-300' : isDanger ? 'text-rose-400' : 'text-slate-200'
+                    isHealthy ? 'text-violet-300' : isDanger ? 'text-[#FC2D79]' : 'text-orange-300'
                   }`}
                 >
                   {value}
@@ -184,19 +184,19 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
       </div>
 
       {/* Threshold Legend Bar */}
-      <div className="mt-1 pt-2 border-t border-blue-900/40 flex items-center justify-between text-[13px] text-slate-300 font-normal">
+      <div className="mt-1 pt-2 border-t border-white/10 flex items-center justify-between text-[13px] text-slate-300 font-normal">
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_rgba(239,68,68,0.7)]" />
-          <span className="text-rose-300">อันตราย: &lt;{danger}{unit}</span>
+          <span className="w-2 h-2 rounded-full bg-[#FC2D79] shadow-[0_0_6px_rgba(252,45,121,0.7)]" />
+          <span className="text-pink-300">อันตราย: &lt;{danger}{unit}</span>
         </div>
         {isWarning && (
-          <div className="flex items-center gap-1 text-[12px] text-slate-200 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-600/50">
+          <div className="flex items-center gap-1 text-[12px] text-orange-200 bg-orange-950/40 px-2 py-0.5 rounded border border-orange-700/50">
             เฝ้าระวัง
           </div>
         )}
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_6px_rgba(59,130,246,0.7)]" />
-          <span className="text-blue-300">ปลอดภัย: &ge;{safe}{unit}</span>
+          <span className="w-2 h-2 rounded-full bg-[#823AFD] shadow-[0_0_6px_rgba(130,58,253,0.7)]" />
+          <span className="text-violet-300">ปลอดภัย: &ge;{safe}{unit}</span>
         </div>
       </div>
     </div>

@@ -85,19 +85,19 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
           width,
           height,
           layout: {
-            background: { type: ColorType.Solid, color: '#060A16' },
+            background: { type: ColorType.Solid, color: '#0A0E1A' },
             textColor: '#FFFFFF',
             fontSize: 13,
             fontFamily: 'monospace'
           },
           grid: {
-            vertLines: { color: 'rgba(30, 58, 110, 0.25)' },
-            horzLines: { color: 'rgba(30, 58, 110, 0.25)' }
+            vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
+            horzLines: { color: 'rgba(255, 255, 255, 0.05)' }
           },
           crosshair: {
             mode: CrosshairMode.Normal,
-            vertLine: { color: '#60A5FA', width: 1, style: LineStyle.Dashed },
-            horzLine: { color: '#60A5FA', width: 1, style: LineStyle.Dashed }
+            vertLine: { color: '#823AFD', width: 1, style: LineStyle.Dashed },
+            horzLine: { color: '#823AFD', width: 1, style: LineStyle.Dashed }
           },
           timeScale: {
             borderColor: '#1E293B',
@@ -108,15 +108,15 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         chartRef.current = chart;
 
-        // 1. Candlestick Series (Institutional Blue & Deep Red)
+        // 1. Candlestick Series (Electric Violet & Hot Pink)
         const candleSeries = chart.addSeries(CandlestickSeries, {
-          upColor: '#3B82F6',
-          downColor: '#DC2626',
+          upColor: '#823AFD',
+          downColor: '#FC2D79',
           borderVisible: true,
-          borderUpColor: '#3B82F6',
-          borderDownColor: '#DC2626',
-          wickUpColor: '#3B82F6',
-          wickDownColor: '#DC2626'
+          borderUpColor: '#823AFD',
+          borderDownColor: '#FC2D79',
+          wickUpColor: '#823AFD',
+          wickDownColor: '#FC2D79'
         });
         candleSeries.setData(formattedCandles);
 
@@ -124,7 +124,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
         if (avgCost > 0) {
           candleSeries.createPriceLine({
             price: avgCost,
-            color: '#94A3B8',
+            color: '#9898C8',
             lineWidth: 2,
             lineStyle: LineStyle.Dashed,
             axisLabelVisible: true,
@@ -151,7 +151,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         if (ema50Data.length > 0) {
           const s50 = chart.addSeries(LineSeries, {
-            color: '#60A5FA',
+            color: '#C090FF',
             lineWidth: 2,
             title: 'EMA 50'
           });
@@ -160,7 +160,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         if (ema150Data.length > 0) {
           const s150 = chart.addSeries(LineSeries, {
-            color: '#818CF8',
+            color: '#FD5514',
             lineWidth: 2,
             title: 'EMA 150'
           });
@@ -169,7 +169,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         if (ema200Data.length > 0) {
           const s200 = chart.addSeries(LineSeries, {
-            color: '#C084FC',
+            color: '#FC2D79',
             lineWidth: 2,
             title: 'EMA 200'
           });
@@ -178,7 +178,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
 
         // 4. Volume Histogram Series at bottom
         const volumeSeries = chart.addSeries(HistogramSeries, {
-          color: '#3B82F6',
+          color: '#823AFD',
           priceFormat: { type: 'volume' },
           priceScaleId: 'volume',
         });
@@ -188,7 +188,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
         volumeSeries.setData(formattedCandles.map(c => ({
           time: c.time,
           value: c.volume,
-          color: c.close >= c.open ? 'rgba(59, 130, 246, 0.45)' : 'rgba(220, 38, 38, 0.45)'
+          color: c.close >= c.open ? 'rgba(130, 58, 253, 0.45)' : 'rgba(252, 45, 121, 0.45)'
         })));
 
         chart.timeScale().fitContent();
@@ -223,29 +223,29 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
   }, [symbol, avgCost]);
 
   return (
-    <div className={`relative bg-[#0B1226]/95 border border-blue-900/50 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
+    <div className={`relative bg-[#12162B]/95 border border-white/10 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
       {/* Top Header & Legend Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
+          <span className="w-2.5 h-2.5 rounded-full bg-violet-400 animate-pulse" />
           <h4 className="text-sm font-black text-white uppercase tracking-wider">
             Tactical Pro Chart ({symbol})
           </h4>
-          <span className="px-2 py-0.5 rounded text-[13px] font-mono font-bold bg-[#060A16] border border-blue-900/60 text-blue-300">
+          <span className="px-2 py-0.5 rounded text-[13px] font-mono font-bold bg-[#0A0E1A] border border-white/10 text-violet-300">
             1D Candle
           </span>
         </div>
 
         {/* Legend Pills */}
         <div className="flex flex-wrap items-center gap-2 text-[13px]">
-          <span className="flex items-center gap-1.5 text-blue-300 font-bold bg-blue-500/15 px-2 py-0.5 rounded border border-blue-500/30">
-            <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> EMA 50
+          <span className="flex items-center gap-1.5 text-violet-200 font-bold bg-violet-500/15 px-2 py-0.5 rounded border border-violet-500/30">
+            <span className="w-2 h-2 rounded-full bg-[#C090FF] inline-block" /> EMA 50
           </span>
-          <span className="flex items-center gap-1.5 text-indigo-300 font-bold bg-indigo-500/15 px-2 py-0.5 rounded border border-indigo-500/30">
-            <span className="w-2 h-2 rounded-full bg-indigo-400 inline-block" /> EMA 150
+          <span className="flex items-center gap-1.5 text-orange-200 font-bold bg-orange-500/15 px-2 py-0.5 rounded border border-orange-500/30">
+            <span className="w-2 h-2 rounded-full bg-[#FD5514] inline-block" /> EMA 150
           </span>
-          <span className="flex items-center gap-1.5 text-purple-300 font-bold bg-purple-500/15 px-2 py-0.5 rounded border border-purple-500/30">
-            <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" /> EMA 200
+          <span className="flex items-center gap-1.5 text-pink-300 font-bold bg-pink-500/15 px-2 py-0.5 rounded border border-pink-500/30">
+            <span className="w-2 h-2 rounded-full bg-[#FC2D79] inline-block" /> EMA 200
           </span>
           {avgCost > 0 && (
             <span className="flex items-center gap-1.5 text-slate-200 font-black bg-slate-800/80 px-2 py-0.5 rounded border border-slate-600/50">
@@ -253,7 +253,7 @@ export const TacticalMiniProChart: React.FC<TacticalMiniProChartProps> = ({
             </span>
           )}
           {bankerFlow > 0 && (
-            <span className="flex items-center gap-1 text-rose-300 font-black bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/40">
+            <span className="flex items-center gap-1 text-orange-200 font-black bg-orange-500/20 px-2 py-0.5 rounded border border-orange-500/40">
               🔥 Banker: {bankerFlow.toFixed(1)}
             </span>
           )}

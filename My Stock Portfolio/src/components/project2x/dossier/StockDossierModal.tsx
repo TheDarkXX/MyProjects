@@ -63,24 +63,24 @@ export const StockDossierModal: React.FC = () => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: 15 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="relative w-full max-w-[99vw] 2xl:max-w-[2100px] max-h-[96vh] bg-gradient-to-br from-[#040714] via-[#070D22] to-[#120716] border border-blue-900/50 shadow-[0_24px_64px_rgba(0,0,0,0.85)] rounded-3xl flex flex-col overflow-hidden"
+          className="relative w-full max-w-[99vw] 2xl:max-w-[2100px] max-h-[96vh] bg-gradient-to-br from-[#080818] via-[#0A0E1A] to-[#12162B] border border-white/10 shadow-[0_24px_64px_rgba(0,0,0,0.85)] rounded-3xl flex flex-col overflow-hidden"
         >
           {/* Scrollable Content Body */}
-          <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 scrollbar-thin scrollbar-thumb-blue-900/50 scrollbar-track-transparent">
+          <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 scrollbar-thin scrollbar-thumb-violet-900/50 scrollbar-track-transparent">
             {/* Header with Switcher & Verdict */}
             <DossierHeader onClose={closeDossier} />
 
             {/* Loading State */}
             {isLoading && !data && (
-              <div className="py-24 flex flex-col items-center justify-center gap-3 text-blue-300">
-                <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+              <div className="py-24 flex flex-col items-center justify-center gap-3 text-violet-300">
+                <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
                 <span className="text-[13px] font-medium tracking-wide text-slate-300">กำลังประมวลผลข้อมูลเอ็กซเรย์ {selectedSymbol}...</span>
               </div>
             )}
 
             {/* Error State */}
             {error && (
-              <div className="p-3 my-3 rounded-xl bg-rose-500/15 border border-rose-500/35 text-rose-200 text-[13px] font-medium">
+              <div className="p-3 my-3 rounded-xl bg-[#FC2D79]/15 border border-[#FC2D79]/35 text-rose-200 text-[13px] font-medium">
                 ⚠️ เกิดข้อผิดพลาด: {error}
               </div>
             )}
