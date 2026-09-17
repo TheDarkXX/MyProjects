@@ -326,11 +326,11 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           onClick={() => setActiveSubTab('financials')}
           className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeSubTab === 'financials'
-              ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-semibold shadow-[0_0_16px_rgba(147,51,234,0.4)] border border-white/20'
+              ? 'bg-gradient-to-r from-blue-700 via-indigo-600 to-amber-600 text-white font-semibold shadow-[0_0_16px_rgba(245,158,11,0.35)] border border-amber-400/30'
               : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
           }`}
         >
-          <LineChart className="w-4 h-4 text-pink-300" />
+          <LineChart className="w-4 h-4 text-amber-300" />
           <span>2. Financial Pulse (ตรวจงบ 8Q & กระแสเงินสด)</span>
         </button>
 
@@ -338,7 +338,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           onClick={() => setActiveSubTab('thesis')}
           className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeSubTab === 'thesis'
-              ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white font-semibold shadow-[0_0_16px_rgba(16,185,129,0.4)] border border-white/20'
+              ? 'bg-gradient-to-r from-blue-800 via-emerald-700 to-emerald-600 text-white font-semibold shadow-[0_0_16px_rgba(16,185,129,0.35)] border border-emerald-400/30'
               : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
           }`}
         >

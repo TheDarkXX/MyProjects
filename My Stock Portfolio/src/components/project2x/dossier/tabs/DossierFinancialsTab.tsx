@@ -51,7 +51,7 @@ export const DossierFinancialsTab: React.FC = () => {
 
   // Render FCF Quality Panel
   const renderFCFQualityPanel = () => (
-    <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
+    <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Coins className="w-5 h-5 text-emerald-400" />
@@ -63,9 +63,9 @@ export const DossierFinancialsTab: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-3.5 rounded-xl bg-[#081024] border border-blue-900/30">
+        <div className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
           <div className="text-slate-300 text-sm font-medium">Free Cash Flow (TTM)</div>
-          <div className="text-2xl font-black font-mono text-slate-100 mt-1">
+          <div className="text-2xl font-black font-mono text-white mt-1">
             {fcfB !== '-' ? `$${fcfB}B` : '-'}
           </div>
           <div className="text-xs text-emerald-400 font-mono mt-1 font-medium">
@@ -73,7 +73,7 @@ export const DossierFinancialsTab: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-[#081024] border border-blue-900/30">
+        <div className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
           <div className="text-slate-300 text-sm font-medium">Operating Cash Flow</div>
           <div className="text-2xl font-black font-mono text-cyan-300 mt-1">
             {opCfB !== '-' ? `$${opCfB}B` : '-'}
@@ -82,8 +82,8 @@ export const DossierFinancialsTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-3 rounded-xl bg-[#081126]/60 border border-blue-900/30 flex items-center justify-between text-sm">
-        <span className="text-slate-300">P/FCF Yield เทียบมูลค่ากิจการ:</span>
+      <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
+        <span className="text-slate-200 font-medium">P/FCF Yield เทียบมูลค่ากิจการ:</span>
         <span className="text-emerald-300 font-mono font-bold">{fcfYieldPct}</span>
       </div>
     </div>
@@ -91,7 +91,7 @@ export const DossierFinancialsTab: React.FC = () => {
 
   // Render Share Dilution Guard Panel
   const renderShareDilutionGuard = () => (
-    <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
+    <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldAlert className="w-5 h-5 text-cyan-400" />
@@ -103,15 +103,15 @@ export const DossierFinancialsTab: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-3.5 rounded-xl bg-[#081024] border border-blue-900/30">
+        <div className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
           <div className="text-slate-300 text-sm font-medium">จำนวนหุ้นทั้งหมด (Shares)</div>
-          <div className="text-2xl font-black font-mono text-slate-100 mt-1">
+          <div className="text-2xl font-black font-mono text-white mt-1">
             {sharesB}
           </div>
-          <div className="text-xs text-slate-400 mt-1 font-medium">จำนวนหุ้นจดทะเบียนชำระแล้ว</div>
+          <div className="text-xs text-slate-300 mt-1 font-medium">จำนวนหุ้นจดทะเบียนชำระแล้ว</div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-[#081024] border border-blue-900/30">
+        <div className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
           <div className="text-slate-300 text-sm font-medium">สัดส่วนการเจือจาง (Dilution YoY)</div>
           <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
             {dilutionPct !== 0 ? `${dilutionPct >= 0 ? '+' : ''}${dilutionPct}%` : 'Stable (<1%)'}
@@ -120,8 +120,8 @@ export const DossierFinancialsTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-3 rounded-xl bg-[#081126]/60 border border-blue-900/30 flex items-center justify-between text-sm">
-        <span className="text-slate-300">สถานะการคุ้มครองผู้ถือหุ้น:</span>
+      <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
+        <span className="text-slate-200 font-medium">สถานะการคุ้มครองผู้ถือหุ้น:</span>
         <span className="text-cyan-300 font-medium flex items-center gap-1.5">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
           ไม่มีความเสี่ยง Dilution ร้ายแรง
@@ -136,17 +136,17 @@ export const DossierFinancialsTab: React.FC = () => {
     const peg = data.vitalSigns?.pegRatio || 0;
 
     return (
-      <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
+      <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-purple-400" />
+            <BarChart3 className="w-5 h-5 text-amber-400" />
             <span className="text-slate-100 text-base font-bold">Valuation Multiples Band</span>
           </div>
           <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
             data.vitalSigns?.valuationStatus === 'UNDERVALUED'
               ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
               : data.vitalSigns?.valuationStatus === 'STRETCHED'
-              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+              ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
               : 'bg-blue-500/15 text-cyan-300 border-blue-500/30'
           }`}>
             {data.vitalSigns?.valuationStatus || 'FAIR'}
@@ -154,29 +154,29 @@ export const DossierFinancialsTab: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-3 gap-2.5">
-          <div className="p-3 rounded-xl bg-[#081024] border border-blue-900/30 text-center">
-            <div className="text-slate-400 text-xs font-medium">Forward P/E</div>
-            <div className="text-2xl font-black font-mono text-slate-100 mt-1">
+          <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 text-center">
+            <div className="text-slate-300 text-xs font-medium">Forward P/E</div>
+            <div className="text-2xl font-black font-mono text-white mt-1">
               {fwdPe > 0 ? fwdPe.toFixed(1) : '-'}x
             </div>
           </div>
-          <div className="p-3 rounded-xl bg-[#081024] border border-blue-900/30 text-center">
-            <div className="text-slate-400 text-xs font-medium">PEG Ratio</div>
+          <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 text-center">
+            <div className="text-slate-300 text-xs font-medium">PEG Ratio</div>
             <div className="text-2xl font-black font-mono text-cyan-300 mt-1">
               {peg > 0 ? peg.toFixed(2) : '-'}
             </div>
           </div>
-          <div className="p-3 rounded-xl bg-[#081024] border border-blue-900/30 text-center">
-            <div className="text-slate-400 text-xs font-medium">P/FCF Yield</div>
+          <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 text-center">
+            <div className="text-slate-300 text-xs font-medium">P/FCF Yield</div>
             <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
               {fcfYieldPct}
             </div>
           </div>
         </div>
 
-        <div className="p-3 rounded-xl bg-[#081126]/60 border border-blue-900/30 flex items-center justify-between text-sm">
-          <span className="text-slate-300 font-medium">Historical P/E Corridor:</span>
-          <span className="text-purple-300 font-mono font-bold">
+        <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
+          <span className="text-slate-200 font-medium">Historical P/E Corridor:</span>
+          <span className="text-amber-300 font-mono font-bold">
             {minPe}x – {maxPe}x ({validPes.length} snapshots)
           </span>
         </div>
@@ -186,25 +186,25 @@ export const DossierFinancialsTab: React.FC = () => {
 
   // Render Operating Leverage Panel
   const renderOperatingLeveragePanel = () => (
-    <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
+    <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Layers className="w-5 h-5 text-indigo-400" />
+          <Layers className="w-5 h-5 text-cyan-400" />
           <span className="text-slate-100 text-base font-bold">Operating Scale & Margins</span>
         </div>
-        <span className="px-2.5 py-1 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs font-bold">
+        <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-cyan-300 border border-blue-500/30 text-xs font-bold">
           Margin Expansion
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-3.5 rounded-xl bg-[#081024] border border-blue-900/30">
+        <div className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
           <div className="text-slate-300 text-sm font-medium">Latest Gross Margin</div>
           <div className="text-2xl font-black font-mono text-cyan-300 mt-1">{gm}%</div>
-          <div className="text-xs text-slate-400 font-mono mt-1">Q ก่อนหน้า: {gmPrev}%</div>
+          <div className="text-xs text-slate-300 font-mono mt-1">Q ก่อนหน้า: {gmPrev}%</div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-[#081024] border border-blue-900/30">
+        <div className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
           <div className="text-slate-300 text-sm font-medium">Operating Margin (จริง)</div>
           <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
             {opMarginReal > 0 ? `${opMarginReal.toFixed(1)}%` : '-'}
@@ -213,8 +213,8 @@ export const DossierFinancialsTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-3 rounded-xl bg-[#081126]/60 border border-blue-900/30 flex items-center justify-between text-sm">
-        <span className="text-slate-300">Guidance Beat & Raise Cadence</span>
+      <div className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
+        <span className="text-slate-200 font-medium">Guidance Beat & Raise Cadence</span>
         <span className="text-emerald-300 font-bold flex items-center gap-1.5">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
           Consistent Beat & Raise

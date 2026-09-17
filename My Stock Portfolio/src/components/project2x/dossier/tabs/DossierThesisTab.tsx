@@ -317,31 +317,32 @@ export const DossierThesisTab: React.FC = () => {
         </div>
 
         {/* Column 2: Deep Moat Architecture */}
+        {/* Column 2: Deep Moat Architecture */}
         <div className="flex flex-col gap-4">
-          <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
+          <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-cyan-400" />
                 <span className="text-slate-100 text-base font-bold">Deep Moat Architecture</span>
               </div>
-              <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-cyan-300 border border-blue-500/30 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-lg bg-blue-600/20 text-cyan-300 border border-blue-500/30 text-xs font-bold">
                 คูเมือง 3 มิติ
               </span>
             </div>
 
             <div className="space-y-3">
               {profile.moats.map((m, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl bg-[#081024] border border-blue-900/30">
+                <div key={idx} className="p-3.5 rounded-xl bg-[#070D1F] border border-blue-900/40">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-slate-100 text-sm font-bold">{m.title}</span>
-                    <span className="text-cyan-300 text-sm font-mono font-bold">{m.score}/{m.maxScore}</span>
+                    <span className="text-amber-300 text-sm font-mono font-bold">{m.score}/{m.maxScore}</span>
                   </div>
                   <p className="text-slate-300 text-xs leading-relaxed mb-2">
                     {m.reason}
                   </p>
                   <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-700"
+                      className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 rounded-full transition-all duration-700"
                       style={{ width: `${(m.score / m.maxScore) * 100}%` }}
                     />
                   </div>
@@ -350,8 +351,8 @@ export const DossierThesisTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Breach Red Flags */}
-          <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-rose-900/40 shadow-sm flex flex-col gap-3">
+          {/* Breach Red Flags (Deep Red) */}
+          <div className="bg-[#1A0A10]/95 p-4 rounded-2xl border border-rose-600/70 shadow-xl flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <AlertOctagon className="w-5 h-5 text-rose-400" />
               <span className="text-rose-200 text-base font-bold">Breach Red Flags (จุดตายที่ต้องเผ่น)</span>
@@ -362,7 +363,7 @@ export const DossierThesisTab: React.FC = () => {
 
             <div className="space-y-2">
               {profile.breachFlags.map((flag, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-rose-950/25 border border-rose-900/40 text-rose-200 text-sm font-medium flex items-start gap-2.5">
+                <div key={idx} className="p-3 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-200 text-sm font-medium flex items-start gap-2.5">
                   <span className="text-rose-400 font-bold text-base shrink-0">⚠️</span>
                   <span>{flag}</span>
                 </div>
@@ -373,63 +374,63 @@ export const DossierThesisTab: React.FC = () => {
 
         {/* Column 3: Doubler Scenario Matrix & Milestones */}
         <div className="flex flex-col gap-4">
-          {/* Scenarios Matrix */}
-          <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
+          {/* Scenarios Matrix: Bear (Deep Red) / Base (Deep Blue-Cyan) / Bull (Light Green) */}
+          <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Target className="w-5 h-5 text-amber-400" />
                 <span className="text-slate-100 text-base font-bold">Doubler Scenario Matrix (3Y)</span>
               </div>
-              <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-lg bg-blue-950 text-cyan-300 border border-blue-800 text-xs font-bold">
                 กรอบ 3 ปี
               </span>
             </div>
 
             <div className="space-y-3">
-              {/* Bear Case */}
-              <div className="p-3 rounded-xl bg-[#081024] border border-blue-900/30">
+              {/* Bear Case (Deep Red) */}
+              <div className="p-3 rounded-xl bg-rose-950/25 border border-rose-800/40">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-slate-200 text-sm font-bold">🥉 Bear Case (กรณีชะลอตัว)</span>
-                  <span className="text-amber-400 font-mono font-bold text-sm">
+                  <span className="text-rose-300 text-sm font-bold">🥉 Bear Case (กรณีชะลอตัว)</span>
+                  <span className="text-rose-300 font-mono font-bold text-sm">
                     {profile.scenarios.bear.multiple} ({profile.scenarios.bear.cagr})
                   </span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-800 rounded-full mb-1.5 overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '40%' }} />
+                  <div className="h-full bg-rose-500 rounded-full" style={{ width: '40%' }} />
                 </div>
                 <p className="text-slate-300 text-xs leading-relaxed">
                   {profile.scenarios.bear.desc}
                 </p>
               </div>
 
-              {/* Base Case (Target 2X) */}
-              <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-950/70 via-indigo-950/70 to-emerald-950/70 border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+              {/* Base Case (Target 2X - Deep Blue with Cyan Glow) */}
+              <div className="p-3.5 rounded-xl bg-blue-950/50 border border-cyan-400/60 shadow-[0_0_20px_rgba(56,189,248,0.2)]">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-emerald-300 text-base font-bold flex items-center gap-1">
+                  <span className="text-cyan-300 text-base font-bold flex items-center gap-1">
                     🥈 Base Case (เป้าหมาย 1 เด้ง)
                   </span>
-                  <span className="text-emerald-300 font-mono font-black text-base">
+                  <span className="text-cyan-200 font-mono font-black text-base">
                     {profile.scenarios.base.multiple} ({profile.scenarios.base.cagr})
                   </span>
                 </div>
                 <div className="w-full h-2 bg-slate-800 rounded-full mb-2 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 rounded-full" style={{ width: '70%' }} />
+                  <div className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.5)]" style={{ width: '70%' }} />
                 </div>
                 <p className="text-slate-200 text-xs leading-relaxed">
                   {profile.scenarios.base.desc}
                 </p>
               </div>
 
-              {/* Bull Case */}
-              <div className="p-3 rounded-xl bg-[#081024] border border-blue-900/30">
+              {/* Bull Case (Light Green) */}
+              <div className="p-3 rounded-xl bg-emerald-950/25 border border-emerald-800/40">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-purple-300 text-sm font-bold">🥇 Bull Case (เร่งตัวสุดขีด)</span>
-                  <span className="text-purple-300 font-mono font-bold text-sm">
+                  <span className="text-emerald-300 text-sm font-bold">🥇 Bull Case (เร่งตัวสุดขีด)</span>
+                  <span className="text-emerald-300 font-mono font-bold text-sm">
                     {profile.scenarios.bull.multiple} ({profile.scenarios.bull.cagr})
                   </span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-800 rounded-full mb-1.5 overflow-hidden">
-                  <div className="h-full bg-purple-500 rounded-full" style={{ width: '100%' }} />
+                  <div className="h-full bg-emerald-400 rounded-full" style={{ width: '100%' }} />
                 </div>
                 <p className="text-slate-300 text-xs leading-relaxed">
                   {profile.scenarios.bull.desc}
@@ -439,7 +440,7 @@ export const DossierThesisTab: React.FC = () => {
           </div>
 
           {/* Milestones Roadmap (Spin fix -> Pulse) */}
-          <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
+          <div className="bg-[#0B1226]/95 p-4 rounded-2xl border border-blue-900/60 shadow-xl flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Flag className="w-5 h-5 text-emerald-400" />
               <span className="text-slate-100 text-base font-bold">Milestone Roadmap</span>
@@ -447,7 +448,7 @@ export const DossierThesisTab: React.FC = () => {
 
             <div className="space-y-2">
               {profile.milestones.map((m, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-[#081024] border border-blue-900/30 flex items-center justify-between text-sm">
+                <div key={idx} className="p-3 rounded-xl bg-[#070D1F] border border-blue-900/40 flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2.5">
                     {m.status === 'DONE' ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />

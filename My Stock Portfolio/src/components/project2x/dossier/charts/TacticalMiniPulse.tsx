@@ -32,7 +32,6 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
       try {
         setIsLoading(true);
         const res = await api.chart.get(symbol, 365, '1D');
-        // API returns { dates: string[], closes: number[], ... } NOT an Array
         if (!isMounted || !res || !Array.isArray(res.dates) || !Array.isArray(res.closes) || res.dates.length === 0) {
           setIsLoading(false);
           return;
@@ -66,7 +65,7 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
   // Dimensions
   const width = 500;
   const height = 120;
-  const margin = { top: 12, right: 55, bottom: 20, left: 10 };
+  const margin = { top: 12, right: 60, bottom: 20, left: 10 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
@@ -144,7 +143,7 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
   const hoveredCandle = hoveredIndex !== null ? candles[hoveredIndex] : null;
 
   return (
-    <div className={`bg-[#0A1022]/90 border border-blue-900/40 rounded-2xl p-4 shadow-lg backdrop-blur-md ${className}`}>
+    <div className={`bg-[#0B1226]/95 border border-blue-900/60 rounded-2xl p-4 shadow-xl backdrop-blur-md ${className}`}>
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2.5">
@@ -161,13 +160,21 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
 
         <div className="flex items-center gap-2 text-sm">
           {bankerFlow > 0 && (
-            <span className="flex items-center gap-1 text-rose-300 font-semibold bg-rose-500/15 px-2.5 py-1 rounded-lg border border-rose-500/30">
-              <Flame className="w-4 h-4 text-rose-400" />
+            <span
+              className={`flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg border ${
+                bankerFlow >= 50
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  : bankerFlow >= 25
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+              }`}
+            >
+              <Flame className="w-4 h-4" />
               <span>Banker {bankerFlow.toFixed(0)}%</span>
             </span>
           )}
           {avgCost > 0 && (
-            <span className="flex items-center gap-1 text-amber-200 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-lg border border-amber-500/30">
+            <span className="flex items-center gap-1 text-amber-300 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-lg border border-amber-500/35">
               <Target className="w-4 h-4 text-amber-400" />
               <span>ทุนเฉลี่ย ${avgCost.toFixed(2)}</span>
             </span>
@@ -178,7 +185,7 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
       {/* SVG Chart Area */}
       <div className="relative w-full h-[130px]">
         {isLoading ? (
-          <div className="w-full h-full flex items-center justify-center text-slate-300 text-sm font-normal">
+          <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm font-normal">
             กำลังโหลดข้อมูลราคา 52 สัปดาห์...
           </div>
         ) : (
@@ -189,33 +196,34 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
             onMouseLeave={handleMouseLeave}
           >
             <defs>
-              <linearGradient id="miniPulseGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#0284C7" stopOpacity="0.00" />
+              <linearGradient id="tacticalMiniGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.45" />
+                <stop offset="60%" stopColor="#0284C7" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#0B1226" stopOpacity="0.00" />
               </linearGradient>
             </defs>
 
             <g transform={`translate(${margin.left}, ${margin.top})`}>
-              {/* Shaded Area */}
-              {areaD && <path d={areaD} fill="url(#miniPulseGradient)" />}
+              {/* Shaded Area (Deep Blue) */}
+              {areaD && <path d={areaD} fill="url(#tacticalMiniGrad)" />}
 
-              {/* Cost Basis Reference Line */}
+              {/* Cost Basis Reference Line (Yellow Gold) */}
               {costY !== null && (
                 <g transform={`translate(0, ${costY})`}>
-                  <line x1={0} x2={innerWidth} stroke="#F59E0B" strokeDasharray="3,3" strokeWidth={1.2} />
-                  <text x={innerWidth + 6} dy="0.32em" className="fill-amber-300 text-[12px] font-mono font-medium">
-                    ${avgCost.toFixed(0)}
+                  <line x1={0} x2={innerWidth} stroke="#FACC15" strokeDasharray="4,3" strokeWidth={1.5} />
+                  <text x={innerWidth + 6} dy="0.32em" className="fill-amber-300 text-[12px] font-mono font-semibold">
+                    ${avgCost.toFixed(1)}
                   </text>
                 </g>
               )}
 
-              {/* Price Line */}
-              {pathD && <path d={pathD} fill="none" stroke="#38BDF8" strokeWidth={2.2} />}
+              {/* Price Line (Cyan Glow on Deep Blue) */}
+              {pathD && <path d={pathD} fill="none" stroke="#38BDF8" strokeWidth={2.4} />}
 
               {/* Current Price Dot & Label */}
               {currentX > 0 && hoveredIndex === null && (
                 <>
-                  <circle cx={currentX} cy={currentY} r={4.5} fill="#FFFFFF" stroke="#0284C7" strokeWidth={2} />
+                  <circle cx={currentX} cy={currentY} r={4.5} fill="#FFFFFF" stroke="#0284C7" strokeWidth={2.5} />
                   <text
                     x={innerWidth + 6}
                     y={currentY}
@@ -232,7 +240,7 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
                 <>
                   {(() => {
                     const hX = (hoveredIndex! / (candles.length - 1)) * innerWidth;
-                    const closes = candles.map(c => c.close);
+                    const closes = candles.map((c) => c.close);
                     const low = Math.min(...closes);
                     const high = Math.max(...closes);
                     const yMin = Math.min(low, avgCost > 0 ? avgCost : low) * 0.96;
@@ -245,9 +253,9 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
                         <line x1={hX} x2={hX} y1={0} y2={innerHeight} stroke="#38BDF8" strokeDasharray="2,2" strokeWidth={1} />
                         <circle cx={hX} cy={hY} r={5} fill="#38BDF8" stroke="#FFFFFF" strokeWidth={2} />
                         <rect
-                          x={Math.min(innerWidth - 75, Math.max(0, hX - 35))}
+                          x={Math.min(innerWidth - 80, Math.max(0, hX - 40))}
                           y={Math.max(0, hY - 26)}
-                          width={75}
+                          width={80}
                           height={20}
                           rx={4}
                           fill="#141E38"
@@ -255,7 +263,7 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
                           strokeWidth={1}
                         />
                         <text
-                          x={Math.min(innerWidth - 75, Math.max(0, hX - 35)) + 37.5}
+                          x={Math.min(innerWidth - 80, Math.max(0, hX - 40)) + 40}
                           y={Math.max(0, hY - 26) + 14}
                           textAnchor="middle"
                           className="fill-slate-100 font-mono text-[11px] font-bold"
@@ -263,10 +271,10 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
                           ${hoveredCandle.close.toFixed(1)}
                         </text>
                         <text
-                          x={Math.min(innerWidth - 75, Math.max(0, hX - 35)) + 37.5}
+                          x={Math.min(innerWidth - 80, Math.max(0, hX - 40)) + 40}
                           y={innerHeight + 14}
                           textAnchor="middle"
-                          className="fill-slate-400 font-mono text-[10px]"
+                          className="fill-slate-300 font-mono text-[11px]"
                         >
                           {dateStr}
                         </text>
@@ -281,18 +289,18 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
       </div>
 
       {/* 52-Week Range Bar & EMA Cushions */}
-      <div className="mt-2 pt-2.5 border-t border-blue-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-sm text-slate-200">
+      <div className="mt-2 pt-2.5 border-t border-blue-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-sm text-slate-200">
         {/* 52W Range Visual Slider */}
         <div className="flex items-center gap-2.5 flex-1">
-          <span className="font-mono text-slate-300 font-medium">${low52.toFixed(1)}</span>
+          <span className="font-mono text-rose-300 font-medium">${low52.toFixed(1)}</span>
           <div className="relative flex-1 h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
             <div
-              className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 rounded-full transition-all duration-500"
+              className="absolute top-0 bottom-0 bg-gradient-to-r from-rose-600 via-amber-400 to-emerald-400 rounded-full transition-all duration-500"
               style={{ width: `${rangePct}%` }}
             />
           </div>
-          <span className="font-mono text-slate-300 font-medium">${high52.toFixed(1)}</span>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">
+          <span className="font-mono text-emerald-300 font-medium">${high52.toFixed(1)}</span>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-950/60 text-cyan-300 border border-blue-800/60">
             52W Range
           </span>
         </div>
@@ -300,13 +308,25 @@ export const TacticalMiniPulse: React.FC<TacticalMiniPulseProps> = ({
         {/* EMA Cushions */}
         <div className="flex items-center gap-2 flex-shrink-0 text-sm">
           {ema50Cushion !== null && (
-            <span className={`px-2.5 py-1 rounded-lg font-mono font-medium ${ema50Cushion >= 0 ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'}`}>
+            <span
+              className={`px-2.5 py-1 rounded-lg font-mono font-medium border ${
+                ema50Cushion >= 0
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+              }`}
+            >
               EMA50: {ema50Cushion >= 0 ? '+' : ''}{ema50Cushion.toFixed(1)}%
             </span>
           )}
           {ema200Cushion !== null && (
-            <span className={`px-2.5 py-1 rounded-lg font-mono font-medium flex items-center gap-1.5 ${ema200Cushion >= 0 ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-500/30' : 'bg-rose-500/20 text-rose-200 border border-rose-500/40'}`}>
-              <Shield className="w-4 h-4 text-cyan-400" />
+            <span
+              className={`px-2.5 py-1 rounded-lg font-mono font-medium flex items-center gap-1.5 border ${
+                ema200Cushion >= 0
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  : 'bg-rose-600/25 text-rose-300 border-rose-500/50 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+              }`}
+            >
+              <Shield className={`w-4 h-4 ${ema200Cushion >= 0 ? 'text-emerald-400' : 'text-rose-400'}`} />
               <span>EMA200: {ema200Cushion >= 0 ? '+' : ''}{ema200Cushion.toFixed(1)}%</span>
             </span>
           )}

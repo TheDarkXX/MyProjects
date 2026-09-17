@@ -10,7 +10,6 @@ import {
   Cell
 } from 'recharts';
 import { QuarterlyFinancialItem } from '../../../../stores/dossierStore';
-
 import { DossierTooltip } from '../shared/DossierTooltip';
 
 interface EpsBeatPulseChartProps {
@@ -50,11 +49,11 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
   const latestBeat = chartData[chartData.length - 1];
 
   return (
-    <div className={`bg-[#0A1022]/90 border border-blue-900/40 rounded-2xl p-4 shadow-lg backdrop-blur-md flex flex-col justify-between ${className}`}>
+    <div className={`bg-[#0B1226]/95 border border-blue-900/60 rounded-2xl p-4 shadow-xl backdrop-blur-md flex flex-col justify-between ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
           <h4 className="text-base font-bold text-slate-100 tracking-wide uppercase">
             EPS Beat & Consensus ({symbol})
           </h4>
@@ -65,8 +64,12 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
             Beat {beatStreak}Q ซ้อน
           </span>
           {latestBeat && (
-            <span className="text-sm font-mono font-semibold text-cyan-300">
-              Surprise +{latestBeat.surprisePct.toFixed(1)}%
+            <span
+              className={`text-sm font-mono font-semibold ${
+                latestBeat.surprisePct >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              }`}
+            >
+              Surprise {latestBeat.surprisePct >= 0 ? '+' : ''}{latestBeat.surprisePct.toFixed(1)}%
             </span>
           )}
         </div>
@@ -75,7 +78,7 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
       {/* Chart Canvas */}
       <div className="w-full h-[190px]">
         {chartData.length === 0 ? (
-          <div className="w-full h-full flex items-center justify-center text-slate-300 text-sm font-normal">
+          <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm font-normal">
             ไม่มีข้อมูลผลประกอบการ
           </div>
         ) : (
@@ -107,16 +110,16 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
                       active={active}
                       title={`ไตรมาส ${label}`}
                       customRows={[
-                        { label: 'EPS จริง (Actual):', value: `$${item.epsActual.toFixed(2)}`, color: item.isBeat ? '#10B981' : '#F43F5E' },
-                        { label: 'EPS คาดการณ์ (Est):', value: `$${item.epsEstimate.toFixed(2)}`, color: '#64748B' },
-                        { label: 'Surprise:', value: `${item.surprisePct >= 0 ? '+' : ''}${item.surprisePct.toFixed(1)}%`, color: item.isBeat ? '#34D399' : '#FB7185' }
+                        { label: 'EPS จริง (Actual):', value: `$${item.epsActual.toFixed(2)}`, color: item.isBeat ? '#34D399' : '#EF4444' },
+                        { label: 'EPS คาดการณ์ (Est):', value: `$${item.epsEstimate.toFixed(2)}`, color: '#94A3B8' },
+                        { label: 'Surprise:', value: `${item.surprisePct >= 0 ? '+' : ''}${item.surprisePct.toFixed(1)}%`, color: item.isBeat ? '#34D399' : '#EF4444' }
                       ]}
                     />
                   );
                 }}
               />
 
-              {/* EPS Actual Bar (Green beat / Red miss) */}
+              {/* EPS Actual Bar (Light Green beat / Deep Red miss) */}
               <Bar
                 dataKey="epsActual"
                 name="EPS Actual"
@@ -128,18 +131,19 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
                 {chartData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.isBeat ? '#10B981' : '#F43F5E'}
+                    fill={entry.isBeat ? '#10B981' : '#EF4444'}
                     className="hover:opacity-80 transition-opacity cursor-pointer"
                   />
                 ))}
               </Bar>
 
-              {/* EPS Estimate Bar (Faint ghost bar) */}
+              {/* EPS Estimate Bar (Faint ghost bar in Slate Blue) */}
               <Bar
                 dataKey="epsEstimate"
                 name="EPS Estimate"
-                fill="#334155"
-                opacity={0.6}
+                fill="#1E293B"
+                stroke="#334155"
+                opacity={0.8}
                 radius={[5, 5, 0, 0]}
                 barSize={14}
                 animationDuration={600}
@@ -151,13 +155,16 @@ export const EpsBeatPulseChart: React.FC<EpsBeatPulseChartProps> = ({
       </div>
 
       {/* Subtle Legend */}
-      <div className="mt-2 pt-2 border-t border-blue-900/30 flex items-center justify-between text-sm text-slate-300">
+      <div className="mt-2 pt-2 border-t border-blue-900/40 flex items-center justify-between text-sm text-slate-300">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-emerald-300 font-medium">
-            <span className="w-2.5 h-2.5 bg-[#10B981] rounded-sm inline-block shadow-sm" /> Actual (ชนะเป้า)
+            <span className="w-2.5 h-2.5 bg-[#10B981] rounded-sm inline-block shadow-[0_0_6px_rgba(16,185,129,0.5)]" /> Actual (ชนะเป้า)
           </span>
           <span className="flex items-center gap-1.5 text-slate-400 font-medium">
-            <span className="w-2.5 h-2.5 bg-[#334155] rounded-sm inline-block" /> Estimate (เป้าคาด)
+            <span className="w-2.5 h-2.5 bg-[#1E293B] border border-slate-600 rounded-sm inline-block" /> Estimate (เป้าคาด)
+          </span>
+          <span className="flex items-center gap-1.5 text-rose-300 font-medium">
+            <span className="w-2.5 h-2.5 bg-[#EF4444] rounded-sm inline-block shadow-[0_0_6px_rgba(239,68,68,0.5)]" /> Miss (พลาดเป้า)
           </span>
         </div>
         <span className="text-xs text-slate-400">สถาบันดันราคาเมื่อ Beat ต่อเนื่อง</span>

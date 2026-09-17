@@ -33,11 +33,13 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
   const stopCushionPct = data.currentPrice > 0 && stopLevel > 0 ? ((data.currentPrice - stopLevel) / data.currentPrice) * 100 : 0;
 
   return (
-    <div className={`rounded-2xl p-4 shadow-lg border backdrop-blur-md transition-all ${
-      isMoatBreaker
-        ? 'bg-gradient-to-b from-[#1C0816] to-[#0A1022] border-rose-500/60 shadow-[0_0_20px_rgba(244,63,94,0.2)]'
-        : 'bg-[#0A1022]/90 border-blue-900/40'
-    } ${className}`}>
+    <div
+      className={`rounded-2xl p-4 shadow-xl border backdrop-blur-md transition-all ${
+        isMoatBreaker
+          ? 'bg-[#1A0A10]/95 border-rose-600/70 shadow-[0_0_20px_rgba(239,68,68,0.25)]'
+          : 'bg-[#0B1226]/95 border-blue-900/60'
+      } ${className}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5">
@@ -52,16 +54,16 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
       </div>
 
       {/* Dynamic Visual Moat Meters */}
-      <div className="grid grid-cols-3 gap-2.5 mb-3 bg-[#060A16]/70 p-3 rounded-xl border border-blue-900/30">
+      <div className="grid grid-cols-3 gap-2.5 mb-3 bg-[#070D1F] p-3 rounded-xl border border-blue-900/40">
         {dynamicMoats.slice(0, 3).map((m, idx) => (
           <div key={idx}>
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="text-slate-300 font-medium truncate">{m.title}</span>
-              <span className="text-cyan-400 font-mono font-bold">{m.score}/{m.maxScore}</span>
+              <span className="text-amber-300 font-mono font-bold">{m.score}/{m.maxScore}</span>
             </div>
             <div className="relative h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 rounded-full transition-all duration-700"
+                className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 rounded-full transition-all duration-700"
                 style={{ width: `${Math.min(100, (m.score / m.maxScore) * 100)}%` }}
               />
             </div>
@@ -69,54 +71,62 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
         ))}
       </div>
 
-      {/* 3 Tactical Protocol Status Strips (Visual Instruments) */}
+      {/* 3 Tactical Protocol Status Strips */}
       <div className="space-y-1.5">
         {/* Protocol 1: Free-Ride 50% */}
-        <div className="p-2.5 bg-[#060A16]/80 rounded-xl border border-blue-900/30 flex items-center justify-between text-[13px]">
+        <div className="p-2.5 bg-[#070D1F] rounded-xl border border-blue-900/40 flex items-center justify-between text-[13px]">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${isFreeRideReady ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
             <span className="text-slate-200 font-medium">Free-Ride 50%:</span>
             <span className="text-slate-300 text-[13px] font-normal">เป้าหมายกำไรแตะ +100%</span>
           </div>
-          <span className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
-            isFreeRideReady
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold'
-              : 'bg-slate-800 text-slate-300 border-slate-700 font-medium'
-          }`}>
+          <span
+            className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
+              isFreeRideReady
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold'
+                : 'bg-slate-800 text-slate-300 border-slate-700 font-medium'
+            }`}
+          >
             {isFreeRideReady ? '🚀 READY TO HARVEST' : `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(0)}% PnL`}
           </span>
         </div>
 
         {/* Protocol 2: Moat Breaker Alert */}
-        <div className={`p-2.5 rounded-xl border flex items-center justify-between text-[13px] ${
-          isMoatBreaker ? 'bg-rose-500/15 border-rose-500/40 text-rose-200' : 'bg-[#060A16]/80 border-blue-900/30 text-slate-200'
-        }`}>
+        <div
+          className={`p-2.5 rounded-xl border flex items-center justify-between text-[13px] ${
+            isMoatBreaker ? 'bg-rose-950/40 border-rose-500/50 text-rose-200' : 'bg-[#070D1F] border-blue-900/40 text-slate-200'
+          }`}
+        >
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${isMoatBreaker ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400'}`} />
             <span className="font-medium">Moat Breaker:</span>
             <span className="text-slate-300 text-[13px] font-normal">Gross Margin ลดลง 3Q ติด</span>
           </div>
-          <span className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
-            isMoatBreaker
-              ? 'bg-rose-500/30 text-rose-200 border-rose-500/60 font-semibold animate-pulse'
-              : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25 font-medium'
-          }`}>
+          <span
+            className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
+              isMoatBreaker
+                ? 'bg-rose-500/30 text-rose-200 border-rose-500/60 font-semibold animate-pulse'
+                : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25 font-medium'
+            }`}
+          >
             {isMoatBreaker ? '🚨 BREACHED' : '🛡️ SAFE'}
           </span>
         </div>
 
         {/* Protocol 3: Trailing Stop Cushion */}
-        <div className="p-2.5 bg-[#060A16]/80 rounded-xl border border-blue-900/30 flex items-center justify-between text-[13px]">
+        <div className="p-2.5 bg-[#070D1F] rounded-xl border border-blue-900/40 flex items-center justify-between text-[13px]">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${stopCushionPct >= 0 ? 'bg-cyan-400' : 'bg-rose-500'}`} />
             <span className="text-slate-200 font-medium">Trailing Stop:</span>
             <span className="text-slate-300 text-[13px] font-normal">EMA 200 (${stopLevel.toFixed(1)})</span>
           </div>
-          <span className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
-            stopCushionPct >= 0
-              ? 'bg-cyan-500/10 text-cyan-200 border-cyan-500/25 font-medium'
-              : 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold'
-          }`}>
+          <span
+            className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
+              stopCushionPct >= 0
+                ? 'bg-cyan-500/10 text-cyan-200 border-cyan-500/25 font-medium'
+                : 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold'
+            }`}
+          >
             {stopCushionPct >= 0 ? `+${stopCushionPct.toFixed(1)}% เหนือเส้น` : `หลุดเส้น ${stopCushionPct.toFixed(1)}%`}
           </span>
         </div>

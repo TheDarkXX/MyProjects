@@ -20,18 +20,22 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
 }) => {
   // SVG Dimensions
   const width = 600;
-  const height = 280;
-  const margin = { top: 30, right: 65, bottom: 40, left: 55 };
+  const height = 290;
+  const margin = { top: 32, right: 70, bottom: 42, left: 60 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
-  // Cone Math: 3-Year Projection
-  // Year 0 (Now) -> Year 1 -> Year 2 -> Year 3
-  // Base Case: 26% CAGR -> Doubler (2.0x) in ~3 years
-  // Bull Case: 38% CAGR -> 2.6x in 3 years
-  // Bear Case: 14% CAGR -> 1.48x in 3 years
+  // Real Cost Basis and 2X Target Alignment
+  const costBasis = basePrice > 0 ? basePrice : (currentPrice > 0 ? currentPrice : 100);
+  const finalTarget = targetPrice3Y > 0 ? targetPrice3Y : costBasis * 2;
+  const startP = currentPrice > 0 ? currentPrice : costBasis;
+  const pnlPct = costBasis > 0 ? ((startP - costBasis) / costBasis) * 100 : 0;
+
+  // 3-Year Projection from current position toward investment horizon
+  // Base Case: 26% CAGR -> Doubler (2.0x) from base
+  // Bull Case: 38% CAGR -> 2.6x
+  // Bear Case: 14% CAGR -> 1.48x
   const projection = useMemo(() => {
-    const startP = currentPrice > 0 ? currentPrice : basePrice;
     const now = new Date();
     const y1 = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
     const y2 = new Date(now.getFullYear() + 2, now.getMonth(), now.getDate());
@@ -56,27 +60,29 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
         { date: y2, bull: bullY2, base: baseY2, bear: bearY2, actual: null },
         { date: y3, bull: bullY3, base: baseY3, bear: bearY3, actual: null }
       ],
-      finalTarget: targetPrice3Y > 0 ? targetPrice3Y : startP * 2,
       startDate: now,
       endDate: y3,
       startPrice: startP
     };
-  }, [currentPrice, basePrice, targetPrice3Y]);
+  }, [startP]);
 
-  // Merge with historical points (last 6-12 months)
+  // Merge with historical prices (simulated or real last 6-12 months)
   const chartData = useMemo(() => {
     const hist = (historicalPrices || []).slice(-12).map(h => ({
       date: new Date(h.date),
       price: h.price
     }));
 
-    const minDate = hist.length > 0 ? hist[0].date : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    // Inception point (simulated 6 months ago for cost basis anchor)
+    const costDate = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+    const minDate = hist.length > 0 ? (hist[0].date < costDate ? hist[0].date : costDate) : costDate;
     const maxDate = projection.endDate;
 
     const allPrices = [
+      costBasis,
+      finalTarget,
+      startP,
       ...hist.map(h => h.price),
-      projection.startPrice,
-      projection.finalTarget,
       ...projection.points.map(p => p.bull),
       ...projection.points.map(p => p.bear)
     ];
@@ -92,7 +98,7 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       .domain([minPrice, maxPrice])
       .range([innerHeight, 0]);
 
-    // Area generator for the cone (between Bull and Bear)
+    // Area generator for the cone (Bull to Bear)
     const areaGenerator = d3.area<any>()
       .x(d => xScale(d.date))
       .y0(d => yScale(d.bear))
@@ -133,31 +139,32 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       histPath: hist.length > 0 ? (historyLine(hist) || '') : '',
       currentX: xScale(projection.startDate),
       currentY: yScale(projection.startPrice),
-      targetY: yScale(projection.finalTarget),
+      costY: yScale(costBasis),
+      targetY: yScale(finalTarget),
       ticksX: xScale.ticks(5),
       ticksY: yScale.ticks(4)
     };
-  }, [projection, historicalPrices, innerWidth, innerHeight]);
+  }, [projection, historicalPrices, costBasis, finalTarget, startP, innerWidth, innerHeight]);
 
   return (
-    <div className={`relative bg-[#0B1226]/95 border border-blue-900/50 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
+    <div className={`relative bg-[#0B1226]/95 border border-blue-900/60 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
       {/* Header Info */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-cyan-400" />
-          <h4 className="text-[15px] font-medium text-slate-200 uppercase tracking-wide">
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+          <h4 className="text-[15px] font-semibold text-slate-100 uppercase tracking-wide">
             3-Year Doubler Cone ({symbol})
           </h4>
         </div>
         <div className="flex items-center gap-1.5 text-[12px]">
-          <span className="flex items-center gap-1 text-emerald-300 font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25">
+          <span className="flex items-center gap-1 text-emerald-300 font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
             <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block" /> Bull +38%
           </span>
-          <span className="flex items-center gap-1 text-cyan-200 font-medium bg-cyan-500/15 px-2 py-0.5 rounded border border-cyan-500/30">
+          <span className="flex items-center gap-1 text-cyan-200 font-medium bg-blue-500/20 px-2 py-0.5 rounded border border-cyan-400/40">
             <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full inline-block" /> Base +26% (2X)
           </span>
-          <span className="flex items-center gap-1 text-slate-300 font-normal bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/60">
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full inline-block" /> Bear +14%
+          <span className="flex items-center gap-1 text-rose-300 font-normal bg-rose-950/40 px-2 py-0.5 rounded border border-rose-800/40">
+            <span className="w-1.5 h-1.5 bg-rose-400 rounded-full inline-block" /> Bear +14%
           </span>
         </div>
       </div>
@@ -169,15 +176,16 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
           className="w-full h-auto min-w-[450px]"
         >
           <defs>
-            <linearGradient id="coneGradient" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#06B6D4" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.15" />
+            <linearGradient id="doublerConeGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.45" />
+              <stop offset="50%" stopColor="#0284C7" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#10B981" stopOpacity="0.15" />
             </linearGradient>
-            <linearGradient id="historyGradient" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#60A5FA" stopOpacity="0.4" />
+            <linearGradient id="historyLineGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.5" />
               <stop offset="100%" stopColor="#38BDF8" stopOpacity="1" />
             </linearGradient>
-            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id="doublerGlow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="3" result="glow" />
               <feComposite in="SourceGraphic" in2="glow" operator="over" />
             </filter>
@@ -188,34 +196,42 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             {chartData.ticksY.map((tick, i) => (
               <g key={`y-${i}`} transform={`translate(0, ${chartData.yScale(tick)})`}>
                 <line x1={0} x2={innerWidth} stroke="#1E293B" strokeDasharray="3,3" strokeOpacity={0.8} />
-                <text x={-10} dy="0.32em" textAnchor="end" className="fill-slate-300 text-[13px] font-mono font-medium">
+                <text x={-10} dy="0.32em" textAnchor="end" className="fill-slate-400 text-[13px] font-mono font-medium">
                   ${tick.toFixed(0)}
                 </text>
               </g>
             ))}
 
-            {/* Target 2X Horizontal Reference Line */}
+            {/* Target 2X Horizontal Reference Line (Light Green) */}
             <g transform={`translate(0, ${chartData.targetY})`}>
               <line x1={0} x2={innerWidth} stroke="#10B981" strokeWidth={2} strokeDasharray="5,4" />
-              <text x={innerWidth - 110} dy="-8" className="fill-emerald-300 text-[13px] font-semibold font-mono">
-                2X Goal (${projection.finalTarget.toFixed(0)})
+              <text x={innerWidth - 125} dy="-8" className="fill-emerald-400 text-[13px] font-semibold font-mono">
+                2X Goal (${finalTarget.toFixed(1)})
+              </text>
+            </g>
+
+            {/* Cost Basis Reference Line (Yellow Gold) */}
+            <g transform={`translate(0, ${chartData.costY})`}>
+              <line x1={0} x2={innerWidth} stroke="#EAB308" strokeWidth={1.5} strokeDasharray="4,3" strokeOpacity={0.85} />
+              <text x={innerWidth - 125} dy="15" className="fill-amber-300 text-[12px] font-medium font-mono">
+                My Cost (${costBasis.toFixed(1)})
               </text>
             </g>
 
             {/* The Shaded Cone */}
-            <path d={chartData.areaPath} fill="url(#coneGradient)" />
+            <path d={chartData.areaPath} fill="url(#doublerConeGrad)" />
 
-            {/* Cone Outline Lines */}
-            <path d={chartData.bullPath} fill="none" stroke="#10B981" strokeWidth={1.5} strokeOpacity={0.9} />
-            <path d={chartData.basePath} fill="none" stroke="#38BDF8" strokeWidth={3} filter="url(#glow)" />
-            <path d={chartData.bearPath} fill="none" stroke="#94A3B8" strokeWidth={1.5} strokeOpacity={0.8} />
+            {/* Cone Outline Lines: Bull = Light Green, Base = Deep Blue/Cyan, Bear = Deep Red */}
+            <path d={chartData.bullPath} fill="none" stroke="#34D399" strokeWidth={1.8} strokeOpacity={0.9} />
+            <path d={chartData.basePath} fill="none" stroke="#38BDF8" strokeWidth={3} filter="url(#doublerGlow)" />
+            <path d={chartData.bearPath} fill="none" stroke="#EF4444" strokeWidth={1.8} strokeOpacity={0.85} />
 
             {/* Historical Price Line */}
             {chartData.histPath && (
-              <path d={chartData.histPath} fill="none" stroke="url(#historyGradient)" strokeWidth={2.5} />
+              <path d={chartData.histPath} fill="none" stroke="url(#historyLineGrad)" strokeWidth={2.5} />
             )}
 
-            {/* Current Price Dot & Pulse */}
+            {/* Current Price Dot & Glow */}
             <circle
               cx={chartData.currentX}
               cy={chartData.currentY}
@@ -234,9 +250,9 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
 
             {/* Label for Current Price */}
             <g transform={`translate(${chartData.currentX}, ${chartData.currentY - 14})`}>
-              <rect x={-34} y={-18} width={68} height={22} rx={6} fill="#060A16" stroke="#38BDF8" strokeWidth={1.5} />
+              <rect x={-42} y={-18} width={84} height={22} rx={6} fill="#060A16" stroke="#38BDF8" strokeWidth={1.5} />
               <text textAnchor="middle" dy="-2" className="fill-white text-[13px] font-semibold font-mono">
-                ${currentPrice.toFixed(1)}
+                ${startP.toFixed(1)}
               </text>
             </g>
 
@@ -254,15 +270,24 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       </div>
 
       {/* Bottom Summary Bar */}
-      <div className="mt-1 pt-2 border-t border-blue-900/30 flex items-center justify-between text-[13px] text-slate-300 font-normal">
+      <div className="mt-1 pt-2.5 border-t border-blue-900/40 flex flex-wrap items-center justify-between gap-2 text-[14px] text-slate-300 font-normal">
         <div>
-          ฐาน: <span className="font-mono font-medium text-slate-100">${basePrice.toFixed(1)}</span>
+          ทุนเฉลี่ย: <span className="font-mono font-semibold text-amber-300">${costBasis.toFixed(1)}</span>
         </div>
         <div>
-          เป้า 1 เด้ง: <span className="font-mono font-semibold text-emerald-300">${targetPrice3Y.toFixed(0)}</span> (+100%)
+          ราคาปัจจุบัน:{' '}
+          <span className="font-mono font-semibold text-white">${startP.toFixed(1)}</span>{' '}
+          <span className={`text-[12px] font-mono font-medium ${pnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
+          </span>
         </div>
         <div>
-          CAGR ฐาน: <span className="font-mono font-medium text-cyan-200">26.0% / ปี</span>
+          เป้า 1 เด้ง:{' '}
+          <span className="font-mono font-semibold text-emerald-400">${finalTarget.toFixed(0)}</span>{' '}
+          <span className="text-emerald-500/80 text-[12px]">(+100%)</span>
+        </div>
+        <div>
+          CAGR ฐาน: <span className="font-mono font-semibold text-cyan-300">26.0% / ปี</span>
         </div>
       </div>
     </div>

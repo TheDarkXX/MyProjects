@@ -32,7 +32,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
   const stopCushionPct = currentPrice > 0 ? ((currentPrice - stopPrice) / currentPrice) * 100 : 0;
 
   return (
-    <div className="bg-[#0A1022]/90 border border-blue-900/40 rounded-2xl p-3.5 shadow-lg backdrop-blur-md">
+    <div className="bg-[#0B1226]/95 border border-blue-900/60 rounded-2xl p-4 shadow-xl backdrop-blur-md">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2.5">
@@ -51,9 +51,9 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
         </div>
       </div>
 
-      {/* Position Snapshot Bar (Subtle, Clean Tiles) */}
+      {/* Position Snapshot Bar (Deep Blue / Yellow / Light Green) */}
       {ownedShares === 0 ? (
-        <div className="p-3.5 bg-blue-950/30 rounded-xl border border-blue-800/40 mb-3 flex items-center justify-between">
+        <div className="p-3.5 bg-blue-950/40 rounded-xl border border-blue-800/40 mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="text-lg">🎯</span>
             <div>
@@ -66,7 +66,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
           </span>
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-2.5 p-3 bg-[#060A16]/80 rounded-xl border border-blue-900/40 mb-3">
+        <div className="grid grid-cols-4 gap-2.5 p-3 bg-[#070D1F] rounded-xl border border-blue-900/50 mb-3">
           <div>
             <span className="text-xs text-slate-400 font-medium">หุ้นที่ถือ:</span>
             <div className="text-lg font-bold text-white font-mono">
@@ -109,11 +109,11 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
               ? 'bg-[#060A16]/30 border-slate-800 opacity-40 cursor-not-allowed'
               : activeAction === 'BUY'
                 ? 'bg-emerald-500/15 border-emerald-500/60 shadow-md shadow-emerald-500/10'
-                : 'bg-[#060A16]/70 hover:bg-[#0B152C] border-blue-900/30 hover:border-emerald-500/40'
+                : 'bg-[#070D1F] hover:bg-[#0E1A38] border-blue-900/40 hover:border-emerald-500/40'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[14px] font-medium text-emerald-300 flex items-center gap-1">
+            <span className="text-[14px] font-semibold text-emerald-300 flex items-center gap-1">
               <ShoppingCart className="w-3.5 h-3.5" />
               1. เติมโควตา
             </span>
@@ -131,21 +131,21 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
           onClick={() => setActiveAction(activeAction === 'HOLD' ? null : 'HOLD')}
           className={`p-2.5 rounded-xl border transition-all text-left flex flex-col justify-between cursor-pointer ${
             activeAction === 'HOLD'
-              ? 'bg-cyan-500/15 border-cyan-500/60 shadow-md shadow-cyan-500/10'
-              : 'bg-[#060A16]/70 hover:bg-[#0B152C] border-blue-900/30 hover:border-cyan-500/40'
+              ? 'bg-blue-600/20 border-cyan-400 shadow-md shadow-cyan-500/10'
+              : 'bg-[#070D1F] hover:bg-[#0E1A38] border-blue-900/40 hover:border-cyan-500/40'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[14px] font-medium text-cyan-200 flex items-center gap-1">
+            <span className="text-[14px] font-semibold text-cyan-200 flex items-center gap-1">
               <PauseCircle className="w-3.5 h-3.5" />
               2. ถือตามแผน
             </span>
-            <span className="text-[12px] font-mono font-medium px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-200 border border-cyan-500/30">
+            <span className="text-[12px] font-mono font-medium px-1.5 py-0.5 rounded bg-blue-500/20 text-cyan-300 border border-blue-500/40">
               Safe
             </span>
           </div>
           <div className="text-[13px] text-slate-300 font-mono">
-            Cushion: <span className="text-emerald-300 font-semibold">+{stopCushionPct.toFixed(1)}%</span>
+            Cushion: <span className="text-emerald-400 font-semibold">+{stopCushionPct.toFixed(1)}%</span>
           </div>
         </button>
 
@@ -154,14 +154,14 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
           onClick={() => setActiveAction(activeAction === 'FREERIDE' ? null : 'FREERIDE')}
           className={`p-2.5 rounded-xl border transition-all text-left flex flex-col justify-between cursor-pointer ${
             activeAction === 'FREERIDE'
-              ? 'bg-rose-500/15 border-rose-500/60 shadow-md shadow-rose-500/10'
+              ? 'bg-rose-500/20 border-rose-500/60 shadow-md shadow-rose-500/15'
               : isFreeRideEligible
-                ? 'bg-[#180814] border-rose-500/60 animate-pulse'
-                : 'bg-[#060A16]/70 hover:bg-[#0B152C] border-blue-900/30 hover:border-rose-500/30'
+                ? 'bg-[#1C0A14] border-rose-500/60 animate-pulse'
+                : 'bg-[#070D1F] hover:bg-[#0E1A38] border-blue-900/40 hover:border-rose-500/40'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[14px] font-medium text-rose-300 flex items-center gap-1">
+            <span className="text-[14px] font-semibold text-rose-300 flex items-center gap-1">
               <ShieldAlert className="w-3.5 h-3.5" />
               3. Free-Ride
             </span>
@@ -179,9 +179,9 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
         </button>
       </div>
 
-      {/* Expanded Slip Panel based on active selection (Clean & Visual) */}
+      {/* Expanded Slip Panel */}
       {activeAction === 'BUY' && missingShares > 0 && (
-        <div className="p-2.5 bg-emerald-950/25 border border-emerald-500/30 rounded-xl mb-2 flex items-center justify-between text-[13px]">
+        <div className="p-2.5 bg-emerald-950/30 border border-emerald-500/35 rounded-xl mb-2 flex items-center justify-between text-[13px]">
           <div>
             <span className="text-emerald-400 font-medium">คำนวณเติมโควตา:</span>
             <span className="text-slate-200 font-mono ml-1.5">
@@ -195,7 +195,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
       )}
 
       {activeAction === 'HOLD' && (
-        <div className="p-2.5 bg-cyan-950/25 border border-cyan-500/30 rounded-xl mb-2 text-[13px] text-slate-200">
+        <div className="p-2.5 bg-blue-950/35 border border-cyan-500/35 rounded-xl mb-2 text-[13px] text-slate-200">
           <span className="text-cyan-400 font-medium">จุดตัดขาดทุน Stoploss:</span>
           <span className="font-mono text-amber-300 ml-1.5 font-semibold">${stopPrice.toFixed(2)}</span>
           <span className="text-slate-300 ml-2 font-normal">ตราบใดที่ไม่หลุด EMA 200 และ Gross Margin ไม่ตก 3Q ติด ให้นั่งทับมือ</span>
@@ -203,7 +203,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
       )}
 
       {activeAction === 'FREERIDE' && (
-        <div className="p-2.5 bg-amber-950/25 border border-amber-500/30 rounded-xl mb-2 text-[13px] text-slate-200">
+        <div className="p-2.5 bg-amber-950/30 border border-amber-500/35 rounded-xl mb-2 text-[13px] text-slate-200">
           <span className="text-amber-400 font-medium">ดึงเงินต้นคืน:</span>
           <span className="text-slate-200 font-mono ml-1.5">
             ขาย <span className="font-semibold text-white">{freeRideShares} หุ้น</span> ได้เงินสดคืน <span className="text-emerald-300 font-semibold">${freeRideCashReturn.toFixed(0)}</span> เหลืออีก <span className="text-cyan-300 font-semibold">{ownedShares - freeRideShares} หุ้น</span> ต้นทุนเป็น $0.00 ตลอดไป
@@ -212,14 +212,14 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
       )}
 
       {holding.lots && holding.lots.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-blue-900/30">
+        <div className="mt-2 pt-2 border-t border-blue-900/40">
           <div className="flex items-center gap-1 text-[13px] font-medium text-slate-300 mb-1.5">
             <History className="w-3.5 h-3.5 text-cyan-400" />
             <span>ประวัติการทำรายการ ({holding.lots.length} รายการล่าสุด)</span>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {holding.lots.slice(0, 3).map((lot) => (
-              <div key={lot.id} className="p-1.5 bg-[#060A16]/70 rounded-lg border border-blue-900/30 text-[12px] flex items-center justify-between">
+              <div key={lot.id} className="p-1.5 bg-[#070D1F] rounded-lg border border-blue-900/40 text-[12px] flex items-center justify-between">
                 <div>
                   <span className={`font-semibold ${lot.type === 'BUY' ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {lot.type}
