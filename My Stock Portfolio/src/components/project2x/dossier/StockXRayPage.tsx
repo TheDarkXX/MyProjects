@@ -9,14 +9,15 @@ import { ScanSearch, Sparkles } from 'lucide-react';
 const STOCKS_ORDER = ['NVDA', 'TSM', 'AVGO', 'VRT', 'MELI', 'APH', 'KLAC', 'ANET', 'CRWD', 'STRL', 'ALAB', 'PLTR', 'CLS'];
 
 export const StockXRayPage: React.FC = () => {
-  const { data, selectedSymbol, selectSymbol, openDossier, isLoading, error, activeSubTab } = useDossierStore();
+  const { data, selectedSymbol, selectSymbol, closeDossier, isLoading, error, activeSubTab } = useDossierStore();
 
-  // Auto-select first stock (NVDA) on page load if none selected
+  // Auto-select first stock (NVDA) on page load and ensure modal overlay is closed
   useEffect(() => {
+    closeDossier();
     if (!selectedSymbol) {
-      openDossier('NVDA');
+      selectSymbol('NVDA');
     }
-  }, [selectedSymbol, openDossier]);
+  }, [selectedSymbol, selectSymbol, closeDossier]);
 
   // Keyboard navigation: Arrow Left / Right to switch stock
   useEffect(() => {

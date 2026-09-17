@@ -18,6 +18,10 @@ const PAGE_TITLES: Record<string, string> = {
   transactions: 'Transactions',
   portfolios: 'Portfolios',
   settings: 'Settings',
+  project2x: 'Project 2X',
+  xray: 'Stock X-Ray',
+  xchart: 'X-Chart',
+  news: 'News Intel',
 };
 
 export const Header = () => {

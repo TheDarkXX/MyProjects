@@ -1,6 +1,12 @@
 import React from 'react';
-import { RefreshCw, X, ArrowUpRight, ArrowDownRight, ShieldCheck, AlertTriangle, LayoutDashboard, LineChart, BrainCircuit } from 'lucide-react';
+import { 
+  RefreshCw, X, ArrowUpRight, ArrowDownRight, ShieldCheck, AlertTriangle, 
+  LayoutDashboard, LineChart, BrainCircuit, PanelLeftClose, PanelLeftOpen, 
+  PanelTopClose, PanelTopOpen, Maximize2 
+} from 'lucide-react';
+import clsx from 'clsx';
 import { useDossierStore } from '../../../stores/dossierStore';
+import { useUiStore } from '../../../stores/uiStore';
 import { DoublerPowerTube } from './DoublerPowerTube';
 
 interface DossierHeaderProps {
@@ -19,6 +25,9 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
     activeSubTab,
     setActiveSubTab
   } = useDossierStore();
+
+  const { sidebarMode, toggleSidebarMode, xchartHideHeader, toggleXChartHeader, setActiveTab } = useUiStore();
+  const collapsed = sidebarMode === 'compact';
 
   if (!data) return null;
 
@@ -139,6 +148,54 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
             </div>
           )}
 
+          {/* Toggle Sidebar Button */}
+          <button
+            onClick={toggleSidebarMode}
+            className={clsx(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[13px] font-medium transition-all cursor-pointer",
+              collapsed
+                ? "bg-cyan-950/70 border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.25)] hover:bg-cyan-900/60 font-semibold"
+                : "bg-[#0B1226] border-blue-900/50 text-slate-300 hover:text-white hover:bg-blue-950/50"
+            )}
+            title={collapsed ? "กาง Sidebar ด้านซ้าย (Expand Sidebar)" : "ย่อ Sidebar ด้านซ้าย (Collapse Sidebar)"}
+          >
+            {collapsed ? (
+              <>
+                <PanelLeftOpen className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden xl:inline">กาง Sidebar</span>
+              </>
+            ) : (
+              <>
+                <PanelLeftClose className="w-3.5 h-3.5 text-slate-300" />
+                <span className="hidden xl:inline">ย่อ Sidebar</span>
+              </>
+            )}
+          </button>
+
+          {/* Toggle Top Bar Header Button */}
+          <button
+            onClick={toggleXChartHeader}
+            className={clsx(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[13px] font-medium transition-all cursor-pointer",
+              xchartHideHeader
+                ? "bg-purple-950/70 border-purple-500/50 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.25)] hover:bg-purple-900/60 font-semibold"
+                : "bg-[#0B1226] border-blue-900/50 text-slate-300 hover:text-white hover:bg-blue-950/50"
+            )}
+            title={xchartHideHeader ? "แสดง Header ด้านบน (Show Header)" : "ซ่อน Header ด้านบนเพื่อขยายพื้นที่ (Hide Header)"}
+          >
+            {xchartHideHeader ? (
+              <>
+                <PanelTopOpen className="w-3.5 h-3.5 text-purple-400" />
+                <span className="hidden xl:inline">แสดง Header</span>
+              </>
+            ) : (
+              <>
+                <PanelTopClose className="w-3.5 h-3.5 text-slate-300" />
+                <span className="hidden xl:inline">ซ่อน Header</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={() => refreshFinancials()}
             disabled={isRefreshing}
@@ -150,13 +207,27 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           </button>
 
           {onClose && (
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl bg-[#0B1226] hover:bg-rose-950/40 text-slate-300 hover:text-white border border-blue-900/50 hover:border-rose-500/50 transition-colors cursor-pointer"
-              title="ปิดหน้าต่าง (Esc)"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  onClose();
+                  setActiveTab('xray');
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[13px] font-medium bg-[#0B1226] border border-blue-900/50 hover:border-cyan-500/60 text-slate-300 hover:text-cyan-300 transition-colors cursor-pointer"
+                title="เปิดในแท็บ Stock X-Ray เต็มหน้าจอ (Open as Full Page)"
+              >
+                <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">เปิดเต็มหน้า</span>
+              </button>
+
+              <button
+                onClick={onClose}
+                className="p-2 rounded-xl bg-[#0B1226] hover:bg-rose-950/40 text-slate-300 hover:text-white border border-blue-900/50 hover:border-rose-500/50 transition-colors cursor-pointer"
+                title="ปิดหน้าต่าง (Esc)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </>
           )}
         </div>
       </div>

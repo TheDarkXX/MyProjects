@@ -127,7 +127,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 const MainLayout = () => {
   const { activeTab, xchartHideHeader } = useUiStore();
   const { isCompact, isDesktop, isTablet, isMobile, isPortrait } = useDeviceLayout();
-  const shouldShowHeader = !(activeTab === 'xchart' && xchartHideHeader);
+  const shouldShowHeader = !((activeTab === 'xchart' || activeTab === 'xray') && xchartHideHeader);
   const isTabletDashboard = isTablet && activeTab === 'dashboard';
   
   return (
@@ -144,12 +144,14 @@ const MainLayout = () => {
               ? "p-2 sm:p-4 overflow-hidden flex flex-col min-h-0"
               : activeTab === 'news'
                 ? "p-2 sm:p-4 md:p-5 overflow-y-auto"
-                : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
+                : activeTab === 'xray'
+                  ? "p-2 sm:p-4 md:p-5 overflow-y-auto"
+                  : isCompact ? "p-3 sm:p-5 overflow-y-auto pb-24" : "p-8 overflow-y-auto"
         )}>
           <div className={clsx(
             "w-full",
             (isTabletDashboard || activeTab === 'xchart') ? "h-full flex flex-col min-h-0" :
-            isCompact && activeTab !== 'xchart' && activeTab !== 'news' && "max-w-2xl mx-auto"
+            isCompact && activeTab !== 'xchart' && activeTab !== 'news' && activeTab !== 'xray' && "max-w-2xl mx-auto"
           )}>
             <ErrorBoundary>
               <Suspense fallback={
@@ -193,7 +195,7 @@ const MainLayout = () => {
       </div>
       <AppModal />
       <Suspense fallback={null}>
-        <StockDossierModal />
+        {activeTab !== 'xray' && <StockDossierModal />}
       </Suspense>
     </div>
   );
