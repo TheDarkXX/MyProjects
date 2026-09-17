@@ -140,24 +140,24 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
   }, [projection, historicalPrices, innerWidth, innerHeight]);
 
   return (
-    <div className={`relative bg-[#0B0F1A] border border-slate-800/80 rounded-2xl p-4 shadow-xl flex flex-col justify-between ${className}`}>
+    <div className={`relative bg-[#0B1226]/95 border border-blue-900/50 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
       {/* Header Info */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-          <h4 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
+          <h4 className="text-sm font-black text-white uppercase tracking-wider">
             3-Year Doubler Cone ({symbol})
           </h4>
         </div>
-        <div className="flex items-center gap-3 text-[13px]">
-          <span className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-3 h-0.5 bg-emerald-400 rounded-full inline-block" /> Bull (38% CAGR)
+        <div className="flex items-center gap-2 text-[13px]">
+          <span className="flex items-center gap-1 text-emerald-300 font-bold bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/30">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full inline-block" /> Bull +38%
           </span>
-          <span className="flex items-center gap-1.5 text-cyan-300 font-semibold">
-            <span className="w-3 h-0.5 bg-cyan-400 rounded-full inline-block" /> Base (26% CAGR)
+          <span className="flex items-center gap-1 text-cyan-200 font-black bg-cyan-500/20 px-2 py-0.5 rounded-md border border-cyan-500/40">
+            <span className="w-2 h-2 bg-cyan-400 rounded-full inline-block" /> Base +26% (2X)
           </span>
-          <span className="flex items-center gap-1.5 text-slate-400">
-            <span className="w-3 h-0.5 bg-slate-500 rounded-full inline-block" /> Bear (14% CAGR)
+          <span className="flex items-center gap-1 text-slate-200 font-semibold bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700">
+            <span className="w-2 h-2 bg-slate-400 rounded-full inline-block" /> Bear +14%
           </span>
         </div>
       </div>
@@ -166,15 +166,15 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       <div className="w-full overflow-x-auto">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-auto min-w-[500px]"
+          className="w-full h-auto min-w-[450px]"
         >
           <defs>
             <linearGradient id="coneGradient" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#06B6D4" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.12" />
+              <stop offset="0%" stopColor="#06B6D4" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.15" />
             </linearGradient>
             <linearGradient id="historyGradient" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.4" />
+              <stop offset="0%" stopColor="#60A5FA" stopOpacity="0.4" />
               <stop offset="100%" stopColor="#38BDF8" stopOpacity="1" />
             </linearGradient>
             <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -187,8 +187,8 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             {/* Grid Lines */}
             {chartData.ticksY.map((tick, i) => (
               <g key={`y-${i}`} transform={`translate(0, ${chartData.yScale(tick)})`}>
-                <line x1={0} x2={innerWidth} stroke="#1E293B" strokeDasharray="3,3" strokeOpacity={0.7} />
-                <text x={-10} dy="0.32em" textAnchor="end" className="fill-slate-400 text-[13px] font-mono">
+                <line x1={0} x2={innerWidth} stroke="#1E293B" strokeDasharray="3,3" strokeOpacity={0.8} />
+                <text x={-10} dy="0.32em" textAnchor="end" className="fill-slate-100 text-[13px] font-mono font-bold">
                   ${tick.toFixed(0)}
                 </text>
               </g>
@@ -196,9 +196,9 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
 
             {/* Target 2X Horizontal Reference Line */}
             <g transform={`translate(0, ${chartData.targetY})`}>
-              <line x1={0} x2={innerWidth} stroke="#10B981" strokeWidth={1.5} strokeDasharray="5,4" />
-              <text x={innerWidth + 8} dy="0.32em" className="fill-emerald-400 text-[13px] font-bold font-mono">
-                2X Target (${projection.finalTarget.toFixed(0)})
+              <line x1={0} x2={innerWidth} stroke="#10B981" strokeWidth={2} strokeDasharray="5,4" />
+              <text x={innerWidth - 110} dy="-8" className="fill-emerald-300 text-[13px] font-black font-mono">
+                2X Goal (${projection.finalTarget.toFixed(0)})
               </text>
             </g>
 
@@ -206,9 +206,9 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             <path d={chartData.areaPath} fill="url(#coneGradient)" />
 
             {/* Cone Outline Lines */}
-            <path d={chartData.bullPath} fill="none" stroke="#10B981" strokeWidth={1.5} strokeOpacity={0.8} />
-            <path d={chartData.basePath} fill="none" stroke="#06B6D4" strokeWidth={2.5} filter="url(#glow)" />
-            <path d={chartData.bearPath} fill="none" stroke="#64748B" strokeWidth={1.5} strokeOpacity={0.8} />
+            <path d={chartData.bullPath} fill="none" stroke="#10B981" strokeWidth={1.5} strokeOpacity={0.9} />
+            <path d={chartData.basePath} fill="none" stroke="#38BDF8" strokeWidth={3} filter="url(#glow)" />
+            <path d={chartData.bearPath} fill="none" stroke="#94A3B8" strokeWidth={1.5} strokeOpacity={0.8} />
 
             {/* Historical Price Line */}
             {chartData.histPath && (
@@ -219,23 +219,23 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             <circle
               cx={chartData.currentX}
               cy={chartData.currentY}
-              r={7}
-              fill="#06B6D4"
+              r={8}
+              fill="#38BDF8"
               className="animate-ping opacity-60"
             />
             <circle
               cx={chartData.currentX}
               cy={chartData.currentY}
               r={5}
-              fill="#F8FAFC"
-              stroke="#06B6D4"
+              fill="#FFFFFF"
+              stroke="#0284C7"
               strokeWidth={3}
             />
 
             {/* Label for Current Price */}
             <g transform={`translate(${chartData.currentX}, ${chartData.currentY - 14})`}>
-              <rect x={-32} y={-16} width={64} height={20} rx={4} fill="#0F172A" stroke="#06B6D4" strokeWidth={1} />
-              <text textAnchor="middle" dy="-2" className="fill-cyan-300 text-[13px] font-bold font-mono">
+              <rect x={-34} y={-18} width={68} height={22} rx={6} fill="#060A16" stroke="#38BDF8" strokeWidth={1.5} />
+              <text textAnchor="middle" dy="-2" className="fill-white text-[13px] font-black font-mono">
                 ${currentPrice.toFixed(1)}
               </text>
             </g>
@@ -244,7 +244,7 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             {chartData.ticksX.map((tick, i) => (
               <g key={`x-${i}`} transform={`translate(${chartData.xScale(tick)}, ${innerHeight})`}>
                 <line y1={0} y2={6} stroke="#334155" />
-                <text y={20} textAnchor="middle" className="fill-slate-400 text-[13px] font-mono">
+                <text y={20} textAnchor="middle" className="fill-slate-100 text-[13px] font-mono font-bold">
                   {tick.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
                 </text>
               </g>
@@ -254,15 +254,15 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       </div>
 
       {/* Bottom Summary Bar */}
-      <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[13px] text-slate-300">
+      <div className="mt-2 pt-2.5 border-t border-blue-900/40 flex items-center justify-between text-[13px] text-white">
         <div>
-          ฐานราคา: <span className="font-bold text-slate-100">${basePrice.toFixed(2)}</span>
+          ฐาน: <span className="font-mono font-black text-white">${basePrice.toFixed(1)}</span>
         </div>
         <div>
-          เป้าหมาย 1 เด้ง: <span className="font-bold text-emerald-400">${targetPrice3Y.toFixed(2)}</span> (+100%)
+          เป้า 1 เด้ง: <span className="font-mono font-black text-emerald-300">${targetPrice3Y.toFixed(0)}</span> (+100%)
         </div>
         <div>
-          โมเดล CAGR ฐาน: <span className="font-bold text-cyan-400">26.0% ต่อปี</span>
+          CAGR ฐาน: <span className="font-mono font-black text-cyan-200">26.0% / ปี</span>
         </div>
       </div>
     </div>

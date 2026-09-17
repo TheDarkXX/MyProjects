@@ -7,7 +7,7 @@ interface DossierHeaderProps {
 }
 
 export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
-  const { data, selectedSymbol, selectSymbol, refreshFinancials, isRefreshing } = useDossierStore();
+  const { data, selectedSymbol, selectSymbol, refreshFinancials, isRefreshing, columnMode, setColumnMode } = useDossierStore();
 
   if (!data) return null;
 
@@ -36,32 +36,32 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
   // Verdict Styling
   const verdictConfig = {
     BUY_ADD: {
-      bg: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300',
+      bg: 'bg-gradient-to-r from-emerald-950/50 via-[#0B162C] to-[#070E1F] border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.2)]',
       pill: 'bg-emerald-500 text-slate-950 font-black',
       title: '🟢 BUY ADD ZONE (สะสมเพิ่มได้)',
       icon: <ShieldCheck className="w-5 h-5 text-emerald-400" />
     },
     HOLD_RIDE: {
-      bg: 'bg-cyan-500/10 border-cyan-500/40 text-cyan-300',
+      bg: 'bg-gradient-to-r from-blue-950/50 via-[#0B162C] to-[#14081E] border-blue-500/60 shadow-[0_0_20px_rgba(56,189,248,0.2)]',
       pill: 'bg-cyan-500 text-slate-950 font-black',
       title: '🟡 HOLD & RIDE TREND (ถือทับมือ)',
       icon: <ShieldCheck className="w-5 h-5 text-cyan-400" />
     },
     TRIM_SELL: {
-      bg: 'bg-rose-500/10 border-rose-500/40 text-rose-300',
+      bg: 'bg-gradient-to-r from-rose-950/60 via-[#180814] to-[#0B162C] border-rose-500/70 shadow-[0_0_25px_rgba(244,63,94,0.3)]',
       pill: 'bg-rose-500 text-white font-black',
       title: '🔴 TRIM / SELL ALERT (แจ้งเตือนความเสี่ยง)',
       icon: <AlertTriangle className="w-5 h-5 text-rose-400" />
     }
   }[data.verdict] || {
-    bg: 'bg-slate-800/40 border-slate-700 text-slate-300',
+    bg: 'bg-[#0B1226] border-blue-900/50',
     pill: 'bg-slate-700 text-white font-bold',
     title: 'HOLD & RIDE',
     icon: null
   };
 
   return (
-    <div className="flex flex-col gap-4 border-b border-slate-800/80 pb-4 mb-4">
+    <div className="flex flex-col gap-4 border-b border-blue-900/40 pb-4 mb-4">
       {/* Top Bar: Switcher Pills & Window Controls */}
       <div className="flex items-center justify-between gap-4">
         {/* Horizontal Quick Switcher */}
@@ -72,14 +72,14 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
               <button
                 key={s.symbol}
                 onClick={() => selectSymbol(s.symbol)}
-                className={`px-3 py-1.5 rounded-xl text-[13px] font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl text-[13px] font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                   isActive
-                    ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/25 scale-105'
-                    : 'bg-slate-900/80 text-slate-300 hover:text-slate-100 hover:bg-slate-800 border border-slate-800/80'
+                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-rose-600 text-white font-black shadow-[0_0_18px_rgba(244,63,94,0.35)] scale-105 border border-white/30'
+                    : 'bg-[#0B1226]/90 text-white hover:text-white hover:bg-[#131D38] border border-blue-900/40'
                 }`}
               >
-                <span>{s.symbol}</span>
-                <span className={`text-[13px] opacity-75 font-normal ${isActive ? 'text-slate-950' : 'text-slate-400'}`}>
+                <span className="text-white font-bold">{s.symbol}</span>
+                <span className="text-[13px]">
                   {s.symbol === 'NVDA' || s.symbol === 'TSM' || s.symbol === 'AVGO' ? '👑' : s.tier.includes('Moonshot') ? '🚀' : ''}
                 </span>
               </button>
@@ -87,22 +87,59 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           })}
         </div>
 
-        {/* Right Actions */}
+        {/* Right Actions: Column Layout Mode + Refresh + Close */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Ultra-Wide Column Switcher (2, 3, 4 Cols) */}
+          <div className="flex items-center bg-[#060A16] p-1 rounded-xl border border-blue-900/60 shadow-inner">
+            <button
+              onClick={() => setColumnMode(2)}
+              className={`px-2.5 py-1 rounded-lg text-[13px] font-black transition-all cursor-pointer ${
+                columnMode === 2
+                  ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.5)]'
+                  : 'text-slate-200 hover:text-white hover:bg-blue-950/40'
+              }`}
+              title="แสดง 2 คอลัมน์"
+            >
+              2 Col
+            </button>
+            <button
+              onClick={() => setColumnMode(3)}
+              className={`px-2.5 py-1 rounded-lg text-[13px] font-black transition-all cursor-pointer ${
+                columnMode === 3
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.6)]'
+                  : 'text-slate-200 hover:text-white hover:bg-blue-950/40'
+              }`}
+              title="แสดง 3 คอลัมน์ (แนะนำสำหรับ Ultra-Wide)"
+            >
+              3 Col ⭐
+            </button>
+            <button
+              onClick={() => setColumnMode(4)}
+              className={`px-2.5 py-1 rounded-lg text-[13px] font-black transition-all cursor-pointer ${
+                columnMode === 4
+                  ? 'bg-gradient-to-r from-indigo-600 to-rose-600 text-white shadow-[0_0_12px_rgba(244,63,94,0.5)]'
+                  : 'text-slate-200 hover:text-white hover:bg-blue-950/40'
+              }`}
+              title="แสดง 4 คอลัมน์ (แบบกว้างพาโนรามา Ultra-Wide)"
+            >
+              4 Col ⚡
+            </button>
+          </div>
+
           <button
             onClick={() => refreshFinancials()}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] font-semibold bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] font-bold bg-[#0B1226] border border-blue-900/50 hover:border-cyan-500/60 text-white hover:text-cyan-300 transition-colors cursor-pointer"
             title="ดึงงบการเงินล่าสุดจาก Yahoo Finance เข้า SQLite"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : 'text-white'}`} />
             <span className="hidden sm:inline">อัปเดตงบ</span>
           </button>
 
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition-colors"
+              className="p-2 rounded-xl bg-[#0B1226] hover:bg-rose-950/40 text-white border border-blue-900/50 hover:border-rose-500/50 transition-colors cursor-pointer"
               title="ปิดหน้าต่าง (Esc)"
             >
               <X className="w-5 h-5" />
@@ -114,72 +151,72 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
       {/* Main Header Strip: Stock Profile + Executive Verdict Bar */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
         {/* Left Col: Symbol, Category, Live Price */}
-        <div className="lg:col-span-4 flex items-center gap-4">
+        <div className="lg:col-span-4 flex items-center gap-5">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-black text-slate-100 tracking-tight">
+              <h2 className="text-3xl font-black text-white tracking-tight drop-shadow-md">
                 {data.symbol}
               </h2>
-              <span className={`px-2 py-0.5 rounded-md text-[13px] font-bold ${
+              <span className={`px-2.5 py-0.5 rounded-lg text-[13px] font-black ${
                 data.category === 'Core'
-                  ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                  : 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                  ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40'
+                  : 'bg-rose-500/20 text-rose-200 border border-rose-500/40'
               }`}>
-                {data.category === 'Core' ? 'Core Commander 👑' : 'Moonshot Strike 🚀'}
+                {data.category === 'Core' ? 'Core 👑' : 'Moonshot 🚀'}
               </span>
             </div>
-            <p className="text-[13px] text-slate-400 font-medium">
+            <p className="text-[13px] text-slate-200 font-semibold mt-0.5">
               {data.name}
             </p>
           </div>
 
           {/* Price Box */}
-          <div className="border-l border-slate-800 pl-4">
-            <div className="text-2xl font-black text-slate-100 font-mono tracking-tight">
+          <div className="border-l border-blue-900/50 pl-4">
+            <div className="text-3xl font-black text-white font-mono tracking-tight drop-shadow-md">
               ${currentPrice.toFixed(2)}
             </div>
-            <div className={`flex items-center gap-1 text-[13px] font-bold font-mono ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+            <div className={`flex items-center gap-1 text-[13px] font-black font-mono mt-0.5 ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {isUp ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
               <span>{isUp ? '+' : ''}{change.toFixed(2)} ({isUp ? '+' : ''}{changePct.toFixed(2)}%)</span>
             </div>
           </div>
         </div>
 
         {/* Center/Right Col: The 3-Way Executive Verdict Bar */}
-        <div className={`lg:col-span-8 p-3 rounded-2xl border ${verdictConfig.bg} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner`}>
+        <div className={`lg:col-span-8 p-3.5 rounded-2xl border ${verdictConfig.bg} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-md`}>
           <div className="flex items-start gap-3">
             <div className="mt-0.5">
               {verdictConfig.icon}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-black tracking-wide">
+                <span className="text-sm font-black tracking-wide text-white">
                   {verdictConfig.title}
                 </span>
-                <span className="text-[13px] px-2 py-0.5 rounded bg-slate-900/80 border border-slate-700 text-slate-200 font-mono">
+                <span className="text-[13px] px-2 py-0.5 rounded-md bg-[#060A16] border border-blue-800/60 text-cyan-200 font-mono font-bold">
                   Scenario {data.radar?.scenario || 1}
                 </span>
               </div>
-              <p className="text-[13px] text-slate-200 mt-0.5 leading-snug">
+              <p className="text-[13px] text-slate-100 mt-0.5 font-medium leading-snug">
                 {data.verdictReason}
               </p>
             </div>
           </div>
 
           {/* Doubler Progress Mini Bar */}
-          <div className="flex-shrink-0 w-full sm:w-48 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+          <div className="flex-shrink-0 w-full sm:w-52 bg-[#060A16]/90 p-2.5 rounded-xl border border-blue-900/50">
             <div className="flex items-center justify-between text-[13px] mb-1">
-              <span className="text-slate-400">เป้า 1 เด้ง</span>
-              <span className="text-emerald-400 font-bold font-mono">${data.targetPrice3Y.toFixed(0)}</span>
+              <span className="text-slate-200 font-semibold">เป้า 1 เด้ง</span>
+              <span className="text-emerald-300 font-black font-mono text-sm">${data.targetPrice3Y.toFixed(0)}</span>
             </div>
-            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div className="w-full h-2.5 bg-slate-800/90 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-700"
+                className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 rounded-full transition-all duration-700 shadow-[0_0_8px_rgba(52,211,153,0.5)]"
                 style={{ width: `${data.doublerProgressPct}%` }}
               />
             </div>
-            <div className="text-right text-[13px] font-bold text-cyan-300 font-mono mt-0.5">
-              {data.doublerProgressPct}% สู่เป้า
+            <div className="text-right text-[13px] font-black text-cyan-200 font-mono mt-0.5">
+              {data.doublerProgressPct}% สู่เป้าหมาย
             </div>
           </div>
         </div>

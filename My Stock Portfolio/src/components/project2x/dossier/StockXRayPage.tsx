@@ -13,7 +13,7 @@ import { ScanSearch, Sparkles } from 'lucide-react';
 const STOCKS_ORDER = ['NVDA', 'TSM', 'AVGO', 'VRT', 'MELI', 'APH', 'KLAC', 'ANET', 'CRWD', 'STRL', 'ALAB', 'PLTR', 'CLS'];
 
 export const StockXRayPage: React.FC = () => {
-  const { data, selectedSymbol, selectSymbol, openDossier, isLoading, error } = useDossierStore();
+  const { data, selectedSymbol, selectSymbol, openDossier, isLoading, error, columnMode } = useDossierStore();
 
   // Auto-select first stock (NVDA) on page load if none selected
   useEffect(() => {
@@ -46,44 +46,44 @@ export const StockXRayPage: React.FC = () => {
   }, [selectedSymbol, selectSymbol]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 pb-20 select-none">
+    <div className="w-full max-w-[99vw] 2xl:max-w-[2100px] mx-auto space-y-4 pb-20 select-none">
       {/* Top Banner: Breadcrumb & Purpose */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-[#0C1222] via-[#0E172A] to-[#0A1020] border border-cyan-500/20 rounded-2xl p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-[#060A1A] via-[#0A132E] to-[#1A0818] border border-blue-800/40 rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-md">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600/30 to-rose-600/25 border border-blue-500/40 flex items-center justify-center text-cyan-300 shadow-md">
             <ScanSearch className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-md">
                 Stock X-Ray
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[13px] font-extrabold">
-                Project 2X Edition
+              <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-blue-600/40 via-indigo-600/40 to-rose-600/40 text-white border border-blue-400/50 text-[13px] font-black">
+                Ultra-Wide Command Deck
               </span>
             </div>
-            <p className="text-[13px] text-slate-300 font-medium mt-0.5">
-              เอ็กซเรย์ไส้ใน 13 หุ้นคัดสรร • 4 สัญญาณชีพพื้นฐาน • 3 กราฟทรงพลัง • คูเมือง & แผนสั่งการ 3 ทิศทาง
+            <p className="text-[13px] text-white font-bold mt-0.5">
+              เอ็กซเรย์ 13 หุ้นคัดสรร • 4 สัญญาณชีพ • 3 กราฟหัวใจ • คูเมือง & แผนสั่งการ 3 ทิศทาง
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-center">
-          <div className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[13px] text-slate-300 flex items-center gap-2 font-medium">
+          <div className="px-3 py-1.5 rounded-xl bg-[#060A16]/90 border border-blue-900/50 text-[13px] text-white flex items-center gap-2 font-bold">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>ใช้ปุ่ม <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-[13px] border border-slate-700">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-[13px] border border-slate-700">→</kbd> สลับหุ้น</span>
+            <span>ใช้ปุ่ม <kbd className="px-1.5 py-0.5 rounded bg-blue-950 text-cyan-300 font-mono text-[13px] border border-blue-800">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-blue-950 text-cyan-300 font-mono text-[13px] border border-blue-800">→</kbd> สลับหุ้น</span>
           </div>
         </div>
       </div>
 
       {/* Main Container Card */}
-      <div className="bg-[#070A12] border border-slate-800/90 rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#040714] via-[#070D22] to-[#120716] border border-blue-900/50 rounded-3xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
         {/* Header with 13-Stock Switcher & Verdict Strip */}
         <DossierHeader />
 
         {/* Loading State */}
         {isLoading && !data && (
-          <div className="py-28 flex flex-col items-center justify-center gap-3 text-cyan-400">
+          <div className="py-28 flex flex-col items-center justify-center gap-3 text-cyan-300">
             <div className="w-10 h-10 border-3 border-cyan-400 border-t-transparent rounded-full animate-spin" />
             <span className="text-[14px] font-bold tracking-wide">กำลังสแกนข้อมูลเอ็กซเรย์ {selectedSymbol}...</span>
           </div>
@@ -91,42 +91,143 @@ export const StockXRayPage: React.FC = () => {
 
         {/* Error State */}
         {error && (
-          <div className="p-4 my-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[13px] font-medium">
+          <div className="p-4 my-4 rounded-xl bg-rose-500/20 border border-rose-500/50 text-white text-[13px] font-bold">
             ⚠️ เกิดข้อผิดพลาด: {error}
           </div>
         )}
 
-        {/* Main Content when loaded */}
+        {/* Dynamic Multi-Column Grid (2, 3, or 4 Columns) */}
         {data && (
-          <div className="space-y-6 mt-4">
-            {/* 1. 4 Vital Signs */}
-            <DossierVitalSigns />
+          <>
+            {/* MODE 2: Split 2 Columns */}
+            {columnMode === 2 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start mt-4">
+                {/* Column 1: Tactical Chart + Specific Driver + 3Y Doubler */}
+                <div className="flex flex-col gap-4">
+                  <TacticalMiniProChart
+                    symbol={data.symbol}
+                    currentPrice={data.currentPrice}
+                    avgCost={data.holding?.avgCost || 0}
+                    ema50={data.radar?.ema50}
+                    ema150={data.radar?.ema150}
+                    ema200={data.radar?.ema200}
+                    bankerFlow={data.radar?.bankerFlow}
+                  />
+                  <SpecificDriverGauge
+                    symbol={data.symbol}
+                    driver={data.specificDriver}
+                  />
+                  <DoublerConeChart
+                    symbol={data.symbol}
+                    currentPrice={data.currentPrice}
+                    basePrice={data.basePrice}
+                    targetPrice3Y={data.targetPrice3Y}
+                  />
+                </div>
 
-            {/* 2. Charts Matrix */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-              {/* Left Col (7/12): Fundamental Pulse (EPS Beat + Margin) & Specific Driver Gauge */}
-              <div className="lg:col-span-7 flex flex-col gap-6">
-                <FundamentalPulseChart />
-                <SpecificDriverGauge />
+                {/* Column 2: Vital Signs + Fundamental Pulse + Execution Slip + Moat */}
+                <div className="flex flex-col gap-4">
+                  <DossierVitalSigns data={data} />
+                  <FundamentalPulseChart
+                    symbol={data.symbol}
+                    data={data.quarterlyFinancials || []}
+                  />
+                  <DossierExecutionSlip data={data} />
+                  <DossierMoatGuard data={data} />
+                </div>
               </div>
+            )}
 
-              {/* Right Col (5/12): 3-Year 1-Doubler Cone Projection */}
-              <div className="lg:col-span-5 flex flex-col">
-                <DoublerConeChart />
+            {/* MODE 3: Balanced 3 Columns (Recommended Sweet Spot) */}
+            {columnMode === 3 && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start mt-4">
+                {/* Column 1: Tactical Technical & Live Candle Chart + Specific Driver */}
+                <div className="flex flex-col gap-4">
+                  <TacticalMiniProChart
+                    symbol={data.symbol}
+                    currentPrice={data.currentPrice}
+                    avgCost={data.holding?.avgCost || 0}
+                    ema50={data.radar?.ema50}
+                    ema150={data.radar?.ema150}
+                    ema200={data.radar?.ema200}
+                    bankerFlow={data.radar?.bankerFlow}
+                  />
+                  <SpecificDriverGauge
+                    symbol={data.symbol}
+                    driver={data.specificDriver}
+                  />
+                </div>
+
+                {/* Column 2: Growth Engine (4 Vital Signs + 3Y Doubler Cone) */}
+                <div className="flex flex-col gap-4">
+                  <DossierVitalSigns data={data} />
+                  <DoublerConeChart
+                    symbol={data.symbol}
+                    currentPrice={data.currentPrice}
+                    basePrice={data.basePrice}
+                    targetPrice3Y={data.targetPrice3Y}
+                  />
+                </div>
+
+                {/* Column 3: Fundamental Pulse & Moat Defense & Execution Slip */}
+                <div className="flex flex-col gap-4">
+                  <FundamentalPulseChart
+                    symbol={data.symbol}
+                    data={data.quarterlyFinancials || []}
+                  />
+                  <DossierExecutionSlip data={data} />
+                  <DossierMoatGuard data={data} />
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* 3. Tactical Mini Pro Chart (Lightweight Charts with EMA & Cost line) */}
-            <div>
-              <TacticalMiniProChart />
-            </div>
+            {/* MODE 4: Panoramic 4 Columns (Ultra-Wide Full Deck) */}
+            {columnMode === 4 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start mt-4">
+                {/* Column 1: Tactical Technical Chart */}
+                <div className="flex flex-col gap-4">
+                  <TacticalMiniProChart
+                    symbol={data.symbol}
+                    currentPrice={data.currentPrice}
+                    avgCost={data.holding?.avgCost || 0}
+                    ema50={data.radar?.ema50}
+                    ema150={data.radar?.ema150}
+                    ema200={data.radar?.ema200}
+                    bankerFlow={data.radar?.bankerFlow}
+                  />
+                </div>
 
-            {/* 4. Moat Guard (Story, Moat Checklist, 5-Pillar Selling Protocols) */}
-            <DossierMoatGuard />
+                {/* Column 2: Vital Signs + Doubler Cone */}
+                <div className="flex flex-col gap-4">
+                  <DossierVitalSigns data={data} />
+                  <DoublerConeChart
+                    symbol={data.symbol}
+                    currentPrice={data.currentPrice}
+                    basePrice={data.basePrice}
+                    targetPrice3Y={data.targetPrice3Y}
+                  />
+                </div>
 
-            {/* 5. 3-Way Action Plan & Execution Slip */}
-            <DossierExecutionSlip />
-          </div>
+                {/* Column 3: Fundamental Pulse + Specific Driver */}
+                <div className="flex flex-col gap-4">
+                  <FundamentalPulseChart
+                    symbol={data.symbol}
+                    data={data.quarterlyFinancials || []}
+                  />
+                  <SpecificDriverGauge
+                    symbol={data.symbol}
+                    driver={data.specificDriver}
+                  />
+                </div>
+
+                {/* Column 4: Execution Slip + Moat Defense */}
+                <div className="flex flex-col gap-4">
+                  <DossierExecutionSlip data={data} />
+                  <DossierMoatGuard data={data} />
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

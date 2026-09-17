@@ -51,12 +51,12 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
   };
 
   return (
-    <div className={`relative bg-[#0B0F1A] border border-slate-800/80 rounded-2xl p-4 shadow-xl flex flex-col justify-between ${className}`}>
+    <div className={`relative bg-[#0B1226]/95 border border-blue-900/50 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
       {/* Top Header & Edit Trigger */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-          <h4 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+          <h4 className="text-sm font-black text-white uppercase tracking-wider">
             Key Driver: {driver.metric_label}
           </h4>
         </div>
@@ -67,7 +67,7 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
               setEditValue(String(driver.metric_value));
               setIsEditing(true);
             }}
-            className="flex items-center gap-1 text-[13px] text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 px-2 py-1 rounded-lg transition-colors border border-cyan-500/30"
+            className="flex items-center gap-1.5 text-[13px] font-bold text-cyan-200 hover:text-white bg-blue-600/20 hover:bg-blue-600/40 px-2.5 py-1 rounded-lg transition-colors border border-blue-500/40 cursor-pointer"
             title="แก้ไขตัวเลขหลังอ่านงบ"
           >
             <Edit2 className="w-3.5 h-3.5" />
@@ -78,15 +78,15 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="p-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40"
+              className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40 cursor-pointer"
             >
-              <Check className="w-3.5 h-3.5" />
+              <Check className="w-4 h-4" />
             </button>
             <button
               onClick={() => setIsEditing(false)}
-              className="p-1 rounded bg-slate-800 text-slate-400 hover:bg-slate-700"
+              className="p-1.5 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -108,7 +108,7 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
             <path
               d="M 15 80 A 65 65 0 0 1 145 80"
               fill="none"
-              stroke={isHealthy ? '#10B981' : isDanger ? '#EF4444' : '#F59E0B'}
+              stroke={isHealthy ? '#10B981' : isDanger ? '#F43F5E' : '#38BDF8'}
               strokeWidth="12"
               strokeLinecap="round"
               strokeDasharray={204}
@@ -126,17 +126,17 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
                   step="any"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="w-20 bg-slate-900 border border-cyan-400 rounded px-1.5 py-0.5 text-center text-lg font-bold text-slate-100 focus:outline-none"
+                  className="w-20 bg-[#060A16] border border-cyan-400 rounded px-1.5 py-0.5 text-center text-lg font-bold text-white focus:outline-none"
                   autoFocus
                 />
-                <span className="text-sm text-slate-400 font-bold">{unit}</span>
+                <span className="text-sm text-cyan-200 font-bold">{unit}</span>
               </div>
             ) : (
               <div className="flex items-baseline justify-center gap-1">
-                <span className={`text-3xl font-black font-mono ${isHealthy ? 'text-emerald-400' : isDanger ? 'text-rose-400' : 'text-amber-400'}`}>
+                <span className={`text-3xl font-black font-mono tracking-tight drop-shadow-md ${isHealthy ? 'text-emerald-400' : isDanger ? 'text-rose-400' : 'text-cyan-200'}`}>
                   {value}
                 </span>
-                <span className="text-sm font-bold text-slate-300 font-mono">
+                <span className="text-sm font-bold text-white font-mono">
                   {unit}
                 </span>
               </div>
@@ -145,21 +145,15 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
         </div>
       </div>
 
-      {/* Threshold Badges & Guidance */}
-      <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[13px]">
-        <div className="flex items-center gap-1 text-slate-400">
-          เกณฑ์ปลอดภัย: <span className="text-emerald-400 font-bold">≥ {safe}{unit}</span>
+      {/* Threshold Legend Bar */}
+      <div className="mt-1 pt-2 border-t border-blue-900/40 flex items-center justify-between text-[13px] text-white">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-rose-500" />
+          <span className="text-slate-200">อันตราย: &lt;{danger}{unit}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className={`px-2 py-0.5 rounded-full font-bold text-[13px] ${
-            isHealthy 
-              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' 
-              : isDanger 
-                ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30' 
-                : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-          }`}>
-            {isHealthy ? '🟢 แข็งแกร่ง (Healthy)' : isDanger ? '🔴 อันตราย (Red Flag)' : '🟡 เฝ้าระวัง (Neutral)'}
-          </span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span className="text-slate-200">ปลอดภัย: &ge;{safe}{unit}</span>
         </div>
       </div>
     </div>

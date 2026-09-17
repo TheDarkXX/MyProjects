@@ -105,7 +105,9 @@ interface DossierState {
   isRefreshing: boolean;
   error: string | null;
 
-  openDossier: (portfolioId: string, symbol: string) => Promise<void>;
+  columnMode: 2 | 3 | 4;
+  setColumnMode: (mode: 2 | 3 | 4) => void;
+  openDossier: (portfolioIdOrSymbol: string, symbol?: string) => Promise<void>;
   closeDossier: () => void;
   selectSymbol: (symbol: string) => Promise<void>;
   refreshFinancials: () => Promise<void>;
@@ -120,18 +122,35 @@ export const useDossierStore = create<DossierState>((set, get) => ({
   isLoading: false,
   isRefreshing: false,
   error: null,
+  columnMode: (Number(localStorage.getItem('xray_column_mode')) as 2 | 3 | 4) || 3,
 
-  openDossier: async (portfolioId: string, symbol: string) => {
+  setColumnMode: (mode: 2 | 3 | 4) => {
+    localStorage.setItem('xray_column_mode', String(mode));
+    set({ columnMode: mode });
+  },
+
+  openDossier: async (portfolioIdOrSymbol: string, symbol?: string) => {
+    let targetPid = portfolioIdOrSymbol;
+    let targetSym = symbol;
+
+    if (!symbol) {
+      // Called with 1 arg: e.g. openDossier('NVDA')
+      targetSym = portfolioIdOrSymbol;
+      targetPid = get().portfolioId || localStorage.getItem('active_portfolio_id') || 'default';
+    }
+
+    const symUpper = (targetSym || 'NVDA').toUpperCase();
+
     set({
       isOpen: true,
-      portfolioId,
-      selectedSymbol: symbol.toUpperCase(),
+      portfolioId: targetPid,
+      selectedSymbol: symUpper,
       isLoading: true,
       error: null
     });
 
     try {
-      const data = await api.project2x.dossier(portfolioId, symbol);
+      const data = await api.project2x.dossier(targetPid, symUpper);
       set({ data, isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Failed to load dossier', isLoading: false });
@@ -143,12 +162,16 @@ export const useDossierStore = create<DossierState>((set, get) => ({
   },
 
   selectSymbol: async (symbol: string) => {
-    const { portfolioId } = get();
-    if (!portfolioId) return;
+    let pid = get().portfolioId;
+    if (!pid || pid === 'default') {
+      const stored = localStorage.getItem('active_portfolio_id');
+      if (stored) pid = stored;
+    }
+    const finalPid = pid || 'default';
 
-    set({ selectedSymbol: symbol.toUpperCase(), isLoading: true, error: null });
+    set({ selectedSymbol: symbol.toUpperCase(), portfolioId: finalPid, isLoading: true, error: null });
     try {
-      const data = await api.project2x.dossier(portfolioId, symbol);
+      const data = await api.project2x.dossier(finalPid, symbol);
       set({ data, isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Failed to switch stock', isLoading: false });
