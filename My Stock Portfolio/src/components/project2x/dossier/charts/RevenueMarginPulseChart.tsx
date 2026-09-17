@@ -40,14 +40,14 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
-          <h4 className="text-[13px] font-medium text-slate-200 tracking-wide uppercase">
+          <h4 className="text-[15px] font-medium text-slate-200 tracking-wide uppercase">
             Revenue & Gross Margin ({symbol})
           </h4>
         </div>
 
-        <div className="flex items-center gap-2 text-[12px]">
+        <div className="flex items-center gap-2 text-[13px]">
           <span className="text-slate-300 font-medium">ล่าสุด:</span>
-          <span className="text-cyan-300 font-mono font-bold">${latestRev.toFixed(1)}B</span>
+          <span className="text-cyan-300 font-mono font-semibold">${latestRev.toFixed(1)}B</span>
           <span className="text-emerald-300 font-mono font-medium">({latestMargin.toFixed(1)}% Moat)</span>
         </div>
       </div>
@@ -55,7 +55,7 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
       {/* Chart Canvas */}
       <div className="w-full h-[180px]">
         {chartData.length === 0 ? (
-          <div className="w-full h-full flex items-center justify-center text-slate-300 text-[13px] font-normal">
+          <div className="w-full h-full flex items-center justify-center text-slate-300 text-[14px] font-normal">
             ไม่มีข้อมูลงบการเงิน
           </div>
         ) : (
@@ -66,7 +66,7 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
               <XAxis
                 dataKey="quarter"
                 stroke="#64748B"
-                tick={{ fill: '#CBD5E1', fontSize: 11, fontFamily: 'monospace', fontWeight: 500 }}
+                tick={{ fill: '#CBD5E1', fontSize: 12, fontFamily: 'monospace', fontWeight: 500 }}
                 axisLine={{ stroke: '#1E293B' }}
               />
 
@@ -74,7 +74,7 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
               <YAxis
                 yAxisId="left"
                 stroke="#64748B"
-                tick={{ fill: '#CBD5E1', fontSize: 11, fontFamily: 'monospace', fontWeight: 500 }}
+                tick={{ fill: '#CBD5E1', fontSize: 12, fontFamily: 'monospace', fontWeight: 500 }}
                 axisLine={{ stroke: '#1E293B' }}
                 tickFormatter={(val) => `$${val}B`}
               />
@@ -85,7 +85,7 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
                 orientation="right"
                 domain={[0, 100]}
                 stroke="#38BDF8"
-                tick={{ fill: '#38BDF8', fontSize: 11, fontFamily: 'monospace', fontWeight: 500 }}
+                tick={{ fill: '#38BDF8', fontSize: 12, fontFamily: 'monospace', fontWeight: 500 }}
                 axisLine={{ stroke: '#0284C7' }}
                 tickFormatter={(val) => `${val}%`}
               />
@@ -96,7 +96,7 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
                   borderColor: '#1E293B',
                   borderRadius: '10px',
                   color: '#CBD5E1',
-                  fontSize: '12px',
+                  fontSize: '13px',
                   boxShadow: '0 8px 24px rgba(0,0,0,0.6)'
                 }}
                 formatter={(value: any, name: string) => {
@@ -133,7 +133,7 @@ export const RevenueMarginPulseChart: React.FC<RevenueMarginPulseChartProps> = (
       </div>
 
       {/* Subtle Legend */}
-      <div className="mt-1 pt-1.5 border-t border-blue-900/30 flex items-center justify-between text-[11px] text-slate-300">
+      <div className="mt-1 pt-1.5 border-t border-blue-900/30 flex items-center justify-between text-[13px] text-slate-300">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 bg-[#0284C7] rounded-sm inline-block" /> ยอดขาย ($B)

@@ -45,32 +45,32 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
       {/* Top Indicators Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-950/70 border border-blue-700/50 text-[#CBD5E1] text-[13px] font-medium">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-950/70 border border-blue-700/50 text-slate-200 text-[14px] font-medium">
             <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
             <span>2X Power Tube</span>
           </div>
           {marketCap && marketCap > 0 ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#091124] border border-blue-900/50 text-slate-300 text-[13px]">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#091124] border border-blue-900/50 text-slate-300 text-[14px]">
               <span className="text-slate-400 font-normal">Mkt Cap:</span>
-              <span className="text-white font-medium font-mono">{formatMarketCap(marketCap)}</span>
+              <span className="text-slate-100 font-medium font-mono">{formatMarketCap(marketCap)}</span>
             </div>
           ) : null}
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-950/50 border border-emerald-500/30 text-emerald-300 text-[12px]">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-950/50 border border-emerald-500/30 text-emerald-300 text-[12px] font-medium">
             <span>CAGR 26% / 3Y</span>
           </div>
         </div>
 
         {/* Right Metric Pill */}
-        <div className="flex items-center gap-3 text-[13px]">
+        <div className="flex items-center gap-3 text-[14px]">
           {avgCost > 0 && (
-            <div className="flex items-center gap-1 font-mono">
+            <div className="flex items-center gap-1.5 font-mono">
               <span className="text-slate-400 font-normal">จากทุน:</span>
               <span className={`font-medium ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {isProfit ? '+' : ''}{pnlPct.toFixed(1)}%
               </span>
             </div>
           )}
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-700/40 text-cyan-300 text-[13px] font-medium font-mono">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-700/40 text-cyan-300 text-[14px] font-medium font-mono">
             <Flame className="w-3.5 h-3.5 text-amber-400" />
             <span>{doublerProgressPct.toFixed(0)}% สู่เป้าหมาย</span>
           </div>
@@ -91,7 +91,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
           style={{ width: `${Math.max(4, tubeFillPct)}%` }}
         >
           {tubeFillPct > 15 && (
-            <span className="text-slate-950 font-bold text-[12px] font-mono tracking-tight whitespace-nowrap">
+            <span className="text-slate-950 font-semibold text-[13px] font-mono tracking-tight whitespace-nowrap">
               ${currentPrice.toFixed(0)}
             </span>
           )}
@@ -100,7 +100,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
         {/* Milestone Pin: Cost */}
         {avgCost > 0 && (
           <div className="absolute left-2 flex items-center gap-1 z-10 pointer-events-none">
-            <span className="text-slate-300 text-[12px] font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            <span className="text-slate-300 text-[13px] font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               ทุน ${avgCost.toFixed(0)}
             </span>
           </div>
@@ -109,14 +109,14 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
         {/* Milestone Pin: 2X Goal */}
         <div className="absolute right-2 flex items-center gap-1 z-10 pointer-events-none">
           <Trophy className="w-3.5 h-3.5 text-amber-300 drop-shadow" />
-          <span className="text-emerald-300 text-[13px] font-medium font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+          <span className="text-emerald-300 text-[14px] font-medium font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
             เป้า 2X: ${targetPrice3Y.toFixed(0)}
           </span>
         </div>
       </div>
 
       {/* Tube Step Sub-Labels */}
-      <div className="flex items-center justify-between text-[12px] text-slate-400 mt-1 px-1 font-mono">
+      <div className="flex items-center justify-between text-[13px] text-slate-300 mt-1.5 px-1 font-mono">
         <span>{avgCost > 0 ? `Cost Basis: $${avgCost.toFixed(2)}` : `Base: $${effectiveCost.toFixed(2)}`}</span>
         <span className="text-cyan-300 font-medium">ปัจจุบัน: ${currentPrice.toFixed(2)}</span>
         <span className="text-emerald-400">เป้า 3 ปี: ${targetPrice3Y.toFixed(2)} (1 เด้ง)</span>

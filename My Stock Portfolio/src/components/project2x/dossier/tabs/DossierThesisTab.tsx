@@ -183,7 +183,7 @@ export const DossierThesisTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Brain className="w-4 h-4 text-cyan-400" />
-                <span className="text-[#CBD5E1] text-[14px] font-medium">Secular Trend Thesis</span>
+                <span className="text-slate-200 text-[16px] font-medium">Secular Trend Thesis</span>
               </div>
               <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[12px] font-medium">
                 ทำไมถึงจะโตมหาศาล
@@ -191,10 +191,10 @@ export const DossierThesisTab: React.FC = () => {
             </div>
 
             <div>
-              <h3 className="text-white text-[15px] font-medium tracking-tight">
+              <h3 className="text-slate-100 text-[15px] font-medium tracking-tight">
                 {profile.trendTitle}
               </h3>
-              <p className="text-slate-300 text-[13px] font-normal leading-relaxed mt-1.5">
+              <p className="text-slate-300 text-[14px] font-normal leading-relaxed mt-1.5">
                 {profile.trendDesc}
               </p>
             </div>
@@ -205,34 +205,34 @@ export const DossierThesisTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Globe2 className="w-4 h-4 text-emerald-400" />
-                <span className="text-[#CBD5E1] text-[14px] font-medium">TAM (Total Addressable Market)</span>
+                <span className="text-slate-200 text-[16px] font-medium">TAM (Total Addressable Market)</span>
               </div>
-              <span className="text-emerald-300 text-[13px] font-mono font-medium">
+              <span className="text-emerald-300 text-[14px] font-mono font-medium">
                 Share: ~{profile.marketSharePct}%
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-xl bg-[#081024] border border-blue-900/30">
-                <div className="text-slate-400 text-[12px] font-normal">TAM ปัจจุบัน</div>
-                <div className="text-xl font-bold font-mono text-white mt-0.5">
+                <div className="text-slate-300 text-[13px] font-normal">TAM ปัจจุบัน</div>
+                <div className="text-2xl font-semibold font-mono text-slate-100 mt-0.5">
                   ${profile.tamCurrentB}{profile.tamUnit}
                 </div>
-                <div className="text-[12px] text-slate-400 font-normal mt-0.5">ตลาดปัจจุบัน</div>
+                <div className="text-[13px] text-slate-300 font-normal mt-0.5">ตลาดปัจจุบัน</div>
               </div>
 
               <div className="p-3 rounded-xl bg-[#081024] border border-blue-900/30">
-                <div className="text-slate-400 text-[12px] font-normal">ศักยภาพ 3-5 ปี</div>
-                <div className="text-xl font-bold font-mono text-emerald-400 mt-0.5">
+                <div className="text-slate-300 text-[13px] font-normal">ศักยภาพ 3-5 ปี</div>
+                <div className="text-2xl font-semibold font-mono text-emerald-400 mt-0.5">
                   ${profile.tamFuture3YB}{profile.tamUnit}
                 </div>
-                <div className="text-[12px] text-emerald-300 font-normal mt-0.5">โต {(profile.tamFuture3YB / profile.tamCurrentB).toFixed(1)}x เท่า</div>
+                <div className="text-[13px] text-emerald-300 font-normal mt-0.5">โต {(profile.tamFuture3YB / profile.tamCurrentB).toFixed(1)}x เท่า</div>
               </div>
             </div>
 
             {/* Visual TAM Progress Bar */}
             <div className="space-y-1 mt-1">
-              <div className="flex justify-between text-[12px] text-slate-400">
+              <div className="flex justify-between text-[13px] text-slate-300">
                 <span>Room to Run</span>
                 <span className="text-cyan-300 font-mono">ยังมีที่ว่างให้โตอีกมหาศาล</span>
               </div>
@@ -249,18 +249,18 @@ export const DossierThesisTab: React.FC = () => {
           <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span className="text-[#CBD5E1] text-[14px] font-medium">Catalyst Timeline (ตัวเร่งการเติบโต)</span>
+              <span className="text-slate-200 text-[16px] font-medium">Catalyst Timeline (ตัวเร่งการเติบโต)</span>
             </div>
 
             <div className="space-y-2.5">
               {profile.catalysts.map((c, i) => (
                 <div key={i} className="p-2.5 rounded-xl bg-[#081024] border border-blue-900/30 flex items-start gap-3">
-                  <span className="px-2 py-0.5 rounded bg-blue-950 text-cyan-300 border border-blue-800 text-[12px] font-mono flex-shrink-0 mt-0.5">
+                  <span className="px-2.5 py-0.5 rounded bg-blue-950 text-cyan-300 border border-blue-800 text-[12px] font-mono flex-shrink-0 mt-0.5 font-medium">
                     {c.period}
                   </span>
                   <div>
-                    <div className="text-white text-[13px] font-medium">{c.title}</div>
-                    <div className="text-slate-300 text-[12px] font-normal mt-0.5 leading-snug">{c.desc}</div>
+                    <div className="text-slate-100 text-[14px] font-medium">{c.title}</div>
+                    <div className="text-slate-300 text-[13px] font-normal mt-0.5 leading-snug">{c.desc}</div>
                   </div>
                 </div>
               ))}
@@ -274,7 +274,7 @@ export const DossierThesisTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                <span className="text-[#CBD5E1] text-[14px] font-medium">Deep Moat Architecture</span>
+                <span className="text-slate-200 text-[16px] font-medium">Deep Moat Architecture</span>
               </div>
               <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-cyan-300 border border-blue-500/30 text-[12px] font-medium">
                 คูเมืองที่คู่แข่งข้ามไม่ได้
@@ -285,10 +285,10 @@ export const DossierThesisTab: React.FC = () => {
               {profile.moats.map((m, idx) => (
                 <div key={idx} className="p-3 rounded-xl bg-[#081024] border border-blue-900/30">
                   <div className="flex items-center justify-between">
-                    <span className="text-white text-[13px] font-medium">{m.title}</span>
-                    <span className="text-cyan-300 text-[13px] font-mono font-medium">{m.score}/{m.maxScore}</span>
+                    <span className="text-slate-100 text-[14px] font-medium">{m.title}</span>
+                    <span className="text-cyan-300 text-[14px] font-mono font-medium">{m.score}/{m.maxScore}</span>
                   </div>
-                  <p className="text-slate-300 text-[12px] font-normal mt-1 leading-snug">
+                  <p className="text-slate-300 text-[13px] font-normal mt-1 leading-snug">
                     {m.reason}
                   </p>
                   <div className="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
@@ -306,16 +306,16 @@ export const DossierThesisTab: React.FC = () => {
           <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-rose-900/40 shadow-sm flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <AlertOctagon className="w-4 h-4 text-rose-400" />
-              <span className="text-rose-200 text-[14px] font-medium">Breach Red Flags (จุดตายที่ต้องเผ่น)</span>
+              <span className="text-rose-200 text-[16px] font-medium">Breach Red Flags (จุดตายที่ต้องเผ่น)</span>
             </div>
-            <p className="text-slate-300 text-[12px] font-normal">
+            <p className="text-slate-300 text-[13px] font-normal">
               หากสัญญาณเตือนต่อไปนี้เกิดขึ้น แสดงว่าคูเมืองกำลังถูกเจาะ ให้พิจารณาตัดลดความเสี่ยงทันที:
             </p>
 
             <div className="space-y-2">
               {profile.breachFlags.map((flag, idx) => (
-                <div key={idx} className="p-2.5 rounded-xl bg-rose-950/25 border border-rose-900/40 text-rose-200 text-[13px] font-normal flex items-start gap-2">
-                  <span className="text-rose-400 font-bold">⚠️</span>
+                <div key={idx} className="p-2.5 rounded-xl bg-rose-950/25 border border-rose-900/40 text-rose-200 text-[14px] font-normal flex items-start gap-2">
+                  <span className="text-rose-400 font-semibold">⚠️</span>
                   <span>{flag}</span>
                 </div>
               ))}
@@ -330,9 +330,9 @@ export const DossierThesisTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-amber-400" />
-                <span className="text-[#CBD5E1] text-[14px] font-medium">Doubler Scenario Matrix (คาดการณ์กี่เด้ง)</span>
+                <span className="text-slate-200 text-[16px] font-medium">Doubler Scenario Matrix (คาดการณ์กี่เด้ง)</span>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[12px] font-medium">
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[12px] font-medium">
                 กรอบ 3 ปี
               </span>
             </div>
@@ -341,10 +341,10 @@ export const DossierThesisTab: React.FC = () => {
               {/* Bear Case */}
               <div className="p-3 rounded-xl bg-[#081024] border border-blue-900/30">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-300 text-[13px] font-medium">🥉 Bear Case (กรณีเลวร้าย)</span>
-                  <span className="text-amber-400 font-mono font-medium text-[13px]">{profile.scenarios.bear.multiple} (CAGR {profile.scenarios.bear.cagr})</span>
+                  <span className="text-slate-200 text-[14px] font-medium">🥉 Bear Case (กรณีเลวร้าย)</span>
+                  <span className="text-amber-400 font-mono font-medium text-[14px]">{profile.scenarios.bear.multiple} (CAGR {profile.scenarios.bear.cagr})</span>
                 </div>
-                <p className="text-slate-400 text-[12px] font-normal mt-1 leading-snug">
+                <p className="text-slate-300 text-[13px] font-normal mt-1 leading-snug">
                   {profile.scenarios.bear.desc}
                 </p>
               </div>
@@ -352,10 +352,10 @@ export const DossierThesisTab: React.FC = () => {
               {/* Base Case (Target 2X) */}
               <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-950/70 via-indigo-950/70 to-emerald-950/70 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                 <div className="flex items-center justify-between">
-                  <span className="text-emerald-300 text-[14px] font-medium">🥈 Base Case (เป้าหลัก 1 เด้ง)</span>
-                  <span className="text-emerald-300 font-mono font-bold text-[14px]">{profile.scenarios.base.multiple} (CAGR {profile.scenarios.base.cagr})</span>
+                  <span className="text-emerald-300 text-[15px] font-medium">🥈 Base Case (เป้าหลัก 1 เด้ง)</span>
+                  <span className="text-emerald-300 font-mono font-semibold text-[15px]">{profile.scenarios.base.multiple} (CAGR {profile.scenarios.base.cagr})</span>
                 </div>
-                <p className="text-slate-200 text-[13px] font-normal mt-1 leading-snug">
+                <p className="text-slate-200 text-[14px] font-normal mt-1 leading-snug">
                   {profile.scenarios.base.desc}
                 </p>
               </div>
@@ -363,10 +363,10 @@ export const DossierThesisTab: React.FC = () => {
               {/* Bull Case */}
               <div className="p-3 rounded-xl bg-[#081024] border border-blue-900/30">
                 <div className="flex items-center justify-between">
-                  <span className="text-purple-300 text-[13px] font-medium">🥇 Bull Case (กรณีเร่งตัวสุดขีด)</span>
-                  <span className="text-purple-300 font-mono font-medium text-[13px]">{profile.scenarios.bull.multiple} (CAGR {profile.scenarios.bull.cagr})</span>
+                  <span className="text-purple-300 text-[14px] font-medium">🥇 Bull Case (กรณีเร่งตัวสุดขีด)</span>
+                  <span className="text-purple-300 font-mono font-medium text-[14px]">{profile.scenarios.bull.multiple} (CAGR {profile.scenarios.bull.cagr})</span>
                 </div>
-                <p className="text-slate-400 text-[12px] font-normal mt-1 leading-snug">
+                <p className="text-slate-300 text-[13px] font-normal mt-1 leading-snug">
                   {profile.scenarios.bull.desc}
                 </p>
               </div>
@@ -377,12 +377,12 @@ export const DossierThesisTab: React.FC = () => {
           <div className="bg-[#060B1C]/90 p-4 rounded-2xl border border-blue-900/40 shadow-sm flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Flag className="w-4 h-4 text-emerald-400" />
-              <span className="text-[#CBD5E1] text-[14px] font-medium">Milestone Roadmap (เช็กลิสต์รายปีสู่เป้า 1 เด้ง)</span>
+              <span className="text-slate-200 text-[16px] font-medium">Milestone Roadmap (เช็กลิสต์รายปีสู่เป้า 1 เด้ง)</span>
             </div>
 
             <div className="space-y-2">
               {profile.milestones.map((m, idx) => (
-                <div key={idx} className="p-2.5 rounded-xl bg-[#081024] border border-blue-900/30 flex items-center justify-between text-[13px]">
+                <div key={idx} className="p-2.5 rounded-xl bg-[#081024] border border-blue-900/30 flex items-center justify-between text-[14px]">
                   <div className="flex items-center gap-2.5">
                     {m.status === 'DONE' ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
@@ -394,7 +394,7 @@ export const DossierThesisTab: React.FC = () => {
                     <span className="text-white font-medium">{m.year}:</span>
                     <span className="text-slate-300 font-normal">{m.goal}</span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${
+                  <span className={`px-2.5 py-0.5 rounded text-[12px] font-mono font-medium ${
                     m.status === 'DONE'
                       ? 'bg-emerald-500/20 text-emerald-300'
                       : m.status === 'PROGRESS'

@@ -145,7 +145,7 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
-          <h4 className="text-[13px] font-medium text-slate-200 uppercase tracking-wide">
+          <h4 className="text-[15px] font-medium text-slate-200 uppercase tracking-wide">
             3-Year Doubler Cone ({symbol})
           </h4>
         </div>
@@ -188,7 +188,7 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             {chartData.ticksY.map((tick, i) => (
               <g key={`y-${i}`} transform={`translate(0, ${chartData.yScale(tick)})`}>
                 <line x1={0} x2={innerWidth} stroke="#1E293B" strokeDasharray="3,3" strokeOpacity={0.8} />
-                <text x={-10} dy="0.32em" textAnchor="end" className="fill-slate-100 text-[13px] font-mono font-bold">
+                <text x={-10} dy="0.32em" textAnchor="end" className="fill-slate-300 text-[13px] font-mono font-medium">
                   ${tick.toFixed(0)}
                 </text>
               </g>
@@ -197,7 +197,7 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             {/* Target 2X Horizontal Reference Line */}
             <g transform={`translate(0, ${chartData.targetY})`}>
               <line x1={0} x2={innerWidth} stroke="#10B981" strokeWidth={2} strokeDasharray="5,4" />
-              <text x={innerWidth - 110} dy="-8" className="fill-emerald-300 text-[13px] font-black font-mono">
+              <text x={innerWidth - 110} dy="-8" className="fill-emerald-300 text-[13px] font-semibold font-mono">
                 2X Goal (${projection.finalTarget.toFixed(0)})
               </text>
             </g>
@@ -235,7 +235,7 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             {/* Label for Current Price */}
             <g transform={`translate(${chartData.currentX}, ${chartData.currentY - 14})`}>
               <rect x={-34} y={-18} width={68} height={22} rx={6} fill="#060A16" stroke="#38BDF8" strokeWidth={1.5} />
-              <text textAnchor="middle" dy="-2" className="fill-white text-[13px] font-black font-mono">
+              <text textAnchor="middle" dy="-2" className="fill-white text-[13px] font-semibold font-mono">
                 ${currentPrice.toFixed(1)}
               </text>
             </g>
@@ -244,7 +244,7 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
             {chartData.ticksX.map((tick, i) => (
               <g key={`x-${i}`} transform={`translate(${chartData.xScale(tick)}, ${innerHeight})`}>
                 <line y1={0} y2={6} stroke="#334155" />
-                <text y={20} textAnchor="middle" className="fill-slate-100 text-[13px] font-mono font-bold">
+                <text y={20} textAnchor="middle" className="fill-slate-300 text-[13px] font-mono font-medium">
                   {tick.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
                 </text>
               </g>
@@ -254,12 +254,12 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       </div>
 
       {/* Bottom Summary Bar */}
-      <div className="mt-1 pt-2 border-t border-blue-900/30 flex items-center justify-between text-[12px] text-slate-300 font-normal">
+      <div className="mt-1 pt-2 border-t border-blue-900/30 flex items-center justify-between text-[13px] text-slate-300 font-normal">
         <div>
-          ฐาน: <span className="font-mono font-medium text-white">${basePrice.toFixed(1)}</span>
+          ฐาน: <span className="font-mono font-medium text-slate-100">${basePrice.toFixed(1)}</span>
         </div>
         <div>
-          เป้า 1 เด้ง: <span className="font-mono font-bold text-emerald-300">${targetPrice3Y.toFixed(0)}</span> (+100%)
+          เป้า 1 เด้ง: <span className="font-mono font-semibold text-emerald-300">${targetPrice3Y.toFixed(0)}</span> (+100%)
         </div>
         <div>
           CAGR ฐาน: <span className="font-mono font-medium text-cyan-200">26.0% / ปี</span>

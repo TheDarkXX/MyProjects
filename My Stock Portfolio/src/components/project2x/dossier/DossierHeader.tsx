@@ -83,13 +83,13 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
               <button
                 key={s.symbol}
                 onClick={() => selectSymbol(s.symbol)}
-                className={`px-3 py-1.5 rounded-xl text-[13px] font-medium transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-[14px] font-medium transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                   isActive
-                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-rose-600 text-white shadow-[0_0_16px_rgba(59,130,246,0.4)] scale-105 border border-white/30'
+                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-rose-600 text-white shadow-[0_0_16px_rgba(59,130,246,0.4)] scale-105 border border-white/30 font-semibold'
                     : 'bg-[#0B1226]/90 text-slate-300 hover:text-white hover:bg-[#131D38] border border-blue-900/40'
                 }`}
               >
-                <span className={isActive ? 'font-bold text-white' : 'text-slate-200'}>{s.symbol}</span>
+                <span className={isActive ? 'font-semibold text-white' : 'text-slate-200'}>{s.symbol}</span>
                 <span className="text-[13px]">
                   {s.symbol === 'NVDA' || s.symbol === 'TSM' || s.symbol === 'AVGO' ? '👑' : s.tier.includes('Moonshot') ? '🚀' : ''}
                 </span>
@@ -107,7 +107,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
                 onClick={() => setColumnMode(2)}
                 className={`px-2.5 py-1 rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
                   columnMode === 2
-                    ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.5)] font-bold'
+                    ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.5)] font-semibold'
                     : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
                 }`}
                 title="แสดง 2 คอลัมน์"
@@ -118,7 +118,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
                 onClick={() => setColumnMode(3)}
                 className={`px-2.5 py-1 rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
                   columnMode === 3
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.6)] font-bold'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.6)] font-semibold'
                     : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
                 }`}
                 title="แสดง 3 คอลัมน์ (แนะนำสำหรับ Ultra-Wide)"
@@ -129,7 +129,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
                 onClick={() => setColumnMode(4)}
                 className={`px-2.5 py-1 rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
                   columnMode === 4
-                    ? 'bg-gradient-to-r from-indigo-600 to-rose-600 text-white shadow-[0_0_12px_rgba(244,63,94,0.5)] font-bold'
+                    ? 'bg-gradient-to-r from-indigo-600 to-rose-600 text-white shadow-[0_0_12px_rgba(244,63,94,0.5)] font-semibold'
                     : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
                 }`}
                 title="แสดง 4 คอลัมน์ (Ultra-Wide พาโนรามา)"
@@ -142,7 +142,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           <button
             onClick={() => refreshFinancials()}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] font-medium bg-[#0B1226] border border-blue-900/50 hover:border-cyan-500/60 text-[#CBD5E1] hover:text-cyan-300 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[14px] font-medium bg-[#0B1226] border border-blue-900/50 hover:border-cyan-500/60 text-slate-200 hover:text-cyan-300 transition-colors cursor-pointer"
             title="ดึงงบการเงินล่าสุดจาก Yahoo Finance เข้า SQLite"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : 'text-cyan-400'}`} />
@@ -170,7 +170,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
               <h2 className="text-2xl font-bold text-slate-100 tracking-tight">
                 {data.symbol}
               </h2>
-              <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${
+              <span className={`px-2.5 py-0.5 rounded text-[12px] font-medium ${
                 data.category === 'Core'
                   ? 'bg-amber-500/15 text-amber-200 border border-amber-500/30'
                   : 'bg-rose-500/15 text-rose-200 border border-rose-500/30'
@@ -178,7 +178,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
                 {data.category === 'Core' ? 'Core 👑' : 'Moonshot 🚀'}
               </span>
             </div>
-            <p className="text-[13px] text-slate-300 font-normal mt-0.5 truncate max-w-[220px]">
+            <p className="text-[14px] text-slate-300 font-normal mt-0.5 truncate max-w-[220px]">
               {data.name}
             </p>
           </div>
@@ -188,7 +188,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
             <div className="text-3xl font-bold text-white font-mono tracking-tight">
               ${currentPrice.toFixed(2)}
             </div>
-            <div className={`flex items-center gap-1 text-[13px] font-medium font-mono mt-0.5 ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <div className={`flex items-center gap-1 text-[14px] font-medium font-mono mt-0.5 ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
               {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
               <span>{isUp ? '+' : ''}{change.toFixed(2)} ({isUp ? '+' : ''}{changePct.toFixed(2)}%)</span>
             </div>
@@ -216,22 +216,22 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[14px] font-medium tracking-wide text-slate-100">
+              <span className="text-[15px] font-medium tracking-wide text-slate-200">
                 {verdictConfig.title}
               </span>
               <span className="text-[12px] px-2 py-0.5 rounded bg-[#060A16] border border-blue-800/50 text-cyan-200 font-mono font-medium">
                 Scenario {data.radar?.scenario || 1}
               </span>
             </div>
-            <p className="text-[13px] text-slate-300 mt-0.5 font-normal leading-snug">
+            <p className="text-[14px] text-slate-300 mt-0.5 font-normal leading-snug">
               {data.verdictReason}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-center">
-          <span className="text-[13px] text-slate-300 font-normal">โควตา:</span>
-          <span className="text-[13px] font-medium font-mono text-cyan-300">
+          <span className="text-[14px] text-slate-300 font-normal">โควตา:</span>
+          <span className="text-[14px] font-medium font-mono text-cyan-300">
             {data.holding?.shares || 0} / {data.holding?.targetShares || 0} หุ้น ({data.holding?.quotaProgressPct || 0}%)
           </span>
         </div>
@@ -241,9 +241,9 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
       <div className="flex items-center gap-2 bg-[#060A16]/90 p-1.5 rounded-2xl border border-blue-900/50 shadow-inner">
         <button
           onClick={() => setActiveSubTab('cockpit')}
-          className={`flex-1 py-2 px-4 rounded-xl text-[13px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeSubTab === 'cockpit'
-              ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 text-white font-bold shadow-[0_0_16px_rgba(59,130,246,0.4)] border border-white/20'
+              ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 text-white font-semibold shadow-[0_0_16px_rgba(59,130,246,0.4)] border border-white/20'
               : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
           }`}
         >
@@ -253,9 +253,9 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
 
         <button
           onClick={() => setActiveSubTab('financials')}
-          className={`flex-1 py-2 px-4 rounded-xl text-[13px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeSubTab === 'financials'
-              ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-bold shadow-[0_0_16px_rgba(147,51,234,0.4)] border border-white/20'
+              ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-semibold shadow-[0_0_16px_rgba(147,51,234,0.4)] border border-white/20'
               : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
           }`}
         >
@@ -265,9 +265,9 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
 
         <button
           onClick={() => setActiveSubTab('thesis')}
-          className={`flex-1 py-2 px-4 rounded-xl text-[13px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`flex-1 py-2.5 px-4 rounded-xl text-[15px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeSubTab === 'thesis'
-              ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white font-bold shadow-[0_0_16px_rgba(16,185,129,0.4)] border border-white/20'
+              ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white font-semibold shadow-[0_0_16px_rgba(16,185,129,0.4)] border border-white/20'
               : 'text-slate-300 hover:text-white hover:bg-blue-950/40'
           }`}
         >

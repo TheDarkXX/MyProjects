@@ -56,7 +56,7 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
-          <h4 className="text-[13px] font-medium text-slate-200 uppercase tracking-wide">
+          <h4 className="text-[15px] font-medium text-slate-200 uppercase tracking-wide">
             Key Driver: {driver.metric_label}
           </h4>
         </div>
@@ -67,7 +67,7 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
               setEditValue(String(driver.metric_value));
               setIsEditing(true);
             }}
-            className="flex items-center gap-1.5 text-[13px] font-bold text-cyan-200 hover:text-white bg-blue-600/20 hover:bg-blue-600/40 px-2.5 py-1 rounded-lg transition-colors border border-blue-500/40 cursor-pointer"
+            className="flex items-center gap-1.5 text-[13px] font-medium text-cyan-200 hover:text-white bg-blue-600/20 hover:bg-blue-600/40 px-2.5 py-1 rounded-lg transition-colors border border-blue-500/40 cursor-pointer"
             title="แก้ไขตัวเลขหลังอ่านงบ"
           >
             <Edit2 className="w-3.5 h-3.5" />

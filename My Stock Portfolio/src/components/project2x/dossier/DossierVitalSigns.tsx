@@ -33,11 +33,11 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
       {/* Tile 1: Revenue Growth YoY */}
       <div className="bg-[#0A1022]/90 border border-blue-900/40 rounded-2xl p-3 shadow-lg flex flex-col justify-between backdrop-blur-md">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[12px] font-medium tracking-wide uppercase flex items-center gap-1.5 text-slate-200">
-            <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="text-[14px] font-medium tracking-wide uppercase flex items-center gap-1.5 text-slate-200">
+            <TrendingUp className="w-4 h-4 text-cyan-400" />
             รายได้โต YoY
           </span>
-          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+          <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${
             isHyperGrowth 
               ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' 
               : isSteady 
@@ -52,12 +52,12 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
           <div className="text-3xl font-bold font-mono text-white tracking-tight">
             {revGrowth > 0 ? `+${revGrowth}%` : `${revGrowth}%`}
           </div>
-          <p className="text-[11px] text-slate-300 font-normal mt-0.5">
+          <p className="text-[13px] text-slate-300 font-normal mt-0.5">
             YoY Revenue Acceleration
           </p>
         </div>
 
-        <div className="pt-1.5 border-t border-blue-900/30 text-[11px] text-slate-300 flex items-center justify-between">
+        <div className="pt-1.5 border-t border-blue-900/30 text-[13px] text-slate-300 flex items-center justify-between">
           <span>เกณฑ์:</span>
           <span className="font-medium text-emerald-400">&gt; 30% ถือยาว</span>
         </div>
@@ -66,11 +66,11 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
       {/* Tile 2: EPS Beat Streak */}
       <div className="bg-[#0A1022]/90 border border-blue-900/40 rounded-2xl p-3 shadow-lg flex flex-col justify-between backdrop-blur-md">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[12px] font-medium tracking-wide uppercase flex items-center gap-1.5 text-slate-200">
-            <Target className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-[14px] font-medium tracking-wide uppercase flex items-center gap-1.5 text-slate-200">
+            <Target className="w-4 h-4 text-emerald-400" />
             ชนะเป้า EPS
           </span>
-          <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+          <span className="px-2 py-0.5 rounded text-[12px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
             Beat {streak}Q
           </span>
         </div>
@@ -90,11 +90,11 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
                 title={`ไตรมาสที่ -${idx + 1}`}
               />
             ))}
-            <span className="text-[11px] text-slate-400 font-normal ml-0.5">ล่าสุด</span>
+            <span className="text-[12px] text-slate-400 font-normal ml-0.5">ล่าสุด</span>
           </div>
         </div>
 
-        <div className="pt-1.5 border-t border-blue-900/30 text-[11px] text-slate-300 flex items-center justify-between">
+        <div className="pt-1.5 border-t border-blue-900/30 text-[13px] text-slate-300 flex items-center justify-between">
           <span>สถิติ:</span>
           <span className="font-medium text-emerald-300">ชนะเป้าต่อเนื่อง</span>
         </div>
@@ -107,11 +107,11 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
           : 'bg-[#0A1022]/90 border border-blue-900/40'
       }`}>
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[12px] font-medium tracking-wide uppercase flex items-center gap-1.5 text-slate-200">
-            <Shield className={`w-3.5 h-3.5 ${isMoatBreaker ? 'text-rose-400' : 'text-cyan-400'}`} />
+          <span className="text-[14px] font-medium tracking-wide uppercase flex items-center gap-1.5 text-slate-200">
+            <Shield className={`w-4 h-4 ${isMoatBreaker ? 'text-rose-400' : 'text-cyan-400'}`} />
             คูเมือง (Margin)
           </span>
-          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+          <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${
             isMoatBreaker
               ? 'bg-rose-500/25 text-rose-200 border border-rose-500/50 animate-pulse'
               : 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
@@ -124,12 +124,12 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
           <div className="text-3xl font-bold font-mono text-white tracking-tight">
             {margin > 0 ? `${margin.toFixed(1)}%` : '-'}
           </div>
-          <p className="text-[11px] text-slate-300 font-normal mt-0.5">
+          <p className="text-[13px] text-slate-300 font-normal mt-0.5">
             Pricing Power Moat
           </p>
         </div>
 
-        <div className="pt-1.5 border-t border-blue-900/30 text-[11px] text-slate-300 flex items-center justify-between">
+        <div className="pt-1.5 border-t border-blue-900/30 text-[13px] text-slate-300 flex items-center justify-between">
           <span>ระวัง:</span>
           <span className="font-medium text-slate-200">ลด 3Q ติด = ลดเสี่ยง</span>
         </div>
@@ -138,11 +138,11 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
       {/* Tile 4: Forward P/E & PEG Ratio */}
       <div className="bg-[#0A1022]/90 border border-blue-900/40 rounded-2xl p-3 shadow-lg flex flex-col justify-between backdrop-blur-md">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[12px] font-medium tracking-wide uppercase flex items-center gap-1.5 text-slate-200">
-            <Tag className="w-3.5 h-3.5 text-purple-400" />
+          <span className="text-[14px] font-medium tracking-wide uppercase flex items-center gap-1.5 text-slate-200">
+            <Tag className="w-4 h-4 text-purple-400" />
             คุ้มค่า (PEG)
           </span>
-          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+          <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${
             isUndervalued
               ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
               : isStretched
@@ -158,16 +158,16 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data }) =>
             <span className="text-3xl font-bold font-mono text-white tracking-tight">
               {peg > 0 ? peg.toFixed(2) : '-'}
             </span>
-            <span className="text-[12px] font-medium text-cyan-300 font-mono">
+            <span className="text-[13px] font-medium text-cyan-300 font-mono">
               PEG
             </span>
           </div>
-          <p className="text-[11px] text-slate-300 font-mono mt-0.5">
+          <p className="text-[13px] text-slate-300 font-mono mt-0.5">
             Forward P/E: <span className="text-white font-medium">{fwdPE > 0 ? `${fwdPE.toFixed(1)}x` : '-'}</span>
           </p>
         </div>
 
-        <div className="pt-1.5 border-t border-blue-900/30 text-[11px] text-slate-300 flex items-center justify-between">
+        <div className="pt-1.5 border-t border-blue-900/30 text-[13px] text-slate-300 flex items-center justify-between">
           <span>ทยอยเก็บ:</span>
           <span className="font-medium text-emerald-400">PEG &lt; 1.5</span>
         </div>
