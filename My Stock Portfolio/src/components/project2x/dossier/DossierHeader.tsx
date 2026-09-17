@@ -3,7 +3,7 @@ import { RefreshCw, X, ArrowUpRight, ArrowDownRight, ShieldCheck, AlertTriangle 
 import { useDossierStore } from '../../../stores/dossierStore';
 
 interface DossierHeaderProps {
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
@@ -99,13 +99,15 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
             <span className="hidden sm:inline">อัปเดตงบ</span>
           </button>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition-colors"
-            title="ปิดหน้าต่าง (Esc)"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition-colors"
+              title="ปิดหน้าต่าง (Esc)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 

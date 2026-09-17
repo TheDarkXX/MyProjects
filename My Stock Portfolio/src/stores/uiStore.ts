@@ -31,7 +31,7 @@ interface UiState {
   addNotification?: (n: { type: 'success' | 'error' | 'info'; message: string }) => void;
 }
 
-const VALID_TABS = ['dashboard', 'scorecard', 'analysis', 'performance', 'risk', 'rebalance', 'transactions', 'snapshots', 'planner', 'settings', 'project2x', 'xchart', 'news'];
+const VALID_TABS = ['dashboard', 'scorecard', 'analysis', 'performance', 'risk', 'rebalance', 'transactions', 'snapshots', 'planner', 'settings', 'project2x', 'xray', 'xchart', 'news'];
 
 const getInitialTab = (): string => {
   if (typeof window !== 'undefined') {

@@ -47,7 +47,6 @@ import { useDrawingStore } from '../../stores/drawingStore';
 import { ProgressRing } from './ProgressRing';
 import { MiniSparkline } from './MiniSparkline';
 import { LWChart, PortfolioOverlayConfig } from './LWChart';
-import { StockDossierModal } from './dossier/StockDossierModal';
 import { useDossierStore } from '../../stores/dossierStore';
 
 type SortKey = 'STATUS' | 'PROGRESS' | 'VALUE' | 'WEIGHT' | 'NAME';
@@ -2297,9 +2296,6 @@ export const Project2xPage: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Commander Stock Dossier Immersive Modal */}
-      <StockDossierModal />
     </div>
   );
 };

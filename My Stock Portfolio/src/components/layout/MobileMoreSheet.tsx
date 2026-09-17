@@ -3,7 +3,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
   Rocket, Scale, PieChart, ShieldCheck, ReceiptText, Briefcase, 
-  Settings, LogOut, X, ChevronRight, Sparkles, Newspaper 
+  Settings, LogOut, X, ChevronRight, Sparkles, Newspaper, ScanSearch 
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -36,6 +36,7 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({ isOpen, onClos
   const NAV_ITEMS = [
     { id: 'news', label: 'News Intel Feed', desc: 'AI-curated news & radar', icon: Newspaper, color: 'text-rose-400' },
     { id: 'project2x', label: 'Project 2X Simulator', desc: 'Compounding forecast & goals', icon: Rocket, color: 'text-orange-400' },
+    { id: 'xray', label: 'Stock X-Ray', desc: '4 Vital Signs & 3 High-Impact Charts', icon: ScanSearch, color: 'text-cyan-400' },
     { id: 'rebalance', label: 'Smart Rebalance', desc: 'AI-driven asset allocation', icon: Scale, color: 'text-blue-400' },
     { id: 'analysis', label: 'Analysis & Returns', desc: 'Performance attribution & sectors', icon: PieChart, color: 'text-cyan-400' },
     { id: 'health', label: 'Health & Risk', desc: 'Portfolio health, beta & volatility', icon: ShieldCheck, color: 'text-emerald-400' },
