@@ -120,7 +120,7 @@
 | **Moonshot 11%**| **STRL** | Sterling Infrastructure | **3.0%** | $79.38 | $0.00 | 🚀 **Underweight -$79.38** (รอสไนเปอร์แตะ EMA) |
 | | **ALAB** | Astera Labs | **3.0%** | $79.38 | $0.00 | 🚀 **Underweight -$79.38** (รอสไนเปอร์แตะ EMA) |
 | | **PLTR** | Palantir Technologies | **3.0%** | $79.38 | $0.00 | 🚀 **Underweight -$79.38** (รอสไนเปอร์แตะ EMA) |
-| | **RKLB** | Rocket Lab USA | **2.0%** | $52.92 | $0.00 | 🚀 **Underweight -$52.92** (รอสไนเปอร์แตะ EMA) |
+| | **CLS** | Celestica Inc. | **2.0%** | $52.92 | $0.00 | 🚀 **Underweight -$52.92** (รอสไนเปอร์แตะ EMA) |
 | **รวมทั้งสิ้น** | | | **100.0%** | **$2,646.07** | | |
 
 ---

@@ -17,7 +17,7 @@ export const DEFAULT_2X_STOCKS = [
   { symbol: 'STRL', name: 'Sterling Infra', target_percent: 3.0, category: 'Moonshot' },
   { symbol: 'ALAB', name: 'Astera Labs', target_percent: 3.0, category: 'Moonshot' },
   { symbol: 'PLTR', name: 'Palantir', target_percent: 3.0, category: 'Moonshot' },
-  { symbol: 'RKLB', name: 'Rocket Lab', target_percent: 2.0, category: 'Moonshot' }
+  { symbol: 'CLS', name: 'Celestica', target_percent: 2.0, category: 'Moonshot' }
 ];
 
 export const DEFAULT_TIGER_2X_STOCKS = [
