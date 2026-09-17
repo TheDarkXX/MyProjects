@@ -55,8 +55,8 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
       {/* Top Header & Edit Trigger */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-          <h4 className="text-sm font-black text-white uppercase tracking-wider">
+          <span className="w-2 h-2 rounded-full bg-cyan-400" />
+          <h4 className="text-[13px] font-medium text-slate-200 uppercase tracking-wide">
             Key Driver: {driver.metric_label}
           </h4>
         </div>
@@ -146,14 +146,14 @@ export const SpecificDriverGauge: React.FC<SpecificDriverGaugeProps> = ({
       </div>
 
       {/* Threshold Legend Bar */}
-      <div className="mt-1 pt-2 border-t border-blue-900/40 flex items-center justify-between text-[13px] text-white">
+      <div className="mt-1 pt-2 border-t border-blue-900/30 flex items-center justify-between text-[12px] text-slate-300 font-normal">
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-rose-500" />
-          <span className="text-slate-200">อันตราย: &lt;{danger}{unit}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+          <span>อันตราย: &lt;{danger}{unit}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          <span className="text-slate-200">ปลอดภัย: &ge;{safe}{unit}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span>ปลอดภัย: &ge;{safe}{unit}</span>
         </div>
       </div>
     </div>

@@ -154,50 +154,50 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
         <div className="lg:col-span-4 flex items-center gap-5">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-3xl font-black text-white tracking-tight drop-shadow-md">
+              <h2 className="text-2xl font-bold text-slate-100 tracking-tight">
                 {data.symbol}
               </h2>
-              <span className={`px-2.5 py-0.5 rounded-lg text-[13px] font-black ${
+              <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
                 data.category === 'Core'
-                  ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40'
-                  : 'bg-rose-500/20 text-rose-200 border border-rose-500/40'
+                  ? 'bg-amber-500/15 text-amber-200 border border-amber-500/30'
+                  : 'bg-rose-500/15 text-rose-200 border border-rose-500/30'
               }`}>
                 {data.category === 'Core' ? 'Core 👑' : 'Moonshot 🚀'}
               </span>
             </div>
-            <p className="text-[13px] text-slate-200 font-semibold mt-0.5">
+            <p className="text-[12px] text-slate-300 font-normal mt-0.5">
               {data.name}
             </p>
           </div>
 
           {/* Price Box */}
-          <div className="border-l border-blue-900/50 pl-4">
-            <div className="text-3xl font-black text-white font-mono tracking-tight drop-shadow-md">
+          <div className="border-l border-blue-900/40 pl-4">
+            <div className="text-3xl font-bold text-white font-mono tracking-tight">
               ${currentPrice.toFixed(2)}
             </div>
-            <div className={`flex items-center gap-1 text-[13px] font-black font-mono mt-0.5 ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {isUp ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+            <div className={`flex items-center gap-1 text-[12px] font-medium font-mono mt-0.5 ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
               <span>{isUp ? '+' : ''}{change.toFixed(2)} ({isUp ? '+' : ''}{changePct.toFixed(2)}%)</span>
             </div>
           </div>
         </div>
 
         {/* Center/Right Col: The 3-Way Executive Verdict Bar */}
-        <div className={`lg:col-span-8 p-3.5 rounded-2xl border ${verdictConfig.bg} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-md`}>
+        <div className={`lg:col-span-8 p-3 rounded-2xl border ${verdictConfig.bg} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-md`}>
           <div className="flex items-start gap-3">
             <div className="mt-0.5">
               {verdictConfig.icon}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-black tracking-wide text-white">
+                <span className="text-sm font-medium tracking-wide text-slate-100">
                   {verdictConfig.title}
                 </span>
-                <span className="text-[13px] px-2 py-0.5 rounded-md bg-[#060A16] border border-blue-800/60 text-cyan-200 font-mono font-bold">
+                <span className="text-[11px] px-2 py-0.5 rounded bg-[#060A16] border border-blue-800/50 text-cyan-200 font-mono font-medium">
                   Scenario {data.radar?.scenario || 1}
                 </span>
               </div>
-              <p className="text-[13px] text-slate-100 mt-0.5 font-medium leading-snug">
+              <p className="text-[12px] text-slate-300 mt-0.5 font-normal leading-snug">
                 {data.verdictReason}
               </p>
             </div>

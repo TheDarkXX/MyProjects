@@ -144,20 +144,20 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       {/* Header Info */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-          <h4 className="text-sm font-black text-white uppercase tracking-wider">
+          <span className="w-2 h-2 rounded-full bg-cyan-400" />
+          <h4 className="text-[13px] font-medium text-slate-200 uppercase tracking-wide">
             3-Year Doubler Cone ({symbol})
           </h4>
         </div>
-        <div className="flex items-center gap-2 text-[13px]">
-          <span className="flex items-center gap-1 text-emerald-300 font-bold bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/30">
-            <span className="w-2 h-2 bg-emerald-400 rounded-full inline-block" /> Bull +38%
+        <div className="flex items-center gap-1.5 text-[12px]">
+          <span className="flex items-center gap-1 text-emerald-300 font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25">
+            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block" /> Bull +38%
           </span>
-          <span className="flex items-center gap-1 text-cyan-200 font-black bg-cyan-500/20 px-2 py-0.5 rounded-md border border-cyan-500/40">
-            <span className="w-2 h-2 bg-cyan-400 rounded-full inline-block" /> Base +26% (2X)
+          <span className="flex items-center gap-1 text-cyan-200 font-medium bg-cyan-500/15 px-2 py-0.5 rounded border border-cyan-500/30">
+            <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full inline-block" /> Base +26% (2X)
           </span>
-          <span className="flex items-center gap-1 text-slate-200 font-semibold bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700">
-            <span className="w-2 h-2 bg-slate-400 rounded-full inline-block" /> Bear +14%
+          <span className="flex items-center gap-1 text-slate-300 font-normal bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/60">
+            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full inline-block" /> Bear +14%
           </span>
         </div>
       </div>
@@ -254,15 +254,15 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       </div>
 
       {/* Bottom Summary Bar */}
-      <div className="mt-2 pt-2.5 border-t border-blue-900/40 flex items-center justify-between text-[13px] text-white">
+      <div className="mt-1 pt-2 border-t border-blue-900/30 flex items-center justify-between text-[12px] text-slate-300 font-normal">
         <div>
-          ฐาน: <span className="font-mono font-black text-white">${basePrice.toFixed(1)}</span>
+          ฐาน: <span className="font-mono font-medium text-white">${basePrice.toFixed(1)}</span>
         </div>
         <div>
-          เป้า 1 เด้ง: <span className="font-mono font-black text-emerald-300">${targetPrice3Y.toFixed(0)}</span> (+100%)
+          เป้า 1 เด้ง: <span className="font-mono font-bold text-emerald-300">${targetPrice3Y.toFixed(0)}</span> (+100%)
         </div>
         <div>
-          CAGR ฐาน: <span className="font-mono font-black text-cyan-200">26.0% / ปี</span>
+          CAGR ฐาน: <span className="font-mono font-medium text-cyan-200">26.0% / ปี</span>
         </div>
       </div>
     </div>

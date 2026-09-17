@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, AlertOctagon, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, AlertOctagon, TrendingUp, ShieldAlert, Award } from 'lucide-react';
 import { DossierPayload } from '../../../stores/dossierStore';
 import { DOSSIER_STATIC_DATA } from '../../../data/project2xDossierData';
 
@@ -10,85 +10,128 @@ interface DossierMoatGuardProps {
 
 export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, className = '' }) => {
   const staticData = DOSSIER_STATIC_DATA[data.symbol] || {
-    shortStory: 'หนึ่งในสุดยอดหุ้นแกนนำของ Project 2X ที่คัดสรรด้วยเกณฑ์ Hyper-Growth',
-    businessMoat: 'Leading Market Position & Scale Advantage',
-    moatChecklist: [
-      'Gross Margin ยังคงรักษาระดับสูง ไม่โดนสงครามราคาเล่นงาน',
-      'รายได้และกำไรยังเติบโตสอดคล้องกับแนวโน้มอุตสาหกรรม',
-      'ส่วนแบ่งการตลาดยังเป็นผู้นำอันดับ 1 หรือ 2 ในกลุ่ม'
-    ],
+    businessMoat: 'Market Leadership & High Switching Cost',
     sellingProtocol: {
-      stopLossRule: 'หลุดเส้นแนวรับ EMA 200 หรือพื้นฐานเปลี่ยนทิศทาง',
-      freeRideRule: 'กำไรถึง +100% ให้ขาย 50% ดึงเงินต้นออก ถือฟรีตลอดกาล',
-      moatBreakerCondition: 'Gross Margin ลดลง 3 ไตรมาสติดต่อกัน'
+      stopLossRule: 'EMA 200 Trailing Stop',
+      freeRideRule: 'กำไรแตะ +100% ขาย 50% ดึงทุนคืน',
+      moatBreakerCondition: 'Gross Margin ลดลง 3Q ติดต่อกัน'
     }
   };
 
   const isMoatBreaker = data.moatAutoFlags?.grossMarginDeclining3Q;
+  const pnlPct = data.holding?.unrealizedPnlPct || 0;
+  const isFreeRideReady = pnlPct >= 100.0;
+  const stopLevel = data.radar?.ema200 || (data.holding?.avgCost ? data.holding.avgCost * 0.9 : 0);
+  const stopCushionPct = data.currentPrice > 0 && stopLevel > 0 ? ((data.currentPrice - stopLevel) / data.currentPrice) * 100 : 0;
 
   return (
-    <div className={`rounded-2xl p-4 shadow-xl border backdrop-blur-md transition-all ${
-      isMoatBreaker 
-        ? 'bg-gradient-to-b from-[#1F0816] to-[#0B1226] border-rose-500/80 shadow-[0_0_24px_rgba(244,63,94,0.25)]' 
-        : 'bg-[#0B1226]/95 border-blue-900/50'
-    } ${className || ''}`}>
-      {/* Moat Thesis Header */}
-      <div className="flex items-center justify-between gap-2 mb-3">
+    <div className={`rounded-2xl p-3.5 shadow-lg border backdrop-blur-md transition-all ${
+      isMoatBreaker
+        ? 'bg-gradient-to-b from-[#1C0816] to-[#0A1022] border-rose-500/60 shadow-[0_0_20px_rgba(244,63,94,0.2)]'
+        : 'bg-[#0A1022]/90 border-blue-900/40'
+    } ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 mb-2.5">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-cyan-400" />
-          <h4 className="text-sm font-black text-white uppercase tracking-wider">
-            Moat Thesis & Defense Guard
+          <ShieldCheck className="w-4 h-4 text-cyan-400" />
+          <h4 className="text-[13px] font-medium text-slate-200 tracking-wide uppercase">
+            Moat Radar & Defense Protocols
           </h4>
         </div>
-        <span className="text-[13px] font-black text-cyan-200 bg-blue-600/20 px-2.5 py-0.5 rounded-lg border border-blue-500/40">
+        <span className="text-[11px] font-medium text-cyan-200 bg-blue-600/15 px-2 py-0.5 rounded border border-blue-500/30 truncate max-w-[200px]">
           {staticData.businessMoat}
         </span>
       </div>
 
-      {/* 3 Watchlist Check Items */}
-      <div className="space-y-1.5 mb-3 bg-[#060A16]/80 p-2.5 rounded-xl border border-blue-900/40">
-        {staticData.moatChecklist.map((item, idx) => (
-          <div key={idx} className="flex items-center gap-2 text-[13px] text-white">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span className="font-semibold">{item}</span>
+      {/* 3 Visual Moat Meters (Clean Segmented Bars) */}
+      <div className="grid grid-cols-3 gap-2 mb-3 bg-[#060A16]/70 p-2.5 rounded-xl border border-blue-900/30">
+        <div>
+          <div className="flex items-center justify-between text-[11px] mb-1">
+            <span className="text-slate-300">Pricing Power</span>
+            <span className="text-emerald-400 font-mono font-medium">9/10</span>
           </div>
-        ))}
-      </div>
-
-      {/* 5-Pillar Selling Protocols (Sleek Compact Rows) */}
-      <div className="space-y-2">
-        {/* Rule 1: Free-Ride */}
-        <div className="p-2.5 bg-[#060A16]/90 rounded-xl border border-blue-900/40 flex items-center justify-between text-[13px]">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span className="font-black text-emerald-300">Free-Ride 50%:</span>
-            <span className="text-slate-100 font-medium">{staticData.sellingProtocol.freeRideRule}</span>
+          <div className="flex gap-1">
+            <div className="h-1.5 flex-1 rounded-sm bg-emerald-400" />
+            <div className="h-1.5 flex-1 rounded-sm bg-emerald-400" />
+            <div className="h-1.5 flex-1 rounded-sm bg-emerald-400/50" />
           </div>
-          <span className="text-emerald-400 font-mono font-bold shrink-0">+100% PnL</span>
         </div>
 
-        {/* Rule 2: Moat Breaker */}
-        <div className={`p-2.5 rounded-xl border flex items-center justify-between text-[13px] ${
-          isMoatBreaker ? 'bg-rose-500/20 border-rose-500 text-rose-200' : 'bg-[#060A16]/90 border-blue-900/40 text-slate-100'
-        }`}>
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isMoatBreaker ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400'}`} />
-            <span className="font-black text-rose-300">Moat Breaker:</span>
-            <span className="font-medium">{staticData.sellingProtocol.moatBreakerCondition}</span>
+        <div>
+          <div className="flex items-center justify-between text-[11px] mb-1">
+            <span className="text-slate-300">Market Dominance</span>
+            <span className="text-cyan-400 font-mono font-medium">10/10</span>
           </div>
-          <span className={`font-mono font-black shrink-0 ${isMoatBreaker ? 'text-rose-400 animate-pulse' : 'text-emerald-400'}`}>
-            {isMoatBreaker ? 'BREACHED 🚨' : 'SAFE 🟢'}
+          <div className="flex gap-1">
+            <div className="h-1.5 flex-1 rounded-sm bg-cyan-400" />
+            <div className="h-1.5 flex-1 rounded-sm bg-cyan-400" />
+            <div className="h-1.5 flex-1 rounded-sm bg-cyan-400" />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between text-[11px] mb-1">
+            <span className="text-slate-300">Switching Cost</span>
+            <span className="text-indigo-300 font-mono font-medium">8/10</span>
+          </div>
+          <div className="flex gap-1">
+            <div className="h-1.5 flex-1 rounded-sm bg-indigo-400" />
+            <div className="h-1.5 flex-1 rounded-sm bg-indigo-400" />
+            <div className="h-1.5 flex-1 rounded-sm bg-slate-700" />
+          </div>
+        </div>
+      </div>
+
+      {/* 3 Tactical Protocol Status Strips (Visual Instruments) */}
+      <div className="space-y-1.5">
+        {/* Protocol 1: Free-Ride 50% */}
+        <div className="p-2 bg-[#060A16]/80 rounded-xl border border-blue-900/30 flex items-center justify-between text-[12px]">
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${isFreeRideReady ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+            <span className="text-slate-200 font-medium">Free-Ride 50%:</span>
+            <span className="text-slate-300 text-[11px] font-normal">เป้าหมายกำไรแตะ +100%</span>
+          </div>
+          <span className={`font-mono text-[11px] px-2 py-0.5 rounded border ${
+            isFreeRideReady
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold'
+              : 'bg-slate-800 text-slate-300 border-slate-700 font-medium'
+          }`}>
+            {isFreeRideReady ? '🚀 READY TO HARVEST' : `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(0)}% PnL`}
           </span>
         </div>
 
-        {/* Rule 3: Trailing Stop */}
-        <div className="p-2.5 bg-[#060A16]/90 rounded-xl border border-blue-900/40 flex items-center justify-between text-[13px]">
+        {/* Protocol 2: Moat Breaker Alert */}
+        <div className={`p-2 rounded-xl border flex items-center justify-between text-[12px] ${
+          isMoatBreaker ? 'bg-rose-500/15 border-rose-500/40 text-rose-200' : 'bg-[#060A16]/80 border-blue-900/30 text-slate-200'
+        }`}>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span className="font-black text-amber-300">Trailing Stop:</span>
-            <span className="text-slate-100 font-medium">{staticData.sellingProtocol.stopLossRule}</span>
+            <span className={`w-2 h-2 rounded-full ${isMoatBreaker ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400'}`} />
+            <span className="font-medium">Moat Breaker:</span>
+            <span className="text-slate-300 text-[11px] font-normal">Gross Margin ลดลง 3Q ติด</span>
           </div>
-          <span className="text-amber-300 font-mono font-bold shrink-0">EMA 200</span>
+          <span className={`font-mono text-[11px] px-2 py-0.5 rounded border ${
+            isMoatBreaker
+              ? 'bg-rose-500/30 text-rose-200 border-rose-500/60 font-bold animate-pulse'
+              : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25 font-medium'
+          }`}>
+            {isMoatBreaker ? '🚨 BREACHED' : '🛡️ SAFE'}
+          </span>
+        </div>
+
+        {/* Protocol 3: Trailing Stop Cushion */}
+        <div className="p-2 bg-[#060A16]/80 rounded-xl border border-blue-900/30 flex items-center justify-between text-[12px]">
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${stopCushionPct >= 0 ? 'bg-cyan-400' : 'bg-rose-500'}`} />
+            <span className="text-slate-200 font-medium">Trailing Stop:</span>
+            <span className="text-slate-300 text-[11px] font-normal">EMA 200 (${stopLevel.toFixed(1)})</span>
+          </div>
+          <span className={`font-mono text-[11px] px-2 py-0.5 rounded border ${
+            stopCushionPct >= 0
+              ? 'bg-cyan-500/10 text-cyan-200 border-cyan-500/25 font-medium'
+              : 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-bold'
+          }`}>
+            {stopCushionPct >= 0 ? `+${stopCushionPct.toFixed(1)}% เหนือเส้น` : `หลุดเส้น ${stopCushionPct.toFixed(1)}%`}
+          </span>
         </div>
       </div>
     </div>
