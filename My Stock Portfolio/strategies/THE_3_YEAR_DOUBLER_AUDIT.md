@@ -230,3 +230,8 @@ $$P = \text{EPS} \times (P/E)$$
    - หุ้นถูกสะสมโดยกองทุนสถาบันอย่างต่อเนื่อง กราฟจึงยก High ยก Low สวยงามเหมือนบันไดเลื่อน (Stairway to Heaven)
 3. **การผสานพลังในสล็อต Moonshot:**
    - การมี **STRL (3%)** ทำงานฐานรากภายนอก ควบคู่กับ **CLS (2%)** ทำสวิตช์ AI 800G/1.6T ภายใน ทำให้กระเช้าซิ่งของเราครอบคลุมคอขวดที่สร้างผลตอบแทนสูงสุดในประวัติศาสตร์ AI
+
+---
+
+### 🔗 Related Documentation & Quick Saves
+- **2026-09-17** | [V2.35.0_[impl]_project2x_cls_promotion_and_stairway_standards.md](file:///c:/My%20Claw/MyProjects/Quick%20Save/Complete/My%20Stock%20Portfolio/V2.35.0_[impl]_project2x_cls_promotion_and_stairway_standards.md) -- Project 2X CLS Moonshot promotion and 3-Year Reality Check backtest against NVDA.

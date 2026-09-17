@@ -130,11 +130,11 @@ graph TD
     ```
     *(ตรวจสอบผลการ deploy จาก stdout ของ Git hook โดยตรง)*
 
-12. **High-Speed Log Sync (State Ledger Engine):**
+12. **High-Speed Log Sync (Non-blocking Detached Background):**
     ```powershell
-    node scripts/sync-ag-logs.js
+    node scripts/sync-ag-logs.js --bg
     ```
-    *(เสร็จสิ้นใน 1-3 วินาทีผ่าน State Ledger Caching และ Parallel Metadata Sync)*
+    *(เสร็จสิ้นใน 0ms ทันทีผ่าน Detached Background Process และ Single Compressed Tar Stream เบื้องหลัง ไม่ขวาง Pipeline)*
 
 13. **Final Clean Tree Audit:**
     ```powershell
