@@ -138,6 +138,8 @@ export const LWChart: React.FC<LWChartProps> = ({
   regime,
   reasonTh,
   signalsChecklist,
+  distEma150: propDistEma150,
+  distEma200: propDistEma200,
   className = '',
   onAddInflow,
   watchlist = [],
@@ -1490,7 +1492,11 @@ export const LWChart: React.FC<LWChartProps> = ({
                 regime={regime}
                 reasonTh={reasonTh}
                 signalsChecklist={signalsChecklist}
-                distEma200={distEma200}
+                distEma200={propDistEma200 !== undefined ? propDistEma200 : (
+                  currentPrice && ema200 && ema200.length > 0 && ema200[ema200.length - 1] 
+                    ? Number((((currentPrice - ema200[ema200.length - 1]) / ema200[ema200.length - 1]) * 100).toFixed(2)) 
+                    : undefined
+                )}
                 distEma9={ema9Dist}
                 isAboveEma9={isEma9Above}
                 banker={bVal}
