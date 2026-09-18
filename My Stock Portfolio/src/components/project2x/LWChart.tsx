@@ -1475,15 +1475,6 @@ export const LWChart: React.FC<LWChartProps> = ({
 
             {/* POD 1: Command & Signal Action with Holographic Preflight Hover Card */}
             <div className="flex items-center gap-2 shrink-0">
-              {/* Live Radar Ping */}
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/40 border border-white/10 text-xs tracking-wider text-slate-200 font-bold uppercase shrink-0">
-                <span className="relative flex h-2 w-2">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${pingGlow}`} />
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${pingColor}`} />
-                </span>
-                <span>RADAR</span>
-              </div>
-
               {/* Holographic Scenario Preflight Hover Card */}
               <ScenarioPreflightCard
                 scenario={scenario}
@@ -1502,8 +1493,13 @@ export const LWChart: React.FC<LWChartProps> = ({
                 banker={bVal}
               >
                 <div className="flex items-center gap-2 group">
-                  {/* Action Signal Badge */}
+                  {/* Action Signal Badge with Embedded Live Pulse Ping */}
                   <div className={`px-2.5 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 shadow-md border ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass} group-hover:scale-105 transition-transform duration-200`}>
+                    {/* Embedded Live Pulse Ping */}
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${pingGlow}`} />
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${pingColor}`} />
+                    </span>
                     <span className={tier.animClass}>{tier.icon}</span>
                     <span className="tracking-wide">{tier.label}</span>
                   </div>
