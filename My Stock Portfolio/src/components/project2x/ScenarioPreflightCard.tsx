@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { getTierMetadata, CyberTier } from '../../utils/tierConfig';
 
 export interface SignalCheckItem {
@@ -36,7 +37,9 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   const tier = getTierMetadata(trafficLight);
@@ -56,12 +59,31 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
   const passPct = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 0;
   const isPerfectPass = passPct === 100;
 
+  // Calculate viewport position relative to trigger
+  const updatePosition = useCallback(() => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const cardWidth = Math.min(380, window.innerWidth - 24);
+      let left = rect.left;
+      if (left + cardWidth > window.innerWidth - 12) {
+        left = window.innerWidth - cardWidth - 12;
+      }
+      left = Math.max(12, left);
+
+      setCoords({
+        top: rect.bottom + 8,
+        left,
+      });
+    }
+  }, []);
+
   // Hover delay buffer to prevent accidental closing
   const handleMouseEnter = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    updatePosition();
     timerRef.current = setTimeout(() => {
       setIsOpen(true);
-    }, 80);
+    }, 50);
   };
 
   const handleMouseLeave = () => {
@@ -69,13 +91,40 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setIsOpen(false);
-    }, 180);
+    }, 150);
   };
 
-  // Close on outside click if pinned
+  // Toggle pinned state on click
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    updatePosition();
+    setIsPinned(prev => {
+      const next = !prev;
+      setIsOpen(next);
+      return next;
+    });
+  };
+
+  // Recalculate on window resize / scroll
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+    }
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen, updatePosition]);
+
+  // Close on outside click if pinned or open
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        cardRef.current && !cardRef.current.contains(e.target as Node)
+      ) {
         setIsPinned(false);
         setIsOpen(false);
       }
@@ -90,62 +139,71 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
 
   // Glow theme per tier
   let cardBorder = 'border-slate-700/80';
-  let cardGlow = 'shadow-[0_15px_40px_rgba(15,23,42,0.85)]';
+  let cardGlow = 'shadow-[0_20px_50px_rgba(0,0,0,0.9)]';
   let progressGlow = 'from-emerald-500 to-teal-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]';
 
   if (tier.id === 'TO_THE_MOON') {
     cardBorder = 'border-purple-500/60';
-    cardGlow = 'shadow-[0_15px_45px_rgba(168,85,247,0.35)]';
+    cardGlow = 'shadow-[0_20px_50px_rgba(168,85,247,0.4)]';
     progressGlow = 'from-purple-500 via-indigo-400 to-cyan-400 shadow-[0_0_12px_rgba(168,85,247,0.5)]';
   } else if (tier.id === 'BUY_NOW') {
     cardBorder = 'border-emerald-500/60';
-    cardGlow = 'shadow-[0_15px_45px_rgba(16,185,129,0.35)]';
+    cardGlow = 'shadow-[0_20px_50px_rgba(16,185,129,0.4)]';
     progressGlow = 'from-emerald-500 to-green-400 shadow-[0_0_12px_rgba(16,185,129,0.5)]';
   } else if (tier.id === 'BUY_ZONE') {
     cardBorder = 'border-cyan-500/60';
-    cardGlow = 'shadow-[0_15px_45px_rgba(6,182,212,0.35)]';
+    cardGlow = 'shadow-[0_20px_50px_rgba(6,182,212,0.4)]';
     progressGlow = 'from-cyan-500 to-blue-400 shadow-[0_0_12px_rgba(6,182,212,0.5)]';
   } else if (tier.id === 'GET_READY') {
     cardBorder = 'border-amber-500/60';
-    cardGlow = 'shadow-[0_15px_45px_rgba(245,158,11,0.35)]';
+    cardGlow = 'shadow-[0_20px_50px_rgba(245,158,11,0.4)]';
     progressGlow = 'from-amber-500 to-yellow-400 shadow-[0_0_12px_rgba(245,158,11,0.5)]';
   } else if (tier.id === 'MAYDAY_EXIT' || tier.id === 'SLOW_BLEED' || tier.id === 'DANGER') {
     cardBorder = 'border-rose-500/70';
-    cardGlow = 'shadow-[0_15px_45px_rgba(244,63,94,0.45)]';
+    cardGlow = 'shadow-[0_20px_50px_rgba(244,63,94,0.45)]';
     progressGlow = 'from-rose-500 to-red-600 shadow-[0_0_12px_rgba(244,63,94,0.5)]';
   }
 
   return (
-    <div 
-      className="relative inline-flex items-center" 
-      ref={cardRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {/* Trigger element (Scenario Pill / Badge) */}
+    <>
+      {/* Trigger Container */}
       <div 
-        onClick={() => setIsPinned(prev => !prev)}
-        className={`cursor-pointer transition-all duration-200 ${
-          isOpen ? 'ring-2 ring-white/30 scale-[1.02] brightness-125' : 'hover:brightness-110'
-        }`}
-        title="คลิกหรือวางเมาส์เพื่อเปิด Preflight Checklist HUD"
+        className="relative inline-flex items-center cursor-pointer" 
+        ref={triggerRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
       >
-        {children}
+        <div 
+          className={`transition-all duration-200 ${
+            isOpen ? 'ring-2 ring-white/40 scale-[1.02] brightness-125 rounded-md' : 'hover:brightness-110'
+          }`}
+        >
+          {children}
+        </div>
       </div>
 
-      {/* Floating Hologram Preflight Card */}
-      {isOpen && (
+      {/* Floating Hologram Preflight Card via Portal to bypass overflow clipping */}
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <div 
-          className={`absolute top-full left-0 mt-2.5 w-[340px] sm:w-[380px] max-w-[92vw] z-50 rounded-xl bg-[#090D16]/95 backdrop-blur-2xl border ${cardBorder} ${cardGlow} transition-all duration-200 animate-in fade-in zoom-in-95 font-mono select-none overflow-hidden`}
-          style={{ transformOrigin: 'top left' }}
+          ref={cardRef}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          style={{ 
+            position: 'fixed',
+            top: `${coords.top}px`,
+            left: `${coords.left}px`,
+            zIndex: 99999
+          }}
+          className={`w-[340px] sm:w-[380px] max-w-[92vw] rounded-xl bg-[#090D16]/98 backdrop-blur-2xl border ${cardBorder} ${cardGlow} transition-all duration-200 animate-in fade-in zoom-in-95 font-mono select-none overflow-hidden`}
         >
           {/* Top Indicator Pip (Arrow) */}
           <div className="absolute -top-1.5 left-6 w-3 h-3 bg-[#090D16] border-t border-l border-white/20 transform rotate-45 pointer-events-none" />
 
           {/* Hologram Card Header */}
-          <div className="px-3.5 pt-3 pb-2.5 border-b border-white/10 bg-gradient-to-r from-white/[0.04] to-transparent">
+          <div className="px-3.5 pt-3 pb-2.5 border-b border-white/10 bg-gradient-to-r from-white/[0.05] to-transparent">
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase">
+              <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-200 uppercase">
                 <span className="text-amber-400">📡</span>
                 <span>PREFLIGHT RADAR HUD</span>
               </div>
@@ -198,8 +256,8 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
                 key={idx}
                 className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border transition-all duration-150 ${
                   item.pass 
-                    ? 'bg-emerald-950/30 border-emerald-500/25 hover:bg-emerald-950/50 hover:border-emerald-500/50 text-emerald-200' 
-                    : 'bg-rose-950/30 border-rose-500/25 hover:bg-rose-950/50 hover:border-rose-500/50 text-rose-200'
+                    ? 'bg-emerald-950/40 border-emerald-500/30 hover:bg-emerald-950/60 hover:border-emerald-500/50 text-emerald-200' 
+                    : 'bg-rose-950/40 border-rose-500/30 hover:bg-rose-950/60 hover:border-rose-500/50 text-rose-200'
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -242,8 +300,9 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
             <span>แตะเพื่อปักหมุด / เลื่อนเมาส์ออกเพื่อปิด</span>
             <span className="font-mono text-slate-300 font-bold">{tier.id}</span>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 };
