@@ -122,6 +122,11 @@ export interface DossierPayload {
   radar: {
     scenario: number;
     trafficLight: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
+    badge?: string;
+    reason?: string;
+    reason_th?: string;
+    regime?: string;
+    volRatio?: number;
     ema9?: number | null;
     ema50: number | null;
     ema150: number | null;

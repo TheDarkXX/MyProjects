@@ -1,6 +1,6 @@
 import { db } from '../db/init.js';
 import { fetchYahooRealtimeQuote, fetchYahooLatest } from './yahoo.js';
-import { getPortfolioHoldings, getOrCreateConfig } from './project2xEngine.js';
+import { getPortfolioHoldings, getOrCreateConfig, calculateStockRadarSignal } from './project2xEngine.js';
 import YahooFinance from 'yahoo-finance2';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
@@ -119,12 +119,12 @@ export async function getDossierData(portfolioId, symbol) {
     ORDER BY date DESC LIMIT 10
   `).all(actualPortfolioId, upper);
 
-  // 3. Technical Signals & Radar Row
-  const signalRow = db.prepare(`
-    SELECT * FROM project2x_signals
-    WHERE portfolio_id = ? AND symbol = ?
-    ORDER BY date DESC LIMIT 1
-  `).get(actualPortfolioId, upper) || {};
+  // 3. Real-time Technical Signals & Radar Calculation
+  const signalRadar = await calculateStockRadarSignal(upper, {
+    portfolioId: actualPortfolioId,
+    ownedShares: holdingShares,
+    category: quota.category || 'Core'
+  });
 
   // 4. Quarterly Financials (8-12 quarters)
   let quarterlyFinancials = db.prepare(`
@@ -247,11 +247,11 @@ export async function getDossierData(portfolioId, symbol) {
 
   // 9. Compute Executive Verdict (BUY_ADD / HOLD_RIDE / TRIM_SELL)
   let verdict = 'HOLD_RIDE';
-  let verdictReason = 'ราคาอยู่ในกรอบปกติ นั่งทับมือถือตามแผน ไม่ต้องเทรดพร่ำเพรื่อ';
+  let verdictReason = signalRadar?.reason_th || 'ราคาอยู่ในกรอบปกติ นั่งทับมือถือตามแผน ไม่ต้องเทรดพร่ำเพรื่อ';
 
   const isFreeRideEligible = (unrealizedPnlPct || 0) >= 100.0;
-  const isEma200Broken = signalRow.ema200 && currentPrice < signalRow.ema200;
-  const isDangerTraffic = signalRow.traffic_light === 'DANGER' || signalRow.traffic_light === 'MAYDAY_EXIT' || signalRow.traffic_light === 'SLOW_BLEED';
+  const isEma200Broken = signalRadar?.ema200 && currentPrice < signalRadar.ema200;
+  const isDangerTraffic = signalRadar?.traffic_light === 'DANGER' || signalRadar?.traffic_light === 'MAYDAY_EXIT' || signalRadar?.traffic_light === 'SLOW_BLEED';
 
   if (isFreeRideEligible) {
     verdict = 'TRIM_SELL';
@@ -261,18 +261,18 @@ export async function getDossierData(portfolioId, symbol) {
     verdictReason = 'Moat Breaker Alert: Gross Margin ลดลง 3 ไตรมาสติดต่อกัน ส่อแววโดนตัดราคา แนะนำพิจารณาตัดลดความเสี่ยง';
   } else if (isEma200Broken || isDangerTraffic) {
     verdict = 'TRIM_SELL';
-    verdictReason = signalRow.traffic_light === 'SLOW_BLEED'
-      ? 'สัญญาณเข้าเขต SLOW BLEED ไร้แรงสถาบันซื้อต่อเนื่อง แนะนำพิจารณาตัดลดความเสี่ยงถือเงินสด'
-      : 'สัญญาณเทคนิคเข้าเขต MAYDAY EXIT (หลุด EMA 200 ลึก) แนะนำพิจารณาหยุดขาดทุน';
-  } else if (signalRow.traffic_light === 'TO_THE_MOON') {
+    verdictReason = signalRadar?.reason_th || 'สัญญาณเทคนิคเข้าเขตอันตราย แนะนำพิจารณาตัดลดความเสี่ยง';
+  } else if (signalRadar?.traffic_light === 'TO_THE_MOON') {
     verdict = 'HOLD_RIDE';
-    verdictReason = 'หุ้นติดเทอร์โบขาขึ้นลอยฟ้า (TO THE MOON 🚀) สถาบันเกาะแน่น นั่งทับมือปล่อยกำไรวิ่ง';
-  } else if ((signalRow.traffic_light === 'BUY_NOW' || signalRow.traffic_light === 'BUY_ZONE' || signalRow.scenario === 1 || signalRow.scenario === 2 || signalRow.scenario === 5 || signalRow.scenario === 6 || signalRow.scenario === 7 || signalRow.scenario === 8) && quotaSharesRemaining > 0) {
+    verdictReason = signalRadar?.reason_th || 'หุ้นติดเทอร์โบขาขึ้นลอยฟ้า (TO THE MOON 🚀) สถาบันเกาะแน่น นั่งทับมือปล่อยกำไรวิ่ง';
+  } else if ((signalRadar?.traffic_light === 'BUY_NOW' || signalRadar?.traffic_light === 'BUY_ZONE') && quotaSharesRemaining > 0) {
     verdict = 'BUY_ADD';
-    verdictReason = `Setup สวย (${signalRow.traffic_light === 'BUY_NOW' ? 'BUY NOW!! 🔥 จุดเข้าซื้อคมกริบ' : 'BUY ZONE 💰 สะสมตามแผน'}) และโควตายังขาดอีก ${quotaSharesRemaining.toFixed(0)} หุ้น แนะนำซื้อเติมโควตา`;
+    verdictReason = signalRadar?.reason_th || `Setup สวย (${signalRadar?.traffic_light === 'BUY_NOW' ? 'BUY NOW!! 🔥 จุดเข้าซื้อคมกริบ' : 'BUY ZONE 💰 สะสมตามแผน'}) และโควตายังขาดอีก ${quotaSharesRemaining.toFixed(0)} หุ้น แนะนำซื้อเติมโควตา`;
   } else if (quotaSharesRemaining === 0) {
     verdict = 'HOLD_RIDE';
     verdictReason = 'โควตาครบ 100% แล้ว นั่งทับมือถือยาว ปล่อยให้พลัง Compound ทำงานสู่เป้า 1 เด้ง';
+  } else {
+    verdictReason = signalRadar?.reason_th || verdictReason;
   }
 
   return {
@@ -320,17 +320,28 @@ export async function getDossierData(portfolioId, symbol) {
       earningsDate: fundRow.earnings_date || ''
     },
     radar: {
-      scenario: signalRow.scenario || 1,
-      trafficLight: signalRow.traffic_light || 'ON_RADAR',
-      ema9: signalRow.ema9 || null,
-      ema50: signalRow.ema50 || null,
-      ema150: signalRow.ema150 || null,
-      ema200: signalRow.ema200 || null,
-      isAboveEma9: signalRow.is_above_ema9 != null ? !!signalRow.is_above_ema9 : (signalRow.ema9 ? currentPrice >= signalRow.ema9 : true),
-      hasRsiDivergence: !!signalRow.has_rsi_divergence,
-      bankerFlow: signalRow.banker_flow || 0,
-      sellSignal: signalRow.sell_signal || null,
-      actionSuggested: signalRow.action_suggested || ''
+      scenario: signalRadar?.scenario || 16,
+      trafficLight: signalRadar?.traffic_light || 'ON_RADAR',
+      badge: signalRadar?.badge || 'Evaluating',
+      ema9: signalRadar?.ema9 || null,
+      ema50: signalRadar?.ema50 || null,
+      ema150: signalRadar?.ema150 || null,
+      ema200: signalRadar?.ema200 || null,
+      distEma9: signalRadar?.distEma9 || 0,
+      distEma50: signalRadar?.distEma50 || 0,
+      distEma150: signalRadar?.distEma150 || 0,
+      distEma200: signalRadar?.distEma200 || 0,
+      isAboveEma9: signalRadar?.isAboveEma9 ?? (signalRadar?.ema9 ? currentPrice >= signalRadar.ema9 : true),
+      hasRsiDivergence: !!signalRadar?.hasRsiDivergence,
+      bankerFlow: signalRadar?.banker || 0,
+      volRatio: signalRadar?.volRatio || 1.0,
+      regime: signalRadar?.regime || 'NEUTRAL',
+      reason: signalRadar?.reason || '',
+      reason_th: signalRadar?.reason_th || '',
+      signals_checklist: signalRadar?.signals_checklist || [],
+      checklist: signalRadar?.checklist || {},
+      sellSignal: null,
+      actionSuggested: signalRadar?.badge || ''
     },
     vitalSigns: {
       revenueGrowthYoY: Number(latestRevGrowth.toFixed(1)),

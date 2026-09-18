@@ -300,7 +300,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
                   {tier.label}
                 </span>
                 <span className="text-[11px] opacity-90 font-mono tracking-tight font-medium mt-0.5">
-                  Scenario {data.radar?.scenario || 1}
+                  {data.radar?.badge ? `${data.radar.badge} • Scen ${data.radar.scenario || 1}` : `Scenario ${data.radar?.scenario || 1}`}
                 </span>
               </div>
             </div>
@@ -327,11 +327,13 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
 
                 {/* Regime Chip */}
                 <span className={`px-2 py-0.5 rounded-md text-[12px] font-mono font-semibold border ${
-                  isBullRegime
+                  data.radar?.regime === 'BULL' || isBullRegime
                     ? 'bg-violet-500/15 text-violet-300 border-violet-500/30'
+                    : data.radar?.regime === 'BEAR'
+                    ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
                     : 'bg-slate-800 text-slate-300 border-white/10'
                 }`}>
-                  {isBullRegime ? 'BULL Regime 👑' : 'NEUTRAL / BEAR'}
+                  {data.radar?.regime === 'BULL' || isBullRegime ? 'BULL Regime 👑' : (data.radar?.regime === 'BEAR' ? 'BEAR Regime ⚠️' : 'NEUTRAL Regime')}
                 </span>
 
                 {/* RSI Divergence Chip */}
@@ -344,7 +346,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
 
               {/* Action Description */}
               <p className="text-[13px] text-slate-200 font-normal leading-snug">
-                {data.verdictReason || tier.descriptionTh}
+                {data.radar?.reason_th || data.verdictReason || tier.descriptionTh}
               </p>
             </div>
           </div>

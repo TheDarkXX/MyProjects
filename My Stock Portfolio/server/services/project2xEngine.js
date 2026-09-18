@@ -839,6 +839,272 @@ export function classifyScenario({
 }
 
 /**
+ * Compute real-time technical indicators & 7-Tier classification for a single stock
+ */
+export async function calculateStockRadarSignal(symbol, { portfolioId = 'default', ownedShares = 0, category = 'Core' } = {}) {
+  if (!symbol) return null;
+  const upper = symbol.toUpperCase().trim();
+
+  // 1. Fetch candles: Check cached historical in SQLite first
+  let dbCandles = db.prepare(`
+    SELECT date, price, open, high, low, close, volume 
+    FROM historical_prices 
+    WHERE symbol = ? 
+    ORDER BY date ASC
+  `).all(upper);
+
+  // If fewer than 50 bars, sync delta from Yahoo
+  if (dbCandles.length < 50) {
+    try {
+      await syncCandleDelta(upper, 400);
+      dbCandles = db.prepare(`
+        SELECT date, price, open, high, low, close, volume 
+        FROM historical_prices 
+        WHERE symbol = ? 
+        ORDER BY date ASC
+      `).all(upper);
+    } catch (e) {
+      console.warn(`[calculateStockRadarSignal] syncCandleDelta error for ${upper}:`, e.message);
+    }
+  }
+
+  if (!dbCandles || dbCandles.length < 50) {
+    return {
+      scenario: 16,
+      traffic_light: 'ON_RADAR',
+      badge: 'Evaluating',
+      reason: 'Insufficient historical data',
+      reason_th: 'กำลังรอประมวลผลข้อมูลกราฟ',
+      currentPrice: 0,
+      ema9: null,
+      ema50: null,
+      ema150: null,
+      ema200: null,
+      distEma9: 0,
+      distEma50: 0,
+      distEma150: 0,
+      distEma200: 0,
+      isAboveEma9: false,
+      hasRsiDivergence: false,
+      regime: 'NEUTRAL',
+      banker: 0,
+      volRatio: 1.0,
+      checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
+      signals_checklist: []
+    };
+  }
+
+  const sparkCloses = dbCandles.map(c => c.price);
+  const sparkDates = dbCandles.map(c => c.date);
+  const sparkOpens = dbCandles.map(c => c.open ?? c.price);
+  const sparkHighs = dbCandles.map(c => c.high ?? c.price);
+  const sparkLows = dbCandles.map(c => c.low ?? c.price);
+  const sparkVolumes = dbCandles.map(c => c.volume ?? 0);
+
+  const currentPrice = sparkCloses[sparkCloses.length - 1];
+
+  // Full-depth EMA Series calculation
+  const ema9Series = calcEMASeries(sparkCloses, 9);
+  const ema50Series = calcEMASeries(sparkCloses, 50);
+  const ema150Series = calcEMASeries(sparkCloses, 150);
+  const ema200Series = calcEMASeries(sparkCloses, 200);
+
+  const ema9 = ema9Series[ema9Series.length - 1] !== null ? Number(ema9Series[ema9Series.length - 1].toFixed(2)) : null;
+  const ema50 = ema50Series[ema50Series.length - 1] !== null ? Number(ema50Series[ema50Series.length - 1].toFixed(2)) : null;
+  const ema150 = ema150Series[ema150Series.length - 1] !== null ? Number(ema150Series[ema150Series.length - 1].toFixed(2)) : null;
+  const ema200 = ema200Series[ema200Series.length - 1] !== null ? Number(ema200Series[ema200Series.length - 1].toFixed(2)) : null;
+
+  const banker = calcBankerMCDX(sparkCloses);
+  const rsi14 = calcRSI(sparkCloses, 14);
+
+  const rsi14Series = calcRSISeries(sparkCloses, 14);
+  const hasRsiDivergence = detectRsiDivergence(sparkCloses, rsi14Series, 30);
+
+  const distEma9 = ema9 ? Number((((currentPrice - ema9) / ema9) * 100).toFixed(2)) : 0;
+  const distEma50 = ema50 ? Number((((currentPrice - ema50) / ema50) * 100).toFixed(2)) : 0;
+  const distEma150 = ema150 ? Number((((currentPrice - ema150) / ema150) * 100).toFixed(2)) : 0;
+  const distEma200 = ema200 ? Number((((currentPrice - ema200) / ema200) * 100).toFixed(2)) : 0;
+  const isAboveEma9 = currentPrice >= (ema9 || 0);
+
+  // Detect Regime
+  const isBullRegime = (ema50 && ema150 && ema200 && ema50 > ema150 && ema150 > ema200);
+  const isNeutralRegime = (ema50 && ema200 && ema50 > ema200 && !isBullRegime);
+  const regime = isBullRegime ? 'BULL' : (isNeutralRegime ? 'NEUTRAL' : 'BEAR');
+
+  // Volume 20D SMA
+  const volLookback = Math.min(20, sparkVolumes.length - 1);
+  let avg20dVol = 0;
+  if (volLookback > 0) {
+    let volSum = 0;
+    for (let i = sparkVolumes.length - 1 - volLookback; i < sparkVolumes.length - 1; i++) {
+      volSum += sparkVolumes[i] || 0;
+    }
+    avg20dVol = volSum / volLookback;
+  }
+  const lastVol = sparkVolumes[sparkVolumes.length - 1] || 0;
+  const volRatio = avg20dVol > 0 ? Number((lastVol / avg20dVol).toFixed(2)) : 1.0;
+
+  // Candle & Red Bars
+  const lastBar = dbCandles[dbCandles.length - 1];
+  const isLatestBullish = (lastBar.close >= (lastBar.open ?? lastBar.close));
+  let consecutiveRedBars = 0;
+  for (let i = dbCandles.length - 1; i >= 0; i--) {
+    const bar = dbCandles[i];
+    const barOpen = bar.open ?? bar.close;
+    if (bar.close < barOpen) {
+      consecutiveRedBars++;
+    } else {
+      break;
+    }
+  }
+
+  const mcdxData = calcMcdxSeries(sparkCloses);
+  const n = sparkCloses.length;
+
+  let daysNearEma200 = 0;
+  for (let i = n - 1; i >= 0; i--) {
+    const e200 = ema200Series[i];
+    if (!e200) break;
+    const d = ((sparkCloses[i] - e200) / e200) * 100;
+    if (d >= -3.5 && d <= 3.5) daysNearEma200++;
+    else break;
+  }
+
+  let daysBelowEma200 = 0;
+  for (let i = n - 1; i >= 0; i--) {
+    const e200 = ema200Series[i];
+    if (!e200) break;
+    if (sparkCloses[i] < e200) daysBelowEma200++;
+    else break;
+  }
+
+  let daysBankerZero = 0;
+  const bankerArr = mcdxData.banker || [];
+  for (let i = bankerArr.length - 1; i >= 0; i--) {
+    if (bankerArr[i] === 0) daysBankerZero++;
+    else break;
+  }
+
+  let isBearTrapReclaimed = false;
+  if (n >= 10 && distEma200 >= 0 && isLatestBullish) {
+    for (let i = n - 2; i >= Math.max(0, n - 6); i--) {
+      const e200 = ema200Series[i];
+      if (e200 && ((sparkCloses[i] - e200) / e200) * 100 < -4.0) {
+        isBearTrapReclaimed = true;
+        break;
+      }
+    }
+  }
+
+  let isDoubleBottomConfirmed = false;
+  if (n >= 40 && distEma200 >= -3.5 && distEma200 <= 2.5 && isLatestBullish) {
+    let earlierTouchIndex = -1;
+    for (let i = n - 5; i >= Math.max(0, n - 45); i--) {
+      const e200 = ema200Series[i];
+      if (e200) {
+        const d = ((sparkCloses[i] - e200) / e200) * 100;
+        if (d >= -4.0 && d <= 3.0) {
+          earlierTouchIndex = i;
+          break;
+        }
+      }
+    }
+    if (earlierTouchIndex > 0) {
+      const earlierLow = sparkLows[earlierTouchIndex];
+      const currentLow = sparkLows[n - 1];
+      if (currentLow >= earlierLow * 0.985) {
+        isDoubleBottomConfirmed = true;
+      }
+    }
+  }
+
+  let isBaseBreakout = false;
+  if (n >= 12 && isLatestBullish && volRatio >= 1.4) {
+    const baseHighs = sparkHighs.slice(n - 10, n - 2);
+    const baseLows = sparkLows.slice(n - 10, n - 2);
+    const maxBaseHigh = Math.max(...baseHighs);
+    const minBaseLow = Math.min(...baseLows);
+    const baseSpread = minBaseLow > 0 ? (maxBaseHigh - minBaseLow) / minBaseLow : 1;
+    if (baseSpread < 0.08 && currentPrice > maxBaseHigh && banker >= 3 && (rsi14 ? rsi14 >= 50 && rsi14 <= 74 : true)) {
+      isBaseBreakout = true;
+    }
+  }
+
+  let isRegimeFlip = false;
+  if (n >= 10 && ema50Series[n - 1] && ema200Series[n - 1]) {
+    const isNowAbove = ema50Series[n - 1] >= ema200Series[n - 1];
+    const wasBelow = (ema50Series[n - 5] || 0) < (ema200Series[n - 5] || 0);
+    if (isNowAbove && wasBelow && currentPrice > ema50 && currentPrice > ema200) {
+      isRegimeFlip = true;
+    }
+  }
+
+  const classification = classifyScenario({
+    currentPrice,
+    ema9,
+    ema50,
+    ema150,
+    ema200,
+    distEma9,
+    distEma50,
+    distEma150,
+    distEma200,
+    banker,
+    rsi14,
+    isAboveEma9,
+    hasRsiDivergence,
+    isLatestBullish,
+    consecutiveRedBars,
+    volRatio,
+    regime,
+    daysNearEma200,
+    daysBelowEma200,
+    daysBankerZero,
+    isBearTrapReclaimed,
+    isDoubleBottomConfirmed,
+    isBaseBreakout,
+    isRegimeFlip,
+    ownedShares,
+    category
+  });
+
+  return {
+    ...classification,
+    currentPrice,
+    ema9,
+    ema50,
+    ema150,
+    ema200,
+    distEma9,
+    distEma50,
+    distEma150,
+    distEma200,
+    isAboveEma9,
+    hasRsiDivergence,
+    banker,
+    volRatio,
+    regime,
+    mcdxData,
+    sparkline: {
+      dates: sparkDates,
+      closes: sparkCloses,
+      opens: sparkOpens,
+      highs: sparkHighs,
+      lows: sparkLows,
+      volumes: sparkVolumes,
+      ema9: ema9Series,
+      ema50: ema50Series,
+      ema150: ema150Series,
+      ema200: ema200Series,
+      bankerSeries: mcdxData.banker,
+      hotMoneySeries: mcdxData.hotMoney,
+      retailSeries: mcdxData.retail,
+      bankerMaSeries: mcdxData.bankerMa
+    }
+  };
+}
+
+/**
  * Backfill State Tracker
  */
 const backfillState = {
@@ -1026,283 +1292,73 @@ export async function scanRadarMatrix(portfolioId) {
 
   for (const q of quotas) {
     const symbol = q.symbol;
-    const candles = await syncCandleDelta(symbol, 400);
-
-    // Fetch all cached historical candles from DB to support full timeframe zoom & accurate EMA convergence (up to 10Y)
-    const dbCandles = db.prepare(`
-      SELECT date, price, open, high, low, close, volume 
-      FROM historical_prices 
-      WHERE symbol = ? 
-      ORDER BY date ASC
-    `).all(symbol);
-
-    const candleSeries = dbCandles.length >= 50 ? dbCandles : candles;
-    if (candleSeries.length < 50) {
-      continue;
-    }
-
-    const sparkCloses = candleSeries.map(c => c.price);
-    const sparkDates = candleSeries.map(c => c.date);
-    const sparkOpens = candleSeries.map(c => c.open ?? c.price);
-    const sparkHighs = candleSeries.map(c => c.high ?? c.price);
-    const sparkLows = candleSeries.map(c => c.low ?? c.price);
-    const sparkVolumes = candleSeries.map(c => c.volume ?? 0);
-
-    const currentPrice = sparkCloses[sparkCloses.length - 1];
-
-    // Compute EMAs on the full historical series (2,500+ bars) for mathematical convergence identical to chart
-    const ema9Series = calcEMASeries(sparkCloses, 9);
-    const ema50Series = calcEMASeries(sparkCloses, 50);
-    const ema150Series = calcEMASeries(sparkCloses, 150);
-    const ema200Series = calcEMASeries(sparkCloses, 200);
-
-    const ema9 = ema9Series[ema9Series.length - 1] !== null ? Number(ema9Series[ema9Series.length - 1].toFixed(2)) : null;
-    const ema50 = ema50Series[ema50Series.length - 1] !== null ? Number(ema50Series[ema50Series.length - 1].toFixed(2)) : null;
-    const ema150 = ema150Series[ema150Series.length - 1] !== null ? Number(ema150Series[ema150Series.length - 1].toFixed(2)) : null;
-    const ema200 = ema200Series[ema200Series.length - 1] !== null ? Number(ema200Series[ema200Series.length - 1].toFixed(2)) : null;
-
-    const banker = calcBankerMCDX(sparkCloses);
-    const rsi14 = calcRSI(sparkCloses, 14);
-
-    // Compute RSI Series & Bullish Divergence
-    const rsi14Series = calcRSISeries(sparkCloses, 14);
-    const hasRsiDivergence = detectRsiDivergence(sparkCloses, rsi14Series, 30);
-
-    const distEma9 = ema9 ? Number((((currentPrice - ema9) / ema9) * 100).toFixed(2)) : 0;
-    const distEma50 = ema50 ? Number((((currentPrice - ema50) / ema50) * 100).toFixed(2)) : 0;
-    const distEma150 = ema150 ? Number((((currentPrice - ema150) / ema150) * 100).toFixed(2)) : 0;
-    const distEma200 = ema200 ? Number((((currentPrice - ema200) / ema200) * 100).toFixed(2)) : 0;
-    const isAboveEma9 = currentPrice >= (ema9 || 0);
-
-    // Detect EMA alignment regime
-    const isBullRegime = (ema50 && ema150 && ema200 && ema50 > ema150 && ema150 > ema200);
-    const isNeutralRegime = (ema50 && ema200 && ema50 > ema200 && !isBullRegime);
-    const regime = isBullRegime ? 'BULL' : (isNeutralRegime ? 'NEUTRAL' : 'BEAR');
-
-    // Calculate 20-Day SMA Volume Ratio
-    const volLookback = Math.min(20, sparkVolumes.length - 1);
-    let avg20dVol = 0;
-    if (volLookback > 0) {
-      let volSum = 0;
-      for (let i = sparkVolumes.length - 1 - volLookback; i < sparkVolumes.length - 1; i++) {
-        volSum += sparkVolumes[i] || 0;
-      }
-      avg20dVol = volSum / volLookback;
-    }
-    const lastVol = sparkVolumes[sparkVolumes.length - 1] || 0;
-    const volRatio = avg20dVol > 0 ? Number((lastVol / avg20dVol).toFixed(2)) : 1.0;
-
-    // Detect latest price action & consecutive red bars
-    const lastBar = candleSeries[candleSeries.length - 1];
-    const isLatestBullish = (lastBar.close >= (lastBar.open ?? lastBar.close));
-    let consecutiveRedBars = 0;
-    for (let i = candleSeries.length - 1; i >= 0; i--) {
-      const bar = candleSeries[i];
-      const barOpen = bar.open ?? bar.close;
-      if (bar.close < barOpen) {
-        consecutiveRedBars++;
-      } else {
-        break;
-      }
-    }
-
-    // Calculate MCDX on full series for 100% historical depth
-    const mcdxData = calcMcdxSeries(sparkCloses);
-
-    // Lookback Metrics
-    const n = sparkCloses.length;
-
-    // 1. Days near EMA 200 (-3.5% to +3.5%)
-    let daysNearEma200 = 0;
-    for (let i = n - 1; i >= 0; i--) {
-      const e200 = ema200Series[i];
-      if (!e200) break;
-      const d = ((sparkCloses[i] - e200) / e200) * 100;
-      if (d >= -3.5 && d <= 3.5) {
-        daysNearEma200++;
-      } else {
-        break;
-      }
-    }
-
-    // 2. Days below EMA 200
-    let daysBelowEma200 = 0;
-    for (let i = n - 1; i >= 0; i--) {
-      const e200 = ema200Series[i];
-      if (!e200) break;
-      if (sparkCloses[i] < e200) {
-        daysBelowEma200++;
-      } else {
-        break;
-      }
-    }
-
-    // 3. Days Banker is 0
-    let daysBankerZero = 0;
-    const bankerArr = mcdxData.banker || [];
-    for (let i = bankerArr.length - 1; i >= 0; i--) {
-      if (bankerArr[i] === 0) {
-        daysBankerZero++;
-      } else {
-        break;
-      }
-    }
-
-    // 4. Bear Trap Reclaim: plunged < -4% in past 2-8 bars, and closed > EMA200 for 2 consecutive bars
-    let hadBearTrapDip = false;
-    for (let i = Math.max(0, n - 8); i < n - 2; i++) {
-      const e200 = ema200Series[i];
-      if (e200 && ((sparkCloses[i] - e200) / e200) * 100 < -4) {
-        hadBearTrapDip = true;
-        break;
-      }
-    }
-    const isNowAboveEma200_2Days = n >= 2 && 
-      sparkCloses[n - 1] >= (ema200Series[n - 1] || 0) && 
-      sparkCloses[n - 2] >= (ema200Series[n - 2] || 0);
-    const isBearTrapReclaimed = hadBearTrapDip && isNowAboveEma200_2Days;
-
-    // 5. Double Bottom Confirmed: Retest of EMA 200 in 15-45 bars
-    let isDoubleBottomConfirmed = false;
-    let prevDipLow = null;
-    let hadBounceBetween = false;
-    const isCurrentAtEma200 = distEma200 >= -3.5 && distEma200 <= 2.0;
-
-    if (isCurrentAtEma200 && n >= 45) {
-      for (let i = n - 45; i <= n - 12; i++) {
-        const e200_i = ema200Series[i];
-        if (!e200_i) continue;
-        const dist_i = ((sparkCloses[i] - e200_i) / e200_i) * 100;
-        if (dist_i >= -4.0 && dist_i <= 2.0) {
-          const firstBottomLow = sparkLows[i];
-          for (let j = i + 1; j < n - 3; j++) {
-            const e200_j = ema200Series[j];
-            if (e200_j && ((sparkCloses[j] - e200_j) / e200_j) * 100 >= 3.0) {
-              hadBounceBetween = true;
-              break;
-            }
-          }
-          if (hadBounceBetween) {
-            prevDipLow = firstBottomLow;
-            break;
-          }
-        }
-      }
-
-      if (hadBounceBetween && prevDipLow !== null) {
-        const currentRecentLow = Math.min(...sparkLows.slice(-3));
-        if (currentRecentLow >= prevDipLow * 0.985 && isLatestBullish && banker >= 1) {
-          isDoubleBottomConfirmed = true;
-        }
-      }
-    }
-
-    // 6. Base Breakout
-    let isBaseBreakout = false;
-    if (n >= 12 && isLatestBullish && volRatio >= 1.4) {
-      const baseHighs = sparkHighs.slice(n - 10, n - 2);
-      const baseLows = sparkLows.slice(n - 10, n - 2);
-      const maxBaseHigh = Math.max(...baseHighs);
-      const minBaseLow = Math.min(...baseLows);
-      const baseSpread = minBaseLow > 0 ? (maxBaseHigh - minBaseLow) / minBaseLow : 1;
-
-      if (baseSpread < 0.08 && currentPrice > maxBaseHigh && banker >= 3 && (rsi14 ? rsi14 >= 50 && rsi14 <= 74 : true)) {
-        isBaseBreakout = true;
-      }
-    }
-
-    // 7. Regime Flip (Golden Cross EMA 50 > EMA 200 in last 5 bars)
-    let isRegimeFlip = false;
-    if (n >= 10 && ema50Series[n - 1] && ema200Series[n - 1]) {
-      const isNowAbove = ema50Series[n - 1] >= ema200Series[n - 1];
-      const wasBelow = (ema50Series[n - 5] || 0) < (ema200Series[n - 5] || 0);
-      if (isNowAbove && wasBelow && currentPrice > ema50 && currentPrice > ema200) {
-        isRegimeFlip = true;
-      }
-    }
-
-    // 8. 52-Week High & Drawdown
-    const past252Closes = sparkCloses.slice(-252);
-    const high52W = past252Closes.length > 0 ? Math.max(...past252Closes) : currentPrice;
-    const drawdownFrom52W = high52W > 0 ? Number((((currentPrice - high52W) / high52W) * 100).toFixed(1)) : 0;
-
-    const classification = classifyScenario({
-      currentPrice,
-      ema9,
-      ema50,
-      ema150,
-      ema200,
-      distEma9,
-      distEma50,
-      distEma150,
-      distEma200,
-      banker,
-      rsi14,
-      isAboveEma9,
-      hasRsiDivergence,
-      isLatestBullish,
-      consecutiveRedBars,
-      volRatio,
-      regime,
-      daysNearEma200,
-      daysBelowEma200,
-      daysBankerZero,
-      isBearTrapReclaimed,
-      isDoubleBottomConfirmed,
-      isBaseBreakout,
-      isRegimeFlip,
+    const signalData = await calculateStockRadarSignal(symbol, {
+      portfolioId,
       ownedShares: q.owned_shares || 0,
       category: q.category
     });
 
+    if (!signalData) continue;
+
+    const currentPrice = signalData.currentPrice;
     const ownedShares = q.owned_shares || 0;
     const marketValueUsd = ownedShares * currentPrice;
     stockMarketValues[symbol] = marketValueUsd;
+
+    // Past 252 Closes for 52W High & Drawdown
+    const past252Closes = signalData.sparkline?.closes?.slice(-252) || [];
+    const high52W = past252Closes.length > 0 ? Math.max(...past252Closes) : currentPrice;
+    const drawdownFrom52W = high52W > 0 ? Number((((currentPrice - high52W) / high52W) * 100).toFixed(1)) : 0;
+
+    // Safety Alert: Core Trend Breakdown & Trailing Drawdown
+    if (ownedShares > 0 && q.category === 'Core') {
+      if (signalData.distEma200 < -5.0 && signalData.regime === 'BEAR') {
+        sellAlerts.push({
+          symbol,
+          type: 'CORE_TREND_BREAKDOWN',
+          severity: 'HIGH',
+          message: `Core Commander ${symbol} broken below EMA 200 (${signalData.distEma200}%). Review exit protocol.`
+        });
+      }
+      if (drawdownFrom52W <= -25.0) {
+        sellAlerts.push({
+          symbol,
+          type: 'TRAILING_DRAWDOWN',
+          severity: 'HIGH',
+          message: `Core Commander ${symbol} is down ${drawdownFrom52W}% from 52W high ($${high52W.toFixed(2)}).`
+        });
+      }
+    }
 
     radarRows.push({
       symbol,
       category: q.category,
       target_percent: q.target_percent,
       currentPrice,
-      ema9,
-      ema50,
-      ema150,
-      ema200,
-      distEma9,
-      distEma50,
-      distEma150,
-      distEma200,
-      isAboveEma9,
-      hasRsiDivergence,
-      banker,
-      rsi14,
-      regime,
-      volRatio,
+      ema9: signalData.ema9,
+      ema50: signalData.ema50,
+      ema150: signalData.ema150,
+      ema200: signalData.ema200,
+      distEma9: signalData.distEma9,
+      distEma50: signalData.distEma50,
+      distEma150: signalData.distEma150,
+      distEma200: signalData.distEma200,
+      isAboveEma9: signalData.isAboveEma9,
+      hasRsiDivergence: signalData.hasRsiDivergence,
+      banker: signalData.banker,
+      rsi14: signalData.rsi14,
+      regime: signalData.regime,
+      volRatio: signalData.volRatio,
       high52W,
       drawdownFrom52W,
-      scenario: classification.scenario,
-      traffic_light: classification.traffic_light,
-      badge: classification.badge,
-      reason: classification.reason,
-      reason_th: classification.reason_th,
-      checklist: classification.checklist,
-      signals_checklist: classification.signals_checklist,
-      sparkline: {
-        dates: sparkDates,
-        closes: sparkCloses,
-        opens: sparkOpens,
-        highs: sparkHighs,
-        lows: sparkLows,
-        volumes: sparkVolumes,
-        ema9: ema9Series,
-        ema50: ema50Series,
-        ema150: ema150Series,
-        ema200: ema200Series,
-        bankerSeries: mcdxData.banker,
-        hotMoneySeries: mcdxData.hotMoney,
-        retailSeries: mcdxData.retail,
-        bankerMaSeries: mcdxData.bankerMa
-      },
+      scenario: signalData.scenario,
+      traffic_light: signalData.traffic_light,
+      badge: signalData.badge,
+      reason: signalData.reason,
+      reason_th: signalData.reason_th,
+      checklist: signalData.checklist,
+      signals_checklist: signalData.signals_checklist,
+      sparkline: signalData.sparkline,
       owned_shares: ownedShares,
       target_shares: q.target_shares,
       progress_percent: q.progress_percent,
