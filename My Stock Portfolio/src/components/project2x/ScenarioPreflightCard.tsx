@@ -92,7 +92,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
             ...item,
             value: `$${e200.toFixed(2)} (${liveDist >= 0 ? '+' : ''}${liveDist.toFixed(2)}%)`,
             priceLevel: e200,
-            pass: Math.abs(liveDist) <= 3.5,
+            pass: liveDist >= -5.0 && liveDist <= 3.5,
           };
         }
       }

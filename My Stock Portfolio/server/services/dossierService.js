@@ -119,11 +119,13 @@ export async function getDossierData(portfolioId, symbol) {
     ORDER BY date DESC LIMIT 10
   `).all(actualPortfolioId, upper);
 
-  // 3. Real-time Technical Signals & Radar Calculation
+  // 3. Real-time Technical Signals & Radar Calculation (with live intraday price)
   const signalRadar = await calculateStockRadarSignal(upper, {
     portfolioId: actualPortfolioId,
     ownedShares: holdingShares,
-    category: quota.category || 'Core'
+    category: quota.category || 'Core',
+    livePrice: currentPrice,
+    liveQuote
   });
 
   // 4. Quarterly Financials (8-12 quarters)

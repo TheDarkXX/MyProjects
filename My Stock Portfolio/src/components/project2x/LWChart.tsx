@@ -1628,13 +1628,18 @@ export const LWChart: React.FC<LWChartProps> = ({
             {/* Vertical Divider */}
             <div className="h-4 w-[1px] bg-white/20 shrink-0 hidden md:block" />
 
-            {/* POD 3: Tactical Directive (Thai Rationale) */}
-            {reasonTh && (
-              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-black/35 border border-white/10 text-xs text-slate-200 font-sans truncate max-w-[340px] xl:max-w-[440px] shrink-0" title={reasonTh}>
-                <span className="text-amber-300 shrink-0">💡</span>
-                <span className="truncate">{reasonTh}</span>
-              </div>
-            )}
+            {/* POD 3: Tactical Directive (Thai Rationale with Live Distance Sync) */}
+            {(() => {
+              const liveReasonDirective = reasonTh && liveDistEma200 !== undefined && /(-?\d+\.\d+)%/.test(reasonTh)
+                ? reasonTh.replace(/(-?\d+\.\d+)%/, `${liveDistEma200 >= 0 ? '+' : ''}${liveDistEma200.toFixed(2)}%`)
+                : reasonTh;
+              return liveReasonDirective ? (
+                <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-black/35 border border-white/10 text-xs text-slate-200 font-sans truncate max-w-[340px] xl:max-w-[440px] shrink-0" title={liveReasonDirective}>
+                  <span className="text-amber-300 shrink-0">💡</span>
+                  <span className="truncate">{liveReasonDirective}</span>
+                </div>
+              ) : null;
+            })()}
 
             {/* EMA 9 Lock Status (Far Right) */}
             {ema9Cur !== null && (

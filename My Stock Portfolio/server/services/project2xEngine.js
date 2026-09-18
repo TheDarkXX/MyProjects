@@ -1,5 +1,5 @@
 import { db } from '../db/init.js';
-import { fetchYahooExchangeRate, fetchYahooLatest, fetchYahooHistorical, fetchYahooFundamentals } from './yahoo.js';
+import { fetchYahooExchangeRate, fetchYahooLatest, fetchYahooRealtimeQuote, fetchYahooHistorical, fetchYahooFundamentals } from './yahoo.js';
 import { calcEMA, calcEMASeries, calcBankerMCDX, calcBankerSeries, calcMcdxSeries, calcRSI, calcRSISeries, syncCandleDelta } from './technicalAnalysis.js';
 
 export const DEFAULT_2X_STOCKS = [
@@ -399,8 +399,12 @@ export function classifyScenario({
     };
   }
 
-  // 3. Core Breakdown: Prolonged failure below EMA 200 (> 3 days below and < -4.0% with no banker)
-  if (d200 < -4.0 && daysBelowEma200 >= 3 && (regime === 'BEAR' || banker <= 1)) {
+  // 3. Core Breakdown: Prolonged failure below EMA 200
+  // For BEAR regime: < -4.0% with daysBelowEma200 >= 3
+  // For BULL/NEUTRAL: Only if severe structural breach (< -6.5% and daysBelowEma200 >= 5)
+  const isCoreBreakdown = (regime === 'BEAR' && d200 < -4.0 && daysBelowEma200 >= 3) ||
+                          (regime !== 'BEAR' && d200 < -6.5 && daysBelowEma200 >= 5 && banker <= 1);
+  if (isCoreBreakdown) {
     return {
       scenario: 3,
       traffic_light: 'MAYDAY_EXIT',
@@ -426,8 +430,8 @@ export function classifyScenario({
     };
   }
 
-  // 4. Slow Bleed / Death Drift: Persistent decay without bounce below EMA 200
-  if (d200 < -3.5 && daysBankerZero >= 8) {
+  // 4. Slow Bleed / Death Drift: Persistent decay without bounce below EMA 200 in non-bull regime or severe drop
+  if ((regime === 'BEAR' || d200 < -5.0) && d200 < -3.5 && daysBankerZero >= 8) {
     return {
       scenario: 4,
       traffic_light: 'SLOW_BLEED',
@@ -458,7 +462,7 @@ export function classifyScenario({
   // ==========================================
 
   // 5. Double Bottom Confirmed: Retest of EMA 200 with higher low & banker + triggered above EMA 9
-  if (isDoubleBottomConfirmed && regime !== 'BEAR' && aboveEma9) {
+  if (isDoubleBottomConfirmed && regime !== 'BEAR' && banker >= 1 && aboveEma9) {
     return {
       scenario: 5,
       traffic_light: 'BUY_NOW',
@@ -546,8 +550,10 @@ export function classifyScenario({
   // ==========================================
   // LAYER 2: DIP BUY & SUPPORT TESTS (BUY_NOW vs GET_READY)
   // ==========================================
-  const isNearEma200 = (d200 >= -3.5 && d200 <= 2.0);
-  const isNearEma150 = (d150 >= -2.5 && d150 <= 2.0);
+  // In non-BEAR regime (BULL/NEUTRAL), support zone extends down to -5.0% to catch high-beta bedrock retests and wick dip-buys
+  const ema200LowerBound = regime !== 'BEAR' ? -5.0 : -3.5;
+  const isNearEma200 = (d200 >= ema200LowerBound && d200 <= 2.5);
+  const isNearEma150 = (d150 >= -3.0 && d150 <= 2.0);
   const isNearMajorEma = isNearEma200 || isNearEma150;
 
   // 8. V-Shape Rebound: Near major EMA + Banker + BULL regime + above EMA 9 + Green Candle
@@ -866,7 +872,7 @@ export function classifyScenario({
 /**
  * Compute real-time technical indicators & 7-Tier classification for a single stock
  */
-export async function calculateStockRadarSignal(symbol, { portfolioId = 'default', ownedShares = 0, category = 'Core' } = {}) {
+export async function calculateStockRadarSignal(symbol, { portfolioId = 'default', ownedShares = 0, category = 'Core', livePrice = null, liveQuote = null } = {}) {
   if (!symbol) return null;
   const upper = symbol.toUpperCase().trim();
 
@@ -897,6 +903,41 @@ export async function calculateStockRadarSignal(symbol, { portfolioId = 'default
     } catch (e) {
       console.warn(`[calculateStockRadarSignal] syncCandleDelta error for ${upper}:`, e.message);
     }
+  }
+
+  // 2. Real-Time Intraday Bar Injection (Ensures live market price is reflected immediately)
+  let rtQuote = liveQuote;
+  if (!rtQuote) {
+    try {
+      rtQuote = await fetchYahooRealtimeQuote(upper);
+    } catch (err) {
+      // fallback
+    }
+  }
+
+  if (rtQuote && rtQuote.price && dbCandles && dbCandles.length > 0) {
+    const lastBar = dbCandles[dbCandles.length - 1];
+    if (lastBar.date === rtQuote.date) {
+      lastBar.price = rtQuote.price;
+      lastBar.close = rtQuote.price;
+      lastBar.high = Math.max(lastBar.high ?? rtQuote.price, rtQuote.high ?? rtQuote.price);
+      lastBar.low = Math.min(lastBar.low ?? rtQuote.price, rtQuote.low ?? rtQuote.price);
+      lastBar.volume = rtQuote.volume ?? lastBar.volume;
+    } else if (lastBar.date < rtQuote.date) {
+      dbCandles.push({
+        date: rtQuote.date,
+        price: rtQuote.price,
+        open: rtQuote.open ?? rtQuote.price,
+        high: rtQuote.high ?? rtQuote.price,
+        low: rtQuote.low ?? rtQuote.price,
+        close: rtQuote.price,
+        volume: rtQuote.volume ?? 0
+      });
+    }
+  } else if (livePrice && livePrice > 0 && dbCandles && dbCandles.length > 0) {
+    const lastBar = dbCandles[dbCandles.length - 1];
+    lastBar.price = livePrice;
+    lastBar.close = livePrice;
   }
 
   if (!dbCandles || dbCandles.length < 50) {
