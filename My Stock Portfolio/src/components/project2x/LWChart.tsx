@@ -1395,65 +1395,59 @@ export const LWChart: React.FC<LWChartProps> = ({
         hasPosition={!!holding && holding.quantity > 0}
       />
 
-      {/* Cyber Action Matrix Live Command Strip (Layer 2: Cyber HUD) */}
-      <div className="flex items-center gap-2.5 px-3 py-1 bg-[#0D111A] border-b border-white/5 text-[12px] font-mono select-none overflow-x-auto scrollbar-none">
-        <span className="text-slate-400 font-sans shrink-0">Action Signal:</span>
-        {(() => {
-          const tier = getTierMetadata(trafficLight);
-          return (
-            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black inline-flex items-center gap-1.5 shrink-0 ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass}`}>
-              <span className={tier.animClass}>{tier.icon}</span>
-              <span>{tier.label}</span>
-            </span>
-          );
-        })()}
+      {/* Tactical Cyber Cockpit HUD Capsule (Layer 2: Cyber HUD) */}
+      {(() => {
+        const tier = getTierMetadata(trafficLight);
 
-        {/* Scenario Pill */}
-        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-900 border border-slate-800 text-slate-300 shrink-0">
-          {badge ? `${badge} • Scen ${scenario || 1}` : `Scenario ${scenario || 1}`}
-        </span>
+        // Dynamic Tier Glow & Capsule Background Theme
+        let capsuleBorder = 'border-slate-700/70';
+        let capsuleGlow = 'shadow-[0_0_18px_rgba(15,23,42,0.6)]';
+        let capsuleBg = 'bg-gradient-to-r from-[#0F172A]/95 via-[#131D33]/90 to-[#0F172A]/95';
+        let pingColor = 'bg-slate-300';
+        let pingGlow = 'bg-slate-400';
 
-        {/* Regime Chip */}
-        {regime === 'BULL' && (
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-950/70 text-purple-300 border border-purple-800/60 shrink-0 flex items-center gap-1">
-            👑 BULL Regime
-          </span>
-        )}
-        {regime === 'BEAR' && (
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-950/70 text-rose-300 border border-rose-800/60 shrink-0 flex items-center gap-1">
-            ⚠️ BEAR Regime
-          </span>
-        )}
-        {(!regime || regime === 'NEUTRAL') && (
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-900/80 text-slate-300 border border-slate-700/60 shrink-0">
-            NEUTRAL Regime
-          </span>
-        )}
+        if (tier.id === 'TO_THE_MOON') {
+          capsuleBorder = 'border-purple-500/60';
+          capsuleGlow = 'shadow-[0_0_25px_rgba(168,85,247,0.35)]';
+          capsuleBg = 'bg-gradient-to-r from-[#1e0e35]/95 via-[#131D33]/90 to-[#0F172A]/95';
+          pingColor = 'bg-purple-300';
+          pingGlow = 'bg-purple-400';
+        } else if (tier.id === 'BUY_NOW') {
+          capsuleBorder = 'border-emerald-500/60';
+          capsuleGlow = 'shadow-[0_0_25px_rgba(16,185,129,0.35)]';
+          capsuleBg = 'bg-gradient-to-r from-[#0d2a1f]/95 via-[#131D33]/90 to-[#0F172A]/95';
+          pingColor = 'bg-emerald-300';
+          pingGlow = 'bg-emerald-400';
+        } else if (tier.id === 'BUY_ZONE') {
+          capsuleBorder = 'border-cyan-500/60';
+          capsuleGlow = 'shadow-[0_0_25px_rgba(6,182,212,0.35)]';
+          capsuleBg = 'bg-gradient-to-r from-[#0c2633]/95 via-[#131D33]/90 to-[#0F172A]/95';
+          pingColor = 'bg-cyan-300';
+          pingGlow = 'bg-cyan-400';
+        } else if (tier.id === 'GET_READY') {
+          capsuleBorder = 'border-amber-500/60';
+          capsuleGlow = 'shadow-[0_0_25px_rgba(245,158,11,0.35)]';
+          capsuleBg = 'bg-gradient-to-r from-[#2a1d08]/95 via-[#131D33]/90 to-[#0F172A]/95';
+          pingColor = 'bg-amber-300';
+          pingGlow = 'bg-amber-400';
+        } else if (tier.id === 'MAYDAY_EXIT' || tier.id === 'DANGER' || tier.id === 'SLOW_BLEED') {
+          capsuleBorder = 'border-rose-500/70';
+          capsuleGlow = 'shadow-[0_0_25px_rgba(244,63,94,0.45)] animate-pulse';
+          capsuleBg = 'bg-gradient-to-r from-[#330f14]/95 via-[#131D33]/90 to-[#0F172A]/95';
+          pingColor = 'bg-rose-300';
+          pingGlow = 'bg-rose-400';
+        }
 
-        {/* Banker Flow Meter */}
-        {(() => {
-          const bVal = activeLegend?.banker ?? (bankerSeries && bankerSeries.length > 0 ? bankerSeries[bankerSeries.length - 1] : (banker ?? 0));
-          const isHigh = bVal >= 10;
-          return (
-            <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold shrink-0 border ${
-              isHigh ? 'bg-amber-950/60 text-amber-300 border-amber-800/70' : 'bg-slate-900 border-slate-800 text-slate-400'
-            }`}>
-              Banker: <strong className={isHigh ? 'text-amber-300 font-extrabold' : 'text-slate-300'}>{Number(bVal).toFixed(1)}</strong>/20
-            </span>
-          );
-        })()}
+        // Banker calculations
+        const bVal = Number(activeLegend?.banker ?? (bankerSeries && bankerSeries.length > 0 ? bankerSeries[bankerSeries.length - 1] : (banker ?? 0)));
+        const isHighBanker = bVal >= 10;
+        const bankerPct = Math.min(100, Math.max(0, (bVal / 20) * 100));
 
-        {/* Action Rationale / Reason */}
-        {reasonTh && (
-          <span className="hidden xl:inline-flex items-center gap-1 text-[11px] text-slate-300 font-sans truncate max-w-[320px] shrink-0" title={reasonTh}>
-            <span className="text-slate-300">💬</span>
-            <span className="truncate">{reasonTh}</span>
-          </span>
-        )}
-
-        {/* EMA 9 Status (Right Aligned) */}
-        {(() => {
-          if (!closes || closes.length < 9) return null;
+        // EMA 9 calculation
+        let ema9Cur: number | null = null;
+        let ema9Dist: number = 0;
+        let isEma9Above: boolean = false;
+        if (closes && closes.length >= 9) {
           const k = 2 / (9 + 1);
           let sum = 0;
           for (let i = 0; i < 9; i++) sum += closes[i];
@@ -1461,17 +1455,115 @@ export const LWChart: React.FC<LWChartProps> = ({
           for (let i = 9; i < closes.length; i++) {
             cur = closes[i] * k + cur * (1 - k);
           }
-          const dist9 = currentPrice ? Number((((currentPrice - cur) / cur) * 100).toFixed(2)) : 0;
-          const isAbove = currentPrice >= cur;
-          return (
-            <span className={`ml-auto shrink-0 font-bold flex items-center gap-1.5 ${isAbove ? 'text-emerald-400' : 'text-rose-400'}`}>
-              <span className="text-slate-400 font-normal">EMA 9:</span>
-              <span>${cur.toFixed(2)}</span>
-              <span className="text-[11px] font-medium">({dist9 >= 0 ? `+${dist9}%` : `${dist9}%`} {isAbove ? 'Unlocked ⚡' : 'Locked 🔒'})</span>
-            </span>
-          );
-        })()}
-      </div>
+          ema9Cur = cur;
+          ema9Dist = currentPrice ? Number((((currentPrice - cur) / cur) * 100).toFixed(2)) : 0;
+          isEma9Above = currentPrice >= cur;
+        }
+
+        return (
+          <div className={`relative mx-2 my-1.5 px-3 py-1.5 rounded-xl border ${capsuleBorder} ${capsuleGlow} ${capsuleBg} backdrop-blur-md transition-all duration-300 flex items-center gap-3 select-none overflow-x-auto scrollbar-none font-mono text-[13px] z-10`}>
+            {/* Corner Tech Brackets */}
+            <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-white/25 rounded-tl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-white/25 rounded-tr pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-white/25 rounded-bl pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-white/25 rounded-br pointer-events-none" />
+
+            {/* POD 1: Command & Signal Action */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Live Radar Ping */}
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/40 border border-white/10 text-xs tracking-wider text-slate-200 font-bold uppercase shrink-0">
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${pingGlow}`} />
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${pingColor}`} />
+                </span>
+                <span>RADAR</span>
+              </div>
+
+              {/* Action Signal Badge */}
+              <div className={`px-2.5 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 shadow-md border ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass}`}>
+                <span className={tier.animClass}>{tier.icon}</span>
+                <span className="tracking-wide">{tier.label}</span>
+              </div>
+
+              {/* Scenario Pill */}
+              <div className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-950/80 border border-slate-700/80 text-slate-200 tracking-wide shrink-0">
+                {badge ? `${badge} • S${scenario || 1}` : `SCENARIO ${scenario || 1}`}
+              </div>
+            </div>
+
+            {/* Vertical Divider */}
+            <div className="h-4 w-[1px] bg-white/20 shrink-0" />
+
+            {/* POD 2: Market Regime & Institutional Flow */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Regime Chip */}
+              {regime === 'BULL' && (
+                <span className="px-2 py-0.5 rounded-md text-xs font-extrabold bg-purple-950/80 text-purple-200 border border-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.3)] flex items-center gap-1 shrink-0">
+                  👑 BULL REGIME
+                </span>
+              )}
+              {regime === 'BEAR' && (
+                <span className="px-2 py-0.5 rounded-md text-xs font-extrabold bg-rose-950/80 text-rose-200 border border-rose-500/60 shadow-[0_0_12px_rgba(244,63,94,0.3)] flex items-center gap-1 shrink-0">
+                  ⚠️ BEAR REGIME
+                </span>
+              )}
+              {(!regime || regime === 'NEUTRAL') && (
+                <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-900/90 text-slate-300 border border-slate-700/70 shrink-0">
+                  NEUTRAL REGIME
+                </span>
+              )}
+
+              {/* Banker Flow Meter with Mini Gauge */}
+              <div className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold flex items-center gap-2 border bg-black/40 shrink-0 ${
+                isHighBanker ? 'border-amber-500/50 text-amber-300' : 'border-slate-800 text-slate-300'
+              }`}>
+                <span className="text-slate-300">Banker:</span>
+                <strong className={isHighBanker ? 'text-amber-300 font-extrabold' : 'text-slate-200'}>
+                  {bVal.toFixed(1)}
+                </strong>
+                <span className="text-slate-400">/20</span>
+                {/* Mini Power Gauge */}
+                <div className="w-10 h-1.5 bg-slate-800 rounded-full overflow-hidden border border-white/10 shrink-0">
+                  <div 
+                    className={`h-full transition-all duration-300 ${
+                      isHighBanker 
+                        ? 'bg-gradient-to-r from-amber-500 to-emerald-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
+                        : 'bg-slate-400'
+                    }`}
+                    style={{ width: `${bankerPct}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Vertical Divider */}
+            <div className="h-4 w-[1px] bg-white/20 shrink-0 hidden md:block" />
+
+            {/* POD 3: Tactical Directive (Thai Rationale) */}
+            {reasonTh && (
+              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-black/35 border border-white/10 text-xs text-slate-200 font-sans truncate max-w-[340px] xl:max-w-[440px] shrink-0" title={reasonTh}>
+                <span className="text-amber-300 shrink-0">💡</span>
+                <span className="truncate">{reasonTh}</span>
+              </div>
+            )}
+
+            {/* EMA 9 Lock Status (Far Right) */}
+            {ema9Cur !== null && (
+              <div className={`ml-auto shrink-0 font-bold flex items-center gap-2 px-2.5 py-0.5 rounded-md border text-xs ${
+                isEma9Above 
+                  ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]' 
+                  : 'bg-rose-950/50 border-rose-500/50 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
+              }`}>
+                <span className="text-slate-300 font-normal">EMA 9:</span>
+                <span className="font-mono text-slate-100">${ema9Cur.toFixed(2)}</span>
+                <span className="font-medium tracking-tight">
+                  ({ema9Dist >= 0 ? `+${ema9Dist}%` : `${ema9Dist}%`} {isEma9Above ? 'Unlocked ⚡' : 'Locked 🔒'})
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 6. EXTRACTED COMPONENT: Real-Time Floating Legend Strip */}
       {!isMobile && (
