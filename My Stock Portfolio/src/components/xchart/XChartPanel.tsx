@@ -137,6 +137,22 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [radarSignal, setRadarSignal] = useState<any>(null);
+
+  useEffect(() => {
+    if (!symbol) return;
+    let active = true;
+    const pid = localStorage.getItem('active_portfolio_id') || 'default';
+    api.project2x.dossier(pid, symbol.toUpperCase())
+      .then((data: any) => {
+        if (active && data?.radar) {
+          setRadarSignal(data.radar);
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [symbol]);
+
   const fetchKey = `${symbol}_${activeResolution === '4H' ? '4H' : '1D'}`;
   const currentData = cacheByRes[fetchKey] || null;
 
@@ -285,6 +301,11 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
         retailSeries={currentData.retailSeries}
         bankerMaSeries={currentData.bankerMaSeries}
         currentPrice={currentData.currentPrice}
+        trafficLight={radarSignal?.trafficLight || 'ON_RADAR'}
+        scenario={radarSignal?.scenario || 1}
+        badge={radarSignal?.badge}
+        regime={radarSignal?.regime}
+        reasonTh={radarSignal?.reason_th}
         timeframe={activeTimeframe}
         onTimeframeChange={(newTf) => updateTabChartSettings(tabId, { timeframe: newTf as any })}
         chartStyle={activeChartStyle}

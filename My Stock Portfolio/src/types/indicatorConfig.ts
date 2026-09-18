@@ -1,7 +1,7 @@
 export type LineStyleOption = 'Solid' | 'Dotted' | 'Dashed';
 
 export interface EMALineConfig {
-  id: 'ema1' | 'ema2' | 'ema3';
+  id: 'ema1' | 'ema2' | 'ema3' | 'ema4' | 'ema5';
   name: string;
   visible: boolean;
   period: number;
@@ -19,21 +19,64 @@ export interface EnvelopeConfig {
   emaPeriod?: number;
 }
 
+export type SignalShapeType =
+  | 'arrow'
+  | 'fire'
+  | 'bolt'
+  | 'star'
+  | 'diamond'
+  | 'circle'
+  | 'hourglass'
+  | 'cross'
+  | 'target'
+  | 'xxxxx'
+  | 'ooooo'
+  | '+++++'
+  | '^^^^^';
+
+export interface SignalShapesConfig {
+  buyNow: SignalShapeType;
+  buyZone: SignalShapeType;
+  getReady: SignalShapeType;
+  exitDanger: SignalShapeType;
+}
+
+export const DEFAULT_SIGNAL_SHAPES: SignalShapesConfig = {
+  buyNow: 'fire',
+  buyZone: 'diamond',
+  getReady: 'hourglass',
+  exitDanger: 'cross',
+};
+
 export interface SignalMarkersConfig {
-  rebound: boolean;   // ● ● ● READY
-  breakout: boolean;  // ▲ BUY
-  goldenStar: boolean;// ★ SUPER
-  pullback: boolean;  // ▼ EXIT
+  buyNow: boolean;    // ⚡ BUY NOW!!
+  buyZone: boolean;   // 💎 BUY ZONE
+  getReady: boolean;  // ⏳ GET READY
+  exitDanger: boolean;// ❌ EXIT / DANGER
+  // Legacy compatibility
+  rebound?: boolean;
+  breakout?: boolean;
+  goldenStar?: boolean;
+  pullback?: boolean;
 }
 
 export interface SignalColorsConfig {
-  rebound: string;   // ● ● ● READY
-  breakout: string;  // ▲ BUY
-  goldenStar: string;// ★ SUPER
-  pullback: string;  // ▼ EXIT
+  buyNow: string;     // #10B981
+  buyZone: string;    // #00E5FF
+  getReady: string;   // #F59E0B
+  exitDanger: string; // #EF4444
+  // Legacy compatibility
+  rebound?: string;
+  breakout?: string;
+  goldenStar?: string;
+  pullback?: string;
 }
 
 export const DEFAULT_SIGNAL_COLORS: SignalColorsConfig = {
+  buyNow: '#10B981',
+  buyZone: '#00E5FF',
+  getReady: '#F59E0B',
+  exitDanger: '#EF4444',
   rebound: '#FBBF24',
   breakout: '#FFE600',
   goldenStar: '#FFFFFF',
@@ -47,6 +90,7 @@ export interface SignalConfig {
   padding: number;
   markers: SignalMarkersConfig;
   colors: SignalColorsConfig;
+  shapes: SignalShapesConfig;
 }
 
 export interface MCDXConfig {
@@ -318,6 +362,8 @@ export interface IndicatorSettings {
   ema1: EMALineConfig;
   ema2: EMALineConfig;
   ema3: EMALineConfig;
+  ema4: EMALineConfig;
+  ema5: EMALineConfig;
   envelope: EnvelopeConfig;
   signals: SignalConfig;
   mcdx: MCDXConfig;
@@ -371,6 +417,24 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     lineWidth: 3,
     lineStyle: 'Solid',
   },
+  ema4: {
+    id: 'ema4',
+    name: 'EMA 4',
+    visible: false,
+    period: 9,
+    color: '#10B981',
+    lineWidth: 2,
+    lineStyle: 'Solid',
+  },
+  ema5: {
+    id: 'ema5',
+    name: 'EMA 5',
+    visible: false,
+    period: 21,
+    color: '#EC4899',
+    lineWidth: 2,
+    lineStyle: 'Solid',
+  },
   envelope: {
     visible: true,
     percent: 4.0,
@@ -384,12 +448,17 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     size: 1.2,
     padding: 0,
     markers: {
+      buyNow: true,
+      buyZone: true,
+      getReady: true,
+      exitDanger: true,
       rebound: true,
       breakout: true,
       goldenStar: true,
       pullback: true,
     },
     colors: DEFAULT_SIGNAL_COLORS,
+    shapes: DEFAULT_SIGNAL_SHAPES,
   },
   mcdx: {
     visible: true,

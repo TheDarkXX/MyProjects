@@ -30,7 +30,7 @@ export interface MainPaneIndicatorLegendProps {
   autoSRLocked?: boolean;
   globalDrawingsVisible?: boolean;
 
-  onToggleEMA: (key: 'ema1' | 'ema2' | 'ema3') => void;
+  onToggleEMA: (key: 'ema1' | 'ema2' | 'ema3' | 'ema4' | 'ema5') => void;
   onToggleEnvelope: () => void;
   onToggleTrendSpeedDyn: () => void;
   onToggleSuperMoneySignal: () => void;
@@ -94,7 +94,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
     setRemovedItems((prev) => {
       let changed = false;
       const next = { ...prev };
-      if (prev['emaRibbon'] && (indicatorConfig.ema1.visible || indicatorConfig.ema2.visible || indicatorConfig.ema3.visible)) {
+      if (prev['emaRibbon'] && (indicatorConfig.ema1.visible || indicatorConfig.ema2.visible || indicatorConfig.ema3.visible || indicatorConfig.ema4?.visible || indicatorConfig.ema5?.visible)) {
         delete next['emaRibbon'];
         changed = true;
       }
@@ -130,6 +130,8 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
     indicatorConfig.ema1.visible,
     indicatorConfig.ema2.visible,
     indicatorConfig.ema3.visible,
+    indicatorConfig.ema4?.visible,
+    indicatorConfig.ema5?.visible,
     indicatorConfig.envelope.visible,
     indicatorConfig.trendSpeed?.dynamicTrendVisible,
     indicatorConfig.superMoneySignal?.visible,
@@ -141,7 +143,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
     setIsCollapsed((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem('tv_legend_collapsed', String(next));
+        localStorage.setItem('tv_main_legend_collapsed', String(next));
       } catch (_) {}
       return next;
     });
@@ -191,6 +193,8 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       { key: 'ema1' as const, period: indicatorConfig.ema1.period, val: activeLegend?.ema50, color: indicatorConfig.ema1.color, visible: indicatorConfig.ema1.visible },
       { key: 'ema2' as const, period: indicatorConfig.ema2.period, val: activeLegend?.ema150, color: indicatorConfig.ema2.color, visible: indicatorConfig.ema2.visible },
       { key: 'ema3' as const, period: indicatorConfig.ema3.period, val: activeLegend?.ema200, color: indicatorConfig.ema3.color, visible: indicatorConfig.ema3.visible },
+      { key: 'ema4' as const, period: indicatorConfig.ema4?.period ?? 9, val: (activeLegend as any)?.ema4 ?? null, color: indicatorConfig.ema4?.color ?? '#10B981', visible: indicatorConfig.ema4?.visible ?? false },
+      { key: 'ema5' as const, period: indicatorConfig.ema5?.period ?? 21, val: (activeLegend as any)?.ema5 ?? null, color: indicatorConfig.ema5?.color ?? '#EC4899', visible: indicatorConfig.ema5?.visible ?? false },
     ];
     const anyEmaVisible = emas.some((e) => e.visible);
     const periodsText = emas.map((e) => e.period).join(' ');
@@ -373,11 +377,11 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
         </button>
       ) : (
         // Expanded Stacked List (TradingView Style - Per-Row Sleek Pills)
-        <div className="pointer-events-auto flex flex-col items-start gap-1 p-0 bg-transparent transition-all duration-150 group/container">
+        <div className="pointer-events-auto flex flex-col items-start gap-[3px] p-0 bg-transparent transition-all duration-150 group/container">
           {activeItems.map((item) => (
             <div
               key={item.id}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#090D16]/90 hover:bg-[#0B101B] backdrop-blur-md border border-slate-800/50 hover:border-slate-700/80 shadow-sm transition-all group/row text-[10px] leading-none w-fit ${
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#090D16]/90 hover:bg-[#0B101B] backdrop-blur-md border border-slate-800/50 hover:border-slate-700/80 shadow-sm transition-all group/row text-[10px] leading-tight w-fit ${
                 !item.visible ? 'opacity-75' : ''
               }`}
             >

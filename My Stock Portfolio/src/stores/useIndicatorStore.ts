@@ -7,6 +7,8 @@ import {
   SignalConfig,
   SignalMarkersConfig,
   SignalColorsConfig,
+  SignalShapesConfig,
+  SignalShapeType,
   MCDXConfig,
   VolumeConfig,
   PresetType,
@@ -46,6 +48,8 @@ function loadSavedConfig(): IndicatorSettings {
       ema1: { ...DEFAULT_INDICATOR_SETTINGS.ema1, ...(parsed.ema1 || {}) },
       ema2: { ...DEFAULT_INDICATOR_SETTINGS.ema2, ...(parsed.ema2 || {}) },
       ema3: { ...DEFAULT_INDICATOR_SETTINGS.ema3, ...(parsed.ema3 || {}) },
+      ema4: { ...DEFAULT_INDICATOR_SETTINGS.ema4, ...(parsed.ema4 || {}) },
+      ema5: { ...DEFAULT_INDICATOR_SETTINGS.ema5, ...(parsed.ema5 || {}) },
       envelope: { ...DEFAULT_INDICATOR_SETTINGS.envelope, ...(parsed.envelope || {}) },
       signals: {
         ...DEFAULT_INDICATOR_SETTINGS.signals,
@@ -60,6 +64,10 @@ function loadSavedConfig(): IndicatorSettings {
         colors: {
           ...DEFAULT_INDICATOR_SETTINGS.signals.colors,
           ...(parsed.signals?.colors || {}),
+        },
+        shapes: {
+          ...DEFAULT_INDICATOR_SETTINGS.signals.shapes,
+          ...(parsed.signals?.shapes || {}),
         },
       },
       mcdx: { ...DEFAULT_INDICATOR_SETTINGS.mcdx, ...(parsed.mcdx || {}) },
@@ -156,13 +164,14 @@ interface IndicatorState {
   applyCloudConfig: (cloudConfig: Partial<IndicatorSettings>) => void;
   addCustomColor: (color: string) => void;
   setCustomColors: (colors: string[]) => void;
-  updateEMA: (id: 'ema1' | 'ema2' | 'ema3', partial: Partial<EMALineConfig>) => void;
-  toggleEMA: (id: 'ema1' | 'ema2' | 'ema3') => void;
+  updateEMA: (id: 'ema1' | 'ema2' | 'ema3' | 'ema4' | 'ema5', partial: Partial<EMALineConfig>) => void;
+  toggleEMA: (id: 'ema1' | 'ema2' | 'ema3' | 'ema4' | 'ema5') => void;
   toggleAllEMA: (visible: boolean) => void;
   updateEnvelope: (partial: Partial<EnvelopeConfig>) => void;
   toggleEnvelope: () => void;
   updateSignals: (partial: Partial<SignalConfig>) => void;
   updateSignalColor: (signalKey: keyof SignalColorsConfig, color: string) => void;
+  updateSignalShape: (signalKey: keyof SignalShapesConfig, shape: SignalShapeType) => void;
   toggleSignals: () => void;
   toggleSignalMarker: (markerKey: keyof SignalMarkersConfig) => void;
   updateMCDX: (partial: Partial<MCDXConfig>) => void;
@@ -260,6 +269,8 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       ema1: { ...prev.ema1, visible },
       ema2: { ...prev.ema2, visible },
       ema3: { ...prev.ema3, visible },
+      ema4: { ...prev.ema4, visible },
+      ema5: { ...prev.ema5, visible },
     };
     pushIndicatorToggleHistory(
       `${visible ? 'Show' : 'Hide'} All EMAs`,
@@ -315,6 +326,23 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
         colors: {
           ...prev.signals.colors,
           [signalKey]: color,
+        },
+      },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateSignalShape: (signalKey, shape) => {
+    const prev = get().config;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      signals: {
+        ...prev.signals,
+        shapes: {
+          ...prev.signals.shapes,
+          [signalKey]: shape,
         },
       },
     };

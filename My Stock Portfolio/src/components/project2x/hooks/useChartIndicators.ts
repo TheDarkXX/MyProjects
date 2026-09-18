@@ -129,6 +129,16 @@ export function useChartIndicators({
     return computeEMA(closes, indicatorConfig.ema3.period);
   }, [closes, ema200, indicatorConfig.ema3.period]);
 
+  const activeEma4 = useMemo(() => {
+    const period = indicatorConfig.ema4?.period ?? 9;
+    return computeEMA(closes, period);
+  }, [closes, indicatorConfig.ema4?.period]);
+
+  const activeEma5 = useMemo(() => {
+    const period = indicatorConfig.ema5?.period ?? 21;
+    return computeEMA(closes, period);
+  }, [closes, indicatorConfig.ema5?.period]);
+
   // Sanitize & build raw clean bars sorted by date ascending
   const rawCleanBars: RawBarItem[] = useMemo(() => {
     const total = (closes || []).length;
@@ -160,6 +170,8 @@ export function useChartIndicators({
       const e50Val = activeEma1[i] !== undefined && activeEma1[i] !== null && !isNaN(activeEma1[i]!) ? activeEma1[i] : null;
       const e150Val = activeEma2[i] !== undefined && activeEma2[i] !== null && !isNaN(activeEma2[i]!) ? activeEma2[i] : null;
       const e200Val = activeEma3[i] !== undefined && activeEma3[i] !== null && !isNaN(activeEma3[i]!) ? activeEma3[i] : null;
+      const e4Val = activeEma4[i] !== undefined && activeEma4[i] !== null && !isNaN(activeEma4[i]!) ? activeEma4[i] : null;
+      const e5Val = activeEma5[i] !== undefined && activeEma5[i] !== null && !isNaN(activeEma5[i]!) ? activeEma5[i] : null;
 
       const bVal = bankerSeries[i] ?? 0;
       let hVal = hotMoneySeries[i] ?? 0;
@@ -249,6 +261,8 @@ export function useChartIndicators({
         ema50: lastDay.ema50,
         ema150: lastDay.ema150,
         ema200: lastDay.ema200,
+        ema4: lastDay.ema4,
+        ema5: lastDay.ema5,
         banker: lastDay.banker,
         hotMoney: lastDay.hotMoney,
         retail: lastDay.retail,
@@ -497,18 +511,60 @@ export function useChartIndicators({
     indicatorConfig.ultimateRsi.osValue,
   ]);
 
-  // Calculate 3-Step Super Money Signals markers with individual sub-toggles
+  // Calculate 7-Tier Cyber Action Signals markers with individual sub-toggles & customizable shapes
   const calculatedMarkers: SeriesMarker<Time>[] = useMemo(() => {
     if (!indicatorConfig.signals.visible || aggregatedBars.length < 2) return [];
 
     const markers: SeriesMarker<Time>[] = [];
     let lastType: string | null = null;
     let lastReadyIdx = -100;
-    const { rebound, breakout, goldenStar, pullback } = indicatorConfig.signals.markers;
+
+    const sigMarkers = indicatorConfig.signals.markers;
+    const showBuyNow = sigMarkers.buyNow !== undefined ? sigMarkers.buyNow : (sigMarkers.goldenStar !== false);
+    const showBuyZone = sigMarkers.buyZone !== undefined ? sigMarkers.buyZone : (sigMarkers.breakout !== false);
+    const showGetReady = sigMarkers.getReady !== undefined ? sigMarkers.getReady : (sigMarkers.rebound !== false);
+    const showExitDanger = sigMarkers.exitDanger !== undefined ? sigMarkers.exitDanger : (sigMarkers.pullback !== false);
+
     const showText = indicatorConfig.signals.showText !== false;
     const userSize = indicatorConfig.signals.size ?? 1.2;
     const padding = indicatorConfig.signals.padding ?? 0;
-    const sigColors = indicatorConfig.signals.colors || { rebound: '#FBBF24', breakout: '#FFE600', goldenStar: '#FFFFFF', pullback: '#FF1744' };
+
+    const sigColors = indicatorConfig.signals.colors || {
+      buyNow: '#10B981',
+      buyZone: '#00E5FF',
+      getReady: '#F59E0B',
+      exitDanger: '#EF4444',
+      rebound: '#FBBF24',
+      breakout: '#FFE600',
+      goldenStar: '#FFFFFF',
+      pullback: '#FF1744',
+    };
+
+    const sigShapes = indicatorConfig.signals.shapes || {
+      buyNow: 'fire',
+      buyZone: 'diamond',
+      getReady: 'hourglass',
+      exitDanger: 'cross',
+    };
+
+    const getGlyph = (shape: string, defaultGlyph: string): { glyph: string; isNativeArrow: boolean; isNativeCircle: boolean } => {
+      switch (shape) {
+        case 'arrow': return { glyph: '', isNativeArrow: true, isNativeCircle: false };
+        case 'circle': return { glyph: '', isNativeArrow: false, isNativeCircle: true };
+        case 'fire': return { glyph: '🔥', isNativeArrow: false, isNativeCircle: false };
+        case 'bolt': return { glyph: '⚡', isNativeArrow: false, isNativeCircle: false };
+        case 'star': return { glyph: '★', isNativeArrow: false, isNativeCircle: false };
+        case 'diamond': return { glyph: '💎', isNativeArrow: false, isNativeCircle: false };
+        case 'hourglass': return { glyph: '⏳', isNativeArrow: false, isNativeCircle: false };
+        case 'cross': return { glyph: '✕', isNativeArrow: false, isNativeCircle: false };
+        case 'target': return { glyph: '🎯', isNativeArrow: false, isNativeCircle: false };
+        case 'xxxxx': return { glyph: 'xxxxx', isNativeArrow: false, isNativeCircle: false };
+        case 'ooooo': return { glyph: 'ooooo', isNativeArrow: false, isNativeCircle: false };
+        case '+++++': return { glyph: '+++++', isNativeArrow: false, isNativeCircle: false };
+        case '^^^^^': return { glyph: '^^^^^', isNativeArrow: false, isNativeCircle: false };
+        default: return { glyph: defaultGlyph, isNativeArrow: false, isNativeCircle: false };
+      }
+    };
 
     const makeMarker = (
       time: Time,
@@ -516,13 +572,29 @@ export function useChartIndicators({
       barHigh: number,
       barLow: number,
       color: string,
-      shape: 'circle' | 'arrowUp' | 'arrowDown',
-      textLabel: string,
-      sizeMult: number,
-      textOnly?: string
+      shapeType: string,
+      defaultGlyph: string,
+      label: string,
+      sizeMult: number
     ): SeriesMarker<Time> => {
-      const finalSize = textOnly !== undefined ? 0 : Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
-      const text = textOnly !== undefined ? (showText ? `${textOnly} READY` : textOnly) : (showText ? textLabel : undefined);
+      const { glyph, isNativeArrow, isNativeCircle } = getGlyph(shapeType, defaultGlyph);
+      let shape: 'circle' | 'arrowUp' | 'arrowDown' = pos === 'below' ? 'arrowUp' : 'arrowDown';
+      let finalSize = Math.max(0.5, Math.round(userSize * sizeMult * 10) / 10);
+      let text: string | undefined = undefined;
+
+      if (isNativeArrow) {
+        shape = pos === 'below' ? 'arrowUp' : 'arrowDown';
+        text = showText ? label : undefined;
+      } else if (isNativeCircle) {
+        shape = 'circle';
+        text = showText ? label : undefined;
+      } else {
+        // Custom glyph / repetitive icon (e.g. 🔥, 💎, ⏳, xxxxx, ooooo, +++++, ^^^^^)
+        shape = 'circle';
+        finalSize = 0; // Text renders directly without background marker dot
+        text = showText ? `${glyph} ${label}` : glyph;
+      }
+
       if (padding > 0) {
         const candleSpread = Math.abs(barHigh - barLow);
         const refPrice = pos === 'below' ? barLow : barHigh;
@@ -552,44 +624,52 @@ export function useChartIndicators({
       const dist150 = e150 ? ((close - e150) / e150) * 100 : 0;
       const nearSupport = (e200 && dist200 >= -3.0 && dist200 <= 2.5) || (e150 && dist150 >= -2.5 && dist150 <= 2.5);
 
-      // STEP 3: ★ SUPER MONEY
-      if (goldenStar && bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
-        if (lastType !== 'SUPER') {
-          markers.push(makeMarker(formatBarTime(bar.time), 'below', bar.high, bar.low, sigColors.goldenStar, 'arrowUp', '★ SUPER', 1.35));
-          lastType = 'SUPER';
+      // 1. ⚡ BUY NOW!! (Sniper / High Confidence Strike)
+      if (showBuyNow && bVal >= 10 && prevBVal < 10 && close > (e50 || close * 0.98)) {
+        if (lastType !== 'BUY_NOW') {
+          const c = sigColors.buyNow || sigColors.goldenStar || '#10B981';
+          const s = sigShapes.buyNow || 'fire';
+          markers.push(makeMarker(formatBarTime(bar.time), 'below', bar.high, bar.low, c, s, '⚡', 'BUY NOW!!', 1.35));
+          lastType = 'BUY_NOW';
           continue;
         }
       }
 
-      // STEP 2: ▲ BUY ZONE
-      if (breakout && nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
-        if (lastType !== 'BUY') {
-          markers.push(makeMarker(formatBarTime(bar.time), 'below', bar.high, bar.low, sigColors.breakout, 'arrowUp', '▲ BUY', 1.15));
-          lastType = 'BUY';
+      // 2. 💎 BUY ZONE (Nibble / Support Accumulation)
+      if (showBuyZone && nearSupport && bVal > 0 && prevBVal === 0 && isBull) {
+        if (lastType !== 'BUY_ZONE' && lastType !== 'BUY_NOW') {
+          const c = sigColors.buyZone || sigColors.breakout || '#00E5FF';
+          const s = sigShapes.buyZone || 'diamond';
+          markers.push(makeMarker(formatBarTime(bar.time), 'below', bar.high, bar.low, c, s, '💎', 'BUY ZONE', 1.15));
+          lastType = 'BUY_ZONE';
           continue;
         }
       }
 
-      // STEP 1: ● ● ● READY
-      if (rebound && nearSupport && bVal === 0) {
-        if (lastType !== 'READY' && lastType !== 'BUY' && lastType !== 'SUPER') {
+      // 3. ⏳ GET READY (On Deck Setup)
+      if (showGetReady && nearSupport && bVal === 0) {
+        if (lastType !== 'GET_READY' && lastType !== 'BUY_ZONE' && lastType !== 'BUY_NOW') {
           if (i - lastReadyIdx >= 14) {
-            markers.push(makeMarker(formatBarTime(bar.time), 'below', bar.high, bar.low, sigColors.rebound, 'circle', '', 0, '● ● ●'));
-            lastType = 'READY';
+            const c = sigColors.getReady || sigColors.rebound || '#F59E0B';
+            const s = sigShapes.getReady || 'hourglass';
+            markers.push(makeMarker(formatBarTime(bar.time), 'below', bar.high, bar.low, c, s, '⏳', 'GET READY', 1.0));
+            lastType = 'GET_READY';
             lastReadyIdx = i;
             continue;
           }
         }
       }
 
-      if (lastType === 'READY' && dist200 < -4) {
+      if (lastType === 'GET_READY' && dist200 < -4) {
         lastType = null;
       }
 
-      // EXIT: ▼ DANGER / STOP LOSS
-      const inPosition = lastType === 'BUY' || lastType === 'SUPER';
-      if (pullback && inPosition && ((dist200 < -5.0 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close)))) {
-        markers.push(makeMarker(formatBarTime(bar.time), 'above', bar.high, bar.low, sigColors.pullback, 'arrowDown', '▼ EXIT', 1.15));
+      // 4. ❌ EXIT / DANGER (Bear Breakdown / Cut Loss)
+      const inPosition = lastType === 'BUY_ZONE' || lastType === 'BUY_NOW';
+      if (showExitDanger && inPosition && ((dist200 < -5.0 && bVal === 0 && e200) || (prevBVal >= 10 && bVal < 5 && close < (e50 || close)))) {
+        const c = sigColors.exitDanger || sigColors.pullback || '#EF4444';
+        const s = sigShapes.exitDanger || 'cross';
+        markers.push(makeMarker(formatBarTime(bar.time), 'above', bar.high, bar.low, c, s, '❌', 'EXIT', 1.15));
         lastType = null;
       }
     }
@@ -853,6 +933,8 @@ export function useChartIndicators({
     activeEma1,
     activeEma2,
     activeEma3,
+    activeEma4,
+    activeEma5,
     rawCleanBars,
     aggregatedBars,
     displayBars,

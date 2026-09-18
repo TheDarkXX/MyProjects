@@ -29,6 +29,7 @@ import {
   PresetType,
   RSIMarkerShape,
   RSIMarkerLocation,
+  SignalShapeType,
   DEFAULT_INDICATOR_SETTINGS,
 } from '../../types/indicatorConfig';
 
@@ -384,6 +385,22 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ location, onChange 
   );
 };
 
+const CYBER_SIGNAL_SHAPE_OPTIONS: { label: string; value: SignalShapeType; preview: string }[] = [
+  { label: '🔥 Fire', value: 'fire', preview: '🔥' },
+  { label: '⚡ Bolt', value: 'bolt', preview: '⚡' },
+  { label: '💎 Diamond', value: 'diamond', preview: '💎' },
+  { label: '★ Star', value: 'star', preview: '★' },
+  { label: '⏳ Hourglass', value: 'hourglass', preview: '⏳' },
+  { label: '▲ Arrow', value: 'arrow', preview: '▲' },
+  { label: '● Circle', value: 'circle', preview: '●' },
+  { label: '✕ Cross', value: 'cross', preview: '✕' },
+  { label: '🎯 Target', value: 'target', preview: '🎯' },
+  { label: 'xxxxx (5-X)', value: 'xxxxx', preview: 'xxxxx' },
+  { label: 'ooooo (5-O)', value: 'ooooo', preview: 'ooooo' },
+  { label: '+++++ (5-Plus)', value: '+++++', preview: '+++++' },
+  { label: '^^^^^ (5-Caret)', value: '^^^^^', preview: '^^^^^' },
+];
+
 type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal' | 'volumeProfile';
 
 interface IndicatorManagerPopoverProps {
@@ -410,6 +427,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     toggleEnvelope,
     updateSignals,
     updateSignalColor,
+    updateSignalShape,
     toggleSignals,
     toggleSignalMarker,
     updateMCDX,
@@ -462,8 +480,12 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
   ];
 
   const lineStyles: LineStyleOption[] = ['Solid', 'Dashed', 'Dotted'];
-  const emaLines: (keyof Pick<typeof config, 'ema1' | 'ema2' | 'ema3'>)[] = ['ema1', 'ema2', 'ema3'];
+  const emaLines: (keyof Pick<typeof config, 'ema1' | 'ema2' | 'ema3' | 'ema4' | 'ema5'>)[] = ['ema1', 'ema2', 'ema3', 'ema4', 'ema5'];
   const sigColors = config.signals.colors || {
+    buyNow: '#10B981',
+    buyZone: '#00E5FF',
+    getReady: '#F59E0B',
+    exitDanger: '#EF4444',
     rebound: '#FBBF24',
     breakout: '#FFE600',
     goldenStar: '#FFFFFF',
@@ -477,31 +499,35 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
         id: 'ema',
         name: 'EMA Ribbon',
         pane: 0,
-        isActive: Boolean(config.ema1.visible || config.ema2.visible || config.ema3.visible),
+        isActive: Boolean(config.ema1.visible || config.ema2.visible || config.ema3.visible || config.ema4?.visible || config.ema5?.visible),
         renderRow: () => (
           <div key="ema" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => {
-                  const anyVisible = config.ema1.visible || config.ema2.visible || config.ema3.visible;
+                  const anyVisible = config.ema1.visible || config.ema2.visible || config.ema3.visible || config.ema4?.visible || config.ema5?.visible;
                   toggleEMA('ema1');
                   if (anyVisible) {
                     if (config.ema2.visible) toggleEMA('ema2');
                     if (config.ema3.visible) toggleEMA('ema3');
+                    if (config.ema4?.visible) toggleEMA('ema4');
+                    if (config.ema5?.visible) toggleEMA('ema5');
                   } else {
                     if (!config.ema2.visible) toggleEMA('ema2');
                     if (!config.ema3.visible) toggleEMA('ema3');
+                    if (!config.ema4?.visible) toggleEMA('ema4');
+                    if (!config.ema5?.visible) toggleEMA('ema5');
                   }
                 }}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  config.ema1.visible || config.ema2.visible || config.ema3.visible
+                  config.ema1.visible || config.ema2.visible || config.ema3.visible || config.ema4?.visible || config.ema5?.visible
                     ? 'text-cyan-400 bg-cyan-950/30 hover:bg-cyan-950/60'
                     : 'text-slate-500 hover:text-slate-400 bg-slate-950'
                 }`}
                 title="Toggle EMA Ribbon"
               >
-                {config.ema1.visible || config.ema2.visible || config.ema3.visible ? (
+                {config.ema1.visible || config.ema2.visible || config.ema3.visible || config.ema4?.visible || config.ema5?.visible ? (
                   <Eye className="w-4 h-4" />
                 ) : (
                   <EyeOff className="w-4 h-4" />
@@ -513,20 +539,22 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                   <Activity className="w-3.5 h-3.5 text-cyan-400" />
                   EMA Ribbon
                   <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-cyan-950/80 text-cyan-300 border-cyan-800/60">
-                    Pane 0 Overlay
+                    Pane 0 Overlay (Max 5 EMAs)
                   </span>
                 </span>
                 <span className="text-[13px] text-slate-400">
-                  Length {config.ema1.period}, {config.ema2.period}, {config.ema3.period}
+                  Length {config.ema1.period}, {config.ema2.period}, {config.ema3.period}, {config.ema4?.period ?? 9}, {config.ema5?.period ?? 21}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-2.5">
               <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema1.color }} />
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema2.color }} />
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema3.color }} />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema1.color }} title={`EMA ${config.ema1.period}`} />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema2.color }} title={`EMA ${config.ema2.period}`} />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema3.color }} title={`EMA ${config.ema3.period}`} />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema4?.color ?? '#10B981' }} title={`EMA ${config.ema4?.period ?? 9}`} />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.ema5?.color ?? '#EC4899' }} title={`EMA ${config.ema5?.period ?? 21}`} />
               </div>
 
               <button
@@ -1348,96 +1376,152 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {/* READY */}
+                  {/* BUY NOW */}
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                     <label className="flex items-center gap-2.5 text-[13px] font-bold text-slate-200 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={config.signals.markers.rebound}
-                        onChange={() => toggleSignalMarker('rebound')}
-                        className="rounded bg-slate-900 border-slate-700 text-amber-400 focus:ring-0 cursor-pointer"
+                        checked={config.signals.markers.buyNow !== undefined ? config.signals.markers.buyNow : (config.signals.markers.goldenStar !== false)}
+                        onChange={() => toggleSignalMarker('buyNow')}
+                        className="rounded bg-slate-900 border-slate-700 text-emerald-400 focus:ring-0 cursor-pointer"
                       />
-                      <span className="font-extrabold" style={{ color: sigColors.rebound }}>
-                        ● ● ● READY
+                      <span className="font-extrabold" style={{ color: sigColors.buyNow || sigColors.goldenStar || '#10B981' }}>
+                        ⚡ BUY NOW!!
                       </span>
                       <span className="text-[12px] font-normal text-slate-400 hidden sm:inline">
-                        (Rebound Setup)
+                        (Sniper Entry)
                       </span>
                     </label>
-                    <ColorPickerDropdown
-                      color={sigColors.rebound}
-                      onChange={(c) => updateSignalColor('rebound', c)}
-                      label="READY Signal Color"
-                    />
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={config.signals.shapes?.buyNow || 'fire'}
+                        onChange={(e) => updateSignalShape('buyNow', e.target.value as SignalShapeType)}
+                        className="bg-slate-900 border border-slate-700 text-slate-200 text-[12px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        title="Choose Icon"
+                      >
+                        {CYBER_SIGNAL_SHAPE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ColorPickerDropdown
+                        color={sigColors.buyNow || sigColors.goldenStar || '#10B981'}
+                        onChange={(c) => updateSignalColor('buyNow', c)}
+                        label="BUY NOW Color"
+                      />
+                    </div>
                   </div>
 
-                  {/* BUY */}
+                  {/* BUY ZONE */}
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                     <label className="flex items-center gap-2.5 text-[13px] font-bold text-slate-200 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={config.signals.markers.breakout}
-                        onChange={() => toggleSignalMarker('breakout')}
+                        checked={config.signals.markers.buyZone !== undefined ? config.signals.markers.buyZone : (config.signals.markers.breakout !== false)}
+                        onChange={() => toggleSignalMarker('buyZone')}
                         className="rounded bg-slate-900 border-slate-700 text-cyan-400 focus:ring-0 cursor-pointer"
                       />
-                      <span className="font-extrabold" style={{ color: sigColors.breakout }}>
-                        ▲ BUY
+                      <span className="font-extrabold" style={{ color: sigColors.buyZone || sigColors.breakout || '#00E5FF' }}>
+                        💎 BUY ZONE
                       </span>
                       <span className="text-[12px] font-normal text-slate-400 hidden sm:inline">
-                        (Breakout Entry)
+                        (Nibble / Dip)
                       </span>
                     </label>
-                    <ColorPickerDropdown
-                      color={sigColors.breakout}
-                      onChange={(c) => updateSignalColor('breakout', c)}
-                      label="BUY Signal Color"
-                    />
-                  </div>
-
-                  {/* SUPER */}
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                    <label className="flex items-center gap-2.5 text-[13px] font-bold text-slate-200 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={config.signals.markers.goldenStar}
-                        onChange={() => toggleSignalMarker('goldenStar')}
-                        className="rounded bg-slate-900 border-slate-700 text-white focus:ring-0 cursor-pointer"
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={config.signals.shapes?.buyZone || 'diamond'}
+                        onChange={(e) => updateSignalShape('buyZone', e.target.value as SignalShapeType)}
+                        className="bg-slate-900 border border-slate-700 text-slate-200 text-[12px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                        title="Choose Icon"
+                      >
+                        {CYBER_SIGNAL_SHAPE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ColorPickerDropdown
+                        color={sigColors.buyZone || sigColors.breakout || '#00E5FF'}
+                        onChange={(c) => updateSignalColor('buyZone', c)}
+                        label="BUY ZONE Color"
                       />
-                      <span className="font-extrabold" style={{ color: sigColors.goldenStar }}>
-                        ★ SUPER
-                      </span>
-                      <span className="text-[12px] font-normal text-slate-400 hidden sm:inline">
-                        (Banker Strike &ge; 10)
-                      </span>
-                    </label>
-                    <ColorPickerDropdown
-                      color={sigColors.goldenStar}
-                      onChange={(c) => updateSignalColor('goldenStar', c)}
-                      label="SUPER Signal Color"
-                    />
+                    </div>
                   </div>
 
-                  {/* EXIT */}
+                  {/* GET READY */}
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                     <label className="flex items-center gap-2.5 text-[13px] font-bold text-slate-200 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={config.signals.markers.pullback}
-                        onChange={() => toggleSignalMarker('pullback')}
+                        checked={config.signals.markers.getReady !== undefined ? config.signals.markers.getReady : (config.signals.markers.rebound !== false)}
+                        onChange={() => toggleSignalMarker('getReady')}
+                        className="rounded bg-slate-900 border-slate-700 text-amber-400 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="font-extrabold" style={{ color: sigColors.getReady || sigColors.rebound || '#F59E0B' }}>
+                        ⏳ GET READY
+                      </span>
+                      <span className="text-[12px] font-normal text-slate-400 hidden sm:inline">
+                        (On Deck)
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={config.signals.shapes?.getReady || 'hourglass'}
+                        onChange={(e) => updateSignalShape('getReady', e.target.value as SignalShapeType)}
+                        className="bg-slate-900 border border-slate-700 text-slate-200 text-[12px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-amber-500 cursor-pointer"
+                        title="Choose Icon"
+                      >
+                        {CYBER_SIGNAL_SHAPE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ColorPickerDropdown
+                        color={sigColors.getReady || sigColors.rebound || '#F59E0B'}
+                        onChange={(c) => updateSignalColor('getReady', c)}
+                        label="GET READY Color"
+                      />
+                    </div>
+                  </div>
+
+                  {/* EXIT / DANGER */}
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                    <label className="flex items-center gap-2.5 text-[13px] font-bold text-slate-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.signals.markers.exitDanger !== undefined ? config.signals.markers.exitDanger : (config.signals.markers.pullback !== false)}
+                        onChange={() => toggleSignalMarker('exitDanger')}
                         className="rounded bg-slate-900 border-slate-700 text-rose-400 focus:ring-0 cursor-pointer"
                       />
-                      <span className="font-extrabold" style={{ color: sigColors.pullback }}>
-                        ▼ EXIT
+                      <span className="font-extrabold" style={{ color: sigColors.exitDanger || sigColors.pullback || '#EF4444' }}>
+                        ❌ EXIT / DANGER
                       </span>
                       <span className="text-[12px] font-normal text-slate-400 hidden sm:inline">
-                        (Danger / Stop Loss)
+                        (Stop Loss)
                       </span>
                     </label>
-                    <ColorPickerDropdown
-                      color={sigColors.pullback}
-                      onChange={(c) => updateSignalColor('pullback', c)}
-                      label="EXIT Signal Color"
-                    />
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={config.signals.shapes?.exitDanger || 'cross'}
+                        onChange={(e) => updateSignalShape('exitDanger', e.target.value as SignalShapeType)}
+                        className="bg-slate-900 border border-slate-700 text-slate-200 text-[12px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-rose-500 cursor-pointer"
+                        title="Choose Icon"
+                      >
+                        {CYBER_SIGNAL_SHAPE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ColorPickerDropdown
+                        color={sigColors.exitDanger || sigColors.pullback || '#EF4444'}
+                        onChange={(c) => updateSignalColor('exitDanger', c)}
+                        label="EXIT Color"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1623,7 +1707,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
 
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
               {emaLines.map((key) => {
-                const line = config[key];
+                const line = config[key] || DEFAULT_INDICATOR_SETTINGS[key];
                 return (
                   <div
                     key={key}

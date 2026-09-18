@@ -70,6 +70,8 @@ export function useChartSeries({
   const ema50SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const ema150SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const ema200SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const ema4SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const ema5SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const upperEnvSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const lowerEnvSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const mcdxSeriesRef = useRef<ISeriesApi<'Custom'> | null>(null);
@@ -134,6 +136,14 @@ export function useChartSeries({
       .filter(b => b.ema200 !== null)
       .map(b => ({ time: formatBarTime(b.time), value: b.ema200! }));
 
+    const e4Data = displayBars
+      .filter(b => b.ema4 !== null && b.ema4 !== undefined)
+      .map(b => ({ time: formatBarTime(b.time), value: b.ema4! }));
+
+    const e5Data = displayBars
+      .filter(b => b.ema5 !== null && b.ema5 !== undefined)
+      .map(b => ({ time: formatBarTime(b.time), value: b.ema5! }));
+
     const envPct = (indicatorConfig.envelope.percent || 4.0) / 100;
     const upperEnvData = displayBars
       .filter(b => b.ema200 !== null)
@@ -160,6 +170,8 @@ export function useChartSeries({
     ema50SeriesRef.current?.setData(e50Data);
     ema150SeriesRef.current?.setData(e150Data);
     ema200SeriesRef.current?.setData(e200Data);
+    ema4SeriesRef.current?.setData(e4Data);
+    ema5SeriesRef.current?.setData(e5Data);
     upperEnvSeriesRef.current?.setData(upperEnvData);
     lowerEnvSeriesRef.current?.setData(lowerEnvData);
     mcdxSeriesRef.current?.setData(mcdxData as any);
@@ -386,6 +398,22 @@ export function useChartSeries({
       lastValueVisible: showLabels,
       title: showLabels ? `EMA ${indicatorConfig.ema3.period}` : '',
     });
+    ema4SeriesRef.current?.applyOptions({
+      color: indicatorConfig.ema4?.color ?? '#10B981',
+      lineWidth: (indicatorConfig.ema4?.lineWidth ?? 2) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.ema4?.lineStyle ?? 'Solid'),
+      visible: indicatorConfig.ema4?.visible ?? false,
+      lastValueVisible: showLabels,
+      title: showLabels ? `EMA ${indicatorConfig.ema4?.period ?? 9}` : '',
+    });
+    ema5SeriesRef.current?.applyOptions({
+      color: indicatorConfig.ema5?.color ?? '#EC4899',
+      lineWidth: (indicatorConfig.ema5?.lineWidth ?? 2) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.ema5?.lineStyle ?? 'Solid'),
+      visible: indicatorConfig.ema5?.visible ?? false,
+      lastValueVisible: showLabels,
+      title: showLabels ? `EMA ${indicatorConfig.ema5?.period ?? 21}` : '',
+    });
     upperEnvSeriesRef.current?.applyOptions({
       color: indicatorConfig.envelope.color,
       lineWidth: indicatorConfig.envelope.lineWidth as any,
@@ -610,6 +638,8 @@ export function useChartSeries({
     ema50SeriesRef,
     ema150SeriesRef,
     ema200SeriesRef,
+    ema4SeriesRef,
+    ema5SeriesRef,
     upperEnvSeriesRef,
     lowerEnvSeriesRef,
     mcdxSeriesRef,

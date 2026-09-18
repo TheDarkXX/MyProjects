@@ -90,6 +90,8 @@ export interface LWChartProps {
   scenario?: number;
   badge?: string;
   trafficLight?: CyberTier;
+  regime?: 'BULL' | 'BEAR' | 'NEUTRAL';
+  reasonTh?: string;
   distEma150?: number;
   distEma200?: number;
   className?: string;
@@ -126,9 +128,11 @@ export const LWChart: React.FC<LWChartProps> = ({
   hotMoneySeries = [],
   retailSeries = [],
   bankerMaSeries = [],
-  currentPrice,
+  scenario = 1,
   badge,
   trafficLight = 'ON_RADAR',
+  regime,
+  reasonTh,
   className = '',
   onAddInflow,
   watchlist = [],
@@ -247,6 +251,14 @@ export const LWChart: React.FC<LWChartProps> = ({
       ema3: {
         ...rawIndicatorConfig.ema3,
         visible: isP2X ? viewProfile.showEMA : (rawIndicatorConfig.ema3.visible && viewProfile.showEMA),
+      },
+      ema4: {
+        ...(rawIndicatorConfig.ema4 || { id: 'ema4', name: 'EMA 4', visible: false, period: 9, color: '#10B981', lineWidth: 2, lineStyle: 'Solid' }),
+        visible: isP2X ? viewProfile.showEMA : ((rawIndicatorConfig.ema4?.visible ?? false) && viewProfile.showEMA),
+      },
+      ema5: {
+        ...(rawIndicatorConfig.ema5 || { id: 'ema5', name: 'EMA 5', visible: false, period: 21, color: '#EC4899', lineWidth: 2, lineStyle: 'Solid' }),
+        visible: isP2X ? viewProfile.showEMA : ((rawIndicatorConfig.ema5?.visible ?? false) && viewProfile.showEMA),
       },
       smcLite: {
         ...rawIndicatorConfig.smcLite,
@@ -492,6 +504,8 @@ export const LWChart: React.FC<LWChartProps> = ({
     ema50SeriesRef,
     ema150SeriesRef,
     ema200SeriesRef,
+    ema4SeriesRef,
+    ema5SeriesRef,
     upperEnvSeriesRef,
     lowerEnvSeriesRef,
     mcdxSeriesRef,
@@ -805,6 +819,28 @@ export const LWChart: React.FC<LWChartProps> = ({
       visible: indicatorConfig.ema3.visible,
     }, 0);
     ema200SeriesRef.current = ema200Series;
+
+    const ema4Series = chart.addSeries(LineSeries, {
+      color: indicatorConfig.ema4?.color ?? '#10B981',
+      lineWidth: (indicatorConfig.ema4?.lineWidth ?? 2) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.ema4?.lineStyle ?? 'Solid'),
+      priceLineVisible: false,
+      lastValueVisible: showLabels,
+      title: showLabels ? `EMA ${indicatorConfig.ema4?.period ?? 9}` : '',
+      visible: indicatorConfig.ema4?.visible ?? false,
+    }, 0);
+    ema4SeriesRef.current = ema4Series;
+
+    const ema5Series = chart.addSeries(LineSeries, {
+      color: indicatorConfig.ema5?.color ?? '#EC4899',
+      lineWidth: (indicatorConfig.ema5?.lineWidth ?? 2) as any,
+      lineStyle: getChartLineStyle(indicatorConfig.ema5?.lineStyle ?? 'Solid'),
+      priceLineVisible: false,
+      lastValueVisible: showLabels,
+      title: showLabels ? `EMA ${indicatorConfig.ema5?.period ?? 21}` : '',
+      visible: indicatorConfig.ema5?.visible ?? false,
+    }, 0);
+    ema5SeriesRef.current = ema5Series;
 
     const upperEnvSeries = chart.addSeries(LineSeries, {
       color: indicatorConfig.envelope.color,
@@ -1149,6 +1185,8 @@ export const LWChart: React.FC<LWChartProps> = ({
       ema50SeriesRef.current = null;
       ema150SeriesRef.current = null;
       ema200SeriesRef.current = null;
+      ema4SeriesRef.current = null;
+      ema5SeriesRef.current = null;
       upperEnvSeriesRef.current = null;
       lowerEnvSeriesRef.current = null;
       mcdxSeriesRef.current = null;
@@ -1355,19 +1393,63 @@ export const LWChart: React.FC<LWChartProps> = ({
         hasPosition={!!holding && holding.quantity > 0}
       />
 
-      {/* Cyber Action Matrix Live Command Strip */}
-      <div className="flex items-center gap-2.5 px-3 py-1 bg-[#101420] border-b border-white/5 text-[12px] font-mono select-none overflow-x-auto scrollbar-none">
-        <span className="text-slate-400 font-sans">Action Signal:</span>
+      {/* Cyber Action Matrix Live Command Strip (Layer 2: Cyber HUD) */}
+      <div className="flex items-center gap-2.5 px-3 py-1 bg-[#0D111A] border-b border-white/5 text-[12px] font-mono select-none overflow-x-auto scrollbar-none">
+        <span className="text-slate-400 font-sans shrink-0">Action Signal:</span>
         {(() => {
           const tier = getTierMetadata(trafficLight);
           return (
-            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black inline-flex items-center gap-1.5 ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass}`}>
+            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black inline-flex items-center gap-1.5 shrink-0 ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass}`}>
               <span className={tier.animClass}>{tier.icon}</span>
               <span>{tier.label}</span>
             </span>
           );
         })()}
-        {badge && <span className="text-slate-300 font-sans font-medium">▪ {badge}</span>}
+
+        {/* Scenario Pill */}
+        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-900 border border-slate-800 text-slate-300 shrink-0">
+          {badge ? `${badge} • Scen ${scenario || 1}` : `Scenario ${scenario || 1}`}
+        </span>
+
+        {/* Regime Chip */}
+        {regime === 'BULL' && (
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-950/70 text-purple-300 border border-purple-800/60 shrink-0 flex items-center gap-1">
+            👑 BULL Regime
+          </span>
+        )}
+        {regime === 'BEAR' && (
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-950/70 text-rose-300 border border-rose-800/60 shrink-0 flex items-center gap-1">
+            ⚠️ BEAR Regime
+          </span>
+        )}
+        {(!regime || regime === 'NEUTRAL') && (
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-900/80 text-slate-300 border border-slate-700/60 shrink-0">
+            NEUTRAL Regime
+          </span>
+        )}
+
+        {/* Banker Flow Meter */}
+        {(() => {
+          const bVal = activeLegend?.banker ?? (bankerSeries && bankerSeries.length > 0 ? bankerSeries[bankerSeries.length - 1] : (banker ?? 0));
+          const isHigh = bVal >= 10;
+          return (
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold shrink-0 border ${
+              isHigh ? 'bg-amber-950/60 text-amber-300 border-amber-800/70' : 'bg-slate-900 border-slate-800 text-slate-400'
+            }`}>
+              Banker: <strong className={isHigh ? 'text-amber-300 font-extrabold' : 'text-slate-300'}>{Number(bVal).toFixed(1)}</strong>/20
+            </span>
+          );
+        })()}
+
+        {/* Action Rationale / Reason */}
+        {reasonTh && (
+          <span className="hidden xl:inline-flex items-center gap-1 text-[11px] text-slate-300 font-sans truncate max-w-[320px] shrink-0" title={reasonTh}>
+            <span className="text-slate-300">💬</span>
+            <span className="truncate">{reasonTh}</span>
+          </span>
+        )}
+
+        {/* EMA 9 Status (Right Aligned) */}
         {(() => {
           if (!closes || closes.length < 9) return null;
           const k = 2 / (9 + 1);
@@ -1380,7 +1462,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           const dist9 = currentPrice ? Number((((currentPrice - cur) / cur) * 100).toFixed(2)) : 0;
           const isAbove = currentPrice >= cur;
           return (
-            <span className={`ml-auto font-bold flex items-center gap-1.5 ${isAbove ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <span className={`ml-auto shrink-0 font-bold flex items-center gap-1.5 ${isAbove ? 'text-emerald-400' : 'text-rose-400'}`}>
               <span className="text-slate-400 font-normal">EMA 9:</span>
               <span>${cur.toFixed(2)}</span>
               <span className="text-[11px] font-medium">({dist9 >= 0 ? `+${dist9}%` : `${dist9}%`} {isAbove ? 'Unlocked ⚡' : 'Locked 🔒'})</span>

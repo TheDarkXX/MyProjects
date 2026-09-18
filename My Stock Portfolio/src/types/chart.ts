@@ -41,6 +41,8 @@ export interface RawBarItem {
   ema50: number | null;
   ema150: number | null;
   ema200: number | null;
+  ema4?: number | null;
+  ema5?: number | null;
   banker: number;
   hotMoney: number;
   retail: number;
