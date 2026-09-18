@@ -121,10 +121,13 @@ export interface DossierPayload {
   };
   radar: {
     scenario: number;
-    trafficLight: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+    trafficLight: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
+    ema9?: number | null;
     ema50: number | null;
     ema150: number | null;
     ema200: number | null;
+    isAboveEma9?: boolean;
+    hasRsiDivergence?: boolean;
     bankerFlow: number;
     sellSignal: string | null;
     actionSuggested: string;

@@ -23,6 +23,7 @@ import {
   IndicatorSettings,
   SubPaneIndicatorId,
 } from '../../types/indicatorConfig';
+import { getTierMetadata, CyberTier } from '../../utils/tierConfig';
 import { useDrawingStore } from '../../stores/drawingStore';
 import { LeftDrawingToolbar } from './drawings/LeftDrawingToolbar';
 import { LineFloatingToolbar } from './drawings/LineFloatingToolbar';
@@ -85,9 +86,10 @@ export interface LWChartProps {
   bankerMaSeries?: number[];
   banker?: number;
   currentPrice: number;
+  ema9?: (number | null)[];
   scenario?: number;
   badge?: string;
-  trafficLight?: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+  trafficLight?: CyberTier;
   distEma150?: number;
   distEma200?: number;
   className?: string;
@@ -126,6 +128,7 @@ export const LWChart: React.FC<LWChartProps> = ({
   bankerMaSeries = [],
   currentPrice,
   badge,
+  trafficLight = 'ON_RADAR',
   className = '',
   onAddInflow,
   watchlist = [],
@@ -1352,6 +1355,40 @@ export const LWChart: React.FC<LWChartProps> = ({
         hasPosition={!!holding && holding.quantity > 0}
       />
 
+      {/* Cyber Action Matrix Live Command Strip */}
+      <div className="flex items-center gap-2.5 px-3 py-1 bg-[#101420] border-b border-white/5 text-[12px] font-mono select-none overflow-x-auto scrollbar-none">
+        <span className="text-slate-400 font-sans">Action Signal:</span>
+        {(() => {
+          const tier = getTierMetadata(trafficLight);
+          return (
+            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black inline-flex items-center gap-1.5 ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass}`}>
+              <span className={tier.animClass}>{tier.icon}</span>
+              <span>{tier.label}</span>
+            </span>
+          );
+        })()}
+        {badge && <span className="text-slate-300 font-sans font-medium">▪ {badge}</span>}
+        {(() => {
+          if (!closes || closes.length < 9) return null;
+          const k = 2 / (9 + 1);
+          let sum = 0;
+          for (let i = 0; i < 9; i++) sum += closes[i];
+          let cur = sum / 9;
+          for (let i = 9; i < closes.length; i++) {
+            cur = closes[i] * k + cur * (1 - k);
+          }
+          const dist9 = currentPrice ? Number((((currentPrice - cur) / cur) * 100).toFixed(2)) : 0;
+          const isAbove = currentPrice >= cur;
+          return (
+            <span className={`ml-auto font-bold flex items-center gap-1.5 ${isAbove ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <span className="text-slate-400 font-normal">EMA 9:</span>
+              <span>${cur.toFixed(2)}</span>
+              <span className="text-[11px] font-medium">({dist9 >= 0 ? `+${dist9}%` : `${dist9}%`} {isAbove ? 'Unlocked ⚡' : 'Locked 🔒'})</span>
+            </span>
+          );
+        })()}
+      </div>
+
       {/* 6. EXTRACTED COMPONENT: Real-Time Floating Legend Strip */}
       {!isMobile && (
         <ChartLegendBar
@@ -1704,13 +1741,13 @@ export const LWChart: React.FC<LWChartProps> = ({
             <div className="flex flex-col gap-2">
               {watchlist.map((item) => {
                 const isSelected = item.symbol === symbol;
-                const isBuy = item.traffic_light === 'BUY_ZONE';
+                const itemTier = getTierMetadata(item.traffic_light);
 
                 return (
                   <button
                     key={item.symbol}
                     onClick={() => onSelectSymbol?.(item.symbol)}
-                    className={`flex items-center justify-between p-2.5 rounded-xl text-left border transition-all ${
+                    className={`flex items-center justify-between p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-cyan-950/60 border-cyan-500/50 shadow-md shadow-cyan-950/40'
                         : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/50 hover:border-slate-700'
@@ -1719,13 +1756,12 @@ export const LWChart: React.FC<LWChartProps> = ({
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="font-black text-slate-100 text-sm">{item.symbol}</span>
-                        {isBuy && (
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
-                            BUY
-                          </span>
-                        )}
+                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-black flex items-center gap-1 ${itemTier.badgeClass}`}>
+                          <span className={itemTier.animClass}>{itemTier.icon}</span>
+                          <span>{itemTier.label}</span>
+                        </span>
                       </div>
-                      <div className="text-[13px] text-slate-300 font-semibold">
+                      <div className="text-[13px] text-slate-300 font-semibold mt-0.5">
                         ${item.currentPrice.toFixed(2)}
                       </div>
                     </div>

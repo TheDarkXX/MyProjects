@@ -40,17 +40,17 @@ async function runTests() {
   console.log(`✅ Test 3: ETA calculation: Base ${eta.Base.years} yrs (${eta.Base.targetDate})`);
 
   // Test 4: Scenario Classifier
-  const s1 = classifyScenario({ currentPrice: 100, ema50: 105, ema150: 101, ema200: 100, banker: 4, rsi14: 42 });
-  if (s1.scenario !== 1 || s1.traffic_light !== 'BUY_ZONE') {
-    throw new Error(`Scenario 1 classifier failed: got ${s1.scenario} ${s1.traffic_light}`);
+  const s1 = classifyScenario({ currentPrice: 100, ema9: 99, ema50: 105, ema150: 101, ema200: 100, banker: 4, rsi14: 42, regime: 'BULL', isAboveEma9: true, isLatestBullish: true });
+  if (s1.scenario !== 8 || s1.traffic_light !== 'BUY_NOW') {
+    throw new Error(`Scenario classifier failed: got ${s1.scenario} ${s1.traffic_light}`);
   }
-  console.log('✅ Test 4: Scenario 1 Golden Setup classified properly (BUY_ZONE 🟢)');
+  console.log('✅ Test 4: Scenario 8 V-Shape Rebound classified properly (BUY_NOW 🔥)');
 
   const s3 = classifyScenario({ currentPrice: 85, ema50: 105, ema150: 100, ema200: 95, banker: 0, rsi14: 25 });
-  if (s3.scenario !== 3 || s3.traffic_light !== 'DANGER') {
-    throw new Error(`Scenario 3 Falling Knife failed: got ${s3.scenario} ${s3.traffic_light}`);
+  if (s3.scenario !== 1 || s3.traffic_light !== 'MAYDAY_EXIT') {
+    throw new Error(`Scenario 1 Falling Knife failed: got ${s3.scenario} ${s3.traffic_light}`);
   }
-  console.log('✅ Test 5: Scenario 3 Falling Knife classified properly (DANGER 🔴)');
+  console.log('✅ Test 5: Scenario 1 Falling Knife classified properly (MAYDAY_EXIT ❌)');
 
   // Test 5: Quotas Initialization
   console.log('Syncing quotas...');

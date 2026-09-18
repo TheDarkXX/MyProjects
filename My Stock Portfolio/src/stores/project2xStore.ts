@@ -82,6 +82,10 @@ export interface RadarRow {
   ema150: number | null;
   ema200: number | null;
   distEma50?: number;
+  ema9?: number | null;
+  distEma9?: number;
+  isAboveEma9?: boolean;
+  hasRsiDivergence?: boolean;
   distEma150: number;
   distEma200: number;
   banker: number;
@@ -91,7 +95,7 @@ export interface RadarRow {
   high52W?: number;
   drawdownFrom52W?: number;
   scenario: number;
-  traffic_light: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+  traffic_light: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
   badge: string;
   reason: string;
   reason_th: string;
@@ -115,6 +119,7 @@ export interface RadarRow {
     highs?: number[];
     lows?: number[];
     volumes?: number[];
+    ema9?: (number | null)[];
     ema50?: (number | null)[];
     ema150: (number | null)[];
     ema200: (number | null)[];

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Activity, Zap, ExternalLink, BarChart3, TrendingUp, RotateCcw, MoveHorizontal, ZoomIn } from 'lucide-react';
+import { getTierMetadata, CyberTier } from '../../utils/tierConfig';
 
 export const TV_FONT_FAMILY = "'Trebuchet MS', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
@@ -22,7 +23,7 @@ interface TradingViewChartProps {
   currentPrice: number;
   scenario?: number;
   badge?: string;
-  trafficLight?: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+  trafficLight?: CyberTier;
   distEma150?: number;
   distEma200?: number;
   className?: string;
@@ -802,29 +803,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
   const activePriceY = getPriceY(activeClose);
 
   // Traffic Light Styling
-  const getTrafficBadge = () => {
-    if (trafficLight === 'BUY_ZONE') {
-      return {
-        icon: '🔷',
-        text: 'BUY ZONE',
-        bg: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 shadow-[0_0_12px_rgba(0,229,255,0.3)]'
-      };
-    }
-    if (trafficLight === 'WAIT') {
-      return {
-        icon: '🟡',
-        text: 'WAIT ZONE',
-        bg: 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-      };
-    }
-    return {
-      icon: '🔴',
-      text: 'DANGER ZONE',
-      bg: 'bg-rose-500/15 border-rose-500/30 text-rose-300'
-    };
-  };
-
-  const badgeInfo = getTrafficBadge();
+  const badgeInfo = getTierMetadata(trafficLight);
 
   if (sliceCloses.length < 2) {
     return (
@@ -848,9 +827,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({
           </div>
 
           {/* Traffic Light Badge */}
-          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-black ${badgeInfo.bg}`}>
-            <span>{badgeInfo.icon}</span>
-            <span>{badgeInfo.text}</span>
+          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-black ${badgeInfo.badgeClass} ${badgeInfo.glowClass} ${badgeInfo.borderClass}`}>
+            <span className={badgeInfo.animClass}>{badgeInfo.icon}</span>
+            <span>{badgeInfo.label}</span>
           </div>
 
           <span className="px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs text-slate-300 font-semibold">

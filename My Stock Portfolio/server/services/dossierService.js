@@ -251,7 +251,7 @@ export async function getDossierData(portfolioId, symbol) {
 
   const isFreeRideEligible = (unrealizedPnlPct || 0) >= 100.0;
   const isEma200Broken = signalRow.ema200 && currentPrice < signalRow.ema200;
-  const isDangerTraffic = signalRow.traffic_light === 'DANGER';
+  const isDangerTraffic = signalRow.traffic_light === 'DANGER' || signalRow.traffic_light === 'MAYDAY_EXIT' || signalRow.traffic_light === 'SLOW_BLEED';
 
   if (isFreeRideEligible) {
     verdict = 'TRIM_SELL';
@@ -261,10 +261,15 @@ export async function getDossierData(portfolioId, symbol) {
     verdictReason = 'Moat Breaker Alert: Gross Margin ลดลง 3 ไตรมาสติดต่อกัน ส่อแววโดนตัดราคา แนะนำพิจารณาตัดลดความเสี่ยง';
   } else if (isEma200Broken || isDangerTraffic) {
     verdict = 'TRIM_SELL';
-    verdictReason = 'สัญญาณเทคนิคเข้าเขต DANGER (หลุด EMA 200) หลุดเกณฑ์ปลอดภัยเสาที่ 3 แนะนำพิจารณาหยุดขาดทุน';
-  } else if ((signalRow.traffic_light === 'BUY_ZONE' || signalRow.scenario === 1 || signalRow.scenario === 2) && quotaSharesRemaining > 0) {
+    verdictReason = signalRow.traffic_light === 'SLOW_BLEED'
+      ? 'สัญญาณเข้าเขต SLOW BLEED ไร้แรงสถาบันซื้อต่อเนื่อง แนะนำพิจารณาตัดลดความเสี่ยงถือเงินสด'
+      : 'สัญญาณเทคนิคเข้าเขต MAYDAY EXIT (หลุด EMA 200 ลึก) แนะนำพิจารณาหยุดขาดทุน';
+  } else if (signalRow.traffic_light === 'TO_THE_MOON') {
+    verdict = 'HOLD_RIDE';
+    verdictReason = 'หุ้นติดเทอร์โบขาขึ้นลอยฟ้า (TO THE MOON 🚀) สถาบันเกาะแน่น นั่งทับมือปล่อยกำไรวิ่ง';
+  } else if ((signalRow.traffic_light === 'BUY_NOW' || signalRow.traffic_light === 'BUY_ZONE' || signalRow.scenario === 1 || signalRow.scenario === 2 || signalRow.scenario === 5 || signalRow.scenario === 6 || signalRow.scenario === 7 || signalRow.scenario === 8) && quotaSharesRemaining > 0) {
     verdict = 'BUY_ADD';
-    verdictReason = `Setup สวย (แตะเส้นรับ EMA + เงินเจ้ามือเข้า) และโควตายังขาดอีก ${quotaSharesRemaining.toFixed(0)} หุ้น แนะนำซื้อเติมโควตา`;
+    verdictReason = `Setup สวย (${signalRow.traffic_light === 'BUY_NOW' ? 'BUY NOW!! 🔥 จุดเข้าซื้อคมกริบ' : 'BUY ZONE 💰 สะสมตามแผน'}) และโควตายังขาดอีก ${quotaSharesRemaining.toFixed(0)} หุ้น แนะนำซื้อเติมโควตา`;
   } else if (quotaSharesRemaining === 0) {
     verdict = 'HOLD_RIDE';
     verdictReason = 'โควตาครบ 100% แล้ว นั่งทับมือถือยาว ปล่อยให้พลัง Compound ทำงานสู่เป้า 1 เด้ง';
@@ -316,10 +321,13 @@ export async function getDossierData(portfolioId, symbol) {
     },
     radar: {
       scenario: signalRow.scenario || 1,
-      trafficLight: signalRow.traffic_light || 'BUY_ZONE',
+      trafficLight: signalRow.traffic_light || 'ON_RADAR',
+      ema9: signalRow.ema9 || null,
       ema50: signalRow.ema50 || null,
       ema150: signalRow.ema150 || null,
       ema200: signalRow.ema200 || null,
+      isAboveEma9: signalRow.is_above_ema9 != null ? !!signalRow.is_above_ema9 : (signalRow.ema9 ? currentPrice >= signalRow.ema9 : true),
+      hasRsiDivergence: !!signalRow.has_rsi_divergence,
       bankerFlow: signalRow.banker_flow || 0,
       sellSignal: signalRow.sell_signal || null,
       actionSuggested: signalRow.action_suggested || ''

@@ -1,6 +1,6 @@
 import { db } from '../db/init.js';
 import { fetchYahooExchangeRate, fetchYahooLatest, fetchYahooHistorical, fetchYahooFundamentals } from './yahoo.js';
-import { calcEMA, calcEMASeries, calcBankerMCDX, calcBankerSeries, calcMcdxSeries, calcRSI, syncCandleDelta } from './technicalAnalysis.js';
+import { calcEMA, calcEMASeries, calcBankerMCDX, calcBankerSeries, calcMcdxSeries, calcRSI, calcRSISeries, syncCandleDelta } from './technicalAnalysis.js';
 
 export const DEFAULT_2X_STOCKS = [
   // Core Commanders (83%)
@@ -251,18 +251,55 @@ export async function syncShareQuotas(portfolioId, forceDefault = false) {
 }
 
 /**
- * 8-Scenario Technical Classifier with Risk-First Hierarchical Evaluation
+ * Detect Bullish RSI Divergence (Price lower low/equal, RSI higher low)
+ */
+export function detectRsiDivergence(closes, rsiSeries, lookback = 30) {
+  if (!closes || !rsiSeries || closes.length < lookback || rsiSeries.length < lookback) {
+    return false;
+  }
+  const n = closes.length;
+  const currentClose = closes[n - 1];
+  const currentRsi = rsiSeries[n - 1];
+  if (currentRsi === null || currentRsi > 55) return false;
+
+  let lowestEarlierClose = Infinity;
+  let rsiAtEarlierLow = null;
+
+  for (let i = n - lookback; i <= n - 5; i++) {
+    const p = closes[i];
+    const r = rsiSeries[i];
+    if (r === null) continue;
+    if (p < lowestEarlierClose) {
+      lowestEarlierClose = p;
+      rsiAtEarlierLow = r;
+    }
+  }
+
+  if (lowestEarlierClose === Infinity || rsiAtEarlierLow === null) return false;
+
+  const isPriceLowerOrEqual = currentClose <= lowestEarlierClose * 1.015;
+  const isRsiHigher = currentRsi >= rsiAtEarlierLow + 3.0;
+
+  return isPriceLowerOrEqual && isRsiHigher;
+}
+
+/**
+ * 16-Scenario Technical Classifier with 7-Tier Cyber Action Matrix
  */
 export function classifyScenario({
   currentPrice,
+  ema9,
   ema50,
   ema150,
   ema200,
+  distEma9,
   distEma50,
   distEma150,
   distEma200,
   banker,
   rsi14,
+  isAboveEma9 = true,
+  hasRsiDivergence = false,
   isLatestBullish = true,
   consecutiveRedBars = 0,
   volRatio = 1.0,
@@ -274,16 +311,20 @@ export function classifyScenario({
   isDoubleBottomConfirmed = false,
   isBaseBreakout = false,
   isRegimeFlip = false,
+  ownedShares = 0,
   category = 'Core'
 }) {
   if (!currentPrice || !ema150 || !ema200) {
     return {
-      scenario: 13,
-      traffic_light: 'WAIT',
+      scenario: 16,
+      traffic_light: 'ON_RADAR',
       badge: 'Evaluating',
+      distEma9: 0,
       distEma50: 0,
       distEma150: 0,
       distEma200: 0,
+      isAboveEma9: false,
+      hasRsiDivergence: false,
       regime: 'NEUTRAL',
       volRatio: 1.0,
       reason: 'Insufficient technical indicators',
@@ -293,70 +334,110 @@ export function classifyScenario({
     };
   }
 
+  const d9 = distEma9 !== undefined ? distEma9 : (ema9 ? Number((((currentPrice - ema9) / ema9) * 100).toFixed(2)) : 0);
   const d50 = distEma50 !== undefined ? distEma50 : (ema50 ? Number((((currentPrice - ema50) / ema50) * 100).toFixed(2)) : 0);
   const d150 = distEma150 !== undefined ? distEma150 : Number((((currentPrice - ema150) / ema150) * 100).toFixed(2));
   const d200 = distEma200 !== undefined ? distEma200 : Number((((currentPrice - ema200) / ema200) * 100).toFixed(2));
+  const aboveEma9 = isAboveEma9 !== undefined ? isAboveEma9 : (ema9 ? currentPrice >= ema9 : true);
 
-  // TIER 0: DANGER VETO GUARDS (Stop loss & high-risk falling knives)
-  // 1. Falling Knife: Plunged below EMA 200 by > 4% with 0 Banker
-  if (d200 < -4 && banker === 0) {
+  // ==========================================
+  // LAYER 0: VETO GUARDS (Capital Preservation)
+  // ==========================================
+
+  // 1. Falling Knife: Plunged below EMA 200 by > 8% with 0 Banker
+  if (d200 < -8 && banker === 0) {
     return {
-      scenario: 5,
-      traffic_light: 'DANGER',
+      scenario: 1,
+      traffic_light: 'MAYDAY_EXIT',
       badge: 'Falling Knife',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Plunged below EMA 200 (${d200}%) with 0 Banker. Stand aside, do not catch falling knife!`,
-      reason_th: `ราคาหลุดเส้น EMA 200 ลึก (${d200}%) + ไร้แรงสถาบัน (Banker = 0) — ห้ามรับมีดเด็ดขาด นั่งทับมือรอมีดปักพื้น`,
+      reason: `Plunged below EMA 200 (${d200}%) with 0 Banker. Critical danger, do not catch falling knife!`,
+      reason_th: `ราคาดิ่งหลุดเส้น EMA 200 ลึก (${d200}%) และไร้แรงสถาบัน (Banker = 0) — สัญญาณอันตรายขั้นวิกฤต ห้ามรับมีดเด็ดขาด!`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
-        { label: 'Dist EMA 200', pass: false, value: `${d200}% (< -4%)` },
+        { label: 'Dist EMA 200', pass: false, value: `${d200}% (< -8%)` },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Zero)` },
         { label: 'Safety VETO', pass: false, value: 'CRITICAL DANGER' }
       ]
     };
   }
 
-  // 2. Dead Cat Bounce: Plunged below EMA 200 (> -4%) trying a weak bounce under water with weak banker (1-6)
-  if (d200 < -4 && banker > 0 && banker <= 6) {
+  // 2. Dead Cat Bounce: Plunged deep below EMA 200 (> -8%) in BEAR regime trying a weak underwater bounce (1-6)
+  if (d200 < -8 && banker > 0 && banker <= 6 && regime === 'BEAR') {
     return {
-      scenario: 6,
-      traffic_light: 'DANGER',
+      scenario: 2,
+      traffic_light: 'MAYDAY_EXIT',
       badge: 'Dead Cat Bounce',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Submerged below EMA 200 (${d200}%) with weak institutional presence (${banker}/20). High risk of secondary dump.`,
-      reason_th: `ราคาจมใต้เส้น EMA 200 (${d200}%) เด้งสั้นๆ ใต้บาดาลสถาบันบางตา (${banker}/20) — อย่าผลีผลาม รอให้กลับมายืนเหนือเส้น 200 ก่อน`,
+      reason: `Submerged deep below EMA 200 (${d200}%) in BEAR regime with weak institutional flow (${banker}/20). High trap risk.`,
+      reason_th: `ราคาจมลึกใต้เส้น EMA 200 (${d200}%) ในแนวโน้มขาลง (BEAR) สถาบันบางตา (${banker}/20) — ระวังการเด้งหลอกเพื่อทุบต่อ`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
-        { label: 'Dist EMA 200', pass: false, value: `${d200}% (< -4%)` },
+        { label: 'Dist EMA 200', pass: false, value: `${d200}% (< -8%)` },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Weak)` },
         { label: 'Bounce Quality', pass: false, value: 'Underwater Bounce' }
       ]
     };
   }
 
-  // 3. Slow Bleed / Death Drift: Persistent decay without bounce
-  if (regime === 'BEAR' && d200 < 0 && daysBankerZero >= 8) {
+  // 3. Core Breakdown: Prolonged failure below EMA 200 (> 5 days below and < -5%)
+  if (d200 < -5 && daysBelowEma200 >= 5 && regime === 'BEAR') {
     return {
-      scenario: 7,
-      traffic_light: 'WAIT',
-      badge: 'Slow Bleed',
+      scenario: 3,
+      traffic_light: 'MAYDAY_EXIT',
+      badge: 'Core Breakdown',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
+      regime,
+      volRatio,
+      reason: `Core trend broken below EMA 200 for ${daysBelowEma200} days (${d200}%). Severe capital risk.`,
+      reason_th: `โครงสร้างหลักพัง หลุดต่ำกว่าเส้น EMA 200 ต่อเนื่อง ${daysBelowEma200} วัน (${d200}%) — พิจารณาคัทลอส/หยุดขาดทุน`,
+      checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
+      signals_checklist: [
+        { label: 'EMA Regime', pass: false, value: regime },
+        { label: 'Dist EMA 200', pass: false, value: `${d200}%` },
+        { label: 'Days Below 200', pass: false, value: `${daysBelowEma200} Days` },
+        { label: 'Action', pass: false, value: 'MAYDAY EXIT' }
+      ]
+    };
+  }
+
+  // 4. Slow Bleed / Death Drift: Persistent decay without bounce
+  if (regime === 'BEAR' && d200 < 0 && daysBankerZero >= 8) {
+    return {
+      scenario: 4,
+      traffic_light: 'SLOW_BLEED',
+      badge: 'Slow Bleed',
+      distEma9: d9,
+      distEma50: d50,
+      distEma150: d150,
+      distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
       reason: `In BEAR regime with persistent 0 Banker for ${daysBankerZero} days. Slow bleed without institutional bid. Stand by.`,
-      reason_th: `เทรนด์ใหญ่ขาลง (BEAR) + สถาบันทิ้งหายต่อเนื่อง ${daysBankerZero} วัน — หุ้นไหลซึมไร้แรงซื้อ ทับมือ 100% รอโครงสร้างฟื้น`,
+      reason_th: `เทรนด์ใหญ่ขาลง (BEAR) + สถาบันทิ้งหายต่อเนื่อง ${daysBankerZero} วัน — หุ้นไหลซึมไร้แรงซื้อ ถือเงินสด 100% รอโครงสร้างฟื้น`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
@@ -367,51 +448,59 @@ export function classifyScenario({
     };
   }
 
-  // TIER 1: HIGH CONVICTION REVERSAL (100% Size)
-  // 4. Double Bottom Confirmed: Retest of EMA 200 with higher low & banker present
-  if (isDoubleBottomConfirmed && regime !== 'BEAR') {
+  // ==========================================
+  // LAYER 1: CONFIRMED REVERSALS & BREAKOUTS (BUY_NOW)
+  // ==========================================
+
+  // 5. Double Bottom Confirmed: Retest of EMA 200 with higher low & banker + triggered above EMA 9
+  if (isDoubleBottomConfirmed && regime !== 'BEAR' && aboveEma9) {
     return {
-      scenario: 1,
-      traffic_light: 'BUY_ZONE',
+      scenario: 5,
+      traffic_light: 'BUY_NOW',
       badge: 'Double Bottom',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Double Bottom confirmed at EMA 200 (${d200}%) with higher low + Banker (${banker}/20). Highest conviction reversal (Deploy 100%).`,
-      reason_th: `ทดสอบแนวรับเส้น EMA 200 ซ้ำรอบที่ 2 สำเร็จ (Double Bottom) ฐานยกสูง + สถาบันสะสม (${banker}/20) — สัญญาณกลับตัวความมั่นใจสูงสุด จัดเต็ม 100%!`,
+      reason: `Double Bottom confirmed at EMA 200 (${d200}%) with higher low + Banker (${banker}/20) + Triggered above EMA 9. Prime entry (Deploy 100%).`,
+      reason_th: `ทดสอบแนวรับเส้น EMA 200 ซ้ำรอบ 2 สำเร็จ (Double Bottom) ฐานยกสูง + สถาบันสะสม (${banker}/20) + ยืนเหนือ EMA 9 — สัญญาณกลับตัวความมั่นใจสูงสุด จัดเต็ม 100%!`,
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: regime },
         { label: 'Dist EMA 200', pass: true, value: `${d200}%` },
         { label: 'Retest Structure', pass: true, value: 'Double Bottom (Higher Low)' },
+        { label: 'EMA 9 Trigger', pass: true, value: 'Above EMA 9 (Unlocked)' },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
-        { label: 'Candle Rebound', pass: true, value: isLatestBullish ? 'Bullish Green' : 'Consolidating' },
         { label: 'Deploy Tranche', pass: true, value: '100% Size' }
       ]
     };
   }
 
-  // TIER 2: CONFIRMED RECLAIM / BREAKOUT (75-100% Size)
-  // 5. Bear Trap Reclaim: Deep dip below EMA 200 reclaimed with volume
-  if (isBearTrapReclaimed && regime !== 'BEAR' && banker >= 1 && isLatestBullish) {
+  // 6. Bear Trap Reclaim: Deep dip below EMA 200 reclaimed above EMA 9 with volume
+  if (isBearTrapReclaimed && regime !== 'BEAR' && banker >= 1 && aboveEma9) {
     return {
-      scenario: 2,
-      traffic_light: 'BUY_ZONE',
+      scenario: 6,
+      traffic_light: 'BUY_NOW',
       badge: 'Bear Trap Reclaim',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `False breakdown reclaimed! Surpassed EMA 200 with institutional accumulation (${banker}/20, Vol ${volRatio}x). Deploy 75-100%.`,
-      reason_th: `กับดักหมีสำเร็จ! ทะลวงกลับมายืนเหนือ EMA 200 ได้มั่นคง 2 วันติด + วอลุ่มสถาบันดัน (${volRatio}x) — สัญญาณหลอกกิน Stop loss สถาบันพาพุ่ง จัด 75-100%!`,
+      reason: `False breakdown reclaimed above EMA 200 + triggered above EMA 9 with institutional volume (${banker}/20). Deploy 75-100%.`,
+      reason_th: `กับดักหมีสำเร็จ! ทะลวงกลับมายืนเหนือ EMA 200 + ตัดเหนือเส้น Trigger EMA 9 สถาบันหนุน (${banker}/20) — ซื้อตามแรงสถาบัน 75-100%!`,
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: volRatio >= 1.2 },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: regime },
         { label: 'Dist EMA 200', pass: true, value: `${d200}% (Reclaimed)` },
-        { label: 'Trap Reclaim', pass: true, value: 'Held > EMA200 (2 Days)' },
+        { label: 'EMA 9 Trigger', pass: true, value: 'Above EMA 9 (Active)' },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
         { label: 'Volume Surge', pass: volRatio >= 1.2, value: `${volRatio}x 20D SMA` },
         { label: 'Deploy Tranche', pass: true, value: '75 - 100%' }
@@ -419,147 +508,170 @@ export function classifyScenario({
     };
   }
 
-  // 6. Breakout from Base: Breakout from tight base near EMA with volume
-  if (isBaseBreakout && regime !== 'BEAR') {
+  // 7. Breakout from Base: Breakout from tight base near EMA with volume & above EMA 9
+  if (isBaseBreakout && regime !== 'BEAR' && aboveEma9) {
     return {
-      scenario: 3,
-      traffic_light: 'BUY_ZONE',
+      scenario: 7,
+      traffic_light: 'BUY_NOW',
       badge: 'Base Breakout',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Explosive breakout from tight EMA base with Volume surge (${volRatio}x) and Banker (${banker}/20). Deploy 100%.`,
-      reason_th: `ระเบิดออกจากกรอบสะสมแนวรับ วอลุ่มพุ่ง (${volRatio}x) + สถาบันเกาะหนาแน่น (${banker}/20) — Breakout คอนเฟิร์ม เติมไม้เต็ม 100%!`,
+      reason: `Explosive breakout from tight EMA base with Volume surge (${volRatio}x), Banker (${banker}/20), and EMA 9 confirmed. Deploy 100%.`,
+      reason_th: `ระเบิดออกจากกรอบสะสมแนวรับ วอลุ่มพุ่ง (${volRatio}x) + สถาบันเกาะหนาแน่น (${banker}/20) + ยืนเหนือ EMA 9 — Breakout คอนเฟิร์ม ซื้อเต็มไม้ 100%!`,
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: regime },
         { label: 'Base Range', pass: true, value: 'Tight Consolidation Broken' },
+        { label: 'EMA 9 Trigger', pass: true, value: 'Above EMA 9' },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
         { label: 'Volume Surge', pass: true, value: `${volRatio}x (Explosive)` },
-        { label: 'RSI Momentum', pass: true, value: `${rsi14 || '—'}` },
         { label: 'Deploy Tranche', pass: true, value: '100% Size' }
       ]
     };
   }
 
-  // TIER 3: STANDARD DIP BUY (50-100% Size)
-  const isNearEma200 = (d200 >= -3.0 && d200 <= 1.5);
-  const isNearEma150 = (d150 >= -2.0 && d150 <= 1.5);
+  // ==========================================
+  // LAYER 2: DIP BUY & SUPPORT TESTS (BUY_NOW vs GET_READY)
+  // ==========================================
+  const isNearEma200 = (d200 >= -3.5 && d200 <= 2.0);
+  const isNearEma150 = (d150 >= -2.5 && d150 <= 2.0);
   const isNearMajorEma = isNearEma200 || isNearEma150;
 
-  // 7. V-Shape Quick Dip Rebound or Support Testing
-  if (isNearMajorEma && banker >= 1 && banker <= 14) {
-    if (!isLatestBullish && consecutiveRedBars >= 2) {
-      return {
-        scenario: 8,
-        traffic_light: 'WAIT',
-        badge: 'Testing Support',
-        distEma50: d50,
-        distEma150: d150,
-        distEma200: d200,
-        regime,
-        volRatio,
-        reason: `Pulling back to EMA 150/200 support (${d200}%) with Banker (${banker}/20), but red selling pressure persists (${consecutiveRedBars} red bars). Wait for a green rebound candle.`,
-        reason_th: `ราคากำลังย่อลงมาหาแนวรับ EMA 150/200 (${d200}%) สถาบันมี (${banker}/20) แต่ยังโดนเทขายแท่งแดง (${consecutiveRedBars} แท่งติด) — รอแท่งเขียวเด้งคอนเฟิร์มก่อนเข้า!`,
-        checklist: { regimePass: regime === 'BULL', distPass: true, bankerPass: true, rsiPass: true, candlePass: false, volumePass: true },
-        signals_checklist: [
-          { label: 'EMA Regime', pass: regime === 'BULL', value: regime },
-          { label: 'Dist EMA 200', pass: true, value: `${d200}%` },
-          { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
-          { label: 'Candle Action', pass: false, value: `${consecutiveRedBars} Red Bars (Wait for Green)` }
-        ]
-      };
-    }
-
-    if (isLatestBullish && regime === 'BULL') {
-      return {
-        scenario: 4,
-        traffic_light: 'BUY_ZONE',
-        badge: 'V-Shape Rebound',
-        distEma50: d50,
-        distEma150: d150,
-        distEma200: d200,
-        regime,
-        volRatio,
-        reason: `V-Shape rebound at EMA 150/200 support + Banker active (${banker}/20) + Bull Regime confirmed. Prime Buy Zone (Deploy 100%).`,
-        reason_th: `ราคาแตะแนวรับเส้น EMA 150/200 แล้วแท่งเขียวเด้งสวนทันที + สถาบันหนุน (${banker}/20) ในเทรนด์ขาขึ้น — จุดช้อนซื้อชั้นยอด จัดเต็ม 100%!`,
-        checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: (rsi14 ? rsi14 < 50 : true), candlePass: true, volumePass: volRatio >= 0.8 },
-        signals_checklist: [
-          { label: 'EMA Regime', pass: true, value: regime },
-          { label: 'Dist Major EMA', pass: true, value: isNearEma200 ? `EMA200 ${d200}%` : `EMA150 ${d150}%` },
-          { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
-          { label: 'Candle Rebound', pass: true, value: 'Bullish Green' },
-          { label: 'RSI 14', pass: (rsi14 ? rsi14 < 50 : true), value: `${rsi14 || '—'} (< 50)` },
-          { label: 'Deploy Tranche', pass: true, value: '100% Size' }
-        ]
-      };
-    }
-  }
-
-  // 8. Shallow Dip — EMA 50 Bounce
-  const isNearEma50 = (d50 >= -2.0 && d50 <= 1.5);
-  if (isNearEma50 && d150 > 4.0 && regime === 'BULL' && banker >= 6 && isLatestBullish) {
+  // 8. V-Shape Rebound: Near major EMA + Banker + BULL regime + above EMA 9 + Green Candle
+  if (isNearMajorEma && banker >= 1 && banker <= 14 && regime === 'BULL' && aboveEma9 && isLatestBullish) {
     return {
       scenario: 8,
-      traffic_light: 'BUY_ZONE',
-      badge: 'Shallow Dip (EMA50)',
+      traffic_light: 'BUY_NOW',
+      badge: 'V-Shape Rebound',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Shallow pullback to EMA 50 in super-bull trend (far above EMA 150 +${d150}%) with strong Banker (${banker}/20). Deploy 50% tranche.`,
-      reason_th: `ย่อตื้นแตะแนวรับแรกเส้น EMA 50 ในหุ้นเทรนด์แกร่งพิเศษ (ลอยเหนือเส้น 150 ถึง +${d150}%) สถาบันคุมเข้ม (${banker}/20) — จัดไม้ตามเทรนด์ 50%!`,
-      checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
+      reason: `V-Shape rebound at EMA 150/200 support + Banker active (${banker}/20) + Triggered above EMA 9. Prime Buy (Deploy 100%).`,
+      reason_th: `ราคาแตะแนวรับเส้น EMA 150/200 แล้วแท่งเขียวเด้งสวนทันที + ยืนเหนือ Trigger EMA 9 + สถาบันหนุน (${banker}/20) — จุดช้อนซื้อชั้นยอด จัด 100%!`,
+      checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: (rsi14 ? rsi14 < 50 : true), candlePass: true, volumePass: volRatio >= 0.8 },
       signals_checklist: [
-        { label: 'EMA Regime', pass: true, value: 'Super BULL (Perfect Order)' },
-        { label: 'Dist EMA 50', pass: true, value: `${d50}% (Kiss Support)` },
-        { label: 'Dist EMA 150', pass: true, value: `+${d150}% (Strong Altitude)` },
-        { label: 'Banker MCDX', pass: true, value: `${banker}/20 (High)` },
-        { label: 'Deploy Tranche', pass: true, value: '50% Size' }
+        { label: 'EMA Regime', pass: true, value: regime },
+        { label: 'Dist Major EMA', pass: true, value: isNearEma200 ? `EMA200 ${d200}%` : `EMA150 ${d150}%` },
+        { label: 'EMA 9 Trigger', pass: true, value: 'Above EMA 9' },
+        { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
+        { label: 'Candle Rebound', pass: true, value: 'Bullish Green' },
+        { label: 'Deploy Tranche', pass: true, value: '100% Size' }
       ]
     };
   }
 
-  // TIER 4: ACCUMULATION & WATCH
-  // 9. Regime Flip Recovery: Golden Cross of EMA 50 > EMA 200
-  if (isRegimeFlip && banker >= 4 && isLatestBullish) {
+  // 9. Testing Support: Pulling back near major EMA with Banker, but still below EMA 9 or stuck in red bars
+  if (isNearMajorEma && banker >= 1 && (!aboveEma9 || !isLatestBullish || consecutiveRedBars >= 2)) {
     return {
       scenario: 9,
-      traffic_light: 'BUY_ZONE',
-      badge: 'Regime Flip',
+      traffic_light: 'GET_READY',
+      badge: 'Testing Support',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `EMA 50 crossed above EMA 200 (Golden Cross) with institutional inflow (${banker}/20). Trend reversal beginning. Nibble 25%.`,
-      reason_th: `เส้น EMA 50 ตัดข้าม EMA 200 (Golden Cross) ฟื้นตัวจากขาลง + สถาบันเริ่มสะสม (${banker}/20) — เริ่มสะสมไม้แรก 25%!`,
+      reason: `Kissing EMA 150/200 support (${d200}%) with Banker present (${banker}/20), but red pressure persists (${consecutiveRedBars} red bars) or below EMA 9. Get ready; wait for green rebound candle & EMA 9 reclaim.`,
+      reason_th: `ราคาย่อลงมาจ่อแนวรับใหญ่ EMA 150/200 (${d200}%) มีแรงสถาบัน (${banker}/20) แต่ยังอยู่ใต้ EMA 9 หรือติดแท่งแดง (${consecutiveRedBars} แท่ง) — หมุนนาฬิกาทรายเตรียมตัว รอแท่งเขียวเด้งผ่าน EMA 9!`,
+      checklist: { regimePass: regime === 'BULL', distPass: true, bankerPass: true, rsiPass: true, candlePass: false, volumePass: true },
+      signals_checklist: [
+        { label: 'EMA Regime', pass: regime === 'BULL', value: regime },
+        { label: 'Dist EMA 200', pass: true, value: `${d200}%` },
+        { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
+        { label: 'EMA 9 Trigger', pass: false, value: aboveEma9 ? 'Above' : 'Below EMA 9 (Locked)' },
+        { label: 'Action', pass: true, value: 'GET READY (Hourglass)' }
+      ]
+    };
+  }
+
+  // ==========================================
+  // LAYER 3: ACCUMULATION / STARTER (BUY_ZONE)
+  // ==========================================
+
+  // 10. Shallow Dip — EMA 50 Bounce
+  const isNearEma50 = (d50 >= -2.0 && d50 <= 1.5);
+  if (isNearEma50 && d150 > 3.0 && regime === 'BULL' && banker >= 5 && isLatestBullish) {
+    return {
+      scenario: 10,
+      traffic_light: 'BUY_ZONE',
+      badge: 'Shallow Dip (EMA50)',
+      distEma9: d9,
+      distEma50: d50,
+      distEma150: d150,
+      distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
+      regime,
+      volRatio,
+      reason: `Shallow pullback to EMA 50 in bull trend (+${d150}% vs EMA150) with active Banker (${banker}/20). Accumulate 50% tranche.`,
+      reason_th: `ย่อตื้นแตะแนวรับแรกเส้น EMA 50 ในหุ้นเทรนด์แกร่ง สถาบันคุมเข้ม (${banker}/20) — แหย่ไม้แรกตามเทรนด์ 50%!`,
+      checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
+      signals_checklist: [
+        { label: 'EMA Regime', pass: true, value: 'BULL Trend' },
+        { label: 'Dist EMA 50', pass: true, value: `${d50}% (Kiss Support)` },
+        { label: 'Dist EMA 150', pass: true, value: `+${d150}%` },
+        { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
+        { label: 'Deploy Tranche', pass: true, value: '50% Accumulate' }
+      ]
+    };
+  }
+
+  // 11. Regime Flip Recovery: Golden Cross EMA 50 > EMA 200
+  if (isRegimeFlip && banker >= 3 && isLatestBullish) {
+    return {
+      scenario: 11,
+      traffic_light: 'BUY_ZONE',
+      badge: 'Regime Flip',
+      distEma9: d9,
+      distEma50: d50,
+      distEma150: d150,
+      distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
+      regime,
+      volRatio,
+      reason: `EMA 50 crossed above EMA 200 (Golden Cross) with institutional inflow (${banker}/20). Trend reversal beginning. Accumulate 25-50%.`,
+      reason_th: `เส้น EMA 50 ตัดข้าม EMA 200 (Golden Cross) พลิกจากขาลงสู่รอบใหม่ สถาบันเริ่มสะสม (${banker}/20) — เริ่มสะสมไม้แรก 25-50%!`,
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: 'Golden Cross (50 > 200)' },
         { label: 'Price Level', pass: true, value: 'Above EMA 50 & 200' },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
-        { label: 'Deploy Tranche', pass: true, value: '25% Starter Tranche' }
+        { label: 'Deploy Tranche', pass: true, value: '25-50% Starter Tranche' }
       ]
     };
   }
 
-  // 10. Sideway Base Building: Consolidating near EMA 200
-  if (daysNearEma200 >= 5 && regime !== 'BEAR' && banker >= 2 && (rsi14 >= 35 && rsi14 <= 60) && volRatio <= 1.1) {
+  // 12. Sideway Base Building: Consolidating near EMA 200
+  if (daysNearEma200 >= 5 && regime !== 'BEAR' && banker >= 2 && (rsi14 >= 35 && rsi14 <= 62) && volRatio <= 1.2) {
     return {
-      scenario: 10,
+      scenario: 12,
       traffic_light: 'BUY_ZONE',
       badge: 'Sideway Base',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Consolidating tightly around EMA 200 for ${daysNearEma200} days with dry volume (${volRatio}x) and steady Banker (${banker}/20). Accumulate DCA 25% tranches.`,
-      reason_th: `ราคาสร้างฐานกอดเส้น EMA 200 นิ่งๆ นาน ${daysNearEma200} วันทำการ วอลุ่มแห้งบีบตัว (${volRatio}x) สถาบันเลี้ยงตัว (${banker}/20) — ทยอย DCA สะสมไม้ละ 25%`,
+      reason: `Tight base consolidation at EMA 200 for ${daysNearEma200} days with dry volume (${volRatio}x) and steady Banker (${banker}/20). Accumulate DCA 25%.`,
+      reason_th: `ราคาสร้างฐานกอดเส้น EMA 200 นาน ${daysNearEma200} วัน วอลุ่มแห้งบีบตัว (${volRatio}x) สถาบันเลี้ยงตัว (${banker}/20) — ทยอยสะสม DCA ไม้ละ 25%`,
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: regime },
@@ -571,53 +683,123 @@ export function classifyScenario({
     };
   }
 
-  // 11. Early Bird Watch: Kissing support but banker 0 or still red
-  if (isNearMajorEma && (banker === 0 || !isLatestBullish)) {
+  // ==========================================
+  // LAYER 4: SETUP IN SIGHT / DIVERGENCE (GET_READY)
+  // ==========================================
+
+  // 13. Early Bird Watch: Kissing support but banker 0 or still red, OR Bullish Divergence formed
+  if (isNearMajorEma && (banker === 0 || !isLatestBullish || hasRsiDivergence)) {
     return {
-      scenario: 11,
-      traffic_light: 'WAIT',
+      scenario: 13,
+      traffic_light: 'GET_READY',
       badge: 'Early Bird Watch',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Hovering at major EMA support bottom (${d200}%), but Banker is zero (${banker}/20). Keep on tight watch, wait for green reversal candle.`,
-      reason_th: `ราคาลงมาแตะแนวรับใหญ่ (${d200}%) แต่สถาบันยังไม่ส่งสัญญาณ (Banker = 0) — เฝ้าจอเตรียมพร้อม รอแท่งเขียวยืนยัน`,
-      checklist: { regimePass: regime !== 'BEAR', distPass: true, bankerPass: false, rsiPass: (rsi14 ? rsi14 < 45 : true), candlePass: isLatestBullish, volumePass: true },
+      reason: `Hovering near major EMA support (${d200}%)${hasRsiDivergence ? ' with Bullish RSI Divergence' : ''}, but institutional flow dormant (Banker = ${banker}). Prepare radar.`,
+      reason_th: `ราคาลงมาแตะแนวรับใหญ่ (${d200}%)${hasRsiDivergence ? ' + เกิดสัญญาณกระทิงซ่อน RSI Bullish Divergence' : ''} แต่สถาบันยังไม่จุดพลุ (Banker = ${banker}) — เตรียมพร้อมรอจังหวะ`,
+      checklist: { regimePass: regime !== 'BEAR', distPass: true, bankerPass: false, rsiPass: (rsi14 ? rsi14 < 48 : true), candlePass: isLatestBullish, volumePass: true },
       signals_checklist: [
         { label: 'EMA Support', pass: true, value: `${d200}%` },
-        { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Zero / Dormant)` },
-        { label: 'Status', pass: true, value: 'WATCHLIST / PREPARE' }
+        { label: 'RSI Divergence', pass: hasRsiDivergence, value: hasRsiDivergence ? 'Bullish Div Detected' : 'None' },
+        { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Zero / Low)` },
+        { label: 'Status', pass: true, value: 'GET READY (Hourglass)' }
       ]
     };
   }
 
-  // TIER 5: OVERBOUGHT & DEFAULT FALLBACKS
-  // 12. Overbought
-  const obThreshold = category === 'Moonshot' ? 25 : 14;
-  if (d150 > obThreshold && banker >= 15) {
+  // ==========================================
+  // LAYER 5: TREND RUNNERS & OVERBOUGHT (TO_THE_MOON vs ON_RADAR)
+  // ==========================================
+
+  // 14. Overbought Momentum: High above EMA 150
+  const obThreshold = category === 'Moonshot' ? 25 : 15;
+  if (d150 > obThreshold && banker >= 12) {
+    if (ownedShares > 0) {
+      return {
+        scenario: 14,
+        traffic_light: 'TO_THE_MOON',
+        badge: 'To The Moon',
+        distEma9: d9,
+        distEma50: d50,
+        distEma150: d150,
+        distEma200: d200,
+        isAboveEma9: aboveEma9,
+        hasRsiDivergence,
+        regime,
+        volRatio,
+        reason: `Hyper-bull momentum running +${d150}% above EMA 150 with heavy institutional backing (${banker}/20). Ride the trend, let profits run!`,
+        reason_th: `หุ้นติดเทอร์โบขาขึ้นลอยฟ้า (+${d150}% เหนือเส้น 150) สถาบันเกาะแน่น (${banker}/20) — นั่งทับมือปล่อยกำไรวิ่ง ห้ามขายหมู!`,
+        checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
+        signals_checklist: [
+          { label: 'Dist EMA 150', pass: true, value: `+${d150}% (High Altitude)` },
+          { label: 'Banker MCDX', pass: true, value: `${banker}/20 (Massive)` },
+          { label: 'Position', pass: true, value: 'Holding Shares (Ride Trend)' },
+          { label: 'Action', pass: true, value: 'TO THE MOON 🚀' }
+        ]
+      };
+    } else {
+      return {
+        scenario: 14,
+        traffic_light: 'ON_RADAR',
+        badge: 'Overbought Run',
+        distEma9: d9,
+        distEma50: d50,
+        distEma150: d150,
+        distEma200: d200,
+        isAboveEma9: aboveEma9,
+        hasRsiDivergence,
+        regime,
+        volRatio,
+        reason: `Extended +${d150}% above EMA 150 with heavy institutional flow (${banker}/20). Do not chase at highs; wait for pullback.`,
+        reason_th: `ราคาลอยฟ้าสูง (+${d150}%) เหนือแนวรับใหญ่ สถาบันหนาแน่น — ห้ามไล่ราคาเด็ดขาด เฝ้ารอย่อตัวแตะแนวรับ`,
+        checklist: { regimePass: true, distPass: false, bankerPass: true, rsiPass: false, candlePass: true, volumePass: true },
+        signals_checklist: [
+          { label: 'Dist EMA 150', pass: false, value: `+${d150}% (> ${obThreshold}%)` },
+          { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
+          { label: 'Position', pass: false, value: 'No Shares (Do Not Chase)' },
+          { label: 'Action', pass: true, value: 'ON RADAR 📡' }
+        ]
+      };
+    }
+  }
+
+  // 15. Trend Runner: In BULL regime, above EMA 9, strong banker
+  if (regime === 'BULL' && d50 > 0 && d150 > 4.0 && banker >= 10 && aboveEma9) {
     return {
-      scenario: 12,
-      traffic_light: 'WAIT',
-      badge: 'Overbought',
+      scenario: 15,
+      traffic_light: 'TO_THE_MOON',
+      badge: 'Trend Runner',
+      distEma9: d9,
       distEma50: d50,
       distEma150: d150,
       distEma200: d200,
+      isAboveEma9: aboveEma9,
+      hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Overextended +${d150}% above EMA 150 with saturated Banker (${banker}/20). High pullback risk. Do not chase.`,
-      reason_th: `ราคาลอยฟ้าเหนือ EMA 150 (+${d150}%) สถาบันชนเพดาน (${banker}/20) — เสี่ยงโดนเททำกำไร ห้ามไล่ราคาเด็ดขาด`,
-      checklist: { regimePass: true, distPass: false, bankerPass: false, rsiPass: false, candlePass: true, volumePass: true },
+      reason: `Perfect Bullish order (50 > 150 > 200) surfing above EMA 9 with solid institutional power (${banker}/20). Trend on fire!`,
+      reason_th: `เทรนด์ขาขึ้นสมบูรณ์แบบ วิ่งเกาะเหนือเส้น Trigger EMA 9 สถาบันคุมเข้ม (${banker}/20) — วิ่งตามเทรนด์เต็มสูบ นั่งทับมือ!`,
+      checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
       signals_checklist: [
-        { label: 'Dist EMA 150', pass: false, value: `+${d150}% (> ${obThreshold}%)` },
-        { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Saturated)` },
-        { label: 'Action', pass: true, value: 'Park cash in Dime FCD' }
+        { label: 'EMA Regime', pass: true, value: 'Super BULL (50 > 150 > 200)' },
+        { label: 'EMA 9 Trigger', pass: true, value: 'Surfing Above EMA 9' },
+        { label: 'Banker MCDX', pass: true, value: `${banker}/20 (Strong)` },
+        { label: 'Action', pass: true, value: 'TO THE MOON 🚀' }
       ]
     };
   }
 
-  // 13. Default: Consolidating / Pullback with high granularity
+  // ==========================================
+  // LAYER 6: ON_RADAR (Stealth Monochrome Fallback)
+  // ==========================================
+
+  // 16. Default: Consolidating / Pullback with high granularity
   let defaultBadge = 'Consolidating';
   let defaultTh = 'ราคาวิ่งตามเทรนด์ปกติ รอจังหวะย่อตัวลงมาแตะแนวรับ';
   if (d150 < 0 && d150 >= -3) {
@@ -632,22 +814,26 @@ export function classifyScenario({
   }
 
   return {
-    scenario: 13,
-    traffic_light: 'WAIT',
+    scenario: 16,
+    traffic_light: 'ON_RADAR',
     badge: defaultBadge,
+    distEma9: d9,
     distEma50: d50,
     distEma150: d150,
     distEma200: d200,
+    isAboveEma9: aboveEma9,
+    hasRsiDivergence,
     regime,
     volRatio,
-    reason: `Price healthy (${d150 > 0 ? '+' : ''}${d150}% vs EMA150, Regime: ${regime}). Waiting for high-probability setup.`,
+    reason: `Price healthy (${d150 > 0 ? '+' : ''}${d150}% vs EMA150, Regime: ${regime}). Watching on radar for high-probability setup.`,
     reason_th: defaultTh,
     checklist: { regimePass: regime !== 'BEAR', distPass: true, bankerPass: banker > 0, rsiPass: true, candlePass: isLatestBullish, volumePass: true },
     signals_checklist: [
       { label: 'EMA Regime', pass: regime !== 'BEAR', value: regime },
       { label: 'Dist EMA 150', pass: true, value: `${d150 >= 0 ? '+' : ''}${d150}%` },
       { label: 'Dist EMA 200', pass: true, value: `${d200 >= 0 ? '+' : ''}${d200}%` },
-      { label: 'Banker MCDX', pass: banker > 0, value: `${banker}/20` }
+      { label: 'Banker MCDX', pass: banker > 0, value: `${banker}/20` },
+      { label: 'Status', pass: true, value: 'ON RADAR 📡' }
     ]
   };
 }
@@ -865,10 +1051,12 @@ export async function scanRadarMatrix(portfolioId) {
     const currentPrice = sparkCloses[sparkCloses.length - 1];
 
     // Compute EMAs on the full historical series (2,500+ bars) for mathematical convergence identical to chart
+    const ema9Series = calcEMASeries(sparkCloses, 9);
     const ema50Series = calcEMASeries(sparkCloses, 50);
     const ema150Series = calcEMASeries(sparkCloses, 150);
     const ema200Series = calcEMASeries(sparkCloses, 200);
 
+    const ema9 = ema9Series[ema9Series.length - 1] !== null ? Number(ema9Series[ema9Series.length - 1].toFixed(2)) : null;
     const ema50 = ema50Series[ema50Series.length - 1] !== null ? Number(ema50Series[ema50Series.length - 1].toFixed(2)) : null;
     const ema150 = ema150Series[ema150Series.length - 1] !== null ? Number(ema150Series[ema150Series.length - 1].toFixed(2)) : null;
     const ema200 = ema200Series[ema200Series.length - 1] !== null ? Number(ema200Series[ema200Series.length - 1].toFixed(2)) : null;
@@ -876,9 +1064,15 @@ export async function scanRadarMatrix(portfolioId) {
     const banker = calcBankerMCDX(sparkCloses);
     const rsi14 = calcRSI(sparkCloses, 14);
 
+    // Compute RSI Series & Bullish Divergence
+    const rsi14Series = calcRSISeries(sparkCloses, 14);
+    const hasRsiDivergence = detectRsiDivergence(sparkCloses, rsi14Series, 30);
+
+    const distEma9 = ema9 ? Number((((currentPrice - ema9) / ema9) * 100).toFixed(2)) : 0;
     const distEma50 = ema50 ? Number((((currentPrice - ema50) / ema50) * 100).toFixed(2)) : 0;
     const distEma150 = ema150 ? Number((((currentPrice - ema150) / ema150) * 100).toFixed(2)) : 0;
     const distEma200 = ema200 ? Number((((currentPrice - ema200) / ema200) * 100).toFixed(2)) : 0;
+    const isAboveEma9 = currentPrice >= (ema9 || 0);
 
     // Detect EMA alignment regime
     const isBullRegime = (ema50 && ema150 && ema200 && ema50 > ema150 && ema150 > ema200);
@@ -1034,14 +1228,18 @@ export async function scanRadarMatrix(portfolioId) {
 
     const classification = classifyScenario({
       currentPrice,
+      ema9,
       ema50,
       ema150,
       ema200,
+      distEma9,
       distEma50,
       distEma150,
       distEma200,
       banker,
       rsi14,
+      isAboveEma9,
+      hasRsiDivergence,
       isLatestBullish,
       consecutiveRedBars,
       volRatio,
@@ -1053,6 +1251,7 @@ export async function scanRadarMatrix(portfolioId) {
       isDoubleBottomConfirmed,
       isBaseBreakout,
       isRegimeFlip,
+      ownedShares: q.owned_shares || 0,
       category: q.category
     });
 
@@ -1065,12 +1264,16 @@ export async function scanRadarMatrix(portfolioId) {
       category: q.category,
       target_percent: q.target_percent,
       currentPrice,
+      ema9,
       ema50,
       ema150,
       ema200,
+      distEma9,
       distEma50,
       distEma150,
       distEma200,
+      isAboveEma9,
+      hasRsiDivergence,
       banker,
       rsi14,
       regime,
@@ -1091,6 +1294,7 @@ export async function scanRadarMatrix(portfolioId) {
         highs: sparkHighs,
         lows: sparkLows,
         volumes: sparkVolumes,
+        ema9: ema9Series,
         ema50: ema50Series,
         ema150: ema150Series,
         ema200: ema200Series,

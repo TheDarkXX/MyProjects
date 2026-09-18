@@ -12,7 +12,7 @@ export interface WatchlistStock {
   currentPrice: number;
   percent_change?: number;
   banker?: number;
-  traffic_light?: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+  traffic_light?: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
 }
 
 export interface PortfolioOverlayConfig {

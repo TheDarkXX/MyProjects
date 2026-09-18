@@ -40,6 +40,7 @@ import {
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useProject2xStore, MilestoneItem, RadarRow } from '../../stores/project2xStore';
 import { PullbackDnaModal } from './PullbackDnaModal';
+import { getTierMetadata, getTierRank } from '../../utils/tierConfig';
 import { useUiStore } from '../../stores/uiStore';
 import { useChartViewStore } from '../../stores/useChartViewStore';
 import { useHoldings } from '../../hooks/useHoldings';
@@ -136,7 +137,7 @@ export const Project2xPage: React.FC = () => {
   // Set default selected stock to first Golden Setup or Buy Zone stock if available
   useEffect(() => {
     if (radar?.rows && radar.rows.length > 0) {
-      const buyZoneStock = radar.rows.find(r => r.traffic_light === 'BUY_ZONE');
+      const buyZoneStock = radar.rows.find(r => r.traffic_light === 'BUY_NOW' || r.traffic_light === 'BUY_ZONE');
       if (buyZoneStock && !selectedStockSymbol) {
         setSelectedStockSymbol(buyZoneStock.symbol);
       } else if (!selectedStockSymbol) {
@@ -295,8 +296,7 @@ export const Project2xPage: React.FC = () => {
     list.sort((a, b) => {
       let comp = 0;
       if (sortKey === 'STATUS') {
-        const rank = (tl: string) => tl === 'BUY_ZONE' ? 1 : tl === 'WAIT' ? 2 : 3;
-        comp = rank(a.traffic_light) - rank(b.traffic_light);
+        comp = getTierRank(a.traffic_light) - getTierRank(b.traffic_light);
         if (comp === 0) comp = b.progress_percent - a.progress_percent;
       } else if (sortKey === 'PROGRESS') {
         comp = b.progress_percent - a.progress_percent;
@@ -355,8 +355,7 @@ export const Project2xPage: React.FC = () => {
           comp = (a.consecutive_eps_qs ?? 0) - (b.consecutive_eps_qs ?? 0);
           break;
         case 'STATUS': {
-          const rank = (tl: string) => tl === 'BUY_ZONE' ? 1 : tl === 'WAIT' ? 2 : 3;
-          comp = rank(a.traffic_light) - rank(b.traffic_light);
+          comp = getTierRank(a.traffic_light) - getTierRank(b.traffic_light);
           break;
         }
       }
@@ -1018,16 +1017,15 @@ export const Project2xPage: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-2 font-bold text-cyan-300">
                         <Info className="w-4 h-4" />
                         <span>Tactical Playbook for {activeStockRow.symbol}:</span>
-                        <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1 ${
-                          activeStockRow.traffic_light === 'BUY_ZONE'
-                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
-                            : activeStockRow.traffic_light === 'WAIT'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
-                            : 'bg-rose-500/20 text-rose-400 border border-rose-500/50'
-                        }`}>
-                          <span>{activeStockRow.traffic_light === 'BUY_ZONE' ? '🔷' : activeStockRow.traffic_light === 'WAIT' ? '🟡' : '🔴'}</span>
-                          <span>{activeStockRow.traffic_light}</span>
-                        </span>
+                        {(() => {
+                          const tier = getTierMetadata(activeStockRow.traffic_light);
+                          return (
+                            <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass}`}>
+                              <span className={tier.animClass}>{tier.icon}</span>
+                              <span>{tier.label}</span>
+                            </span>
+                          );
+                        })()}
                         {activeStockRow.badge && (
                           <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/40">
                             {activeStockRow.badge}
@@ -1148,7 +1146,7 @@ export const Project2xPage: React.FC = () => {
               <div className="space-y-1.5 max-h-[780px] overflow-y-auto pr-1">
                 {sortedWatchlistRows.map((row) => {
                   const isSelected = selectedStockSymbol === row.symbol;
-                  const isBuyZone = row.traffic_light === 'BUY_ZONE';
+                  const rowTier = getTierMetadata(row.traffic_light);
                   const hasAlert = radar?.sellAlerts.some(a => a.symbol === row.symbol);
                   const ownedVal = (row.owned_shares || 0) * row.currentPrice;
 
@@ -1164,8 +1162,8 @@ export const Project2xPage: React.FC = () => {
                     >
                       {/* Left: Signal Badge + Symbol + Category */}
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs" title={row.traffic_light}>
-                          {isBuyZone ? '🔷' : row.traffic_light === 'WAIT' ? '🟡' : '🔴'}
+                        <span className={`text-xs ${rowTier.animClass}`} title={`${rowTier.label} - ${row.traffic_light}`}>
+                          {rowTier.icon}
                         </span>
                         <span className="font-black text-white text-sm tracking-tight">{row.symbol}</span>
                         <span className={`text-[10px] font-bold px-1 py-0.2 rounded ${
@@ -1191,7 +1189,7 @@ export const Project2xPage: React.FC = () => {
                             className={`h-full rounded-full ${
                               row.progress_percent >= 100
                                 ? 'bg-amber-400'
-                                : isBuyZone
+                                : (rowTier.id === 'BUY_NOW' || rowTier.id === 'BUY_ZONE')
                                 ? 'bg-gradient-to-r from-cyan-400 to-blue-500'
                                 : 'bg-blue-500'
                             }`}
@@ -1316,16 +1314,15 @@ export const Project2xPage: React.FC = () => {
                             <Trophy className="w-3.5 h-3.5" />
                             <span>FULL! 🏆</span>
                           </span>
-                        ) : isBuyZone ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1 animate-pulse">
-                            <span>🔷</span>
-                            <span>BUY ZONE</span>
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                            🟡 WAIT
-                          </span>
-                        )}
+                        ) : (() => {
+                          const cardTier = getTierMetadata(radarMatch?.traffic_light);
+                          return (
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-black flex items-center gap-1.5 ${cardTier.badgeClass} ${cardTier.borderClass} ${cardTier.glowClass}`}>
+                              <span className={cardTier.animClass}>{cardTier.icon}</span>
+                              <span>{cardTier.label}</span>
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -1425,15 +1422,15 @@ export const Project2xPage: React.FC = () => {
                           <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-400 text-slate-950">
                             FULL! 🏆
                           </span>
-                        ) : isBuyZone ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                            🔷 BUY
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300">
-                            🟡 WAIT
-                          </span>
-                        )}
+                        ) : (() => {
+                          const cardTier = getTierMetadata(radarMatch?.traffic_light);
+                          return (
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 ${cardTier.badgeClass} ${cardTier.borderClass} ${cardTier.glowClass}`}>
+                              <span className={cardTier.animClass}>{cardTier.icon}</span>
+                              <span>{cardTier.label}</span>
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <div className="my-5 space-y-2 relative z-10">
@@ -1882,16 +1879,15 @@ export const Project2xPage: React.FC = () => {
                         <td className="p-3.5">
                           <div className="flex flex-col gap-1 items-start">
                             <div className="flex items-center gap-1.5">
-                              <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1 ${
-                                isBuy
-                                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
-                                  : isWait
-                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
-                                  : 'bg-rose-500/20 text-rose-400 border border-rose-500/50'
-                              }`}>
-                                <span>{isBuy ? '🔷' : isWait ? '🟡' : '🔴'}</span>
-                                <span>{row.traffic_light}</span>
-                              </span>
+                              {(() => {
+                                const rowTier = getTierMetadata(row.traffic_light);
+                                return (
+                                  <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 ${rowTier.badgeClass} ${rowTier.borderClass} ${rowTier.glowClass}`}>
+                                    <span className={rowTier.animClass}>{rowTier.icon}</span>
+                                    <span>{rowTier.label}</span>
+                                  </span>
+                                );
+                              })()}
                               {row.regime && (
                                 <span className={`px-1.5 py-0.2 rounded text-[11px] font-bold ${
                                   row.regime === 'BULL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
@@ -2272,16 +2268,15 @@ export const Project2xPage: React.FC = () => {
                     }`}>
                       {detailModalStock.category} Commander
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1 ${
-                      detailModalStock.traffic_light === 'BUY_ZONE'
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                        : detailModalStock.traffic_light === 'WAIT'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                    }`}>
-                      <span>{detailModalStock.traffic_light === 'BUY_ZONE' ? '🔷' : detailModalStock.traffic_light === 'WAIT' ? '🟡' : '🔴'}</span>
-                      <span>{detailModalStock.traffic_light}</span>
-                    </span>
+                    {(() => {
+                      const mTier = getTierMetadata(detailModalStock.traffic_light);
+                      return (
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 ${mTier.badgeClass} ${mTier.borderClass} ${mTier.glowClass}`}>
+                          <span className={mTier.animClass}>{mTier.icon}</span>
+                          <span>{mTier.label}</span>
+                        </span>
+                      );
+                    })()}
                   </div>
                   <p className="text-[13px] text-slate-300 mt-0.5">
                     Market Price: <strong className="text-white">${detailModalStock.currentPrice.toFixed(2)}</strong> · Weight: <strong className="text-cyan-300">{detailModalStock.weight_pct}%</strong> (Target {detailModalStock.target_percent}%)

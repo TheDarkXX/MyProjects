@@ -32,7 +32,7 @@ export interface ChartControlBarProps {
   isLiveActive: boolean;
   isMarketOpen: boolean;
   badge?: string;
-  trafficLight?: 'BUY_ZONE' | 'WAIT' | 'DANGER';
+  trafficLight?: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
   resolution: Resolution;
   setResolution: (res: Resolution) => void;
   canShow4H: boolean;
