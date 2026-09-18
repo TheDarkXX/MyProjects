@@ -345,8 +345,9 @@ export function classifyScenario({
   // LAYER 0: VETO GUARDS (Capital Preservation)
   // ==========================================
 
-  // 1. Falling Knife: Plunged below EMA 200 by > 8% with 0 Banker
-  if (d200 < -8 && banker === 0) {
+  // 1. Falling Knife: Plunged below EMA 200 with 0 Banker (BULL regime requires severe plunge < -12% to prevent capitulation wick false alarm)
+  const fallingKnifeThreshold = regime === 'BULL' ? -12.0 : -8.0;
+  if (d200 < fallingKnifeThreshold && banker === 0) {
     return {
       scenario: 1,
       traffic_light: 'MAYDAY_EXIT',
@@ -431,7 +432,8 @@ export function classifyScenario({
   }
 
   // 4. Slow Bleed / Death Drift: Persistent decay without bounce below EMA 200 in non-bull regime or severe drop
-  if ((regime === 'BEAR' || d200 < -5.0) && d200 < -3.5 && daysBankerZero >= 8) {
+  const isSlowBleed = (regime === 'BEAR' ? d200 < -3.5 : d200 < -6.5) && daysBankerZero >= 8;
+  if (isSlowBleed) {
     return {
       scenario: 4,
       traffic_light: 'SLOW_BLEED',
@@ -585,8 +587,8 @@ export function classifyScenario({
     };
   }
 
-  // 9. Testing Support: Pulling back near major EMA with Banker, but still below EMA 9 or stuck in red bars
-  if (isNearMajorEma && banker >= 1 && (!aboveEma9 || !isLatestBullish || consecutiveRedBars >= 2)) {
+  // 9. Testing Support: Pulling back near major EMA with Banker, but still below EMA 9 or stuck in red bars (in non-BEAR regime)
+  if (regime !== 'BEAR' && isNearMajorEma && banker >= 1 && (!aboveEma9 || !isLatestBullish || consecutiveRedBars >= 2)) {
     return {
       scenario: 9,
       traffic_light: 'GET_READY',
@@ -705,8 +707,8 @@ export function classifyScenario({
   // LAYER 4: SETUP IN SIGHT / DIVERGENCE (GET_READY)
   // ==========================================
 
-  // 13. Early Bird Watch: Kissing support but banker 0 or still red, OR Bullish Divergence formed
-  if (isNearMajorEma && (banker === 0 || !isLatestBullish || hasRsiDivergence)) {
+  // 13. Early Bird Watch: Kissing support but banker < 1 or still red, OR Bullish Divergence formed (in non-BEAR regime)
+  if (regime !== 'BEAR' && isNearMajorEma && (banker < 1 || !isLatestBullish || hasRsiDivergence)) {
     return {
       scenario: 13,
       traffic_light: 'GET_READY',
@@ -1033,12 +1035,13 @@ export async function calculateStockRadarSignal(symbol, { portfolioId = 'default
   const mcdxData = calcMcdxSeries(sparkCloses);
   const n = sparkCloses.length;
 
+  const nearLowerBound = regime !== 'BEAR' ? -5.0 : -3.5;
   let daysNearEma200 = 0;
   for (let i = n - 1; i >= 0; i--) {
     const e200 = ema200Series[i];
     if (!e200) break;
     const d = ((sparkCloses[i] - e200) / e200) * 100;
-    if (d >= -3.5 && d <= 3.5) daysNearEma200++;
+    if (d >= nearLowerBound && d <= 3.5) daysNearEma200++;
     else break;
   }
 

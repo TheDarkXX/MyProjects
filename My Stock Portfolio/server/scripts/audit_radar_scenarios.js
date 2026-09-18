@@ -58,6 +58,28 @@ async function runAudit() {
         issues.push(`Strong institutional backing (${b}/20) in BULL regime, but classified as MAYDAY_EXIT`);
       }
 
+      // 6. Banker Float Dead Zone (0 < b < 1) near EMA 200 falling into S16 default
+      const ema200Lower = res.regime !== 'BEAR' ? -5.0 : -3.5;
+      const isNearBedrock = (d200 >= ema200Lower && d200 <= 2.5) || (d150 >= -3.0 && d150 <= 2.0);
+      if (isNearBedrock && b > 0 && b < 1 && scen === 16) {
+        issues.push(`Banker float dead zone (${b}/20) near EMA support (${d200}%), but fallen into S16 default`);
+      }
+
+      // 7. BULL regime + S4 Slow Bleed when not severely broken (d200 >= -6.5%)
+      if (res.regime === 'BULL' && scen === 4 && d200 >= -6.5) {
+        issues.push(`BULL regime classified as S4 Slow Bleed without severe breach (d200: ${d200}%)`);
+      }
+
+      // 8. BEAR regime + S9 GET_READY (EMA 200 is overhead resistance in BEAR, cannot be support test)
+      if (res.regime === 'BEAR' && scen === 9) {
+        issues.push(`BEAR regime classified as S9 Testing Support GET_READY (EMA 200 is resistance in bear trend)`);
+      }
+
+      // 9. BULL regime + S1 Falling Knife without severe capitulation (d200 >= -12.0%)
+      if (res.regime === 'BULL' && scen === 1 && d200 >= -12.0) {
+        issues.push(`BULL regime classified as S1 Falling Knife on moderate pullback (${d200}%)`);
+      }
+
       const item = {
         symbol: sym,
         price: res.currentPrice,
