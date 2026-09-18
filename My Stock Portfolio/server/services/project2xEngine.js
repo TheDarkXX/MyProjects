@@ -396,8 +396,8 @@ export function classifyScenario({
     };
   }
 
-  // 3. Core Breakdown: Prolonged failure below EMA 200 (> 5 days below and < -5%)
-  if (d200 < -5 && daysBelowEma200 >= 5 && regime === 'BEAR') {
+  // 3. Core Breakdown: Prolonged failure below EMA 200 (> 4 days below and < -4.5% with no banker)
+  if (d200 < -4.5 && daysBelowEma200 >= 4 && (regime === 'BEAR' || banker <= 1)) {
     return {
       scenario: 3,
       traffic_light: 'MAYDAY_EXIT',
@@ -422,8 +422,8 @@ export function classifyScenario({
     };
   }
 
-  // 4. Slow Bleed / Death Drift: Persistent decay without bounce
-  if (regime === 'BEAR' && d200 < 0 && daysBankerZero >= 8) {
+  // 4. Slow Bleed / Death Drift: Persistent decay without bounce below EMA 200
+  if (d200 < 0 && daysBankerZero >= 8) {
     return {
       scenario: 4,
       traffic_light: 'SLOW_BLEED',
@@ -436,8 +436,8 @@ export function classifyScenario({
       hasRsiDivergence,
       regime,
       volRatio,
-      reason: `In BEAR regime with persistent 0 Banker for ${daysBankerZero} days. Slow bleed without institutional bid. Stand by.`,
-      reason_th: `เทรนด์ใหญ่ขาลง (BEAR) + สถาบันทิ้งหายต่อเนื่อง ${daysBankerZero} วัน — หุ้นไหลซึมไร้แรงซื้อ ถือเงินสด 100% รอโครงสร้างฟื้น`,
+      reason: `Trading below EMA 200 (${d200}%) with persistent 0 Banker for ${daysBankerZero} days. Slow bleed without institutional bid. Stand by.`,
+      reason_th: `ราคาหลุดใต้เส้น EMA 200 (${d200}%) + สถาบันทิ้งหายต่อเนื่อง ${daysBankerZero} วัน — หุ้นไหลซึมไร้แรงซื้อ ถือเงินสด 100% รอโครงสร้างฟื้น`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
@@ -802,15 +802,26 @@ export function classifyScenario({
   // 16. Default: Consolidating / Pullback with high granularity
   let defaultBadge = 'Consolidating';
   let defaultTh = 'ราคาวิ่งตามเทรนด์ปกติ รอจังหวะย่อตัวลงมาแตะแนวรับ';
-  if (d150 < 0 && d150 >= -3) {
-    defaultBadge = 'Healthy Dip';
-    defaultTh = 'ราคาย่อตัวตามปกติในกรอบ -1% ถึง -3% กำลังจับตาแนวรับ';
-  } else if (d150 < -3 && d150 >= -6) {
-    defaultBadge = 'Deep Pullback';
-    defaultTh = 'ราคาย่อตัวลึก -3% ถึง -6% ใกล้โซนแนวรับใหญ่';
-  } else if (d150 < -6) {
-    defaultBadge = 'Approaching Bedrock';
-    defaultTh = 'ราคากำลังทิ้งตัวลงหาแนวรับหินผา EMA 200';
+  
+  if (d200 < 0) {
+    if (d200 < -3.5) {
+      defaultBadge = 'Below Bedrock';
+      defaultTh = `ราคาหลุดต่ำกว่าเส้น EMA 200 (${d200}%) เฝ้าสังเกตการณ์ในเรดาร์ ห้ามรีบเข้ารับ`;
+    } else {
+      defaultBadge = 'Testing Under 200';
+      defaultTh = `ราคากำลังทดสอบใต้เส้น EMA 200 (${d200}%) รอแรงซื้อดึงกลับมายืนเหนือเส้น`;
+    }
+  } else {
+    if (d150 < 0 && d150 >= -3) {
+      defaultBadge = 'Healthy Dip';
+      defaultTh = 'ราคาย่อตัวตามปกติในกรอบ -1% ถึง -3% กำลังจับตาแนวรับ';
+    } else if (d150 < -3 && d150 >= -6) {
+      defaultBadge = 'Deep Pullback';
+      defaultTh = 'ราคาย่อตัวลึก -3% ถึง -6% ใกล้โซนแนวรับใหญ่';
+    } else if (d150 < -6) {
+      defaultBadge = 'Approaching Bedrock';
+      defaultTh = 'ราคากำลังทิ้งตัวลงหาแนวรับหินผา EMA 200';
+    }
   }
 
   return {
