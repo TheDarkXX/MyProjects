@@ -402,9 +402,9 @@ export function classifyScenario({
 
   // 3. Core Breakdown: Prolonged failure below EMA 200
   // For BEAR regime: < -4.0% with daysBelowEma200 >= 3
-  // For BULL/NEUTRAL: Only if severe structural breach (< -6.5% and daysBelowEma200 >= 5)
+  // For BULL/NEUTRAL: Outside support zone (< -5.0%) with prolonged failure (daysBelowEma200 >= 5 and banker <= 1)
   const isCoreBreakdown = (regime === 'BEAR' && d200 < -4.0 && daysBelowEma200 >= 3) ||
-                          (regime !== 'BEAR' && d200 < -6.5 && daysBelowEma200 >= 5 && banker <= 1);
+                          (regime !== 'BEAR' && d200 < -5.0 && daysBelowEma200 >= 5 && banker <= 1);
   if (isCoreBreakdown) {
     return {
       scenario: 3,
@@ -432,7 +432,7 @@ export function classifyScenario({
   }
 
   // 4. Slow Bleed / Death Drift: Persistent decay without bounce below EMA 200 in non-bull regime or severe drop
-  const isSlowBleed = (regime === 'BEAR' ? d200 < -3.5 : d200 < -6.5) && daysBankerZero >= 8;
+  const isSlowBleed = (regime === 'BEAR' ? d200 < -3.5 : d200 < -5.0) && daysBankerZero >= 8;
   if (isSlowBleed) {
     return {
       scenario: 4,
@@ -556,10 +556,10 @@ export function classifyScenario({
   const ema200LowerBound = regime !== 'BEAR' ? -5.0 : -3.5;
   const isNearEma200 = (d200 >= ema200LowerBound && d200 <= 2.5);
   const isNearEma150 = (d150 >= -3.0 && d150 <= 2.0);
-  const isNearMajorEma = isNearEma200 || isNearEma150;
+  const isNearMajorEma = (isNearEma200 || isNearEma150) && d200 >= ema200LowerBound;
 
-  // 8. V-Shape Rebound: Near major EMA + Banker + BULL regime + above EMA 9 + Green Candle
-  if (isNearMajorEma && banker >= 1 && banker <= 14 && regime === 'BULL' && aboveEma9 && isLatestBullish) {
+  // 8. V-Shape Rebound: Near major EMA + Banker + non-BEAR regime + above EMA 9 + Green Candle
+  if (isNearMajorEma && banker >= 1 && regime !== 'BEAR' && aboveEma9 && isLatestBullish) {
     return {
       scenario: 8,
       traffic_light: 'BUY_NOW',
@@ -572,8 +572,8 @@ export function classifyScenario({
       hasRsiDivergence,
       regime,
       volRatio,
-      reason: `V-Shape rebound at EMA 150/200 support + Banker active (${banker}/20) + Triggered above EMA 9. Prime Buy (Deploy 100%).`,
-      reason_th: `ราคาแตะแนวรับเส้น EMA 150/200 แล้วแท่งเขียวเด้งสวนทันที + ยืนเหนือ Trigger EMA 9 + สถาบันหนุน (${banker}/20) — จุดช้อนซื้อชั้นยอด จัด 100%!`,
+      reason: `V-Shape rebound at EMA 150/200 support + Banker active (${banker}/20) + Triggered above EMA 9. Prime Buy (${regime === 'BULL' ? 'Deploy 100%' : 'Deploy 75%'}).`,
+      reason_th: `ราคาแตะแนวรับเส้น EMA 150/200 แล้วแท่งเขียวเด้งสวนทันที + ยืนเหนือ Trigger EMA 9 + สถาบันหนุน (${banker}/20) — จุดช้อนซื้อชั้นยอด จัด ${regime === 'BULL' ? '100%' : '75%'}!`,
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: (rsi14 ? rsi14 < 50 : true), candlePass: true, volumePass: volRatio >= 0.8 },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: regime },
@@ -582,7 +582,7 @@ export function classifyScenario({
         { label: 'EMA 9 Trigger', pass: true, value: `${fmtPrice(ema9)} (Above)`, priceLevel: ema9 },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
         { label: 'Candle Rebound', pass: true, value: 'Bullish Green' },
-        { label: 'Deploy Tranche', pass: true, value: '100% Size' }
+        { label: 'Deploy Tranche', pass: true, value: regime === 'BULL' ? '100% Size' : '75% Tranche' }
       ]
     };
   }
@@ -621,7 +621,7 @@ export function classifyScenario({
 
   // 10. Shallow Dip — EMA 50 Bounce
   const isNearEma50 = (d50 >= -2.0 && d50 <= 1.5);
-  if (isNearEma50 && d150 > 3.0 && regime === 'BULL' && banker >= 5 && isLatestBullish) {
+  if (isNearEma50 && d150 > 3.0 && d200 > 0 && regime === 'BULL' && banker >= 5 && isLatestBullish) {
     return {
       scenario: 10,
       traffic_light: 'BUY_ZONE',
