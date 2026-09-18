@@ -50,8 +50,8 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
     : [
         { label: 'EMA Regime', pass: regime === 'BULL', value: regime || 'NEUTRAL' },
         { label: 'Dist EMA 200', pass: distEma200 !== undefined ? Math.abs(distEma200) <= 3.5 : true, value: distEma200 !== undefined ? `${distEma200 >= 0 ? '+' : ''}${distEma200.toFixed(1)}%` : 'Active' },
-        { label: 'EMA 9 Trigger', pass: isAboveEma9 ?? true, value: isAboveEma9 ? 'Above EMA 9 (Unlocked ⚡)' : 'Below EMA 9 (Locked 🔒)' },
-        { label: 'Banker Flow', pass: (banker ?? 0) >= 5, value: `${(banker ?? 0).toFixed(1)} / 20` },
+        { label: 'EMA 9 Trigger', pass: isAboveEma9 ?? true, value: isAboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒' },
+        { label: 'Banker Flow', pass: (banker ?? 0) >= 5, value: `${(banker ?? 0).toFixed(1)}/20` },
       ];
 
   const passedCount = effectiveChecklist.filter(item => item.pass).length;
@@ -59,11 +59,11 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
   const passPct = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 0;
   const isPerfectPass = passPct === 100;
 
-  // Calculate viewport position relative to trigger
+  // Calculate viewport position relative to trigger (Compact width: 290px)
   const updatePosition = useCallback(() => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const cardWidth = Math.min(380, window.innerWidth - 24);
+      const cardWidth = Math.min(295, window.innerWidth - 24);
       let left = rect.left;
       if (left + cardWidth > window.innerWidth - 12) {
         left = window.innerWidth - cardWidth - 12;
@@ -71,7 +71,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
       left = Math.max(12, left);
 
       setCoords({
-        top: rect.bottom + 8,
+        top: rect.bottom + 6,
         left,
       });
     }
@@ -83,7 +83,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
     updatePosition();
     timerRef.current = setTimeout(() => {
       setIsOpen(true);
-    }, 50);
+    }, 40);
   };
 
   const handleMouseLeave = () => {
@@ -91,7 +91,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setIsOpen(false);
-    }, 150);
+    }, 120);
   };
 
   // Toggle pinned state on click
@@ -139,29 +139,29 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
 
   // Glow theme per tier
   let cardBorder = 'border-slate-700/80';
-  let cardGlow = 'shadow-[0_20px_50px_rgba(0,0,0,0.9)]';
-  let progressGlow = 'from-emerald-500 to-teal-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]';
+  let cardGlow = 'shadow-[0_12px_32px_rgba(0,0,0,0.85)]';
+  let progressGlow = 'from-emerald-500 to-teal-400';
 
   if (tier.id === 'TO_THE_MOON') {
-    cardBorder = 'border-purple-500/60';
-    cardGlow = 'shadow-[0_20px_50px_rgba(168,85,247,0.4)]';
-    progressGlow = 'from-purple-500 via-indigo-400 to-cyan-400 shadow-[0_0_12px_rgba(168,85,247,0.5)]';
+    cardBorder = 'border-purple-500/50';
+    cardGlow = 'shadow-[0_12px_32px_rgba(168,85,247,0.3)]';
+    progressGlow = 'from-purple-500 via-indigo-400 to-cyan-400';
   } else if (tier.id === 'BUY_NOW') {
-    cardBorder = 'border-emerald-500/60';
-    cardGlow = 'shadow-[0_20px_50px_rgba(16,185,129,0.4)]';
-    progressGlow = 'from-emerald-500 to-green-400 shadow-[0_0_12px_rgba(16,185,129,0.5)]';
+    cardBorder = 'border-emerald-500/50';
+    cardGlow = 'shadow-[0_12px_32px_rgba(16,185,129,0.3)]';
+    progressGlow = 'from-emerald-500 to-green-400';
   } else if (tier.id === 'BUY_ZONE') {
-    cardBorder = 'border-cyan-500/60';
-    cardGlow = 'shadow-[0_20px_50px_rgba(6,182,212,0.4)]';
-    progressGlow = 'from-cyan-500 to-blue-400 shadow-[0_0_12px_rgba(6,182,212,0.5)]';
+    cardBorder = 'border-cyan-500/50';
+    cardGlow = 'shadow-[0_12px_32px_rgba(6,182,212,0.3)]';
+    progressGlow = 'from-cyan-500 to-blue-400';
   } else if (tier.id === 'GET_READY') {
-    cardBorder = 'border-amber-500/60';
-    cardGlow = 'shadow-[0_20px_50px_rgba(245,158,11,0.4)]';
-    progressGlow = 'from-amber-500 to-yellow-400 shadow-[0_0_12px_rgba(245,158,11,0.5)]';
+    cardBorder = 'border-amber-500/50';
+    cardGlow = 'shadow-[0_12px_32px_rgba(245,158,11,0.3)]';
+    progressGlow = 'from-amber-500 to-yellow-400';
   } else if (tier.id === 'MAYDAY_EXIT' || tier.id === 'SLOW_BLEED' || tier.id === 'DANGER') {
-    cardBorder = 'border-rose-500/70';
-    cardGlow = 'shadow-[0_20px_50px_rgba(244,63,94,0.45)]';
-    progressGlow = 'from-rose-500 to-red-600 shadow-[0_0_12px_rgba(244,63,94,0.5)]';
+    cardBorder = 'border-rose-500/60';
+    cardGlow = 'shadow-[0_12px_32px_rgba(244,63,94,0.35)]';
+    progressGlow = 'from-rose-500 to-red-600';
   }
 
   return (
@@ -175,15 +175,15 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
         onClick={handleClick}
       >
         <div 
-          className={`transition-all duration-200 ${
-            isOpen ? 'ring-2 ring-white/40 scale-[1.02] brightness-125 rounded-md' : 'hover:brightness-110'
+          className={`transition-all duration-150 ${
+            isOpen ? 'brightness-125 scale-[1.01]' : 'hover:brightness-110'
           }`}
         >
           {children}
         </div>
       </div>
 
-      {/* Floating Hologram Preflight Card via Portal to bypass overflow clipping */}
+      {/* Mini Compact Modern Elegance Preflight Card */}
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div 
           ref={cardRef}
@@ -195,84 +195,61 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
             left: `${coords.left}px`,
             zIndex: 99999
           }}
-          className={`w-[340px] sm:w-[380px] max-w-[92vw] rounded-xl bg-[#090D16]/98 backdrop-blur-2xl border ${cardBorder} ${cardGlow} transition-all duration-200 animate-in fade-in zoom-in-95 font-mono select-none overflow-hidden`}
+          className={`w-[290px] sm:w-[305px] max-w-[92vw] rounded-xl bg-[#090D16]/98 backdrop-blur-2xl border ${cardBorder} ${cardGlow} transition-all duration-150 animate-in fade-in zoom-in-95 font-mono select-none overflow-hidden`}
         >
           {/* Top Indicator Pip (Arrow) */}
-          <div className="absolute -top-1.5 left-6 w-3 h-3 bg-[#090D16] border-t border-l border-white/20 transform rotate-45 pointer-events-none" />
+          <div className="absolute -top-1 left-5 w-2.5 h-2.5 bg-[#090D16] border-t border-l border-white/20 transform rotate-45 pointer-events-none" />
 
-          {/* Hologram Card Header */}
-          <div className="px-3.5 pt-3 pb-2.5 border-b border-white/10 bg-gradient-to-r from-white/[0.05] to-transparent">
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-200 uppercase">
-                <span className="text-amber-400">📡</span>
-                <span>PREFLIGHT RADAR HUD</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-xs font-bold text-slate-200">
-                  SCENARIO {scenario.toString().padStart(2, '0')}
-                </span>
-                {isPinned && (
-                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/40">
-                    PINNED
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Action Tier & Scenario Badge */}
-            <div className="flex items-center gap-2 mt-2">
-              <div className={`px-2.5 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 shadow-md border ${tier.badgeClass} ${tier.borderClass}`}>
-                <span className={tier.animClass}>{tier.icon}</span>
+          {/* Compact Elegance Header */}
+          <div className="px-3 py-2 border-b border-white/10 bg-white/[0.03] flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={`px-2 py-0.5 rounded text-xs font-black inline-flex items-center gap-1 shrink-0 ${tier.badgeClass}`}>
+                <span>{tier.icon}</span>
                 <span>{tier.label}</span>
-              </div>
+              </span>
               <span className="text-xs font-bold text-slate-200 truncate">
-                {badge}
+                {badge ? `${badge} • S${scenario}` : `S${scenario}`}
               </span>
             </div>
 
-            {/* Criteria Verification Progress Bar */}
-            <div className="mt-3">
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-slate-300 font-semibold uppercase tracking-wider">
-                  Checklist Criteria:
-                </span>
-                <span className={`font-black ${isPerfectPass ? 'text-emerald-300' : 'text-amber-300'}`}>
-                  {passedCount}/{totalCount} ({passPct}%)
-                </span>
-              </div>
-              <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-white/10 p-[0.5px]">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={`text-xs font-bold font-mono ${isPerfectPass ? 'text-emerald-300' : 'text-amber-300'}`}>
+                {passedCount}/{totalCount}
+              </span>
+              <div className="w-10 h-1 bg-slate-900 rounded-full overflow-hidden border border-white/10">
                 <div 
-                  className={`h-full rounded-full transition-all duration-300 bg-gradient-to-r ${progressGlow}`}
+                  className={`h-full rounded-full transition-all duration-200 bg-gradient-to-r ${progressGlow}`}
                   style={{ width: `${passPct}%` }}
                 />
               </div>
+              {isPinned && (
+                <span className="text-xs text-amber-400" title="Pinned">📌</span>
+              )}
             </div>
           </div>
 
-          {/* Interactive Checklist Rows */}
-          <div className="p-3 space-y-1.5 max-h-[260px] overflow-y-auto scrollbar-none">
+          {/* Mini Checklist Rows */}
+          <div className="p-2 space-y-1 max-h-[190px] overflow-y-auto scrollbar-none text-xs">
             {effectiveChecklist.map((item, idx) => (
               <div 
                 key={idx}
-                className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border transition-all duration-150 ${
+                className={`flex items-center justify-between px-2 py-1 rounded-md border transition-colors ${
                   item.pass 
-                    ? 'bg-emerald-950/40 border-emerald-500/30 hover:bg-emerald-950/60 hover:border-emerald-500/50 text-emerald-200' 
-                    : 'bg-rose-950/40 border-rose-500/30 hover:bg-rose-950/60 hover:border-rose-500/50 text-rose-200'
+                    ? 'bg-emerald-950/25 border-emerald-500/20 text-emerald-200' 
+                    : 'bg-rose-950/25 border-rose-500/20 text-rose-200'
                 }`}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                    item.pass ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
-                  }`}>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`font-bold shrink-0 ${item.pass ? 'text-emerald-300' : 'text-rose-300'}`}>
                     {item.pass ? '✓' : '✕'}
                   </span>
-                  <span className="text-xs font-medium text-slate-200 truncate">
+                  <span className="text-slate-300 truncate">
                     {item.label}
                   </span>
                 </div>
 
                 <div className="text-right shrink-0 ml-2">
-                  <span className="text-xs font-bold font-mono text-slate-100">
+                  <span className="font-bold font-mono text-slate-100">
                     {item.value}
                   </span>
                 </div>
@@ -280,26 +257,13 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
             ))}
           </div>
 
-          {/* Tactical Directive Rationale Footer */}
+          {/* Compact Directive Footer */}
           {reasonTh && (
-            <div className="px-3.5 py-2.5 border-t border-white/10 bg-black/40 text-xs">
-              <div className="flex items-start gap-1.5 font-sans leading-relaxed text-slate-200">
-                <span className="text-amber-400 shrink-0 text-sm mt-[-1px]">💡</span>
-                <div>
-                  <span className="text-slate-400 font-mono text-xs font-bold block mb-0.5">
-                    TACTICAL DIRECTIVE:
-                  </span>
-                  <span>{reasonTh}</span>
-                </div>
-              </div>
+            <div className="px-2.5 py-1.5 border-t border-white/10 bg-black/40 text-xs text-slate-200 flex items-start gap-1.5 leading-snug">
+              <span className="text-amber-400 shrink-0 text-xs mt-[1px]">💡</span>
+              <span className="line-clamp-2 text-slate-200">{reasonTh}</span>
             </div>
           )}
-
-          {/* Card Micro Footer Tip */}
-          <div className="px-3 py-1 bg-black/60 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400 font-sans">
-            <span>แตะเพื่อปักหมุด / เลื่อนเมาส์ออกเพื่อปิด</span>
-            <span className="font-mono text-slate-300 font-bold">{tier.id}</span>
-          </div>
         </div>,
         document.body
       )}
