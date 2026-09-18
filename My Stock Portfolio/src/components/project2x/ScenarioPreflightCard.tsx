@@ -53,16 +53,76 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
 
   const tier = getTierMetadata(trafficLight);
 
-  // Fallback checklist if engine didn't supply full checklist array
-  const effectiveChecklist: SignalCheckItem[] = signalsChecklist && signalsChecklist.length > 0 
-    ? signalsChecklist 
-    : [
-        { label: 'EMA Regime', pass: regime === 'BULL', value: regime || 'NEUTRAL' },
-        { label: 'Price', pass: true, value: currentPrice ? `$${currentPrice.toFixed(2)}` : '-', priceLevel: currentPrice },
-        { label: 'EMA 200', pass: distEma200 !== undefined ? Math.abs(distEma200) <= 3.5 : true, value: ema200Price ? `$${ema200Price.toFixed(2)} (${distEma200 !== undefined ? `${distEma200 >= 0 ? '+' : ''}${distEma200.toFixed(1)}%` : 'Active'})` : (distEma200 !== undefined ? `${distEma200 >= 0 ? '+' : ''}${distEma200.toFixed(1)}%` : 'Active'), priceLevel: ema200Price },
-        { label: 'EMA 9 Trigger', pass: isAboveEma9 ?? true, value: ema9Price ? `$${ema9Price.toFixed(2)} (${isAboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒'})` : (isAboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒'), priceLevel: ema9Price },
-        { label: 'Banker Flow', pass: (banker ?? 0) >= 5, value: `${(banker ?? 0).toFixed(1)}/20` },
-      ];
+  // Raw checklist either from engine signalsChecklist or default fallback
+  const rawList: SignalCheckItem[] = useMemo(() => {
+    return signalsChecklist && signalsChecklist.length > 0 
+      ? signalsChecklist 
+      : [
+          { label: 'EMA Regime', pass: regime === 'BULL', value: regime || 'NEUTRAL' },
+          { label: 'Price', pass: true, value: currentPrice ? `$${currentPrice.toFixed(2)}` : '-', priceLevel: currentPrice },
+          { label: 'EMA 200', pass: distEma200 !== undefined ? Math.abs(distEma200) <= 3.5 : true, value: ema200Price ? `$${ema200Price.toFixed(2)} (${distEma200 !== undefined ? `${distEma200 >= 0 ? '+' : ''}${distEma200.toFixed(1)}%` : 'Active'})` : (distEma200 !== undefined ? `${distEma200 >= 0 ? '+' : ''}${distEma200.toFixed(1)}%` : 'Active'), priceLevel: ema200Price },
+          { label: 'EMA 9 Trigger', pass: isAboveEma9 ?? true, value: ema9Price ? `$${ema9Price.toFixed(2)} (${isAboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒'})` : (isAboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒'), priceLevel: ema9Price },
+          { label: 'Banker Flow', pass: (banker ?? 0) >= 5, value: `${(banker ?? 0).toFixed(1)}/20` },
+        ];
+  }, [signalsChecklist, regime, currentPrice, ema200Price, ema9Price, distEma200, isAboveEma9, banker]);
+
+  // Live Chart Synchronization: Override Price and EMA levels with actual live canvas chart values
+  const effectiveChecklist: SignalCheckItem[] = useMemo(() => {
+    return rawList.map(item => {
+      const labelLower = item.label.toLowerCase();
+
+      // 1. Sync Price with live chart price
+      if (labelLower === 'price' && currentPrice && currentPrice > 0) {
+        return {
+          ...item,
+          value: `$${currentPrice.toFixed(2)}`,
+          priceLevel: currentPrice,
+          pass: true,
+        };
+      }
+
+      // 2. Sync EMA 200 with chart's latest EMA 200 and live distance
+      if (labelLower.includes('ema 200') || labelLower === 'dist ema 200') {
+        const e200 = ema200Price ?? item.priceLevel;
+        if (e200 && e200 > 0 && currentPrice && currentPrice > 0) {
+          const liveDist = distEma200 !== undefined 
+            ? distEma200 
+            : Number((((currentPrice - e200) / e200) * 100).toFixed(2));
+          return {
+            ...item,
+            value: `$${e200.toFixed(2)} (${liveDist >= 0 ? '+' : ''}${liveDist.toFixed(2)}%)`,
+            priceLevel: e200,
+            pass: Math.abs(liveDist) <= 3.5,
+          };
+        }
+      }
+
+      // 3. Sync EMA 9 Trigger with chart's latest EMA 9 and live state
+      if (labelLower.includes('ema 9')) {
+        const e9 = ema9Price ?? item.priceLevel;
+        if (e9 && e9 > 0 && currentPrice && currentPrice > 0) {
+          const isAbove = isAboveEma9 !== undefined ? isAboveEma9 : currentPrice >= e9;
+          return {
+            ...item,
+            value: `$${e9.toFixed(2)} (${isAbove ? 'Unlocked ⚡' : 'Locked 🔒'})`,
+            priceLevel: e9,
+            pass: isAbove,
+          };
+        }
+      }
+
+      return item;
+    });
+  }, [rawList, currentPrice, ema200Price, ema9Price, distEma200, isAboveEma9]);
+
+  // Dynamic Reason Directive with synchronized live distance
+  const liveReasonTh = useMemo(() => {
+    if (!reasonTh) return undefined;
+    if (distEma200 !== undefined && /(-?\d+\.\d+)%/.test(reasonTh)) {
+      return reasonTh.replace(/(-?\d+\.\d+)%/, `${distEma200 >= 0 ? '+' : ''}${distEma200.toFixed(2)}%`);
+    }
+    return reasonTh;
+  }, [reasonTh, distEma200]);
 
   const passedCount = effectiveChecklist.filter(item => item.pass).length;
   const totalCount = effectiveChecklist.length;
@@ -289,11 +349,11 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
             })}
           </div>
 
-          {/* Compact Directive Footer (Complete text without cut-off) */}
-          {reasonTh && (
+          {/* Compact Directive Footer (Complete text without cut-off & live distance sync) */}
+          {liveReasonTh && (
             <div className="px-2.5 py-2 border-t border-white/10 bg-black/50 text-xs text-slate-200 flex items-start gap-1.5 leading-relaxed">
               <span className="text-amber-400 shrink-0 text-xs mt-[1px]">💡</span>
-              <span className="text-slate-200 break-words leading-relaxed">{reasonTh}</span>
+              <span className="text-slate-200 break-words leading-relaxed">{liveReasonTh}</span>
             </div>
           )}
         </div>,

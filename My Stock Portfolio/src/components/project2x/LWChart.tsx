@@ -1506,6 +1506,15 @@ export const LWChart: React.FC<LWChartProps> = ({
         const isHighBanker = bVal >= 10;
         const bankerPct = Math.min(100, Math.max(0, (bVal / 20) * 100));
 
+        // Effective Live Real-Time Price: Poller livePrice -> displayBars latest close -> currentPrice
+        const effectivePrice = livePrice || (displayBars && displayBars.length > 0 ? displayBars[displayBars.length - 1].close : (currentPrice || 0));
+
+        // Latest EMA 200 & Live Distance
+        const lastEma200 = ema200 && ema200.length > 0 ? ema200[ema200.length - 1] : undefined;
+        const liveDistEma200 = effectivePrice && lastEma200
+          ? Number((((effectivePrice - lastEma200) / lastEma200) * 100).toFixed(2))
+          : propDistEma200;
+
         // EMA 9 calculation
         let ema9Cur: number | null = null;
         let ema9Dist: number = 0;
@@ -1519,8 +1528,8 @@ export const LWChart: React.FC<LWChartProps> = ({
             cur = closes[i] * k + cur * (1 - k);
           }
           ema9Cur = cur;
-          ema9Dist = currentPrice ? Number((((currentPrice - cur) / cur) * 100).toFixed(2)) : 0;
-          isEma9Above = currentPrice >= cur;
+          ema9Dist = effectivePrice ? Number((((effectivePrice - cur) / cur) * 100).toFixed(2)) : 0;
+          isEma9Above = effectivePrice >= cur;
         }
 
         return (
@@ -1541,16 +1550,12 @@ export const LWChart: React.FC<LWChartProps> = ({
                 regime={regime}
                 reasonTh={reasonTh}
                 signalsChecklist={signalsChecklist}
-                distEma200={propDistEma200 !== undefined ? propDistEma200 : (
-                  currentPrice && ema200 && ema200.length > 0 && ema200[ema200.length - 1] 
-                    ? Number((((currentPrice - ema200[ema200.length - 1]) / ema200[ema200.length - 1]) * 100).toFixed(2)) 
-                    : undefined
-                )}
+                distEma200={liveDistEma200}
                 distEma9={ema9Dist}
                 isAboveEma9={isEma9Above}
                 banker={bVal}
-                currentPrice={currentPrice}
-                ema200Price={ema200 && ema200.length > 0 ? ema200[ema200.length - 1] : undefined}
+                currentPrice={effectivePrice}
+                ema200Price={lastEma200 ?? undefined}
                 ema9Price={ema9Cur ?? undefined}
                 onHoverPriceLevel={handleHoverPriceLevel}
               >

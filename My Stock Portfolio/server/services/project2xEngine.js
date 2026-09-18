@@ -878,10 +878,16 @@ export async function calculateStockRadarSignal(symbol, { portfolioId = 'default
     ORDER BY date ASC
   `).all(upper);
 
-  // If fewer than 50 bars, sync delta from Yahoo
-  if (dbCandles.length < 50) {
+  // If fewer than 50 bars or last bar is older than today, sync recent delta from Yahoo
+  const lastBarDate = dbCandles.length > 0 ? dbCandles[dbCandles.length - 1].date : null;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const dayOfWeek = new Date().getDay();
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+  const isStale = !lastBarDate || (isWeekday && lastBarDate < todayStr);
+
+  if (dbCandles.length < 50 || isStale) {
     try {
-      await syncCandleDelta(upper, 400);
+      await syncCandleDelta(upper, dbCandles.length < 50 ? 400 : 15);
       dbCandles = db.prepare(`
         SELECT date, price, open, high, low, close, volume 
         FROM historical_prices 
