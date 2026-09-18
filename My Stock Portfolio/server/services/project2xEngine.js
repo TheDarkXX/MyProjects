@@ -339,6 +339,7 @@ export function classifyScenario({
   const d150 = distEma150 !== undefined ? distEma150 : Number((((currentPrice - ema150) / ema150) * 100).toFixed(2));
   const d200 = distEma200 !== undefined ? distEma200 : Number((((currentPrice - ema200) / ema200) * 100).toFixed(2));
   const aboveEma9 = isAboveEma9 !== undefined ? isAboveEma9 : (ema9 ? currentPrice >= ema9 : true);
+  const fmtPrice = (p) => p !== undefined && p !== null ? `$${Number(p).toFixed(2)}` : '-';
 
   // ==========================================
   // LAYER 0: VETO GUARDS (Capital Preservation)
@@ -363,7 +364,8 @@ export function classifyScenario({
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
-        { label: 'Dist EMA 200', pass: false, value: `${d200}% (< -8%)` },
+        { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Zero)` },
         { label: 'Safety VETO', pass: false, value: 'CRITICAL DANGER' }
       ]
@@ -389,15 +391,16 @@ export function classifyScenario({
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
-        { label: 'Dist EMA 200', pass: false, value: `${d200}% (< -8%)` },
+        { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Weak)` },
         { label: 'Bounce Quality', pass: false, value: 'Underwater Bounce' }
       ]
     };
   }
 
-  // 3. Core Breakdown: Prolonged failure below EMA 200 (> 4 days below and < -4.5% with no banker)
-  if (d200 < -4.5 && daysBelowEma200 >= 4 && (regime === 'BEAR' || banker <= 1)) {
+  // 3. Core Breakdown: Prolonged failure below EMA 200 (> 3 days below and < -4.0% with no banker)
+  if (d200 < -4.0 && daysBelowEma200 >= 3 && (regime === 'BEAR' || banker <= 1)) {
     return {
       scenario: 3,
       traffic_light: 'MAYDAY_EXIT',
@@ -415,7 +418,8 @@ export function classifyScenario({
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
-        { label: 'Dist EMA 200', pass: false, value: `${d200}%` },
+        { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Days Below 200', pass: false, value: `${daysBelowEma200} Days` },
         { label: 'Action', pass: false, value: 'MAYDAY EXIT' }
       ]
@@ -423,7 +427,7 @@ export function classifyScenario({
   }
 
   // 4. Slow Bleed / Death Drift: Persistent decay without bounce below EMA 200
-  if (d200 < 0 && daysBankerZero >= 8) {
+  if (d200 < -3.5 && daysBankerZero >= 8) {
     return {
       scenario: 4,
       traffic_light: 'SLOW_BLEED',
@@ -437,11 +441,12 @@ export function classifyScenario({
       regime,
       volRatio,
       reason: `Trading below EMA 200 (${d200}%) with persistent 0 Banker for ${daysBankerZero} days. Slow bleed without institutional bid. Stand by.`,
-      reason_th: `ราคาหลุดใต้เส้น EMA 200 (${d200}%) + สถาบันทิ้งหายต่อเนื่อง ${daysBankerZero} วัน — หุ้นไหลซึมไร้แรงซื้อ ถือเงินสด 100% รอโครงสร้างฟื้น`,
+      reason_th: `ราคาหลุดใต้เส้น EMA 200 ลึก (${d200}%) + สถาบันทิ้งหายต่อเนื่อง ${daysBankerZero} วัน — หุ้นไหลซึมไร้แรงซื้อ ถือเงินสด 100% รอโครงสร้างฟื้น`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
-        { label: 'Dist EMA 200', pass: false, value: `${d200}%` },
+        { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Banker Zero Days', pass: false, value: `${daysBankerZero} Days` },
         { label: 'Strategy', pass: true, value: 'Standby / Cash' }
       ]
@@ -471,9 +476,10 @@ export function classifyScenario({
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: regime },
-        { label: 'Dist EMA 200', pass: true, value: `${d200}%` },
+        { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
+        { label: 'EMA 9 Trigger', pass: true, value: `${fmtPrice(ema9)} (Unlocked ⚡)`, priceLevel: ema9 },
         { label: 'Retest Structure', pass: true, value: 'Double Bottom (Higher Low)' },
-        { label: 'EMA 9 Trigger', pass: true, value: 'Above EMA 9 (Unlocked)' },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
         { label: 'Deploy Tranche', pass: true, value: '100% Size' }
       ]
@@ -499,8 +505,9 @@ export function classifyScenario({
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: volRatio >= 1.2 },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: regime },
-        { label: 'Dist EMA 200', pass: true, value: `${d200}% (Reclaimed)` },
-        { label: 'EMA 9 Trigger', pass: true, value: 'Above EMA 9 (Active)' },
+        { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200}% Reclaimed)`, priceLevel: ema200 },
+        { label: 'EMA 9 Trigger', pass: true, value: `${fmtPrice(ema9)} (Active ⚡)`, priceLevel: ema9 },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
         { label: 'Volume Surge', pass: volRatio >= 1.2, value: `${volRatio}x 20D SMA` },
         { label: 'Deploy Tranche', pass: true, value: '75 - 100%' }
@@ -562,8 +569,9 @@ export function classifyScenario({
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: (rsi14 ? rsi14 < 50 : true), candlePass: true, volumePass: volRatio >= 0.8 },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: regime },
-        { label: 'Dist Major EMA', pass: true, value: isNearEma200 ? `EMA200 ${d200}%` : `EMA150 ${d150}%` },
-        { label: 'EMA 9 Trigger', pass: true, value: 'Above EMA 9' },
+        { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: isNearEma200 ? 'EMA 200' : 'EMA 150', pass: true, value: isNearEma200 ? `${fmtPrice(ema200)} (${d200}%)` : `${fmtPrice(ema150)} (${d150}%)`, priceLevel: isNearEma200 ? ema200 : ema150 },
+        { label: 'EMA 9 Trigger', pass: true, value: `${fmtPrice(ema9)} (Above)`, priceLevel: ema9 },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
         { label: 'Candle Rebound', pass: true, value: 'Bullish Green' },
         { label: 'Deploy Tranche', pass: true, value: '100% Size' }
@@ -590,9 +598,10 @@ export function classifyScenario({
       checklist: { regimePass: regime === 'BULL', distPass: true, bankerPass: true, rsiPass: true, candlePass: false, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: regime === 'BULL', value: regime },
-        { label: 'Dist EMA 200', pass: true, value: `${d200}%` },
+        { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
-        { label: 'EMA 9 Trigger', pass: false, value: aboveEma9 ? 'Above' : 'Below EMA 9 (Locked)' },
+        { label: 'EMA 9 Trigger', pass: false, value: `${fmtPrice(ema9)} (${aboveEma9 ? 'Above' : 'Locked 🔒'})`, priceLevel: ema9 },
         { label: 'Action', pass: true, value: 'GET READY (Hourglass)' }
       ]
     };
@@ -622,7 +631,8 @@ export function classifyScenario({
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: 'BULL Trend' },
-        { label: 'Dist EMA 50', pass: true, value: `${d50}% (Kiss Support)` },
+        { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 50', pass: true, value: `${fmtPrice(ema50)} (${d50}%)`, priceLevel: ema50 },
         { label: 'Dist EMA 150', pass: true, value: `+${d150}%` },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
         { label: 'Deploy Tranche', pass: true, value: '50% Accumulate' }
@@ -675,6 +685,8 @@ export function classifyScenario({
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: regime },
+        { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Base Duration', pass: true, value: `${daysNearEma200} Days near EMA200` },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
         { label: 'Volume Squeeze', pass: true, value: `${volRatio}x (Dry Volume)` },
@@ -705,8 +717,10 @@ export function classifyScenario({
       reason_th: `ราคาลงมาแตะแนวรับใหญ่ (${d200}%)${hasRsiDivergence ? ' + เกิดสัญญาณกระทิงซ่อน RSI Bullish Divergence' : ''} แต่สถาบันยังไม่จุดพลุ (Banker = ${banker}) — เตรียมพร้อมรอจังหวะ`,
       checklist: { regimePass: regime !== 'BEAR', distPass: true, bankerPass: false, rsiPass: (rsi14 ? rsi14 < 48 : true), candlePass: isLatestBullish, volumePass: true },
       signals_checklist: [
-        { label: 'EMA Support', pass: true, value: `${d200}%` },
-        { label: 'RSI Divergence', pass: hasRsiDivergence, value: hasRsiDivergence ? 'Bullish Div Detected' : 'None' },
+        { label: 'EMA Regime', pass: regime !== 'BEAR', value: regime },
+        { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+        { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
+        { label: 'EMA 9 Trigger', pass: aboveEma9, value: `${fmtPrice(ema9)} (${aboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒'})`, priceLevel: ema9 },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Zero / Low)` },
         { label: 'Status', pass: true, value: 'GET READY (Hourglass)' }
       ]
@@ -841,8 +855,8 @@ export function classifyScenario({
     checklist: { regimePass: regime !== 'BEAR', distPass: true, bankerPass: banker > 0, rsiPass: true, candlePass: isLatestBullish, volumePass: true },
     signals_checklist: [
       { label: 'EMA Regime', pass: regime !== 'BEAR', value: regime },
-      { label: 'Dist EMA 150', pass: true, value: `${d150 >= 0 ? '+' : ''}${d150}%` },
-      { label: 'Dist EMA 200', pass: true, value: `${d200 >= 0 ? '+' : ''}${d200}%` },
+      { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
+      { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200 >= 0 ? '+' : ''}${d200}%)`, priceLevel: ema200 },
       { label: 'Banker MCDX', pass: banker > 0, value: `${banker}/20` },
       { label: 'Status', pass: true, value: 'ON RADAR 📡' }
     ]

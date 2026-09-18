@@ -6,6 +6,7 @@ export interface SignalCheckItem {
   label: string;
   pass: boolean;
   value: string;
+  priceLevel?: number;
 }
 
 export interface ScenarioPreflightCardProps {
@@ -19,6 +20,10 @@ export interface ScenarioPreflightCardProps {
   distEma9?: number;
   isAboveEma9?: boolean;
   banker?: number;
+  currentPrice?: number;
+  ema200Price?: number;
+  ema9Price?: number;
+  onHoverPriceLevel?: (price: number | null, label?: string) => void;
   children: React.ReactNode;
 }
 
@@ -33,6 +38,10 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
   distEma9,
   isAboveEma9,
   banker,
+  currentPrice,
+  ema200Price,
+  ema9Price,
+  onHoverPriceLevel,
   children,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -49,8 +58,9 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
     ? signalsChecklist 
     : [
         { label: 'EMA Regime', pass: regime === 'BULL', value: regime || 'NEUTRAL' },
-        { label: 'Dist EMA 200', pass: distEma200 !== undefined ? Math.abs(distEma200) <= 3.5 : true, value: distEma200 !== undefined ? `${distEma200 >= 0 ? '+' : ''}${distEma200.toFixed(1)}%` : 'Active' },
-        { label: 'EMA 9 Trigger', pass: isAboveEma9 ?? true, value: isAboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒' },
+        { label: 'Price', pass: true, value: currentPrice ? `$${currentPrice.toFixed(2)}` : '-', priceLevel: currentPrice },
+        { label: 'EMA 200', pass: distEma200 !== undefined ? Math.abs(distEma200) <= 3.5 : true, value: ema200Price ? `$${ema200Price.toFixed(2)} (${distEma200 !== undefined ? `${distEma200 >= 0 ? '+' : ''}${distEma200.toFixed(1)}%` : 'Active'})` : (distEma200 !== undefined ? `${distEma200 >= 0 ? '+' : ''}${distEma200.toFixed(1)}%` : 'Active'), priceLevel: ema200Price },
+        { label: 'EMA 9 Trigger', pass: isAboveEma9 ?? true, value: ema9Price ? `$${ema9Price.toFixed(2)} (${isAboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒'})` : (isAboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒'), priceLevel: ema9Price },
         { label: 'Banker Flow', pass: (banker ?? 0) >= 5, value: `${(banker ?? 0).toFixed(1)}/20` },
       ];
 
@@ -88,6 +98,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
 
   const handleMouseLeave = () => {
     if (isPinned) return;
+    if (onHoverPriceLevel) onHoverPriceLevel(null);
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setIsOpen(false);
@@ -101,6 +112,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
     setIsPinned(prev => {
       const next = !prev;
       setIsOpen(next);
+      if (!next && onHoverPriceLevel) onHoverPriceLevel(null);
       return next;
     });
   };
@@ -127,6 +139,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
       ) {
         setIsPinned(false);
         setIsOpen(false);
+        if (onHoverPriceLevel) onHoverPriceLevel(null);
       }
     };
     if (isOpen) {
@@ -135,7 +148,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, onHoverPriceLevel]);
 
   // Glow theme per tier
   let cardBorder = 'border-slate-700/80';
@@ -195,7 +208,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
             left: `${coords.left}px`,
             zIndex: 99999
           }}
-          className={`w-[290px] sm:w-[305px] max-w-[92vw] rounded-xl bg-[#090D16]/98 backdrop-blur-2xl border ${cardBorder} ${cardGlow} transition-all duration-150 animate-in fade-in zoom-in-95 font-mono select-none overflow-hidden`}
+          className={`w-[290px] sm:w-[310px] max-w-[92vw] rounded-xl bg-[#090D16]/98 backdrop-blur-2xl border ${cardBorder} ${cardGlow} transition-all duration-150 animate-in fade-in zoom-in-95 font-mono select-none overflow-hidden`}
         >
           {/* Top Indicator Pip (Arrow) */}
           <div className="absolute -top-1 left-5 w-2.5 h-2.5 bg-[#090D16] border-t border-l border-white/20 transform rotate-45 pointer-events-none" />
@@ -228,40 +241,59 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
             </div>
           </div>
 
-          {/* Mini Checklist Rows */}
-          <div className="p-2 space-y-1 max-h-[190px] overflow-y-auto scrollbar-none text-xs">
-            {effectiveChecklist.map((item, idx) => (
-              <div 
-                key={idx}
-                className={`flex items-center justify-between px-2 py-1 rounded-md border transition-colors ${
-                  item.pass 
-                    ? 'bg-emerald-950/25 border-emerald-500/20 text-emerald-200' 
-                    : 'bg-rose-950/25 border-rose-500/20 text-rose-200'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className={`font-bold shrink-0 ${item.pass ? 'text-emerald-300' : 'text-rose-300'}`}>
-                    {item.pass ? '✓' : '✕'}
-                  </span>
-                  <span className="text-slate-300 truncate">
-                    {item.label}
-                  </span>
-                </div>
+          {/* Mini Checklist Rows with Canvas Ghost Guide Trigger */}
+          <div className="p-2 space-y-1 max-h-[220px] overflow-y-auto scrollbar-none text-xs">
+            {effectiveChecklist.map((item, idx) => {
+              const hasGuide = typeof item.priceLevel === 'number' && !isNaN(item.priceLevel) && item.priceLevel > 0;
+              return (
+                <div 
+                  key={idx}
+                  onMouseEnter={() => {
+                    if (hasGuide && onHoverPriceLevel) {
+                      onHoverPriceLevel(item.priceLevel!, item.label);
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (hasGuide && onHoverPriceLevel) {
+                      onHoverPriceLevel(null);
+                    }
+                  }}
+                  className={`flex items-center justify-between px-2 py-1 rounded-md border transition-all duration-150 cursor-default ${
+                    hasGuide ? 'hover:scale-[1.01] hover:border-amber-400/50 hover:bg-white/[0.06]' : ''
+                  } ${
+                    item.pass 
+                      ? 'bg-emerald-950/25 border-emerald-500/20 text-emerald-200' 
+                      : 'bg-rose-950/25 border-rose-500/20 text-rose-200'
+                  }`}
+                  title={hasGuide ? `ชี้เป้าบนชาร์ต: $${item.priceLevel!.toFixed(2)}` : undefined}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={`font-bold shrink-0 ${item.pass ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      {item.pass ? '✓' : '✕'}
+                    </span>
+                    <span className="text-slate-300 truncate flex items-center gap-1">
+                      <span>{item.label}</span>
+                      {hasGuide && (
+                        <span className="text-[10px] text-amber-400 opacity-60 hover:opacity-100 transition-opacity">🎯</span>
+                      )}
+                    </span>
+                  </div>
 
-                <div className="text-right shrink-0 ml-2">
-                  <span className="font-bold font-mono text-slate-100">
-                    {item.value}
-                  </span>
+                  <div className="text-right shrink-0 ml-2">
+                    <span className="font-bold font-mono text-slate-100">
+                      {item.value}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Compact Directive Footer */}
+          {/* Compact Directive Footer (Complete text without cut-off) */}
           {reasonTh && (
-            <div className="px-2.5 py-1.5 border-t border-white/10 bg-black/40 text-xs text-slate-200 flex items-start gap-1.5 leading-snug">
+            <div className="px-2.5 py-2 border-t border-white/10 bg-black/50 text-xs text-slate-200 flex items-start gap-1.5 leading-relaxed">
               <span className="text-amber-400 shrink-0 text-xs mt-[1px]">💡</span>
-              <span className="line-clamp-2 text-slate-200">{reasonTh}</span>
+              <span className="text-slate-200 break-words leading-relaxed">{reasonTh}</span>
             </div>
           )}
         </div>,

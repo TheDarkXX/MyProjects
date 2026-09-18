@@ -11,6 +11,7 @@ import {
   ColorType,
   CrosshairMode,
   LineStyle,
+  IPriceLine,
 } from 'lightweight-charts';
 import { BankerMCDXSeriesView } from './BankerMCDXPlugin';
 import { useIndicatorStore } from '../../stores/useIndicatorStore';
@@ -554,6 +555,63 @@ export const LWChart: React.FC<LWChartProps> = ({
     applyPaneLayoutHeights,
     setPaneOffsets,
   });
+
+  // Ghost Laser Price Line for Holographic Scenario Checklist hover
+  const ghostPriceLineRef = useRef<IPriceLine | null>(null);
+
+  const handleHoverPriceLevel = useCallback((price: number | null, label?: string) => {
+    const activeSeries = candleSeriesRef.current || areaSeriesRef.current;
+    if (!activeSeries) return;
+
+    if (ghostPriceLineRef.current) {
+      try {
+        activeSeries.removePriceLine(ghostPriceLineRef.current);
+      } catch (e) {}
+      ghostPriceLineRef.current = null;
+    }
+
+    if (price !== null && !isNaN(price) && price > 0) {
+      try {
+        const lbl = label || '';
+        let color = '#38BDF8';
+        if (lbl.includes('200')) {
+          color = '#F59E0B'; // Amber for EMA 200
+        } else if (lbl.includes('9')) {
+          color = '#06B6D4'; // Cyan for EMA 9
+        } else if (lbl.includes('50')) {
+          color = '#A855F7'; // Purple for EMA 50
+        } else if (lbl.includes('Price')) {
+          color = '#10B981'; // Emerald for Price
+        }
+
+        const line = activeSeries.createPriceLine({
+          price: Number(price.toFixed(2)),
+          color,
+          lineWidth: 2,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: `🎯 ${lbl.replace(/Trigger|Regime/g, '').trim() || 'TARGET'}: $${price.toFixed(2)}`,
+        });
+        ghostPriceLineRef.current = line;
+      } catch (e) {
+        console.warn('[GhostGuideRay] createPriceLine failed:', e);
+      }
+    }
+  }, [candleSeriesRef, areaSeriesRef]);
+
+  useEffect(() => {
+    return () => {
+      if (ghostPriceLineRef.current) {
+        const activeSeries = candleSeriesRef.current || areaSeriesRef.current;
+        if (activeSeries) {
+          try {
+            activeSeries.removePriceLine(ghostPriceLineRef.current);
+          } catch (e) {}
+        }
+        ghostPriceLineRef.current = null;
+      }
+    };
+  }, [candleSeriesRef, areaSeriesRef]);
 
   // 3. EXTRACTED HOOK: Live quote polling
   const { isLiveActive, isMarketOpen, livePrice } = useChartLivePulse({
@@ -1491,6 +1549,10 @@ export const LWChart: React.FC<LWChartProps> = ({
                 distEma9={ema9Dist}
                 isAboveEma9={isEma9Above}
                 banker={bVal}
+                currentPrice={currentPrice}
+                ema200Price={ema200 && ema200.length > 0 ? ema200[ema200.length - 1] : undefined}
+                ema9Price={ema9Cur ?? undefined}
+                onHoverPriceLevel={handleHoverPriceLevel}
               >
                 <div className="flex items-center gap-2 group">
                   {/* Action Signal Badge with Embedded Live Pulse Ping */}
