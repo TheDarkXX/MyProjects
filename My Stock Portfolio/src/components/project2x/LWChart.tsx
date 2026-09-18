@@ -128,6 +128,8 @@ export const LWChart: React.FC<LWChartProps> = ({
   hotMoneySeries = [],
   retailSeries = [],
   bankerMaSeries = [],
+  banker,
+  currentPrice = 0,
   scenario = 1,
   badge,
   trafficLight = 'ON_RADAR',
