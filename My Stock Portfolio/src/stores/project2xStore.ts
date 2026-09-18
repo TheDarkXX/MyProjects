@@ -81,15 +81,33 @@ export interface RadarRow {
   ema50: number | null;
   ema150: number | null;
   ema200: number | null;
+  distEma50?: number;
   distEma150: number;
   distEma200: number;
   banker: number;
   rsi14: number | null;
+  regime?: 'BULL' | 'NEUTRAL' | 'BEAR';
+  volRatio?: number;
+  high52W?: number;
+  drawdownFrom52W?: number;
   scenario: number;
   traffic_light: 'BUY_ZONE' | 'WAIT' | 'DANGER';
   badge: string;
   reason: string;
   reason_th: string;
+  checklist?: {
+    regimePass: boolean;
+    distPass: boolean;
+    bankerPass: boolean;
+    rsiPass: boolean;
+    candlePass: boolean;
+    volumePass: boolean;
+  };
+  signals_checklist?: Array<{
+    label: string;
+    pass: boolean;
+    value: string;
+  }>;
   sparkline: {
     dates?: string[];
     closes: number[];

@@ -17,11 +17,27 @@ import {
   saveSpecificDriver,
   syncQuarterlyFinancials
 } from '../services/dossierService.js';
+import { getPullbackDna } from '../services/pullbackDnaService.js';
 
 const project2xRoutes = new Hono();
 
 // Require auth
 project2xRoutes.use('*', authMiddleware);
+
+/**
+ * GET /api/project-2x/pullback-dna/:symbol
+ * Pullback & Bedrock DNA statistics (10-year analysis of bounces on EMA 50/150/200)
+ */
+project2xRoutes.get('/pullback-dna/:symbol', async (c) => {
+  const symbol = c.req.param('symbol');
+  try {
+    const dna = await getPullbackDna(symbol);
+    return c.json(dna);
+  } catch (error) {
+    console.error('[Project2X API] Pullback DNA error:', error);
+    return c.json({ error: error.message || 'Failed to analyze Pullback DNA' }, 500);
+  }
+});
 
 // Validate portfolioId parameter on all :pid routes
 project2xRoutes.use('/:pid/*', async (c, next) => {

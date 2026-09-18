@@ -34,10 +34,12 @@ import {
   ArrowDown,
   Eye,
   EyeOff,
-  Pen
+  Pen,
+  Dna
 } from 'lucide-react';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useProject2xStore, MilestoneItem, RadarRow } from '../../stores/project2xStore';
+import { PullbackDnaModal } from './PullbackDnaModal';
 import { useUiStore } from '../../stores/uiStore';
 import { useChartViewStore } from '../../stores/useChartViewStore';
 import { useHoldings } from '../../hooks/useHoldings';
@@ -99,6 +101,7 @@ export const Project2xPage: React.FC = () => {
   const [tableSortOrder, setTableSortOrder] = useState<SortOrder>('DESC');
   const [detailModalStock, setDetailModalStock] = useState<RadarRow | null>(null);
   const [stockCagrInputs, setStockCagrInputs] = useState<Record<string, number>>({});
+  const [dnaModalSymbol, setDnaModalSymbol] = useState<string | null>(null);
 
   const [inflowAmountInput, setInflowAmountInput] = useState<string>('35000');
   const [expandedRadarRow, setExpandedRadarRow] = useState<string | null>(null);
@@ -279,7 +282,7 @@ export const Project2xPage: React.FC = () => {
     }
   }
 
-  const coreQuotas = quotas.filter(q => q.category === 'Core' || q.category === 'Index');
+  const coreQuotas = quotas.filter(q => q.category === 'Core' || (q.category as string) === 'Index');
   const moonshotQuotas = quotas.filter(q => q.category === 'Moonshot');
 
   // Sorted and filtered watchlist rows
@@ -1010,17 +1013,75 @@ export const Project2xPage: React.FC = () => {
                   />
 
                   {/* Tactical Rationale under chart */}
-                  <div className="p-4 rounded-2xl bg-[#1E222D] border border-white/10 text-xs text-slate-300 space-y-1.5">
-                    <div className="flex items-center gap-2 font-bold text-cyan-300">
-                      <Info className="w-4 h-4" />
-                      <span>Tactical Playbook for {activeStockRow.symbol}:</span>
+                  <div className="p-4 rounded-2xl bg-[#1E222D] border border-white/10 text-xs text-slate-300 space-y-3 shadow-lg">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                      <div className="flex flex-wrap items-center gap-2 font-bold text-cyan-300">
+                        <Info className="w-4 h-4" />
+                        <span>Tactical Playbook for {activeStockRow.symbol}:</span>
+                        <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1 ${
+                          activeStockRow.traffic_light === 'BUY_ZONE'
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
+                            : activeStockRow.traffic_light === 'WAIT'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
+                            : 'bg-rose-500/20 text-rose-400 border border-rose-500/50'
+                        }`}>
+                          <span>{activeStockRow.traffic_light === 'BUY_ZONE' ? '🔷' : activeStockRow.traffic_light === 'WAIT' ? '🟡' : '🔴'}</span>
+                          <span>{activeStockRow.traffic_light}</span>
+                        </span>
+                        {activeStockRow.badge && (
+                          <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                            {activeStockRow.badge}
+                          </span>
+                        )}
+                        {activeStockRow.regime && (
+                          <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${
+                            activeStockRow.regime === 'BULL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                            activeStockRow.regime === 'NEUTRAL' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                            'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          }`}>
+                            Regime: {activeStockRow.regime}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Button to open Pullback DNA */}
+                      <button
+                        onClick={() => setDnaModalSymbol(activeStockRow.symbol)}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-black flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                        title="ดูสถิติย่อตัวแตะเส้น 50 / 150 / 200 ย้อนหลัง 10 ปี"
+                      >
+                        <Dna className="w-4 h-4 text-cyan-400" />
+                        <span>🧬 Pullback DNA (10Y Stats)</span>
+                      </button>
                     </div>
+
                     <p className="text-slate-200 font-medium leading-relaxed">
                       {activeStockRow.reason}
                     </p>
-                    <p className="text-slate-300 leading-relaxed">
+                    <p className="text-slate-300 leading-relaxed font-medium">
                       (ไทย: {activeStockRow.reason_th})
                     </p>
+
+                    {/* Preflight Signals Checklist Pill Strip */}
+                    {activeStockRow.signals_checklist && activeStockRow.signals_checklist.length > 0 && (
+                      <div className="pt-2 border-t border-white/5 flex flex-wrap gap-2 items-center">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Checklist:</span>
+                        {activeStockRow.signals_checklist.map((chk, i) => (
+                          <span
+                            key={i}
+                            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 border ${
+                              chk.pass
+                                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+                                : 'bg-rose-950/60 text-rose-300 border-rose-500/40'
+                            }`}
+                          >
+                            <span>{chk.pass ? '✓' : '✗'}</span>
+                            <span className="text-slate-400">{chk.label}:</span>
+                            <span className="font-bold text-white">{chk.value}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -1819,16 +1880,34 @@ export const Project2xPage: React.FC = () => {
                           {row.consecutive_eps_qs > 0 ? `🔥 ${row.consecutive_eps_qs} Qs` : '—'}
                         </td>
                         <td className="p-3.5">
-                          <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1 ${
-                            isBuy
-                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
-                              : isWait
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
-                              : 'bg-rose-500/20 text-rose-400 border border-rose-500/50'
-                          }`}>
-                            <span>{isBuy ? '🔷' : isWait ? '🟡' : '🔴'}</span>
-                            <span>{row.traffic_light}</span>
-                          </span>
+                          <div className="flex flex-col gap-1 items-start">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1 ${
+                                isBuy
+                                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
+                                  : isWait
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
+                                  : 'bg-rose-500/20 text-rose-400 border border-rose-500/50'
+                              }`}>
+                                <span>{isBuy ? '🔷' : isWait ? '🟡' : '🔴'}</span>
+                                <span>{row.traffic_light}</span>
+                              </span>
+                              {row.regime && (
+                                <span className={`px-1.5 py-0.2 rounded text-[11px] font-bold ${
+                                  row.regime === 'BULL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                                  row.regime === 'NEUTRAL' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                                  'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                }`}>
+                                  {row.regime}
+                                </span>
+                              )}
+                            </div>
+                            {row.badge && (
+                              <span className="text-[12px] font-semibold text-slate-300 flex items-center gap-1" title={row.reason_th || row.reason}>
+                                <span className="text-cyan-400">▪</span> {row.badge}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -1842,6 +1921,14 @@ export const Project2xPage: React.FC = () => {
                             >
                               <Activity className="w-3.5 h-3.5" />
                               <span>Chart</span>
+                            </button>
+                            <button
+                              onClick={() => setDnaModalSymbol(row.symbol)}
+                              className="px-2 py-1 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 text-xs font-bold border border-purple-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                              title="10-Year Pullback DNA"
+                            >
+                              <Dna className="w-3.5 h-3.5" />
+                              <span>DNA</span>
                             </button>
                             <button
                               onClick={() => {
@@ -2296,6 +2383,13 @@ export const Project2xPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 10-Year Pullback & Bedrock DNA Modal */}
+      <PullbackDnaModal
+        isOpen={!!dnaModalSymbol}
+        onClose={() => setDnaModalSymbol(null)}
+        symbol={dnaModalSymbol || ''}
+      />
     </div>
   );
 };
