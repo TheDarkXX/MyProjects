@@ -306,6 +306,9 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
         badge={radarSignal?.badge}
         regime={radarSignal?.regime}
         reasonTh={radarSignal?.reason_th}
+        signalsChecklist={radarSignal?.signals_checklist}
+        distEma150={radarSignal?.distEma150}
+        distEma200={radarSignal?.distEma200}
         timeframe={activeTimeframe}
         onTimeframeChange={(newTf) => updateTabChartSettings(tabId, { timeframe: newTf as any })}
         chartStyle={activeChartStyle}

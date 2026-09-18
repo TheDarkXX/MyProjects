@@ -24,6 +24,7 @@ import {
   SubPaneIndicatorId,
 } from '../../types/indicatorConfig';
 import { getTierMetadata, CyberTier } from '../../utils/tierConfig';
+import { ScenarioPreflightCard, SignalCheckItem } from './ScenarioPreflightCard';
 import { useDrawingStore } from '../../stores/drawingStore';
 import { LeftDrawingToolbar } from './drawings/LeftDrawingToolbar';
 import { LineFloatingToolbar } from './drawings/LineFloatingToolbar';
@@ -92,6 +93,7 @@ export interface LWChartProps {
   trafficLight?: CyberTier;
   regime?: 'BULL' | 'BEAR' | 'NEUTRAL';
   reasonTh?: string;
+  signalsChecklist?: SignalCheckItem[];
   distEma150?: number;
   distEma200?: number;
   className?: string;
@@ -135,6 +137,7 @@ export const LWChart: React.FC<LWChartProps> = ({
   trafficLight = 'ON_RADAR',
   regime,
   reasonTh,
+  signalsChecklist,
   className = '',
   onAddInflow,
   watchlist = [],
@@ -1468,7 +1471,7 @@ export const LWChart: React.FC<LWChartProps> = ({
             <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-white/25 rounded-bl pointer-events-none" />
             <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-white/25 rounded-br pointer-events-none" />
 
-            {/* POD 1: Command & Signal Action */}
+            {/* POD 1: Command & Signal Action with Holographic Preflight Hover Card */}
             <div className="flex items-center gap-2 shrink-0">
               {/* Live Radar Ping */}
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/40 border border-white/10 text-xs tracking-wider text-slate-200 font-bold uppercase shrink-0">
@@ -1479,16 +1482,33 @@ export const LWChart: React.FC<LWChartProps> = ({
                 <span>RADAR</span>
               </div>
 
-              {/* Action Signal Badge */}
-              <div className={`px-2.5 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 shadow-md border ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass}`}>
-                <span className={tier.animClass}>{tier.icon}</span>
-                <span className="tracking-wide">{tier.label}</span>
-              </div>
+              {/* Holographic Scenario Preflight Hover Card */}
+              <ScenarioPreflightCard
+                scenario={scenario}
+                badge={badge}
+                trafficLight={trafficLight}
+                regime={regime}
+                reasonTh={reasonTh}
+                signalsChecklist={signalsChecklist}
+                distEma200={distEma200}
+                distEma9={ema9Dist}
+                isAboveEma9={isEma9Above}
+                banker={bVal}
+              >
+                <div className="flex items-center gap-2 group">
+                  {/* Action Signal Badge */}
+                  <div className={`px-2.5 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 shadow-md border ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass} group-hover:scale-105 transition-transform duration-200`}>
+                    <span className={tier.animClass}>{tier.icon}</span>
+                    <span className="tracking-wide">{tier.label}</span>
+                  </div>
 
-              {/* Scenario Pill */}
-              <div className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-950/80 border border-slate-700/80 text-slate-200 tracking-wide shrink-0">
-                {badge ? `${badge} • S${scenario || 1}` : `SCENARIO ${scenario || 1}`}
-              </div>
+                  {/* Scenario Pill */}
+                  <div className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-950/80 border border-slate-700/80 text-slate-200 tracking-wide shrink-0 flex items-center gap-1 group-hover:border-slate-500 group-hover:bg-slate-900 transition-all duration-200">
+                    <span>{badge ? `${badge} • S${scenario || 1}` : `SCENARIO ${scenario || 1}`}</span>
+                    <span className="text-[10px] text-slate-400 group-hover:text-amber-300">▼</span>
+                  </div>
+                </div>
+              </ScenarioPreflightCard>
             </div>
 
             {/* Vertical Divider */}
