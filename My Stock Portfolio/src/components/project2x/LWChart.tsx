@@ -1493,7 +1493,7 @@ export const LWChart: React.FC<LWChartProps> = ({
           capsuleBg = 'bg-gradient-to-r from-[#2a1d08]/95 via-[#131D33]/90 to-[#0F172A]/95';
           pingColor = 'bg-amber-300';
           pingGlow = 'bg-amber-400';
-        } else if (tier.id === 'MAYDAY_EXIT' || tier.id === 'DANGER' || tier.id === 'SLOW_BLEED') {
+        } else if (tier.id === 'MAYDAY_EXIT' || tier.id === 'FALLING_KNIFE' || tier.id === 'DANGER' || tier.id === 'SLOW_BLEED') {
           capsuleBorder = 'border-rose-500/70';
           capsuleGlow = 'shadow-[0_0_25px_rgba(244,63,94,0.45)] animate-pulse';
           capsuleBg = 'bg-gradient-to-r from-[#330f14]/95 via-[#131D33]/90 to-[#0F172A]/95';

@@ -261,7 +261,7 @@ export async function getDossierData(portfolioId, symbol) {
 
   const isFreeRideEligible = (unrealizedPnlPct || 0) >= 100.0;
   const isEma200Broken = signalRadar?.ema200 && currentPrice < signalRadar.ema200;
-  const isDangerTraffic = signalRadar?.traffic_light === 'DANGER' || signalRadar?.traffic_light === 'MAYDAY_EXIT' || signalRadar?.traffic_light === 'SLOW_BLEED';
+  const isDangerTraffic = signalRadar?.traffic_light === 'DANGER' || signalRadar?.traffic_light === 'MAYDAY_EXIT' || signalRadar?.traffic_light === 'FALLING_KNIFE' || signalRadar?.traffic_light === 'SLOW_BLEED';
 
   if (isFreeRideEligible) {
     verdict = 'TRIM_SELL';

@@ -48,14 +48,14 @@ async function runAudit() {
         issues.push(`0 Banker but classified as BUY_NOW`);
       }
 
-      // 4. Plunged > 8% below EMA 200 with 0 banker, but NOT Mayday Exit
-      if (d200 < -8.0 && b === 0 && tier !== 'MAYDAY_EXIT') {
-        issues.push(`Severe plunge (${d200}%) with 0 Banker, but tier is ${tier} instead of MAYDAY_EXIT`);
+      // 4. Plunged > 8% below EMA 200 with 0 banker, but NOT Mayday Exit / Falling Knife
+      if (d200 < -8.0 && b === 0 && tier !== 'MAYDAY_EXIT' && tier !== 'FALLING_KNIFE') {
+        issues.push(`Severe plunge (${d200}%) with 0 Banker, but tier is ${tier} instead of MAYDAY_EXIT / FALLING_KNIFE`);
       }
 
-      // 5. High Banker (>= 12) in super trend, but classified as Mayday Exit
-      if (b >= 12 && res.regime === 'BULL' && tier === 'MAYDAY_EXIT') {
-        issues.push(`Strong institutional backing (${b}/20) in BULL regime, but classified as MAYDAY_EXIT`);
+      // 5. High Banker (>= 12) in super trend, but classified as Mayday Exit / Falling Knife
+      if (b >= 12 && res.regime === 'BULL' && (tier === 'MAYDAY_EXIT' || tier === 'FALLING_KNIFE')) {
+        issues.push(`Strong institutional backing (${b}/20) in BULL regime, but classified as ${tier}`);
       }
 
       // 6. Banker Float Dead Zone (0 < b < 1) near EMA 200 falling into S16 default
@@ -111,6 +111,7 @@ async function runAudit() {
     TO_THE_MOON: [],
     ON_RADAR: [],
     SLOW_BLEED: [],
+    FALLING_KNIFE: [],
     MAYDAY_EXIT: []
   };
 
@@ -123,13 +124,14 @@ async function runAudit() {
   console.log('='.repeat(80));
   console.log('📊 7-TIER RADAR DISTRIBUTION MATRIX:');
   console.log('='.repeat(80));
-  console.log(`🔥 BUY NOW!!    (${grouped.BUY_NOW.length}): ${grouped.BUY_NOW.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
-  console.log(`💰 BUY ZONE     (${grouped.BUY_ZONE.length}): ${grouped.BUY_ZONE.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
-  console.log(`⏳ GET READY    (${grouped.GET_READY.length}): ${grouped.GET_READY.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
-  console.log(`🚀 TO THE MOON  (${grouped.TO_THE_MOON.length}): ${grouped.TO_THE_MOON.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
-  console.log(`📡 ON RADAR     (${grouped.ON_RADAR.length}): ${grouped.ON_RADAR.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
-  console.log(`🔪 SLOW BLEED   (${grouped.SLOW_BLEED.length}): ${grouped.SLOW_BLEED.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
-  console.log(`❌ MAYDAY EXIT  (${grouped.MAYDAY_EXIT.length}): ${grouped.MAYDAY_EXIT.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`🔥 BUY NOW!!     (${grouped.BUY_NOW.length}): ${grouped.BUY_NOW.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`💰 BUY ZONE      (${grouped.BUY_ZONE.length}): ${grouped.BUY_ZONE.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`⏳ GET READY     (${grouped.GET_READY.length}): ${grouped.GET_READY.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`🚀 TO THE MOON   (${grouped.TO_THE_MOON.length}): ${grouped.TO_THE_MOON.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`📡 ON RADAR      (${grouped.ON_RADAR.length}): ${grouped.ON_RADAR.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`🔪 SLOW BLEED    (${grouped.SLOW_BLEED.length}): ${grouped.SLOW_BLEED.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`🗡️ FALLING KNIFE (${grouped.FALLING_KNIFE.length}): ${grouped.FALLING_KNIFE.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`❌ MAYDAY EXIT   (${grouped.MAYDAY_EXIT.length}): ${grouped.MAYDAY_EXIT.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
   console.log('='.repeat(80));
 
   // Print Details Table

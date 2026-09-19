@@ -122,7 +122,7 @@ export interface DossierPayload {
   };
   radar: {
     scenario: number;
-    trafficLight: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
+    trafficLight: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'FALLING_KNIFE' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
     badge?: string;
     reason?: string;
     reason_th?: string;

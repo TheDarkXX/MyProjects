@@ -231,7 +231,7 @@ export const ScenarioPreflightCard: React.FC<ScenarioPreflightCardProps> = ({
     cardBorder = 'border-amber-500/50';
     cardGlow = 'shadow-[0_12px_32px_rgba(245,158,11,0.3)]';
     progressGlow = 'from-amber-500 to-yellow-400';
-  } else if (tier.id === 'MAYDAY_EXIT' || tier.id === 'SLOW_BLEED' || tier.id === 'DANGER') {
+  } else if (tier.id === 'MAYDAY_EXIT' || tier.id === 'FALLING_KNIFE' || tier.id === 'SLOW_BLEED' || tier.id === 'DANGER') {
     cardBorder = 'border-rose-500/60';
     cardGlow = 'shadow-[0_12px_32px_rgba(244,63,94,0.35)]';
     progressGlow = 'from-rose-500 to-red-600';

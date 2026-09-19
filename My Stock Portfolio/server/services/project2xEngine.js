@@ -348,10 +348,11 @@ export function classifyScenario({
   // 1. Falling Knife: Plunged below EMA 200 with 0 Banker (BULL regime requires severe plunge < -12% to prevent capitulation wick false alarm)
   const fallingKnifeThreshold = regime === 'BULL' ? -12.0 : -8.0;
   if (d200 < fallingKnifeThreshold && banker === 0) {
+    const isOwned = ownedShares > 0;
     return {
       scenario: 1,
-      traffic_light: 'MAYDAY_EXIT',
-      badge: 'Falling Knife',
+      traffic_light: isOwned ? 'MAYDAY_EXIT' : 'FALLING_KNIFE',
+      badge: isOwned ? 'Mayday Exit' : 'Falling Knife',
       distEma9: d9,
       distEma50: d50,
       distEma150: d150,
@@ -360,25 +361,30 @@ export function classifyScenario({
       hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Plunged below EMA 200 (${d200}%) with 0 Banker. Critical danger, do not catch falling knife!`,
-      reason_th: `ราคาดิ่งหลุดเส้น EMA 200 ลึก (${d200}%) และไร้แรงสถาบัน (Banker = 0) — สัญญาณอันตรายขั้นวิกฤต ห้ามรับมีดเด็ดขาด!`,
+      reason: isOwned
+        ? `Plunged below EMA 200 (${d200}%) with 0 Banker. Critical capital risk on owned shares. Emergency Exit / Cut Loss!`
+        : `Plunged below EMA 200 (${d200}%) with 0 Banker. Critical danger, do not catch falling knife! Stand by for reversal.`,
+      reason_th: isOwned
+        ? `ราคาดิ่งหลุดเส้น EMA 200 ลึก (${d200}%) และไร้แรงสถาบัน (Banker = 0) มีหุ้นในพอร์ต — สละเรือ พิจารณาตัดขาดทุนทันที!`
+        : `ราคาดิ่งหลุดเส้น EMA 200 ลึก (${d200}%) และไร้แรงสถาบัน (Banker = 0) — สัญญาณอันตรายขั้นวิกฤต ห้ามรับมีดเด็ดขาด! รอสะเด็ดน้ำรอตั้งลำ`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
         { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
         { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Zero)` },
-        { label: 'Safety VETO', pass: false, value: 'CRITICAL DANGER' }
+        { label: 'Actionable Mandate', pass: false, value: isOwned ? 'MAYDAY EXIT (Cut Loss)' : 'FALLING KNIFE (Stand By)' }
       ]
     };
   }
 
   // 2. Dead Cat Bounce: Plunged deep below EMA 200 (> -8%) in BEAR regime trying a weak underwater bounce (1-6)
   if (d200 < -8 && banker > 0 && banker <= 6 && regime === 'BEAR') {
+    const isOwned = ownedShares > 0;
     return {
       scenario: 2,
-      traffic_light: 'MAYDAY_EXIT',
-      badge: 'Dead Cat Bounce',
+      traffic_light: isOwned ? 'MAYDAY_EXIT' : 'FALLING_KNIFE',
+      badge: isOwned ? 'Mayday Exit (Dead Cat)' : 'Dead Cat Bounce',
       distEma9: d9,
       distEma50: d50,
       distEma150: d150,
@@ -387,15 +393,19 @@ export function classifyScenario({
       hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Submerged deep below EMA 200 (${d200}%) in BEAR regime with weak institutional flow (${banker}/20). High trap risk.`,
-      reason_th: `ราคาจมลึกใต้เส้น EMA 200 (${d200}%) ในแนวโน้มขาลง (BEAR) สถาบันบางตา (${banker}/20) — ระวังการเด้งหลอกเพื่อทุบต่อ`,
+      reason: isOwned
+        ? `Submerged deep below EMA 200 (${d200}%) in BEAR regime. Owned shares at risk, beware trap bounce. Exit / Cut Loss.`
+        : `Submerged deep below EMA 200 (${d200}%) in BEAR regime with weak institutional flow (${banker}/20). High trap risk, do not catch.`,
+      reason_th: isOwned
+        ? `ราคาจมลึกใต้เส้น EMA 200 (${d200}%) ในแนวโน้มขาลง มีหุ้นในพอร์ต — ระวังกับดักเด้งหลอก พิจารณาขายตัดลดความเสี่ยง`
+        : `ราคาจมลึกใต้เส้น EMA 200 (${d200}%) ในแนวโน้มขาลง (BEAR) สถาบันบางตา (${banker}/20) — ห้ามรับมีด ระวังการเด้งหลอกเพื่อทุบต่อ`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
         { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
         { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Weak)` },
-        { label: 'Bounce Quality', pass: false, value: 'Underwater Bounce' }
+        { label: 'Bounce Quality', pass: false, value: isOwned ? 'Exit Trap Bounce' : 'Underwater Trap Bounce' }
       ]
     };
   }
@@ -406,10 +416,11 @@ export function classifyScenario({
   const isCoreBreakdown = (regime === 'BEAR' && d200 < -4.0 && daysBelowEma200 >= 3) ||
                           (regime !== 'BEAR' && d200 < -5.0 && daysBelowEma200 >= 5 && banker <= 1);
   if (isCoreBreakdown) {
+    const isOwned = ownedShares > 0;
     return {
       scenario: 3,
-      traffic_light: 'MAYDAY_EXIT',
-      badge: 'Core Breakdown',
+      traffic_light: isOwned ? 'MAYDAY_EXIT' : 'FALLING_KNIFE',
+      badge: isOwned ? 'Mayday Exit (Breakdown)' : 'Core Breakdown',
       distEma9: d9,
       distEma50: d50,
       distEma150: d150,
@@ -418,15 +429,19 @@ export function classifyScenario({
       hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Core trend broken below EMA 200 for ${daysBelowEma200} days (${d200}%). Severe capital risk.`,
-      reason_th: `โครงสร้างหลักพัง หลุดต่ำกว่าเส้น EMA 200 ต่อเนื่อง ${daysBelowEma200} วัน (${d200}%) — พิจารณาคัทลอส/หยุดขาดทุน`,
+      reason: isOwned
+        ? `Core trend broken below EMA 200 for ${daysBelowEma200} days (${d200}%). Severe capital risk, stop loss now.`
+        : `Core trend broken below EMA 200 for ${daysBelowEma200} days (${d200}%). Severe falling knife, wait for base repair.`,
+      reason_th: isOwned
+        ? `โครงสร้างหลักพัง หลุดต่ำกว่าเส้น EMA 200 ต่อเนื่อง ${daysBelowEma200} วัน (${d200}%) มีหุ้นในพอร์ต — สละเรือ พิจารณาตัดขาดทุน/หยุดขาดทุน`
+        : `โครงสร้างหลักพัง หลุดต่ำกว่าเส้น EMA 200 ต่อเนื่อง ${daysBelowEma200} วัน (${d200}%) — มีดร่วงหนัก ห้ามรับมีด รอซ่อมสร้างฐานใหม่`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
         { label: 'EMA Regime', pass: false, value: regime },
         { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
         { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Days Below 200', pass: false, value: `${daysBelowEma200} Days` },
-        { label: 'Action', pass: false, value: 'MAYDAY EXIT' }
+        { label: 'Action', pass: false, value: isOwned ? 'MAYDAY EXIT (Cut Loss)' : 'FALLING KNIFE (Stand By)' }
       ]
     };
   }
@@ -769,7 +784,7 @@ export function classifyScenario({
       return {
         scenario: 14,
         traffic_light: 'ON_RADAR',
-        badge: 'Overbought Run',
+        badge: 'MOON (No Chase)',
         distEma9: d9,
         distEma50: d50,
         distEma150: d150,
@@ -778,14 +793,14 @@ export function classifyScenario({
         hasRsiDivergence,
         regime,
         volRatio,
-        reason: `Extended +${d150}% above EMA 150 with heavy institutional flow (${banker}/20). Do not chase at highs; wait for pullback.`,
-        reason_th: `ราคาลอยฟ้าสูง (+${d150}%) เหนือแนวรับใหญ่ สถาบันหนาแน่น — ห้ามไล่ราคาเด็ดขาด เฝ้ารอย่อตัวแตะแนวรับ`,
+        reason: `Extended +${d150}% above EMA 150 with heavy institutional flow (${banker}/20). At the Moon, do not chase at highs; wait for pullback.`,
+        reason_th: `หุ้นพุ่งลอยฟ้าแตะดวงจันทร์ (+${d150}%) สถาบันหนาแน่น แต่เราไม่มีของ — ห้ามกระโดดเกาะยอดดอยเด็ดขาด! เฝ้ารอย่อตัวแตะแนวรับ`,
         checklist: { regimePass: true, distPass: false, bankerPass: true, rsiPass: false, candlePass: true, volumePass: true },
         signals_checklist: [
           { label: 'Dist EMA 150', pass: false, value: `+${d150}% (> ${obThreshold}%)` },
           { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
           { label: 'Position', pass: false, value: 'No Shares (Do Not Chase)' },
-          { label: 'Action', pass: true, value: 'ON RADAR 📡' }
+          { label: 'Action', pass: true, value: 'MOON 🚀 (No Chase)' }
         ]
       };
     }
@@ -796,7 +811,7 @@ export function classifyScenario({
     return {
       scenario: 15,
       traffic_light: 'TO_THE_MOON',
-      badge: 'Trend Runner',
+      badge: 'RUNNER (Surfing Trend)',
       distEma9: d9,
       distEma50: d50,
       distEma150: d150,
@@ -806,43 +821,43 @@ export function classifyScenario({
       regime,
       volRatio,
       reason: `Perfect Bullish order (50 > 150 > 200) surfing above EMA 9 with solid institutional power (${banker}/20). Trend on fire!`,
-      reason_th: `เทรนด์ขาขึ้นสมบูรณ์แบบ วิ่งเกาะเหนือเส้น Trigger EMA 9 สถาบันคุมเข้ม (${banker}/20) — วิ่งตามเทรนด์เต็มสูบ นั่งทับมือ!`,
+      reason_th: `เทรนด์ขาขึ้นสมบูรณ์แบบ วิ่งเกาะไต่ระดับเหนือเส้น Trigger EMA 9 (RUNNER ⚡) สถาบันคุมเข้ม (${banker}/20) — วิ่งตามเทรนด์เต็มสูบ นั่งทับมือ!`,
       checklist: { regimePass: true, distPass: true, bankerPass: true, rsiPass: true, candlePass: true, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: true, value: 'Super BULL (50 > 150 > 200)' },
         { label: 'EMA 9 Trigger', pass: true, value: 'Surfing Above EMA 9' },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20 (Strong)` },
-        { label: 'Action', pass: true, value: 'TO THE MOON 🚀' }
+        { label: 'Action', pass: true, value: 'RUNNER ⚡ (Ride Trend)' }
       ]
     };
   }
 
   // ==========================================
-  // LAYER 6: ON_RADAR (Stealth Monochrome Fallback)
+  // LAYER 6: ON_RADAR (RUNNER ⚡ vs DIP BUY 🧲)
   // ==========================================
 
-  // 16. Default: Consolidating / Pullback with high granularity
-  let defaultBadge = 'Consolidating';
-  let defaultTh = 'ราคาวิ่งตามเทรนด์ปกติ รอจังหวะย่อตัวลงมาแตะแนวรับ';
+  // 16. Default: Consolidating / Pullback with RUNNER vs DIP BUY classification
+  let defaultBadge = 'RUNNER (Consolidating)';
+  let defaultTh = 'หุ้นกำลังวิ่งรันเทรนด์ปกติ โมเมนตัมทรงตัว รอจังหวะย่อตัวลงมาแตะแนวรับ';
   
   if (d200 < 0) {
     if (d200 < -3.5) {
-      defaultBadge = 'Below Bedrock';
-      defaultTh = `ราคาหลุดต่ำกว่าเส้น EMA 200 (${d200}%) เฝ้าสังเกตการณ์ในเรดาร์ ห้ามรีบเข้ารับ`;
+      defaultBadge = 'DIP BUY (Below Bedrock)';
+      defaultTh = `ราคาหลุดต่ำกว่าเส้น EMA 200 (${d200}%) เฝ้าสังเกตการณ์ในเรดาร์ขาย่อ ห้ามรีบเข้ารับ`;
     } else {
-      defaultBadge = 'Testing Under 200';
+      defaultBadge = 'DIP BUY (Testing 200)';
       defaultTh = `ราคากำลังทดสอบใต้เส้น EMA 200 (${d200}%) รอแรงซื้อดึงกลับมายืนเหนือเส้น`;
     }
   } else {
     if (d150 < 0 && d150 >= -3) {
-      defaultBadge = 'Healthy Dip';
-      defaultTh = 'ราคาย่อตัวตามปกติในกรอบ -1% ถึง -3% กำลังจับตาแนวรับ';
+      defaultBadge = 'DIP BUY (Healthy Dip)';
+      defaultTh = 'ราคาย่อตัวตามปกติในกรอบ -1% ถึง -3% กำลังจับตาแนวรับย่อซื้อ';
     } else if (d150 < -3 && d150 >= -6) {
-      defaultBadge = 'Deep Pullback';
-      defaultTh = 'ราคาย่อตัวลึก -3% ถึง -6% ใกล้โซนแนวรับใหญ่';
+      defaultBadge = 'DIP BUY (Deep Pullback)';
+      defaultTh = 'ราคาย่อตัวลึก -3% ถึง -6% ใกล้โซนแนวรับใหญ่ ดักซุ่มยิง';
     } else if (d150 < -6) {
-      defaultBadge = 'Approaching Bedrock';
-      defaultTh = 'ราคากำลังทิ้งตัวลงหาแนวรับหินผา EMA 200';
+      defaultBadge = 'DIP BUY (Approaching Bedrock)';
+      defaultTh = 'ราคากำลังทิ้งตัวลงหาแนวรับหินผา EMA 200 เตรียมโหลดกระสุน';
     }
   }
 
@@ -866,7 +881,7 @@ export function classifyScenario({
       { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
       { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200 >= 0 ? '+' : ''}${d200}%)`, priceLevel: ema200 },
       { label: 'Banker MCDX', pass: banker > 0, value: `${banker}/20` },
-      { label: 'Status', pass: true, value: 'ON RADAR 📡' }
+      { label: 'Radar Mode', pass: true, value: defaultBadge.startsWith('RUNNER') ? 'RUNNER ⚡ (ขาขึ้น)' : 'DIP BUY 🧲 (ขาย่อ)' }
     ]
   };
 }

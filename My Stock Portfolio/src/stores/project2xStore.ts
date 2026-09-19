@@ -95,7 +95,7 @@ export interface RadarRow {
   high52W?: number;
   drawdownFrom52W?: number;
   scenario: number;
-  traffic_light: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
+  traffic_light: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'FALLING_KNIFE' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
   badge: string;
   reason: string;
   reason_th: string;

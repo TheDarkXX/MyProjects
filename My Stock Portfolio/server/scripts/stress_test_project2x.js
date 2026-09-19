@@ -6,7 +6,7 @@ console.log('='.repeat(85));
 console.log('Target: ~60,000 Permutations | 5 Execution Phases | 0-Veto Toleration\n');
 
 const startTime = Date.now();
-const validTiers = new Set(['BUY_NOW', 'BUY_ZONE', 'GET_READY', 'TO_THE_MOON', 'ON_RADAR', 'SLOW_BLEED', 'MAYDAY_EXIT']);
+const validTiers = new Set(['BUY_NOW', 'BUY_ZONE', 'GET_READY', 'TO_THE_MOON', 'ON_RADAR', 'SLOW_BLEED', 'FALLING_KNIFE', 'MAYDAY_EXIT']);
 
 // ============================================================================
 // PHASE 1: FULL-SPECTRUM COMBINATORIAL (3-Tier Strategic Sampling)
@@ -90,10 +90,10 @@ function runInvariantChecks(input, res) {
     }
   }
 
-  // INV-7: BEAR underwater bounce (< -8% and banker 1-6) must trigger S2 MAYDAY_EXIT
+  // INV-7: BEAR underwater bounce (< -8% and banker 1-6) must trigger S2 (MAYDAY_EXIT / FALLING_KNIFE)
   if (input.regime === 'BEAR' && input.distEma200 < -8.0 && input.banker > 0 && input.banker <= 6) {
-    if (res.scenario !== 2 || res.traffic_light !== 'MAYDAY_EXIT') {
-      return { rule: 'INV-7', desc: 'BEAR underwater bounce (< -8%, banker 1-6) failed S2 MAYDAY_EXIT', input, res };
+    if (res.scenario !== 2 || (res.traffic_light !== 'MAYDAY_EXIT' && res.traffic_light !== 'FALLING_KNIFE')) {
+      return { rule: 'INV-7', desc: 'BEAR underwater bounce (< -8%, banker 1-6) failed S2 VETO', input, res };
     }
   }
 
@@ -269,7 +269,7 @@ for (const t of phase2Tests) {
   const res = classifyScenario(t.input);
   let ok = true;
   if (t.expectScen !== undefined && res.scenario !== t.expectScen) ok = false;
-  if (t.expectTier !== undefined && res.traffic_light !== t.expectTier) ok = false;
+  if (t.expectTier !== undefined && res.traffic_light !== t.expectTier && !(t.expectTier === 'MAYDAY_EXIT' && res.traffic_light === 'FALLING_KNIFE')) ok = false;
   if (t.rejectScen !== undefined && res.scenario === t.rejectScen) ok = false;
 
   if (ok) p2Passed++;
@@ -367,21 +367,21 @@ console.log('🛡️ PHASE 4: SEMANTIC INVARIANT MATRIX (SR-01 to SR-23)');
 console.log('='.repeat(85));
 
 const phase4Rules = [
-  // SR-01: BEAR + d200 < -8% + banker 1-6 -> S2 MAYDAY_EXIT
-  { name: 'SR-01a: BEAR d200=-10% banker=2', input: { ...baseCliff, regime: 'BEAR', distEma200: -10.0, banker: 2 }, check: r => r.scenario === 2 && r.traffic_light === 'MAYDAY_EXIT' },
-  { name: 'SR-01b: BEAR d200=-8.5% banker=5', input: { ...baseCliff, regime: 'BEAR', distEma200: -8.5, banker: 5 }, check: r => r.scenario === 2 && r.traffic_light === 'MAYDAY_EXIT' },
+  // SR-01: BEAR + d200 < -8% + banker 1-6 -> S2 MAYDAY_EXIT / FALLING_KNIFE
+  { name: 'SR-01a: BEAR d200=-10% banker=2', input: { ...baseCliff, regime: 'BEAR', distEma200: -10.0, banker: 2 }, check: r => r.scenario === 2 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
+  { name: 'SR-01b: BEAR d200=-8.5% banker=5', input: { ...baseCliff, regime: 'BEAR', distEma200: -8.5, banker: 5 }, check: r => r.scenario === 2 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
 
-  // SR-02: BEAR + d200 < -4% + daysBelow >= 3 -> S3 MAYDAY_EXIT
-  { name: 'SR-02a: BEAR d200=-4.5% daysBelow=3 banker=3', input: { ...baseCliff, regime: 'BEAR', distEma200: -4.5, daysBelowEma200: 3, banker: 3 }, check: r => r.scenario === 3 && r.traffic_light === 'MAYDAY_EXIT' },
-  { name: 'SR-02b: BEAR d200=-6.0% daysBelow=5 banker=10', input: { ...baseCliff, regime: 'BEAR', distEma200: -6.0, daysBelowEma200: 5, banker: 10 }, check: r => r.scenario === 3 && r.traffic_light === 'MAYDAY_EXIT' },
+  // SR-02: BEAR + d200 < -4% + daysBelow >= 3 -> S3 MAYDAY_EXIT / FALLING_KNIFE
+  { name: 'SR-02a: BEAR d200=-4.5% daysBelow=3 banker=3', input: { ...baseCliff, regime: 'BEAR', distEma200: -4.5, daysBelowEma200: 3, banker: 3 }, check: r => r.scenario === 3 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
+  { name: 'SR-02b: BEAR d200=-6.0% daysBelow=5 banker=10', input: { ...baseCliff, regime: 'BEAR', distEma200: -6.0, daysBelowEma200: 5, banker: 10 }, check: r => r.scenario === 3 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
 
-  // SR-03: BULL + d200 < -12% + banker=0 -> S1 MAYDAY_EXIT
-  { name: 'SR-03a: BULL d200=-12.5% banker=0', input: { ...baseCliff, regime: 'BULL', distEma200: -12.5, banker: 0 }, check: r => r.scenario === 1 && r.traffic_light === 'MAYDAY_EXIT' },
-  { name: 'SR-03b: BULL d200=-25.0% banker=0', input: { ...baseCliff, regime: 'BULL', distEma200: -25.0, banker: 0 }, check: r => r.scenario === 1 && r.traffic_light === 'MAYDAY_EXIT' },
+  // SR-03: BULL + d200 < -12% + banker=0 -> S1 MAYDAY_EXIT / FALLING_KNIFE
+  { name: 'SR-03a: BULL d200=-12.5% banker=0', input: { ...baseCliff, regime: 'BULL', distEma200: -12.5, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
+  { name: 'SR-03b: BULL d200=-25.0% banker=0', input: { ...baseCliff, regime: 'BULL', distEma200: -25.0, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
 
-  // SR-04: non-BULL + d200 < -8% + banker=0 -> S1 MAYDAY_EXIT
-  { name: 'SR-04a: NEUTRAL d200=-8.5% banker=0', input: { ...baseCliff, regime: 'NEUTRAL', distEma200: -8.5, banker: 0 }, check: r => r.scenario === 1 && r.traffic_light === 'MAYDAY_EXIT' },
-  { name: 'SR-04b: BEAR d200=-9.0% banker=0', input: { ...baseCliff, regime: 'BEAR', distEma200: -9.0, banker: 0 }, check: r => r.scenario === 1 && r.traffic_light === 'MAYDAY_EXIT' },
+  // SR-04: non-BULL + d200 < -8% + banker=0 -> S1 MAYDAY_EXIT / FALLING_KNIFE
+  { name: 'SR-04a: NEUTRAL d200=-8.5% banker=0', input: { ...baseCliff, regime: 'NEUTRAL', distEma200: -8.5, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
+  { name: 'SR-04b: BEAR d200=-9.0% banker=0', input: { ...baseCliff, regime: 'BEAR', distEma200: -9.0, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
 
   // SR-05: daysBankerZero >= 8 + d200 < threshold -> S4 SLOW_BLEED
   { name: 'SR-05a: BEAR d200=-3.8% daysBankerZero=8', input: { ...baseCliff, regime: 'BEAR', distEma200: -3.8, daysBankerZero: 8, banker: 0 }, check: r => r.scenario === 4 && r.traffic_light === 'SLOW_BLEED' },
@@ -463,7 +463,7 @@ console.log('🌪️ PHASE 5: BLACK SWAN & NUMERICAL CRASH RESILIENCE');
 console.log('='.repeat(85));
 
 const phase5Tests = [
-  { name: 'BlackSwan 1: Flash Crash -80% with 0 Banker in BEAR', input: { ...baseCliff, currentPrice: 20, distEma200: -80, banker: 0, regime: 'BEAR' }, check: r => r.traffic_light === 'MAYDAY_EXIT' },
+  { name: 'BlackSwan 1: Flash Crash -80% with 0 Banker in BEAR', input: { ...baseCliff, currentPrice: 20, distEma200: -80, banker: 0, regime: 'BEAR' }, check: r => r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE' },
   { name: 'BlackSwan 2: Hyper parabolic +800% run (holding shares)', input: { ...baseCliff, currentPrice: 900, distEma150: 800, banker: 20, ownedShares: 100, regime: 'BULL' }, check: r => r.traffic_light === 'TO_THE_MOON' },
   { name: 'BlackSwan 3: Hyper parabolic +800% run (0 shares - no chase)', input: { ...baseCliff, currentPrice: 900, distEma150: 800, banker: 20, ownedShares: 0, regime: 'BULL' }, check: r => r.traffic_light === 'ON_RADAR' },
   { name: 'BlackSwan 4: Volume drought (volRatio = 0.0)', input: { ...baseCliff, currentPrice: 100, distEma200: 0, banker: 0, volRatio: 0, regime: 'BULL' }, check: r => r.traffic_light === 'GET_READY' },

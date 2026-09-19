@@ -5,6 +5,7 @@ export type CyberTier =
   | 'GET_READY' 
   | 'ON_RADAR' 
   | 'SLOW_BLEED' 
+  | 'FALLING_KNIFE'
   | 'MAYDAY_EXIT'
   | 'WAIT'
   | 'DANGER';
@@ -86,7 +87,7 @@ export const TIER_CONFIG: Record<string, TierMetadata> = {
     glowClass: 'shadow-none',
     textClass: 'text-slate-300',
     bgGradient: 'from-zinc-950/80 via-neutral-900/70 to-[#0A0E1A]',
-    descriptionTh: 'ราคาวิ่งตามเทรนด์ปกติ เฝ้าสังเกตการณ์ในเรดาร์',
+    descriptionTh: 'ราคาวิ่งตามเทรนด์ปกติ เฝ้าสังเกตการณ์ในเรดาร์ (RUNNER ⚡ / DIP BUY 🧲)',
     rank: 5
   },
   SLOW_BLEED: {
@@ -102,6 +103,19 @@ export const TIER_CONFIG: Record<string, TierMetadata> = {
     descriptionTh: 'หุ้นไหลซึมต่อเนื่อง ไร้แรงสถาบันซื้อ ถือเงินสด 100% รอโครงสร้างฟื้น',
     rank: 6
   },
+  FALLING_KNIFE: {
+    id: 'FALLING_KNIFE',
+    label: 'FALLING KNIFE',
+    icon: '🗡️',
+    badgeClass: 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white font-black',
+    animClass: 'animate-flash-alert',
+    borderClass: 'border-rose-500/80',
+    glowClass: 'shadow-[0_0_25px_rgba(225,29,72,0.7)]',
+    textClass: 'text-rose-300',
+    bgGradient: 'from-rose-950/90 via-red-950/80 to-[#0A0E1A]',
+    descriptionTh: 'มีดกำลังร่วงแรง ไร้แรงซื้อสถาบัน ห้ามรับมีดเด็ดขาด! ถือเงินสด 100% รอสะเด็ดน้ำรอตั้งลำ',
+    rank: 7
+  },
   MAYDAY_EXIT: {
     id: 'MAYDAY_EXIT',
     label: 'MAYDAY EXIT',
@@ -112,7 +126,7 @@ export const TIER_CONFIG: Record<string, TierMetadata> = {
     glowClass: 'shadow-[0_0_25px_rgba(220,38,38,0.7)]',
     textClass: 'text-red-300',
     bgGradient: 'from-red-950/90 via-rose-950/80 to-[#0A0E1A]',
-    descriptionTh: 'สัญญาณอันตรายขั้นวิกฤต หลุดต่ำกว่า EMA 200 ลึก พิจารณาหยุดขาดทุน!',
+    descriptionTh: 'สัญญาณอันตรายขั้นวิกฤต มีหุ้นในพอร์ต พิจารณาตัดขาดทุน/สละเรือทันที!',
     rank: 7
   },
   // Legacy Fallbacks
@@ -130,16 +144,16 @@ export const TIER_CONFIG: Record<string, TierMetadata> = {
     rank: 5
   },
   DANGER: {
-    id: 'MAYDAY_EXIT',
-    label: 'MAYDAY EXIT',
-    icon: '❌',
-    badgeClass: 'bg-gradient-to-r from-red-700 via-rose-800 to-red-900 text-white font-black',
+    id: 'FALLING_KNIFE',
+    label: 'FALLING KNIFE',
+    icon: '🗡️',
+    badgeClass: 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white font-black',
     animClass: 'animate-flash-alert',
-    borderClass: 'border-red-500/80',
-    glowClass: 'shadow-[0_0_25px_rgba(220,38,38,0.7)]',
-    textClass: 'text-red-300',
-    bgGradient: 'from-red-950/90 via-rose-950/80 to-[#0A0E1A]',
-    descriptionTh: 'สัญญาณอันตราย หลุดต่ำกว่า EMA 200 ลึก',
+    borderClass: 'border-rose-500/80',
+    glowClass: 'shadow-[0_0_25px_rgba(225,29,72,0.7)]',
+    textClass: 'text-rose-300',
+    bgGradient: 'from-rose-950/90 via-red-950/80 to-[#0A0E1A]',
+    descriptionTh: 'สัญญาณอันตราย มีดร่วงหลุดต่ำกว่า EMA 200 ลึก',
     rank: 7
   }
 };

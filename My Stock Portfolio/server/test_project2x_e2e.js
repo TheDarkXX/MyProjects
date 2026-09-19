@@ -46,11 +46,15 @@ async function runTests() {
   }
   console.log('✅ Test 4: Scenario 8 V-Shape Rebound classified properly (BUY_NOW 🔥)');
 
-  const s3 = classifyScenario({ currentPrice: 85, ema50: 105, ema150: 100, ema200: 95, banker: 0, rsi14: 25 });
-  if (s3.scenario !== 1 || s3.traffic_light !== 'MAYDAY_EXIT') {
-    throw new Error(`Scenario 1 Falling Knife failed: got ${s3.scenario} ${s3.traffic_light}`);
+  const s3Unowned = classifyScenario({ currentPrice: 85, ema50: 105, ema150: 100, ema200: 95, banker: 0, rsi14: 25, ownedShares: 0 });
+  if (s3Unowned.scenario !== 1 || s3Unowned.traffic_light !== 'FALLING_KNIFE') {
+    throw new Error(`Scenario 1 Falling Knife (Unowned) failed: got ${s3Unowned.scenario} ${s3Unowned.traffic_light}`);
   }
-  console.log('✅ Test 5: Scenario 1 Falling Knife classified properly (MAYDAY_EXIT ❌)');
+  const s3Owned = classifyScenario({ currentPrice: 85, ema50: 105, ema150: 100, ema200: 95, banker: 0, rsi14: 25, ownedShares: 100 });
+  if (s3Owned.scenario !== 1 || s3Owned.traffic_light !== 'MAYDAY_EXIT') {
+    throw new Error(`Scenario 1 Mayday Exit (Owned) failed: got ${s3Owned.scenario} ${s3Owned.traffic_light}`);
+  }
+  console.log('✅ Test 5: Scenario 1 Falling Knife & Mayday Exit classified properly (FALLING_KNIFE 🗡️ & MAYDAY_EXIT ❌)');
 
   // Test 5: Quotas Initialization
   console.log('Syncing quotas...');
