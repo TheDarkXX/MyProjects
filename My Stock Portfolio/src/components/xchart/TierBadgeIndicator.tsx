@@ -27,6 +27,7 @@ export interface TierVisualInfo {
   icon: string;
   label: string;
   subLabel?: string;
+  subMode?: 'DIP_BUY' | 'REVERSAL' | null;
   scenarioNum?: number;
   scenarioTitle?: string;
   reasonTh?: string;
@@ -106,70 +107,62 @@ export function getTierVisualInfo(
     };
   }
 
-  // Tier 5: ON RADAR ➔ Split into RUNNER ⚡ vs DIP BUY 🧲
-  if (traffic_light === 'ON_RADAR' || upperBadge.includes('RUNNER') || upperBadge.includes('DIP BUY')) {
-    const isRunner = upperBadge.includes('RUNNER') || scenario === 15;
-    if (isRunner) {
+  // Tier 4: GET READY ⏳ with 2 Core Sub-Modes (Ready: Dip Buy 🧲 vs Ready: Reversal 🔄)
+  const readySubMode = (radarData as any)?.ready_sub_mode;
+  if (
+    traffic_light === 'GET_READY' || 
+    upperBadge.includes('READY') || 
+    upperBadge.includes('DIP BUY') ||
+    upperBadge.includes('TESTING SUPPORT') ||
+    upperBadge.includes('EARLY BIRD') ||
+    readySubMode
+  ) {
+    const isDipBuy = readySubMode === 'DIP_BUY' || upperBadge.includes('DIP') || upperBadge.includes('TESTING SUPPORT');
+    if (isDipBuy) {
       return {
-        tierId: 'RUNNER',
-        icon: '⚡',
-        label: 'RUNNER',
-        subLabel: 'โต้คลื่นโมเมนตัมเหนือ EMA 9',
-        scenarioNum: scenario,
-        scenarioTitle: badge,
-        reasonTh: reason_th || reason,
-        spineClass: 'bg-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.9)]',
-        badgeClass: 'text-cyan-300',
-        textGlowClass: 'text-cyan-300 font-semibold',
-        isRecognized: true
-      };
-    } else {
-      return {
-        tierId: 'DIP_BUY',
+        tierId: 'GET_READY',
+        subMode: 'DIP_BUY',
         icon: '🧲',
-        label: 'DIP BUY',
-        subLabel: 'ทิ้งตัวหาแนวรับเตรียมกระสุน',
+        label: 'Ready: Dip Buy',
+        subLabel: 'รอย่อแตะแนวรับใหญ่เตรียมกระสุน',
         scenarioNum: scenario,
-        scenarioTitle: badge,
+        scenarioTitle: badge || 'Ready: Dip Buy',
         reasonTh: reason_th || reason,
         spineClass: 'bg-[#FF9100] shadow-[0_0_8px_rgba(255,145,0,0.85)]',
-        badgeClass: 'text-orange-300',
-        textGlowClass: 'text-orange-300 font-semibold',
+        badgeClass: 'text-amber-300',
+        textGlowClass: 'text-amber-300 font-semibold',
         isRecognized: true
       };
     }
-  }
-
-  // Tier 3: BUY ZONE 💰
-  if (traffic_light === 'BUY_ZONE') {
-    return {
-      tierId: 'BUY_ZONE',
-      icon: '💰',
-      label: 'BUY ZONE',
-      subLabel: 'โซนสะสมฐานไม้แรก DCA',
-      scenarioNum: scenario,
-      scenarioTitle: badge,
-      reasonTh: reason_th || reason,
-      spineClass: 'bg-[#00BFA5] shadow-[0_0_8px_rgba(0,191,165,0.85)]',
-      badgeClass: 'text-teal-300',
-      textGlowClass: 'text-teal-300 font-semibold',
-      isRecognized: true
-    };
-  }
-
-  // Tier 4: GET READY ⏳
-  if (traffic_light === 'GET_READY') {
     return {
       tierId: 'GET_READY',
-      icon: '⏳',
-      label: 'GET READY',
-      subLabel: 'หมุนนาฬิกาทราย รอยืนเหนือ EMA 9',
+      subMode: 'REVERSAL',
+      icon: '🔄',
+      label: 'Ready: Reversal',
+      subLabel: 'รอเด้งกลับตัว / บีบตัวรอบใหม่',
       scenarioNum: scenario,
-      scenarioTitle: badge,
+      scenarioTitle: badge || 'Ready: Reversal',
       reasonTh: reason_th || reason,
       spineClass: 'bg-[#FFD600] shadow-[0_0_8px_rgba(255,214,0,0.85)]',
       badgeClass: 'text-yellow-300',
       textGlowClass: 'text-yellow-300 font-semibold',
+      isRecognized: true
+    };
+  }
+
+  // Tier 5: ON RADAR ➔ RUNNER ⚡ (Super Bull / Trend Surfing)
+  if (traffic_light === 'ON_RADAR' || upperBadge.includes('RUNNER') || scenario === 15) {
+    return {
+      tierId: 'RUNNER',
+      icon: '⚡',
+      label: 'RUNNER',
+      subLabel: 'โต้คลื่นโมเมนตัมเหนือ EMA 9',
+      scenarioNum: scenario,
+      scenarioTitle: badge,
+      reasonTh: reason_th || reason,
+      spineClass: 'bg-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.9)]',
+      badgeClass: 'text-cyan-300',
+      textGlowClass: 'text-cyan-300 font-semibold',
       isRecognized: true
     };
   }

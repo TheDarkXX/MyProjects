@@ -58,21 +58,15 @@ export const XChartWatchlistDock: React.FC = () => {
     addSection,
     removeSection,
     renameSection,
-    toggleSectionCollapse,
     setWatchlistSort,
     setWatchlistDetailSymbol,
     toggleWatchlistDetail,
     fetchWatchlistQuotes,
     moveSymbol,
-    moveSection,
-    toggleAllSectionsCollapse
+    moveSection
   } = useXChartStore();
 
   const { isMobile } = useDeviceLayout();
-
-  const allSectionsCollapsed = useMemo(() => {
-    return watchlistSections.length > 0 && watchlistSections.every((s) => s.isCollapsed);
-  }, [watchlistSections]);
 
   const { holdings = [] } = useHoldings();
   const portHoldingsCount = useMemo(() => {
@@ -124,6 +118,211 @@ export const XChartWatchlistDock: React.FC = () => {
     }
     return map;
   }, [radar?.rows, compactTiers]);
+
+  // Dynamic 7-Tier Cyber Action Matrix Sections
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('xchart_watchlist_sections_collapsed');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return {};
+  });
+
+  const toggleSectionCollapse = (secId: string) => {
+    setCollapsedSections(prev => {
+      const next = { ...prev, [secId]: !prev[secId] };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('xchart_watchlist_sections_collapsed', JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
+  const handleRemoveSymbol = (sym: string) => {
+    for (const s of watchlistSections) {
+      if (s.symbols.includes(sym)) {
+        removeSymbolFromSection(s.id, sym);
+        break;
+      }
+    }
+  };
+
+  const activeWatchlistSections = useMemo(() => {
+    // 1. Preserved exchange section
+    const exSec = watchlistSections.find(s => s.id === 'sec-exchange' || s.name === 'EXCHANGE');
+    const exSymbols = exSec ? exSec.symbols : ['SCHD', 'SCHG', '^GSPC', 'QQQ', 'JEPQ', 'THB=X'];
+
+    // 2. Preserved commodities & crypto section
+    const crSec = watchlistSections.find(s => s.id === 'sec-commodities-crypto' || s.name.includes('COMMODITIES') || s.name.includes('CRYPTO'));
+    const crSymbols = crSec ? crSec.symbols : ['BTC-USD', 'GC=F', 'CL=F'];
+
+    const exSet = new Set(exSymbols.map(s => s.toUpperCase()));
+    const crSet = new Set(crSymbols.map(s => s.toUpperCase()));
+
+    // 3. Collect all other stock symbols from all sections
+    const allStockSymbols = Array.from(new Set(
+      watchlistSections.flatMap(s => s.symbols).filter(s => {
+        const u = s.toUpperCase();
+        return !exSet.has(u) && !crSet.has(u) && !u.includes('=X') && !u.includes('=F') && !u.endsWith('-USD');
+      })
+    ));
+
+    const buyNow: string[] = [];
+    const getReady: string[] = [];
+    const runner: string[] = [];
+    const danger: string[] = [];
+    const watching: string[] = [];
+
+    let dipBuyCount = 0;
+    let reversalCount = 0;
+
+    for (const sym of allStockSymbols) {
+      const row = radarMap[sym.toUpperCase()];
+      const info = getTierVisualInfo(row, sym);
+
+      if (info.tierId === 'BUY_NOW') {
+        buyNow.push(sym);
+      } else if (info.tierId === 'GET_READY') {
+        getReady.push(sym);
+        if (info.subMode === 'DIP_BUY') {
+          dipBuyCount++;
+        } else {
+          reversalCount++;
+        }
+      } else if (info.tierId === 'TO_THE_MOON' || info.tierId === 'RUNNER') {
+        runner.push(sym);
+      } else if (
+        info.tierId === 'FALLING_KNIFE' || 
+        info.tierId === 'SLOW_BLEED' || 
+        info.tierId === 'MAYDAY_EXIT' || 
+        info.tierId === 'DANGER'
+      ) {
+        danger.push(sym);
+      } else {
+        watching.push(sym);
+      }
+    }
+
+    const list: Array<{
+      id: string;
+      name: string;
+      icon: string;
+      symbols: string[];
+      isDynamic: boolean;
+      subStats?: string;
+      badgeClass?: string;
+      isCollapsed: boolean;
+    }> = [];
+
+    // 1. BUY NOW (Auto-hide if 0)
+    if (buyNow.length > 0) {
+      list.push({
+        id: 'sec-tier-buy-now',
+        name: 'BUY NOW',
+        icon: '🔥',
+        symbols: buyNow,
+        isDynamic: true,
+        badgeClass: 'text-orange-400 bg-orange-500/15 border-orange-500/30',
+        isCollapsed: Boolean(collapsedSections['sec-tier-buy-now'])
+      });
+    }
+
+    // 2. GET READY with 2 Sub-Modes (Auto-hide if 0)
+    if (getReady.length > 0) {
+      const parts: string[] = [];
+      if (dipBuyCount > 0) parts.push(`🧲 Dip ${dipBuyCount}`);
+      if (reversalCount > 0) parts.push(`🔄 Rev ${reversalCount}`);
+      list.push({
+        id: 'sec-tier-get-ready',
+        name: 'GET READY',
+        icon: '⏳',
+        symbols: getReady,
+        isDynamic: true,
+        subStats: parts.join(' · '),
+        badgeClass: 'text-yellow-300 bg-yellow-500/15 border-yellow-500/30',
+        isCollapsed: Boolean(collapsedSections['sec-tier-get-ready'])
+      });
+    }
+
+    // 3. TO THE MOON / RUNNER (Auto-hide if 0)
+    if (runner.length > 0) {
+      list.push({
+        id: 'sec-tier-runner',
+        name: 'TO THE MOON / RUNNER',
+        icon: '🚀',
+        symbols: runner,
+        isDynamic: true,
+        badgeClass: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        isCollapsed: Boolean(collapsedSections['sec-tier-runner'])
+      });
+    }
+
+    // 4. DANGER & BEAR ABYSS (Auto-hide if 0)
+    if (danger.length > 0) {
+      list.push({
+        id: 'sec-tier-danger',
+        name: 'DANGER & BEAR ABYSS',
+        icon: '🔪',
+        symbols: danger,
+        isDynamic: true,
+        badgeClass: 'text-red-300 bg-rose-950/40 border-red-500/30',
+        isCollapsed: Boolean(collapsedSections['sec-tier-danger'])
+      });
+    }
+
+    // 5. WATCHING (Auto-hide if 0)
+    if (watching.length > 0) {
+      list.push({
+        id: 'sec-tier-watching',
+        name: 'WATCHING',
+        icon: '🔍',
+        symbols: watching,
+        isDynamic: true,
+        badgeClass: 'text-slate-300 bg-slate-800/40 border-slate-700/30',
+        isCollapsed: Boolean(collapsedSections['sec-tier-watching'])
+      });
+    }
+
+    // 6. EXCHANGE (Preserved)
+    list.push({
+      id: exSec?.id || 'sec-exchange',
+      name: exSec?.name || 'EXCHANGE',
+      icon: '🌐',
+      symbols: exSymbols,
+      isDynamic: false,
+      isCollapsed: Boolean(collapsedSections[exSec?.id || 'sec-exchange'])
+    });
+
+    // 7. COMMODITIES & CRYPTO (Preserved)
+    list.push({
+      id: crSec?.id || 'sec-commodities-crypto',
+      name: crSec?.name || 'COMMODITIES & CRYPTO',
+      icon: '🪙',
+      symbols: crSymbols,
+      isDynamic: false,
+      isCollapsed: Boolean(collapsedSections[crSec?.id || 'sec-commodities-crypto'])
+    });
+
+    return list;
+  }, [watchlistSections, radarMap, collapsedSections]);
+
+  const allSectionsCollapsed = useMemo(() => {
+    return activeWatchlistSections.length > 0 && activeWatchlistSections.every((s) => s.isCollapsed);
+  }, [activeWatchlistSections]);
+
+  const handleToggleAllSectionsCollapse = () => {
+    const nextState = !allSectionsCollapsed;
+    const nextMap: Record<string, boolean> = {};
+    for (const s of activeWatchlistSections) {
+      nextMap[s.id] = nextState;
+    }
+    setCollapsedSections(nextMap);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('xchart_watchlist_sections_collapsed', JSON.stringify(nextMap));
+    }
+  };
 
   const [hoveredTier, setHoveredTier] = useState<{
     rect: DOMRect;
@@ -254,11 +453,19 @@ export const XChartWatchlistDock: React.FC = () => {
   // Add symbol submit
   const handleAddSymbolSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!symbolInput.trim()) return;
-    const destSecId = targetSectionId || watchlistSections[0]?.id;
-    if (!destSecId) return;
+    const clean = symbolInput.trim().toUpperCase();
+    if (!clean) return;
 
-    addSymbolToSection(destSecId, symbolInput.trim().toUpperCase());
+    if (targetSectionId.includes('exchange')) {
+      const exSec = watchlistSections.find(s => s.id === 'sec-exchange' || s.name === 'EXCHANGE') || watchlistSections[0];
+      if (exSec) addSymbolToSection(exSec.id, clean);
+    } else if (targetSectionId.includes('crypto') || targetSectionId.includes('commodities')) {
+      const crSec = watchlistSections.find(s => s.id === 'sec-commodities-crypto' || s.name.includes('CRYPTO')) || watchlistSections[0];
+      if (crSec) addSymbolToSection(crSec.id, clean);
+    } else {
+      const firstSec = watchlistSections.find(s => s.id !== 'sec-exchange' && s.id !== 'sec-commodities-crypto') || watchlistSections[0];
+      if (firstSec) addSymbolToSection(firstSec.id, clean);
+    }
     setSymbolInput('');
     setShowAddSymbol(false);
   };
@@ -282,8 +489,8 @@ export const XChartWatchlistDock: React.FC = () => {
 
   // Total count of symbols
   const totalSymbolsCount = useMemo(() => {
-    return watchlistSections.reduce((acc, s) => acc + s.symbols.length, 0);
-  }, [watchlistSections]);
+    return activeWatchlistSections.reduce((acc, s) => acc + s.symbols.length, 0);
+  }, [activeWatchlistSections]);
 
   // Render sorting arrow helper
   const renderSortIndicator = (col: WatchlistSortColumn) => {
@@ -439,7 +646,7 @@ export const XChartWatchlistDock: React.FC = () => {
 
               {/* Toggle All Sections Collapse / Expand (ข้อ 2 & 3) */}
               <button
-                onClick={toggleAllSectionsCollapse}
+                onClick={handleToggleAllSectionsCollapse}
                 className={clsx(
                   "p-1.5 rounded-lg transition-all cursor-pointer",
                   allSectionsCollapsed 
@@ -506,7 +713,7 @@ export const XChartWatchlistDock: React.FC = () => {
               onChange={(e) => setTargetSectionId(e.target.value)}
               className="bg-[#0B1220] border border-[#2A2E45] text-xs text-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-purple-500 max-w-[110px] truncate"
             >
-              {watchlistSections.map((sec) => (
+              {activeWatchlistSections.map((sec) => (
                 <option key={sec.id} value={sec.id} className="bg-[#111418] text-white">
                   {sec.name}
                 </option>
@@ -561,16 +768,13 @@ export const XChartWatchlistDock: React.FC = () => {
         </form>
       )}
 
-      {/* 3.5. Cyber Tier Quick-Filter Bar (Hybrid 1 + 3) */}
-      <div className="px-2.5 py-1.5 bg-[#0D101A] border-b border-[#1F2233]/70 flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0 select-none">
+      {/* 3.5. Streamlined Cyber Tier Quick-Filter Bar (Zero Overflow) */}
+      <div className="px-2.5 py-1.5 bg-[#0D101A] border-b border-[#1F2233]/70 grid grid-cols-4 gap-1 shrink-0 select-none">
         {[
           { id: null, label: 'ALL', icon: '🌐' },
-          { id: 'BUY_NOW', label: 'BUY', icon: '🔥', activeClass: 'bg-red-500/25 text-orange-200 border-orange-500/60 shadow-[0_0_8px_rgba(239,68,68,0.45)]' },
-          { id: 'RUNNER', label: 'RUN', icon: '⚡', activeClass: 'bg-cyan-500/25 text-cyan-200 border-cyan-400/60 shadow-[0_0_8px_rgba(6,182,212,0.45)]' },
-          { id: 'DIP_BUY', label: 'DIP', icon: '🧲', activeClass: 'bg-orange-500/25 text-amber-200 border-amber-400/60 shadow-[0_0_8px_rgba(245,158,11,0.45)]' },
-          { id: 'GET_READY', label: 'RDY', icon: '⏳', activeClass: 'bg-yellow-500/25 text-yellow-200 border-yellow-400/60 shadow-[0_0_8px_rgba(234,179,8,0.45)]' },
-          { id: 'TO_THE_MOON', label: 'MOON', icon: '🚀', activeClass: 'bg-purple-500/25 text-purple-200 border-purple-400/60 shadow-[0_0_8px_rgba(168,85,247,0.45)]' },
-          { id: 'DANGER', label: 'CUT', icon: '🔪', activeClass: 'bg-rose-950 text-red-200 border-red-500/70 shadow-[0_0_8px_rgba(239,68,68,0.55)]' }
+          { id: 'BUY_NOW', label: 'BUY NOW', icon: '🔥', activeClass: 'bg-red-500/25 text-orange-200 border-orange-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]' },
+          { id: 'GET_READY', label: 'READY', icon: '⏳', activeClass: 'bg-yellow-500/25 text-yellow-200 border-yellow-400/80 shadow-[0_0_8px_rgba(234,179,8,0.5)]' },
+          { id: 'DANGER', label: 'MAYDAY', icon: '🩸', activeClass: 'bg-rose-950 text-red-200 border-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.6)]' }
         ].map(filter => {
           const isActive = selectedTierFilter === filter.id;
           return (
@@ -578,13 +782,13 @@ export const XChartWatchlistDock: React.FC = () => {
               key={filter.label}
               onClick={() => setSelectedTierFilter(isActive ? null : filter.id)}
               className={clsx(
-                "px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 border transition-all cursor-pointer shrink-0",
+                "h-6 rounded-md text-[11.5px] font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer whitespace-nowrap",
                 isActive 
                   ? (filter.activeClass || "bg-purple-600 text-white border-purple-400 shadow-sm")
                   : "bg-white/5 border-transparent text-slate-300 hover:text-white hover:bg-white/10"
               )}
             >
-              <span>{filter.icon}</span>
+              <span className="text-xs">{filter.icon}</span>
               <span>{filter.label}</span>
             </button>
           );
@@ -628,18 +832,34 @@ export const XChartWatchlistDock: React.FC = () => {
 
       {/* 5. Scrollable Sections & High-Density Stocks List with Free-Style Drag & Drop */}
       <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 divide-y divide-[#1F2233]/40">
-        {watchlistSections.map((section, secIdx) => {
+        {activeWatchlistSections.map((section, secIdx) => {
           // Filter symbols if a tier filter is active
           const displayedSymbols = selectedTierFilter
             ? section.symbols.filter((sym) => {
                 const row = radarMap[sym.toUpperCase()];
                 const info = getTierVisualInfo(row, sym, sym.includes('=X'));
-                if (selectedTierFilter === 'DANGER') {
-                  return info.tierId === 'FALLING_KNIFE' || info.tierId === 'MAYDAY_EXIT' || info.tierId === 'SLOW_BLEED';
+                if (selectedTierFilter === 'BUY_NOW') {
+                  return info.tierId === 'BUY_NOW';
                 }
-                return info.tierId === selectedTierFilter;
+                if (selectedTierFilter === 'GET_READY') {
+                  return info.tierId === 'GET_READY';
+                }
+                if (selectedTierFilter === 'DANGER') {
+                  return (
+                    info.tierId === 'FALLING_KNIFE' || 
+                    info.tierId === 'MAYDAY_EXIT' || 
+                    info.tierId === 'SLOW_BLEED' || 
+                    info.tierId === 'DANGER'
+                  );
+                }
+                return true;
               })
             : section.symbols;
+
+          // Auto-hide section if tier filter is active and has 0 matching symbols
+          if (selectedTierFilter && displayedSymbols.length === 0) {
+            return null;
+          }
 
           // Visual sort of symbols for this section
           const sortedSymbols = [...displayedSymbols].sort((a, b) => {
@@ -741,6 +961,8 @@ export const XChartWatchlistDock: React.FC = () => {
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-400 transition-colors shrink-0" />
                   )}
 
+                  <span className="text-sm shrink-0">{section.icon}</span>
+
                   {isEditing ? (
                     <input
                       type="text"
@@ -755,14 +977,20 @@ export const XChartWatchlistDock: React.FC = () => {
                       className="bg-[#0B1220] border border-purple-500 rounded px-1.5 py-0.5 text-xs text-white uppercase font-normal focus:outline-none"
                     />
                   ) : (
-                    <span className="tracking-wide uppercase text-slate-200 group-hover:text-white truncate font-medium">
+                    <span className="tracking-wide uppercase text-slate-200 group-hover:text-white truncate font-bold text-xs">
                       {section.name}
                     </span>
                   )}
 
                   <span className="text-[11px] text-slate-400 font-normal shrink-0">
-                    ({section.symbols.length})
+                    ({displayedSymbols.length})
                   </span>
+
+                  {section.subStats && (
+                    <span className="text-[10px] text-amber-300/90 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20 font-mono shrink-0 ml-1">
+                      {section.subStats}
+                    </span>
+                  )}
                 </div>
 
                 {/* Section Hover Actions */}
@@ -779,31 +1007,35 @@ export const XChartWatchlistDock: React.FC = () => {
                     <Plus className="w-3 h-3" />
                   </button>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingSectionId(section.id);
-                      setEditingSectionName(section.name);
-                    }}
-                    className="p-0.5 text-slate-400 hover:text-white hover:bg-white/10 rounded cursor-pointer"
-                    title="Rename section"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                  </button>
+                  {!section.isDynamic && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingSectionId(section.id);
+                          setEditingSectionName(section.name);
+                        }}
+                        className="p-0.5 text-slate-400 hover:text-white hover:bg-white/10 rounded cursor-pointer"
+                        title="Rename section"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
 
-                  {watchlistSections.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm(`ลบหมวดหมู่ "${section.name}" พร้อมหุ้นในกลุ่มนี้?`)) {
-                          removeSection(section.id);
-                        }
-                      }}
-                      className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer"
-                      title="Delete section"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                      {watchlistSections.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`ลบหมวดหมู่ "${section.name}" พร้อมหุ้นในกลุ่มนี้?`)) {
+                              removeSection(section.id);
+                            }
+                          }}
+                          className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer"
+                          title="Delete section"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -987,7 +1219,7 @@ export const XChartWatchlistDock: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                removeSymbolFromSection(section.id, symbol);
+                                handleRemoveSymbol(symbol);
                               }}
                               className="absolute right-0 opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded transition-all cursor-pointer"
                               title={`Remove ${symbol}`}

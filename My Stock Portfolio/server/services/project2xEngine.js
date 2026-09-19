@@ -607,7 +607,8 @@ export function classifyScenario({
     return {
       scenario: 9,
       traffic_light: 'GET_READY',
-      badge: 'Testing Support',
+      ready_sub_mode: 'DIP_BUY',
+      badge: 'Ready: Dip Buy (Testing Support)',
       distEma9: d9,
       distEma50: d50,
       distEma150: d150,
@@ -616,8 +617,8 @@ export function classifyScenario({
       hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Kissing EMA 150/200 support (${d200}%) with Banker present (${banker}/20), but red pressure persists (${consecutiveRedBars} red bars) or below EMA 9. Get ready; wait for green rebound candle & EMA 9 reclaim.`,
-      reason_th: `ราคาย่อลงมาจ่อแนวรับใหญ่ EMA 150/200 (${d200}%) มีแรงสถาบัน (${banker}/20) แต่ยังอยู่ใต้ EMA 9 หรือติดแท่งแดง (${consecutiveRedBars} แท่ง) — หมุนนาฬิกาทรายเตรียมตัว รอแท่งเขียวเด้งผ่าน EMA 9!`,
+      reason: `Kissing EMA 150/200 support (${d200}%) with Banker present (${banker}/20), but red pressure persists (${consecutiveRedBars} red bars) or below EMA 9. Get ready for dip buy; wait for green rebound candle & EMA 9 reclaim.`,
+      reason_th: `ราคาย่อลงมาจ่อแนวรับใหญ่ EMA 150/200 (${d200}%) มีแรงสถาบัน (${banker}/20) แต่ยังอยู่ใต้ EMA 9 หรือติดแท่งแดง (${consecutiveRedBars} แท่ง) — หมุนนาฬิกาทรายเตรียมกระสุน รอย่อช้อนซื้อเมื่อแท่งเขียวเด้งผ่าน EMA 9!`,
       checklist: { regimePass: regime === 'BULL', distPass: true, bankerPass: true, rsiPass: true, candlePass: false, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: regime === 'BULL', value: regime },
@@ -625,7 +626,7 @@ export function classifyScenario({
         { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Banker MCDX', pass: true, value: `${banker}/20` },
         { label: 'EMA 9 Trigger', pass: false, value: `${fmtPrice(ema9)} (${aboveEma9 ? 'Above' : 'Locked 🔒'})`, priceLevel: ema9 },
-        { label: 'Action', pass: true, value: 'GET READY (Hourglass)' }
+        { label: 'Action', pass: true, value: 'READY: DIP BUY 🧲 (ดักช้อนขาย่อ)' }
       ]
     };
   }
@@ -724,10 +725,12 @@ export function classifyScenario({
 
   // 13. Early Bird Watch: Kissing support but banker < 1 or still red, OR Bullish Divergence formed (in non-BEAR regime)
   if (regime !== 'BEAR' && isNearMajorEma && (banker < 1 || !isLatestBullish || hasRsiDivergence)) {
+    const isDivergence = Boolean(hasRsiDivergence);
     return {
       scenario: 13,
       traffic_light: 'GET_READY',
-      badge: 'Early Bird Watch',
+      ready_sub_mode: 'REVERSAL',
+      badge: isDivergence ? 'Ready: Reversal (RSI Divergence)' : 'Ready: Reversal (Base Spring)',
       distEma9: d9,
       distEma50: d50,
       distEma150: d150,
@@ -736,8 +739,8 @@ export function classifyScenario({
       hasRsiDivergence,
       regime,
       volRatio,
-      reason: `Hovering near major EMA support (${d200}%)${hasRsiDivergence ? ' with Bullish RSI Divergence' : ''}, but institutional flow dormant (Banker = ${banker}). Prepare radar.`,
-      reason_th: `ราคาลงมาแตะแนวรับใหญ่ (${d200}%)${hasRsiDivergence ? ' + เกิดสัญญาณกระทิงซ่อน RSI Bullish Divergence' : ''} แต่สถาบันยังไม่จุดพลุ (Banker = ${banker}) — เตรียมพร้อมรอจังหวะ`,
+      reason: `Hovering near major EMA support (${d200}%)${isDivergence ? ' with Bullish RSI Divergence' : ''}, but institutional flow dormant (Banker = ${banker}). Prepare radar for reversal rebound.`,
+      reason_th: `ราคาลงมาแตะแนวรับใหญ่ (${d200}%)${isDivergence ? ' + เกิดสัญญาณกระทิงซ่อน RSI Bullish Divergence' : ''} แต่สถาบันยังไม่จุดพลุ (Banker = ${banker}) — หมุนนาฬิกาทรายเตรียมพร้อม รอสัญญาณกลับตัวรอบใหม่!`,
       checklist: { regimePass: regime !== 'BEAR', distPass: true, bankerPass: false, rsiPass: (rsi14 ? rsi14 < 48 : true), candlePass: isLatestBullish, volumePass: true },
       signals_checklist: [
         { label: 'EMA Regime', pass: regime !== 'BEAR', value: regime },
@@ -745,7 +748,7 @@ export function classifyScenario({
         { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'EMA 9 Trigger', pass: aboveEma9, value: `${fmtPrice(ema9)} (${aboveEma9 ? 'Unlocked ⚡' : 'Locked 🔒'})`, priceLevel: ema9 },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Zero / Low)` },
-        { label: 'Status', pass: true, value: 'GET READY (Hourglass)' }
+        { label: 'Action', pass: true, value: 'READY: REVERSAL 🔄 (ดักกลับตัวรอบใหม่)' }
       ]
     };
   }
@@ -839,31 +842,37 @@ export function classifyScenario({
   // 16. Default: Consolidating / Pullback with RUNNER vs DIP BUY classification
   let defaultBadge = 'RUNNER (Consolidating)';
   let defaultTh = 'หุ้นกำลังวิ่งรันเทรนด์ปกติ โมเมนตัมทรงตัว รอจังหวะย่อตัวลงมาแตะแนวรับ';
+  let isDip = false;
   
   if (d200 < 0) {
+    isDip = true;
     if (d200 < -3.5) {
-      defaultBadge = 'DIP BUY (Below Bedrock)';
+      defaultBadge = 'Ready: Dip Buy (Below Bedrock)';
       defaultTh = `ราคาหลุดต่ำกว่าเส้น EMA 200 (${d200}%) เฝ้าสังเกตการณ์ในเรดาร์ขาย่อ ห้ามรีบเข้ารับ`;
     } else {
-      defaultBadge = 'DIP BUY (Testing 200)';
+      defaultBadge = 'Ready: Dip Buy (Testing 200)';
       defaultTh = `ราคากำลังทดสอบใต้เส้น EMA 200 (${d200}%) รอแรงซื้อดึงกลับมายืนเหนือเส้น`;
     }
   } else {
     if (d150 < 0 && d150 >= -3) {
-      defaultBadge = 'DIP BUY (Healthy Dip)';
+      isDip = true;
+      defaultBadge = 'Ready: Dip Buy (Healthy Dip)';
       defaultTh = 'ราคาย่อตัวตามปกติในกรอบ -1% ถึง -3% กำลังจับตาแนวรับย่อซื้อ';
     } else if (d150 < -3 && d150 >= -6) {
-      defaultBadge = 'DIP BUY (Deep Pullback)';
+      isDip = true;
+      defaultBadge = 'Ready: Dip Buy (Deep Pullback)';
       defaultTh = 'ราคาย่อตัวลึก -3% ถึง -6% ใกล้โซนแนวรับใหญ่ ดักซุ่มยิง';
     } else if (d150 < -6) {
-      defaultBadge = 'DIP BUY (Approaching Bedrock)';
+      isDip = true;
+      defaultBadge = 'Ready: Dip Buy (Approaching Bedrock)';
       defaultTh = 'ราคากำลังทิ้งตัวลงหาแนวรับหินผา EMA 200 เตรียมโหลดกระสุน';
     }
   }
 
   return {
     scenario: 16,
-    traffic_light: 'ON_RADAR',
+    traffic_light: isDip ? 'GET_READY' : 'ON_RADAR',
+    ready_sub_mode: isDip ? 'DIP_BUY' : null,
     badge: defaultBadge,
     distEma9: d9,
     distEma50: d50,
@@ -873,7 +882,9 @@ export function classifyScenario({
     hasRsiDivergence,
     regime,
     volRatio,
-    reason: `Price healthy (${d150 > 0 ? '+' : ''}${d150}% vs EMA150, Regime: ${regime}). Watching on radar for high-probability setup.`,
+    reason: isDip
+      ? `Pullback near support (${d150 > 0 ? '+' : ''}${d150}% vs EMA150, Regime: ${regime}). Watching in Ready: Dip Buy zone.`
+      : `Price healthy (${d150 > 0 ? '+' : ''}${d150}% vs EMA150, Regime: ${regime}). Running on radar for high-probability setup.`,
     reason_th: defaultTh,
     checklist: { regimePass: regime !== 'BEAR', distPass: true, bankerPass: banker > 0, rsiPass: true, candlePass: isLatestBullish, volumePass: true },
     signals_checklist: [
@@ -881,7 +892,7 @@ export function classifyScenario({
       { label: 'Price', pass: true, value: fmtPrice(currentPrice), priceLevel: currentPrice },
       { label: 'EMA 200', pass: true, value: `${fmtPrice(ema200)} (${d200 >= 0 ? '+' : ''}${d200}%)`, priceLevel: ema200 },
       { label: 'Banker MCDX', pass: banker > 0, value: `${banker}/20` },
-      { label: 'Radar Mode', pass: true, value: defaultBadge.startsWith('RUNNER') ? 'RUNNER ⚡ (ขาขึ้น)' : 'DIP BUY 🧲 (ขาย่อ)' }
+      { label: 'Mode', pass: true, value: isDip ? 'READY: DIP BUY 🧲 (ดักช้อนขาย่อ)' : 'RUNNER ⚡ (ขาขึ้น)' }
     ]
   };
 }
@@ -1459,6 +1470,7 @@ export async function scanRadarMatrix(portfolioId) {
       drawdownFrom52W,
       scenario: signalData.scenario,
       traffic_light: signalData.traffic_light,
+      ready_sub_mode: signalData.ready_sub_mode || null,
       badge: signalData.badge,
       reason: signalData.reason,
       reason_th: signalData.reason_th,
@@ -1516,6 +1528,7 @@ export async function scanRadarMatrix(portfolioId) {
         drawdownFrom52W: 0,
         scenario: signalData.scenario,
         traffic_light: signalData.traffic_light,
+        ready_sub_mode: signalData.ready_sub_mode || null,
         badge: signalData.badge,
         reason: signalData.reason,
         reason_th: signalData.reason_th,

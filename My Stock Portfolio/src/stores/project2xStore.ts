@@ -96,6 +96,7 @@ export interface RadarRow {
   drawdownFrom52W?: number;
   scenario: number;
   traffic_light: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'FALLING_KNIFE' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
+  ready_sub_mode?: 'DIP_BUY' | 'REVERSAL' | null;
   badge: string;
   reason: string;
   reason_th: string;
@@ -210,6 +211,7 @@ export interface Project2xConfig {
 export interface CompactTierInfo {
   symbol: string;
   traffic_light: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'FALLING_KNIFE' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
+  ready_sub_mode?: 'DIP_BUY' | 'REVERSAL' | null;
   badge: string;
   scenario: number;
   reason_th?: string;
@@ -335,6 +337,7 @@ export const useProject2xStore = create<Project2xStore>((set, get) => ({
             map[r.symbol.toUpperCase()] = {
               symbol: r.symbol,
               traffic_light: r.traffic_light,
+              ready_sub_mode: r.ready_sub_mode || null,
               badge: r.badge,
               scenario: r.scenario,
               reason_th: r.reason_th,
