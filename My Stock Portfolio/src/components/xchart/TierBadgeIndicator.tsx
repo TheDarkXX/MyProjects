@@ -34,6 +34,7 @@ export interface TierVisualInfo {
   badgeClass: string;
   textGlowClass?: string;
   isRecognized: boolean;
+  isFireOrb?: boolean;
 }
 
 /**
@@ -58,7 +59,7 @@ export function getTierVisualInfo(
   if (!radarData) {
     return {
       tierId: 'UNKNOWN',
-      icon: symbol.slice(0, 1) || '•',
+      icon: '•',
       label: 'Watchlist Asset',
       spineClass: 'bg-slate-700/50',
       badgeClass: clsx('bg-gradient-to-tr shadow-sm text-white font-bold', getSymbolBadgeGradient(symbol)),
@@ -69,7 +70,7 @@ export function getTierVisualInfo(
   const { traffic_light, badge = '', scenario, reason_th, reason } = radarData;
   const upperBadge = badge.toUpperCase();
 
-  // Tier 1: BUY NOW!! 🔥
+  // Tier 1: BUY NOW!! 🔥 (The Solar Fire Orb)
   if (traffic_light === 'BUY_NOW') {
     return {
       tierId: 'BUY_NOW',
@@ -79,10 +80,11 @@ export function getTierVisualInfo(
       scenarioNum: scenario,
       scenarioTitle: badge,
       reasonTh: reason_th || reason,
-      spineClass: 'bg-[#FF5722] shadow-[0_0_10px_rgba(255,87,34,0.9)]',
+      spineClass: 'w-[8.5px] h-[8.5px] rounded-full bg-gradient-to-tr from-[#FF3D00] via-[#FF9100] to-[#FFF176] shadow-[0_0_8px_#FF9100,0_0_16px_rgba(255,61,0,0.95)] animate-pulse',
       badgeClass: 'text-orange-400',
       textGlowClass: 'text-orange-400 font-bold',
-      isRecognized: true
+      isRecognized: true,
+      isFireOrb: true
     };
   }
 
@@ -246,12 +248,12 @@ export const TierBadgeIndicator: React.FC<TierBadgeIndicatorProps> = ({
   };
 
   if (!info.isRecognized) {
-    // Elegant fallback initial letter without box
+    // Subtle neutral placeholder dot (eliminates initial letter jump)
     return (
       <span
-        className="w-4 flex items-center justify-center text-[11px] font-bold text-slate-400 shrink-0 select-none"
+        className="w-5 flex items-center justify-center text-[11px] text-slate-500 shrink-0 select-none"
       >
-        {info.icon}
+        •
       </span>
     );
   }

@@ -909,15 +909,25 @@ export const XChartWatchlistDock: React.FC = () => {
                             isDropTarget && (dropTargetSymbol.isAfter ? 'border-b-2 border-purple-500 shadow-[0_2px_4px_rgba(168,85,247,0.4)]' : 'border-t-2 border-purple-500 shadow-[0_-2px_4px_rgba(168,85,247,0.4)]')
                           )}
                         >
-                          {/* Left Cyber Neon Capsule (Tier Zone Visual + Active Tab Highlight) */}
-                          <div
-                            className={clsx(
-                              'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
-                              isSelected
-                                ? 'w-[5px] bg-[#D500F9] shadow-[0_0_12px_rgba(213,0,249,0.95)]'
-                                : clsx('w-[4px]', tierInfo.spineClass)
-                            )}
-                          />
+                          {/* Left Cyber Indicator: Solar Fire Orb for BUY NOW or Floating Neon Capsule */}
+                          {tierInfo.isFireOrb ? (
+                            <div
+                              className={clsx(
+                                'absolute left-[1px] top-1/2 -translate-y-1/2 transition-all z-10',
+                                isSelected && 'ring-2 ring-purple-400 ring-offset-1 ring-offset-[#0F111A]',
+                                tierInfo.spineClass
+                              )}
+                            />
+                          ) : (
+                            <div
+                              className={clsx(
+                                'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
+                                isSelected
+                                  ? 'w-[5px] bg-[#D500F9] shadow-[0_0_12px_rgba(213,0,249,0.95)]'
+                                  : clsx('w-[4px]', tierInfo.spineClass)
+                              )}
+                            />
+                          )}
 
                           {/* Symbol Column: Dot Badge + Ticker */}
                           <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">

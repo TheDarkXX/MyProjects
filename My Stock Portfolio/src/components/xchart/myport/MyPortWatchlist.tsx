@@ -462,15 +462,25 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                           : 'hover:bg-white/5 text-slate-200 hover:text-white'
                       )}
                     >
-                      {/* Left Cyber Neon Capsule (Tier Zone Visual + Active Highlight) */}
-                      <div
-                        className={clsx(
-                          'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
-                          isSelected
-                            ? 'w-[5px] bg-[#D500F9] shadow-[0_0_12px_rgba(213,0,249,0.95)]'
-                            : clsx('w-[4px]', tierInfo.spineClass)
-                        )}
-                      />
+                      {/* Left Cyber Indicator: Solar Fire Orb for BUY NOW or Floating Neon Capsule */}
+                      {tierInfo.isFireOrb ? (
+                        <div
+                          className={clsx(
+                            'absolute left-[1px] top-1/2 -translate-y-1/2 transition-all z-10',
+                            isSelected && 'ring-2 ring-purple-400 ring-offset-1 ring-offset-[#0F111A]',
+                            tierInfo.spineClass
+                          )}
+                        />
+                      ) : (
+                        <div
+                          className={clsx(
+                            'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
+                            isSelected
+                              ? 'w-[5px] bg-[#D500F9] shadow-[0_0_12px_rgba(213,0,249,0.95)]'
+                              : clsx('w-[4px]', tierInfo.spineClass)
+                          )}
+                        />
+                      )}
 
                       {/* Symbol Column: Dot Badge + Ticker */}
                       <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
@@ -590,15 +600,25 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                         : 'hover:bg-white/5 text-slate-200 hover:text-white'
                     )}
                   >
-                    {/* Left Cyber Neon Capsule (Tier Zone Visual + Active Highlight) */}
-                    <div
-                      className={clsx(
-                        'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
-                        isSelected
-                          ? 'w-[5px] bg-[#06B6D4] shadow-[0_0_12px_rgba(6,182,212,0.95)]'
-                          : clsx('w-[4px]', tierInfo.spineClass)
-                      )}
-                    />
+                    {/* Left Cyber Indicator: Solar Fire Orb for BUY NOW or Floating Neon Capsule */}
+                    {tierInfo.isFireOrb ? (
+                      <div
+                        className={clsx(
+                          'absolute left-[1px] top-1/2 -translate-y-1/2 transition-all z-10',
+                          isSelected && 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-[#0F111A]',
+                          tierInfo.spineClass
+                        )}
+                      />
+                    ) : (
+                      <div
+                        className={clsx(
+                          'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
+                          isSelected
+                            ? 'w-[5px] bg-[#06B6D4] shadow-[0_0_12px_rgba(6,182,212,0.95)]'
+                            : clsx('w-[4px]', tierInfo.spineClass)
+                        )}
+                      />
+                    )}
 
                     {/* Symbol Column: Dot Badge + Ticker + Target % Pill + Owned Dot */}
                     <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">

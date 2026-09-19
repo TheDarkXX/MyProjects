@@ -241,13 +241,24 @@ interface Project2xStore {
   refreshAll: (portfolioId: string) => Promise<void>;
 }
 
+const getInitialRadar = (): RadarMatrixData | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const cached = localStorage.getItem('p2x_radar_cache');
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch {}
+  return null;
+};
+
 export const useProject2xStore = create<Project2xStore>((set, get) => ({
   selectedTab: 'radar',
   setSelectedTab: (tab) => set({ selectedTab: tab }),
 
   dashboard: null,
   quotas: [],
-  radar: null,
+  radar: getInitialRadar(),
   recommendation: null,
   config: null,
   backfillStatus: null,
@@ -295,6 +306,11 @@ export const useProject2xStore = create<Project2xStore>((set, get) => ({
     set({ isLoadingRadar: true, error: null });
     try {
       const data = await api.project2x.scan(portfolioId);
+      if (typeof window !== 'undefined' && data) {
+        try {
+          localStorage.setItem('p2x_radar_cache', JSON.stringify(data));
+        } catch {}
+      }
       set({ radar: data, isLoadingRadar: false });
     } catch (err: any) {
       set({ error: err.message, isLoadingRadar: false });
