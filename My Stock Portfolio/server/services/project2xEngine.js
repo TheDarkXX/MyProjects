@@ -902,7 +902,7 @@ export function classifyScenario({
 /**
  * Compute real-time technical indicators & 7-Tier classification for a single stock
  */
-export async function calculateStockRadarSignal(symbol, { portfolioId = 'default', ownedShares = 0, category = 'Core', livePrice = null, liveQuote = null } = {}) {
+export async function calculateStockRadarSignal(symbol, { portfolioId = 'default', ownedShares = 0, category = 'Core', livePrice = null, liveQuote = null, skipLiveFetch = false } = {}) {
   if (!symbol) return null;
   const upper = symbol.toUpperCase().trim();
 
@@ -921,7 +921,7 @@ export async function calculateStockRadarSignal(symbol, { portfolioId = 'default
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
   const isStale = !lastBarDate || (isWeekday && lastBarDate < todayStr);
 
-  if (dbCandles.length < 50 || isStale) {
+  if (!skipLiveFetch && (dbCandles.length < 50 || isStale)) {
     try {
       await syncCandleDelta(upper, dbCandles.length < 50 ? 400 : 15);
       dbCandles = db.prepare(`
@@ -937,7 +937,7 @@ export async function calculateStockRadarSignal(symbol, { portfolioId = 'default
 
   // 2. Real-Time Intraday Bar Injection (Ensures live market price is reflected immediately)
   let rtQuote = liveQuote;
-  if (!rtQuote) {
+  if (!rtQuote && !skipLiveFetch) {
     try {
       rtQuote = await fetchYahooRealtimeQuote(upper);
     } catch (err) {
@@ -1414,7 +1414,8 @@ export async function scanRadarMatrix(portfolioId) {
     const signalData = await calculateStockRadarSignal(symbol, {
       portfolioId,
       ownedShares: q.owned_shares || 0,
-      category: q.category
+      category: q.category,
+      skipLiveFetch: true
     });
 
     if (!signalData) continue;
@@ -1503,7 +1504,8 @@ export async function scanRadarMatrix(portfolioId) {
       const signalData = await calculateStockRadarSignal(sym, {
         portfolioId,
         ownedShares: 0,
-        category: 'Watchlist'
+        category: 'Watchlist',
+        skipLiveFetch: true
       });
       if (!signalData) continue;
 

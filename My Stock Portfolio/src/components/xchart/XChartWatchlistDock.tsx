@@ -4,6 +4,7 @@ import { useHoldings } from '../../hooks/useHoldings';
 import { useDeviceLayout } from '../../hooks/useDeviceLayout';
 import { useProject2xStore, RadarRow } from '../../stores/project2xStore';
 import { usePortfolioStore } from '../../stores/portfolioStore';
+import { pushSettingImmediate, SYNC_KEYS } from '../../services/settingsSync';
 import { MyPortWatchlist } from './myport/MyPortWatchlist';
 import { 
   TierBadgeIndicator, 
@@ -104,9 +105,7 @@ export const XChartWatchlistDock: React.FC = () => {
   const { activePortfolioId } = usePortfolioStore();
 
   useEffect(() => {
-    if (activePortfolioId) {
-      fetchRadar(activePortfolioId);
-    }
+    fetchRadar(activePortfolioId || 'default');
   }, [activePortfolioId, fetchRadar]);
 
   const radarMap = useMemo(() => {
@@ -130,9 +129,18 @@ export const XChartWatchlistDock: React.FC = () => {
     return {};
   });
 
+  const isSectionCollapsed = (secId: string): boolean => {
+    if (secId in collapsedSections) {
+      return Boolean(collapsedSections[secId]);
+    }
+    // Default: Expand ONLY BUY NOW and GET READY, collapse all others!
+    return secId !== 'sec-tier-buy-now' && secId !== 'sec-tier-get-ready';
+  };
+
   const toggleSectionCollapse = (secId: string) => {
     setCollapsedSections(prev => {
-      const next = { ...prev, [secId]: !prev[secId] };
+      const current = isSectionCollapsed(secId);
+      const next = { ...prev, [secId]: !current };
       if (typeof window !== 'undefined') {
         localStorage.setItem('xchart_watchlist_sections_collapsed', JSON.stringify(next));
       }
@@ -141,25 +149,38 @@ export const XChartWatchlistDock: React.FC = () => {
   };
 
   const handleRemoveSymbol = (sym: string) => {
-    for (const s of watchlistSections) {
-      if (s.symbols.includes(sym)) {
-        removeSymbolFromSection(s.id, sym);
-        break;
-      }
+    const clean = sym.trim().toUpperCase();
+    const nextSections = watchlistSections.map((sec) => ({
+      ...sec,
+      symbols: sec.symbols.filter((s) => s.trim().toUpperCase() !== clean)
+    }));
+    useXChartStore.setState({ watchlistSections: nextSections });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stock_xchart_watchlist_v3', JSON.stringify(nextSections));
     }
+    pushSettingImmediate(SYNC_KEYS.WATCHLIST, nextSections);
+  };
+
+  const handleDeleteSection = (secId: string) => {
+    const nextSections = watchlistSections.filter(s => s.id !== secId);
+    useXChartStore.setState({ watchlistSections: nextSections });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stock_xchart_watchlist_v3', JSON.stringify(nextSections));
+    }
+    pushSettingImmediate(SYNC_KEYS.WATCHLIST, nextSections);
   };
 
   const activeWatchlistSections = useMemo(() => {
-    // 1. Preserved exchange section
+    // 1. Preserved exchange section (only if still in watchlistSections)
     const exSec = watchlistSections.find(s => s.id === 'sec-exchange' || s.name === 'EXCHANGE');
-    const exSymbols = exSec ? exSec.symbols : ['SCHD', 'SCHG', '^GSPC', 'QQQ', 'JEPQ', 'THB=X'];
+    const exSymbols = exSec ? exSec.symbols : null;
 
-    // 2. Preserved commodities & crypto section
+    // 2. Preserved commodities & crypto section (only if still in watchlistSections)
     const crSec = watchlistSections.find(s => s.id === 'sec-commodities-crypto' || s.name.includes('COMMODITIES') || s.name.includes('CRYPTO'));
-    const crSymbols = crSec ? crSec.symbols : ['BTC-USD', 'GC=F', 'CL=F'];
+    const crSymbols = crSec ? crSec.symbols : null;
 
-    const exSet = new Set(exSymbols.map(s => s.toUpperCase()));
-    const crSet = new Set(crSymbols.map(s => s.toUpperCase()));
+    const exSet = new Set((exSymbols || []).map(s => s.toUpperCase()));
+    const crSet = new Set((crSymbols || []).map(s => s.toUpperCase()));
 
     // 3. Collect all other stock symbols from all sections
     const allStockSymbols = Array.from(new Set(
@@ -225,7 +246,7 @@ export const XChartWatchlistDock: React.FC = () => {
         symbols: buyNow,
         isDynamic: true,
         badgeClass: 'text-orange-400 bg-orange-500/15 border-orange-500/30',
-        isCollapsed: Boolean(collapsedSections['sec-tier-buy-now'])
+        isCollapsed: isSectionCollapsed('sec-tier-buy-now')
       });
     }
 
@@ -242,7 +263,7 @@ export const XChartWatchlistDock: React.FC = () => {
         isDynamic: true,
         subStats: parts.join(' · '),
         badgeClass: 'text-yellow-300 bg-yellow-500/15 border-yellow-500/30',
-        isCollapsed: Boolean(collapsedSections['sec-tier-get-ready'])
+        isCollapsed: isSectionCollapsed('sec-tier-get-ready')
       });
     }
 
@@ -255,7 +276,7 @@ export const XChartWatchlistDock: React.FC = () => {
         symbols: runner,
         isDynamic: true,
         badgeClass: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
-        isCollapsed: Boolean(collapsedSections['sec-tier-runner'])
+        isCollapsed: isSectionCollapsed('sec-tier-runner')
       });
     }
 
@@ -268,7 +289,7 @@ export const XChartWatchlistDock: React.FC = () => {
         symbols: danger,
         isDynamic: true,
         badgeClass: 'text-red-300 bg-rose-950/40 border-red-500/30',
-        isCollapsed: Boolean(collapsedSections['sec-tier-danger'])
+        isCollapsed: isSectionCollapsed('sec-tier-danger')
       });
     }
 
@@ -281,29 +302,55 @@ export const XChartWatchlistDock: React.FC = () => {
         symbols: watching,
         isDynamic: true,
         badgeClass: 'text-slate-300 bg-slate-800/40 border-slate-700/30',
-        isCollapsed: Boolean(collapsedSections['sec-tier-watching'])
+        isCollapsed: isSectionCollapsed('sec-tier-watching')
       });
     }
 
-    // 6. EXCHANGE (Preserved)
-    list.push({
-      id: exSec?.id || 'sec-exchange',
-      name: exSec?.name || 'EXCHANGE',
-      icon: '🌐',
-      symbols: exSymbols,
-      isDynamic: false,
-      isCollapsed: Boolean(collapsedSections[exSec?.id || 'sec-exchange'])
-    });
+    // 6. EXCHANGE (Preserved only if still in watchlistSections)
+    if (exSec && exSymbols) {
+      list.push({
+        id: exSec.id,
+        name: exSec.name,
+        icon: '🌐',
+        symbols: exSymbols,
+        isDynamic: false,
+        isCollapsed: isSectionCollapsed(exSec.id)
+      });
+    }
 
-    // 7. COMMODITIES & CRYPTO (Preserved)
-    list.push({
-      id: crSec?.id || 'sec-commodities-crypto',
-      name: crSec?.name || 'COMMODITIES & CRYPTO',
-      icon: '🪙',
-      symbols: crSymbols,
-      isDynamic: false,
-      isCollapsed: Boolean(collapsedSections[crSec?.id || 'sec-commodities-crypto'])
-    });
+    // 7. COMMODITIES & CRYPTO (Preserved only if still in watchlistSections)
+    if (crSec && crSymbols) {
+      list.push({
+        id: crSec.id,
+        name: crSec.name,
+        icon: '🪙',
+        symbols: crSymbols,
+        isDynamic: false,
+        isCollapsed: isSectionCollapsed(crSec.id)
+      });
+    }
+
+    // 8. Other custom user sections (if any)
+    for (const sec of watchlistSections) {
+      if (
+        sec.id !== 'sec-stocks' && 
+        sec.id !== 'sec-strong-growth' && 
+        sec.id !== 'sec-small-cap' && 
+        sec.id !== 'sec-waiting' && 
+        sec.id !== exSec?.id && 
+        sec.id !== crSec?.id &&
+        sec.symbols.length > 0
+      ) {
+        list.push({
+          id: sec.id,
+          name: sec.name,
+          icon: '📁',
+          symbols: sec.symbols,
+          isDynamic: false,
+          isCollapsed: isSectionCollapsed(sec.id)
+        });
+      }
+    }
 
     return list;
   }, [watchlistSections, radarMap, collapsedSections]);
@@ -1026,7 +1073,7 @@ export const XChartWatchlistDock: React.FC = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (window.confirm(`ลบหมวดหมู่ "${section.name}" พร้อมหุ้นในกลุ่มนี้?`)) {
-                              removeSection(section.id);
+                              handleDeleteSection(section.id);
                             }
                           }}
                           className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer"
