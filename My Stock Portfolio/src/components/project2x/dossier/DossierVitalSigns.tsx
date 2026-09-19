@@ -8,14 +8,14 @@ interface DossierVitalSignsProps {
 }
 
 export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data, className = '' }) => {
-  const { vitalSigns, quarterlyFinancials = [] } = data;
+  const { vitalSigns, quarterlyFinancials = [], peHistory = [] } = data;
 
-  // 1. Revenue Growth Styling
+  // 1. Revenue Growth
   const revGrowth = vitalSigns.revenueGrowthYoY;
   const isHyperGrowth = vitalSigns.revenueGrowthStatus === 'HYPER_GROWTH';
   const isSteady = vitalSigns.revenueGrowthStatus === 'STEADY';
 
-  // 2. EPS Beat Streak Dot Trail
+  // 2. EPS Beat Streak
   const streak = vitalSigns.epsBeatStreak || 0;
   const dots = Array.from({ length: Math.min(8, Math.max(1, streak)) }, (_, i) => i < streak);
 
@@ -29,36 +29,47 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data, clas
   const isUndervalued = vitalSigns.valuationStatus === 'UNDERVALUED';
   const isStretched = vitalSigns.valuationStatus === 'STRETCHED';
 
-  // Elegant Mini Sparkline Helper
-  const renderMiniSparkline = (values: number[], strokeColor: string, fillColor: string) => {
-    if (values.length < 2) return null;
-    const w = 52;
-    const h = 24;
-    const minVal = Math.min(...values);
-    const maxVal = Math.max(...values);
-    const range = Math.max(1, maxVal - minVal);
+  // 4 Quarters Data Extraction (Chronological: Older -> Latest)
+  const recent4Q = quarterlyFinancials.slice(0, 4).reverse();
+  const revGrowth4Q = recent4Q.map((q) => q.yoy_revenue_growth_pct ?? 30);
+  const epsSurprise4Q = recent4Q.map((q) => Math.max(5, q.eps_surprise_pct ?? 10));
+  const gm4Q = recent4Q.map((q) => q.gross_margin_pct ?? 70);
+  const pe4Q = peHistory.length >= 4 
+    ? peHistory.slice(-4).map((p) => p.pe)
+    : [fwdPE * 1.15, fwdPE * 1.1, fwdPE * 1.05, fwdPE || 14];
 
-    const points = values
-      .map((v, i) => {
-        const x = (i / (values.length - 1)) * w;
-        const y = h - ((v - minVal) / range) * (h - 6) - 3;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(' ');
-
-    const areaPoints = `0,${h} ${points} ${w},${h}`;
+  // Unified Micro 4Q Bar Matrix Generator
+  const render4QMicroBars = (
+    values: number[],
+    barColor: string,
+    glowColor: string
+  ) => {
+    const safeVals = values.length > 0 ? values.slice(-4) : [25, 50, 75, 100];
+    const maxVal = Math.max(...safeVals.map((v) => Math.abs(v)), 1);
 
     return (
-      <svg width={w} height={h} className="overflow-visible shrink-0">
-        <polygon points={areaPoints} fill={fillColor} opacity={0.25} />
-        <polyline points={points} fill="none" stroke={strokeColor} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx={w} cy={h - ((values[values.length - 1] - minVal) / range) * (h - 6) - 3} r={3} fill={strokeColor} />
-      </svg>
+      <div 
+        className="flex items-end gap-1.5 h-7 shrink-0 px-2 py-1 bg-slate-900/80 rounded-lg border border-white/5 shadow-inner" 
+        title="แนวโน้ม 4 ไตรมาสล่าสุด (Q-3 -> ล่าสุด)"
+      >
+        {safeVals.map((v, i) => {
+          const heightPct = Math.max(20, Math.min(100, (Math.abs(v) / maxVal) * 100));
+          const isLatest = i === safeVals.length - 1;
+          return (
+            <div
+              key={i}
+              className="w-2 rounded-t-sm transition-all duration-300"
+              style={{
+                height: `${heightPct}%`,
+                backgroundColor: isLatest ? barColor : `${barColor}80`,
+                boxShadow: isLatest ? `0 0 8px ${glowColor}` : undefined
+              }}
+            />
+          );
+        })}
+      </div>
     );
   };
-
-  const rev4Q = quarterlyFinancials.slice(0, 4).reverse().map((q) => q.revenue_usd || 0);
-  const gm4Q = quarterlyFinancials.slice(0, 4).reverse().map((q) => q.gross_margin_pct || 0);
 
   return (
     <div className={`grid grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
@@ -86,7 +97,8 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data, clas
           <div className="text-3xl font-black font-mono text-white tracking-tight">
             {revGrowth > 0 ? `+${revGrowth}%` : `${revGrowth}%`}
           </div>
-          {renderMiniSparkline(rev4Q, '#823AFD', '#3A0090')}
+          {/* Micro 4Q Revenue Growth Bars */}
+          {render4QMicroBars(revGrowth4Q, '#823AFD', 'rgba(130,58,253,0.8)')}
         </div>
 
         <div className="pt-2 border-t border-white/10 text-[13px] text-slate-300 font-medium">
@@ -95,35 +107,39 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data, clas
       </div>
 
       {/* Tile 2: EPS Beat Streak */}
-      <div className="bg-[#12162B]/95 border border-white/10 hover:border-violet-500/40 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md transition-all">
+      <div className="bg-[#12162B]/95 border border-white/10 hover:border-emerald-500/40 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md transition-all">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[14px] font-bold tracking-wide uppercase flex items-center gap-1.5 text-slate-100">
-            <Target className="w-4 h-4 text-violet-400" />
+            <Target className="w-4 h-4 text-emerald-400" />
             ชนะเป้า EPS
           </span>
-          <span className="px-2.5 py-0.5 rounded-lg text-[12px] font-bold bg-violet-600/20 text-violet-200 border border-violet-500/40 shadow-[0_0_8px_rgba(130,58,253,0.3)]">
+          <span className="px-2.5 py-0.5 rounded-lg text-[12px] font-bold bg-emerald-600/20 text-emerald-200 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]">
             Beat {streak}Q
           </span>
         </div>
 
-        <div className="my-1.5">
-          <div className="text-3xl font-black font-mono text-violet-200 tracking-tight">
-            {streak} ไตรมาส
+        <div className="my-1.5 flex items-end justify-between gap-2">
+          <div>
+            <div className="text-3xl font-black font-mono text-emerald-300 tracking-tight">
+              {streak} ไตรมาส
+            </div>
+            {/* Subtle Glow Dot Trail */}
+            <div className="flex items-center gap-1.5 mt-1.5">
+              {dots.map((isBeat, idx) => (
+                <span
+                  key={idx}
+                  className={`w-2 h-2 rounded-full ${
+                    isBeat ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.8)]' : 'bg-slate-700'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
-          {/* Subtle Glow Dot Trail */}
-          <div className="flex items-center gap-1.5 mt-2">
-            {dots.map((isBeat, idx) => (
-              <span
-                key={idx}
-                className={`w-2.5 h-2.5 rounded-full ${
-                  isBeat ? 'bg-[#823AFD] shadow-[0_0_8px_rgba(130,58,253,0.8)]' : 'bg-slate-700'
-                }`}
-              />
-            ))}
-          </div>
+          {/* Micro 4Q EPS Surprise Bars */}
+          {render4QMicroBars(epsSurprise4Q, '#10B981', 'rgba(16,185,129,0.8)')}
         </div>
 
-        <div className="pt-2 border-t border-white/10 text-[13px] text-violet-300 font-medium">
+        <div className="pt-2 border-t border-white/10 text-[13px] text-emerald-300 font-medium">
           ชนะคาดการณ์ต่อเนื่องทุกงวด
         </div>
       </div>
@@ -156,7 +172,8 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data, clas
           <div className="text-3xl font-black font-mono text-white tracking-tight">
             {margin > 0 ? `${margin.toFixed(1)}%` : '-'}
           </div>
-          {renderMiniSparkline(gm4Q, '#FD5514', '#9A3412')}
+          {/* Micro 4Q Gross Margin Bars */}
+          {render4QMicroBars(gm4Q, '#FD5514', 'rgba(253,85,20,0.8)')}
         </div>
 
         <div className="pt-2 border-t border-white/10 text-[13px] text-slate-300 font-medium">
@@ -165,16 +182,16 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data, clas
       </div>
 
       {/* Tile 4: Forward P/E & PEG Ratio */}
-      <div className="bg-[#12162B]/95 border border-white/10 hover:border-violet-500/40 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md transition-all">
+      <div className="bg-[#12162B]/95 border border-white/10 hover:border-cyan-500/40 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md transition-all">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[14px] font-bold tracking-wide uppercase flex items-center gap-1.5 text-slate-100">
-            <Tag className="w-4 h-4 text-violet-400" />
+            <Tag className="w-4 h-4 text-cyan-400" />
             ความคุ้มค่า (PEG)
           </span>
           <span
             className={`px-2.5 py-0.5 rounded-lg text-[12px] font-bold border ${
               isUndervalued
-                ? 'bg-violet-600/25 text-violet-200 border-violet-500/40 shadow-[0_0_8px_rgba(130,58,253,0.3)]'
+                ? 'bg-cyan-600/25 text-cyan-200 border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.3)]'
                 : isStretched
                 ? 'bg-pink-950/40 text-[#FC2D79] border-[#FC2D79]/40'
                 : 'bg-slate-800/60 text-slate-200 border-white/10'
@@ -184,13 +201,17 @@ export const DossierVitalSigns: React.FC<DossierVitalSignsProps> = ({ data, clas
           </span>
         </div>
 
-        <div className="my-1.5 flex items-baseline gap-2">
-          <span className="text-3xl font-black font-mono text-white tracking-tight">
-            {peg > 0 ? peg.toFixed(2) : '-'}
-          </span>
-          <span className="text-[14px] font-bold text-violet-300 font-mono">
-            PEG
-          </span>
+        <div className="my-1.5 flex items-end justify-between gap-2">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-3xl font-black font-mono text-white tracking-tight">
+              {peg > 0 ? peg.toFixed(2) : '-'}
+            </span>
+            <span className="text-[14px] font-bold text-cyan-300 font-mono">
+              PEG
+            </span>
+          </div>
+          {/* Micro 4Q Valuation Trend Bars */}
+          {render4QMicroBars(pe4Q, '#06B6D4', 'rgba(6,182,212,0.8)')}
         </div>
 
         <div className="pt-2 border-t border-white/10 text-[13px] text-slate-300 font-mono font-medium">

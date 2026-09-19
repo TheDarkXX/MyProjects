@@ -267,7 +267,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
         </div>
       </div>
 
-      {/* Right Col (8 cols): 2X Power Tube */}
+      {/* Right Col (8 cols): Executive Thesis & Catalyst HUD */}
       <div className="lg:col-span-8 w-full">
         <DoublerPowerTube
           currentPrice={currentPrice}
@@ -276,6 +276,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
           marketCap={data.marketCap}
           doublerProgressPct={data.doublerProgressPct}
           unrealizedPnlPct={data.holding?.unrealizedPnlPct || 0}
+          data={data}
         />
       </div>
     </div>
