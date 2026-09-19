@@ -47,11 +47,11 @@ export const DossierCockpitTab: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* MODE 2: Asymmetric 1:3 Pro Deck (1/4 Left Rail, 3/4 Right Stage) */}
+      {/* MODE 2: Golden 2:3 Ratio Deck (2/5 Left Rail, 3/5 Right Stage) */}
       {columnMode === 2 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-          {/* Column 1 (1/4 Rail): Tactical Pulse + Doubler Cone */}
-          <div className="flex flex-col gap-3.5 lg:col-span-3">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+          {/* Column 1 (2/5 Rail): Tactical Pulse + Doubler Cone */}
+          <div className="flex flex-col gap-3.5 lg:col-span-2">
             <TacticalMiniPulse
               symbol={data.symbol}
               currentPrice={data.currentPrice}
@@ -68,11 +68,11 @@ export const DossierCockpitTab: React.FC = () => {
             />
           </div>
 
-          {/* Column 2 (3/4 Stage): Vital Signs + Execution Slip + Moat + Mini Momentum */}
-          <div className="flex flex-col gap-3.5 lg:col-span-9">
+          {/* Column 2 (3/5 Stage): Vital Signs + Moat Guard (Above) + Execution Slip + Mini Momentum */}
+          <div className="flex flex-col gap-3.5 lg:col-span-3">
             <DossierVitalSigns data={data} />
-            <DossierExecutionSlip data={data} />
             <DossierMoatGuard data={data} />
+            <DossierExecutionSlip data={data} />
             {renderMiniMomentumStrip()}
           </div>
         </div>
