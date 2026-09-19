@@ -462,13 +462,13 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                           : 'hover:bg-white/5 text-slate-200 hover:text-white'
                       )}
                     >
-                      {/* Left Cyber Neon Spine (Tier Zone Visual + Active Highlight) */}
+                      {/* Left Cyber Neon Capsule (Tier Zone Visual + Active Highlight) */}
                       <div
                         className={clsx(
-                          'absolute left-0 top-0 bottom-0 transition-all z-10',
+                          'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
                           isSelected
-                            ? 'w-[3.5px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79] shadow-[0_0_10px_rgba(168,85,247,0.9)]'
-                            : clsx('w-[3px]', tierInfo.spineClass)
+                            ? 'w-[5px] bg-[#D500F9] shadow-[0_0_12px_rgba(213,0,249,0.95)]'
+                            : clsx('w-[4px]', tierInfo.spineClass)
                         )}
                       />
 
@@ -590,13 +590,13 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                         : 'hover:bg-white/5 text-slate-200 hover:text-white'
                     )}
                   >
-                    {/* Left Cyber Neon Spine (Tier Zone Visual + Active Highlight) */}
+                    {/* Left Cyber Neon Capsule (Tier Zone Visual + Active Highlight) */}
                     <div
                       className={clsx(
-                        'absolute left-0 top-0 bottom-0 transition-all z-10',
+                        'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
                         isSelected
-                          ? 'w-[3.5px] bg-gradient-to-b from-[#06B6D4] to-[#3B82F6] shadow-[0_0_10px_rgba(6,182,212,0.9)]'
-                          : clsx('w-[3px]', tierInfo.spineClass)
+                          ? 'w-[5px] bg-[#06B6D4] shadow-[0_0_12px_rgba(6,182,212,0.95)]'
+                          : clsx('w-[4px]', tierInfo.spineClass)
                       )}
                     />
 

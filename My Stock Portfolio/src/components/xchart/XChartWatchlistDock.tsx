@@ -909,13 +909,13 @@ export const XChartWatchlistDock: React.FC = () => {
                             isDropTarget && (dropTargetSymbol.isAfter ? 'border-b-2 border-purple-500 shadow-[0_2px_4px_rgba(168,85,247,0.4)]' : 'border-t-2 border-purple-500 shadow-[0_-2px_4px_rgba(168,85,247,0.4)]')
                           )}
                         >
-                          {/* Left Cyber Neon Spine (Tier Zone Visual + Active Tab Highlight) */}
+                          {/* Left Cyber Neon Capsule (Tier Zone Visual + Active Tab Highlight) */}
                           <div
                             className={clsx(
-                              'absolute left-0 top-0 bottom-0 transition-all z-10',
+                              'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
                               isSelected
-                                ? 'w-[3.5px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79] shadow-[0_0_10px_rgba(168,85,247,0.9)]'
-                                : clsx('w-[3px]', tierInfo.spineClass)
+                                ? 'w-[5px] bg-[#D500F9] shadow-[0_0_12px_rgba(213,0,249,0.95)]'
+                                : clsx('w-[4px]', tierInfo.spineClass)
                             )}
                           />
 
