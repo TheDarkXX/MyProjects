@@ -375,6 +375,8 @@ export const XChartWatchlistDock: React.FC = () => {
     rect: DOMRect;
     info: TierVisualInfo;
     symbol: string;
+    radarData?: RadarRow | null;
+    quote?: any;
   } | null>(null);
 
   const [selectedTierFilter, setSelectedTierFilter] = useState<string | null>(null);
@@ -1218,7 +1220,7 @@ export const XChartWatchlistDock: React.FC = () => {
                               symbol={symbol}
                               radarData={radarData}
                               isCurrency={isCurrency}
-                              onHover={(rect, info) => setHoveredTier({ rect, info, symbol })}
+                              onHover={(rect, info, rData) => setHoveredTier({ rect, info, symbol, radarData: rData ?? radarData, quote })}
                               onLeave={() => setHoveredTier(null)}
                             />
 

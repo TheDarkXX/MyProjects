@@ -217,7 +217,7 @@ interface TierBadgeIndicatorProps {
   symbol: string;
   radarData?: RadarRow | null;
   isCurrency?: boolean;
-  onHover?: (rect: DOMRect, info: TierVisualInfo) => void;
+  onHover?: (rect: DOMRect, info: TierVisualInfo, radarData?: RadarRow | null) => void;
   onLeave?: () => void;
 }
 
@@ -236,7 +236,7 @@ export const TierBadgeIndicator: React.FC<TierBadgeIndicatorProps> = ({
   const handleMouseEnter = (e: React.MouseEvent<HTMLSpanElement>) => {
     if (onHover && info.isRecognized) {
       const rect = e.currentTarget.getBoundingClientRect();
-      onHover(rect, info);
+      onHover(rect, info, radarData);
     }
   };
 
@@ -256,18 +256,19 @@ export const TierBadgeIndicator: React.FC<TierBadgeIndicatorProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={onLeave}
       className="w-5 flex items-center justify-center text-[14px] leading-none shrink-0 cursor-help transition-transform duration-150 group-hover:scale-125 select-none"
-      title={`${info.label}${info.scenarioTitle ? ` — ${info.scenarioTitle}` : ''}`}
     >
       {info.icon}
     </span>
   );
 };
 
-interface FloatingHUDProps {
+export interface FloatingHUDProps {
   hovered: {
     rect: DOMRect;
     info: TierVisualInfo;
     symbol: string;
+    radarData?: RadarRow | null;
+    quote?: any;
   } | null;
 }
 
@@ -277,11 +278,16 @@ interface FloatingHUDProps {
 export const TierFloatingHUD: React.FC<FloatingHUDProps> = ({ hovered }) => {
   if (!hovered || !hovered.info.isRecognized) return null;
 
-  const { rect, info, symbol } = hovered;
+  const { rect, info, symbol, radarData, quote } = hovered;
   
   // Position the floating card smoothly to the left or right of the badge
   const top = Math.max(10, rect.top - 8);
   const left = Math.max(10, rect.left - 290);
+
+  const price = radarData?.currentPrice || quote?.price || 0;
+  const ema200Val = radarData?.ema200;
+  const distEma200 = radarData?.distEma200;
+  const bankerVal = radarData?.banker;
 
   return (
     <div
@@ -310,8 +316,35 @@ export const TierFloatingHUD: React.FC<FloatingHUDProps> = ({ hovered }) => {
         )}
       </div>
 
+      {/* Technical Data Pill Grid */}
+      {(price > 0 || ema200Val !== undefined) && (
+        <div className="grid grid-cols-3 gap-1.5 my-2 font-mono text-[11px]">
+          <div className="flex flex-col bg-slate-900/90 rounded-lg p-1.5 border border-slate-800 text-center">
+            <span className="text-[10px] text-slate-400">Last Price</span>
+            <span className="font-bold text-slate-100 font-mono">${price.toFixed(2)}</span>
+          </div>
+          <div className="flex flex-col bg-slate-900/90 rounded-lg p-1.5 border border-slate-800 text-center">
+            <span className="text-[10px] text-slate-400">EMA 200</span>
+            <span className="font-bold text-amber-300 font-mono">
+              {ema200Val ? `$${ema200Val.toFixed(2)}` : '—'}
+            </span>
+            {distEma200 !== undefined && (
+              <span className={clsx("text-[10px] font-bold", distEma200 >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                {distEma200 >= 0 ? '+' : ''}{distEma200.toFixed(2)}%
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col bg-slate-900/90 rounded-lg p-1.5 border border-slate-800 text-center">
+            <span className="text-[10px] text-slate-400">Banker</span>
+            <span className={clsx("font-bold font-mono", (bankerVal ?? 0) >= 10 ? "text-rose-400" : "text-slate-300")}>
+              {(bankerVal ?? 0).toFixed(1)}/20
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Scenario / Technical Reason */}
-      <div className="pt-2 space-y-1">
+      <div className="pt-1 space-y-1">
         {info.scenarioTitle && (
           <div className="text-xs font-semibold text-purple-300">
             {info.scenarioTitle}

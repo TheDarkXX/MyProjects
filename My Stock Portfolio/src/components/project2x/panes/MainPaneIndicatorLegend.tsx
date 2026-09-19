@@ -12,10 +12,13 @@ import {
 } from 'lucide-react';
 import { IndicatorSettings } from '../../../types/indicatorConfig';
 import { RawBarItem } from '../../../types/chart';
+import { TierVisualInfo } from '../../xchart/TierBadgeIndicator';
 
 export interface MainPaneIndicatorLegendProps {
   indicatorConfig: IndicatorSettings;
   activeLegend: RawBarItem | null;
+  tierVisual?: TierVisualInfo;
+  distEma200?: number | null;
   superMoneySignalResult?: {
     currentDirection: number;
     currentStatusText: string;
@@ -31,6 +34,7 @@ export interface MainPaneIndicatorLegendProps {
   globalDrawingsVisible?: boolean;
 
   onToggleEMA: (key: 'ema1' | 'ema2' | 'ema3' | 'ema4' | 'ema5') => void;
+  onToggleAllEMA?: (visible: boolean) => void;
   onToggleEnvelope: () => void;
   onToggleTrendSpeedDyn: () => void;
   onToggleSuperMoneySignal: () => void;
@@ -38,19 +42,22 @@ export interface MainPaneIndicatorLegendProps {
   onToggleAutoSRLock?: () => void;
   onToggleAnchoredVWAP?: () => void;
   onToggleVolumeProfile?: () => void;
-  onOpenConfig: (view: 'ema' | 'envelope' | 'trendSpeed' | 'superMoneySignal' | 'mcdx' | 'ultimateRsi' | 'list' | 'anchoredVwap') => void;
+  onOpenConfig: (view: 'ema' | 'envelope' | 'trendSpeed' | 'superMoneySignal' | 'mcdx' | 'ultimateRsi' | 'list' | 'anchoredVwap' | 'volumeProfile') => void;
   onOpenDrawingSettings?: () => void;
 }
 
 export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = ({
   indicatorConfig,
   activeLegend,
+  tierVisual,
+  distEma200,
   superMoneySignalResult,
   trendSpeedData,
   autoSRCount = 0,
   autoSRLocked = false,
   globalDrawingsVisible = true,
   onToggleEMA,
+  onToggleAllEMA,
   onToggleEnvelope,
   onToggleTrendSpeedDyn,
   onToggleSuperMoneySignal,
@@ -199,10 +206,24 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
     const anyEmaVisible = emas.some((e) => e.visible);
     const periodsText = emas.map((e) => e.period).join(' ');
 
+    const liveEma200 = activeLegend?.ema200;
+    const effDist = distEma200 !== undefined && distEma200 !== null ? distEma200 : (
+      (activeLegend?.close && liveEma200) ? ((activeLegend.close - liveEma200) / liveEma200) * 100 : null
+    );
+
     activeItems.push({
       id: 'emaRibbon',
       title: 'EMA Ribbon',
       params: `${periodsText} close`,
+      badge: (tierVisual && effDist !== null && liveEma200) ? {
+        text: `${tierVisual.icon} ${effDist >= 0 ? '+' : ''}${effDist.toFixed(2)}% ($${liveEma200.toFixed(2)})`,
+        bgClass: effDist >= 0
+          ? 'bg-emerald-950/80 border border-emerald-800/60 px-1.5 py-0.5 rounded-full'
+          : effDist >= -15
+            ? 'bg-amber-950/80 border border-amber-800/60 px-1.5 py-0.5 rounded-full'
+            : 'bg-rose-950/80 border border-rose-800/60 px-1.5 py-0.5 rounded-full animate-pulse',
+        textClass: effDist >= 0 ? 'text-emerald-300 font-bold' : effDist >= -15 ? 'text-amber-300 font-bold' : 'text-rose-300 font-bold',
+      } : undefined,
       multiValues: emas.map((e) => ({
         label: '',
         value: e.val !== undefined && e.val !== null ? `$${e.val.toFixed(2)}` : '--',
@@ -212,7 +233,9 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       isLocked: lockedItems['emaRibbon'] ?? true,
       onToggleLock: () => handleToggleItemLock('emaRibbon'),
       onToggle: () => {
-        if (anyEmaVisible) {
+        if (onToggleAllEMA) {
+          onToggleAllEMA(!anyEmaVisible);
+        } else if (anyEmaVisible) {
           emas.filter((e) => e.visible).forEach((e) => onToggleEMA(e.key));
         } else {
           emas.forEach((e) => onToggleEMA(e.key));

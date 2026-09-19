@@ -56,6 +56,8 @@ import { useChartDrawings } from './hooks/useChartDrawings';
 import { useChartSeries } from './hooks/useChartSeries';
 import { PriceRangeRuler } from './PriceRangeRuler';
 import { AnchoredVWAPHandle } from './indicators/AnchoredVWAPHandle';
+import { LiveEMAIndicatorBadge } from './indicators/LiveEMAIndicatorBadge';
+import { getTierVisualInfo } from '../xchart/TierBadgeIndicator';
 import { ChartControlBar } from './ChartControlBar';
 import { ChartLegendBar, DominanceTableOverlay } from './ChartLegendOverlay';
 import { applyPaneLayoutHeights as computePaneHeights } from './chartLayoutUtils';
@@ -1417,6 +1419,31 @@ export const LWChart: React.FC<LWChartProps> = ({
     return 0;
   }, [activeLegend]);
 
+  // Effective Live Real-Time Price: Poller livePrice -> displayBars latest close -> currentPrice
+  const effectivePrice = livePrice || (displayBars && displayBars.length > 0 ? displayBars[displayBars.length - 1].close : (currentPrice || 0));
+
+  // Latest EMA 200 & Live Distance
+  const lastEma200 = activeLegend?.ema200 ?? (ema200 && ema200.length > 0 ? ema200[ema200.length - 1] : undefined);
+  const liveDistEma200 = effectivePrice && lastEma200
+    ? Number((((effectivePrice - lastEma200) / lastEma200) * 100).toFixed(2))
+    : propDistEma200;
+
+  const tierVisual = useMemo(() => {
+    return getTierVisualInfo(
+      {
+        traffic_light: trafficLight as any,
+        badge: badge || '',
+        scenario,
+        reason_th: reasonTh,
+        reason: reasonTh || '',
+        currentPrice: effectivePrice,
+        ema200: lastEma200,
+        distEma200: liveDistEma200,
+      } as any,
+      symbol
+    );
+  }, [trafficLight, badge, scenario, reasonTh, symbol, effectivePrice, lastEma200, liveDistEma200]);
+
   const isCustomHeight = className.includes('h-') || className.includes('flex-1');
   const defaultHeightClass = isCustomHeight ? '' : 'h-[650px] min-h-[500px]';
 
@@ -1505,15 +1532,6 @@ export const LWChart: React.FC<LWChartProps> = ({
         const bVal = Number(activeLegend?.banker ?? (bankerSeries && bankerSeries.length > 0 ? bankerSeries[bankerSeries.length - 1] : (banker ?? 0)));
         const isHighBanker = bVal >= 10;
         const bankerPct = Math.min(100, Math.max(0, (bVal / 20) * 100));
-
-        // Effective Live Real-Time Price: Poller livePrice -> displayBars latest close -> currentPrice
-        const effectivePrice = livePrice || (displayBars && displayBars.length > 0 ? displayBars[displayBars.length - 1].close : (currentPrice || 0));
-
-        // Latest EMA 200 & Live Distance
-        const lastEma200 = ema200 && ema200.length > 0 ? ema200[ema200.length - 1] : undefined;
-        const liveDistEma200 = effectivePrice && lastEma200
-          ? Number((((effectivePrice - lastEma200) / lastEma200) * 100).toFixed(2))
-          : propDistEma200;
 
         // EMA 9 calculation
         let ema9Cur: number | null = null;
@@ -1687,6 +1705,8 @@ export const LWChart: React.FC<LWChartProps> = ({
             <MainPaneIndicatorLegend
               indicatorConfig={indicatorConfig}
               activeLegend={activeLegend}
+              tierVisual={tierVisual}
+              distEma200={liveDistEma200}
               superMoneySignalResult={superMoneySignalResult}
               trendSpeedData={
                 hoveredTrendSpeed ||
@@ -1700,6 +1720,13 @@ export const LWChart: React.FC<LWChartProps> = ({
                   useChartViewStore.getState().toggleVisibility('project2x', 'showEMA');
                 } else {
                   useIndicatorStore.getState().toggleEMA(key);
+                }
+              }}
+              onToggleAllEMA={(visible) => {
+                if (activeContext === 'project2x') {
+                  useChartViewStore.getState().toggleVisibility('project2x', 'showEMA');
+                } else {
+                  useIndicatorStore.getState().toggleAllEMA(visible);
                 }
               }}
               onToggleEnvelope={() => {
@@ -1766,6 +1793,21 @@ export const LWChart: React.FC<LWChartProps> = ({
                 setIndicatorInitialView(view);
                 setIsIndicatorOpen(true);
               }}
+            />
+          )}
+
+          {/* In-Canvas Live Indicator Badge (EMA 200 Anchor Pill with Status Icon) */}
+          {!isMobile && (
+            <LiveEMAIndicatorBadge
+              chartRef={chartRef}
+              ema200SeriesRef={ema200SeriesRef}
+              containerRef={chartContainerRef}
+              displayBars={displayBars}
+              effectivePrice={effectivePrice}
+              lastEma200={lastEma200}
+              distEma200={liveDistEma200}
+              tierVisual={tierVisual}
+              visible={indicatorConfig.ema3.visible && viewProfile.showEMA}
             />
           )}
 

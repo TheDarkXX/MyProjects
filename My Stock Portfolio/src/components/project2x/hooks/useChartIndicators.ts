@@ -205,6 +205,8 @@ export function useChartIndicators({
         ema50: e50Val !== null ? Number(e50Val.toFixed(2)) : null,
         ema150: e150Val !== null ? Number(e150Val.toFixed(2)) : null,
         ema200: e200Val !== null ? Number(e200Val.toFixed(2)) : null,
+        ema4: e4Val !== null ? Number(e4Val.toFixed(2)) : null,
+        ema5: e5Val !== null ? Number(e5Val.toFixed(2)) : null,
         banker: Number(bVal.toFixed(2)),
         hotMoney: Number(hVal.toFixed(2)),
         retail: Number(rVal.toFixed(2)),
@@ -214,7 +216,7 @@ export function useChartIndicators({
 
     items.sort((a, b) => a.time.localeCompare(b.time));
     return items;
-  }, [dates, closes, opens, highs, lows, volumes, activeEma1, activeEma2, activeEma3, bankerSeries, hotMoneySeries, retailSeries, bankerMaSeries, indicatorConfig.mcdx.maPeriod]);
+  }, [dates, closes, opens, highs, lows, volumes, activeEma1, activeEma2, activeEma3, activeEma4, activeEma5, bankerSeries, hotMoneySeries, retailSeries, bankerMaSeries, indicatorConfig.mcdx.maPeriod]);
 
   // Aggregate into Weekly bars (if resolution === '1W')
   const aggregatedBars: RawBarItem[] = useMemo(() => {

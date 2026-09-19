@@ -423,6 +423,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     config,
     updateEMA,
     toggleEMA,
+    toggleAllEMA,
     updateEnvelope,
     toggleEnvelope,
     updateSignals,
@@ -507,18 +508,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                 type="button"
                 onClick={() => {
                   const anyVisible = config.ema1.visible || config.ema2.visible || config.ema3.visible || config.ema4?.visible || config.ema5?.visible;
-                  toggleEMA('ema1');
-                  if (anyVisible) {
-                    if (config.ema2.visible) toggleEMA('ema2');
-                    if (config.ema3.visible) toggleEMA('ema3');
-                    if (config.ema4?.visible) toggleEMA('ema4');
-                    if (config.ema5?.visible) toggleEMA('ema5');
-                  } else {
-                    if (!config.ema2.visible) toggleEMA('ema2');
-                    if (!config.ema3.visible) toggleEMA('ema3');
-                    if (!config.ema4?.visible) toggleEMA('ema4');
-                    if (!config.ema5?.visible) toggleEMA('ema5');
-                  }
+                  toggleAllEMA(!anyVisible);
                 }}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                   config.ema1.visible || config.ema2.visible || config.ema3.visible || config.ema4?.visible || config.ema5?.visible

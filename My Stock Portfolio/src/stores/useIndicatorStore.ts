@@ -239,10 +239,11 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   updateEMA: (id, partial) => {
     const prev = get().config;
+    const cur = prev[id] || DEFAULT_INDICATOR_SETTINGS[id];
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      [id]: { ...prev[id], ...partial },
+      [id]: { ...cur, ...partial },
     };
     saveConfig(next);
     set({ config: next });
@@ -250,13 +251,14 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
 
   toggleEMA: (id) => {
     const prev = get().config;
-    const nextVisible = !prev[id].visible;
+    const cur = prev[id] || DEFAULT_INDICATOR_SETTINGS[id];
+    const nextVisible = !cur.visible;
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      [id]: { ...prev[id], visible: nextVisible },
+      [id]: { ...cur, visible: nextVisible },
     };
-    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} ${id.toUpperCase()}`, { [id]: next[id] }, { [id]: prev[id] });
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} ${id.toUpperCase()}`, { [id]: next[id] }, { [id]: cur });
     saveConfig(next);
     set({ config: next });
   },
@@ -266,16 +268,16 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
     const next: IndicatorSettings = {
       ...prev,
       activePreset: 'custom',
-      ema1: { ...prev.ema1, visible },
-      ema2: { ...prev.ema2, visible },
-      ema3: { ...prev.ema3, visible },
-      ema4: { ...prev.ema4, visible },
-      ema5: { ...prev.ema5, visible },
+      ema1: { ...(prev.ema1 || DEFAULT_INDICATOR_SETTINGS.ema1), visible },
+      ema2: { ...(prev.ema2 || DEFAULT_INDICATOR_SETTINGS.ema2), visible },
+      ema3: { ...(prev.ema3 || DEFAULT_INDICATOR_SETTINGS.ema3), visible },
+      ema4: { ...(prev.ema4 || DEFAULT_INDICATOR_SETTINGS.ema4), visible },
+      ema5: { ...(prev.ema5 || DEFAULT_INDICATOR_SETTINGS.ema5), visible },
     };
     pushIndicatorToggleHistory(
       `${visible ? 'Show' : 'Hide'} All EMAs`,
-      { ema1: next.ema1, ema2: next.ema2, ema3: next.ema3 },
-      { ema1: prev.ema1, ema2: prev.ema2, ema3: prev.ema3 }
+      { ema1: next.ema1, ema2: next.ema2, ema3: next.ema3, ema4: next.ema4, ema5: next.ema5 },
+      { ema1: prev.ema1, ema2: prev.ema2, ema3: prev.ema3, ema4: prev.ema4, ema5: prev.ema5 }
     );
     saveConfig(next);
     set({ config: next });
