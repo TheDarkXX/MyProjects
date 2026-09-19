@@ -8,6 +8,8 @@ import clsx from 'clsx';
 import { useDossierStore } from '../../../stores/dossierStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { DoublerPowerTube } from './DoublerPowerTube';
+import { DossierStrategyCard } from './DossierStrategyCard';
+import { DossierHoldingProfile } from './DossierHoldingProfile';
 import { getTierMetadata } from '../../../utils/tierConfig';
 import { PullbackDnaModal } from '../PullbackDnaModal';
 
@@ -233,42 +235,20 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
       </div>
     </div>
 
-    {/* Row 2: Profile + Live Quote + 2X Power Tube */}
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-center">
-      {/* Left Col (4 cols): Symbol, Category, Price */}
-      <div className="lg:col-span-4 flex items-center justify-between sm:justify-start gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-slate-100 tracking-tight">
-              {data.symbol}
-            </h2>
-            <span className={`px-2.5 py-0.5 rounded text-[12px] font-medium ${
-              data.category === 'Core'
-                ? 'bg-violet-600/20 text-violet-300 border border-violet-500/40'
-                : 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
-            }`}>
-              {data.category === 'Core' ? 'Core 👑' : 'Moonshot 🚀'}
-            </span>
-          </div>
-          <p className="text-[14px] text-slate-300 font-normal mt-0.5 truncate max-w-[220px]">
-            {data.name}
-          </p>
-        </div>
-
-        {/* Price Box */}
-        <div className="border-l border-white/10 pl-4 flex-shrink-0">
-          <div className="text-3xl font-bold text-white font-mono tracking-tight">
-            ${currentPrice.toFixed(2)}
-          </div>
-          <div className={`flex items-center gap-1 text-[14px] font-medium font-mono mt-0.5 ${isUp ? 'text-emerald-400' : 'text-[#FC2D79]'}`}>
-            {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-            <span>{isUp ? '+' : ''}{change.toFixed(2)} ({isUp ? '+' : ''}{changePct.toFixed(2)}%)</span>
-          </div>
-        </div>
+    {/* Row 2: 3 Independent Modular Pods (Profile & Holding | Strategy & Wall St | 2X Runway) */}
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+      {/* Pod 1: Stock Identity & Portfolio Holding */}
+      <div className="lg:col-span-4 2xl:col-span-3 w-full">
+        <DossierHoldingProfile data={data} />
       </div>
 
-      {/* Right Col (8 cols): Executive Thesis & Catalyst HUD */}
-      <div className="lg:col-span-8 w-full">
+      {/* Pod 2: Strategy Verdict & Wall Street Intelligence */}
+      <div className="lg:col-span-4 2xl:col-span-4 w-full">
+        <DossierStrategyCard data={data} />
+      </div>
+
+      {/* Pod 3: 2X Institutional Horizon Runway */}
+      <div className="lg:col-span-4 2xl:col-span-5 w-full">
         <DoublerPowerTube
           currentPrice={currentPrice}
           avgCost={data.holding?.avgCost || 0}
