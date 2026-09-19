@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, ShieldAlert, Award, Shield } from 'lucide-react';
+import { ShieldCheck, Shield } from 'lucide-react';
 import { DossierPayload } from '../../../stores/dossierStore';
 import { DOSSIER_STATIC_DATA } from '../../../data/project2xDossierData';
 import { THESIS_MAP } from './tabs/DossierThesisTab';
@@ -37,11 +37,11 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
     ? dynamicMoats.reduce((sum, m) => sum + (m.score / m.maxScore) * 10, 0) / dynamicMoats.length
     : 9.0;
 
-  // Colors & Configuration for 3 Concentric Rings
-  const ringConfigs = [
-    { r: 84, len: Math.PI * 84, color: '#823AFD', glow: 'rgba(130,58,253,0.7)', labelColor: 'text-violet-300', dot: 'bg-[#823AFD]' },
-    { r: 66, len: Math.PI * 66, color: '#FD5514', glow: 'rgba(253,85,20,0.7)', labelColor: 'text-orange-300', dot: 'bg-[#FD5514]' },
-    { r: 48, len: Math.PI * 48, color: '#FC2D79', glow: 'rgba(252,45,121,0.7)', labelColor: 'text-pink-300', dot: 'bg-[#FC2D79]' },
+  // Colors & Configuration for 3 Distinct Gauges
+  const gaugeConfigs = [
+    { color: '#823AFD', glow: 'rgba(130,58,253,0.7)', labelColor: 'text-violet-300' },
+    { color: '#FD5514', glow: 'rgba(253,85,20,0.7)', labelColor: 'text-orange-300' },
+    { color: '#FC2D79', glow: 'rgba(252,45,121,0.7)', labelColor: 'text-pink-300' },
   ];
 
   return (
@@ -52,104 +52,93 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
           : 'bg-[#0E1326]/95 border-white/10'
       } ${className}`}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2.5">
-          <ShieldCheck className="w-4 h-4 text-violet-400" />
+      {/* Header with Total Moat Index Badge */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <ShieldCheck className="w-4 h-4 text-violet-400 shrink-0" />
           <h4 className="text-[15px] font-bold text-slate-100 tracking-wide uppercase">
             Moat Radar & Defense Protocols
           </h4>
+          <span className="flex items-center gap-1 font-mono text-[12px] font-bold px-2 py-0.5 rounded-md bg-violet-600/20 text-violet-200 border border-violet-500/40">
+            <Shield className="w-3 h-3 text-violet-400" />
+            Index: {avgMoatScore.toFixed(1)}/10
+          </span>
         </div>
         <span className="text-[12px] font-semibold text-violet-200 bg-violet-600/20 px-2.5 py-1 rounded-lg border border-violet-500/30 truncate max-w-[240px]">
           {staticData.businessMoat}
         </span>
       </div>
 
-      {/* Cyberpunk Concentric Shield Arc Gauge & Moat Matrix */}
-      <div className="flex flex-col md:flex-row items-center gap-4 bg-[#0A0E1A] p-3.5 rounded-xl border border-white/5 mb-3">
-        {/* SVG Concentric Arc Gauge */}
-        <div className="relative w-52 h-30 shrink-0 flex items-end justify-center">
-          <svg className="w-52 h-30 overflow-visible" viewBox="0 0 200 115">
-            <defs>
-              <filter id="moatNeonGlow" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="3" result="glow" />
-                <feMerge>
-                  <feMergeNode in="glow" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
+      {/* 3 Separate Individual Moat Gauges (Side-by-Side) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+        {dynamicMoats.slice(0, 3).map((m, idx) => {
+          const cfg = gaugeConfigs[idx] || gaugeConfigs[0];
+          const pct = Math.min(100, Math.max(0, (m.score / m.maxScore) * 100));
+          const arcLen = Math.PI * 46; // ~144.5
+          const dashOffset = arcLen * (1 - pct / 100);
 
-            {/* Render 3 Concentric Rings */}
-            {dynamicMoats.slice(0, 3).map((m, idx) => {
-              const cfg = ringConfigs[idx];
-              const pct = Math.min(100, Math.max(0, (m.score / m.maxScore) * 100));
-              const dashOffset = cfg.len * (1 - pct / 100);
+          return (
+            <div
+              key={idx}
+              className="bg-[#0A0E1A] p-3 rounded-xl border border-white/5 hover:border-white/15 transition-all flex flex-col items-center justify-between text-center shadow-inner"
+            >
+              {/* Individual SVG Semi-Circular Gauge */}
+              <div className="relative w-32 h-18 flex items-end justify-center">
+                <svg className="w-32 h-18 overflow-visible" viewBox="0 0 120 68">
+                  <defs>
+                    <filter id={`moatGlow-${idx}`} x="-25%" y="-25%" width="150%" height="150%">
+                      <feGaussianBlur stdDeviation="2.5" result="glow" />
+                      <feMerge>
+                        <feMergeNode in="glow" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
 
-              return (
-                <g key={idx}>
                   {/* Track Arc */}
                   <path
-                    d={`M ${100 - cfg.r} 100 A ${cfg.r} ${cfg.r} 0 0 1 ${100 + cfg.r} 100`}
+                    d="M 14 62 A 46 46 0 0 1 106 62"
                     fill="none"
-                    stroke="#161C33"
-                    strokeWidth="6"
+                    stroke="#1E293B"
+                    strokeWidth="8"
                     strokeLinecap="round"
                   />
-                  {/* Active Neon Arc */}
+                  {/* Active Neon Progress Arc */}
                   <path
-                    d={`M ${100 - cfg.r} 100 A ${cfg.r} ${cfg.r} 0 0 1 ${100 + cfg.r} 100`}
+                    d="M 14 62 A 46 46 0 0 1 106 62"
                     fill="none"
                     stroke={cfg.color}
-                    strokeWidth="6"
+                    strokeWidth="8"
                     strokeLinecap="round"
-                    strokeDasharray={cfg.len}
+                    strokeDasharray={arcLen}
                     strokeDashoffset={dashOffset}
-                    filter="url(#moatNeonGlow)"
+                    filter={`url(#moatGlow-${idx})`}
                     className="transition-all duration-700 ease-out"
                   />
-                </g>
-              );
-            })}
-          </svg>
+                </svg>
 
-          {/* Central Shield Score & Label */}
-          <div className="absolute bottom-1 text-center flex flex-col items-center">
-            <Shield className="w-4 h-4 text-violet-400 mb-0.5 filter drop-shadow-[0_0_6px_rgba(130,58,253,0.8)]" />
-            <div className="text-xl font-black font-mono text-white leading-tight">
-              {avgMoatScore.toFixed(1)}<span className="text-xs text-slate-400 font-normal">/10</span>
-            </div>
-            <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-              MOAT INDEX
-            </span>
-          </div>
-        </div>
-
-        {/* Pillar Details (Interactive Breakdown) */}
-        <div className="flex-1 flex flex-col justify-center gap-2 w-full">
-          {dynamicMoats.slice(0, 3).map((m, idx) => {
-            const cfg = ringConfigs[idx];
-            return (
-              <div
-                key={idx}
-                className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-white/5 hover:border-white/10 transition-colors"
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <span className={`w-2.5 h-2.5 rounded-full ${cfg.dot} shadow-[0_0_6px_currentColor] shrink-0`} />
-                  <span className="text-[13px] font-medium text-slate-200 truncate">{m.title}</span>
+                {/* Value Inside Arc Center */}
+                <div className="absolute bottom-0 text-center flex flex-col items-center">
+                  <div className="text-lg font-black font-mono text-white leading-tight">
+                    {m.score}<span className="text-[12px] text-slate-400 font-normal">/{m.maxScore}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0 font-mono">
-                  <span className={`text-[13px] font-bold ${cfg.labelColor}`}>
-                    {m.score}/{m.maxScore}
-                  </span>
-                  <span className="text-[11px] text-slate-400">
-                    ({((m.score / m.maxScore) * 100).toFixed(0)}%)
+              </div>
+
+              {/* Title & Percentage Badge */}
+              <div className="mt-2 w-full">
+                <div className="text-[13px] font-bold text-slate-100 truncate px-1" title={m.title}>
+                  {m.title}
+                </div>
+                <div className="mt-0.5">
+                  <span className={`text-[12px] font-mono font-bold ${cfg.labelColor}`}>
+                    {pct.toFixed(0)}% Power
                   </span>
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* 3 Tactical Defense Protocol Strips */}
