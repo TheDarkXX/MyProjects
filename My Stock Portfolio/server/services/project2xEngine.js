@@ -1456,6 +1456,67 @@ export async function scanRadarMatrix(portfolioId) {
     });
   }
 
+  // Also scan all other active watchlist stocks stored in historical_prices (e.g. COST, ISRG, AAPL, etc.)
+  const existingSymbols = new Set(radarRows.map(r => r.symbol.toUpperCase()));
+  try {
+    const extraRows = db.prepare(`
+      SELECT DISTINCT symbol 
+      FROM historical_prices 
+      WHERE symbol NOT LIKE '%=%' AND symbol NOT LIKE '%-USD%'
+      ORDER BY symbol ASC
+    `).all();
+
+    for (const r of extraRows) {
+      const sym = r.symbol.toUpperCase();
+      if (existingSymbols.has(sym)) continue;
+
+      const signalData = await calculateStockRadarSignal(sym, {
+        portfolioId,
+        ownedShares: 0,
+        category: 'Watchlist'
+      });
+      if (!signalData) continue;
+
+      radarRows.push({
+        symbol: sym,
+        category: 'Watchlist',
+        target_percent: 0,
+        currentPrice: signalData.currentPrice,
+        ema9: signalData.ema9,
+        ema50: signalData.ema50,
+        ema150: signalData.ema150,
+        ema200: signalData.ema200,
+        distEma9: signalData.distEma9,
+        distEma50: signalData.distEma50,
+        distEma150: signalData.distEma150,
+        distEma200: signalData.distEma200,
+        isAboveEma9: signalData.isAboveEma9,
+        hasRsiDivergence: signalData.hasRsiDivergence,
+        banker: signalData.banker,
+        rsi14: signalData.rsi14,
+        regime: signalData.regime,
+        volRatio: signalData.volRatio,
+        high52W: signalData.currentPrice,
+        drawdownFrom52W: 0,
+        scenario: signalData.scenario,
+        traffic_light: signalData.traffic_light,
+        badge: signalData.badge,
+        reason: signalData.reason,
+        reason_th: signalData.reason_th,
+        checklist: signalData.checklist,
+        signals_checklist: signalData.signals_checklist,
+        sparkline: signalData.sparkline,
+        owned_shares: 0,
+        target_shares: 0,
+        progress_percent: 0,
+        status: 'WATCHLIST'
+      });
+      existingSymbols.add(sym);
+    }
+  } catch (err) {
+    console.error('[ScanRadarMatrix] Error scanning extra watchlist symbols:', err.message);
+  }
+
   // Calculate true total portfolio market value (ALL held securities + actual cash)
   // FIX: stockMarketValues[sym] is already (shares * price). Do NOT multiply shares again!
   let totalSecuritiesUsd = 0;

@@ -2,7 +2,16 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useXChartStore, WatchlistSortColumn } from '../../stores/xchartStore';
 import { useHoldings } from '../../hooks/useHoldings';
 import { useDeviceLayout } from '../../hooks/useDeviceLayout';
+import { useProject2xStore, RadarRow } from '../../stores/project2xStore';
+import { usePortfolioStore } from '../../stores/portfolioStore';
 import { MyPortWatchlist } from './myport/MyPortWatchlist';
+import { 
+  TierBadgeIndicator, 
+  TierFloatingHUD, 
+  getTierVisualInfo, 
+  TierVisualInfo,
+  getSymbolBadgeGradient
+} from './TierBadgeIndicator';
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -24,29 +33,10 @@ import {
   Briefcase,
   GripVertical,
   ChevronsDownUp,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Filter
 } from 'lucide-react';
 import clsx from 'clsx';
-
-// Deterministic gradient colors for symbol badges (TradingView style)
-const BADGE_GRADIENTS = [
-  'from-blue-600 to-indigo-600',
-  'from-purple-600 to-pink-600',
-  'from-emerald-600 to-teal-600',
-  'from-amber-500 to-orange-600',
-  'from-rose-600 to-red-600',
-  'from-cyan-600 to-blue-600',
-  'from-fuchsia-600 to-purple-600'
-];
-
-function getSymbolBadgeGradient(sym: string): string {
-  let hash = 0;
-  for (let i = 0; i < sym.length; i++) {
-    hash = sym.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const idx = Math.abs(hash) % BADGE_GRADIENTS.length;
-  return BADGE_GRADIENTS[idx];
-}
 
 export const XChartWatchlistDock: React.FC = () => {
   const {
@@ -114,6 +104,34 @@ export const XChartWatchlistDock: React.FC = () => {
 
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionName, setEditingSectionName] = useState('');
+
+  // Project 2X 7-Tier Radar Integration (Hybrid 1 + 3)
+  const { radar, fetchRadar } = useProject2xStore();
+  const { activePortfolioId } = usePortfolioStore();
+
+  useEffect(() => {
+    if (!radar && activePortfolioId) {
+      fetchRadar(activePortfolioId);
+    }
+  }, [radar, activePortfolioId, fetchRadar]);
+
+  const radarMap = useMemo(() => {
+    const map: Record<string, RadarRow> = {};
+    if (radar?.rows) {
+      for (const row of radar.rows) {
+        map[row.symbol.toUpperCase()] = row;
+      }
+    }
+    return map;
+  }, [radar?.rows]);
+
+  const [hoveredTier, setHoveredTier] = useState<{
+    rect: DOMRect;
+    info: TierVisualInfo;
+    symbol: string;
+  } | null>(null);
+
+  const [selectedTierFilter, setSelectedTierFilter] = useState<string | null>(null);
 
   // Resizable width state (min 240px, max 650px)
   const [dockWidth, setDockWidth] = useState<number>(() => {
@@ -543,6 +561,36 @@ export const XChartWatchlistDock: React.FC = () => {
         </form>
       )}
 
+      {/* 3.5. Cyber Tier Quick-Filter Bar (Hybrid 1 + 3) */}
+      <div className="px-2.5 py-1.5 bg-[#0D101A] border-b border-[#1F2233]/70 flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0 select-none">
+        {[
+          { id: null, label: 'ALL', icon: '🌐' },
+          { id: 'BUY_NOW', label: 'BUY', icon: '🔥', activeClass: 'bg-red-500/25 text-orange-200 border-orange-500/60 shadow-[0_0_8px_rgba(239,68,68,0.45)]' },
+          { id: 'RUNNER', label: 'RUN', icon: '⚡', activeClass: 'bg-cyan-500/25 text-cyan-200 border-cyan-400/60 shadow-[0_0_8px_rgba(6,182,212,0.45)]' },
+          { id: 'DIP_BUY', label: 'DIP', icon: '🧲', activeClass: 'bg-orange-500/25 text-amber-200 border-amber-400/60 shadow-[0_0_8px_rgba(245,158,11,0.45)]' },
+          { id: 'GET_READY', label: 'RDY', icon: '⏳', activeClass: 'bg-yellow-500/25 text-yellow-200 border-yellow-400/60 shadow-[0_0_8px_rgba(234,179,8,0.45)]' },
+          { id: 'TO_THE_MOON', label: 'MOON', icon: '🚀', activeClass: 'bg-purple-500/25 text-purple-200 border-purple-400/60 shadow-[0_0_8px_rgba(168,85,247,0.45)]' },
+          { id: 'DANGER', label: 'CUT', icon: '🗡️', activeClass: 'bg-rose-950 text-red-200 border-red-500/70 shadow-[0_0_8px_rgba(239,68,68,0.55)]' }
+        ].map(filter => {
+          const isActive = selectedTierFilter === filter.id;
+          return (
+            <button
+              key={filter.label}
+              onClick={() => setSelectedTierFilter(isActive ? null : filter.id)}
+              className={clsx(
+                "px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 border transition-all cursor-pointer shrink-0",
+                isActive 
+                  ? (filter.activeClass || "bg-purple-600 text-white border-purple-400 shadow-sm")
+                  : "bg-white/5 border-transparent text-slate-300 hover:text-white hover:bg-white/10"
+              )}
+            >
+              <span>{filter.icon}</span>
+              <span>{filter.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* 4. TradingView Sortable Table Column Headers (Height: 28px) */}
       <div className="h-7 px-3 bg-[#0B0D14] border-b border-[#1F2233] grid grid-cols-12 items-center text-[11px] font-bold uppercase tracking-wider text-slate-300 shrink-0 select-none">
         <button
@@ -581,8 +629,20 @@ export const XChartWatchlistDock: React.FC = () => {
       {/* 5. Scrollable Sections & High-Density Stocks List with Free-Style Drag & Drop */}
       <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 divide-y divide-[#1F2233]/40">
         {watchlistSections.map((section, secIdx) => {
+          // Filter symbols if a tier filter is active
+          const displayedSymbols = selectedTierFilter
+            ? section.symbols.filter((sym) => {
+                const row = radarMap[sym.toUpperCase()];
+                const info = getTierVisualInfo(row, sym, sym.includes('=X'));
+                if (selectedTierFilter === 'DANGER') {
+                  return info.tierId === 'FALLING_KNIFE' || info.tierId === 'MAYDAY_EXIT' || info.tierId === 'SLOW_BLEED';
+                }
+                return info.tierId === selectedTierFilter;
+              })
+            : section.symbols;
+
           // Visual sort of symbols for this section
-          const sortedSymbols = [...section.symbols].sort((a, b) => {
+          const sortedSymbols = [...displayedSymbols].sort((a, b) => {
             if (!watchlistSortColumn) return 0;
             const quoteA = watchlistPrices[a];
             const quoteB = watchlistPrices[b];
@@ -797,6 +857,9 @@ export const XChartWatchlistDock: React.FC = () => {
                       const isItemBeingDragged = draggedSymbol?.symbol === symbol;
                       const isDropTarget = dropTargetSymbol?.sectionId === section.id && dropTargetSymbol.index === originalIndex;
 
+                      const radarData = radarMap[symbol.toUpperCase()];
+                      const tierInfo = getTierVisualInfo(radarData, symbol, isCurrency);
+
                       return (
                         <div
                           key={symbol}
@@ -846,25 +909,29 @@ export const XChartWatchlistDock: React.FC = () => {
                             isDropTarget && (dropTargetSymbol.isAfter ? 'border-b-2 border-purple-500 shadow-[0_2px_4px_rgba(168,85,247,0.4)]' : 'border-t-2 border-purple-500 shadow-[0_-2px_4px_rgba(168,85,247,0.4)]')
                           )}
                         >
-                          {/* Active Neon Left Border Indicator */}
-                          {isSelected && (
-                            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79]" />
-                          )}
+                          {/* Left Cyber Neon Spine (Tier Zone Visual + Active Tab Highlight) */}
+                          <div
+                            className={clsx(
+                              'absolute left-0 top-0 bottom-0 transition-all z-10',
+                              isSelected
+                                ? 'w-[3.5px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79] shadow-[0_0_10px_rgba(168,85,247,0.9)]'
+                                : clsx('w-[2.5px]', tierInfo.spineClass)
+                            )}
+                          />
 
                           {/* Symbol Column: Dot Badge + Ticker */}
                           <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
                             {/* Grip handle on hover */}
                             <GripVertical className="w-2.5 h-2.5 text-slate-500 opacity-0 group-hover:opacity-80 transition-opacity shrink-0 -ml-1 cursor-grab" />
 
-                            {/* TradingView-style circle badge */}
-                            <div
-                              className={clsx(
-                                'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm',
-                                isCurrency ? 'from-amber-600 to-yellow-500' : getSymbolBadgeGradient(symbol)
-                              )}
-                            >
-                              {isCurrency ? '$' : symbol.slice(0, 1)}
-                            </div>
+                            {/* Cyber Micro-Badge */}
+                            <TierBadgeIndicator
+                              symbol={symbol}
+                              radarData={radarData}
+                              isCurrency={isCurrency}
+                              onHover={(rect, info) => setHoveredTier({ rect, info, symbol })}
+                              onLeave={() => setHoveredTier(null)}
+                            />
 
                             {/* Ticker Name (No Bold - font-normal) */}
                             <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
@@ -1087,6 +1154,9 @@ export const XChartWatchlistDock: React.FC = () => {
           onSelectSymbol={handleStockClick} 
         />
       )}
+
+      {/* Floating Cyber HUD Tooltip (Portal/Fixed to prevent clipping) */}
+      <TierFloatingHUD hovered={hoveredTier} />
     </aside>
   );
 

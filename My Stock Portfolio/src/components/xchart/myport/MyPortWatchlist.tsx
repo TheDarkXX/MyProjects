@@ -6,7 +6,13 @@ import { useTransactionStore } from '../../../stores/transactionStore';
 import { useBlueprintStore } from '../../../stores/blueprintStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { useXChartStore } from '../../../stores/xchartStore';
-import { useProject2xStore } from '../../../stores/project2xStore';
+import { useProject2xStore, RadarRow } from '../../../stores/project2xStore';
+import { 
+  TierBadgeIndicator, 
+  TierFloatingHUD, 
+  getTierVisualInfo, 
+  TierVisualInfo 
+} from '../TierBadgeIndicator';
 import { formatCurrencyVal, formatSecondaryVal, formatPriceVal } from './types';
 import { 
   Briefcase, 
@@ -105,8 +111,30 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
   const { transactions, fetchTransactions, loading: txLoading } = useTransactionStore();
   const { blueprints, fetchBlueprints } = useBlueprintStore();
-  const { quotas, fetchQuotas } = useProject2xStore();
+  const { quotas, fetchQuotas, radar, fetchRadar } = useProject2xStore();
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
+
+  useEffect(() => {
+    if (!radar && activePortfolioId) {
+      fetchRadar(activePortfolioId);
+    }
+  }, [radar, activePortfolioId, fetchRadar]);
+
+  const radarMap = useMemo(() => {
+    const map: Record<string, RadarRow> = {};
+    if (radar?.rows) {
+      for (const row of radar.rows) {
+        map[row.symbol.toUpperCase()] = row;
+      }
+    }
+    return map;
+  }, [radar?.rows]);
+
+  const [hoveredTier, setHoveredTier] = useState<{
+    rect: DOMRect;
+    info: TierVisualInfo;
+    symbol: string;
+  } | null>(null);
 
   const isLoading = holdingsLoading || txLoading;
 
@@ -420,6 +448,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                   const isPositive = percentChange >= 0;
                   const isZero = percentChange === 0;
 
+                  const radarData = radarMap[h.symbol.toUpperCase()];
+                  const tierInfo = getTierVisualInfo(radarData, h.symbol, false);
+
                   return (
                     <div
                       key={h.symbol}
@@ -431,21 +462,24 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                           : 'hover:bg-white/5 text-slate-200 hover:text-white'
                       )}
                     >
-                      {/* Active Neon Left Border Indicator */}
-                      {isSelected && (
-                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79]" />
-                      )}
+                      {/* Left Cyber Neon Spine (Tier Zone Visual + Active Highlight) */}
+                      <div
+                        className={clsx(
+                          'absolute left-0 top-0 bottom-0 transition-all z-10',
+                          isSelected
+                            ? 'w-[3.5px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79] shadow-[0_0_10px_rgba(168,85,247,0.9)]'
+                            : clsx('w-[2.5px]', tierInfo.spineClass)
+                        )}
+                      />
 
                       {/* Symbol Column: Dot Badge + Ticker */}
                       <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
-                        <div
-                          className={clsx(
-                            'w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm',
-                            getSymbolBadgeGradient(h.symbol)
-                          )}
-                        >
-                          {h.symbol.slice(0, 1)}
-                        </div>
+                        <TierBadgeIndicator
+                          symbol={h.symbol}
+                          radarData={radarData}
+                          onHover={(rect, info) => setHoveredTier({ rect, info, symbol: h.symbol })}
+                          onLeave={() => setHoveredTier(null)}
+                        />
                         <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
                           {h.symbol}
                         </span>
@@ -542,6 +576,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 const isZero = percentChange === 0;
                 const isCore = item.category === 'Core';
 
+                const radarData = radarMap[item.symbol.toUpperCase()];
+                const tierInfo = getTierVisualInfo(radarData, item.symbol, false);
+
                 return (
                   <div
                     key={item.symbol}
@@ -553,21 +590,24 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                         : 'hover:bg-white/5 text-slate-200 hover:text-white'
                     )}
                   >
-                    {/* Active Neon Left Border Indicator */}
-                    {isSelected && (
-                      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#06B6D4] to-[#3B82F6]" />
-                    )}
+                    {/* Left Cyber Neon Spine (Tier Zone Visual + Active Highlight) */}
+                    <div
+                      className={clsx(
+                        'absolute left-0 top-0 bottom-0 transition-all z-10',
+                        isSelected
+                          ? 'w-[3.5px] bg-gradient-to-b from-[#06B6D4] to-[#3B82F6] shadow-[0_0_10px_rgba(6,182,212,0.9)]'
+                          : clsx('w-[2.5px]', tierInfo.spineClass)
+                      )}
+                    />
 
                     {/* Symbol Column: Dot Badge + Ticker + Target % Pill + Owned Dot */}
                     <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
-                      <div
-                        className={clsx(
-                          'w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 bg-gradient-to-tr shadow-sm',
-                          getSymbolBadgeGradient(item.symbol)
-                        )}
-                      >
-                        {item.symbol.slice(0, 1)}
-                      </div>
+                      <TierBadgeIndicator
+                        symbol={item.symbol}
+                        radarData={radarData}
+                        onHover={(rect, info) => setHoveredTier({ rect, info, symbol: item.symbol })}
+                        onLeave={() => setHoveredTier(null)}
+                      />
 
                       <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
                         {item.symbol}
@@ -641,6 +681,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
         </div>
 
       </div>
+
+      {/* Floating Cyber HUD Tooltip (Portal/Fixed to prevent clipping) */}
+      <TierFloatingHUD hovered={hoveredTier} />
 
       {/* 4. Holding Details Modal */}
       {detailModalHolding && modalData && (
