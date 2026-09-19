@@ -169,7 +169,7 @@ export const DossierStrategyCard: React.FC<DossierStrategyCardProps> = ({ data }
 
       {/* Row 3: Institutional Consensus Target Spectrum Bar (Full Interactive) */}
       <div 
-        className="py-3 relative flex flex-col justify-center select-none"
+        className="pt-7 pb-2.5 relative flex flex-col justify-center select-none"
         onMouseLeave={() => setHoveredPoint(null)}
       >
         {/* Background Rail */}
@@ -218,16 +218,22 @@ export const DossierStrategyCard: React.FC<DossierStrategyCardProps> = ({ data }
             title={`High Target: $${targetHigh.toFixed(2)}`}
           />
 
-          {/* Current Price Integrated Pin */}
+          {/* Current Price Integrated Pin (Elevated floating speech bubble - Zero overlap) */}
           <div
             onMouseEnter={() => setHoveredPoint({ label: 'ราคาปัจจุบัน', price: currentPrice })}
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 flex flex-col items-center cursor-pointer group/curr"
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 flex items-center justify-center cursor-pointer group/curr"
             style={{ left: `${currPct}%` }}
           >
-            <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-violet-600 shadow-[0_0_10px_rgba(255,255,255,0.9)] group-hover/curr:scale-125 transition-transform" />
-            <span className="text-[11px] font-mono font-black text-white bg-violet-600 px-1.5 py-0.2 rounded-md shadow-md -mt-7.5 border border-violet-300 whitespace-nowrap">
-              ${currentPrice.toFixed(0)}
-            </span>
+            {/* Anchored Floating Badge with Caret Pointer */}
+            <div className="absolute -top-8.5 flex flex-col items-center pointer-events-none transition-all duration-200 group-hover/curr:-translate-y-0.5">
+              <div className="px-2 py-0.5 rounded-md bg-[#181432] text-white font-mono text-[11px] font-black border border-violet-400 shadow-[0_4px_12px_rgba(0,0,0,0.6)] whitespace-nowrap">
+                ${currentPrice.toFixed(2)}
+              </div>
+              <div className="w-1.5 h-1.5 bg-[#181432] border-r border-b border-violet-400 rotate-45 -mt-1 shadow-sm" />
+            </div>
+
+            {/* Glowing White Orb on the Rail */}
+            <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-violet-500 shadow-[0_0_10px_rgba(255,255,255,0.9)] group-hover/curr:scale-125 transition-transform" />
           </div>
         </div>
 
