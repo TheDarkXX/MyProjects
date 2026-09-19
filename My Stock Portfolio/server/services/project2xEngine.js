@@ -1368,10 +1368,26 @@ export function getAllFundamentals() {
   return db.prepare('SELECT * FROM project2x_fundamentals ORDER BY symbol ASC').all();
 }
 
+const radarScanCache = new Map();
+const RADAR_CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL
+
+export function clearRadarScanCache(portfolioId) {
+  if (portfolioId) {
+    radarScanCache.delete(portfolioId);
+  } else {
+    radarScanCache.clear();
+  }
+}
+
 /**
  * Scan all Project 2X stocks and generate Radar Matrix + Sell Alerts
  */
 export async function scanRadarMatrix(portfolioId) {
+  const cached = radarScanCache.get(portfolioId);
+  if (cached && (Date.now() - cached.timestamp < RADAR_CACHE_TTL_MS)) {
+    return cached.matrix;
+  }
+
   const config = getOrCreateConfig(portfolioId);
   const quotas = await syncShareQuotas(portfolioId);
   const { holdings, cash } = getPortfolioHoldings(portfolioId);
@@ -1652,12 +1668,14 @@ export async function scanRadarMatrix(portfolioId) {
     }
   }
 
-  return {
+  const result = {
     rows: radarRows,
     sellAlerts,
     totalPortfolioUsd,
     cashUsd: cash
   };
+  radarScanCache.set(portfolioId, { timestamp: Date.now(), matrix: result });
+  return result;
 }
 
 /**

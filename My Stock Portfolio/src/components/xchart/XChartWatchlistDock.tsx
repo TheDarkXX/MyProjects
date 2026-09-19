@@ -106,24 +106,24 @@ export const XChartWatchlistDock: React.FC = () => {
   const [editingSectionName, setEditingSectionName] = useState('');
 
   // Project 2X 7-Tier Radar Integration (Hybrid 1 + 3)
-  const { radar, fetchRadar } = useProject2xStore();
+  const { radar, fetchRadar, compactTiers } = useProject2xStore();
   const { activePortfolioId } = usePortfolioStore();
 
   useEffect(() => {
-    if (!radar && activePortfolioId) {
+    if (activePortfolioId) {
       fetchRadar(activePortfolioId);
     }
-  }, [radar, activePortfolioId, fetchRadar]);
+  }, [activePortfolioId, fetchRadar]);
 
   const radarMap = useMemo(() => {
-    const map: Record<string, RadarRow> = {};
+    const map: Record<string, any> = { ...compactTiers };
     if (radar?.rows) {
       for (const row of radar.rows) {
         map[row.symbol.toUpperCase()] = row;
       }
     }
     return map;
-  }, [radar?.rows]);
+  }, [radar?.rows, compactTiers]);
 
   const [hoveredTier, setHoveredTier] = useState<{
     rect: DOMRect;

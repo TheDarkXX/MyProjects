@@ -207,6 +207,15 @@ export interface Project2xConfig {
   fcd_yield_pct: number;
 }
 
+export interface CompactTierInfo {
+  symbol: string;
+  traffic_light: 'TO_THE_MOON' | 'BUY_NOW' | 'BUY_ZONE' | 'GET_READY' | 'ON_RADAR' | 'SLOW_BLEED' | 'FALLING_KNIFE' | 'MAYDAY_EXIT' | 'WAIT' | 'DANGER';
+  badge: string;
+  scenario: number;
+  reason_th?: string;
+  reason?: string;
+}
+
 interface Project2xStore {
   selectedTab: 'radar' | 'vault' | 'inflow' | 'all';
   setSelectedTab: (tab: 'radar' | 'vault' | 'inflow' | 'all') => void;
@@ -214,6 +223,7 @@ interface Project2xStore {
   dashboard: DashboardData | null;
   quotas: ShareQuota[];
   radar: RadarMatrixData | null;
+  compactTiers: Record<string, CompactTierInfo>;
   recommendation: RecommendationResult | null;
   config: Project2xConfig | null;
 
@@ -252,6 +262,17 @@ const getInitialRadar = (): RadarMatrixData | null => {
   return null;
 };
 
+const getInitialCompactTiers = (): Record<string, CompactTierInfo> => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const cached = localStorage.getItem('p2x_compact_tiers');
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch {}
+  return {};
+};
+
 export const useProject2xStore = create<Project2xStore>((set, get) => ({
   selectedTab: 'radar',
   setSelectedTab: (tab) => set({ selectedTab: tab }),
@@ -259,6 +280,7 @@ export const useProject2xStore = create<Project2xStore>((set, get) => ({
   dashboard: null,
   quotas: [],
   radar: getInitialRadar(),
+  compactTiers: getInitialCompactTiers(),
   recommendation: null,
   config: null,
   backfillStatus: null,
@@ -306,6 +328,25 @@ export const useProject2xStore = create<Project2xStore>((set, get) => ({
     set({ isLoadingRadar: true, error: null });
     try {
       const data = await api.project2x.scan(portfolioId);
+      if (typeof window !== 'undefined' && data?.rows) {
+        try {
+          const map: Record<string, CompactTierInfo> = {};
+          for (const r of data.rows) {
+            map[r.symbol.toUpperCase()] = {
+              symbol: r.symbol,
+              traffic_light: r.traffic_light,
+              badge: r.badge,
+              scenario: r.scenario,
+              reason_th: r.reason_th,
+              reason: r.reason
+            };
+          }
+          localStorage.setItem('p2x_compact_tiers', JSON.stringify(map));
+          set({ compactTiers: map });
+        } catch (e) {
+          console.warn('[Project2xStore] Failed to save compact tiers cache:', e);
+        }
+      }
       if (typeof window !== 'undefined' && data) {
         try {
           localStorage.setItem('p2x_radar_cache', JSON.stringify(data));
