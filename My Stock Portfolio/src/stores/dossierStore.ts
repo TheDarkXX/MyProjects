@@ -109,6 +109,7 @@ export interface DossierPayload {
     targetShares: number;
     quotaProgressPct: number;
     quotaSharesRemaining: number;
+    firstBuyDate?: string | null;
     lots: Array<{
       id: string;
       date: string;

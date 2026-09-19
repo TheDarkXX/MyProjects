@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Target, Flame, Sparkles } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Target, Flame, Sparkles, Clock, CheckCircle2, Trophy, Compass } from 'lucide-react';
 import { DossierPayload } from '../../../stores/dossierStore';
 
 interface DoublerPowerTubeProps {
@@ -22,7 +22,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  // Base price for doubler milestone
+  // 1. Base price for doubler milestone
   const basePrice = data?.basePrice && data.basePrice > 0 
     ? data.basePrice 
     : (avgCost > 0 ? avgCost : currentPrice * 0.5);
@@ -35,7 +35,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
   const pnlPct = basePrice > 0 ? (pnlDollar / basePrice) * 100 : unrealizedPnlPct;
   const isProfit = pnlDollar >= 0;
 
-  // Compute progress with high accuracy
+  // 2. Compute progress on 2X track (0% to 100%)
   const computedProgress = effectiveTarget > basePrice
     ? ((currentPrice - basePrice) / (effectiveTarget - basePrice)) * 100
     : doublerProgressPct;
@@ -43,39 +43,169 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
   const displayProgress = Number.isFinite(computedProgress) ? Math.max(0, computedProgress) : doublerProgressPct;
   const clampedTrackProgress = Math.min(100, Math.max(2, displayProgress));
 
-  const remainingDollar = effectiveTarget - currentPrice;
-  const remainingPct = currentPrice > 0 ? ((effectiveTarget - currentPrice) / currentPrice) * 100 : 0;
+  // 3. 3 Annual Stepping Milestones (Compound Growth ~26% CAGR)
+  // Year 1: +26.0% (1.26^1)
+  // Year 2: +58.8% (1.26^2)
+  // Year 3: +100.0% (2X Doubler Boss)
+  const targetY1 = Number((basePrice * 1.26).toFixed(2));
+  const targetY2 = Number((basePrice * 1.5876).toFixed(2));
+  const targetY3 = Number(effectiveTarget.toFixed(2));
+
+  // 4. First Buy Date & Time Telemetry
+  const firstBuyDateStr = data?.holding?.firstBuyDate 
+    || (data?.holding?.lots && data.holding.lots.length > 0 
+        ? [...data.holding.lots].sort((a, b) => a.date.localeCompare(b.date))[0]?.date 
+        : null);
+
+  const timeTelemetry = useMemo(() => {
+    const now = new Date();
+    let startDate = firstBuyDateStr ? new Date(firstBuyDateStr) : null;
+    
+    // Fallback if no lot date: assume 180 days default
+    if (!startDate || isNaN(startDate.getTime())) {
+      startDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+    }
+
+    const diffMs = Math.max(0, now.getTime() - startDate.getTime());
+    const daysHeld = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    const monthsHeld = Math.floor(daysHeld / 30.44);
+    const yearsHeld = Number((daysHeld / 365.25).toFixed(1));
+
+    // 3-Year Horizon (36 months / 1,095 days)
+    const totalDays3Y = 365.25 * 3;
+    const daysRemaining = Math.max(0, Math.round(totalDays3Y - daysHeld));
+    const monthsRemaining = Math.max(0, Math.round(36 - monthsHeld));
+
+    let heldText = '';
+    if (monthsHeld >= 12) {
+      const y = Math.floor(monthsHeld / 12);
+      const m = monthsHeld % 12;
+      heldText = m > 0 ? `${y}Y ${m}M` : `${y}Y`;
+    } else {
+      heldText = `${monthsHeld || 1}M`;
+    }
+
+    let remainingText = '';
+    if (daysRemaining <= 0) {
+      remainingText = 'ครบ 3Y';
+    } else if (monthsRemaining >= 12) {
+      const y = Math.floor(monthsRemaining / 12);
+      const m = monthsRemaining % 12;
+      remainingText = m > 0 ? `${y}Y ${m}M` : `${y}Y`;
+    } else {
+      remainingText = `${monthsRemaining}M`;
+    }
+
+    return {
+      daysHeld,
+      monthsHeld,
+      yearsHeld,
+      daysRemaining,
+      monthsRemaining,
+      heldText,
+      remainingText
+    };
+  }, [firstBuyDateStr]);
+
+  // 5. Pace Telemetry (Current Price vs Ideal Exponential Pace Curve)
+  const paceAnalysis = useMemo(() => {
+    const tYears = Math.min(3, Math.max(0.08, timeTelemetry.yearsHeld));
+    const idealPrice = basePrice * Math.pow(1.26, tYears);
+    const paceDeltaPct = idealPrice > 0 ? ((currentPrice - idealPrice) / idealPrice) * 100 : 0;
+
+    let status: 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'OVERDUE' = 'ON_TRACK';
+    let label = '🟢 On Track';
+    let badgeClass = 'text-emerald-300 bg-emerald-950/60 border-emerald-500/40';
+
+    if (timeTelemetry.daysRemaining <= 0 && currentPrice < targetY3) {
+      status = 'OVERDUE';
+      label = '🔴 Time Expired (>3Y)';
+      badgeClass = 'text-rose-300 bg-rose-950/60 border-rose-500/40';
+    } else if (paceDeltaPct >= 6) {
+      status = 'AHEAD';
+      label = `🚀 Ahead of Pace (+${paceDeltaPct.toFixed(0)}%)`;
+      badgeClass = 'text-amber-300 bg-amber-950/60 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.25)]';
+    } else if (paceDeltaPct <= -6) {
+      status = 'BEHIND';
+      label = `🟡 Behind Schedule (${paceDeltaPct.toFixed(0)}%)`;
+      badgeClass = 'text-orange-300 bg-orange-950/60 border-orange-500/40';
+    }
+
+    return { idealPrice, paceDeltaPct, status, label, badgeClass };
+  }, [basePrice, currentPrice, timeTelemetry, targetY3]);
+
+  // 6. Determine Active Mission Stage
+  const activeMission = useMemo(() => {
+    if (currentPrice >= targetY3) {
+      return {
+        stage: 3,
+        stepName: 'Stage 3 (2X)',
+        title: '🎉 บรรลุเป้าหมาย 2X แล้ว!',
+        targetPrice: targetY3,
+        remainingToStage: 0,
+        isComplete: true
+      };
+    }
+    if (currentPrice >= targetY2) {
+      return {
+        stage: 3,
+        stepName: 'Stage 3 (2X Boss)',
+        title: 'กำลังล่าเป้าใหญ่ 2X',
+        targetPrice: targetY3,
+        remainingToStage: targetY3 - currentPrice,
+        isComplete: false
+      };
+    }
+    if (currentPrice >= targetY1) {
+      return {
+        stage: 2,
+        stepName: 'Stage 2 (Y2)',
+        title: 'กำลังพิชิตเป้า Y2 (+59%)',
+        targetPrice: targetY2,
+        remainingToStage: targetY2 - currentPrice,
+        isComplete: false
+      };
+    }
+    return {
+      stage: 1,
+      stepName: 'Stage 1 (Y1)',
+      title: 'กำลังพิชิตเป้า Y1 (+26%)',
+      targetPrice: targetY1,
+      remainingToStage: targetY1 - currentPrice,
+      isComplete: false
+    };
+  }, [currentPrice, targetY1, targetY2, targetY3]);
 
   return (
-    <div className="bg-[#12162B]/95 p-3.5 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md flex flex-col justify-between gap-2.5 h-full transition-all group">
-      {/* Top: 2X Progress Milestone & 3Y Target Header */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="bg-[#12162B]/95 p-3.5 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md flex flex-col justify-between gap-2.5 h-full transition-all group select-none">
+      {/* Top Header: 2X Progress Milestone, Pace Velocity Pill & Time Dimension */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* Left: 2X Progress & Pace Status */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-violet-900/50 to-orange-900/50 border border-orange-500/40 text-orange-200 text-[13px] font-bold font-mono shadow-[0_0_12px_rgba(253,85,20,0.25)]">
             <Flame className="w-3.5 h-3.5 text-orange-400" />
             <span>2X: {displayProgress.toFixed(0)}%</span>
           </div>
-          <span className="text-[12px] text-slate-300 font-medium hidden sm:inline">
-            {displayProgress >= 100 ? '🎉 บรรลุเป้าหมาย 2X แล้ว!' : displayProgress >= 50 ? '⚡ ผ่านครึ่งทางแล้ว' : '🚀 เริ่มต้นเร่งความเร็ว'}
-          </span>
+
+          <div className={`flex items-center gap-1 px-2.5 py-0.5 rounded-lg border text-[11px] font-mono font-bold tracking-tight ${paceAnalysis.badgeClass}`}>
+            <span>{paceAnalysis.label}</span>
+          </div>
         </div>
 
-        {/* Target 3Y Tag */}
-        <div className="flex items-center gap-1.5 text-[13px] font-mono">
-          <Target className="w-3.5 h-3.5 text-orange-400" />
-          <span className="text-slate-400 font-normal">เป้า 3Y:</span>
-          <span className="text-orange-300 font-bold font-mono text-[14px]">
-            ${effectiveTarget.toFixed(0)}
-          </span>
-          <span className="text-[11px] text-slate-400 font-normal">
-            (CAGR 26%)
-          </span>
+        {/* Right: Time Dimension Telemetry (ถือมาแล้ว vs เวลาคงเหลือ) */}
+        <div className="flex items-center gap-1.5 text-[12px] font-mono text-slate-300 bg-slate-950/80 px-2.5 py-1 rounded-xl border border-white/10 shadow-inner">
+          <Clock className="w-3.5 h-3.5 text-orange-400" />
+          <span className="text-slate-400 text-[11px]">ถือ:</span>
+          <strong className="text-white font-bold">{timeTelemetry.heldText}</strong>
+          <span className="text-slate-500">•</span>
+          <span className="text-slate-400 text-[11px]">เหลือ:</span>
+          <strong className="text-orange-300 font-bold">{timeTelemetry.remainingText}</strong>
         </div>
       </div>
 
-      {/* Center: Seamless Horizon Capsule Track (Modern Elegance with Perfectly Anchored Marker) */}
+      {/* Center: Seamless Horizon Capsule Track with 3 Annual Stepping Milestones */}
       <div 
-        className="pt-7 pb-3 relative flex flex-col justify-center select-none"
+        className="pt-7 pb-2 relative flex flex-col justify-center select-none"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -83,8 +213,9 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
         {isHovered && (
           <div className="absolute top-0 right-0 bg-[#0A0E1A]/95 text-white text-[11px] font-mono px-2.5 py-0.5 rounded-lg border border-orange-500/30 shadow-[0_4px_16px_rgba(0,0,0,0.8)] backdrop-blur-md z-30 pointer-events-none animate-fadeIn flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 text-orange-400" />
-            <span className="text-orange-300 font-bold">{displayProgress.toFixed(1)}%</span>
-            <span className="text-slate-300">• เหลืออีก ${remainingDollar > 0 ? remainingDollar.toFixed(2) : '0'}</span>
+            <span className="text-orange-300 font-bold">{displayProgress.toFixed(1)}% สู่ 2X</span>
+            <span className="text-slate-400">•</span>
+            <span className="text-slate-300">เหลืออีก ${activeMission.remainingToStage > 0 ? activeMission.remainingToStage.toFixed(2) : '0'}</span>
           </div>
         )}
 
@@ -100,10 +231,18 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
             style={{ width: `${clampedTrackProgress}%` }}
           />
 
-          {/* Milestone Ticks (25%, 50%, 75%) */}
-          <div className="absolute inset-0 flex justify-between pointer-events-none px-[25%]">
-            <div className="w-px h-full bg-white/20" />
-            <div className="w-px h-full bg-white/20" />
+          {/* Annual Milestone Ticks on Rail (Y1 at 26%, Y2 at 58.8%) */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div 
+              className="absolute top-0 bottom-0 w-0.5 bg-white/25 z-10" 
+              style={{ left: '26%' }}
+              title="Y1 Benchmark (+26%)"
+            />
+            <div 
+              className="absolute top-0 bottom-0 w-0.5 bg-white/25 z-10" 
+              style={{ left: '58.8%' }}
+              title="Y2 Benchmark (+59%)"
+            />
           </div>
 
           {/* Integrated Glowing Marker on Track (Elevated with ample breathing space) */}
@@ -129,16 +268,52 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
           </div>
         </div>
 
-        {/* Milestone Labels Under Track */}
-        <div className="flex justify-between items-center text-[11px] font-mono text-slate-400 mt-2 px-1 pointer-events-none">
-          <span className="text-slate-400">25%</span>
-          <span className="text-slate-300 font-medium">50%</span>
-          <span className="text-slate-400">75%</span>
-          <span className="text-orange-400 font-bold">100% (2X)</span>
+        {/* 3 Annual Stepping Milestones Under Track (Y1 ➔ Y2 ➔ Y3 2X Boss) */}
+        <div className="flex justify-between items-start text-[11px] font-mono mt-2.5 px-0.5 select-none">
+          {/* Milestone 1: Y1 (+26%) */}
+          <div className={`flex flex-col items-start transition-colors ${currentPrice >= targetY1 ? 'text-emerald-300' : 'text-slate-400'}`}>
+            <div className="flex items-center gap-1 font-bold">
+              {currentPrice >= targetY1 ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block" />
+              )}
+              <span>Y1: +26%</span>
+            </div>
+            <span className="text-[10px] text-slate-400 font-medium">${targetY1.toFixed(0)}</span>
+          </div>
+
+          {/* Milestone 2: Y2 (+59%) */}
+          <div className={`flex flex-col items-center transition-colors ${currentPrice >= targetY2 ? 'text-emerald-300' : activeMission.stage === 2 ? 'text-orange-300' : 'text-slate-400'}`}>
+            <div className="flex items-center gap-1 font-bold">
+              {currentPrice >= targetY2 ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              ) : activeMission.stage === 2 ? (
+                <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shadow-[0_0_8px_rgba(251,146,60,0.8)]" />
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block" />
+              )}
+              <span>Y2: +59%</span>
+            </div>
+            <span className="text-[10px] text-slate-400 font-medium">${targetY2.toFixed(0)}</span>
+          </div>
+
+          {/* Milestone 3: Y3 2X Boss */}
+          <div className={`flex flex-col items-end transition-colors ${currentPrice >= targetY3 ? 'text-amber-300' : 'text-orange-400'}`}>
+            <div className="flex items-center gap-1 font-bold">
+              {currentPrice >= targetY3 ? (
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <Flame className="w-3.5 h-3.5 text-orange-400" />
+              )}
+              <span>Y3: 100% (2X)</span>
+            </div>
+            <span className="text-[10px] text-orange-300 font-medium">${targetY3.toFixed(0)}</span>
+          </div>
         </div>
       </div>
 
-      {/* Bottom: Cohesive Narrative Storytelling (เลิกงง 100%) */}
+      {/* Bottom Footer: Mission Control & Stepping Target Storytelling */}
       <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between text-[12px] font-mono text-slate-300 gap-1.5">
         {/* Step 1: Origin & Current Gain */}
         <div className="flex items-center gap-1.5">
@@ -150,16 +325,18 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
           </span>
         </div>
 
-        {/* Step 2: Distance to 3Y Goal */}
+        {/* Step 2: Active Stepping Mission */}
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-400">สู่เป้า 3Y:</span>
-          {remainingDollar > 0 ? (
-            <span className="text-orange-300 font-bold">
-              เหลืออีก +${remainingDollar.toFixed(2)} (+{remainingPct.toFixed(0)}%)
+          <span className="text-slate-400">ภารกิจ:</span>
+          {activeMission.isComplete ? (
+            <span className="text-amber-300 font-bold flex items-center gap-1">
+              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              สำเร็จเป้าหมาย 2X แล้ว!
             </span>
           ) : (
-            <span className="text-emerald-400 font-bold">
-              🎉 บรรลุเป้าหมาย 2X แล้ว!
+            <span className="text-orange-300 font-bold flex items-center gap-1">
+              <Compass className="w-3.5 h-3.5 text-orange-400" />
+              <span>{activeMission.title}: เหลืออีก +${activeMission.remainingToStage.toFixed(2)}</span>
             </span>
           )}
         </div>

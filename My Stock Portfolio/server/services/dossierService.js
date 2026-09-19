@@ -119,6 +119,14 @@ export async function getDossierData(portfolioId, symbol) {
     ORDER BY date DESC LIMIT 10
   `).all(actualPortfolioId, upper);
 
+  // First Buy Date for Time Dimension Telemetry
+  const firstTx = db.prepare(`
+    SELECT MIN(date) as first_buy_date
+    FROM transactions
+    WHERE portfolio_id = ? AND symbol = ? AND type = 'BUY'
+  `).get(actualPortfolioId, upper);
+  const firstBuyDate = firstTx?.first_buy_date || (lots.length > 0 ? lots[lots.length - 1]?.date : null);
+
   // 3. Real-time Technical Signals & Radar Calculation (with live intraday price)
   const signalRadar = await calculateStockRadarSignal(upper, {
     portfolioId: actualPortfolioId,
@@ -300,6 +308,7 @@ export async function getDossierData(portfolioId, symbol) {
       targetShares: quota.target_shares || 0,
       quotaProgressPct,
       quotaSharesRemaining,
+      firstBuyDate,
       lots
     },
     analystConsensus: {
