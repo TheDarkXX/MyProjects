@@ -1,5 +1,5 @@
-import React from 'react';
-import { Target, Flame } from 'lucide-react';
+import React, { useState } from 'react';
+import { Target, Flame, Sparkles } from 'lucide-react';
 import { DossierPayload } from '../../../stores/dossierStore';
 
 interface DoublerPowerTubeProps {
@@ -20,8 +20,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
   unrealizedPnlPct = 0,
   data
 }) => {
-  const pnlPct = avgCost > 0 ? ((currentPrice - avgCost) / avgCost) * 100 : unrealizedPnlPct;
-  const isProfit = pnlPct >= 0;
+  const [isHovered, setIsHovered] = useState(false);
 
   // Base price for doubler milestone
   const basePrice = data?.basePrice && data.basePrice > 0 
@@ -31,6 +30,10 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
   const effectiveTarget = targetPrice3Y && targetPrice3Y > 0 
     ? targetPrice3Y 
     : (basePrice * 2);
+
+  const pnlDollar = currentPrice - basePrice;
+  const pnlPct = basePrice > 0 ? (pnlDollar / basePrice) * 100 : unrealizedPnlPct;
+  const isProfit = pnlDollar >= 0;
 
   // Compute progress with high accuracy
   const computedProgress = effectiveTarget > basePrice
@@ -44,16 +47,16 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
   const remainingPct = currentPrice > 0 ? ((effectiveTarget - currentPrice) / currentPrice) * 100 : 0;
 
   return (
-    <div className="bg-[#12162B]/95 p-3.5 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md flex flex-col justify-between gap-2.5 h-full transition-all">
-      {/* Top: 2X Progress & 3Y Target Goal */}
+    <div className="bg-[#12162B]/95 p-3.5 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md flex flex-col justify-between gap-2.5 h-full transition-all group">
+      {/* Top: 2X Progress Milestone & 3Y Target Header */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-violet-900/50 to-orange-900/50 border border-orange-500/40 text-orange-200 text-[13px] font-bold font-mono shadow-[0_0_10px_rgba(253,85,20,0.25)]">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-violet-900/50 to-orange-900/50 border border-orange-500/40 text-orange-200 text-[13px] font-bold font-mono shadow-[0_0_12px_rgba(253,85,20,0.25)]">
             <Flame className="w-3.5 h-3.5 text-orange-400" />
             <span>2X: {displayProgress.toFixed(0)}%</span>
           </div>
-          <span className="text-[12px] text-slate-300 font-medium">
-            {displayProgress >= 100 ? '🎉 บรรลุ 2X แล้ว!' : 'สู่เป้า 1 เด้ง'}
+          <span className="text-[12px] text-slate-300 font-medium hidden sm:inline">
+            {displayProgress >= 100 ? '🎉 บรรลุเป้าหมาย 2X แล้ว!' : displayProgress >= 50 ? '⚡ ผ่านครึ่งทางแล้ว' : '🚀 เริ่มต้นเร่งความเร็ว'}
           </span>
         </div>
 
@@ -70,8 +73,21 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
         </div>
       </div>
 
-      {/* Center: Seamless Horizon Capsule Track */}
-      <div className="py-2.5 relative flex flex-col justify-center">
+      {/* Center: Seamless Horizon Capsule Track (Modern Elegance with Perfectly Anchored Marker) */}
+      <div 
+        className="pt-7 pb-3 relative flex flex-col justify-center select-none"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Floating Tooltip when Track is Hovered */}
+        {isHovered && (
+          <div className="absolute top-0 right-0 bg-[#0A0E1A]/95 text-white text-[11px] font-mono px-2.5 py-0.5 rounded-lg border border-violet-500/30 shadow-[0_4px_16px_rgba(0,0,0,0.8)] backdrop-blur-md z-30 pointer-events-none animate-fadeIn flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-violet-400" />
+            <span className="text-violet-300 font-bold">{displayProgress.toFixed(1)}%</span>
+            <span className="text-slate-300">• เหลืออีก ${remainingDollar > 0 ? remainingDollar.toFixed(2) : '0'}</span>
+          </div>
+        )}
+
         {/* The Rail */}
         <div className="relative w-full h-3 bg-slate-950/90 rounded-full border border-white/15 overflow-visible shadow-inner">
           {/* Progress Gradient Fill */}
@@ -90,32 +106,62 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
             <div className="w-px h-full bg-white/20" />
           </div>
 
-          {/* Glowing Current Price Pin (เข็มปักราคาปัจจุบัน) */}
+          {/* Integrated Glowing Marker on Track (Perfect Visual Anchor with Pointer Caret) */}
           <div
-            className="absolute -top-7 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-700 z-10"
-            style={{ left: `${Math.max(4, Math.min(96, clampedTrackProgress))}%` }}
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 flex items-center justify-center cursor-pointer group/orb"
+            style={{ left: `${clampedTrackProgress}%` }}
           >
-            <div className="px-2 py-0.5 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-mono text-[12px] font-black shadow-[0_0_12px_rgba(130,58,253,0.9)] border border-violet-300/80 whitespace-nowrap flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
-              <span>${currentPrice.toFixed(2)}</span>
+            {/* Glowing Orb */}
+            <div className="relative flex items-center justify-center">
+              <span className="absolute w-5 h-5 rounded-full bg-violet-500/40 animate-ping" />
+              <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-r from-violet-300 to-white border-2 border-slate-950 shadow-[0_0_12px_rgba(130,58,253,1)] z-10 group-hover/orb:scale-125 transition-transform" />
             </div>
-            <div className="w-0.5 h-2 bg-violet-400 shadow-[0_0_6px_rgba(130,58,253,1)]" />
+
+            {/* Anchored Speech Bubble Price Tag (Directly above the orb) */}
+            <div className="absolute -top-7 flex flex-col items-center pointer-events-none transition-all duration-300">
+              <div className="px-2 py-0.5 rounded-md bg-[#181432] text-white font-mono text-[12px] font-black border border-violet-400/90 shadow-[0_0_14px_rgba(130,58,253,0.8)] flex items-center gap-1 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                <span>${currentPrice.toFixed(2)}</span>
+              </div>
+              <div className="w-1.5 h-1.5 bg-[#181432] border-r border-b border-violet-400/90 rotate-45 -mt-1 shadow-sm" />
+            </div>
           </div>
+        </div>
+
+        {/* Milestone Labels Under Track */}
+        <div className="flex justify-between items-center text-[11px] font-mono text-slate-400 mt-2 px-1 pointer-events-none">
+          <span className="text-slate-400">25%</span>
+          <span className="text-slate-300 font-medium">50%</span>
+          <span className="text-slate-400">75%</span>
+          <span className="text-orange-300 font-bold">100% (2X)</span>
         </div>
       </div>
 
-      {/* Bottom: Remaining Upside & Anchor bounds */}
-      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[12px] font-mono text-slate-300">
-        <span>ฐาน: <strong className="text-white font-mono">${basePrice.toFixed(1)}</strong></span>
-        {remainingDollar > 0 ? (
-          <span className="text-orange-300 font-semibold">
-            เหลืออีก +${remainingDollar.toFixed(2)} (+{remainingPct.toFixed(0)}%) สู่เป้า
+      {/* Bottom: Cohesive Narrative Storytelling (เลิกงง 100%) */}
+      <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between text-[12px] font-mono text-slate-300 gap-1.5">
+        {/* Step 1: Origin & Current Gain */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-slate-400">ต้นทุน:</span>
+          <strong className="text-white">${basePrice.toFixed(1)}</strong>
+          <span className="text-slate-500">•</span>
+          <span className={isProfit ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+            กำไร {isProfit ? '+' : ''}{pnlPct.toFixed(1)}% ({isProfit ? '+' : ''}${pnlDollar.toFixed(1)})
           </span>
-        ) : (
-          <span className="text-emerald-400 font-bold">
-            🎉 เกินเป้าหมาย 3Y แล้ว!
-          </span>
-        )}
+        </div>
+
+        {/* Step 2: Distance to 3Y Goal */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-slate-400">สู่เป้า 3Y:</span>
+          {remainingDollar > 0 ? (
+            <span className="text-orange-300 font-bold">
+              เหลืออีก +${remainingDollar.toFixed(2)} (+{remainingPct.toFixed(0)}%)
+            </span>
+          ) : (
+            <span className="text-emerald-400 font-bold">
+              🎉 บรรลุเป้าหมาย 2X แล้ว!
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
