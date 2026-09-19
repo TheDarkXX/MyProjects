@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import * as d3 from 'd3';
+import { Target, TrendingUp, Sparkles } from 'lucide-react';
 
 interface DoublerConeChartProps {
   symbol: string;
@@ -18,10 +19,10 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
   historicalPrices = [],
   className = ''
 }) => {
-  // SVG Dimensions
+  // SVG Dimensions & Margins
   const width = 600;
-  const height = 290;
-  const margin = { top: 32, right: 70, bottom: 42, left: 60 };
+  const height = 310;
+  const margin = { top: 32, right: 88, bottom: 44, left: 56 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
@@ -30,51 +31,55 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
   const finalTarget = targetPrice3Y > 0 ? targetPrice3Y : costBasis * 2;
   const startP = currentPrice > 0 ? currentPrice : costBasis;
   const pnlPct = costBasis > 0 ? ((startP - costBasis) / costBasis) * 100 : 0;
+  const distToGoalPct = startP > 0 ? ((finalTarget - startP) / startP) * 100 : 0;
 
-  // 3-Year Projection from current position toward investment horizon
-  // Base Case: 26% CAGR -> Doubler (2.0x) from base
-  // Bull Case: 38% CAGR -> 2.6x
-  // Bear Case: 14% CAGR -> 1.48x
+  // Interactive Hover & Highlight States
+  const [hoverData, setHoverData] = useState<{
+    mouseX: number;
+    date: Date;
+    bull: number;
+    base: number;
+    bear: number;
+    tYears: number;
+  } | null>(null);
+
+  const [highlightedCase, setHighlightedCase] = useState<'all' | 'bull' | 'base' | 'bear'>('all');
+
+  // Smooth Continuous 36-Month Exponential Growth Projection
   const projection = useMemo(() => {
     const now = new Date();
-    const y1 = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-    const y2 = new Date(now.getFullYear() + 2, now.getMonth(), now.getDate());
-    const y3 = new Date(now.getFullYear() + 3, now.getMonth(), now.getDate());
+    const points: Array<{ date: Date; bull: number; base: number; bear: number; t: number }> = [];
 
-    const bullY1 = startP * 1.38;
-    const bullY2 = startP * Math.pow(1.38, 2);
-    const bullY3 = startP * Math.pow(1.38, 3);
-
-    const baseY1 = startP * 1.26;
-    const baseY2 = startP * Math.pow(1.26, 2);
-    const baseY3 = startP * Math.pow(1.26, 3);
-
-    const bearY1 = startP * 1.14;
-    const bearY2 = startP * Math.pow(1.14, 2);
-    const bearY3 = startP * Math.pow(1.14, 3);
+    // Generate 36 monthly steps (3 full years) for ultra-smooth bezier curves
+    for (let m = 0; m <= 36; m++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + m, now.getDate());
+      const t = m / 12; // Time in years
+      points.push({
+        date: d,
+        bull: startP * Math.pow(1.38, t),
+        base: startP * Math.pow(1.26, t),
+        bear: startP * Math.pow(1.14, t),
+        t
+      });
+    }
 
     return {
-      points: [
-        { date: now, bull: startP, base: startP, bear: startP, actual: startP },
-        { date: y1, bull: bullY1, base: baseY1, bear: bearY1, actual: null },
-        { date: y2, bull: bullY2, base: baseY2, bear: bearY2, actual: null },
-        { date: y3, bull: bullY3, base: baseY3, bear: bearY3, actual: null }
-      ],
+      points,
       startDate: now,
-      endDate: y3,
+      endDate: points[points.length - 1].date,
       startPrice: startP
     };
   }, [startP]);
 
-  // Merge with historical prices (simulated or real last 6-12 months)
+  // Scaled Data & Generator Setup
   const chartData = useMemo(() => {
     const hist = (historicalPrices || []).slice(-12).map(h => ({
       date: new Date(h.date),
       price: h.price
     }));
 
-    // Inception point (simulated 6 months ago for cost basis anchor)
-    const costDate = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+    // Inception point (past 6 months for context)
+    const costDate = new Date(Date.now() - 150 * 24 * 60 * 60 * 1000);
     const minDate = hist.length > 0 ? (hist[0].date < costDate ? hist[0].date : costDate) : costDate;
     const maxDate = projection.endDate;
 
@@ -87,8 +92,8 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       ...projection.points.map(p => p.bear)
     ];
 
-    const minPrice = Math.max(0, Math.min(...allPrices) * 0.85);
-    const maxPrice = Math.max(...allPrices) * 1.12;
+    const minPrice = Math.max(0, Math.min(...allPrices) * 0.88);
+    const maxPrice = Math.max(...allPrices) * 1.10;
 
     const xScale = d3.scaleTime()
       .domain([minDate, maxDate])
@@ -98,32 +103,29 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       .domain([minPrice, maxPrice])
       .range([innerHeight, 0]);
 
-    // Area generator for the cone (Bull to Bear)
+    // Area generator for the cone (Bull down to Bear)
     const areaGenerator = d3.area<any>()
       .x(d => xScale(d.date))
       .y0(d => yScale(d.bear))
       .y1(d => yScale(d.bull))
       .curve(d3.curveMonotoneX);
 
-    // Line generator for Base Case
-    const baseLine = d3.line<any>()
-      .x(d => xScale(d.date))
-      .y(d => yScale(d.base))
-      .curve(d3.curveMonotoneX);
-
-    // Line generator for Bull Case
+    // Curve generators
     const bullLine = d3.line<any>()
       .x(d => xScale(d.date))
       .y(d => yScale(d.bull))
       .curve(d3.curveMonotoneX);
 
-    // Line generator for Bear Case
+    const baseLine = d3.line<any>()
+      .x(d => xScale(d.date))
+      .y(d => yScale(d.base))
+      .curve(d3.curveMonotoneX);
+
     const bearLine = d3.line<any>()
       .x(d => xScale(d.date))
       .y(d => yScale(d.bear))
       .curve(d3.curveMonotoneX);
 
-    // Line generator for History
     const historyLine = d3.line<any>()
       .x(d => xScale(d.date))
       .y(d => yScale(d.price))
@@ -133,161 +135,352 @@ export const DoublerConeChart: React.FC<DoublerConeChartProps> = ({
       xScale,
       yScale,
       areaPath: areaGenerator(projection.points) || '',
-      basePath: baseLine(projection.points) || '',
       bullPath: bullLine(projection.points) || '',
+      basePath: baseLine(projection.points) || '',
       bearPath: bearLine(projection.points) || '',
       histPath: hist.length > 0 ? (historyLine(hist) || '') : '',
       currentX: xScale(projection.startDate),
       currentY: yScale(projection.startPrice),
       costY: yScale(costBasis),
       targetY: yScale(finalTarget),
-      ticksX: xScale.ticks(5),
+      ticksX: xScale.ticks(4),
       ticksY: yScale.ticks(4)
     };
   }, [projection, historicalPrices, costBasis, finalTarget, startP, innerWidth, innerHeight]);
 
+  // Mouse Move Crosshair Handler
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left - margin.left;
+    const boundedX = Math.max(0, Math.min(innerWidth, mouseX));
+
+    const hoverDate = chartData.xScale.invert(boundedX);
+    const now = projection.startDate;
+
+    // Calculate elapsed projection years
+    const diffMs = hoverDate.getTime() - now.getTime();
+    const tYears = Math.max(0, Math.min(3, diffMs / (365.25 * 24 * 60 * 60 * 1000)));
+
+    const bull = startP * Math.pow(1.38, tYears);
+    const base = startP * Math.pow(1.26, tYears);
+    const bear = startP * Math.pow(1.14, tYears);
+
+    setHoverData({
+      mouseX: boundedX,
+      date: hoverDate,
+      bull,
+      base,
+      bear,
+      tYears
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHoverData(null);
+  };
+
   return (
     <div className={`relative bg-[#12162B]/95 border border-white/10 rounded-2xl p-4 shadow-xl flex flex-col justify-between backdrop-blur-md ${className}`}>
-      {/* Header Info */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+      {/* Header Info with Interactive Legend */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-2">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(130,58,253,0.8)]" />
-          <h4 className="text-[15px] font-semibold text-slate-100 uppercase tracking-wide">
+          <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(130,58,253,0.8)] flex-shrink-0" />
+          <h4 className="text-[15px] font-bold text-slate-100 tracking-wide uppercase">
             3-Year Doubler Cone ({symbol})
           </h4>
         </div>
-        <div className="flex items-center gap-1.5 text-[12px]">
-          <span className="flex items-center gap-1 text-orange-200 font-medium bg-orange-950/40 px-2 py-0.5 rounded border border-orange-700/50">
-            <span className="w-1.5 h-1.5 bg-orange-400 rounded-full inline-block" /> Bull +38%
-          </span>
-          <span className="flex items-center gap-1 text-violet-200 font-medium bg-violet-950/60 px-2 py-0.5 rounded border border-violet-800/50">
-            <span className="w-1.5 h-1.5 bg-[#823AFD] rounded-full inline-block" /> Base +26% (2X)
-          </span>
-          <span className="flex items-center gap-1 text-pink-300 font-normal bg-pink-950/40 px-2 py-0.5 rounded border border-[#FC2D79]/40">
-            <span className="w-1.5 h-1.5 bg-[#FC2D79] rounded-full inline-block" /> Bear +14%
-          </span>
+
+        {/* Interactive Legend Pills */}
+        <div className="flex items-center gap-1.5 text-[12px] flex-wrap">
+          <button
+            type="button"
+            onMouseEnter={() => setHighlightedCase('bull')}
+            onMouseLeave={() => setHighlightedCase('all')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-semibold transition-all duration-200 cursor-pointer ${
+              highlightedCase === 'bull' || highlightedCase === 'all'
+                ? 'bg-orange-950/40 text-orange-200 border-orange-500/50 shadow-[0_0_8px_rgba(253,85,20,0.35)]'
+                : 'bg-slate-900/40 text-slate-400 border-slate-800/40 opacity-40'
+            }`}
+          >
+            <span className="w-2 h-2 bg-[#FD5514] rounded-full shadow-[0_0_4px_#FD5514]" />
+            <span>Bull +38%</span>
+          </button>
+
+          <button
+            type="button"
+            onMouseEnter={() => setHighlightedCase('base')}
+            onMouseLeave={() => setHighlightedCase('all')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-semibold transition-all duration-200 cursor-pointer ${
+              highlightedCase === 'base' || highlightedCase === 'all'
+                ? 'bg-violet-950/60 text-violet-200 border-violet-500/60 shadow-[0_0_10px_rgba(130,58,253,0.5)]'
+                : 'bg-slate-900/40 text-slate-400 border-slate-800/40 opacity-40'
+            }`}
+          >
+            <span className="w-2 h-2 bg-[#823AFD] rounded-full shadow-[0_0_5px_#823AFD]" />
+            <span>Base +26% (2X)</span>
+          </button>
+
+          <button
+            type="button"
+            onMouseEnter={() => setHighlightedCase('bear')}
+            onMouseLeave={() => setHighlightedCase('all')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-semibold transition-all duration-200 cursor-pointer ${
+              highlightedCase === 'bear' || highlightedCase === 'all'
+                ? 'bg-pink-950/40 text-pink-200 border-[#FC2D79]/50 shadow-[0_0_8px_rgba(252,45,121,0.35)]'
+                : 'bg-slate-900/40 text-slate-400 border-slate-800/40 opacity-40'
+            }`}
+          >
+            <span className="w-2 h-2 bg-[#FC2D79] rounded-full shadow-[0_0_4px_#FC2D79]" />
+            <span>Bear +14%</span>
+          </button>
         </div>
       </div>
 
-      {/* SVG Container */}
-      <div className="w-full overflow-x-auto">
+      {/* SVG Chart Area */}
+      <div className="relative w-full overflow-visible">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-auto min-w-[450px]"
+          className="w-full h-auto cursor-crosshair overflow-visible"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
         >
           <defs>
+            {/* Elegant Cone Gradient */}
             <linearGradient id="doublerConeGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#823AFD" stopOpacity="0.40" />
-              <stop offset="60%" stopColor="#A855F7" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#FD5514" stopOpacity="0.15" />
+              <stop offset="0%" stopColor="#823AFD" stopOpacity="0.35" />
+              <stop offset="50%" stopColor="#A855F7" stopOpacity="0.20" />
+              <stop offset="100%" stopColor="#FD5514" stopOpacity="0.10" />
             </linearGradient>
-            <linearGradient id="historyLineGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#823AFD" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#C090FF" stopOpacity="1" />
-            </linearGradient>
-            <filter id="doublerGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="glow" />
-              <feComposite in="SourceGraphic" in2="glow" operator="over" />
+
+            {/* Neon Glow Filters */}
+            <filter id="doublerNeonGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="3.5" result="glow" />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+
+            <filter id="targetLineGlow" x="-20%" y="-40%" width="140%" height="180%">
+              <feGaussianBlur stdDeviation="2" result="glow" />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
             </filter>
           </defs>
 
           <g transform={`translate(${margin.left}, ${margin.top})`}>
-            {/* Grid Lines */}
+            {/* Y-Axis Horizontal Grid Lines */}
             {chartData.ticksY.map((tick, i) => (
               <g key={`y-${i}`} transform={`translate(0, ${chartData.yScale(tick)})`}>
                 <line x1={0} x2={innerWidth} stroke="#1E293B" strokeDasharray="3,3" strokeOpacity={0.8} />
-                <text x={-10} dy="0.32em" textAnchor="end" className="fill-slate-400 text-[13px] font-mono font-medium">
+                <text x={-10} dy="0.32em" textAnchor="end" className="fill-slate-400 text-[12px] font-mono font-medium">
                   ${tick.toFixed(0)}
                 </text>
               </g>
             ))}
 
-            {/* Target 2X Horizontal Reference Line (Burnt Orange) */}
+            {/* 2X Goal Horizontal Guideline (Burnt Orange) */}
             <g transform={`translate(0, ${chartData.targetY})`}>
-              <line x1={0} x2={innerWidth} stroke="#FD5514" strokeWidth={2} strokeDasharray="5,4" />
-              <text x={innerWidth - 125} dy="-8" className="fill-orange-400 text-[13px] font-bold font-mono">
-                2X Goal (${finalTarget.toFixed(1)})
-              </text>
+              <line x1={0} x2={innerWidth} stroke="#FD5514" strokeWidth={1.8} strokeDasharray="6,4" opacity={0.85} filter="url(#targetLineGlow)" />
+              {/* Right Margin Badge (Zero Overlap with X-axis) */}
+              <g transform={`translate(${innerWidth + 6}, 0)`}>
+                <rect x={0} y={-11} width={76} height={22} rx={6} fill="#1F1510" stroke="#FD5514" strokeWidth={1.2} />
+                <text x={38} y={4} textAnchor="middle" className="fill-orange-300 text-[12px] font-mono font-bold">
+                  2X ${finalTarget.toFixed(0)}
+                </text>
+              </g>
             </g>
 
-            {/* Cost Basis Reference Line (Muted Slate) */}
+            {/* My Cost Reference Guideline (Muted Slate) */}
             <g transform={`translate(0, ${chartData.costY})`}>
-              <line x1={0} x2={innerWidth} stroke="#9898C8" strokeWidth={1.5} strokeDasharray="4,3" strokeOpacity={0.85} />
-              <text x={innerWidth - 125} dy="15" className="fill-slate-300 text-[12px] font-medium font-mono">
-                My Cost (${costBasis.toFixed(1)})
-              </text>
+              <line x1={0} x2={innerWidth} stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4,3" opacity={0.75} />
+              {/* Right Margin Badge (Zero Overlap with X-axis) */}
+              <g transform={`translate(${innerWidth + 6}, 0)`}>
+                <rect x={0} y={-11} width={76} height={22} rx={6} fill="#0F172A" stroke="#475569" strokeWidth={1.2} />
+                <text x={38} y={4} textAnchor="middle" className="fill-slate-200 text-[12px] font-mono font-bold">
+                  ทุน ${costBasis.toFixed(0)}
+                </text>
+              </g>
             </g>
 
-            {/* The Shaded Cone */}
+            {/* Shaded Area of the Doubler Cone */}
             <path d={chartData.areaPath} fill="url(#doublerConeGrad)" />
 
-            {/* Cone Outline Lines: Bull = Burnt Orange, Base = Electric Violet, Bear = Hot Pink */}
-            <path d={chartData.bullPath} fill="none" stroke="#FD5514" strokeWidth={2} strokeOpacity={0.95} />
-            <path d={chartData.basePath} fill="none" stroke="#823AFD" strokeWidth={2.5} filter="url(#doublerGlow)" />
-            <path d={chartData.bearPath} fill="none" stroke="#FC2D79" strokeWidth={1.8} strokeOpacity={0.85} />
-
-            {/* Historical Price Line */}
+            {/* Historical Price Curve (Past Track) */}
             {chartData.histPath && (
-              <path d={chartData.histPath} fill="none" stroke="url(#historyLineGrad)" strokeWidth={2.5} />
+              <path d={chartData.histPath} fill="none" stroke="#C084FC" strokeWidth={2.4} opacity={0.8} />
             )}
 
-            {/* Current Price Dot & Glow */}
-            <circle
-              cx={chartData.currentX}
-              cy={chartData.currentY}
-              r={8}
-              fill="#823AFD"
-              className="animate-ping opacity-60"
-            />
-            <circle
-              cx={chartData.currentX}
-              cy={chartData.currentY}
-              r={5}
-              fill="#FFFFFF"
-              stroke="#823AFD"
-              strokeWidth={3}
+            {/* Bull Case Curve */}
+            <path
+              d={chartData.bullPath}
+              fill="none"
+              stroke="#FD5514"
+              strokeWidth={highlightedCase === 'bull' ? 3.2 : 2.2}
+              opacity={highlightedCase === 'all' || highlightedCase === 'bull' ? 0.95 : 0.2}
+              filter={highlightedCase === 'bull' ? 'url(#doublerNeonGlow)' : undefined}
+              className="transition-all duration-200"
             />
 
-            {/* Label for Current Price */}
-            <g transform={`translate(${chartData.currentX}, ${chartData.currentY - 14})`}>
-              <rect x={-42} y={-18} width={84} height={22} rx={6} fill="#080818" stroke="#823AFD" strokeWidth={1.5} />
-              <text textAnchor="middle" dy="-2" className="fill-white text-[13px] font-semibold font-mono">
+            {/* Base Case Curve (Doubler Path - Highlighted by default) */}
+            <path
+              d={chartData.basePath}
+              fill="none"
+              stroke="#823AFD"
+              strokeWidth={highlightedCase === 'base' ? 3.6 : 2.8}
+              opacity={highlightedCase === 'all' || highlightedCase === 'base' ? 1.0 : 0.2}
+              filter="url(#doublerNeonGlow)"
+              className="transition-all duration-200"
+            />
+
+            {/* Bear Case Curve */}
+            <path
+              d={chartData.bearPath}
+              fill="none"
+              stroke="#FC2D79"
+              strokeWidth={highlightedCase === 'bear' ? 3.0 : 1.8}
+              opacity={highlightedCase === 'all' || highlightedCase === 'bear' ? 0.9 : 0.2}
+              filter={highlightedCase === 'bear' ? 'url(#doublerNeonGlow)' : undefined}
+              className="transition-all duration-200"
+            />
+
+            {/* Current Price Beacon (Glow & Pulse) */}
+            <circle
+              cx={chartData.currentX}
+              cy={chartData.currentY}
+              r={12}
+              fill="#823AFD"
+              opacity={0.35}
+              className="animate-ping"
+            />
+            <circle
+              cx={chartData.currentX}
+              cy={chartData.currentY}
+              r={7}
+              fill="#823AFD"
+              stroke="#FFFFFF"
+              strokeWidth={2.5}
+              filter="url(#doublerNeonGlow)"
+            />
+
+            {/* Current Price Tag Badge (Positioned safely above/left) */}
+            <g transform={`translate(${Math.max(40, chartData.currentX - 10)}, ${chartData.currentY - 14})`}>
+              <rect x={-36} y={-16} width={72} height={20} rx={5} fill="#0C0F1D" stroke="#823AFD" strokeWidth={1.5} shadow-md="true" />
+              <text textAnchor="middle" dy="-2" className="fill-white text-[13px] font-bold font-mono">
                 ${startP.toFixed(1)}
               </text>
             </g>
 
-            {/* X-Axis Ticks */}
+            {/* Interactive Crosshair Tracking Line */}
+            {hoverData && (
+              <g>
+                <line
+                  x1={hoverData.mouseX}
+                  x2={hoverData.mouseX}
+                  y1={0}
+                  y2={innerHeight}
+                  stroke="#A855F7"
+                  strokeWidth={1.5}
+                  strokeDasharray="3,3"
+                  opacity={0.85}
+                />
+                {/* Indicator Dots on the 3 curves */}
+                <circle cx={hoverData.mouseX} cy={chartData.yScale(hoverData.bull)} r={4.5} fill="#FD5514" stroke="#FFF" strokeWidth={1.5} />
+                <circle cx={hoverData.mouseX} cy={chartData.yScale(hoverData.base)} r={5} fill="#823AFD" stroke="#FFF" strokeWidth={2} />
+                <circle cx={hoverData.mouseX} cy={chartData.yScale(hoverData.bear)} r={4.5} fill="#FC2D79" stroke="#FFF" strokeWidth={1.5} />
+              </g>
+            )}
+
+            {/* X-Axis Date Ticks (Spaced cleanly with no text overlap) */}
             {chartData.ticksX.map((tick, i) => (
               <g key={`x-${i}`} transform={`translate(${chartData.xScale(tick)}, ${innerHeight})`}>
                 <line y1={0} y2={6} stroke="#334155" />
-                <text y={20} textAnchor="middle" className="fill-slate-300 text-[13px] font-mono font-medium">
-                  {tick.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
+                <text y={22} textAnchor="middle" className="fill-slate-300 text-[12px] font-mono font-medium">
+                  {tick.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                 </text>
               </g>
             ))}
           </g>
         </svg>
+
+        {/* Floating Glassmorphism Tooltip on Mouse Tracking */}
+        {hoverData && (
+          <div
+            className="absolute top-2 z-20 pointer-events-none transition-all duration-75 bg-[#0B0F22]/95 border border-violet-500/40 rounded-xl p-3 shadow-2xl backdrop-blur-md text-[13px]"
+            style={{
+              left: `${Math.min(innerWidth - 140, Math.max(10, hoverData.mouseX - 40))}px`
+            }}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-1.5 mb-1.5">
+              <span className="font-semibold text-slate-200">
+                {hoverData.date.toLocaleDateString('th-TH', { month: 'short', year: 'numeric' })}
+              </span>
+              <span className="text-[12px] font-mono text-violet-300">
+                ปีที่ {hoverData.tYears.toFixed(1)}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-1 font-mono">
+              <div className="flex items-center justify-between gap-3 text-orange-300">
+                <span className="text-[12px] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400" /> Bull (+38%)
+                </span>
+                <span className="font-bold">${hoverData.bull.toFixed(1)}</span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 text-violet-200">
+                <span className="text-[12px] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400" /> Base 2X (+26%)
+                </span>
+                <span className="font-bold">${hoverData.base.toFixed(1)}</span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 text-pink-300">
+                <span className="text-[12px] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400" /> Bear (+14%)
+                </span>
+                <span className="font-bold">${hoverData.bear.toFixed(1)}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Summary Bar */}
-      <div className="mt-1 pt-2.5 border-t border-blue-900/40 flex flex-wrap items-center justify-between gap-2 text-[14px] text-slate-300 font-normal">
-        <div>
-          ทุนเฉลี่ย: <span className="font-mono font-semibold text-slate-200">${costBasis.toFixed(1)}</span>
+      <div className="mt-2.5 pt-2.5 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[13px] text-slate-300">
+        <div className="bg-slate-900/60 p-2 rounded-xl border border-white/5">
+          <div className="text-slate-400 text-[12px]">ทุนเฉลี่ย</div>
+          <div className="font-mono font-bold text-slate-100 mt-0.5">${costBasis.toFixed(1)}</div>
         </div>
-        <div>
-          ราคาปัจจุบัน:{' '}
-          <span className="font-mono font-semibold text-white">${startP.toFixed(1)}</span>{' '}
-          <span className={`text-[12px] font-mono font-medium ${pnlPct >= 0 ? 'text-blue-300' : 'text-rose-400'}`}>
-            ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
-          </span>
+
+        <div className="bg-slate-900/60 p-2 rounded-xl border border-white/5">
+          <div className="text-slate-400 text-[12px]">ราคาปัจจุบัน</div>
+          <div className="font-mono font-bold text-white mt-0.5 flex items-center gap-1">
+            <span>${startP.toFixed(1)}</span>
+            <span className={`text-[12px] font-semibold ${pnlPct >= 0 ? 'text-violet-400' : 'text-[#FC2D79]'}`}>
+              ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
+            </span>
+          </div>
         </div>
-        <div>
-          เป้า 1 เด้ง:{' '}
-          <span className="font-mono font-semibold text-blue-300">${finalTarget.toFixed(0)}</span>{' '}
-          <span className="text-blue-400/80 text-[12px]">(+100%)</span>
+
+        <div className="bg-slate-900/60 p-2 rounded-xl border border-white/5">
+          <div className="text-slate-400 text-[12px] flex items-center gap-1">
+            <Target className="w-3 h-3 text-orange-400" />
+            <span>เป้า 1 เด้ง (2X)</span>
+          </div>
+          <div className="font-mono font-bold text-orange-300 mt-0.5">
+            ${finalTarget.toFixed(0)} <span className="text-[12px] text-slate-400">({distToGoalPct > 0 ? `+${distToGoalPct.toFixed(0)}%` : 'บรรลุแล้ว'})</span>
+          </div>
         </div>
-        <div>
-          CAGR ฐาน: <span className="font-mono font-semibold text-slate-200">26.0% / ปี</span>
+
+        <div className="bg-slate-900/60 p-2 rounded-xl border border-white/5">
+          <div className="text-slate-400 text-[12px] flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-violet-400" />
+            <span>CAGR ฐาน 3 ปี</span>
+          </div>
+          <div className="font-mono font-bold text-violet-200 mt-0.5">26.0% / ปี</div>
         </div>
       </div>
     </div>

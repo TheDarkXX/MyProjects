@@ -1,7 +1,6 @@
 import React from 'react';
 import { useDossierStore } from '../../../../stores/dossierStore';
 import { TacticalMiniPulse } from '../charts/TacticalMiniPulse';
-import { SpecificDriverGauge } from '../charts/SpecificDriverGauge';
 import { DoublerConeChart } from '../charts/DoublerConeChart';
 import { DossierVitalSigns } from '../DossierVitalSigns';
 import { DossierMoatGuard } from '../DossierMoatGuard';
@@ -48,11 +47,11 @@ export const DossierCockpitTab: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* MODE 2: Split 2 Columns */}
+      {/* MODE 2: Asymmetric 1:3 Pro Deck (1/4 Left Rail, 3/4 Right Stage) */}
       {columnMode === 2 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {/* Column 1: Tactical Pulse + Specific Driver + Doubler Cone */}
-          <div className="flex flex-col gap-3.5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          {/* Column 1 (1/4 Rail): Tactical Pulse + Doubler Cone */}
+          <div className="flex flex-col gap-3.5 lg:col-span-3">
             <TacticalMiniPulse
               symbol={data.symbol}
               currentPrice={data.currentPrice}
@@ -60,10 +59,6 @@ export const DossierCockpitTab: React.FC = () => {
               ema50={data.radar?.ema50}
               ema200={data.radar?.ema200}
               bankerFlow={data.radar?.bankerFlow}
-            />
-            <SpecificDriverGauge
-              symbol={data.symbol}
-              driver={data.specificDriver}
             />
             <DoublerConeChart
               symbol={data.symbol}
@@ -73,8 +68,8 @@ export const DossierCockpitTab: React.FC = () => {
             />
           </div>
 
-          {/* Column 2: Vital Signs + Execution Slip + Moat + Mini Momentum */}
-          <div className="flex flex-col gap-3.5">
+          {/* Column 2 (3/4 Stage): Vital Signs + Execution Slip + Moat + Mini Momentum */}
+          <div className="flex flex-col gap-3.5 lg:col-span-9">
             <DossierVitalSigns data={data} />
             <DossierExecutionSlip data={data} />
             <DossierMoatGuard data={data} />
@@ -95,10 +90,6 @@ export const DossierCockpitTab: React.FC = () => {
               ema50={data.radar?.ema50}
               ema200={data.radar?.ema200}
               bankerFlow={data.radar?.bankerFlow}
-            />
-            <SpecificDriverGauge
-              symbol={data.symbol}
-              driver={data.specificDriver}
             />
             <DossierExecutionSlip data={data} />
           </div>
@@ -125,7 +116,7 @@ export const DossierCockpitTab: React.FC = () => {
       {/* MODE 4: Panoramic 4 Columns (Ultra-Wide Full Deck) */}
       {columnMode === 4 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 items-start">
-          {/* Column 1: Tactical Pulse & Driver */}
+          {/* Column 1: Tactical Pulse */}
           <div className="flex flex-col gap-3.5">
             <TacticalMiniPulse
               symbol={data.symbol}
@@ -134,10 +125,6 @@ export const DossierCockpitTab: React.FC = () => {
               ema50={data.radar?.ema50}
               ema200={data.radar?.ema200}
               bankerFlow={data.radar?.bankerFlow}
-            />
-            <SpecificDriverGauge
-              symbol={data.symbol}
-              driver={data.specificDriver}
             />
           </div>
 
