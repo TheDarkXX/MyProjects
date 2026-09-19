@@ -233,7 +233,7 @@ export const XChartWatchlistDock: React.FC = () => {
     if (getReady.length > 0) {
       const parts: string[] = [];
       if (dipBuyCount > 0) parts.push(`🧲 Dip ${dipBuyCount}`);
-      if (reversalCount > 0) parts.push(`🔄 Rev ${reversalCount}`);
+      if (reversalCount > 0) parts.push(`🔄 Break/Rev ${reversalCount}`);
       list.push({
         id: 'sec-tier-get-ready',
         name: 'GET READY',
