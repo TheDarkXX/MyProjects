@@ -570,7 +570,7 @@ export const XChartWatchlistDock: React.FC = () => {
           { id: 'DIP_BUY', label: 'DIP', icon: '🧲', activeClass: 'bg-orange-500/25 text-amber-200 border-amber-400/60 shadow-[0_0_8px_rgba(245,158,11,0.45)]' },
           { id: 'GET_READY', label: 'RDY', icon: '⏳', activeClass: 'bg-yellow-500/25 text-yellow-200 border-yellow-400/60 shadow-[0_0_8px_rgba(234,179,8,0.45)]' },
           { id: 'TO_THE_MOON', label: 'MOON', icon: '🚀', activeClass: 'bg-purple-500/25 text-purple-200 border-purple-400/60 shadow-[0_0_8px_rgba(168,85,247,0.45)]' },
-          { id: 'DANGER', label: 'CUT', icon: '🗡️', activeClass: 'bg-rose-950 text-red-200 border-red-500/70 shadow-[0_0_8px_rgba(239,68,68,0.55)]' }
+          { id: 'DANGER', label: 'CUT', icon: '🔪', activeClass: 'bg-rose-950 text-red-200 border-red-500/70 shadow-[0_0_8px_rgba(239,68,68,0.55)]' }
         ].map(filter => {
           const isActive = selectedTierFilter === filter.id;
           return (
@@ -915,7 +915,7 @@ export const XChartWatchlistDock: React.FC = () => {
                               'absolute left-0 top-0 bottom-0 transition-all z-10',
                               isSelected
                                 ? 'w-[3.5px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79] shadow-[0_0_10px_rgba(168,85,247,0.9)]'
-                                : clsx('w-[2.5px]', tierInfo.spineClass)
+                                : clsx('w-[3px]', tierInfo.spineClass)
                             )}
                           />
 

@@ -129,8 +129,8 @@ async function runAudit() {
   console.log(`⏳ GET READY     (${grouped.GET_READY.length}): ${grouped.GET_READY.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
   console.log(`🚀 TO THE MOON   (${grouped.TO_THE_MOON.length}): ${grouped.TO_THE_MOON.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
   console.log(`📡 ON RADAR      (${grouped.ON_RADAR.length}): ${grouped.ON_RADAR.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
-  console.log(`🔪 SLOW BLEED    (${grouped.SLOW_BLEED.length}): ${grouped.SLOW_BLEED.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
-  console.log(`🗡️ FALLING KNIFE (${grouped.FALLING_KNIFE.length}): ${grouped.FALLING_KNIFE.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`🩸 SLOW BLEED    (${grouped.SLOW_BLEED.length}): ${grouped.SLOW_BLEED.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
+  console.log(`🔪 FALLING KNIFE (${grouped.FALLING_KNIFE.length}): ${grouped.FALLING_KNIFE.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
   console.log(`❌ MAYDAY EXIT   (${grouped.MAYDAY_EXIT.length}): ${grouped.MAYDAY_EXIT.map(x => `${x.symbol}(S${x.scenario})`).join(', ') || 'None'}`);
   console.log('='.repeat(80));
 

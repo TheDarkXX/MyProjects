@@ -54,7 +54,7 @@ async function runTests() {
   if (s3Owned.scenario !== 1 || s3Owned.traffic_light !== 'MAYDAY_EXIT') {
     throw new Error(`Scenario 1 Mayday Exit (Owned) failed: got ${s3Owned.scenario} ${s3Owned.traffic_light}`);
   }
-  console.log('✅ Test 5: Scenario 1 Falling Knife & Mayday Exit classified properly (FALLING_KNIFE 🗡️ & MAYDAY_EXIT ❌)');
+  console.log('✅ Test 5: Scenario 1 Falling Knife & Mayday Exit classified properly (FALLING_KNIFE 🔪 & MAYDAY_EXIT ❌)');
 
   // Test 5: Quotas Initialization
   console.log('Syncing quotas...');

@@ -93,7 +93,7 @@ export const TIER_CONFIG: Record<string, TierMetadata> = {
   SLOW_BLEED: {
     id: 'SLOW_BLEED',
     label: 'SLOW BLEED',
-    icon: '🔪',
+    icon: '🩸',
     badgeClass: 'bg-gradient-to-r from-pink-600 via-rose-500 to-red-400 text-white font-semibold',
     animClass: 'animate-bleed-drip',
     borderClass: 'border-rose-400/50',
@@ -106,7 +106,7 @@ export const TIER_CONFIG: Record<string, TierMetadata> = {
   FALLING_KNIFE: {
     id: 'FALLING_KNIFE',
     label: 'FALLING KNIFE',
-    icon: '🗡️',
+    icon: '🔪',
     badgeClass: 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white font-black',
     animClass: 'animate-flash-alert',
     borderClass: 'border-rose-500/80',
@@ -146,7 +146,7 @@ export const TIER_CONFIG: Record<string, TierMetadata> = {
   DANGER: {
     id: 'FALLING_KNIFE',
     label: 'FALLING KNIFE',
-    icon: '🗡️',
+    icon: '🔪',
     badgeClass: 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white font-black',
     animClass: 'animate-flash-alert',
     borderClass: 'border-rose-500/80',

@@ -49,8 +49,8 @@ export function getTierVisualInfo(
       tierId: 'CURRENCY',
       icon: '$',
       label: 'FX / Currency',
-      spineClass: 'bg-gradient-to-b from-amber-500 to-yellow-600 shadow-[0_0_6px_rgba(245,158,11,0.4)]',
-      badgeClass: 'bg-amber-500/20 border border-amber-500/40 text-amber-300',
+      spineClass: 'bg-[#FFB300] shadow-[0_0_8px_rgba(255,179,0,0.7)]',
+      badgeClass: 'text-amber-300',
       isRecognized: true
     };
   }
@@ -60,7 +60,7 @@ export function getTierVisualInfo(
       tierId: 'UNKNOWN',
       icon: symbol.slice(0, 1) || '•',
       label: 'Watchlist Asset',
-      spineClass: 'bg-slate-700/40',
+      spineClass: 'bg-slate-700/50',
       badgeClass: clsx('bg-gradient-to-tr shadow-sm text-white font-bold', getSymbolBadgeGradient(symbol)),
       isRecognized: false
     };
@@ -79,8 +79,8 @@ export function getTierVisualInfo(
       scenarioNum: scenario,
       scenarioTitle: badge,
       reasonTh: reason_th || reason,
-      spineClass: 'bg-gradient-to-b from-orange-500 via-red-500 to-rose-600 shadow-[0_0_10px_rgba(249,115,22,0.85)]',
-      badgeClass: 'bg-red-500/20 border border-orange-500/60 text-orange-200 shadow-[0_0_8px_rgba(249,115,22,0.4)] animate-pulse',
+      spineClass: 'bg-[#FF5722] shadow-[0_0_10px_rgba(255,87,34,0.9)]',
+      badgeClass: 'text-orange-400',
       textGlowClass: 'text-orange-400 font-bold',
       isRecognized: true
     };
@@ -97,10 +97,8 @@ export function getTierVisualInfo(
       scenarioNum: scenario,
       scenarioTitle: badge,
       reasonTh: reason_th || reason,
-      spineClass: 'bg-gradient-to-b from-indigo-500 via-purple-500 to-violet-600 shadow-[0_0_10px_rgba(168,85,247,0.85)]',
-      badgeClass: isNoChase 
-        ? 'bg-purple-950/80 border border-purple-400/50 text-purple-200 shadow-[0_0_6px_rgba(168,85,247,0.4)]'
-        : 'bg-gradient-to-r from-purple-600/30 to-indigo-600/30 border border-violet-400/60 text-violet-200 shadow-[0_0_10px_rgba(168,85,247,0.5)]',
+      spineClass: 'bg-[#D500F9] shadow-[0_0_10px_rgba(213,0,249,0.9)]',
+      badgeClass: 'text-purple-300',
       textGlowClass: 'text-purple-300 font-bold',
       isRecognized: true
     };
@@ -118,8 +116,8 @@ export function getTierVisualInfo(
         scenarioNum: scenario,
         scenarioTitle: badge,
         reasonTh: reason_th || reason,
-        spineClass: 'bg-gradient-to-b from-cyan-400 via-sky-500 to-blue-600 shadow-[0_0_10px_rgba(6,182,212,0.85)]',
-        badgeClass: 'bg-cyan-500/20 border border-cyan-400/60 text-cyan-200 shadow-[0_0_8px_rgba(6,182,212,0.4)]',
+        spineClass: 'bg-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.9)]',
+        badgeClass: 'text-cyan-300',
         textGlowClass: 'text-cyan-300 font-semibold',
         isRecognized: true
       };
@@ -132,8 +130,8 @@ export function getTierVisualInfo(
         scenarioNum: scenario,
         scenarioTitle: badge,
         reasonTh: reason_th || reason,
-        spineClass: 'bg-gradient-to-b from-amber-400 via-orange-500 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.8)]',
-        badgeClass: 'bg-orange-500/20 border border-orange-400/50 text-orange-200 shadow-[0_0_6px_rgba(249,115,22,0.35)]',
+        spineClass: 'bg-[#FF9100] shadow-[0_0_8px_rgba(255,145,0,0.85)]',
+        badgeClass: 'text-orange-300',
         textGlowClass: 'text-orange-300 font-semibold',
         isRecognized: true
       };
@@ -150,8 +148,8 @@ export function getTierVisualInfo(
       scenarioNum: scenario,
       scenarioTitle: badge,
       reasonTh: reason_th || reason,
-      spineClass: 'bg-gradient-to-b from-teal-400 via-emerald-500 to-teal-600 shadow-[0_0_8px_rgba(20,184,166,0.8)]',
-      badgeClass: 'bg-teal-500/20 border border-teal-400/50 text-teal-200 shadow-[0_0_6px_rgba(20,184,166,0.35)]',
+      spineClass: 'bg-[#00BFA5] shadow-[0_0_8px_rgba(0,191,165,0.85)]',
+      badgeClass: 'text-teal-300',
       textGlowClass: 'text-teal-300 font-semibold',
       isRecognized: true
     };
@@ -167,43 +165,43 @@ export function getTierVisualInfo(
       scenarioNum: scenario,
       scenarioTitle: badge,
       reasonTh: reason_th || reason,
-      spineClass: 'bg-gradient-to-b from-yellow-400 via-amber-500 to-yellow-600 shadow-[0_0_8px_rgba(234,179,8,0.8)]',
-      badgeClass: 'bg-yellow-500/20 border border-yellow-400/50 text-yellow-200 shadow-[0_0_6px_rgba(234,179,8,0.35)]',
+      spineClass: 'bg-[#FFD600] shadow-[0_0_8px_rgba(255,214,0,0.85)]',
+      badgeClass: 'text-yellow-300',
       textGlowClass: 'text-yellow-300 font-semibold',
       isRecognized: true
     };
   }
 
-  // Tier 6: SLOW BLEED 🔪
+  // Tier 6: SLOW BLEED 🩸
   if (traffic_light === 'SLOW_BLEED') {
     return {
       tierId: 'SLOW_BLEED',
-      icon: '🔪',
+      icon: '🩸',
       label: 'SLOW BLEED',
       subLabel: 'ไหลซึมต่อเนื่อง ไร้สถาบัน ห้ามถัว',
       scenarioNum: scenario,
       scenarioTitle: badge,
       reasonTh: reason_th || reason,
-      spineClass: 'bg-gradient-to-b from-pink-600 via-rose-600 to-red-600 shadow-[0_0_8px_rgba(244,63,94,0.7)]',
-      badgeClass: 'bg-rose-950/80 border border-rose-500/40 text-rose-300',
+      spineClass: 'bg-[#F50057] shadow-[0_0_8px_rgba(245,0,87,0.85)]',
+      badgeClass: 'text-rose-400',
       textGlowClass: 'text-rose-400',
       isRecognized: true
     };
   }
 
-  // Tier 7: FALLING KNIFE 🗡️ / MAYDAY EXIT ❌
+  // Tier 7: FALLING KNIFE 🔪 / MAYDAY EXIT ❌
   if (traffic_light === 'FALLING_KNIFE' || traffic_light === 'MAYDAY_EXIT' || traffic_light === 'DANGER') {
     const isMayday = traffic_light === 'MAYDAY_EXIT' || upperBadge.includes('MAYDAY');
     return {
       tierId: isMayday ? 'MAYDAY_EXIT' : 'FALLING_KNIFE',
-      icon: isMayday ? '❌' : '🗡️',
+      icon: isMayday ? '❌' : '🔪',
       label: isMayday ? 'MAYDAY EXIT' : 'FALLING KNIFE',
       subLabel: isMayday ? 'สละเรือ คัทลอสรักษาเงินต้น' : 'ห้ามรับมีดเด็ดขาด ถือเงินสด 100%',
       scenarioNum: scenario,
       scenarioTitle: badge,
       reasonTh: reason_th || reason,
-      spineClass: 'bg-gradient-to-b from-red-600 via-rose-700 to-red-800 shadow-[0_0_12px_rgba(239,68,68,0.95)] animate-pulse',
-      badgeClass: 'bg-red-950 border border-red-500/70 text-red-200 shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-pulse',
+      spineClass: 'bg-[#FF1744] shadow-[0_0_12px_rgba(255,23,68,0.95)] animate-pulse',
+      badgeClass: 'text-red-400 font-bold animate-pulse',
       textGlowClass: 'text-red-400 font-bold',
       isRecognized: true
     };
@@ -229,7 +227,7 @@ interface TierBadgeIndicatorProps {
 }
 
 /**
- * Micro-Badge Capsule Component
+ * Micro-Badge Indicator Component (Clean Frameless Icon)
  */
 export const TierBadgeIndicator: React.FC<TierBadgeIndicatorProps> = ({
   symbol,
@@ -240,7 +238,7 @@ export const TierBadgeIndicator: React.FC<TierBadgeIndicatorProps> = ({
 }) => {
   const info = getTierVisualInfo(radarData, symbol, isCurrency);
 
-  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseEnter = (e: React.MouseEvent<HTMLSpanElement>) => {
     if (onHover && info.isRecognized) {
       const rect = e.currentTarget.getBoundingClientRect();
       onHover(rect, info);
@@ -248,31 +246,25 @@ export const TierBadgeIndicator: React.FC<TierBadgeIndicatorProps> = ({
   };
 
   if (!info.isRecognized) {
-    // Elegant fallback circular badge
+    // Elegant fallback initial letter without box
     return (
-      <div
-        className={clsx(
-          'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 transition-transform group-hover:scale-105',
-          info.badgeClass
-        )}
+      <span
+        className="w-4 flex items-center justify-center text-[11px] font-bold text-slate-400 shrink-0 select-none"
       >
         {info.icon}
-      </div>
+      </span>
     );
   }
 
   return (
-    <div
+    <span
       onMouseEnter={handleMouseEnter}
       onMouseLeave={onLeave}
-      className={clsx(
-        'w-[18px] h-[18px] rounded-md flex items-center justify-center text-[11px] shrink-0 cursor-help transition-all duration-150 group-hover:scale-110 select-none',
-        info.badgeClass
-      )}
+      className="w-5 flex items-center justify-center text-[14px] leading-none shrink-0 cursor-help transition-transform duration-150 group-hover:scale-125 select-none"
       title={`${info.label}${info.scenarioTitle ? ` — ${info.scenarioTitle}` : ''}`}
     >
-      <span className="leading-none">{info.icon}</span>
-    </div>
+      {info.icon}
+    </span>
   );
 };
 

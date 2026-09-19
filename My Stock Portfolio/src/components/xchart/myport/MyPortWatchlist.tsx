@@ -468,7 +468,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                           'absolute left-0 top-0 bottom-0 transition-all z-10',
                           isSelected
                             ? 'w-[3.5px] bg-gradient-to-b from-[#823AFD] to-[#FC2D79] shadow-[0_0_10px_rgba(168,85,247,0.9)]'
-                            : clsx('w-[2.5px]', tierInfo.spineClass)
+                            : clsx('w-[3px]', tierInfo.spineClass)
                         )}
                       />
 
@@ -596,7 +596,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                         'absolute left-0 top-0 bottom-0 transition-all z-10',
                         isSelected
                           ? 'w-[3.5px] bg-gradient-to-b from-[#06B6D4] to-[#3B82F6] shadow-[0_0_10px_rgba(6,182,212,0.9)]'
-                          : clsx('w-[2.5px]', tierInfo.spineClass)
+                          : clsx('w-[3px]', tierInfo.spineClass)
                       )}
                     />
 
