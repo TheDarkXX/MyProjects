@@ -353,6 +353,24 @@ export const DEFAULT_PANE_HEIGHTS: PaneHeights = {
 
 export type PresetType = 'full' | 'clean' | 'banker' | 'triple_ema' | 'custom';
 
+export interface LiveBadgeConfig {
+  visible: boolean;
+  fontSize: 'sm' | 'base' | 'lg';
+  showIcon: boolean;
+  position: 'above' | 'center' | 'below';
+  verticalOffset: number;
+  verticalPadding: number;
+}
+
+export const DEFAULT_LIVE_BADGE_CONFIG: LiveBadgeConfig = {
+  visible: true,
+  fontSize: 'base',
+  showIcon: true,
+  position: 'center',
+  verticalOffset: 0,
+  verticalPadding: 4,
+};
+
 export interface IndicatorSettings {
   activePreset: PresetType;
   customColors: string[];
@@ -364,6 +382,7 @@ export interface IndicatorSettings {
   ema3: EMALineConfig;
   ema4: EMALineConfig;
   ema5: EMALineConfig;
+  liveBadge?: LiveBadgeConfig;
   envelope: EnvelopeConfig;
   signals: SignalConfig;
   mcdx: MCDXConfig;
@@ -435,6 +454,7 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     lineWidth: 2,
     lineStyle: 'Solid',
   },
+  liveBadge: DEFAULT_LIVE_BADGE_CONFIG,
   envelope: {
     visible: true,
     percent: 4.0,

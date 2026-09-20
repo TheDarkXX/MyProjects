@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import clsx from 'clsx';
 import { RawBarItem, formatBarTime } from '../../../types/chart';
+import { LiveBadgeConfig } from '../../../types/indicatorConfig';
 import { TierVisualInfo } from '../../xchart/TierBadgeIndicator';
 
 export interface LiveEMAIndicatorBadgeProps {
@@ -15,6 +16,7 @@ export interface LiveEMAIndicatorBadgeProps {
   tierVisual: TierVisualInfo;
   visible: boolean;
   pane0Height?: number;
+  liveBadgeConfig?: LiveBadgeConfig;
 }
 
 export const LiveEMAIndicatorBadge: React.FC<LiveEMAIndicatorBadgeProps> = ({
@@ -28,6 +30,7 @@ export const LiveEMAIndicatorBadge: React.FC<LiveEMAIndicatorBadgeProps> = ({
   tierVisual,
   visible,
   pane0Height = 450,
+  liveBadgeConfig,
 }) => {
   const [coords, setCoords] = useState<{ x: number; y: number; inRange: boolean }>({
     x: 0,
@@ -49,7 +52,7 @@ export const LiveEMAIndicatorBadge: React.FC<LiveEMAIndicatorBadgeProps> = ({
       : (pane0Height || container.clientHeight);
 
     // 1. Calculate Y position based on EMA 200 price
-    let y = ema200SeriesRef.current.priceToCoordinate(lastEma200);
+    const y = ema200SeriesRef.current.priceToCoordinate(lastEma200);
     if (y === null || isNaN(y)) {
       setCoords((prev) => (prev.inRange ? { ...prev, inRange: false } : prev));
       return;
@@ -77,15 +80,27 @@ export const LiveEMAIndicatorBadge: React.FC<LiveEMAIndicatorBadgeProps> = ({
       ? Math.min(containerWidth - badgeWidth - rightAxisBuffer, Math.max(16, x + 24))
       : containerWidth - badgeWidth - rightAxisBuffer;
 
+    // Apply Position logic: above / center / below + verticalOffset
+    const position = liveBadgeConfig?.position || 'center';
+    const vertOffset = liveBadgeConfig?.verticalOffset ?? 0;
+
+    let baseBadgeY = y - badgeHeight / 2;
+    if (position === 'above') {
+      baseBadgeY = y - badgeHeight - 6;
+    } else if (position === 'below') {
+      baseBadgeY = y + 6;
+    }
+    baseBadgeY += vertOffset;
+
     // Clamp Y inside Pane 0 bounds so it never overflows into indicator sub-panes
-    const targetY = Math.max(26, Math.min(pane0H - badgeHeight - 10, y - badgeHeight / 2));
+    const targetY = Math.max(10, Math.min(pane0H - badgeHeight - 8, baseBadgeY));
 
     setCoords({
       x: targetX,
       y: targetY,
       inRange: true,
     });
-  }, [visible, lastEma200, displayBars, pane0Height, chartRef, ema200SeriesRef, containerRef]);
+  }, [visible, lastEma200, displayBars, pane0Height, chartRef, ema200SeriesRef, containerRef, liveBadgeConfig]);
 
   useEffect(() => {
     updatePosition();
@@ -143,31 +158,43 @@ export const LiveEMAIndicatorBadge: React.FC<LiveEMAIndicatorBadgeProps> = ({
 
   const distSign = isPositive ? '+' : '';
 
+  // Customization options
+  const fontSize = liveBadgeConfig?.fontSize || 'base';
+  const fontClass = fontSize === 'sm' ? 'text-[12px]' : fontSize === 'lg' ? 'text-[15px]' : 'text-[13px]';
+  const iconSizeClass = fontSize === 'sm' ? 'text-[13px]' : fontSize === 'lg' ? 'text-[17px]' : 'text-[15px]';
+  const priceFontClass = fontSize === 'sm' ? 'text-[11px]' : fontSize === 'lg' ? 'text-[13px]' : 'text-[12px]';
+  const showIcon = liveBadgeConfig?.showIcon ?? true;
+  const vPad = liveBadgeConfig?.verticalPadding ?? 4;
+
   return (
     <div
       style={{
         transform: `translate3d(${coords.x}px, ${coords.y}px, 0)`,
+        paddingTop: `${vPad}px`,
+        paddingBottom: `${vPad}px`,
       }}
       className={clsx(
-        'absolute left-0 top-0 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full',
+        'absolute left-0 top-0 z-20 flex items-center gap-1.5 px-3 rounded-full',
         'bg-[#0B1220]/90 backdrop-blur-md border font-sans select-none pointer-events-auto cursor-help',
         'transition-transform duration-75 ease-out',
         badgeBorderTheme
       )}
       title={`EMA 200 Anchor: ${distSign}${dist.toFixed(2)}% | ราคาปัจจุบัน $${effectivePrice.toFixed(2)} | เส้น EMA 200 $${lastEma200.toFixed(2)}`}
     >
-      {/* Tier Icon from Watchlist */}
-      <span className="text-[15px] leading-none shrink-0" role="img" aria-label={tierVisual.label}>
-        {tierVisual.icon}
-      </span>
+      {/* Optional Tier Status Icon */}
+      {showIcon && (
+        <span className={clsx('leading-none shrink-0', iconSizeClass)} role="img" aria-label={tierVisual.label}>
+          {tierVisual.icon}
+        </span>
+      )}
 
       {/* Percentage Distance */}
-      <span className={clsx('text-[13px] font-extrabold tracking-tight font-mono', pctColor)}>
+      <span className={clsx('font-extrabold tracking-tight font-mono', fontClass, pctColor)}>
         {distSign}{dist.toFixed(2)}%
       </span>
 
       {/* Exact EMA 200 Price Level */}
-      <span className="text-[12px] font-mono font-medium text-slate-300/90 whitespace-nowrap">
+      <span className={clsx('font-mono font-medium text-slate-300/90 whitespace-nowrap', priceFontClass)}>
         (${lastEma200.toFixed(2)})
       </span>
     </div>

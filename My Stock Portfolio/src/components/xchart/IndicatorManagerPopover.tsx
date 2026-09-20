@@ -424,6 +424,8 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     updateEMA,
     toggleEMA,
     toggleAllEMA,
+    updateLiveBadge,
+    toggleLiveBadge,
     updateEnvelope,
     toggleEnvelope,
     updateSignals,
@@ -1783,6 +1785,131 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                   </div>
                 );
               })}
+
+              {/* In-Canvas Live Indicator Label (Badge Pill Options) */}
+              <div className="flex flex-col gap-2.5 p-3.5 rounded-xl border border-cyan-800/60 bg-gradient-to-br from-cyan-950/40 via-slate-900/60 to-slate-950/80 mt-2 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleLiveBadge()}
+                      className={`p-1 rounded-md transition-all cursor-pointer ${
+                        config.liveBadge?.visible !== false ? 'text-cyan-400 hover:text-cyan-300' : 'text-slate-500'
+                      }`}
+                    >
+                      {config.liveBadge?.visible !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                    <span className="text-[14px] font-extrabold text-cyan-200 flex items-center gap-1.5">
+                      🏷️ In-Canvas Live Indicator Label
+                    </span>
+                  </div>
+                  <span className="text-[11px] px-2 py-0.5 rounded font-bold border bg-cyan-950/90 text-cyan-300 border-cyan-700/60">
+                    EMA 200 Anchor
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800/80">
+                  {/* Position: Above / Center / Below */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[12px] text-slate-300 font-bold">Line Position:</label>
+                    <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                      {(['above', 'center', 'below'] as const).map((pos) => (
+                        <button
+                          key={pos}
+                          type="button"
+                          onClick={() => updateLiveBadge({ position: pos })}
+                          className={`flex-1 py-1 rounded text-[11px] font-extrabold capitalize transition-all cursor-pointer ${
+                            (config.liveBadge?.position || 'center') === pos
+                              ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {pos === 'above' ? 'Upper' : pos === 'below' ? 'Below' : 'On Line'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Font Size: Small / Normal / Large */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[12px] text-slate-300 font-bold">Font Size:</label>
+                    <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                      {(['sm', 'base', 'lg'] as const).map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => updateLiveBadge({ fontSize: size })}
+                          className={`flex-1 py-1 rounded text-[11px] font-extrabold transition-all cursor-pointer ${
+                            (config.liveBadge?.fontSize || 'base') === size
+                              ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {size === 'sm' ? '12px' : size === 'base' ? '13px' : '15px'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Vertical Offset (px) */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[12px] text-slate-300 font-bold">Vertical Offset:</label>
+                      <span className="text-[11px] font-mono text-cyan-300 font-bold">
+                        {config.liveBadge?.verticalOffset ?? 0}px
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="-40"
+                      max="40"
+                      step="1"
+                      value={config.liveBadge?.verticalOffset ?? 0}
+                      onChange={(e) => updateLiveBadge({ verticalOffset: parseInt(e.target.value, 10) })}
+                      className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                    />
+                  </div>
+
+                  {/* Vertical Padding (px) */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[12px] text-slate-300 font-bold">Badge Padding:</label>
+                      <span className="text-[11px] font-mono text-cyan-300 font-bold">
+                        {config.liveBadge?.verticalPadding ?? 4}px
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="2"
+                      max="14"
+                      step="1"
+                      value={config.liveBadge?.verticalPadding ?? 4}
+                      onChange={(e) => updateLiveBadge({ verticalPadding: parseInt(e.target.value, 10) })}
+                      className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                {/* Show Icon Toggle */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                  <span className="text-[13px] text-slate-200 font-medium flex items-center gap-1.5">
+                    Show Tier Status Icon
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => updateLiveBadge({ showIcon: !(config.liveBadge?.showIcon ?? true) })}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      (config.liveBadge?.showIcon ?? true) ? 'bg-cyan-500' : 'bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        (config.liveBadge?.showIcon ?? true) ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="p-3.5 bg-[#080D18] border-t border-slate-800 flex items-center justify-between">

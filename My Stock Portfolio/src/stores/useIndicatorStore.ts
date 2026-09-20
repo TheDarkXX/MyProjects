@@ -3,6 +3,7 @@ import {
   IndicatorSettings,
   DEFAULT_INDICATOR_SETTINGS,
   EMALineConfig,
+  LiveBadgeConfig,
   EnvelopeConfig,
   SignalConfig,
   SignalMarkersConfig,
@@ -50,6 +51,7 @@ function loadSavedConfig(): IndicatorSettings {
       ema3: { ...DEFAULT_INDICATOR_SETTINGS.ema3, ...(parsed.ema3 || {}) },
       ema4: { ...DEFAULT_INDICATOR_SETTINGS.ema4, ...(parsed.ema4 || {}) },
       ema5: { ...DEFAULT_INDICATOR_SETTINGS.ema5, ...(parsed.ema5 || {}) },
+      liveBadge: { ...DEFAULT_INDICATOR_SETTINGS.liveBadge, ...(parsed.liveBadge || {}) },
       envelope: { ...DEFAULT_INDICATOR_SETTINGS.envelope, ...(parsed.envelope || {}) },
       signals: {
         ...DEFAULT_INDICATOR_SETTINGS.signals,
@@ -167,6 +169,8 @@ interface IndicatorState {
   updateEMA: (id: 'ema1' | 'ema2' | 'ema3' | 'ema4' | 'ema5', partial: Partial<EMALineConfig>) => void;
   toggleEMA: (id: 'ema1' | 'ema2' | 'ema3' | 'ema4' | 'ema5') => void;
   toggleAllEMA: (visible: boolean) => void;
+  updateLiveBadge: (partial: Partial<LiveBadgeConfig>) => void;
+  toggleLiveBadge: () => void;
   updateEnvelope: (partial: Partial<EnvelopeConfig>) => void;
   toggleEnvelope: () => void;
   updateSignals: (partial: Partial<SignalConfig>) => void;
@@ -279,6 +283,32 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       { ema1: next.ema1, ema2: next.ema2, ema3: next.ema3, ema4: next.ema4, ema5: next.ema5 },
       { ema1: prev.ema1, ema2: prev.ema2, ema3: prev.ema3, ema4: prev.ema4, ema5: prev.ema5 }
     );
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateLiveBadge: (partial) => {
+    const prev = get().config;
+    const cur = prev.liveBadge || DEFAULT_INDICATOR_SETTINGS.liveBadge!;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      liveBadge: { ...cur, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleLiveBadge: () => {
+    const prev = get().config;
+    const cur = prev.liveBadge || DEFAULT_INDICATOR_SETTINGS.liveBadge!;
+    const nextVisible = !cur.visible;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      liveBadge: { ...cur, visible: nextVisible },
+    };
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Live EMA Badge`, { liveBadge: next.liveBadge }, { liveBadge: cur });
     saveConfig(next);
     set({ config: next });
   },

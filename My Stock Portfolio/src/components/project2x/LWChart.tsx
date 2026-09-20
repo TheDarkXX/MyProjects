@@ -1807,7 +1807,8 @@ export const LWChart: React.FC<LWChartProps> = ({
               lastEma200={lastEma200}
               distEma200={liveDistEma200}
               tierVisual={tierVisual}
-              visible={indicatorConfig.ema3.visible && viewProfile.showEMA}
+              visible={(indicatorConfig.liveBadge?.visible !== false) && indicatorConfig.ema3.visible && viewProfile.showEMA}
+              liveBadgeConfig={indicatorConfig.liveBadge}
             />
           )}
 
