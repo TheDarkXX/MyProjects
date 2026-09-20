@@ -253,7 +253,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
       },
       {
         id: 'main-target',
-        title: 'Target · Project 2X',
+        title: 'Project2X',
         icon: <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />,
         stocks: targetsList,
         badge: `${targetsList.length} Targets`,

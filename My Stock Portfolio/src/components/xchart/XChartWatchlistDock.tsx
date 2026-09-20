@@ -1623,7 +1623,7 @@ export const XChartWatchlistDock: React.FC = () => {
             >
               <ChevronDown className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               <span>
-                {activeWatchlistSections.find(s => s.id === sectionContextMenu.sectionId)?.isCollapsed 
+                {watchlistSections.find(s => s.id === sectionContextMenu.sectionId)?.isCollapsed 
                   ? 'Expand Section' 
                   : 'Collapse Section'}
               </span>
@@ -1640,7 +1640,7 @@ export const XChartWatchlistDock: React.FC = () => {
                 setSectionContextMenu(null);
 
                 if (isDynamic) {
-                  const targetSec = activeWatchlistSections.find(s => s.id === secId);
+                  const targetSec = watchlistSections.find(s => s.id === secId);
                   const count = targetSec?.symbols.length || 0;
                   if (count === 0) return;
                   if (window.confirm(`Remove all ${count} symbols in "${secName}" from watchlist?`)) {

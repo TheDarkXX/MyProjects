@@ -118,8 +118,10 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   const { quotas, fetchQuotas, radar, fetchRadar, compactTiers } = useProject2xStore();
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
 
+  const lastFetchedRadarPortfolioRef = React.useRef<string | null>(null);
   useEffect(() => {
-    if (activePortfolioId) {
+    if (activePortfolioId && lastFetchedRadarPortfolioRef.current !== activePortfolioId) {
+      lastFetchedRadarPortfolioRef.current = activePortfolioId;
       fetchRadar(activePortfolioId);
     }
   }, [activePortfolioId, fetchRadar]);
@@ -175,9 +177,11 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     );
   };
 
-  // Eagerly fetch blueprints & quotas when activePortfolioId is available
+  // Eagerly fetch blueprints & quotas when activePortfolioId is available (Guarded against duplicate calls)
+  const lastFetchedDataPortfolioRef = React.useRef<string | null>(null);
   useEffect(() => {
-    if (activePortfolioId) {
+    if (activePortfolioId && lastFetchedDataPortfolioRef.current !== activePortfolioId) {
+      lastFetchedDataPortfolioRef.current = activePortfolioId;
       fetchBlueprints(activePortfolioId);
       fetchQuotas(activePortfolioId);
     }
@@ -339,12 +343,14 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     });
   }, [targetStocks, prices, watchlistPrices, myportPreferences, radarMap]);
 
-  // Fetch prices for any target stocks not yet in price store
+  // Fetch prices for any target stocks not yet in price store (Guarded to eliminate React error #185 infinite loop)
+  const requestedPricesRef = React.useRef<Set<string>>(new Set());
   useEffect(() => {
     const symsToFetch = targetStocks
       .map((t) => t.symbol)
-      .filter((s) => !prices[s] && !watchlistPrices[s]);
+      .filter((s) => !prices[s] && !watchlistPrices[s] && !requestedPricesRef.current.has(s));
     if (symsToFetch.length > 0) {
+      symsToFetch.forEach((s) => requestedPricesRef.current.add(s));
       fetchPrices(symsToFetch);
     }
   }, [targetStocks, prices, watchlistPrices, fetchPrices]);
@@ -612,7 +618,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           )}
         </div>
 
-        {/* SECTION 2: TARGET · PROJECT 2X */}
+        {/* SECTION 2: PROJECT2X */}
         <div className="bg-[#0F111A]">
           {/* Section Header */}
           <div 
@@ -622,7 +628,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
               e.stopPropagation();
               setSectionContextMenu({
                 sectionId: 'target',
-                sectionName: 'Target · Project 2X',
+                sectionName: 'Project2X',
                 x: e.clientX,
                 y: e.clientY
               });
@@ -637,7 +643,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
               )}
               <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               <span className="tracking-wide uppercase text-slate-200 group-hover:text-white font-semibold text-[13px]">
-                Target · Project 2X
+                Project2X
               </span>
               <span className="text-xs text-slate-400 font-normal shrink-0">
                 ({targetStocks.length})
@@ -1206,7 +1212,13 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
             {/* Refresh Quotes */}
             <button
               onClick={() => {
-                fetchPrices();
+                const syms = Array.from(new Set([
+                  ...validHoldings.map((h) => h.symbol),
+                  ...targetStocks.map((t) => t.symbol)
+                ]));
+                if (syms.length > 0) {
+                  fetchPrices(syms);
+                }
                 fetchWatchlistQuotes();
                 setSectionContextMenu(null);
               }}
