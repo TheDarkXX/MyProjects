@@ -376,11 +376,17 @@ export type TargetConsensusDisplayMode = 'mean' | 'band' | 'all';
 export interface TargetConsensusConfig {
   visible: boolean;
   targetMode: TargetConsensusDisplayMode;
+  showMeanLine?: boolean;
+  showHighLine?: boolean;
+  showLowLine?: boolean;
   lineStyle: LineStyleOption;
   lineWidth: number;
   meanColor: string;
   highColor: string;
   lowColor: string;
+  showLineLabel?: boolean;
+  showLinePercent?: boolean;
+  showPriceScaleLabel?: boolean;
   showBadge: boolean;
   badgeFontSize: 'sm' | 'base' | 'lg';
   badgePosition: 'above' | 'center' | 'below';
@@ -394,11 +400,17 @@ export interface TargetConsensusConfig {
 export const DEFAULT_TARGET_CONSENSUS_CONFIG: TargetConsensusConfig = {
   visible: false,
   targetMode: 'mean',
+  showMeanLine: true,
+  showHighLine: false,
+  showLowLine: false,
   lineStyle: 'Dotted',
   lineWidth: 2,
   meanColor: '#38BDF8',
   highColor: '#10B981',
   lowColor: '#F43F5E',
+  showLineLabel: true,
+  showLinePercent: true,
+  showPriceScaleLabel: false,
   showBadge: true,
   badgeFontSize: 'sm',
   badgePosition: 'above',

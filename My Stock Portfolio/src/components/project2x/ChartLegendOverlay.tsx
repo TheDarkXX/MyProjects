@@ -12,6 +12,8 @@ export interface ChartLegendOverlayProps {
   superMoneySignalResult: SuperMoneySignalResult | null;
   rsiDataByDate: Map<string, { arsi: number | null; signal: number | null; buyCross: boolean; reversal: boolean; buyZone: boolean }>;
   trendSpeedDataByDate: Map<string, { speed: number | null; color: string; dynEma: number | null; dynColor: string }>;
+  analystConsensus?: any;
+  effectivePrice?: number;
 }
 
 export const ChartLegendBar: React.FC<ChartLegendOverlayProps> = ({
@@ -21,6 +23,8 @@ export const ChartLegendBar: React.FC<ChartLegendOverlayProps> = ({
   superMoneySignalResult,
   rsiDataByDate,
   trendSpeedDataByDate,
+  analystConsensus,
+  effectivePrice,
 }) => {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 bg-[#080C14]/95 border-b border-slate-800/50 text-[13px] text-slate-300">
@@ -57,6 +61,22 @@ export const ChartLegendBar: React.FC<ChartLegendOverlayProps> = ({
           {indicatorConfig.ema3.visible && activeLegend.ema200 && (
             <span className="hidden sm:inline">
               EMA{indicatorConfig.ema3.period}: <strong style={{ color: indicatorConfig.ema3.color }}>${activeLegend.ema200.toFixed(2)}</strong>
+            </span>
+          )}
+          {indicatorConfig.targetConsensus?.visible && analystConsensus?.targetMean && (
+            <span className="flex items-center gap-1.5 border-l border-slate-700 pl-3">
+              <span className="text-slate-400">Target:</span>
+              <strong style={{ color: indicatorConfig.targetConsensus.meanColor || '#38BDF8' }}>
+                ${analystConsensus.targetMean.toFixed(2)}
+              </strong>
+              {effectivePrice && effectivePrice > 0 && (
+                <span className={`text-[11px] font-bold ${
+                  analystConsensus.targetMean >= effectivePrice ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  ({analystConsensus.targetMean >= effectivePrice ? '+' : ''}
+                  {(((analystConsensus.targetMean - effectivePrice) / effectivePrice) * 100).toFixed(1)}%)
+                </span>
+              )}
             </span>
           )}
           {indicatorConfig.superMoneySignal?.visible && superMoneySignalResult && indicatorConfig.superMoneySignal?.showPaneLabels && (

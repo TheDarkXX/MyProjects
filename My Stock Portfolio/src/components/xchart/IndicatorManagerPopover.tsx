@@ -2163,26 +2163,100 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     </span>
                   </div>
 
-                  {/* Mode Selector */}
+                  {/* Quick Presets */}
                   <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800">
                     <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
-                      Target Display Mode
+                      Quick Preset Modes
                     </label>
                     <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-lg border border-slate-800">
-                      {(['mean', 'band', 'all'] as TargetConsensusDisplayMode[]).map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => updateTargetConsensus({ targetMode: mode })}
-                          className={`py-1.5 rounded-md text-[12px] font-bold transition-all cursor-pointer ${
-                            tc.targetMode === mode
-                              ? 'bg-sky-500 text-slate-950 shadow-md'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          {mode === 'mean' ? '🎯 Mean Only' : mode === 'band' ? '📊 High / Low' : '✨ Full Spectrum'}
-                        </button>
-                      ))}
+                      {[
+                        { mode: 'mean' as const, label: '🎯 Mean Only', mean: true, high: false, low: false },
+                        { mode: 'band' as const, label: '📊 High / Low', mean: false, high: true, low: true },
+                        { mode: 'all' as const, label: '✨ All 3 Lines', mean: true, high: true, low: true },
+                      ].map((p) => {
+                        const isPresetActive = (tc.showMeanLine ?? true) === p.mean && Boolean(tc.showHighLine) === p.high && Boolean(tc.showLowLine) === p.low;
+                        return (
+                          <button
+                            key={p.mode}
+                            type="button"
+                            onClick={() => updateTargetConsensus({
+                              targetMode: p.mode,
+                              showMeanLine: p.mean,
+                              showHighLine: p.high,
+                              showLowLine: p.low,
+                            })}
+                            className={`py-1.5 rounded-md text-[12px] font-bold transition-all cursor-pointer ${
+                              isPresetActive
+                                ? 'bg-sky-500 text-slate-950 shadow-md'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            {p.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Independent Line Toggles & Colors */}
+                  <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
+                    <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Individual Target Lines (เลือกเปิด-ปิดและปรับสีอิสระ)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {/* Mean Line */}
+                      <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                        <label className="flex items-center gap-2 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={tc.showMeanLine ?? (tc.targetMode === 'mean' || tc.targetMode === 'all')}
+                            onChange={(e) => updateTargetConsensus({ showMeanLine: e.target.checked })}
+                            className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                          />
+                          <span>Mean Target</span>
+                        </label>
+                        <ColorPickerDropdown
+                          color={tc.meanColor}
+                          onChange={(c) => updateTargetConsensus({ meanColor: c })}
+                          label="Mean Target Color"
+                        />
+                      </div>
+
+                      {/* High Line */}
+                      <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                        <label className="flex items-center gap-2 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={tc.showHighLine ?? (tc.targetMode === 'band' || tc.targetMode === 'all')}
+                            onChange={(e) => updateTargetConsensus({ showHighLine: e.target.checked })}
+                            className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0 cursor-pointer"
+                          />
+                          <span>High Target</span>
+                        </label>
+                        <ColorPickerDropdown
+                          color={tc.highColor}
+                          onChange={(c) => updateTargetConsensus({ highColor: c })}
+                          label="High Target Color"
+                        />
+                      </div>
+
+                      {/* Low Line */}
+                      <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                        <label className="flex items-center gap-2 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={tc.showLowLine ?? (tc.targetMode === 'band' || tc.targetMode === 'all')}
+                            onChange={(e) => updateTargetConsensus({ showLowLine: e.target.checked })}
+                            className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-rose-500 focus:ring-0 cursor-pointer"
+                          />
+                          <span>Low Target</span>
+                        </label>
+                        <ColorPickerDropdown
+                          color={tc.lowColor}
+                          onChange={(c) => updateTargetConsensus({ lowColor: c })}
+                          label="Low Target Color"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -2224,38 +2298,42 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                     </div>
                   </div>
 
-                  {/* Color Pickers */}
-                  <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-slate-800">
-                    <div className="flex items-center gap-2">
-                      <ColorPickerDropdown
-                        color={tc.meanColor}
-                        onChange={(c) => updateTargetConsensus({ meanColor: c })}
-                        label="Mean Target Color"
-                      />
-                      <span className="text-[13px] font-bold text-slate-300">Mean Target</span>
+                  {/* Line Labels & Price Scale Controls */}
+                  <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
+                    <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Line Labels & Price Scale (ป้ายราคาและเปอร์เซ็นต์บนเส้น)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={tc.showLineLabel !== false}
+                          onChange={(e) => updateTargetConsensus({ showLineLabel: e.target.checked })}
+                          className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>In-Canvas Title</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={tc.showLinePercent !== false}
+                          onChange={(e) => updateTargetConsensus({ showLinePercent: e.target.checked })}
+                          className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>Show % on Line</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-[13px] font-bold text-slate-200 cursor-pointer select-none" title="ระบายสีป้ายราคาบนสเกลแกนขวา">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(tc.showPriceScaleLabel)}
+                          onChange={(e) => updateTargetConsensus({ showPriceScaleLabel: e.target.checked })}
+                          className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>Price Scale Badge</span>
+                      </label>
                     </div>
-
-                    {tc.targetMode !== 'mean' && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <ColorPickerDropdown
-                            color={tc.highColor}
-                            onChange={(c) => updateTargetConsensus({ highColor: c })}
-                            label="High Target Color"
-                          />
-                          <span className="text-[13px] font-bold text-slate-300">High Target</span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <ColorPickerDropdown
-                            color={tc.lowColor}
-                            onChange={(c) => updateTargetConsensus({ lowColor: c })}
-                            label="Low Target Color"
-                          />
-                          <span className="text-[13px] font-bold text-slate-300">Low Target</span>
-                        </div>
-                      </>
-                    )}
                   </div>
                 </div>
 

@@ -10,7 +10,7 @@ import {
   ChevronUp,
   Layers,
 } from 'lucide-react';
-import { IndicatorSettings } from '../../../types/indicatorConfig';
+import { IndicatorSettings, DEFAULT_TARGET_CONSENSUS_CONFIG } from '../../../types/indicatorConfig';
 import { RawBarItem } from '../../../types/chart';
 import { TierVisualInfo } from '../../xchart/TierBadgeIndicator';
 
@@ -32,6 +32,8 @@ export interface MainPaneIndicatorLegendProps {
   autoSRCount?: number;
   autoSRLocked?: boolean;
   globalDrawingsVisible?: boolean;
+  analystConsensus?: any;
+  effectivePrice?: number;
 
   onToggleEMA: (key: 'ema1' | 'ema2' | 'ema3' | 'ema4' | 'ema5') => void;
   onToggleAllEMA?: (visible: boolean) => void;
@@ -42,7 +44,10 @@ export interface MainPaneIndicatorLegendProps {
   onToggleAutoSRLock?: () => void;
   onToggleAnchoredVWAP?: () => void;
   onToggleVolumeProfile?: () => void;
-  onOpenConfig: (view: 'ema' | 'envelope' | 'trendSpeed' | 'superMoneySignal' | 'mcdx' | 'ultimateRsi' | 'list' | 'anchoredVwap' | 'volumeProfile') => void;
+  onToggleTargetConsensus?: () => void;
+  onToggleMCDX?: () => void;
+  onToggleUltimateRSI?: () => void;
+  onOpenConfig: (view: 'ema' | 'envelope' | 'trendSpeed' | 'superMoneySignal' | 'mcdx' | 'ultimateRsi' | 'list' | 'anchoredVwap' | 'volumeProfile' | 'targetConsensus') => void;
   onOpenDrawingSettings?: () => void;
 }
 
@@ -56,6 +61,8 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
   autoSRCount = 0,
   autoSRLocked = false,
   globalDrawingsVisible = true,
+  analystConsensus,
+  effectivePrice,
   onToggleEMA,
   onToggleAllEMA,
   onToggleEnvelope,
@@ -65,6 +72,9 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
   onToggleAutoSRLock,
   onToggleAnchoredVWAP,
   onToggleVolumeProfile,
+  onToggleTargetConsensus,
+  onToggleMCDX,
+  onToggleUltimateRSI,
   onOpenConfig,
   onOpenDrawingSettings,
 }) => {
@@ -125,6 +135,18 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
         delete next['volumeProfile'];
         changed = true;
       }
+      if (prev['targetConsensus'] && indicatorConfig.targetConsensus?.visible) {
+        delete next['targetConsensus'];
+        changed = true;
+      }
+      if (prev['mcdx'] && indicatorConfig.mcdx?.visible) {
+        delete next['mcdx'];
+        changed = true;
+      }
+      if (prev['ultimateRsi'] && indicatorConfig.ultimateRsi?.visible) {
+        delete next['ultimateRsi'];
+        changed = true;
+      }
       if (changed) {
         try {
           localStorage.setItem('tv_legend_removed_items', JSON.stringify(next));
@@ -144,6 +166,9 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
     indicatorConfig.superMoneySignal?.visible,
     indicatorConfig.anchoredVwap?.visible,
     indicatorConfig.volumeProfile?.visible,
+    indicatorConfig.targetConsensus?.visible,
+    indicatorConfig.mcdx?.visible,
+    indicatorConfig.ultimateRsi?.visible,
   ]);
 
   const handleToggleCollapse = () => {
@@ -379,6 +404,92 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
       onToggle: onToggleAutoSR,
       onConfigure: onOpenDrawingSettings || (() => {}),
       onRemove: () => handleRemoveItem('autoSR', onToggleAutoSR),
+    });
+  }
+
+  // 8. Target Consensus (🎯 Wall Street Analyst Target)
+  if (!removedItems['targetConsensus'] && (indicatorConfig.targetConsensus?.visible || analystConsensus?.targetMean)) {
+    const tc = indicatorConfig.targetConsensus || DEFAULT_TARGET_CONSENSUS_CONFIG;
+    const isTcVisible = Boolean(tc.visible);
+    const targetMean = analystConsensus?.targetMean;
+    const targetHigh = analystConsensus?.targetHigh;
+    const targetLow = analystConsensus?.targetLow;
+    const upsidePct = (effectivePrice && effectivePrice > 0 && targetMean && targetMean > 0)
+      ? ((targetMean - effectivePrice) / effectivePrice) * 100
+      : null;
+
+    const multiVals: Array<{ label: string; value: string; color: string }> = [];
+    if (targetMean && (tc.showMeanLine ?? true)) {
+      multiVals.push({ label: 'Mean', value: `$${targetMean.toFixed(2)}`, color: tc.meanColor || '#38BDF8' });
+    }
+    if (targetHigh && tc.showHighLine) {
+      multiVals.push({ label: 'High', value: `$${targetHigh.toFixed(2)}`, color: tc.highColor || '#10B981' });
+    }
+    if (targetLow && tc.showLowLine) {
+      multiVals.push({ label: 'Low', value: `$${targetLow.toFixed(2)}`, color: tc.lowColor || '#F43F5E' });
+    }
+
+    activeItems.push({
+      id: 'targetConsensus',
+      title: 'Target Consensus',
+      params: analystConsensus?.analystOpinionsCount ? `${analystConsensus.analystOpinionsCount} analysts` : 'Wall St',
+      badge: upsidePct !== null ? {
+        text: `${upsidePct >= 0 ? '+' : ''}${upsidePct.toFixed(1)}%`,
+        bgClass: upsidePct >= 0
+          ? 'bg-emerald-950/80 border border-emerald-800/60 px-1.5 py-0.5 rounded-full'
+          : 'bg-rose-950/80 border border-rose-800/60 px-1.5 py-0.5 rounded-full',
+        textClass: upsidePct >= 0 ? 'text-emerald-300 font-bold' : 'text-rose-300 font-bold',
+      } : undefined,
+      multiValues: multiVals.length > 0 ? multiVals : undefined,
+      valueText: multiVals.length === 0 && targetMean ? `$${targetMean.toFixed(2)}` : undefined,
+      valueColor: tc.meanColor || '#38BDF8',
+      visible: isTcVisible,
+      isLocked: lockedItems['targetConsensus'] ?? true,
+      onToggleLock: () => handleToggleItemLock('targetConsensus'),
+      onToggle: onToggleTargetConsensus || (() => {}),
+      onConfigure: () => onOpenConfig('targetConsensus'),
+      onRemove: () => handleRemoveItem('targetConsensus', () => {
+        if (isTcVisible) onToggleTargetConsensus?.();
+      }),
+    });
+  }
+
+  // 9. Banker MCDX (Sub-pane or Active in Manager)
+  if (!removedItems['mcdx'] && indicatorConfig.mcdx?.visible) {
+    const bVal = activeLegend?.banker;
+    activeItems.push({
+      id: 'mcdx',
+      title: 'Banker MCDX',
+      params: '50 close',
+      valueText: bVal !== undefined ? `${bVal.toFixed(1)}/20` : '--',
+      valueColor: indicatorConfig.mcdx.bankerColor || '#F87171',
+      visible: indicatorConfig.mcdx.visible,
+      isLocked: lockedItems['mcdx'] ?? true,
+      onToggleLock: () => handleToggleItemLock('mcdx'),
+      onToggle: onToggleMCDX || (() => {}),
+      onConfigure: () => onOpenConfig('mcdx'),
+      onRemove: () => handleRemoveItem('mcdx', () => {
+        if (indicatorConfig.mcdx.visible) onToggleMCDX?.();
+      }),
+    });
+  }
+
+  // 10. Ultimate RSI (Sub-pane or Active in Manager)
+  if (!removedItems['ultimateRsi'] && indicatorConfig.ultimateRsi?.visible) {
+    activeItems.push({
+      id: 'ultimateRsi',
+      title: 'Ultimate RSI',
+      params: `${indicatorConfig.ultimateRsi.length}`,
+      valueText: indicatorConfig.ultimateRsi.visible ? 'Active' : 'Muted',
+      valueColor: '#38BDF8',
+      visible: indicatorConfig.ultimateRsi.visible,
+      isLocked: lockedItems['ultimateRsi'] ?? true,
+      onToggleLock: () => handleToggleItemLock('ultimateRsi'),
+      onToggle: onToggleUltimateRSI || (() => {}),
+      onConfigure: () => onOpenConfig('ultimateRsi'),
+      onRemove: () => handleRemoveItem('ultimateRsi', () => {
+        if (indicatorConfig.ultimateRsi.visible) onToggleUltimateRSI?.();
+      }),
     });
   }
 

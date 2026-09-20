@@ -770,82 +770,6 @@ export const LWChart: React.FC<LWChartProps> = ({
     };
   }, [candleSeriesReady, portfolioOverlay, positionConfig, viewProfile.showAvgCostLine, viewProfile.showBlueprintTarget]);
 
-  // Target Consensus Price Lines (Mean, High, Low)
-  const consensusPriceLinesRef = useRef<any[]>([]);
-  useEffect(() => {
-    const candleSeries = candleSeriesRef.current;
-    if (!candleSeries || !candleSeriesReady) return;
-
-    // Cleanup previous consensus lines
-    for (const pl of consensusPriceLinesRef.current) {
-      try {
-        candleSeries.removePriceLine(pl);
-      } catch (e) {}
-    }
-    consensusPriceLinesRef.current = [];
-
-    const tc = indicatorConfig.targetConsensus;
-    if (!tc || !tc.visible || !analystConsensus) return;
-
-    const targetMean = analystConsensus.targetMean;
-    const targetHigh = analystConsensus.targetHigh;
-    const targetLow = analystConsensus.targetLow;
-
-    // 1. Target Mean Line
-    if (targetMean && targetMean > 0 && (tc.targetMode === 'mean' || tc.targetMode === 'all')) {
-      try {
-        const line = candleSeries.createPriceLine({
-          price: targetMean,
-          color: tc.meanColor || '#38BDF8',
-          lineWidth: (tc.lineWidth || 2) as any,
-          lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
-          axisLabelVisible: true,
-          title: `Target: $${targetMean.toFixed(2)}`,
-        });
-        consensusPriceLinesRef.current.push(line);
-      } catch (e) {}
-    }
-
-    // 2. Target High Line
-    if (targetHigh && targetHigh > 0 && (tc.targetMode === 'band' || tc.targetMode === 'all')) {
-      try {
-        const line = candleSeries.createPriceLine({
-          price: targetHigh,
-          color: tc.highColor || '#10B981',
-          lineWidth: (tc.lineWidth || 2) as any,
-          lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
-          axisLabelVisible: true,
-          title: `Target High: $${targetHigh.toFixed(2)}`,
-        });
-        consensusPriceLinesRef.current.push(line);
-      } catch (e) {}
-    }
-
-    // 3. Target Low Line
-    if (targetLow && targetLow > 0 && (tc.targetMode === 'band' || tc.targetMode === 'all')) {
-      try {
-        const line = candleSeries.createPriceLine({
-          price: targetLow,
-          color: tc.lowColor || '#F43F5E',
-          lineWidth: (tc.lineWidth || 2) as any,
-          lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
-          axisLabelVisible: true,
-          title: `Target Low: $${targetLow.toFixed(2)}`,
-        });
-        consensusPriceLinesRef.current.push(line);
-      } catch (e) {}
-    }
-
-    return () => {
-      for (const pl of consensusPriceLinesRef.current) {
-        try {
-          candleSeries.removePriceLine(pl);
-        } catch (e) {}
-      }
-      consensusPriceLinesRef.current = [];
-    };
-  }, [candleSeriesReady, analystConsensus, indicatorConfig.targetConsensus]);
-
   // Synchronize Volume Profile (VPVR) data
   useEffect(() => {
     if (volumeProfilePrimitiveRef.current && indicatorConfig.volumeProfile) {
@@ -1523,6 +1447,102 @@ export const LWChart: React.FC<LWChartProps> = ({
     );
   }, [trafficLight, badge, scenario, reasonTh, symbol, effectivePrice, lastEma200, liveDistEma200]);
 
+  // Target Consensus Price Lines (Mean, High, Low) with % upside/downside and clean price scale
+  const consensusPriceLinesRef = useRef<any[]>([]);
+  useEffect(() => {
+    const candleSeries = candleSeriesRef.current;
+    if (!candleSeries || !candleSeriesReady) return;
+
+    // Cleanup previous consensus lines
+    for (const pl of consensusPriceLinesRef.current) {
+      try {
+        candleSeries.removePriceLine(pl);
+      } catch (e) {}
+    }
+    consensusPriceLinesRef.current = [];
+
+    const tc = indicatorConfig.targetConsensus;
+    if (!tc || !tc.visible || !analystConsensus) return;
+
+    const targetMean = analystConsensus.targetMean;
+    const targetHigh = analystConsensus.targetHigh;
+    const targetLow = analystConsensus.targetLow;
+
+    const isMeanActive = targetMean && targetMean > 0 && (tc.showMeanLine ?? (tc.targetMode === 'mean' || tc.targetMode === 'all'));
+    const isHighActive = targetHigh && targetHigh > 0 && (tc.showHighLine ?? (tc.targetMode === 'band' || tc.targetMode === 'all'));
+    const isLowActive = targetLow && targetLow > 0 && (tc.showLowLine ?? (tc.targetMode === 'band' || tc.targetMode === 'all'));
+
+    const showLineLabel = tc.showLineLabel !== false;
+    const showPct = tc.showLinePercent !== false;
+    const axisLabelVisible = Boolean(tc.showPriceScaleLabel);
+
+    // 1. Target Mean Line
+    if (isMeanActive) {
+      try {
+        const upside = (effectivePrice > 0) ? ((targetMean - effectivePrice) / effectivePrice) * 100 : null;
+        const pctText = (showPct && upside !== null) ? ` (${upside >= 0 ? '+' : ''}${upside.toFixed(1)}%)` : '';
+        const titleText = showLineLabel ? `Target: $${targetMean.toFixed(2)}${pctText}` : '';
+
+        const line = candleSeries.createPriceLine({
+          price: targetMean,
+          color: tc.meanColor || '#38BDF8',
+          lineWidth: (tc.lineWidth || 2) as any,
+          lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
+          axisLabelVisible,
+          title: titleText,
+        });
+        consensusPriceLinesRef.current.push(line);
+      } catch (e) {}
+    }
+
+    // 2. Target High Line
+    if (isHighActive) {
+      try {
+        const upside = (effectivePrice > 0) ? ((targetHigh - effectivePrice) / effectivePrice) * 100 : null;
+        const pctText = (showPct && upside !== null) ? ` (${upside >= 0 ? '+' : ''}${upside.toFixed(1)}%)` : '';
+        const titleText = showLineLabel ? `High Target: $${targetHigh.toFixed(2)}${pctText}` : '';
+
+        const line = candleSeries.createPriceLine({
+          price: targetHigh,
+          color: tc.highColor || '#10B981',
+          lineWidth: (tc.lineWidth || 2) as any,
+          lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
+          axisLabelVisible,
+          title: titleText,
+        });
+        consensusPriceLinesRef.current.push(line);
+      } catch (e) {}
+    }
+
+    // 3. Target Low Line
+    if (isLowActive) {
+      try {
+        const upside = (effectivePrice > 0) ? ((targetLow - effectivePrice) / effectivePrice) * 100 : null;
+        const pctText = (showPct && upside !== null) ? ` (${upside >= 0 ? '+' : ''}${upside.toFixed(1)}%)` : '';
+        const titleText = showLineLabel ? `Low Target: $${targetLow.toFixed(2)}${pctText}` : '';
+
+        const line = candleSeries.createPriceLine({
+          price: targetLow,
+          color: tc.lowColor || '#F43F5E',
+          lineWidth: (tc.lineWidth || 2) as any,
+          lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
+          axisLabelVisible,
+          title: titleText,
+        });
+        consensusPriceLinesRef.current.push(line);
+      } catch (e) {}
+    }
+
+    return () => {
+      for (const pl of consensusPriceLinesRef.current) {
+        try {
+          candleSeries.removePriceLine(pl);
+        } catch (e) {}
+      }
+      consensusPriceLinesRef.current = [];
+    };
+  }, [candleSeriesReady, analystConsensus, indicatorConfig.targetConsensus, effectivePrice]);
+
   const isCustomHeight = className.includes('h-') || className.includes('flex-1');
   const defaultHeightClass = isCustomHeight ? '' : 'h-[650px] min-h-[500px]';
 
@@ -1765,6 +1785,8 @@ export const LWChart: React.FC<LWChartProps> = ({
           superMoneySignalResult={superMoneySignalResult}
           rsiDataByDate={rsiDataByDate}
           trendSpeedDataByDate={trendSpeedDataByDate}
+          analystConsensus={analystConsensus}
+          effectivePrice={effectivePrice}
         />
       )}
 
@@ -1794,6 +1816,8 @@ export const LWChart: React.FC<LWChartProps> = ({
               autoSRCount={visibleDrawings.length}
               autoSRLocked={visibleDrawings.some((d) => d.locked)}
               globalDrawingsVisible={viewProfile.showDrawings}
+              analystConsensus={analystConsensus}
+              effectivePrice={effectivePrice}
               onToggleEMA={(key) => {
                 if (activeContext === 'project2x') {
                   useChartViewStore.getState().toggleVisibility('project2x', 'showEMA');
@@ -1843,6 +1867,15 @@ export const LWChart: React.FC<LWChartProps> = ({
                 } else {
                   useIndicatorStore.getState().toggleVolumeProfile();
                 }
+              }}
+              onToggleTargetConsensus={() => {
+                useIndicatorStore.getState().toggleTargetConsensus();
+              }}
+              onToggleMCDX={() => {
+                useIndicatorStore.getState().toggleMCDX();
+              }}
+              onToggleUltimateRSI={() => {
+                useIndicatorStore.getState().toggleUltimateRSI();
               }}
               onToggleAutoSR={() => {
                 if (activeContext === 'project2x') {
