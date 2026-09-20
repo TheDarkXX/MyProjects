@@ -80,8 +80,8 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
 }) => {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('tv_main_legend_collapsed');
-      if (saved === null) return true; // Default auto-collapsed!
+      const saved = localStorage.getItem('tv_main_legend_collapsed_v3');
+      if (saved === null) return true; // Default collapsed as default!
       return saved === 'true';
     } catch (_) {
       return true;
@@ -175,7 +175,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
     setIsCollapsed((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem('tv_main_legend_collapsed', String(next));
+        localStorage.setItem('tv_main_legend_collapsed_v3', String(next));
       } catch (_) {}
       return next;
     });
@@ -502,30 +502,30 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
         // Collapsed Minimal Badge
         <button
           onClick={handleToggleCollapse}
-          className="pointer-events-auto flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0B101B]/80 hover:bg-[#0B101B] border border-slate-700/60 hover:border-slate-500 text-slate-200 hover:text-white shadow-lg backdrop-blur-md text-[10px] font-normal transition-all group cursor-pointer"
+          className="pointer-events-auto flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0B101B]/80 hover:bg-[#0B101B] border border-slate-700/60 hover:border-slate-500 text-slate-200 hover:text-white shadow-lg backdrop-blur-md text-[9px] font-normal transition-all group cursor-pointer"
           title="Expand Indicator Legend"
         >
-          <Layers className="w-3 h-3 text-cyan-400 group-hover:scale-110 transition-transform" />
+          <Layers className="w-2.5 h-2.5 text-cyan-400 group-hover:scale-110 transition-transform" />
           <span>Indicators ({activeItems.filter(i => i.visible).length}/{activeItems.length})</span>
-          <ChevronDown className="w-3 h-3 text-slate-300 group-hover:text-white" />
+          <ChevronDown className="w-2.5 h-2.5 text-slate-300 group-hover:text-white" />
         </button>
       ) : (
-        // Expanded Stacked List (TradingView Style - Per-Row Sleek Pills)
-        <div className="pointer-events-auto flex flex-col items-start gap-[3px] p-0 bg-transparent transition-all duration-150 group/container">
+        // Expanded Stacked List (TradingView Style - Per-Row Sleek Ultra-Compact Pills)
+        <div className="pointer-events-auto flex flex-col items-start gap-[1.5px] p-0 bg-transparent transition-all duration-150 group/container">
           {activeItems.map((item) => (
             <div
               key={item.id}
-              className={`flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#090D16]/90 hover:bg-[#0B101B] backdrop-blur-md border border-slate-800/50 hover:border-slate-700/80 shadow-sm transition-all group/row text-[10px] leading-tight w-fit ${
+              className={`flex items-center gap-1.5 px-1.5 py-[1px] rounded bg-[#090D16]/90 hover:bg-[#0B101B] backdrop-blur-md border border-slate-800/50 hover:border-slate-700/80 shadow-sm transition-all group/row text-[8.5px] leading-none w-fit ${
                 !item.visible ? 'opacity-75' : ''
               }`}
             >
               {/* Title & Parameters */}
-              <span className="font-normal whitespace-nowrap text-slate-200">
+              <span className="font-medium whitespace-nowrap text-slate-200 text-[8.5px]">
                 {item.title}
               </span>
 
               {item.params && (
-                <span className="text-[10px] whitespace-nowrap font-mono text-slate-400">
+                <span className="text-[8px] whitespace-nowrap font-mono text-slate-400">
                   {item.params}
                 </span>
               )}
@@ -533,7 +533,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
               {/* Single Live Value */}
               {item.valueText && (
                 <span
-                  className="font-normal font-mono text-[10px] whitespace-nowrap"
+                  className="font-normal font-mono text-[8px] whitespace-nowrap"
                   style={{ color: item.valueColor || '#CBD5E1' }}
                 >
                   {item.valueText}
@@ -542,10 +542,10 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
 
               {/* Multi Live Values */}
               {item.multiValues && (
-                <div className="flex items-center gap-1 font-mono text-[10px]">
+                <div className="flex items-center gap-0.5 font-mono text-[8px]">
                   {item.multiValues.map((mv, idx) => (
                     <span key={idx} className="whitespace-nowrap">
-                      {mv.label && <span className="text-slate-400 text-[9px] mr-0.5">{mv.label}</span>}
+                      {mv.label && <span className="text-slate-400 text-[7.5px] mr-0.5">{mv.label}</span>}
                       <span className="font-normal" style={{ color: mv.color }}>
                         {mv.value}
                       </span>
@@ -556,13 +556,13 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
 
               {/* Status Badge */}
               {item.badge && (
-                <span className={`${item.badge.bgClass} ${item.badge.textClass} whitespace-nowrap leading-tight text-[9px]`}>
+                <span className={`${item.badge.bgClass} ${item.badge.textClass} whitespace-nowrap leading-none text-[7.5px] px-1 py-0.2`}>
                   {item.badge.text}
                 </span>
               )}
 
               {/* Stealth Hover Action Toolbar */}
-              <div className="flex items-center gap-0.5 ml-1.5 opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto transition-opacity duration-150">
+              <div className="flex items-center gap-0.5 ml-1 opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto transition-opacity duration-150">
                 {/* 👁️ Eye Toggle */}
                 <button
                   onClick={item.onToggle}
@@ -571,7 +571,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                     item.visible ? 'text-slate-300 hover:text-white' : 'text-slate-500 hover:text-amber-400'
                   }`}
                 >
-                  {item.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3 text-slate-500" />}
+                  {item.visible ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5 text-slate-500" />}
                 </button>
 
                 {/* ⚙️ Gear (Direct Settings) */}
@@ -580,7 +580,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                   title={`Configure ${item.title}`}
                   className="p-0.5 rounded hover:bg-slate-700/80 text-slate-300 hover:text-sky-300 transition-colors cursor-pointer"
                 >
-                  <Settings className="w-3 h-3" />
+                  <Settings className="w-2.5 h-2.5" />
                 </button>
 
                 {/* 🔒 / 🔓 Lock Toggle */}
@@ -591,9 +591,9 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                     className="p-0.5 rounded hover:bg-slate-700/80 transition-colors cursor-pointer"
                   >
                     {item.isLocked ? (
-                      <Lock className="w-3 h-3 text-amber-400" />
+                      <Lock className="w-2.5 h-2.5 text-amber-400" />
                     ) : (
-                      <Unlock className="w-3 h-3 text-slate-300 hover:text-white" />
+                      <Unlock className="w-2.5 h-2.5 text-slate-300 hover:text-white" />
                     )}
                   </button>
                 )}
@@ -604,7 +604,7 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
                   title={`Remove ${item.title}`}
                   className="p-0.5 rounded hover:bg-rose-500/25 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-2.5 h-2.5" />
                 </button>
               </div>
             </div>
@@ -614,9 +614,9 @@ export const MainPaneIndicatorLegend: React.FC<MainPaneIndicatorLegendProps> = (
           <div className="pt-0.5">
             <button
               onClick={handleToggleCollapse}
-              className="text-[9px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors px-1.5 py-0.5 rounded bg-[#090D16]/80 hover:bg-[#0B101B] border border-slate-800/40 backdrop-blur-sm"
+              className="text-[8px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors px-1 py-0.2 rounded bg-[#090D16]/80 hover:bg-[#0B101B] border border-slate-800/40 backdrop-blur-sm"
             >
-              <ChevronUp className="w-2.5 h-2.5" />
+              <ChevronUp className="w-2 h-2" />
               <span>Collapse</span>
             </button>
           </div>
