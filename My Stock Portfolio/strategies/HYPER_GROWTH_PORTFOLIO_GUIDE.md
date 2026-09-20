@@ -4,6 +4,7 @@
 > **ตำแหน่งไฟล์:** `My Stock Portfolio/strategies/HYPER_GROWTH_PORTFOLIO_GUIDE.md`  
 > **คู่มือปฏิบัติการพอร์ตจริง & กลยุทธ์ฝั่งขาย:** [PROJECT_2X_EXECUTION_PLAYBOOK.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/PROJECT_2X_EXECUTION_PLAYBOOK.md) *(แผนปฏิบัติการพอร์ตจริง $2,646 & กลยุทธ์ฝั่งขาย 5 เสาหลัก)*  
 > **รายงานตรวจสอบตัวเลขสด:** [THE_3_YEAR_DOUBLER_AUDIT.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/THE_3_YEAR_DOUBLER_AUDIT.md) *(รายงานตรวจสุขภาพ 3 ปี 1 เด้ง เจาะลึกด้วย Yahoo Finance API)*  
+> **กรณีศึกษาพอร์ตระดับโลก:** [DUQUESNE_FAMILY_OFFICE_PORTFOLIO_AUDIT.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/DUQUESNE_FAMILY_OFFICE_PORTFOLIO_AUDIT.md) *(ชำแหละพอร์ต $5.2B ของ Stanley Druckenmiller ครบ 100%)*  
 > **เป้าหมายผลตอบแทน:** **25% – 30% ต่อปี ทบต้นระยะยาว (Bull-Case Stretch Goal 35%++ CAGR)**  
 > **เกณฑ์คัดกรองขั้นต่ำ (The 3-Year Doubler Rule):** **ต้องมีศักยภาพเติบโตอย่างน้อย 100% (1 เด้ง / 2x Capital Gain) ภายในเวลาไม่เกิน 3 ปี (คิดเป็นผลตอบแทนทบต้น CAGR $\ge$ 26% ต่อปีขึ้นไป)**  
 > **พฤติกรรมพอร์ต:** สำหรับนักลงทุนสายถือยาว ไม่เฝ้าจอ ขี้เกียจดูบ่อย เน้นเติมเงิน DCA / Inflow ตามรอบเทคนิคอล และขายตามกลยุทธ์ 5 เสาหลัก

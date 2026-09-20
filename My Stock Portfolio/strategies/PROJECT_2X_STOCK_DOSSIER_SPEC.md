@@ -2,7 +2,7 @@
 > **เอกสารยุทธศาสตร์แม่บท:** แผนผังและข้อมูลเฉพาะทางสำหรับระบบเจาะลึก 12 หุ้นแม่ทัพ  
 > **หมวดหมู่:** High-Conviction Single Stock Execution & Key Driver Dossier  
 > **ตำแหน่งไฟล์:** `My Stock Portfolio/strategies/PROJECT_2X_STOCK_DOSSIER_SPEC.md`  
-> **เอกสารอ้างอิง:** [HYPER_GROWTH_PORTFOLIO_GUIDE.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/HYPER_GROWTH_PORTFOLIO_GUIDE.md) | [PROJECT_2X_EXECUTION_PLAYBOOK.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/PROJECT_2X_EXECUTION_PLAYBOOK.md) | [THE_3_YEAR_DOUBLER_AUDIT.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/THE_3_YEAR_DOUBLER_AUDIT.md)  
+> **เอกสารอ้างอิง:** [HYPER_GROWTH_PORTFOLIO_GUIDE.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/HYPER_GROWTH_PORTFOLIO_GUIDE.md) | [PROJECT_2X_EXECUTION_PLAYBOOK.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/PROJECT_2X_EXECUTION_PLAYBOOK.md) | [THE_3_YEAR_DOUBLER_AUDIT.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/THE_3_YEAR_DOUBLER_AUDIT.md) | [DUQUESNE_FAMILY_OFFICE_PORTFOLIO_AUDIT.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/DUQUESNE_FAMILY_OFFICE_PORTFOLIO_AUDIT.md)  
 
 ---
 
