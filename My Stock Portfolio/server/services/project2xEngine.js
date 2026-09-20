@@ -346,7 +346,7 @@ export function classifyScenario({
   // ==========================================
 
   // 1. Falling Knife: Plunged below EMA 200 with 0 Banker (BULL regime requires severe plunge < -12% to prevent capitulation wick false alarm)
-  const fallingKnifeThreshold = regime === 'BULL' ? -12.0 : -8.0;
+  const fallingKnifeThreshold = regime === 'BULL' ? -12.0 : -10.0;
   if (d200 < fallingKnifeThreshold && banker === 0) {
     const isOwned = ownedShares > 0;
     return {
@@ -378,8 +378,8 @@ export function classifyScenario({
     };
   }
 
-  // 2. Dead Cat Bounce: Plunged deep below EMA 200 (> -8%) in BEAR regime trying a weak underwater bounce (1-6)
-  if (d200 < -8 && banker > 0 && banker <= 6 && regime === 'BEAR') {
+  // 2. Dead Cat Bounce: Plunged deep below EMA 200 (> -10%) in BEAR regime trying a weak underwater bounce (1-6)
+  if (d200 < -10.0 && banker > 0 && banker <= 6 && regime === 'BEAR') {
     const isOwned = ownedShares > 0;
     return {
       scenario: 2,
@@ -1639,7 +1639,7 @@ export async function scanRadarMatrix(portfolioId) {
 
     // Layer 4: [NEW] Core Trend Breakdown Alert (Stop Loss for Core Commanders)
     if (row.category === 'Core' && row.owned_shares > 0) {
-      if (row.distEma200 < -8 && row.banker === 0) {
+      if (row.distEma200 < -10.0 && row.banker === 0) {
         sellAlerts.push({
           symbol: row.symbol,
           layer: 'Core Trend Breakdown',

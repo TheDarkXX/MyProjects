@@ -15,7 +15,7 @@ console.log('🔬 PHASE 1: COMBINATORIAL MATRIX (Tier A Core + Tier B Secondary 
 
 // Tier A: Core Routing (3 x 14 x 9 x 2 x 2 = 1,512 base perms)
 const regimes = ['BULL', 'NEUTRAL', 'BEAR'];
-const d200Vals = [-30, -12.1, -11.9, -8.1, -7.9, -5.1, -4.9, -4.1, -3.6, -3.4, -1.0, 0.0, 2.5, 30.0];
+const d200Vals = [-30, -12.1, -11.9, -10.1, -9.9, -5.1, -4.9, -4.1, -3.6, -3.4, -1.0, 0.0, 2.5, 30.0];
 const bankerVals = [0, 0.5, 1.0, 3.0, 6.0, 7.0, 10.0, 14.0, 15.0];
 const booleans = [true, false];
 
@@ -90,10 +90,10 @@ function runInvariantChecks(input, res) {
     }
   }
 
-  // INV-7: BEAR underwater bounce (< -8% and banker 1-6) must trigger S2 (MAYDAY_EXIT / FALLING_KNIFE)
-  if (input.regime === 'BEAR' && input.distEma200 < -8.0 && input.banker > 0 && input.banker <= 6) {
+  // INV-7: BEAR underwater bounce (< -10% and banker 1-6) must trigger S2 (MAYDAY_EXIT / FALLING_KNIFE)
+  if (input.regime === 'BEAR' && input.distEma200 < -10.0 && input.banker > 0 && input.banker <= 6) {
     if (res.scenario !== 2 || (res.traffic_light !== 'MAYDAY_EXIT' && res.traffic_light !== 'FALLING_KNIFE')) {
-      return { rule: 'INV-7', desc: 'BEAR underwater bounce (< -8%, banker 1-6) failed S2 VETO', input, res };
+      return { rule: 'INV-7', desc: 'BEAR underwater bounce (< -10%, banker 1-6) failed S2 VETO', input, res };
     }
   }
 
@@ -238,11 +238,11 @@ const phase2Tests = [
   { name: 'S7-5: Base Breakout with volume surge 2.5x', input: { ...baseStd, isBaseBreakout: true, regime: 'BULL', banker: 3, isAboveEma9: true, volRatio: 2.5 }, expectScen: 7, expectTier: 'BUY_NOW' },
 
   // S11 Regime Flip (price slightly above support zone d200=4.0, d150=3.5 to bypass Layer 2 S8)
-  { name: 'S11-1: Regime Flip banker>=3 + bullish', input: { ...baseStd, isRegimeFlip: true, banker: 3, isLatestBullish: true, distEma200: 4.0, distEma150: 3.5 }, expectScen: 11, expectTier: 'BUY_ZONE' },
-  { name: 'S11-2: Regime Flip banker=5 + bullish', input: { ...baseStd, isRegimeFlip: true, banker: 5, isLatestBullish: true, distEma200: 4.0, distEma150: 3.5 }, expectScen: 11, expectTier: 'BUY_ZONE' },
+  { name: 'S11-1: Regime Flip banker>=3 + bullish', input: { ...baseStd, isRegimeFlip: true, banker: 3, isLatestBullish: true, distEma200: 4.0, distEma150: 3.5 }, expectScen: 11, expectTier: 'GET_READY' },
+  { name: 'S11-2: Regime Flip banker=5 + bullish', input: { ...baseStd, isRegimeFlip: true, banker: 5, isLatestBullish: true, distEma200: 4.0, distEma150: 3.5 }, expectScen: 11, expectTier: 'GET_READY' },
   { name: 'S11-3: Regime Flip banker=2.99 rejected (< 3)', input: { ...baseStd, isRegimeFlip: true, banker: 2.99, isLatestBullish: true, distEma200: 4.0, distEma150: 3.5 }, rejectScen: 11 },
   { name: 'S11-4: Regime Flip bearish candle rejected', input: { ...baseStd, isRegimeFlip: true, banker: 5, isLatestBullish: false, distEma200: 4.0, distEma150: 3.5 }, rejectScen: 11 },
-  { name: 'S11-5: Regime Flip banker=10 + bullish pass', input: { ...baseStd, isRegimeFlip: true, banker: 10, isLatestBullish: true, distEma200: 4.0, distEma150: 3.5 }, expectScen: 11, expectTier: 'BUY_ZONE' },
+  { name: 'S11-5: Regime Flip banker=10 + bullish pass', input: { ...baseStd, isRegimeFlip: true, banker: 10, isLatestBullish: true, distEma200: 4.0, distEma150: 3.5 }, expectScen: 11, expectTier: 'GET_READY' },
   { name: 'S11-6: Regime Flip banker=0 rejected', input: { ...baseStd, isRegimeFlip: true, banker: 0, isLatestBullish: true, distEma200: 4.0, distEma150: 3.5 }, rejectScen: 11 },
 
   // Pattern Conflicts & Priority Order (Code Order: S5 > S6 > S7 > S11)
@@ -255,9 +255,9 @@ const phase2Tests = [
   { name: 'CF-5: S1 Falling Knife Veto overrides S5 DoubleBottom', input: { ...baseStd, isDoubleBottomConfirmed: true, distEma200: -15.0, banker: 0, regime: 'BULL', isAboveEma9: true }, expectScen: 1, expectTier: 'MAYDAY_EXIT' },
   { name: 'CF-6: S1 Falling Knife Veto overrides S6 BearTrap', input: { ...baseStd, isBearTrapReclaimed: true, distEma200: -15.0, banker: 0, regime: 'BULL', isAboveEma9: true }, expectScen: 1, expectTier: 'MAYDAY_EXIT' },
   { name: 'CF-7: S1 Falling Knife Veto overrides S7 BaseBreakout', input: { ...baseStd, isBaseBreakout: true, distEma200: -15.0, banker: 0, regime: 'BULL', isAboveEma9: true }, expectScen: 1, expectTier: 'MAYDAY_EXIT' },
-  { name: 'CF-8: S2 Dead Cat Veto overrides S5 DoubleBottom (BEAR underwater)', input: { ...baseStd, isDoubleBottomConfirmed: true, distEma200: -9.0, banker: 3, regime: 'BEAR', isAboveEma9: true }, expectScen: 2, expectTier: 'MAYDAY_EXIT' },
-  { name: 'CF-9: S2 Dead Cat Veto overrides S6 BearTrap (BEAR underwater)', input: { ...baseStd, isBearTrapReclaimed: true, distEma200: -9.0, banker: 3, regime: 'BEAR', isAboveEma9: true }, expectScen: 2, expectTier: 'MAYDAY_EXIT' },
-  { name: 'CF-10: S2 Dead Cat Veto overrides S7 BaseBreakout (BEAR underwater)', input: { ...baseStd, isBaseBreakout: true, distEma200: -9.0, banker: 3, regime: 'BEAR', isAboveEma9: true }, expectScen: 2, expectTier: 'MAYDAY_EXIT' },
+  { name: 'CF-8: S2 Dead Cat Veto overrides S5 DoubleBottom (BEAR underwater)', input: { ...baseStd, isDoubleBottomConfirmed: true, distEma200: -10.5, banker: 3, regime: 'BEAR', isAboveEma9: true }, expectScen: 2, expectTier: 'MAYDAY_EXIT' },
+  { name: 'CF-9: S2 Dead Cat Veto overrides S6 BearTrap (BEAR underwater)', input: { ...baseStd, isBearTrapReclaimed: true, distEma200: -10.5, banker: 3, regime: 'BEAR', isAboveEma9: true }, expectScen: 2, expectTier: 'MAYDAY_EXIT' },
+  { name: 'CF-10: S2 Dead Cat Veto overrides S7 BaseBreakout (BEAR underwater)', input: { ...baseStd, isBaseBreakout: true, distEma200: -10.5, banker: 3, regime: 'BEAR', isAboveEma9: true }, expectScen: 2, expectTier: 'MAYDAY_EXIT' },
   { name: 'CF-11: S3 Core Breakdown Veto overrides S5 (BULL d200=-5.5% daysBelow=6)', input: { ...baseStd, isDoubleBottomConfirmed: true, distEma200: -5.5, daysBelowEma200: 6, banker: 1, regime: 'BULL', isAboveEma9: true }, expectScen: 3, expectTier: 'MAYDAY_EXIT' },
   { name: 'CF-12: S3 Core Breakdown Veto overrides S7 (BEAR d200=-4.5% daysBelow=4)', input: { ...baseStd, isBaseBreakout: true, distEma200: -4.5, daysBelowEma200: 4, banker: 3, regime: 'BEAR', isAboveEma9: true }, expectScen: 3, expectTier: 'MAYDAY_EXIT' },
   { name: 'CF-13: S4 Slow Bleed Veto overrides S5 (BULL d200=-7% daysBankerZero=9)', input: { ...baseStd, isDoubleBottomConfirmed: true, distEma200: -7.0, daysBankerZero: 9, banker: 0, regime: 'BULL', isAboveEma9: true }, expectScen: 4, expectTier: 'SLOW_BLEED' },
@@ -291,14 +291,14 @@ const phase3Tests = [
   { name: 'S1-BULL Cliff at -12.01%', input: { ...baseCliff, distEma200: -12.01, banker: 0, regime: 'BULL' }, expectScen: 1 },
   { name: 'S1-BULL Cliff at -11.99%', input: { ...baseCliff, distEma200: -11.99, banker: 0, regime: 'BULL' }, expectScen: 16 },
 
-  // S1 BEAR threshold (-8.0%)
-  { name: 'S1-BEAR Cliff at -8.01%', input: { ...baseCliff, distEma200: -8.01, banker: 0, regime: 'BEAR' }, expectScen: 1 },
-  { name: 'S1-BEAR Cliff at -7.99%', input: { ...baseCliff, distEma200: -7.99, banker: 0, regime: 'BEAR' }, expectScen: 16 },
+  // S1 BEAR threshold (-10.0%)
+  { name: 'S1-BEAR Cliff at -10.01%', input: { ...baseCliff, distEma200: -10.01, banker: 0, regime: 'BEAR' }, expectScen: 1 },
+  { name: 'S1-BEAR Cliff at -9.99%', input: { ...baseCliff, distEma200: -9.99, banker: 0, regime: 'BEAR' }, expectScen: 16 },
 
-  // S2 Dead Cat Bounce BEAR threshold (-8.0% and banker <= 6)
-  { name: 'S2-BEAR Cliff at -8.01% banker=6', input: { ...baseCliff, distEma200: -8.01, banker: 6.0, regime: 'BEAR' }, expectScen: 2 },
-  { name: 'S2-BEAR Cliff at -8.01% banker=6.01 (over ceiling)', input: { ...baseCliff, distEma200: -8.01, banker: 6.01, regime: 'BEAR' }, expectScen: 16 },
-  { name: 'S2-BEAR Cliff at -7.99% banker=6 (above -8%)', input: { ...baseCliff, distEma200: -7.99, banker: 6.0, regime: 'BEAR' }, expectScen: 16 },
+  // S2 Dead Cat Bounce BEAR threshold (-10.0% and banker <= 6)
+  { name: 'S2-BEAR Cliff at -10.01% banker=6', input: { ...baseCliff, distEma200: -10.01, banker: 6.0, regime: 'BEAR' }, expectScen: 2 },
+  { name: 'S2-BEAR Cliff at -10.01% banker=6.01 (over ceiling)', input: { ...baseCliff, distEma200: -10.01, banker: 6.01, regime: 'BEAR' }, expectScen: 16 },
+  { name: 'S2-BEAR Cliff at -9.99% banker=6 (above -10%)', input: { ...baseCliff, distEma200: -9.99, banker: 6.0, regime: 'BEAR' }, expectScen: 16 },
 
   // S3 Breakdown BULL threshold (-5.0%, daysBelow=5, banker=1)
   { name: 'S3-BULL Cliff at -5.01% (outside bedrock)', input: { ...baseCliff, distEma200: -5.01, banker: 1, daysBelowEma200: 5, regime: 'BULL' }, expectScen: 3 },
@@ -367,9 +367,9 @@ console.log('🛡️ PHASE 4: SEMANTIC INVARIANT MATRIX (SR-01 to SR-23)');
 console.log('='.repeat(85));
 
 const phase4Rules = [
-  // SR-01: BEAR + d200 < -8% + banker 1-6 -> S2 MAYDAY_EXIT / FALLING_KNIFE
-  { name: 'SR-01a: BEAR d200=-10% banker=2', input: { ...baseCliff, regime: 'BEAR', distEma200: -10.0, banker: 2 }, check: r => r.scenario === 2 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
-  { name: 'SR-01b: BEAR d200=-8.5% banker=5', input: { ...baseCliff, regime: 'BEAR', distEma200: -8.5, banker: 5 }, check: r => r.scenario === 2 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
+  // SR-01: BEAR + d200 < -10% + banker 1-6 -> S2 MAYDAY_EXIT / FALLING_KNIFE
+  { name: 'SR-01a: BEAR d200=-10.5% banker=2', input: { ...baseCliff, regime: 'BEAR', distEma200: -10.5, banker: 2 }, check: r => r.scenario === 2 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
+  { name: 'SR-01b: BEAR d200=-12.0% banker=5', input: { ...baseCliff, regime: 'BEAR', distEma200: -12.0, banker: 5 }, check: r => r.scenario === 2 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
 
   // SR-02: BEAR + d200 < -4% + daysBelow >= 3 -> S3 MAYDAY_EXIT / FALLING_KNIFE
   { name: 'SR-02a: BEAR d200=-4.5% daysBelow=3 banker=3', input: { ...baseCliff, regime: 'BEAR', distEma200: -4.5, daysBelowEma200: 3, banker: 3 }, check: r => r.scenario === 3 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
@@ -379,9 +379,9 @@ const phase4Rules = [
   { name: 'SR-03a: BULL d200=-12.5% banker=0', input: { ...baseCliff, regime: 'BULL', distEma200: -12.5, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
   { name: 'SR-03b: BULL d200=-25.0% banker=0', input: { ...baseCliff, regime: 'BULL', distEma200: -25.0, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
 
-  // SR-04: non-BULL + d200 < -8% + banker=0 -> S1 MAYDAY_EXIT / FALLING_KNIFE
-  { name: 'SR-04a: NEUTRAL d200=-8.5% banker=0', input: { ...baseCliff, regime: 'NEUTRAL', distEma200: -8.5, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
-  { name: 'SR-04b: BEAR d200=-9.0% banker=0', input: { ...baseCliff, regime: 'BEAR', distEma200: -9.0, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
+  // SR-04: non-BULL + d200 < -10% + banker=0 -> S1 MAYDAY_EXIT / FALLING_KNIFE
+  { name: 'SR-04a: NEUTRAL d200=-10.5% banker=0', input: { ...baseCliff, regime: 'NEUTRAL', distEma200: -10.5, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
+  { name: 'SR-04b: BEAR d200=-11.0% banker=0', input: { ...baseCliff, regime: 'BEAR', distEma200: -11.0, banker: 0 }, check: r => r.scenario === 1 && (r.traffic_light === 'MAYDAY_EXIT' || r.traffic_light === 'FALLING_KNIFE') },
 
   // SR-05: daysBankerZero >= 8 + d200 < threshold -> S4 SLOW_BLEED
   { name: 'SR-05a: BEAR d200=-3.8% daysBankerZero=8', input: { ...baseCliff, regime: 'BEAR', distEma200: -3.8, daysBankerZero: 8, banker: 0 }, check: r => r.scenario === 4 && r.traffic_light === 'SLOW_BLEED' },

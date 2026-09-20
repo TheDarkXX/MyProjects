@@ -48,8 +48,8 @@ async function runAudit() {
         issues.push(`0 Banker but classified as BUY_NOW`);
       }
 
-      // 4. Plunged > 8% below EMA 200 with 0 banker, but NOT Mayday Exit / Falling Knife
-      if (d200 < -8.0 && b === 0 && tier !== 'MAYDAY_EXIT' && tier !== 'FALLING_KNIFE') {
+      // 4. Plunged > 10% below EMA 200 with 0 banker, but NOT Mayday Exit / Falling Knife
+      if (d200 < -10.0 && b === 0 && tier !== 'MAYDAY_EXIT' && tier !== 'FALLING_KNIFE') {
         issues.push(`Severe plunge (${d200}%) with 0 Banker, but tier is ${tier} instead of MAYDAY_EXIT / FALLING_KNIFE`);
       }
 
