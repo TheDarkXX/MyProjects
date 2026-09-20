@@ -1195,11 +1195,11 @@ export const XChartWatchlistDock: React.FC = () => {
                       e.stopPropagation();
                       if (section.isDynamic) {
                         const count = displayedSymbols.length;
-                        if (count > 0 && window.confirm(`ลบหุ้นทั้งหมด (${count} ตัว) ในหมวดหมู่ "${section.name}" ออกจาก Watchlist?`)) {
+                        if (count > 0 && window.confirm(`Remove all ${count} symbols in "${section.name}" from watchlist?`)) {
                           handleDeleteSection(section.id);
                         }
                       } else {
-                        if (window.confirm(`ลบหมวดหมู่ "${section.name}" พร้อมหุ้นในกลุ่มนี้?`)) {
+                        if (window.confirm(`Delete section "${section.name}" and its symbols?`)) {
                           handleDeleteSection(section.id);
                         }
                       }
@@ -1583,7 +1583,7 @@ export const XChartWatchlistDock: React.FC = () => {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2 py-1 border-b border-white/10 text-[11px] font-bold text-slate-400 truncate uppercase">
-            หมวด: {sectionContextMenu.sectionName}
+            SECTION: {sectionContextMenu.sectionName}
           </div>
 
           <div className="py-1 space-y-0.5">
@@ -1597,7 +1597,7 @@ export const XChartWatchlistDock: React.FC = () => {
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
             >
               <Edit2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-              <span>เปลี่ยนชื่อหมวดหมู่ (Rename)</span>
+              <span>Rename Section</span>
             </button>
 
             {/* Add Symbol */}
@@ -1610,7 +1610,7 @@ export const XChartWatchlistDock: React.FC = () => {
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
             >
               <Plus className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>เพิ่มหุ้นเข้าหมวดนี้ (Add)</span>
+              <span>Add Symbol</span>
             </button>
 
             {/* Toggle Collapse */}
@@ -1622,7 +1622,11 @@ export const XChartWatchlistDock: React.FC = () => {
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
             >
               <ChevronDown className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <span>พับ / กางหมวดหมู่นี้</span>
+              <span>
+                {activeWatchlistSections.find(s => s.id === sectionContextMenu.sectionId)?.isCollapsed 
+                  ? 'Expand Section' 
+                  : 'Collapse Section'}
+              </span>
             </button>
 
             <div className="my-1 border-t border-white/5" />
@@ -1639,11 +1643,11 @@ export const XChartWatchlistDock: React.FC = () => {
                   const targetSec = activeWatchlistSections.find(s => s.id === secId);
                   const count = targetSec?.symbols.length || 0;
                   if (count === 0) return;
-                  if (window.confirm(`ลบหุ้นทั้งหมด (${count} ตัว) ในหมวดหมู่ "${secName}" ออกจาก Watchlist?`)) {
+                  if (window.confirm(`Remove all ${count} symbols in "${secName}" from watchlist?`)) {
                     handleDeleteSection(secId);
                   }
                 } else {
-                  if (window.confirm(`ลบหมวดหมู่ "${secName}" พร้อมหุ้นในกลุ่มนี้?`)) {
+                  if (window.confirm(`Delete section "${secName}" and its symbols?`)) {
                     handleDeleteSection(secId);
                   }
                 }
@@ -1651,7 +1655,7 @@ export const XChartWatchlistDock: React.FC = () => {
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/20 hover:text-rose-300 transition-colors cursor-pointer text-left text-rose-400"
             >
               <Trash2 className="w-3.5 h-3.5 shrink-0" />
-              <span>ลบหมวดหมู่นี้ (Delete)</span>
+              <span>Delete Section</span>
             </button>
           </div>
         </div>

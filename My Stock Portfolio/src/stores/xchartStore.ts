@@ -30,7 +30,7 @@ export interface XChartTab {
   settings?: XChartTabChartSettings;
 }
 
-export type MyPortSortColumn = 'symbol' | 'price' | 'change' | 'percentChange';
+export type MyPortSortColumn = 'symbol' | 'price' | 'change' | 'percentChange' | 'tier';
 export type MyPortSortDir = 'asc' | 'desc';
 
 export interface MyPortWatchlistPreferences {
@@ -379,11 +379,11 @@ export const useXChartStore = create<XChartState>((set, get) => ({
 
   setMyPortSort: (column: MyPortSortColumn) => {
     const { myportPreferences } = get();
-    let nextDir: MyPortSortDir = 'desc';
+    let nextDir: MyPortSortDir = column === 'tier' ? 'asc' : 'desc';
     if (myportPreferences.sortColumn === column) {
       nextDir = myportPreferences.sortDir === 'desc' ? 'asc' : 'desc';
     } else {
-      nextDir = 'desc';
+      nextDir = column === 'tier' ? 'asc' : 'desc';
     }
     const nextPrefs: MyPortWatchlistPreferences = {
       ...myportPreferences,

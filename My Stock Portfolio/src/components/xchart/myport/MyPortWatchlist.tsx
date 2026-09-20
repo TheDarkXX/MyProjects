@@ -27,10 +27,13 @@ import {
   ChevronRight,
   ArrowUp,
   ArrowDown,
-  ArrowUpDown
+  ArrowUpDown,
+  RotateCw,
+  Filter
 } from 'lucide-react';
 import clsx from 'clsx';
 import { MyPortSortColumn } from '../../../stores/xchartStore';
+import { TIER_SORT_ASC_RANKS } from '../XChartWatchlistDock';
 
 export interface TargetStockItem {
   symbol: string;
@@ -105,7 +108,8 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     myportPreferences, 
     setMyPortSort, 
     toggleMyPortHoldingsCollapse, 
-    toggleMyPortTargetCollapse 
+    toggleMyPortTargetCollapse,
+    fetchWatchlistQuotes
   } = useXChartStore();
   const { currency } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
@@ -179,12 +183,28 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     }
   }, [activePortfolioId, fetchBlueprints, fetchQuotas]);
 
-  // Handle ESC key to close modal
+  // Section Context Menu State (Right Click)
+  const [sectionContextMenu, setSectionContextMenu] = useState<{
+    sectionId: 'holdings' | 'target';
+    sectionName: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Close context menu on outside click
+  useEffect(() => {
+    const handleClickOutside = () => setSectionContextMenu(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  // Handle ESC key to close modal & context menu
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setDetailModalHolding(null);
         setDetailModalTarget(null);
+        setSectionContextMenu(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -241,6 +261,18 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       const changeB = quoteB?.change ?? wlQuoteB?.change ?? 0;
       const pctB = b.dayChangePercent ?? quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
 
+      if (sortColumn === 'tier') {
+        const radarA = radarMap[a.symbol.toUpperCase()];
+        const radarB = radarMap[b.symbol.toUpperCase()];
+        const infoA = getTierVisualInfo(radarA, a.symbol, false);
+        const infoB = getTierVisualInfo(radarB, b.symbol, false);
+        const rankA = TIER_SORT_ASC_RANKS[infoA.tierId] ?? 999;
+        const rankB = TIER_SORT_ASC_RANKS[infoB.tierId] ?? 999;
+        if (rankA !== rankB) {
+          return sortDir === 'asc' ? (rankA - rankB) : (rankB - rankA);
+        }
+        return a.symbol.localeCompare(b.symbol);
+      }
       if (sortColumn === 'symbol') {
         return sortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
       }
@@ -257,7 +289,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       }
       return 0;
     });
-  }, [validHoldings, prices, watchlistPrices, myportPreferences]);
+  }, [validHoldings, prices, watchlistPrices, myportPreferences, radarMap]);
 
   // Sort targetStocks according to Cloud-Synced myportPreferences
   const sortedTargetStocks = useMemo(() => {
@@ -277,6 +309,18 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       const changeB = quoteB?.change ?? wlQuoteB?.change ?? 0;
       const pctB = quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
 
+      if (sortColumn === 'tier') {
+        const radarA = radarMap[a.symbol.toUpperCase()];
+        const radarB = radarMap[b.symbol.toUpperCase()];
+        const infoA = getTierVisualInfo(radarA, a.symbol, false);
+        const infoB = getTierVisualInfo(radarB, b.symbol, false);
+        const rankA = TIER_SORT_ASC_RANKS[infoA.tierId] ?? 999;
+        const rankB = TIER_SORT_ASC_RANKS[infoB.tierId] ?? 999;
+        if (rankA !== rankB) {
+          return sortDir === 'asc' ? (rankA - rankB) : (rankB - rankA);
+        }
+        return a.symbol.localeCompare(b.symbol);
+      }
       if (sortColumn === 'symbol') {
         return sortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
       }
@@ -293,7 +337,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       }
       return 0;
     });
-  }, [targetStocks, prices, watchlistPrices, myportPreferences]);
+  }, [targetStocks, prices, watchlistPrices, myportPreferences, radarMap]);
 
   // Fetch prices for any target stocks not yet in price store
   useEffect(() => {
@@ -358,19 +402,36 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
       {/* 2. Sort & Table Header Bar (Height: 26px — Interactive with Cloud Sync) */}
       <div className="h-[26px] px-3 bg-[#0E121E] border-b border-[#1F2233] grid grid-cols-12 items-center text-[11px] font-bold uppercase tracking-wider text-slate-300 shrink-0 select-none">
-        <button
-          onClick={() => setMyPortSort('symbol')}
-          className="col-span-5 flex items-center gap-1 text-left hover:text-white transition-colors group cursor-pointer"
-          title="เรียงตามตัวอักษรหุ้น (A-Z / Z-A)"
-        >
-          <span className={myportPreferences.sortColumn === 'symbol' ? 'text-white font-bold' : ''}>Symbol</span>
-          {renderSortIndicator('symbol')}
-        </button>
+        <div className="col-span-5 flex items-center gap-1.5 text-left overflow-hidden">
+          <button
+            onClick={() => setMyPortSort('tier')}
+            className={clsx(
+              "flex items-center gap-0.5 transition-colors group cursor-pointer shrink-0",
+              myportPreferences.sortColumn === 'tier' ? "text-cyan-400 font-extrabold" : "text-slate-400 hover:text-white"
+            )}
+            title="Sort by 7-Tier Action Matrix (BUY NOW -> GET READY -> SLOW BLEED -> FALLING KNIFE -> MAYDAY EXIT -> RUNNER -> TO THE MOON)"
+          >
+            <span>Tier</span>
+            {renderSortIndicator('tier')}
+          </button>
+          <span className="text-slate-600 font-normal">/</span>
+          <button
+            onClick={() => setMyPortSort('symbol')}
+            className={clsx(
+              "flex items-center gap-0.5 transition-colors group cursor-pointer truncate",
+              myportPreferences.sortColumn === 'symbol' ? "text-cyan-400 font-extrabold" : "text-slate-400 hover:text-white"
+            )}
+            title="Sort by Ticker Symbol (A-Z / Z-A)"
+          >
+            <span>Symbol</span>
+            {renderSortIndicator('symbol')}
+          </button>
+        </div>
 
         <button
           onClick={() => setMyPortSort('price')}
           className="col-span-3 flex items-center justify-end gap-1 text-right hover:text-white transition-colors group cursor-pointer pr-1"
-          title="เรียงตามราคาล่าสุด"
+          title="Sort by Last Price"
         >
           <span className={myportPreferences.sortColumn === 'price' ? 'text-white font-bold' : ''}>Last</span>
           {renderSortIndicator('price')}
@@ -379,7 +440,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
         <button
           onClick={() => setMyPortSort('change')}
           className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors group cursor-pointer"
-          title="เรียงตามจำนวนเงินที่เปลี่ยน ($)"
+          title="Sort by Price Change ($)"
         >
           <span className={myportPreferences.sortColumn === 'change' ? 'text-white font-bold' : ''}>Chg</span>
           {renderSortIndicator('change')}
@@ -388,7 +449,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
         <button
           onClick={() => setMyPortSort('percentChange')}
           className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors group cursor-pointer pr-0.5"
-          title={myportPreferences.sortDir === 'desc' ? 'Chg% เรียงติดลบเยอะสุดอยู่บนสุด' : 'Chg% เรียงบวกเยอะสุดอยู่บนสุด'}
+          title={myportPreferences.sortDir === 'desc' ? 'Sort by Change % (Worst to Best)' : 'Sort by Change % (Best to Worst)'}
         >
           <span className={myportPreferences.sortColumn === 'percentChange' ? 'text-purple-300 font-extrabold' : ''}>Chg%</span>
           {renderSortIndicator('percentChange')}
@@ -403,6 +464,16 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           {/* Section Header */}
           <div 
             onClick={toggleHoldingsCollapse}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setSectionContextMenu({
+                sectionId: 'holdings',
+                sectionName: 'Holdings',
+                x: e.clientX,
+                y: e.clientY
+              });
+            }}
             className="h-7 px-2.5 bg-[#131724]/95 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
           >
             <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
@@ -546,6 +617,16 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           {/* Section Header */}
           <div 
             onClick={toggleTargetCollapse}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setSectionContextMenu({
+                sectionId: 'target',
+                sectionName: 'Target · Project 2X',
+                x: e.clientX,
+                y: e.clientY
+              });
+            }}
             className="h-7 px-2.5 bg-[#131724]/95 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
           >
             <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
@@ -1058,6 +1139,82 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Sleek Cyber Section Context Menu for My Port (Right Click) */}
+      {sectionContextMenu && (
+        <div
+          style={{
+            top: `${Math.min(typeof window !== 'undefined' ? window.innerHeight - 210 : 500, sectionContextMenu.y)}px`,
+            left: `${Math.min(typeof window !== 'undefined' ? window.innerWidth - 240 : 800, Math.max(10, sectionContextMenu.x - 100))}px`
+          }}
+          className="fixed z-50 w-56 bg-[#0E121E]/95 backdrop-blur-md border border-[#2A2E45] rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-1.5 font-sans text-xs text-slate-200 select-none animate-in fade-in zoom-in-95 duration-100"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-2 py-1 border-b border-white/10 text-[11px] font-bold text-slate-400 truncate uppercase">
+            SECTION: {sectionContextMenu.sectionName}
+          </div>
+
+          <div className="py-1 space-y-0.5">
+            {/* Toggle Collapse */}
+            <button
+              onClick={() => {
+                if (sectionContextMenu.sectionId === 'holdings') {
+                  toggleHoldingsCollapse();
+                } else {
+                  toggleTargetCollapse();
+                }
+                setSectionContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
+            >
+              <ChevronDown className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>
+                {(sectionContextMenu.sectionId === 'holdings' ? holdingsCollapsed : targetCollapsed)
+                  ? 'Expand Section'
+                  : 'Collapse Section'}
+              </span>
+            </button>
+
+            {/* Quick Sort by 7-Tier Matrix */}
+            <button
+              onClick={() => {
+                setMyPortSort('tier');
+                setSectionContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
+            >
+              <Filter className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span>Sort by 7-Tier Matrix</span>
+            </button>
+
+            {/* Quick Sort by Chg% */}
+            <button
+              onClick={() => {
+                setMyPortSort('percentChange');
+                setSectionContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Sort by Day Change %</span>
+            </button>
+
+            <div className="my-1 border-t border-white/5" />
+
+            {/* Refresh Quotes */}
+            <button
+              onClick={() => {
+                fetchPrices();
+                fetchWatchlistQuotes();
+                setSectionContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
+            >
+              <RotateCw className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <span>Refresh Quotes</span>
+            </button>
           </div>
         </div>
       )}
