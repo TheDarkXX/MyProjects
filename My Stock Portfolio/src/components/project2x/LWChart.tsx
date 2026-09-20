@@ -1903,7 +1903,6 @@ export const LWChart: React.FC<LWChartProps> = ({
               recommendationKey={analystConsensus?.recommendationKey}
               analystOpinionsCount={analystConsensus?.analystOpinionsCount}
               visible={Boolean(indicatorConfig.targetConsensus?.visible)}
-              pane0Height={pane0Height}
               config={indicatorConfig.targetConsensus}
             />
           )}
