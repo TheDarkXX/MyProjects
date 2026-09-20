@@ -2304,34 +2304,34 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                       Line Labels & Price Scale (ป้ายราคาและเปอร์เซ็นต์บนเส้น)
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                      <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-[13px] font-bold text-slate-200 cursor-pointer select-none" title="แสดงป้ายชื่อและราคาบนเส้นกราฟใน Canvas">
                         <input
                           type="checkbox"
                           checked={tc.showLineLabel !== false}
                           onChange={(e) => updateTargetConsensus({ showLineLabel: e.target.checked })}
                           className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
                         />
-                        <span>In-Canvas Title</span>
+                        <span>ป้ายราคาบนเส้น (Line Badge)</span>
                       </label>
 
-                      <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                      <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-[13px] font-bold text-slate-200 cursor-pointer select-none" title="แสดงเปอร์เซ็นต์ Upside/Downside บนป้ายเส้น">
                         <input
                           type="checkbox"
                           checked={tc.showLinePercent !== false}
                           onChange={(e) => updateTargetConsensus({ showLinePercent: e.target.checked })}
                           className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
                         />
-                        <span>Show % on Line</span>
+                        <span>แสดง % บนป้าย (+% / -%)</span>
                       </label>
 
-                      <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-[13px] font-bold text-slate-200 cursor-pointer select-none" title="ระบายสีป้ายราคาบนสเกลแกนขวา">
+                      <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-[13px] font-bold text-slate-200 cursor-pointer select-none" title="ระบายสีป้ายราคาบนสเกลแกนตัวเลขขวาสุด (Price Scale Axis)">
                         <input
                           type="checkbox"
                           checked={Boolean(tc.showPriceScaleLabel)}
                           onChange={(e) => updateTargetConsensus({ showPriceScaleLabel: e.target.checked })}
                           className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
                         />
-                        <span>Price Scale Badge</span>
+                        <span>ระบายสีแถบสเกลราคา (Price Scale)</span>
                       </label>
                     </div>
                   </div>

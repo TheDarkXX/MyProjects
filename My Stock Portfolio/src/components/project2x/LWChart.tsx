@@ -58,6 +58,7 @@ import { PriceRangeRuler } from './PriceRangeRuler';
 import { AnchoredVWAPHandle } from './indicators/AnchoredVWAPHandle';
 import { LiveEMAIndicatorBadge } from './indicators/LiveEMAIndicatorBadge';
 import { LiveConsensusBadge } from './indicators/LiveConsensusBadge';
+import { TargetLineEndBadges } from './indicators/TargetLineEndBadges';
 import { getTierVisualInfo } from '../xchart/TierBadgeIndicator';
 import { ChartControlBar } from './ChartControlBar';
 import { ChartLegendBar, DominanceTableOverlay } from './ChartLegendOverlay';
@@ -1472,24 +1473,18 @@ export const LWChart: React.FC<LWChartProps> = ({
     const isHighActive = targetHigh && targetHigh > 0 && (tc.showHighLine ?? (tc.targetMode === 'band' || tc.targetMode === 'all'));
     const isLowActive = targetLow && targetLow > 0 && (tc.showLowLine ?? (tc.targetMode === 'band' || tc.targetMode === 'all'));
 
-    const showLineLabel = tc.showLineLabel !== false;
-    const showPct = tc.showLinePercent !== false;
     const axisLabelVisible = Boolean(tc.showPriceScaleLabel);
 
     // 1. Target Mean Line
     if (isMeanActive) {
       try {
-        const upside = (effectivePrice > 0) ? ((targetMean - effectivePrice) / effectivePrice) * 100 : null;
-        const pctText = (showPct && upside !== null) ? ` (${upside >= 0 ? '+' : ''}${upside.toFixed(1)}%)` : '';
-        const titleText = showLineLabel ? `Target: $${targetMean.toFixed(2)}${pctText}` : '';
-
         const line = candleSeries.createPriceLine({
           price: targetMean,
           color: tc.meanColor || '#38BDF8',
           lineWidth: (tc.lineWidth || 2) as any,
           lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
           axisLabelVisible,
-          title: titleText,
+          title: '',
         });
         consensusPriceLinesRef.current.push(line);
       } catch (e) {}
@@ -1498,17 +1493,13 @@ export const LWChart: React.FC<LWChartProps> = ({
     // 2. Target High Line
     if (isHighActive) {
       try {
-        const upside = (effectivePrice > 0) ? ((targetHigh - effectivePrice) / effectivePrice) * 100 : null;
-        const pctText = (showPct && upside !== null) ? ` (${upside >= 0 ? '+' : ''}${upside.toFixed(1)}%)` : '';
-        const titleText = showLineLabel ? `High Target: $${targetHigh.toFixed(2)}${pctText}` : '';
-
         const line = candleSeries.createPriceLine({
           price: targetHigh,
           color: tc.highColor || '#10B981',
           lineWidth: (tc.lineWidth || 2) as any,
           lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
           axisLabelVisible,
-          title: titleText,
+          title: '',
         });
         consensusPriceLinesRef.current.push(line);
       } catch (e) {}
@@ -1517,17 +1508,13 @@ export const LWChart: React.FC<LWChartProps> = ({
     // 3. Target Low Line
     if (isLowActive) {
       try {
-        const upside = (effectivePrice > 0) ? ((targetLow - effectivePrice) / effectivePrice) * 100 : null;
-        const pctText = (showPct && upside !== null) ? ` (${upside >= 0 ? '+' : ''}${upside.toFixed(1)}%)` : '';
-        const titleText = showLineLabel ? `Low Target: $${targetLow.toFixed(2)}${pctText}` : '';
-
         const line = candleSeries.createPriceLine({
           price: targetLow,
           color: tc.lowColor || '#F43F5E',
           lineWidth: (tc.lineWidth || 2) as any,
           lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
           axisLabelVisible,
-          title: titleText,
+          title: '',
         });
         consensusPriceLinesRef.current.push(line);
       } catch (e) {}
@@ -1937,6 +1924,19 @@ export const LWChart: React.FC<LWChartProps> = ({
               analystOpinionsCount={analystConsensus?.analystOpinionsCount}
               visible={Boolean(indicatorConfig.targetConsensus?.visible)}
               config={indicatorConfig.targetConsensus}
+            />
+          )}
+
+          {/* In-Canvas Target Line End Badges (Attached to horizontal lines touching price axis) */}
+          {!isMobile && (
+            <TargetLineEndBadges
+              chartRef={chartRef}
+              seriesRef={candleSeriesRef}
+              chartContainer={chartContainerRef.current}
+              effectivePrice={effectivePrice}
+              analystConsensus={analystConsensus}
+              config={indicatorConfig.targetConsensus}
+              visible={Boolean(indicatorConfig.targetConsensus?.visible)}
             />
           )}
 
