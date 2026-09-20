@@ -137,7 +137,7 @@ export function getTierVisualInfo(
     return {
       tierId: 'GET_READY',
       subMode: 'REVERSAL',
-      icon: '🔄',
+      icon: '⏳',
       label: 'Ready: Reversal / Breakout',
       subLabel: 'รอเด้งกลับตัว / บีบตัวจ่อเบรก',
       scenarioNum: scenario,

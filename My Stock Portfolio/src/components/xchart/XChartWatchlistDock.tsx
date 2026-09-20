@@ -39,6 +39,16 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 
+export const TIER_SORT_ASC_RANKS: Record<string, number> = {
+  BUY_NOW: 1,
+  GET_READY: 2,
+  SLOW_BLEED: 3,
+  FALLING_KNIFE: 4,
+  MAYDAY_EXIT: 5,
+  RUNNER: 6,
+  TO_THE_MOON: 7,
+};
+
 export const XChartWatchlistDock: React.FC = () => {
   const {
     tabs,
@@ -99,6 +109,62 @@ export const XChartWatchlistDock: React.FC = () => {
 
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionName, setEditingSectionName] = useState('');
+
+  // Custom section name overrides (supports dynamic sections renaming too)
+  const [customSectionNames, setCustomSectionNames] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('xchart_watchlist_section_names');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return {};
+  });
+
+  // Section Right-Click Context Menu State
+  const [sectionContextMenu, setSectionContextMenu] = useState<{
+    sectionId: string;
+    sectionName: string;
+    isDynamic: boolean;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Close context menu on outside click or Escape
+  useEffect(() => {
+    if (!sectionContextMenu) return;
+    const handleClick = () => setSectionContextMenu(null);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSectionContextMenu(null);
+    };
+    window.addEventListener('click', handleClick);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('click', handleClick);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [sectionContextMenu]);
+
+  const handleSaveRenameSection = (secId: string) => {
+    if (!editingSectionName.trim()) {
+      setEditingSectionId(null);
+      return;
+    }
+    const cleanName = editingSectionName.trim().toUpperCase();
+    const isCustom = watchlistSections.some(s => s.id === secId);
+    if (isCustom) {
+      renameSection(secId, cleanName);
+    } else {
+      setCustomSectionNames(prev => {
+        const next = { ...prev, [secId]: cleanName };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('xchart_watchlist_section_names', JSON.stringify(next));
+        }
+        return next;
+      });
+    }
+    setEditingSectionId(null);
+  };
 
   // Project 2X 7-Tier Radar Integration (Hybrid 1 + 3)
   const { radar, fetchRadar, compactTiers } = useProject2xStore();
@@ -162,12 +228,30 @@ export const XChartWatchlistDock: React.FC = () => {
   };
 
   const handleDeleteSection = (secId: string) => {
-    const nextSections = watchlistSections.filter(s => s.id !== secId);
-    useXChartStore.setState({ watchlistSections: nextSections });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('stock_xchart_watchlist_v3', JSON.stringify(nextSections));
+    const isCustom = watchlistSections.some(s => s.id === secId);
+    if (isCustom) {
+      const nextSections = watchlistSections.filter(s => s.id !== secId);
+      useXChartStore.setState({ watchlistSections: nextSections });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('stock_xchart_watchlist_v3', JSON.stringify(nextSections));
+      }
+      pushSettingImmediate(SYNC_KEYS.WATCHLIST, nextSections);
+    } else {
+      // Dynamic section: remove its symbols from all watchlist sections
+      const targetSec = activeWatchlistSections.find(s => s.id === secId);
+      if (targetSec && targetSec.symbols.length > 0) {
+        const symbolSet = new Set(targetSec.symbols.map(s => s.trim().toUpperCase()));
+        const nextSections = watchlistSections.map(sec => ({
+          ...sec,
+          symbols: sec.symbols.filter(s => !symbolSet.has(s.trim().toUpperCase()))
+        }));
+        useXChartStore.setState({ watchlistSections: nextSections });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('stock_xchart_watchlist_v3', JSON.stringify(nextSections));
+        }
+        pushSettingImmediate(SYNC_KEYS.WATCHLIST, nextSections);
+      }
     }
-    pushSettingImmediate(SYNC_KEYS.WATCHLIST, nextSections);
   };
 
   const activeWatchlistSections = useMemo(() => {
@@ -237,73 +321,74 @@ export const XChartWatchlistDock: React.FC = () => {
       isCollapsed: boolean;
     }> = [];
 
-    // 1. BUY NOW (Auto-hide if 0)
-    if (buyNow.length > 0) {
-      list.push({
-        id: 'sec-tier-buy-now',
-        name: 'BUY NOW',
-        icon: '🔥',
-        symbols: buyNow,
-        isDynamic: true,
-        badgeClass: 'text-orange-400 bg-orange-500/15 border-orange-500/30',
-        isCollapsed: isSectionCollapsed('sec-tier-buy-now')
-      });
-    }
+    const buyNowSec = buyNow.length > 0 ? {
+      id: 'sec-tier-buy-now',
+      name: customSectionNames['sec-tier-buy-now'] || 'BUY NOW',
+      icon: '🔥',
+      symbols: buyNow,
+      isDynamic: true,
+      badgeClass: 'text-orange-400 bg-orange-500/15 border-orange-500/30',
+      isCollapsed: isSectionCollapsed('sec-tier-buy-now')
+    } : null;
 
-    // 2. GET READY with 2 Sub-Modes (Auto-hide if 0)
+    let readySec = null;
     if (getReady.length > 0) {
       const parts: string[] = [];
       if (dipBuyCount > 0) parts.push(`🧲 Dip ${dipBuyCount}`);
-      if (reversalCount > 0) parts.push(`🔄 Break/Rev ${reversalCount}`);
-      list.push({
+      if (reversalCount > 0) parts.push(`⏳ Break/Rev ${reversalCount}`);
+      readySec = {
         id: 'sec-tier-get-ready',
-        name: 'GET READY',
+        name: customSectionNames['sec-tier-get-ready'] || 'GET READY',
         icon: '⏳',
         symbols: getReady,
         isDynamic: true,
         subStats: parts.join(' · '),
         badgeClass: 'text-yellow-300 bg-yellow-500/15 border-yellow-500/30',
         isCollapsed: isSectionCollapsed('sec-tier-get-ready')
-      });
+      };
     }
 
-    // 3. TO THE MOON / RUNNER (Auto-hide if 0)
-    if (runner.length > 0) {
-      list.push({
-        id: 'sec-tier-runner',
-        name: 'TO THE MOON / RUNNER',
-        icon: '🚀',
-        symbols: runner,
-        isDynamic: true,
-        badgeClass: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
-        isCollapsed: isSectionCollapsed('sec-tier-runner')
-      });
-    }
+    const runnerSec = runner.length > 0 ? {
+      id: 'sec-tier-runner',
+      name: customSectionNames['sec-tier-runner'] || 'TO THE MOON / RUNNER',
+      icon: '🚀',
+      symbols: runner,
+      isDynamic: true,
+      badgeClass: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+      isCollapsed: isSectionCollapsed('sec-tier-runner')
+    } : null;
 
-    // 4. DANGER & BEAR ABYSS (Auto-hide if 0)
-    if (danger.length > 0) {
-      list.push({
-        id: 'sec-tier-danger',
-        name: 'DANGER & BEAR ABYSS',
-        icon: '🔪',
-        symbols: danger,
-        isDynamic: true,
-        badgeClass: 'text-red-300 bg-rose-950/40 border-red-500/30',
-        isCollapsed: isSectionCollapsed('sec-tier-danger')
-      });
-    }
+    const dangerSec = danger.length > 0 ? {
+      id: 'sec-tier-danger',
+      name: customSectionNames['sec-tier-danger'] || 'DANGER & BEAR ABYSS',
+      icon: '🔪',
+      symbols: danger,
+      isDynamic: true,
+      badgeClass: 'text-red-300 bg-rose-950/40 border-red-500/30',
+      isCollapsed: isSectionCollapsed('sec-tier-danger')
+    } : null;
 
-    // 5. WATCHING (Auto-hide if 0)
-    if (watching.length > 0) {
-      list.push({
-        id: 'sec-tier-watching',
-        name: 'WATCHING',
-        icon: '🔍',
-        symbols: watching,
-        isDynamic: true,
-        badgeClass: 'text-slate-300 bg-slate-800/40 border-slate-700/30',
-        isCollapsed: isSectionCollapsed('sec-tier-watching')
-      });
+    const watchingSec = watching.length > 0 ? {
+      id: 'sec-tier-watching',
+      name: customSectionNames['sec-tier-watching'] || 'WATCHING',
+      icon: '🔍',
+      symbols: watching,
+      isDynamic: true,
+      badgeClass: 'text-slate-300 bg-slate-800/40 border-slate-700/30',
+      isCollapsed: isSectionCollapsed('sec-tier-watching')
+    } : null;
+
+    // Dynamic sections ordering based on Tier sort:
+    // asc default: BUY NOW!! (1) -> GET READY (2) -> DANGER & BEAR ABYSS (3,4,5) -> TO THE MOON / RUNNER (6,7) -> WATCHING
+    // desc: TO THE MOON / RUNNER -> DANGER & BEAR ABYSS -> GET READY -> BUY NOW!! -> WATCHING
+    const dynamicSections = watchlistSortColumn === 'tier'
+      ? (watchlistSortDir === 'desc'
+          ? [runnerSec, dangerSec, readySec, buyNowSec, watchingSec]
+          : [buyNowSec, readySec, dangerSec, runnerSec, watchingSec])
+      : [buyNowSec, readySec, runnerSec, dangerSec, watchingSec];
+
+    for (const sec of dynamicSections) {
+      if (sec) list.push(sec);
     }
 
     // 6. EXCHANGE (Preserved only if still in watchlistSections)
@@ -353,7 +438,7 @@ export const XChartWatchlistDock: React.FC = () => {
     }
 
     return list;
-  }, [watchlistSections, radarMap, collapsedSections]);
+  }, [watchlistSections, radarMap, collapsedSections, customSectionNames, watchlistSortColumn, watchlistSortDir]);
 
   const allSectionsCollapsed = useMemo(() => {
     return activeWatchlistSections.length > 0 && activeWatchlistSections.every((s) => s.isCollapsed);
@@ -528,13 +613,6 @@ export const XChartWatchlistDock: React.FC = () => {
     setShowAddSection(false);
   };
 
-  // Save renamed section
-  const handleSaveRenameSection = (secId: string) => {
-    if (editingSectionName.trim()) {
-      renameSection(secId, editingSectionName.trim().toUpperCase());
-    }
-    setEditingSectionId(null);
-  };
 
   // Total count of symbols
   const totalSymbolsCount = useMemo(() => {
@@ -846,13 +924,31 @@ export const XChartWatchlistDock: React.FC = () => {
 
       {/* 4. TradingView Sortable Table Column Headers (Height: 28px) */}
       <div className="h-7 px-3 bg-[#0B0D14] border-b border-[#1F2233] grid grid-cols-12 items-center text-[11px] font-bold uppercase tracking-wider text-slate-300 shrink-0 select-none">
-        <button
-          onClick={() => setWatchlistSort('symbol')}
-          className="col-span-5 flex items-center gap-1 text-left hover:text-white transition-colors group cursor-pointer"
-        >
-          <span>Symbol</span>
-          {renderSortIndicator('symbol')}
-        </button>
+        <div className="col-span-5 flex items-center gap-1.5 text-left overflow-hidden">
+          <button
+            onClick={() => setWatchlistSort('tier')}
+            className={clsx(
+              "flex items-center gap-0.5 transition-colors group cursor-pointer shrink-0",
+              watchlistSortColumn === 'tier' ? "text-cyan-400 font-extrabold" : "text-slate-400 hover:text-white"
+            )}
+            title="Sort by 7-Tier Action Matrix (BUY NOW -> GET READY -> SLOW BLEED -> FALLING KNIFE -> MAYDAY EXIT -> RUNNER -> TO THE MOON)"
+          >
+            <span>Tier</span>
+            {renderSortIndicator('tier')}
+          </button>
+          <span className="text-slate-600 font-normal">/</span>
+          <button
+            onClick={() => setWatchlistSort('symbol')}
+            className={clsx(
+              "flex items-center gap-0.5 transition-colors group cursor-pointer truncate",
+              watchlistSortColumn === 'symbol' ? "text-cyan-400 font-extrabold" : "text-slate-400 hover:text-white"
+            )}
+            title="Sort by Ticker Symbol"
+          >
+            <span>Symbol</span>
+            {renderSortIndicator('symbol')}
+          </button>
+        </div>
 
         <button
           onClick={() => setWatchlistSort('price')}
@@ -916,6 +1012,21 @@ export const XChartWatchlistDock: React.FC = () => {
             const quoteA = watchlistPrices[a];
             const quoteB = watchlistPrices[b];
 
+            if (watchlistSortColumn === 'tier') {
+              const rowA = radarMap[a.toUpperCase()];
+              const rowB = radarMap[b.toUpperCase()];
+              const infoA = getTierVisualInfo(rowA, a, a.includes('=X'));
+              const infoB = getTierVisualInfo(rowB, b, b.includes('=X'));
+
+              const rankA = TIER_SORT_ASC_RANKS[infoA.tierId] ?? 999;
+              const rankB = TIER_SORT_ASC_RANKS[infoB.tierId] ?? 999;
+
+              if (rankA !== rankB) {
+                return watchlistSortDir === 'asc' ? (rankA - rankB) : (rankB - rankA);
+              }
+              return a.localeCompare(b);
+            }
+
             if (watchlistSortColumn === 'symbol') {
               return watchlistSortDir === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
             }
@@ -952,6 +1063,17 @@ export const XChartWatchlistDock: React.FC = () => {
               {/* Section Header Row (Height: ~28px) */}
               <div 
                 draggable={!isEditing}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSectionContextMenu({
+                    sectionId: section.id,
+                    sectionName: section.name,
+                    isDynamic: section.isDynamic,
+                    x: e.clientX,
+                    y: e.clientY
+                  });
+                }}
                 onDragStart={(e) => {
                   if (isEditing) return;
                   e.stopPropagation();
@@ -1056,36 +1178,37 @@ export const XChartWatchlistDock: React.FC = () => {
                     <Plus className="w-3 h-3" />
                   </button>
 
-                  {!section.isDynamic && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingSectionId(section.id);
-                          setEditingSectionName(section.name);
-                        }}
-                        className="p-0.5 text-slate-400 hover:text-white hover:bg-white/10 rounded cursor-pointer"
-                        title="Rename section"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSectionId(section.id);
+                      setEditingSectionName(section.name);
+                    }}
+                    className="p-0.5 text-slate-400 hover:text-white hover:bg-white/10 rounded cursor-pointer"
+                    title="Rename section"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </button>
 
-                      {watchlistSections.length > 1 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`ลบหมวดหมู่ "${section.name}" พร้อมหุ้นในกลุ่มนี้?`)) {
-                              handleDeleteSection(section.id);
-                            }
-                          }}
-                          className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer"
-                          title="Delete section"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      )}
-                    </>
-                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (section.isDynamic) {
+                        const count = displayedSymbols.length;
+                        if (count > 0 && window.confirm(`ลบหุ้นทั้งหมด (${count} ตัว) ในหมวดหมู่ "${section.name}" ออกจาก Watchlist?`)) {
+                          handleDeleteSection(section.id);
+                        }
+                      } else {
+                        if (window.confirm(`ลบหมวดหมู่ "${section.name}" พร้อมหุ้นในกลุ่มนี้?`)) {
+                          handleDeleteSection(section.id);
+                        }
+                      }
+                    }}
+                    className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer"
+                    title="Delete section"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
                 </div>
               </div>
 
@@ -1448,6 +1571,91 @@ export const XChartWatchlistDock: React.FC = () => {
 
       {/* Floating Cyber HUD Tooltip (Portal/Fixed to prevent clipping) */}
       <TierFloatingHUD hovered={hoveredTier} />
+
+      {/* Sleek Cyber Section Context Menu (Right Click) */}
+      {sectionContextMenu && (
+        <div
+          style={{
+            top: `${Math.min(typeof window !== 'undefined' ? window.innerHeight - 190 : 500, sectionContextMenu.y)}px`,
+            left: `${Math.min(typeof window !== 'undefined' ? window.innerWidth - 230 : 800, Math.max(10, sectionContextMenu.x - 100))}px`
+          }}
+          className="fixed z-50 w-52 bg-[#0E121E]/95 backdrop-blur-md border border-[#2A2E45] rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-1.5 font-sans text-xs text-slate-200 select-none animate-in fade-in zoom-in-95 duration-100"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-2 py-1 border-b border-white/10 text-[11px] font-bold text-slate-400 truncate uppercase">
+            หมวด: {sectionContextMenu.sectionName}
+          </div>
+
+          <div className="py-1 space-y-0.5">
+            {/* Rename */}
+            <button
+              onClick={() => {
+                setEditingSectionId(sectionContextMenu.sectionId);
+                setEditingSectionName(sectionContextMenu.sectionName);
+                setSectionContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span>เปลี่ยนชื่อหมวดหมู่ (Rename)</span>
+            </button>
+
+            {/* Add Symbol */}
+            <button
+              onClick={() => {
+                setTargetSectionId(sectionContextMenu.sectionId);
+                setShowAddSymbol(true);
+                setSectionContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
+            >
+              <Plus className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>เพิ่มหุ้นเข้าหมวดนี้ (Add)</span>
+            </button>
+
+            {/* Toggle Collapse */}
+            <button
+              onClick={() => {
+                toggleSectionCollapse(sectionContextMenu.sectionId);
+                setSectionContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-purple-600/20 hover:text-white transition-colors cursor-pointer text-left text-slate-200"
+            >
+              <ChevronDown className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>พับ / กางหมวดหมู่นี้</span>
+            </button>
+
+            <div className="my-1 border-t border-white/5" />
+
+            {/* Delete */}
+            <button
+              onClick={() => {
+                const secId = sectionContextMenu.sectionId;
+                const secName = sectionContextMenu.sectionName;
+                const isDynamic = sectionContextMenu.isDynamic;
+                setSectionContextMenu(null);
+
+                if (isDynamic) {
+                  const targetSec = activeWatchlistSections.find(s => s.id === secId);
+                  const count = targetSec?.symbols.length || 0;
+                  if (count === 0) return;
+                  if (window.confirm(`ลบหุ้นทั้งหมด (${count} ตัว) ในหมวดหมู่ "${secName}" ออกจาก Watchlist?`)) {
+                    handleDeleteSection(secId);
+                  }
+                } else {
+                  if (window.confirm(`ลบหมวดหมู่ "${secName}" พร้อมหุ้นในกลุ่มนี้?`)) {
+                    handleDeleteSection(secId);
+                  }
+                }
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/20 hover:text-rose-300 transition-colors cursor-pointer text-left text-rose-400"
+            >
+              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+              <span>ลบหมวดหมู่นี้ (Delete)</span>
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   );
 

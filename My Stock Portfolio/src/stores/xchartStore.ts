@@ -61,7 +61,7 @@ export interface WatchlistQuote {
   marketState: string;
 }
 
-export type WatchlistSortColumn = 'symbol' | 'price' | 'change' | 'percentChange' | null;
+export type WatchlistSortColumn = 'symbol' | 'price' | 'change' | 'percentChange' | 'tier' | null;
 export type WatchlistSortDir = 'asc' | 'desc';
 
 export const DEFAULT_MYPORT_PREFERENCES: MyPortWatchlistPreferences = {
@@ -662,13 +662,21 @@ export const useXChartStore = create<XChartState>((set, get) => ({
   setWatchlistSort: (column: WatchlistSortColumn) => {
     const { watchlistSortColumn, watchlistSortDir } = get();
     if (watchlistSortColumn === column) {
-      if (watchlistSortDir === 'desc') {
-        set({ watchlistSortDir: 'asc' });
+      if (column === 'tier') {
+        if (watchlistSortDir === 'asc') {
+          set({ watchlistSortDir: 'desc' });
+        } else {
+          set({ watchlistSortColumn: null, watchlistSortDir: 'asc' });
+        }
       } else {
-        set({ watchlistSortColumn: null, watchlistSortDir: 'desc' });
+        if (watchlistSortDir === 'desc') {
+          set({ watchlistSortDir: 'asc' });
+        } else {
+          set({ watchlistSortColumn: null, watchlistSortDir: 'desc' });
+        }
       }
     } else {
-      set({ watchlistSortColumn: column, watchlistSortDir: 'desc' });
+      set({ watchlistSortColumn: column, watchlistSortDir: column === 'tier' ? 'asc' : 'desc' });
     }
   },
 
