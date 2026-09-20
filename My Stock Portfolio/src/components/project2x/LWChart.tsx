@@ -57,6 +57,7 @@ import { useChartSeries } from './hooks/useChartSeries';
 import { PriceRangeRuler } from './PriceRangeRuler';
 import { AnchoredVWAPHandle } from './indicators/AnchoredVWAPHandle';
 import { LiveEMAIndicatorBadge } from './indicators/LiveEMAIndicatorBadge';
+import { LiveConsensusBadge } from './indicators/LiveConsensusBadge';
 import { getTierVisualInfo } from '../xchart/TierBadgeIndicator';
 import { ChartControlBar } from './ChartControlBar';
 import { ChartLegendBar, DominanceTableOverlay } from './ChartLegendOverlay';
@@ -115,6 +116,7 @@ export interface LWChartProps {
   onTimeframeChange?: (tf: TimeFrame) => void;
   chartStyle?: ChartStyle;
   onChartStyleChange?: (style: ChartStyle) => void;
+  analystConsensus?: any;
 }
 
 export const LWChart: React.FC<LWChartProps> = ({
@@ -126,21 +128,22 @@ export const LWChart: React.FC<LWChartProps> = ({
   highs = [],
   lows = [],
   volumes = [],
-  ema50 = [],
-  ema150 = [],
-  ema200 = [],
-  bankerSeries = [],
-  hotMoneySeries = [],
-  retailSeries = [],
-  bankerMaSeries = [],
+  ema50,
+  ema150,
+  ema200,
+  bankerSeries,
+  hotMoneySeries,
+  retailSeries,
+  bankerMaSeries,
   banker,
-  currentPrice = 0,
-  scenario = 1,
-  badge,
-  trafficLight = 'ON_RADAR',
-  regime,
-  reasonTh,
-  signalsChecklist,
+  currentPrice: propCurrentPrice,
+  ema9: propEma9,
+  scenario: propScenario,
+  badge: propBadge,
+  trafficLight: propTrafficLight,
+  regime: propRegime,
+  reasonTh: propReasonTh,
+  signalsChecklist: propSignalsChecklist,
   distEma150: propDistEma150,
   distEma200: propDistEma200,
   className = '',
@@ -153,6 +156,7 @@ export const LWChart: React.FC<LWChartProps> = ({
   onToggleFullscreen,
   holding,
   blueprint,
+  analystConsensus,
   onOpenHoldingDrawer,
   chartContext,
   timeframe: propTimeframe,
@@ -766,6 +770,82 @@ export const LWChart: React.FC<LWChartProps> = ({
       portfolioPriceLinesRef.current = [];
     };
   }, [candleSeriesReady, portfolioOverlay, positionConfig, viewProfile.showAvgCostLine, viewProfile.showBlueprintTarget]);
+
+  // Target Consensus Price Lines (Mean, High, Low)
+  const consensusPriceLinesRef = useRef<any[]>([]);
+  useEffect(() => {
+    const candleSeries = candleSeriesRef.current;
+    if (!candleSeries || !candleSeriesReady) return;
+
+    // Cleanup previous consensus lines
+    for (const pl of consensusPriceLinesRef.current) {
+      try {
+        candleSeries.removePriceLine(pl);
+      } catch (e) {}
+    }
+    consensusPriceLinesRef.current = [];
+
+    const tc = indicatorConfig.targetConsensus;
+    if (!tc || !tc.visible || !analystConsensus) return;
+
+    const targetMean = analystConsensus.targetMean;
+    const targetHigh = analystConsensus.targetHigh;
+    const targetLow = analystConsensus.targetLow;
+
+    // 1. Target Mean Line
+    if (targetMean && targetMean > 0 && (tc.targetMode === 'mean' || tc.targetMode === 'all')) {
+      try {
+        const line = candleSeries.createPriceLine({
+          price: targetMean,
+          color: tc.meanColor || '#38BDF8',
+          lineWidth: (tc.lineWidth || 2) as any,
+          lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
+          axisLabelVisible: true,
+          title: `Target: $${targetMean.toFixed(2)}`,
+        });
+        consensusPriceLinesRef.current.push(line);
+      } catch (e) {}
+    }
+
+    // 2. Target High Line
+    if (targetHigh && targetHigh > 0 && (tc.targetMode === 'band' || tc.targetMode === 'all')) {
+      try {
+        const line = candleSeries.createPriceLine({
+          price: targetHigh,
+          color: tc.highColor || '#10B981',
+          lineWidth: (tc.lineWidth || 2) as any,
+          lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
+          axisLabelVisible: true,
+          title: `Target High: $${targetHigh.toFixed(2)}`,
+        });
+        consensusPriceLinesRef.current.push(line);
+      } catch (e) {}
+    }
+
+    // 3. Target Low Line
+    if (targetLow && targetLow > 0 && (tc.targetMode === 'band' || tc.targetMode === 'all')) {
+      try {
+        const line = candleSeries.createPriceLine({
+          price: targetLow,
+          color: tc.lowColor || '#F43F5E',
+          lineWidth: (tc.lineWidth || 2) as any,
+          lineStyle: getChartLineStyle(tc.lineStyle || 'Dotted'),
+          axisLabelVisible: true,
+          title: `Target Low: $${targetLow.toFixed(2)}`,
+        });
+        consensusPriceLinesRef.current.push(line);
+      } catch (e) {}
+    }
+
+    return () => {
+      for (const pl of consensusPriceLinesRef.current) {
+        try {
+          candleSeries.removePriceLine(pl);
+        } catch (e) {}
+      }
+      consensusPriceLinesRef.current = [];
+    };
+  }, [candleSeriesReady, analystConsensus, indicatorConfig.targetConsensus]);
 
   // Synchronize Volume Profile (VPVR) data
   useEffect(() => {
@@ -1809,6 +1889,23 @@ export const LWChart: React.FC<LWChartProps> = ({
               tierVisual={tierVisual}
               visible={(indicatorConfig.liveBadge?.visible !== false) && indicatorConfig.ema3.visible && viewProfile.showEMA}
               liveBadgeConfig={indicatorConfig.liveBadge}
+            />
+          )}
+
+          {/* In-Canvas Live Target Consensus Badge */}
+          {!isMobile && (
+            <LiveConsensusBadge
+              chartRef={chartRef}
+              seriesRef={candleSeriesRef}
+              containerRef={chartContainerRef}
+              displayBars={displayBars}
+              effectivePrice={effectivePrice}
+              targetMean={analystConsensus?.targetMean}
+              recommendationKey={analystConsensus?.recommendationKey}
+              analystOpinionsCount={analystConsensus?.analystOpinionsCount}
+              visible={Boolean(indicatorConfig.targetConsensus?.visible)}
+              pane0Height={pane0Height}
+              config={indicatorConfig.targetConsensus}
             />
           )}
 

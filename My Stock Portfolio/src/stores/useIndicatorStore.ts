@@ -4,6 +4,7 @@ import {
   DEFAULT_INDICATOR_SETTINGS,
   EMALineConfig,
   LiveBadgeConfig,
+  TargetConsensusConfig,
   EnvelopeConfig,
   SignalConfig,
   SignalMarkersConfig,
@@ -52,6 +53,7 @@ function loadSavedConfig(): IndicatorSettings {
       ema4: { ...DEFAULT_INDICATOR_SETTINGS.ema4, ...(parsed.ema4 || {}) },
       ema5: { ...DEFAULT_INDICATOR_SETTINGS.ema5, ...(parsed.ema5 || {}) },
       liveBadge: { ...DEFAULT_INDICATOR_SETTINGS.liveBadge, ...(parsed.liveBadge || {}) },
+      targetConsensus: { ...DEFAULT_INDICATOR_SETTINGS.targetConsensus!, ...(parsed.targetConsensus || {}) },
       envelope: { ...DEFAULT_INDICATOR_SETTINGS.envelope, ...(parsed.envelope || {}) },
       signals: {
         ...DEFAULT_INDICATOR_SETTINGS.signals,
@@ -171,6 +173,8 @@ interface IndicatorState {
   toggleAllEMA: (visible: boolean) => void;
   updateLiveBadge: (partial: Partial<LiveBadgeConfig>) => void;
   toggleLiveBadge: () => void;
+  updateTargetConsensus: (partial: Partial<TargetConsensusConfig>) => void;
+  toggleTargetConsensus: (visible?: boolean) => void;
   updateEnvelope: (partial: Partial<EnvelopeConfig>) => void;
   toggleEnvelope: () => void;
   updateSignals: (partial: Partial<SignalConfig>) => void;
@@ -309,6 +313,36 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       liveBadge: { ...cur, visible: nextVisible },
     };
     pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} Live EMA Badge`, { liveBadge: next.liveBadge }, { liveBadge: cur });
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  updateTargetConsensus: (partial) => {
+    const prev = get().config;
+    const cur = prev.targetConsensus || DEFAULT_INDICATOR_SETTINGS.targetConsensus!;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      targetConsensus: { ...cur, ...partial },
+    };
+    saveConfig(next);
+    set({ config: next });
+  },
+
+  toggleTargetConsensus: (visible) => {
+    const prev = get().config;
+    const cur = prev.targetConsensus || DEFAULT_INDICATOR_SETTINGS.targetConsensus!;
+    const nextVisible = visible !== undefined ? visible : !cur.visible;
+    const next: IndicatorSettings = {
+      ...prev,
+      activePreset: 'custom',
+      targetConsensus: { ...cur, visible: nextVisible },
+    };
+    pushIndicatorToggleHistory(
+      `${nextVisible ? 'Show' : 'Hide'} Target Consensus`,
+      { targetConsensus: next.targetConsensus },
+      { targetConsensus: cur }
+    );
     saveConfig(next);
     set({ config: next });
   },

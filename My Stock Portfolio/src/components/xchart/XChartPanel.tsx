@@ -138,6 +138,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
   const [error, setError] = useState<string | null>(null);
 
   const [radarSignal, setRadarSignal] = useState<any>(null);
+  const [analystConsensus, setAnalystConsensus] = useState<any>(null);
 
   useEffect(() => {
     if (!symbol) return;
@@ -145,8 +146,9 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
     const pid = localStorage.getItem('active_portfolio_id') || 'default';
     api.project2x.dossier(pid, symbol.toUpperCase())
       .then((data: any) => {
-        if (active && data?.radar) {
-          setRadarSignal(data.radar);
+        if (active) {
+          if (data?.radar) setRadarSignal(data.radar);
+          if (data?.analystConsensus) setAnalystConsensus(data.analystConsensus);
         }
       })
       .catch(() => {});
@@ -321,6 +323,7 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
         onToggleFullscreen={handleToggleFullscreen}
         holding={holding}
         blueprint={blueprint}
+        analystConsensus={analystConsensus}
         onOpenHoldingDrawer={() => setIsDrawerOpen(true)}
       />
 

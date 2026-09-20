@@ -22,6 +22,7 @@ import {
   Calendar,
   Clock,
   MapPin,
+  Target,
 } from 'lucide-react';
 import { useIndicatorStore } from '../../stores/useIndicatorStore';
 import {
@@ -31,6 +32,9 @@ import {
   RSIMarkerLocation,
   SignalShapeType,
   DEFAULT_INDICATOR_SETTINGS,
+  TargetConsensusConfig,
+  TargetConsensusDisplayMode,
+  DEFAULT_TARGET_CONSENSUS_CONFIG,
 } from '../../types/indicatorConfig';
 
 // Curated 12-color TradingView-inspired palette
@@ -401,7 +405,7 @@ const CYBER_SIGNAL_SHAPE_OPTIONS: { label: string; value: SignalShapeType; previ
   { label: '^^^^^ (5-Caret)', value: '^^^^^', preview: '^^^^^' },
 ];
 
-type ActiveView = 'list' | 'ema' | 'envelope' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal' | 'volumeProfile';
+type ActiveView = 'list' | 'ema' | 'envelope' | 'targetConsensus' | 'signals' | 'mcdx' | 'ultimateRsi' | 'trendSpeed' | 'smcLite' | 'anchoredVwap' | 'superMoneySignal' | 'volumeProfile';
 
 interface IndicatorManagerPopoverProps {
   onClose: () => void;
@@ -426,6 +430,8 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
     toggleAllEMA,
     updateLiveBadge,
     toggleLiveBadge,
+    updateTargetConsensus,
+    toggleTargetConsensus,
     updateEnvelope,
     toggleEnvelope,
     updateSignals,
@@ -612,6 +618,68 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
             </div>
           </div>
         ),
+      },
+      {
+        id: 'targetConsensus',
+        name: 'Target Consensus',
+        pane: 0,
+        isActive: Boolean(config.targetConsensus?.visible),
+        renderRow: () => {
+          const tc = config.targetConsensus || DEFAULT_TARGET_CONSENSUS_CONFIG;
+          const isVisible = Boolean(tc.visible);
+          return (
+            <div key="targetConsensus" className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800/80 transition-all group">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => toggleTargetConsensus()}
+                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                    isVisible
+                      ? 'text-sky-400 bg-sky-950/30 hover:bg-sky-950/60'
+                      : 'text-slate-500 hover:text-slate-400 bg-slate-950'
+                  }`}
+                  title="Toggle Target Consensus"
+                >
+                  {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                </button>
+
+                <div className="flex flex-col">
+                  <span className="text-[14px] font-extrabold text-slate-100 flex items-center gap-2">
+                    <Target className="w-3.5 h-3.5 text-sky-400" />
+                    Target Consensus
+                    <span className="text-[11px] px-1.5 py-0.5 rounded font-bold border bg-sky-950/80 text-sky-300 border-sky-800/60">
+                      Pane 0 Overlay
+                    </span>
+                  </span>
+                  <span className="text-[13px] text-slate-400">
+                    Mode: {tc.targetMode === 'mean' ? 'Mean Target' : tc.targetMode === 'band' ? 'High/Low Band' : 'Full Spectrum'} • {tc.lineStyle}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tc.meanColor || '#38BDF8' }} title="Mean Target" />
+                  {tc.targetMode !== 'mean' && (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tc.highColor || '#10B981' }} title="High Target" />
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tc.lowColor || '#F43F5E' }} title="Low Target" />
+                    </>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveView('targetConsensus')}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 hover:text-sky-200 border border-sky-500/40 text-[13px] font-bold transition-all cursor-pointer"
+                >
+                  <Settings className="w-3.5 h-3.5 text-sky-400 group-hover:rotate-45 transition-transform" />
+                  <span>Config</span>
+                </button>
+              </div>
+            </div>
+          );
+        },
       },
       {
         id: 'signals',
@@ -2037,6 +2105,322 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
             </div>
           </>
         )}
+
+        {/* ========================================================= */}
+        {/* VIEW: TARGET CONSENSUS CONFIG                             */}
+        {/* ========================================================= */}
+        {activeView === 'targetConsensus' && (() => {
+          const tc = config.targetConsensus || DEFAULT_TARGET_CONSENSUS_CONFIG;
+          return (
+            <>
+              <div className="flex items-center justify-between px-5 py-3.5 bg-[#0E1526] border-b border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('list')}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-[13px] font-bold transition-all cursor-pointer border border-slate-700/60"
+                >
+                  <ArrowLeft className="w-4 h-4 text-sky-400" />
+                  <span>Back</span>
+                </button>
+                <span className="text-[15px] font-black tracking-wide text-slate-100 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-sky-400" />
+                  Target Consensus Settings
+                </span>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3.5">
+                {/* CARD 1: PRICE LINES ON CHART */}
+                <div className="flex flex-col gap-3 p-3.5 rounded-xl bg-slate-900/60 border border-slate-700/70">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleTargetConsensus()}
+                        className={`p-1 rounded-md transition-all cursor-pointer ${
+                          tc.visible ? 'text-sky-400 hover:text-sky-300' : 'text-slate-500'
+                        }`}
+                      >
+                        {tc.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </button>
+                      <span className="text-[14px] font-extrabold text-slate-200">
+                        Target Price Line on Chart
+                      </span>
+                    </div>
+
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded border ${
+                      tc.visible
+                        ? 'bg-sky-950/80 text-sky-300 border-sky-800/60'
+                        : 'bg-slate-950 text-slate-500 border-slate-800'
+                    }`}>
+                      {tc.visible ? 'ACTIVE' : 'MUTED'}
+                    </span>
+                  </div>
+
+                  {/* Mode Selector */}
+                  <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800">
+                    <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Target Display Mode
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-lg border border-slate-800">
+                      {(['mean', 'band', 'all'] as TargetConsensusDisplayMode[]).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => updateTargetConsensus({ targetMode: mode })}
+                          className={`py-1.5 rounded-md text-[12px] font-bold transition-all cursor-pointer ${
+                            tc.targetMode === mode
+                              ? 'bg-sky-500 text-slate-950 shadow-md'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          {mode === 'mean' ? '🎯 Mean Only' : mode === 'band' ? '📊 High / Low' : '✨ Full Spectrum'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Line Style & Width */}
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                    <div className="flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+                      <label className="text-[13px] text-slate-300 font-bold">Line Style:</label>
+                      <select
+                        value={tc.lineStyle}
+                        onChange={(e) => updateTargetConsensus({ lineStyle: e.target.value as LineStyleOption })}
+                        className="bg-transparent text-right text-[13px] font-bold text-slate-100 focus:outline-none cursor-pointer"
+                      >
+                        {lineStyles.map((s) => (
+                          <option key={s} value={s} className="bg-slate-900 text-slate-100">
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+                      <label className="text-[13px] text-slate-300 font-bold">Width:</label>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3].map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => updateTargetConsensus({ lineWidth: w })}
+                            className={`px-2 py-0.5 rounded text-[12px] font-bold cursor-pointer transition-all ${
+                              tc.lineWidth === w
+                                ? 'bg-sky-500 text-slate-950'
+                                : 'bg-slate-900 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {w}px
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Color Pickers */}
+                  <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <ColorPickerDropdown
+                        color={tc.meanColor}
+                        onChange={(c) => updateTargetConsensus({ meanColor: c })}
+                        label="Mean Target Color"
+                      />
+                      <span className="text-[13px] font-bold text-slate-300">Mean Target</span>
+                    </div>
+
+                    {tc.targetMode !== 'mean' && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <ColorPickerDropdown
+                            color={tc.highColor}
+                            onChange={(c) => updateTargetConsensus({ highColor: c })}
+                            label="High Target Color"
+                          />
+                          <span className="text-[13px] font-bold text-slate-300">High Target</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <ColorPickerDropdown
+                            color={tc.lowColor}
+                            onChange={(c) => updateTargetConsensus({ lowColor: c })}
+                            label="Low Target Color"
+                          />
+                          <span className="text-[13px] font-bold text-slate-300">Low Target</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* CARD 2: LIVE CANVAS BADGE */}
+                <div className="flex flex-col gap-3 p-3.5 rounded-xl bg-slate-900/60 border border-slate-700/70">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[14px] font-extrabold text-slate-200 flex items-center gap-2">
+                      <span>🏷️</span>
+                      Live Canvas Floating Badge
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => updateTargetConsensus({ showBadge: !tc.showBadge })}
+                      className={`px-2 py-1 rounded-md text-[12px] font-bold transition-all cursor-pointer border ${
+                        tc.showBadge
+                          ? 'bg-sky-950/80 text-sky-300 border-sky-800/60'
+                          : 'bg-slate-950 text-slate-500 border-slate-800'
+                      }`}
+                    >
+                      {tc.showBadge ? 'SHOW BADGE' : 'HIDE BADGE'}
+                    </button>
+                  </div>
+
+                  {/* Font Size & Position */}
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-slate-400">Font Size</label>
+                      <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                        {(['sm', 'base', 'lg'] as const).map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => updateTargetConsensus({ badgeFontSize: size })}
+                            className={`py-1 rounded text-[12px] font-bold cursor-pointer transition-all ${
+                              tc.badgeFontSize === size
+                                ? 'bg-sky-500 text-slate-950 shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {size.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-slate-400">Vertical Position</label>
+                      <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                        {(['above', 'center', 'below'] as const).map((pos) => (
+                          <button
+                            key={pos}
+                            type="button"
+                            onClick={() => updateTargetConsensus({ badgePosition: pos })}
+                            className={`py-1 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                              tc.badgePosition === pos
+                                ? 'bg-sky-500 text-slate-950 shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {pos === 'above' ? 'Above' : pos === 'center' ? 'Center' : 'Below'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vertical Offset Slider */}
+                  <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[12px] font-bold text-slate-400">Vertical Offset (px)</label>
+                      <span className="text-[12px] font-mono font-bold text-sky-400">
+                        {tc.verticalOffset > 0 ? `+${tc.verticalOffset}px` : `${tc.verticalOffset}px`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min="-50"
+                        max="50"
+                        step="1"
+                        value={tc.verticalOffset}
+                        onChange={(e) => updateTargetConsensus({ verticalOffset: parseInt(e.target.value) || 0 })}
+                        className="flex-1 accent-sky-400 cursor-pointer"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateTargetConsensus({ verticalOffset: 0 })}
+                        className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition-all cursor-pointer"
+                        title="Reset to 0"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Display Content Checkboxes */}
+                  <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
+                    <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                      Visible Badge Elements
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex items-center gap-2 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={tc.showUpsidePercent}
+                          onChange={(e) => updateTargetConsensus({ showUpsidePercent: e.target.checked })}
+                          className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>% Upside/Downside</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={tc.showTargetPrice}
+                          onChange={(e) => updateTargetConsensus({ showTargetPrice: e.target.checked })}
+                          className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>Target Price ($)</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={tc.showRatingPill}
+                          onChange={(e) => updateTargetConsensus({ showRatingPill: e.target.checked })}
+                          className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>Consensus Rating</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-[13px] font-bold text-slate-200 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={tc.showAnalystCount}
+                          onChange={(e) => updateTargetConsensus({ showAnalystCount: e.target.checked })}
+                          className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>Analyst Opinions Count</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-[#080D18] border-t border-slate-800 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('list')}
+                  className="px-3 py-1.5 rounded-lg text-[13px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-slate-800 transition-all cursor-pointer"
+                >
+                  Back to Indicators
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-1.5 rounded-lg text-[13px] font-extrabold bg-sky-400 text-slate-950 hover:bg-sky-300 shadow-md transition-all cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </>
+          );
+        })()}
 
         {/* ========================================================= */}
         {/* VIEW 5: BANKER MCDX CONFIG                                */}

@@ -371,6 +371,44 @@ export const DEFAULT_LIVE_BADGE_CONFIG: LiveBadgeConfig = {
   verticalPadding: 4,
 };
 
+export type TargetConsensusDisplayMode = 'mean' | 'band' | 'all';
+
+export interface TargetConsensusConfig {
+  visible: boolean;
+  targetMode: TargetConsensusDisplayMode;
+  lineStyle: LineStyleOption;
+  lineWidth: number;
+  meanColor: string;
+  highColor: string;
+  lowColor: string;
+  showBadge: boolean;
+  badgeFontSize: 'sm' | 'base' | 'lg';
+  badgePosition: 'above' | 'center' | 'below';
+  verticalOffset: number;
+  showUpsidePercent: boolean;
+  showTargetPrice: boolean;
+  showRatingPill: boolean;
+  showAnalystCount: boolean;
+}
+
+export const DEFAULT_TARGET_CONSENSUS_CONFIG: TargetConsensusConfig = {
+  visible: false,
+  targetMode: 'mean',
+  lineStyle: 'Dotted',
+  lineWidth: 2,
+  meanColor: '#38BDF8',
+  highColor: '#10B981',
+  lowColor: '#F43F5E',
+  showBadge: true,
+  badgeFontSize: 'sm',
+  badgePosition: 'above',
+  verticalOffset: 0,
+  showUpsidePercent: true,
+  showTargetPrice: true,
+  showRatingPill: true,
+  showAnalystCount: true,
+};
+
 export interface IndicatorSettings {
   activePreset: PresetType;
   customColors: string[];
@@ -383,6 +421,7 @@ export interface IndicatorSettings {
   ema4: EMALineConfig;
   ema5: EMALineConfig;
   liveBadge?: LiveBadgeConfig;
+  targetConsensus?: TargetConsensusConfig;
   envelope: EnvelopeConfig;
   signals: SignalConfig;
   mcdx: MCDXConfig;
@@ -455,6 +494,7 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
     lineStyle: 'Solid',
   },
   liveBadge: DEFAULT_LIVE_BADGE_CONFIG,
+  targetConsensus: DEFAULT_TARGET_CONSENSUS_CONFIG,
   envelope: {
     visible: true,
     percent: 4.0,
