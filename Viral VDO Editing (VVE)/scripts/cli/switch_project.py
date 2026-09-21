@@ -2,7 +2,7 @@ import sys
 import os
 
 # Add utils to path
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils"))
 try:
     from registry import set_active_project, get_active_project, load_registry
 except ImportError:

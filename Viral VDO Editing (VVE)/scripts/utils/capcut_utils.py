@@ -14,8 +14,14 @@ import json
 import shutil
 import subprocess
 
-# CapCut project root (locked path)
-CAPCUT_PROJECTS_ROOT = r"C:\Users\Admin\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft"
+# CapCut project root (dynamic resolution for current user or Admin fallback)
+_user_capcut_root = os.path.join(os.environ.get("LOCALAPPDATA", ""), "CapCut", "User Data", "Projects", "com.lveditor.draft")
+if os.path.isdir(_user_capcut_root):
+    CAPCUT_PROJECTS_ROOT = _user_capcut_root
+elif os.path.isdir(r"C:\Users\Admin\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft"):
+    CAPCUT_PROJECTS_ROOT = r"C:\Users\Admin\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft"
+else:
+    CAPCUT_PROJECTS_ROOT = _user_capcut_root
 
 # Force UTF-8 output
 if hasattr(sys.stdout, 'reconfigure') and sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':

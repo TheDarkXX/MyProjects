@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 # Add utils to path
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils"))
 try:
     from registry import load_registry
     from capcut_utils import CAPCUT_PROJECTS_ROOT
@@ -11,7 +11,7 @@ except ImportError:
     print("❌ Error: Could not import utils modules")
     sys.exit(1)
 
-VVE_ROOT = Path(__file__).resolve().parent.parent
+VVE_ROOT = Path(__file__).resolve().parent.parent.parent
 DASHBOARD_MD_PATH = VVE_ROOT / "PROJECT_DASHBOARD.md"
 
 def count_total_capcut_projects():

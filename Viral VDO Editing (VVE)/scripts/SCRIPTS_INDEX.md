@@ -20,6 +20,7 @@
 | **07a** | `07a-scene-analyzer.py` | AI วิเคราะห์บทบาท จังหวะ และจุดเน้นของแต่ละ Scene (Kallaway Pacing + Dopamine Hit) |
 | **07b** | `07b-scene-splitter.py` | AI ตัดสินใจแบ่ง A-Roll / B-Roll ตามผลวิเคราะห์ + ใส่ emphasis field |
 | **07c** | `07c-broll-prompt.py` | สร้าง B-Roll Prompt MD ตามสูตร 8 Categories (A-H) สำหรับ God Flow / Text2Video |
+| **07d** | `07d-auto-broll-flow.py` | 🤖 เจน B-Roll อัตโนมัติผ่าน FlowKit (Veo 3.1) + ตรวจ L1/L2 QA ปิดช่องว่างก่อนเข้า Step 08 |
 | **08** | `08-footage-assembler.py` | ดึง Footage (รูป/วิดีโอ) มาประกอบลง Timeline ตามแผนที่วางไว้ |
 | **09** | `09-sfx-placer.py` | วาง Sound Effect (SFX) ประกอบฉากตามจุดต่างๆ โดยอัตโนมัติ |
 | **10** | `10-capcut-inject.py` | ยัดทุกอย่าง (ซับ, B-Roll, SFX) ลงไปใน CapCut Project ผ่าน capcut-cli |

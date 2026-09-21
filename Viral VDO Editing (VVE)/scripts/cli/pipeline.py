@@ -18,7 +18,7 @@ STAGES = [
     ("07a-scene-analyzer.py",  "SCENE_ANALYZE"),     # AI: Analyze role/emphasis/pacing
     ("07b-scene-splitter.py",  "SCENE_SPLIT"),        # AI: Assign A-Roll / B-Roll
     ("07c-broll-prompt.py",    "BROLL_PROMPT"),        # Generate B-Roll prompt MD
-    # --- PAUSE: User runs God Flow ---
+    ("07d-auto-broll-flow.py", "AUTO_BROLL_FLOW"),     # Auto B-Roll via FlowKit + L1/L2 QA
     ("08-footage-assembler.py","FOOTAGE_ASSEMBLY"),
     ("09-sfx-placer.py",       "SFX_PLACEMENT"),
     ("10-capcut-inject.py",    "CAPCUT_INJECT"),

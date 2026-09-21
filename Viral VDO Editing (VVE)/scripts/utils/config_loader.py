@@ -7,8 +7,8 @@ def load_channel_config(channel_name=None):
     if not channel_name:
         channel_name = os.environ.get("VVE_CHANNEL", "doctorbank")
 
-    script_dir = Path(__file__).parent
-    vve_root = script_dir.parent
+    script_dir = Path(__file__).resolve().parent
+    vve_root = script_dir.parent.parent if script_dir.name == "utils" else script_dir.parent
     config_path = vve_root / "channels" / f"{channel_name}.yaml"
     
     if not config_path.exists():
