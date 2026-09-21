@@ -219,6 +219,36 @@ export const MobileDashboard: React.FC = () => {
       };
     }
     if (timeRange === 'ALL') {
+      if (allDailyPoints.length >= 2) {
+        let cumTwr = 1.0;
+        for (let i = 1; i < allDailyPoints.length; i++) {
+          const prevVal = allDailyPoints[i - 1].value;
+          const currVal = allDailyPoints[i].value;
+          const currDate = allDailyPoints[i].date;
+
+          let dayCf = 0;
+          for (const tx of transactions) {
+            if (tx.status !== 'CANCELLED' && tx.date && tx.date.split('T')[0] === currDate) {
+              const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
+              const type = (tx.type || '').toUpperCase();
+              if (type === 'DEPOSIT' || (type === 'BUY' && isCash)) {
+                dayCf += tx.amount;
+              } else if (type === 'WITHDRAW' || (type === 'SELL' && isCash)) {
+                dayCf -= tx.amount;
+              }
+            }
+          }
+
+          if (prevVal > 0) {
+            const dayReturn = (currVal - dayCf - prevVal) / prevVal;
+            cumTwr *= (1 + dayReturn);
+          }
+        }
+        return {
+          displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0,
+          displayPnlPercent: (cumTwr - 1) * 100,
+        };
+      }
       return {
         displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0,
         displayPnlPercent: typeof totalPnlPercent === 'number' && !isNaN(totalPnlPercent) ? totalPnlPercent : 0,
@@ -238,7 +268,7 @@ export const MobileDashboard: React.FC = () => {
       displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0, 
       displayPnlPercent: typeof totalPnlPercent === 'number' && !isNaN(totalPnlPercent) ? totalPnlPercent : 0 
     };
-  }, [timeRange, todaysProfit, todaysProfitPercent, chartData, totalPnl, totalPnlPercent]);
+  }, [timeRange, todaysProfit, todaysProfitPercent, chartData, totalPnl, totalPnlPercent, allDailyPoints, transactions]);
 
   // Sort holdings by weight descending
   const sortedHoldings = useMemo(() => {

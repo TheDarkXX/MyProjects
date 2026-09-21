@@ -51,6 +51,7 @@ export function useHoldings() {
   const holdingsData = useMemo(() => {
     let cash = activePortfolio?.initial_cash || 0;
     let netInvested = activePortfolio?.initial_cash || 0;
+    let grossInvested = activePortfolio?.initial_cash || 0;
     let totalDividends = 0;
     const holds: Record<string, { quantity: number; totalCost: number }> = {};
     
@@ -83,6 +84,7 @@ export function useHoldings() {
         if (isCash) {
           cash += amount;
           netInvested += amount;
+          grossInvested += amount;
         } else {
           cash -= (amount * price) + fee;
           holds[tx.symbol].quantity += amount;
@@ -104,6 +106,7 @@ export function useHoldings() {
       } else if (tx.type === 'DEPOSIT') {
         cash += amount;
         netInvested += amount;
+        grossInvested += amount;
       } else if (tx.type === 'WITHDRAW') {
         cash -= amount;
         netInvested -= amount;
@@ -161,7 +164,13 @@ export function useHoldings() {
 
     const totalNetWorth = cash + totalSecuritiesValue;
     const totalPnl = totalNetWorth - netInvested;
-    const totalPnlPercent = netInvested > 0 ? (totalPnl / netInvested) * 100 : 0;
+    // Defensive protection against artificial return spikes when cash is withdrawn:
+    // If netInvested has shrunken significantly below gross contributed capital (<50% of gross),
+    // use grossInvested to anchor return, avoiding division by near-zero.
+    const investedBase = (grossInvested > 0 && netInvested < grossInvested * 0.5) 
+      ? grossInvested 
+      : (netInvested > 0 ? netInvested : grossInvested);
+    const totalPnlPercent = investedBase > 0 ? (totalPnl / investedBase) * 100 : 0;
 
     const previousNetWorth = totalNetWorth - todaysProfit;
     const todaysProfitPercent = previousNetWorth > 0 ? (todaysProfit / previousNetWorth) * 100 : 0;
@@ -191,6 +200,7 @@ export function useHoldings() {
       securitiesReturnPercent,
       totalNetWorth,
       netInvested,
+      grossInvested,
       totalDividends,
       dividendYieldOnCost,
       totalPnl,

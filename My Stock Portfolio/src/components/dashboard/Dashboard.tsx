@@ -212,9 +212,12 @@ export const Dashboard = () => {
 
   const activeSymbols = holdings.map(h => h.symbol);
   
-  const symbolsToFetch = useMemo(() => {
-    return Array.from(new Set([...activeSymbols, 'SPY']));
-  }, [activeSymbols]);
+  const allPortfolioSymbols = useMemo(() => {
+    const txSymbols = transactions
+      .filter(t => t.status !== 'CANCELLED' && t.asset !== 'Cash' && t.symbol && t.symbol !== 'CASH')
+      .map(t => t.symbol);
+    return Array.from(new Set([...activeSymbols, ...txSymbols, 'SPY']));
+  }, [activeSymbols, transactions]);
 
   const historyFromDate = useMemo(() => {
     const oneYearAgo = new Date();
@@ -225,22 +228,22 @@ export const Dashboard = () => {
   }, [earliestTxDate]);
 
   useEffect(() => {
-    if (symbolsToFetch.length > 0) {
-      fetchPrices(symbolsToFetch);
+    if (allPortfolioSymbols.length > 0) {
+      fetchPrices(allPortfolioSymbols);
       const to = new Date().toISOString().split('T')[0];
-      fetchHistorical(symbolsToFetch, historyFromDate, to);
+      fetchHistorical(allPortfolioSymbols, historyFromDate, to);
     }
-  }, [JSON.stringify(symbolsToFetch), historyFromDate, fetchPrices, fetchHistorical]);
+  }, [JSON.stringify(allPortfolioSymbols), historyFromDate, fetchPrices, fetchHistorical]);
 
   // Recent Txs (new to old)
   const recentTxs = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4);
 
   // 1. All Daily Points (calculated once across all historical points, independent of timeRange)
   const allDailyPoints = useMemo(() => {
-    if (activeSymbols.length === 0) return [];
+    if (allPortfolioSymbols.length === 0) return [];
     
     const dateSet = new Set<string>();
-    activeSymbols.forEach(s => {
+    allPortfolioSymbols.forEach(s => {
       if (historical[s]) historical[s].forEach(d => dateSet.add(d.date));
     });
     
@@ -286,7 +289,7 @@ export const Dashboard = () => {
       }
 
       let dailyStockValue = 0;
-      activeSymbols.forEach(symbol => {
+      allPortfolioSymbols.forEach(symbol => {
         if (historical[symbol]) {
           const point = historical[symbol].find(d => d.date === date);
           if (point) {
@@ -303,7 +306,7 @@ export const Dashboard = () => {
         value: dailyCash + dailyStockValue
       };
     });
-  }, [historical, transactions, activePortfolio, activeSymbols, earliestTxDate]);
+  }, [historical, transactions, activePortfolio, allPortfolioSymbols, earliestTxDate]);
 
   // 2. Filtered Chart Data for selected timeRange
   const chartData = useMemo(() => {
@@ -369,14 +372,13 @@ export const Dashboard = () => {
       let amount = 0;
       let percent = 0;
 
-      if (range === 'ALL') {
-        amount = totalPnl;
-        percent = totalPnlPercent;
-      } else if (range === '1D') {
+      if (range === '1D') {
         amount = todaysProfit;
         percent = todaysProfitPercent;
       } else {
-        const startDate = getStartDateForRange(range, earliestTxDate, customStart);
+        const startDate = range === 'ALL'
+          ? (earliestTxDate || '2024-01-01')
+          : getStartDateForRange(range, earliestTxDate, customStart);
         const endDate = customEnd || new Date().toISOString().split('T')[0];
         const pts = allDailyPoints.filter(p => p.date >= startDate && p.date <= endDate);
         
@@ -407,7 +409,7 @@ export const Dashboard = () => {
           }
 
           // 1. True Dollar Profit = (End Value - Start Value) - Net External Deposits
-          amount = (endVal - startVal) - periodNetCashFlow;
+          amount = range === 'ALL' ? totalPnl : (endVal - startVal) - periodNetCashFlow;
 
           // 2. Global Industry-Standard: Daily Time-Weighted Return (TWR)
           // Isolates investment performance from timing and size of deposits/withdrawals
@@ -441,6 +443,9 @@ export const Dashboard = () => {
             const base = startVal + Math.max(0, periodNetCashFlow);
             percent = base > 0 ? (amount / base) * 100 : 0;
           }
+        } else if (range === 'ALL') {
+          amount = totalPnl;
+          percent = totalPnlPercent;
         }
       }
 
@@ -464,7 +469,7 @@ export const Dashboard = () => {
 
   // 4. Historical What-If Growth Anchor
   const whatIfData = useMemo(() => {
-    const totalReturnPct = totalPnlPercent;
+    const totalReturnPct = periodMetrics['ALL']?.percent ?? totalPnlPercent;
     const growthMultiple = 1 + (totalReturnPct / 100);
     const seedAmount = currency === 'THB' ? 100000 : 10000;
     const seedLabel = currency === 'THB' ? '฿100,000' : '$10,000';
@@ -489,7 +494,7 @@ export const Dashboard = () => {
       totalReturnPercent: (growthMultiple - 1) * 100,
       inceptionDateLabel,
     };
-  }, [allDailyPoints, totalPnlPercent, currency, earliestTxDate]);
+  }, [allDailyPoints, periodMetrics, totalPnlPercent, currency, earliestTxDate]);
 
   // 5. Dynamic Period Transactions Stats
   const periodTransactionStats = useMemo(() => {
