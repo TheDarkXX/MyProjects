@@ -395,6 +395,22 @@ export const Dashboard = () => {
     const stockSymbols = allPortfolioSymbols.filter(s => s !== 'SPY');
     const hasStockHistorical = stockSymbols.length === 0 || stockSymbols.some(s => historical[s] && historical[s].length > 0);
 
+    const cachedMetrics = activePortfolioId && typeof window !== 'undefined'
+      ? (() => {
+          try {
+            const raw = localStorage.getItem(`stock_period_metrics_${activePortfolioId}`);
+            return raw ? JSON.parse(raw) : null;
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+
+    // If historical prices are still in flight but we have valid cached metrics from prior session, display immediately without flashing
+    if (!hasStockHistorical && cachedMetrics) {
+      return cachedMetrics;
+    }
+
     const calcMetric = (range: DashboardTimeRange, customStart?: string, customEnd?: string) => {
       let amount = 0;
       let percent = 0;
@@ -403,9 +419,9 @@ export const Dashboard = () => {
         amount = todaysProfit;
         percent = todaysProfitPercent;
       } else if (!hasStockHistorical) {
-        // While stock historical data is still loading from API, safely show current holding metrics without flashing insane percentages
+        // While stock historical data is still loading from API and no cache is present, safely use 0 or last known
         amount = range === 'ALL' ? totalPnl : 0;
-        percent = range === 'ALL' ? totalPnlPercent : 0;
+        percent = range === 'ALL' ? (cachedMetrics?.['ALL']?.percent ?? 0) : 0;
       } else {
         const startDate = range === 'ALL'
           ? (earliestTxDate || '2024-01-01')
@@ -486,13 +502,13 @@ export const Dashboard = () => {
           }
         } else if (range === 'ALL') {
           amount = totalPnl;
-          percent = totalPnlPercent;
+          percent = cachedMetrics?.['ALL']?.percent ?? totalPnlPercent;
         }
       }
 
       // Hard sanity cap: if calculation ever diverges into astronomical numbers, fallback safely
       if (!isFinite(percent) || Math.abs(percent) > 10000) {
-        percent = range === 'ALL' ? totalPnlPercent : 0;
+        percent = range === 'ALL' ? (cachedMetrics?.['ALL']?.percent ?? totalPnlPercent) : 0;
       }
 
       const spyPercent = calcSpyMetric(range, customStart, customEnd);
@@ -501,7 +517,7 @@ export const Dashboard = () => {
       return { amount, percent, spyPercent, alpha };
     };
 
-    return {
+    const computed = {
       '1D': calcMetric('1D'),
       '1W': calcMetric('1W'),
       '1M': calcMetric('1M'),
@@ -511,7 +527,16 @@ export const Dashboard = () => {
       'ALL': calcMetric('ALL'),
       'CUSTOM': calcMetric('CUSTOM', customFrom, customTo),
     };
-  }, [allDailyPoints, transactions, todaysProfit, todaysProfitPercent, totalPnl, totalPnlPercent, earliestTxDate, customFrom, customTo, historical, prices]);
+
+    // Cache computed metrics for instant zero-flash rendering on next reload
+    if (hasStockHistorical && activePortfolioId && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`stock_period_metrics_${activePortfolioId}`, JSON.stringify(computed));
+      } catch {}
+    }
+
+    return computed;
+  }, [allDailyPoints, transactions, todaysProfit, todaysProfitPercent, totalPnl, totalPnlPercent, earliestTxDate, customFrom, customTo, historical, prices, activePortfolioId]);
 
   // 4. Historical What-If Growth Anchor
   const whatIfData = useMemo(() => {

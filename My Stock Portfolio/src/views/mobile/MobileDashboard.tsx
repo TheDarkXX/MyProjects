@@ -243,6 +243,18 @@ export const MobileDashboard: React.FC = () => {
       const stockSymbols = activeSymbols.filter(s => s !== 'SPY');
       const hasStockHistorical = stockSymbols.length === 0 || stockSymbols.some(s => historical[s] && historical[s].length > 0);
 
+      const cachedTwr = activePortfolioId && typeof window !== 'undefined'
+        ? (() => {
+            try {
+              const raw = localStorage.getItem(`stock_portfolio_twr_${activePortfolioId}`);
+              const num = raw ? parseFloat(raw) : null;
+              return num !== null && !isNaN(num) ? num : null;
+            } catch {
+              return null;
+            }
+          })()
+        : null;
+
       if (allDailyPoints.length >= 2 && hasStockHistorical) {
         let cumTwr = 1.0;
         let validDays = 0;
@@ -274,8 +286,14 @@ export const MobileDashboard: React.FC = () => {
           }
         }
 
-        const rawPct = validDays > 0 ? (cumTwr - 1) * 100 : totalPnlPercent;
-        const finalPct = isFinite(rawPct) && Math.abs(rawPct) < 10000 ? rawPct : totalPnlPercent;
+        const rawPct = validDays > 0 ? (cumTwr - 1) * 100 : (cachedTwr ?? totalPnlPercent);
+        const finalPct = isFinite(rawPct) && Math.abs(rawPct) < 10000 ? rawPct : (cachedTwr ?? totalPnlPercent);
+
+        if (typeof window !== 'undefined' && activePortfolioId && isFinite(finalPct)) {
+          try {
+            localStorage.setItem(`stock_portfolio_twr_${activePortfolioId}`, String(finalPct));
+          } catch {}
+        }
 
         return {
           displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0,
@@ -284,7 +302,7 @@ export const MobileDashboard: React.FC = () => {
       }
       return {
         displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0,
-        displayPnlPercent: typeof totalPnlPercent === 'number' && !isNaN(totalPnlPercent) ? totalPnlPercent : 0,
+        displayPnlPercent: cachedTwr ?? (typeof totalPnlPercent === 'number' && !isNaN(totalPnlPercent) ? totalPnlPercent : 0),
       };
     }
     if (chartData.length > 0) {
@@ -301,7 +319,7 @@ export const MobileDashboard: React.FC = () => {
       displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0, 
       displayPnlPercent: typeof totalPnlPercent === 'number' && !isNaN(totalPnlPercent) ? totalPnlPercent : 0 
     };
-  }, [timeRange, todaysProfit, todaysProfitPercent, chartData, totalPnl, totalPnlPercent, allDailyPoints, transactions]);
+  }, [timeRange, todaysProfit, todaysProfitPercent, chartData, totalPnl, totalPnlPercent, allDailyPoints, transactions, activePortfolioId]);
 
   // Sort holdings by weight descending
   const sortedHoldings = useMemo(() => {

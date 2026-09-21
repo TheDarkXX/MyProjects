@@ -15,11 +15,44 @@ interface PriceState {
   fetchExchangeRate: (from?: string, to?: string) => Promise<void>;
 }
 
+const PRICES_CACHE_KEY = 'stock_prices_cache_v1';
+const HISTORICAL_CACHE_KEY = 'stock_historical_cache_v1';
+const EXCHANGERATE_CACHE_KEY = 'stock_exchange_rate_cache_v1';
+
+const getInitialPrices = (): Record<string, { price: number; change: number; percent_change: number }> => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(PRICES_CACHE_KEY) : null;
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const getInitialHistorical = (): Record<string, any[]> => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(HISTORICAL_CACHE_KEY) : null;
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const getInitialExchangeRate = (): number => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(EXCHANGERATE_CACHE_KEY) : null;
+    if (raw) {
+      const parsed = parseFloat(raw);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  } catch {}
+  return 34.5;
+};
+
 export const usePriceStore = create<PriceState>((set, get) => ({
-  prices: {},
-  historical: {},
+  prices: getInitialPrices(),
+  historical: getInitialHistorical(),
   metadata: {},
-  exchangeRate: 34.5, // Default fallback
+  exchangeRate: getInitialExchangeRate(), // Default fallback or cached
   loading: false,
   lastUpdated: null,
 
@@ -27,6 +60,9 @@ export const usePriceStore = create<PriceState>((set, get) => ({
     try {
       const data = await api.prices.exchangeRate(from, to);
       if (data && data.rate) {
+        try {
+          localStorage.setItem(EXCHANGERATE_CACHE_KEY, String(data.rate));
+        } catch {}
         set({ exchangeRate: data.rate, lastUpdated: new Date() });
       }
     } catch (error) {
@@ -39,11 +75,17 @@ export const usePriceStore = create<PriceState>((set, get) => ({
     try {
       set({ loading: true });
       const data = await api.prices.latest(symbols);
-      set((state) => ({ 
-        prices: { ...state.prices, ...data },
-        lastUpdated: new Date(),
-        loading: false
-      }));
+      set((state) => {
+        const nextPrices = { ...state.prices, ...data };
+        try {
+          localStorage.setItem(PRICES_CACHE_KEY, JSON.stringify(nextPrices));
+        } catch {}
+        return { 
+          prices: nextPrices,
+          lastUpdated: new Date(),
+          loading: false
+        };
+      });
     } catch (error) {
       console.error(error);
       set({ loading: false });
@@ -54,7 +96,13 @@ export const usePriceStore = create<PriceState>((set, get) => ({
     if (symbols.length === 0) return;
     try {
       const data = await api.prices.historical(symbols, from, to);
-      set((state) => ({ historical: { ...state.historical, ...data } }));
+      set((state) => {
+        const nextHistorical = { ...state.historical, ...data };
+        try {
+          localStorage.setItem(HISTORICAL_CACHE_KEY, JSON.stringify(nextHistorical));
+        } catch {}
+        return { historical: nextHistorical };
+      });
     } catch (error) {
       console.error(error);
     }

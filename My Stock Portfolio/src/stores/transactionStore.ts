@@ -29,14 +29,39 @@ interface TransactionState {
   bulkDeleteTransaction: (ids: string[]) => Promise<void>;
 }
 
+const TXS_CACHE_KEY_PREFIX = 'stock_txs_cache_';
+
+const getInitialTransactions = (): Transaction[] => {
+  try {
+    const activeId = typeof window !== 'undefined' ? localStorage.getItem('active_portfolio_id') : null;
+    if (activeId) {
+      const raw = localStorage.getItem(`${TXS_CACHE_KEY_PREFIX}${activeId}`);
+      return raw ? JSON.parse(raw) : [];
+    }
+  } catch {}
+  return [];
+};
+
 export const useTransactionStore = create<TransactionState>((set, get) => ({
-  transactions: [],
+  transactions: getInitialTransactions(),
   loading: false,
 
   fetchTransactions: async (portfolioId: string) => {
+    // If state is empty or different portfolio, try to load from cache immediately so first frame is populated
+    if (get().transactions.length === 0 || (get().transactions[0] && get().transactions[0].portfolio_id !== portfolioId)) {
+      try {
+        const cached = localStorage.getItem(`${TXS_CACHE_KEY_PREFIX}${portfolioId}`);
+        if (cached) {
+          set({ transactions: JSON.parse(cached) });
+        }
+      } catch {}
+    }
     set({ loading: true });
     try {
       const data = await api.transactions.list(portfolioId);
+      try {
+        localStorage.setItem(`${TXS_CACHE_KEY_PREFIX}${portfolioId}`, JSON.stringify(data));
+      } catch {}
       set({ transactions: data, loading: false });
     } catch (error) {
       set({ loading: false });
