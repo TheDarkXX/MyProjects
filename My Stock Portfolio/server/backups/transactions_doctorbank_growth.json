@@ -804,8 +804,8 @@
     "stock_type": "Growth",
     "amount": 0.4488854,
     "price": 676.256,
-    "fee": 0,
-    "note": "Sell META 0.4488854 shares @ $676.2560",
+    "fee": 0.01,
+    "note": "Sell META 0.4488854 shares @ $676.2560 (TAF Fee $0.01)",
     "status": "CONFIRMED",
     "created_at": "2026-09-16 18:06:31"
   },
@@ -819,9 +819,24 @@
     "stock_type": "Growth",
     "amount": 4,
     "price": 104.0625,
-    "fee": 0,
-    "note": "Sell RBRK 4 shares @ $104.0625",
+    "fee": 0.02,
+    "note": "Sell RBRK 4 shares @ $104.0625 (SEC Fee $0.02)",
     "status": "CONFIRMED",
     "created_at": "2026-09-16 18:06:31"
+  },
+  {
+    "id": "8d4ea88a-2603-4dff-9c3c-2f2b238cb91b",
+    "portfolio_id": "fcfdd1e0-bf53-4910-89e7-8ca2474d4c27",
+    "date": "2026-09-18T12:31:02+07:00",
+    "symbol": "CASH",
+    "type": "WITHDRAW",
+    "asset": "Cash",
+    "stock_type": null,
+    "amount": 850.08,
+    "price": 1,
+    "fee": 0,
+    "note": "Exchange USD to THB (฿28,248.16 @ 33.23 THB/USD)",
+    "status": "CONFIRMED",
+    "created_at": "2026-09-21 01:40:58"
   }
 ]
