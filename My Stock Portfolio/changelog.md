@@ -2,6 +2,13 @@
 
 This log tracks all major updates and features added to the application.
 
+### [v3.1.0] GIPS Time-Weighted Return (TWR) Default & Stale-While-Revalidate Zero-Flash Architecture Date: 2026-09-21T10:30:00Z
+- **📈 GIPS Institutional TWR Default**: Enforced Global Investment Performance Standards (GIPS) Time-Weighted Return as portfolio default across all platforms. Eliminates return distortions when capital is withdrawn.
+- **⚡ Stale-While-Revalidate (SWR) Local Caching**: Persisted `prices`, historical bars, and `transactions` into `localStorage`, enabling 0ms frame-1 hydration and permanently eliminating reload visual flicker.
+- **🛡️ NAV Floor & Numerical Anomaly Filters**: Implemented `>= $10.0` NAV floor and realistic daily return caps (`-99%` to `+300%`) in TWR loop, preventing division-by-dust anomalies.
+- **🎯 Decoupled Percentage Signs & Arrows**: Separated `isPercentPositive` from `isAmountPositive` in `MultiPeriodReturnStrip` and `PortfolioHero`, ensuring signs and arrows strictly reflect percentage return values.
+- **💰 September 2026 Transaction Reconciliation**: Reconciled selling fees for RBRK ($0.02) and META ($0.01) and recorded $850.08 USD exchange withdrawal in SQLite `stock.db`, settling cash balance to exact $4.89 USD.
+
 ### [v3.0.0] gfin Deep Web Radar, Mozilla Readability Engine, Semantic Relevance Guard & 5D Matrix v2 Date: 2026-09-16T20:50:00Z
 - **📡 Autonomous Deep Web Radar (`gfin`)**: Solved the paywall/teaser bottleneck for curated investment headlines (`wethaiinvest.beehiiv.com`). Automatically triggers Google News RSS & Yahoo Finance RSS to hunt down full-text articles (800-2,500 words) from Tier-1 global news publishers.
 - **📰 Mozilla Readability Engine**: Upgraded article extraction to Mozilla Readability + Linkedom with custom 128KB HTTP header support to eliminate Header Overflow errors from Yahoo Finance.
