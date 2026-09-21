@@ -112,9 +112,11 @@ pacing:
 broll:
   aspect_ratio: "9:16" # "9:16" (Full screen cutaway) or "16:9" (Split-screen)
   model: "veo3.1"
-  priority: "low"      # 0 credit tier
+  priority: "low"      # 0 credit tier (veo_3_1_i2v_lite_low_priority)
   backend_url: "http://localhost:8100"
+  flow_project_id: "853a1b94-e647-4a28-b4ea-818053159000"
   max_retries: 2
   l1_min_filesize_kb: 100
   target_folder: "VDO footage"
+
 

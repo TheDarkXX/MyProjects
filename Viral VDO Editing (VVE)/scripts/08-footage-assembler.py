@@ -167,18 +167,39 @@ def assemble_footage(job_dir: str):
         except Exception as e:
             print(f"Warning: Could not parse draft_meta_info for imported materials: {e}")
             
+    # Load QA Manifest if present
+    manifest_file = inter_path / "broll_qa_manifest.json"
+    qa_manifest = {}
+    if manifest_file.exists():
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as mf:
+                mdata = json.load(mf)
+                for rec in mdata.get("records", []):
+                    sid = rec.get("scene_id")
+                    if sid:
+                        qa_manifest[sid] = rec
+        except Exception as e:
+            print(f"Warning: Could not parse broll_qa_manifest.json: {e}")
+
     for scene in scenes:
         scene_id = scene["id"]
         target_duration = scene["duration"]
         start_timeline = scene["start"]
-        
+
+        # Check QA Manifest if present
+        if scene_id in qa_manifest:
+            q_rec = qa_manifest[scene_id]
+            if not q_rec.get("l1_passed", True):
+                print(f"❌ Skipping {scene_id}: Failed QA ({', '.join(q_rec.get('errors', []))})")
+                continue
+
         # Find matching footage (prefix [S01] or S01)
         matched_file = None
         for file in potential_footage:
             if file.name.startswith(f"[{scene_id}]") or file.name.startswith(f"{scene_id}_"):
                 matched_file = file
                 break
-            
+
         if not matched_file or not matched_file.exists():
             print(f"Warning: No footage found for {scene_id}. Skipping.")
             continue

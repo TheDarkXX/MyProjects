@@ -64,6 +64,21 @@ def generate_broll_prompt(job_dir: Path, output_md_path: str):
         json.dump(scenes, f, ensure_ascii=False, indent=2)
         f.write("\n```\n")
 
+    # Also generate structured broll_prompts.json if prompts already present
+    prompts_dict = {}
+    for s in scenes:
+        if "B-Roll" in s.get("visual_type", "") or s.get("visual_type") == "B-Roll (AI Generated)":
+            sid = s.get("id")
+            p = s.get("video_prompt") or s.get("broll_prompt") or s.get("prompt")
+            if sid and p:
+                prompts_dict[sid] = p
+
+    if prompts_dict:
+        broll_json_path = job_dir / "broll_prompts.json"
+        with open(broll_json_path, "w", encoding="utf-8") as pf:
+            json.dump(prompts_dict, pf, indent=2, ensure_ascii=False)
+        print(f"Generated structured B-Roll prompts at {broll_json_path.name} ({len(prompts_dict)} clips)")
+
     print(f"Generated B-Roll prompt at {Path(output_md_path).name}")
     print(f"Total: {len(scenes)} scenes ({aroll_count} A-Roll, {broll_count} B-Roll)")
     print(f"Prompt mode: {prompt_mode}")

@@ -60,51 +60,91 @@ EXIT_CODE_PAUSE = 100
 
 # ─── FlowKit API Client ──────────────────────────────────────────────────────────
 
+# ─── FlowKit API Client ──────────────────────────────────────────────────────────
+
 class FlowKitClient:
-    def __init__(self, base_url: str = "http://127.0.0.1:8100"):
+    def __init__(self, base_url: str = "http://127.0.0.1:8100", project_id: str = ""):
         self.base_url = base_url.rstrip("/")
+        self.project_id = project_id
 
     def check_health(self) -> dict:
         url = f"{self.base_url}/health"
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "VVE-07d/1.0"})
             with urllib.request.urlopen(req, timeout=5) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+                data = json.loads(resp.read().decode("utf-8"))
+                if not data.get("extension_connected"):
+                    data["status"] = "extension_disconnected"
+                return data
         except Exception as e:
             return {"status": "offline", "error": str(e)}
 
-    def submit_t2v(self, prompt: str, aspect_ratio: str = "9:16", duration_s: int = 6,
-                   model: str = "veo3.1", project_id: str = "") -> dict:
-        """Submit text-to-video generation to FlowKit."""
+    def generate_image(self, prompt: str, project_id: str = "", aspect_ratio: str = "9:16") -> dict:
+        """Step 1 for Veo 3.1: Text-to-Image generation to obtain start_image_media_id."""
+        ratio_map = {
+            "9:16": "IMAGE_ASPECT_RATIO_PORTRAIT",
+            "16:9": "IMAGE_ASPECT_RATIO_LANDSCAPE",
+            "1:1": "IMAGE_ASPECT_RATIO_SQUARE"
+        }
+        endpoint = f"{self.base_url}/api/flow/generate-image"
+        payload = {
+            "prompt": prompt,
+            "project_id": project_id or self.project_id,
+            "aspect_ratio": ratio_map.get(aspect_ratio, "IMAGE_ASPECT_RATIO_PORTRAIT"),
+            "user_paygate_tier": "PAYGATE_TIER_FREE"
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            endpoint,
+            data=data,
+            headers={"Content-Type": "application/json", "User-Agent": "VVE-07d/1.0"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                res = json.loads(resp.read().decode("utf-8"))
+                media_list = res.get("media", [])
+                if media_list and isinstance(media_list, list):
+                    first_m = media_list[0]
+                    media_id = (
+                        first_m.get("mediaId")
+                        or first_m.get("name")
+                        or first_m.get("image", {}).get("generatedImage", {}).get("mediaId")
+                    )
+                    image_url = (
+                        first_m.get("imageUrl")
+                        or first_m.get("image", {}).get("generatedImage", {}).get("fifeUrl")
+                    )
+                    if media_id:
+                        return {"status": "SUCCESS", "media_id": media_id, "image_url": image_url}
+                elif res.get("mediaId"):
+                    return {"status": "SUCCESS", "media_id": res.get("mediaId"), "image_url": res.get("imageUrl")}
+                return {"error": f"No mediaId in image gen response: {res}"}
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            return {"error": f"HTTP {e.code}: {err_body}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def submit_veo_i2v(self, image_media_id: str, prompt: str, project_id: str = "",
+                       aspect_ratio: str = "9:16", duration_s: int = 8,
+                       priority: str = "low") -> dict:
+        """Step 2 for Veo 3.1: Image-to-Video generation using start_image_media_id (0 credit tier)."""
         ratio_map = {
             "9:16": "VIDEO_ASPECT_RATIO_PORTRAIT",
             "16:9": "VIDEO_ASPECT_RATIO_LANDSCAPE",
             "1:1": "VIDEO_ASPECT_RATIO_SQUARE"
         }
-        mapped_ratio = ratio_map.get(aspect_ratio, "VIDEO_ASPECT_RATIO_PORTRAIT")
-
-        # Select endpoint based on model family
-        if "omni" in model.lower():
-            endpoint = f"{self.base_url}/api/flow/generate-video-omni-text"
-            payload = {
-                "prompt": prompt,
-                "project_id": project_id,
-                "aspect_ratio": mapped_ratio,
-                "duration_s": max(4, min(10, duration_s)),
-                "user_paygate_tier": "PAYGATE_TIER_FREE"
-            }
-        else:
-            # Default to Veo 3.1
-            endpoint = f"{self.base_url}/api/flow/generate-video"
-            payload = {
-                "prompt": prompt,
-                "project_id": project_id,
-                "aspect_ratio": mapped_ratio,
-                "duration_s": max(4, min(10, duration_s)),
-                "model_family": "veo",
-                "user_paygate_tier": "PAYGATE_TIER_FREE"
-            }
-
+        endpoint = f"{self.base_url}/api/flow/generate-video"
+        payload = {
+            "start_image_media_id": image_media_id,
+            "prompt": prompt,
+            "project_id": project_id or self.project_id,
+            "scene_id": "auto_broll",
+            "aspect_ratio": ratio_map.get(aspect_ratio, "VIDEO_ASPECT_RATIO_PORTRAIT"),
+            "model_family": "veo",
+            "duration_s": duration_s,
+            "user_paygate_tier": "PAYGATE_TIER_FREE"
+        }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
             endpoint,
@@ -120,16 +160,80 @@ class FlowKitClient:
         except Exception as e:
             return {"error": str(e)}
 
+    def submit_omni_t2v(self, prompt: str, project_id: str = "",
+                         aspect_ratio: str = "9:16", duration_s: int = 6) -> dict:
+        """Direct Text-to-Video generation using Gemini Omni Flash."""
+        ratio_map = {
+            "9:16": "VIDEO_ASPECT_RATIO_PORTRAIT",
+            "16:9": "VIDEO_ASPECT_RATIO_LANDSCAPE",
+            "1:1": "VIDEO_ASPECT_RATIO_SQUARE"
+        }
+        endpoint = f"{self.base_url}/api/flow/generate-video-omni-text"
+        payload = {
+            "prompt": prompt,
+            "project_id": project_id or self.project_id,
+            "aspect_ratio": ratio_map.get(aspect_ratio, "VIDEO_ASPECT_RATIO_PORTRAIT"),
+            "duration_s": max(4, min(10, duration_s)),
+            "user_paygate_tier": "PAYGATE_TIER_FREE"
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            endpoint,
+            data=data,
+            headers={"Content-Type": "application/json", "User-Agent": "VVE-07d/1.0"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            return {"error": f"HTTP {e.code}: {err_body}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def submit_broll(self, prompt: str, aspect_ratio: str = "9:16", duration_s: int = 8,
+                     model: str = "veo3.1", project_id: str = "", priority: str = "low") -> dict:
+        """Unified submit: orchestrates 2-step for Veo 3.1 Lite (0 credit) or 1-step for Omni."""
+        pid = project_id or self.project_id
+        if "omni" in model.lower():
+            return self.submit_omni_t2v(prompt=prompt, project_id=pid, aspect_ratio=aspect_ratio, duration_s=duration_s)
+
+        # Veo 3.1 Lite Low Priority (2-step orchestration: T2I -> I2V)
+        print("      [Veo Step 1/2] Generating initial anchor frame (0 credit)...")
+        img_res = self.generate_image(prompt=prompt, project_id=pid, aspect_ratio=aspect_ratio)
+        if img_res.get("error"):
+            return {"error": f"Veo Step 1 (Image Gen) failed: {img_res['error']}"}
+
+        media_id = img_res.get("media_id")
+        if not media_id:
+            return {"error": "Veo Step 1 (Image Gen) returned no mediaId"}
+
+        print(f"      [Veo Step 1/2] Anchor image ready: {media_id[:12]}...")
+        print("      [Veo Step 2/2] Submitting Veo 3.1 Lite video generation (0 credit)...")
+        return self.submit_veo_i2v(
+            image_media_id=media_id,
+            prompt=prompt,
+            project_id=pid,
+            aspect_ratio=aspect_ratio,
+            duration_s=duration_s,
+            priority=priority
+        )
+
+    def submit_t2v(self, prompt: str, aspect_ratio: str = "9:16", duration_s: int = 8,
+                   model: str = "veo3.1", project_id: str = "") -> dict:
+        """Backward compatibility alias for submit_broll."""
+        return self.submit_broll(prompt=prompt, aspect_ratio=aspect_ratio, duration_s=duration_s,
+                                 model=model, project_id=project_id)
+
     def poll_status(self, submit_res: dict, timeout_sec: int = 300, interval_sec: int = 5) -> dict:
-        """Poll job status until completed or timed out."""
+        """Poll job status until completed or timed out. Supports both Veo operations and Omni workflows."""
         operations = submit_res.get("operations")
         workflows = submit_res.get("flowkitPolling", {}).get("workflows") or submit_res.get("workflows")
 
         if not operations and not workflows:
-            # Check if direct video_url is already present
             if submit_res.get("video_url") or submit_res.get("media_url"):
                 return {"status": "COMPLETED", "video_url": submit_res.get("video_url") or submit_res.get("media_url")}
-            return {"error": "No operations or workflows returned by FlowKit to poll"}
+            return {"error": f"No operations or workflows returned by FlowKit to poll: {submit_res}"}
 
         poll_endpoint = f"{self.base_url}/api/flow/check-status"
         payload = {}
@@ -137,7 +241,15 @@ class FlowKitClient:
             payload["workflows"] = workflows
             payload["include_encoded_video"] = True
         elif operations:
-            payload["operations"] = operations
+            clean_ops = []
+            for op in operations:
+                if isinstance(op, dict):
+                    op_name = op.get("operation", {}).get("name") or op.get("name")
+                    if op_name:
+                        clean_ops.append({"operation": {"name": op_name}})
+                    else:
+                        clean_ops.append(op)
+            payload["operations"] = clean_ops
 
         start_time = time.time()
         while time.time() - start_time < timeout_sec:
@@ -151,44 +263,83 @@ class FlowKitClient:
             try:
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     res = json.loads(resp.read().decode("utf-8"))
-                    
-                    # Inspect completion
-                    # Veo operations or Omni workflows
-                    if isinstance(res, list):
+
+                    # 1. Veo operations response: {"operations": [...]}
+                    if isinstance(res, dict) and "operations" in res:
+                        ops = res.get("operations", [])
+                        if ops:
+                            first_op = ops[0]
+                            st = (first_op.get("status") or "").upper()
+                            if st in ("MEDIA_GENERATION_STATUS_SUCCESSFUL", "COMPLETED", "SUCCESS", "DONE"):
+                                meta = first_op.get("operation", {}).get("metadata", {}) or first_op.get("metadata", {})
+                                vid_info = meta.get("video", {})
+                                vurl = (
+                                    vid_info.get("fifeUrl")
+                                    or vid_info.get("downloadUrl")
+                                    or first_op.get("media", {}).get("videoUrl")
+                                    or first_op.get("media", {}).get("downloadUrl")
+                                )
+                                if vurl:
+                                    return {"status": "COMPLETED", "video_url": vurl, "data": res}
+                            elif st in ("MEDIA_GENERATION_STATUS_FAILED", "FAILED", "ERROR"):
+                                complaint = first_op.get("complaint") or first_op.get("error", "Generation failed")
+                                return {"status": "FAILED", "error": complaint}
+
+                    # 2. Omni workflows response (list)
+                    elif isinstance(res, list):
                         all_done = True
                         for item in res:
-                            if item.get("status") not in ("COMPLETED", "FAILED", "DONE", "ERROR"):
+                            st = (item.get("status") or "").upper()
+                            if st not in ("COMPLETED", "FAILED", "DONE", "ERROR", "SUCCESS"):
                                 all_done = False
                                 break
                         if all_done:
                             first = res[0] if res else {}
-                            if first.get("status") in ("FAILED", "ERROR"):
+                            if (first.get("status") or "").upper() in ("FAILED", "ERROR"):
                                 return {"status": "FAILED", "error": first.get("error", "Generation failed")}
-                            vurl = first.get("video_url") or first.get("media_url") or first.get("download_url")
+                            vurl = (
+                                first.get("video_url")
+                                or first.get("media_url")
+                                or first.get("download_url")
+                                or first.get("encoded_video_url")
+                            )
                             return {"status": "COMPLETED", "video_url": vurl, "data": res}
+
+                    # 3. Direct status dict
                     elif isinstance(res, dict):
                         st = res.get("status", "").upper()
-                        if st in ("COMPLETED", "SUCCESS", "DONE"):
+                        if st in ("COMPLETED", "SUCCESS", "DONE", "MEDIA_GENERATION_STATUS_SUCCESSFUL"):
                             vurl = res.get("video_url") or res.get("media_url") or res.get("download_url")
                             return {"status": "COMPLETED", "video_url": vurl, "data": res}
-                        elif st in ("FAILED", "ERROR"):
+                        elif st in ("FAILED", "ERROR", "MEDIA_GENERATION_STATUS_FAILED"):
                             return {"status": "FAILED", "error": res.get("error", "Generation failed")}
-            except Exception as e:
-                # transient network error during polling
+            except Exception:
                 pass
 
         return {"error": f"Generation timed out after {timeout_sec}s"}
 
     def download_video(self, url: str, target_path: Path) -> bool:
-        """Download generated video to target file path."""
+        """Download generated video to target file path atomically via .part."""
         target_path.parent.mkdir(parents=True, exist_ok=True)
+        part_path = target_path.with_suffix(".part")
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "VVE-07d/1.0"})
-            with urllib.request.urlopen(req, timeout=60) as resp, open(target_path, "wb") as out_f:
+            with urllib.request.urlopen(req, timeout=60) as resp, open(part_path, "wb") as out_f:
                 out_f.write(resp.read())
-            return target_path.exists() and target_path.stat().st_size > 0
+            if part_path.exists() and part_path.stat().st_size > 0:
+                os.replace(str(part_path), str(target_path))
+                return True
+            else:
+                if part_path.exists():
+                    part_path.unlink()
+                return False
         except Exception as e:
             print(f"   ❌ Download failed: {e}")
+            if part_path.exists():
+                try:
+                    part_path.unlink()
+                except Exception:
+                    pass
             return False
 
 
@@ -354,8 +505,9 @@ def resolve_scene_prompt(scene: dict, job_dir: Path) -> str:
 
 def clean_prompt_text(text: str, scene_id: str) -> str:
     """Strip markdown markers, scene ID tags, and unnecessary quotes."""
-    text = re.sub(rf"^\[?{scene_id}\]?:?\s*", "", text.strip())
-    text = text.strip("`'\"\t\n\r")
+    text = text.strip("`'\"\t\n\r ")
+    text = re.sub(rf"^\[?{scene_id}\]?:?\s*", "", text)
+    text = text.strip("`'\"\t\n\r ")
     return text
 
 
@@ -415,6 +567,11 @@ def run_auto_broll_flow(job_input: str, args: argparse.Namespace):
     priority = args.priority or broll_cfg.get("priority", "low")
     max_retries = args.max_retries or broll_cfg.get("max_retries", 2)
     backend_url = args.backend_url or broll_cfg.get("backend_url", "http://127.0.0.1:8100")
+    flow_project_id = (
+        args.project_id
+        or broll_cfg.get("flow_project_id")
+        or os.environ.get("FLOW_PROJECT_ID", "853a1b94-e647-4a28-b4ea-818053159000")
+    )
 
     # Resolve project path
     try:
@@ -426,7 +583,8 @@ def run_auto_broll_flow(job_input: str, args: argparse.Namespace):
     # Resolve target footage directory
     footage_dir = resolve_target_footage_dir(job_name, job_dir, config)
     print(f"📁 Target Footage Dir : {footage_dir}")
-    print(f"⚙️  Model Selection   : {model} (Priority: {priority})")
+    print(f"⚙️  Model Selection   : {model} (Priority: {priority}, 0-credit tier)")
+    print(f"🌐 Flow Project UUID  : {flow_project_id}")
     print(f"📐 Aspect Ratio       : {aspect_ratio}")
     print(f"🔁 Max Retries        : {max_retries}")
 
@@ -458,21 +616,32 @@ def run_auto_broll_flow(job_input: str, args: argparse.Namespace):
         return
 
     # Check FlowKit Server
-    client = FlowKitClient(backend_url)
+    client = FlowKitClient(backend_url, project_id=flow_project_id)
     health = client.check_health()
 
-    if health.get("status") == "offline" and not args.dry_run:
-        print("=" * 62)
-        print("⚠️  FLOWKIT SERVER IS OFFLINE (Port 8100 not responding)")
-        print("=" * 62)
-        print("💡 The automated pipeline requires FlowKit backend to generate videos.")
-        print("   How to start FlowKit:")
-        print("   1. Run: python \"P:\\AI\\The Viral\\FlowKit\\flow_cli.py\" start")
-        print("   2. Ensure Chrome is running with FlowKit Extension logged into flow.google.com")
-        print("   3. Or test pipeline logic now with: python 07d-auto-broll-flow.py --dry-run")
-        print(f"\n⏸️  Cleanly pausing pipeline at 07d (Exit Code {EXIT_CODE_PAUSE}).")
-        update_step(job_name, "07d", "paused")
-        sys.exit(EXIT_CODE_PAUSE)
+    if not args.dry_run:
+        h_status = health.get("status")
+        if h_status == "offline":
+            print("=" * 62)
+            print("⚠️  FLOWKIT SERVER IS OFFLINE (Port 8100 not responding)")
+            print("=" * 62)
+            print("💡 The automated pipeline requires FlowKit backend to generate videos.")
+            print("   How to start FlowKit:")
+            print("   1. Run: python \"P:\\AI\\The Viral\\FlowKit\\flow_cli.py\" start")
+            print("   2. Ensure Chrome is running with FlowKit Extension logged into flow.google.com")
+            print("   3. Or test pipeline logic now with: python 07d-auto-broll-flow.py --dry-run")
+            print(f"\n⏸️  Cleanly pausing pipeline at 07d (Exit Code {EXIT_CODE_PAUSE}).")
+            update_step(job_name, "07d", "paused")
+            sys.exit(EXIT_CODE_PAUSE)
+        elif h_status == "extension_disconnected":
+            print("=" * 62)
+            print("⚠️  CHROME EXTENSION IS NOT CONNECTED")
+            print("=" * 62)
+            print("💡 FlowKit server is running, but the Chrome extension is disconnected.")
+            print("   Please ensure Google Chrome is open with flow.google.com active and FlowKit Extension loaded.")
+            print(f"\n⏸️  Cleanly pausing pipeline at 07d (Exit Code {EXIT_CODE_PAUSE}).")
+            update_step(job_name, "07d", "paused")
+            sys.exit(EXIT_CODE_PAUSE)
 
     update_step(job_name, "07d", "wip")
 
@@ -546,12 +715,13 @@ def run_auto_broll_flow(job_input: str, args: argparse.Namespace):
                 break
 
             # Live generation via FlowKit
-            print(f"   🚀 Submitting generation to FlowKit ({model})...")
-            submit_res = client.submit_t2v(
+            print(f"   🚀 Submitting generation to FlowKit ({model}, priority={priority})...")
+            submit_res = client.submit_broll(
                 prompt=prompt,
                 aspect_ratio=aspect_ratio,
                 duration_s=int(round(duration)),
-                model=model
+                model=model,
+                priority=priority
             )
 
             if submit_res.get("error"):
@@ -639,7 +809,14 @@ def run_auto_broll_flow(job_input: str, args: argparse.Namespace):
             print(f"     Keyframes: {', '.join(rel_kfs)}")
 
     insurance_backup(job_input)
-    update_step(job_name, "07d", "done")
+    if fail_count > 0:
+        print(f"\n⚠️  {fail_count} scenes failed generation. Marking 07d as partial_fail.")
+        update_step(job_name, "07d", "partial_fail")
+        sys.exit(1)
+    elif args.dry_run:
+        print("\n🧪 Dry-run completed. Skipping step completion update.")
+    else:
+        update_step(job_name, "07d", "done")
 
     # Snapshot
     try:
@@ -654,9 +831,10 @@ def run_auto_broll_flow(job_input: str, args: argparse.Namespace):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="07d: Automated B-Roll Generator & QA via FlowKit")
     parser.add_argument("job_dir", nargs="?", help="Project name or job directory")
-    parser.add_argument("--model", default=None, help="Video model: veo3.1 or omni_flash")
+    parser.add_argument("--model", default=None, help="Video model: veo3.1 (default, 0 credit low priority) or omni_flash")
     parser.add_argument("--aspect-ratio", default=None, choices=["9:16", "16:9", "1:1"], help="Aspect ratio")
-    parser.add_argument("--priority", default=None, choices=["low", "standard"], help="Generation priority")
+    parser.add_argument("--priority", default=None, choices=["low", "standard"], help="Generation priority (low = 0 credit)")
+    parser.add_argument("--project-id", default=None, help="Google Flow Project UUID (default: from config or active Flow tab)")
     parser.add_argument("--scenes", default=None, help="Comma-separated scene IDs to process (e.g. S02,S04)")
     parser.add_argument("--dry-run", action="store_true", help="Simulate generation without contacting FlowKit")
     parser.add_argument("--force", action="store_true", help="Force regenerate existing footage")
