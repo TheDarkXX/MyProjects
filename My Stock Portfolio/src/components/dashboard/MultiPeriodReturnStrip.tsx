@@ -122,7 +122,8 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
         {periods.map((item) => {
           const isActive = activeRange === item.id;
           const metric = periodMetrics[item.id] || { amount: 0, percent: 0 };
-          const isPositive = metric.amount >= 0;
+          const isAmountPositive = metric.amount >= 0;
+          const isPercentPositive = metric.percent >= 0;
 
           if (item.isCustom) {
             return (
@@ -204,7 +205,7 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                   <span
                     className={clsx(
                       "text-[12px] font-bold px-2 py-0.5 rounded-lg border tabular-nums truncate max-w-[58%] shadow-sm",
-                      isPositive 
+                      isAmountPositive 
                         ? "text-emerald-300 bg-emerald-500/20 border-emerald-500/40 shadow-[0_1px_4px_rgba(52,211,153,0.2)]" 
                         : "text-rose-300 bg-rose-500/20 border-rose-500/40 shadow-[0_1px_4px_rgba(244,63,94,0.2)]"
                     )}
@@ -220,17 +221,17 @@ export const MultiPeriodReturnStrip: React.FC<MultiPeriodReturnStripProps> = ({
                     className={clsx(
                       "font-black tabular-nums tracking-tight flex items-center gap-0.5",
                       item.isTotal ? "text-2xl md:text-3xl" : "text-xl md:text-2xl",
-                      isPositive 
+                      isPercentPositive 
                         ? "text-emerald-400 drop-shadow-[0_2px_10px_rgba(52,211,153,0.35)]" 
                         : "text-rose-400 drop-shadow-[0_2px_10px_rgba(244,63,94,0.35)]"
                     )}
                   >
-                    {isPositive ? (
+                    {isPercentPositive ? (
                       <ArrowUpRight className="w-5 h-5 inline-block shrink-0" />
                     ) : (
                       <ArrowDownRight className="w-5 h-5 inline-block shrink-0" />
                     )}
-                    <span>{isPositive ? '+' : ''}{metric.percent.toFixed(2)}%</span>
+                    <span>{isPercentPositive ? '+' : ''}{metric.percent.toFixed(2)}%</span>
                   </div>
 
                   {item.subLabel && (

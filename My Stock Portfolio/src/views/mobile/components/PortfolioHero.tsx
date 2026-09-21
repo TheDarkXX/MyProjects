@@ -70,7 +70,7 @@ export const PortfolioHero: React.FC<PortfolioHeroProps> = ({
           )}>
             {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
             <span>
-              {formatPrimary(displayPnl, true)} ({isPositive ? '+' : ''}{displayPnlPercent.toFixed(2)}%)
+              {formatPrimary(displayPnl, true)} ({displayPnlPercent >= 0 ? '+' : ''}{displayPnlPercent.toFixed(2)}%)
             </span>
           </div>
           <span className="text-[11px] text-slate-400 font-medium">

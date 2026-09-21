@@ -87,7 +87,10 @@ export const MobileDashboard: React.FC = () => {
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
     if (!earliestTxDate) return oneYearAgoStr;
-    return earliestTxDate < oneYearAgoStr ? earliestTxDate : oneYearAgoStr;
+    const d = new Date(earliestTxDate);
+    d.setDate(d.getDate() - 14);
+    const safeEarliest = d.toISOString().split('T')[0];
+    return safeEarliest < oneYearAgoStr ? safeEarliest : oneYearAgoStr;
   }, [earliestTxDate]);
 
   useEffect(() => {
@@ -122,6 +125,11 @@ export const MobileDashboard: React.FC = () => {
   const allDailyPoints = useMemo(() => {
     if (activeSymbols.length === 0) return [];
 
+    // Guard: Only calculate daily points if stock symbols have loaded historical data
+    const stockSymbols = activeSymbols.filter(s => s !== 'SPY');
+    const hasStockHistorical = stockSymbols.length === 0 || stockSymbols.some(s => historical[s] && historical[s].length > 0);
+    if (!hasStockHistorical) return [];
+
     const dateSet = new Set<string>();
     activeSymbols.forEach((s) => {
       if (historical[s]) historical[s].forEach((d) => dateSet.add(d.date));
@@ -129,11 +137,20 @@ export const MobileDashboard: React.FC = () => {
 
     const sortedDates = Array.from(dateSet).sort();
     const validDates = sortedDates.filter((d) => !earliestTxDate || d >= earliestTxDate);
-    let lastKnownPrices: Record<string, number> = {};
 
     const chronologicalTxs = [...transactions]
       .filter((t) => t.status !== 'CANCELLED')
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Baseline fallback prices from transactions
+    const defaultSymbolPrices: Record<string, number> = {};
+    chronologicalTxs.forEach((tx) => {
+      if (tx.symbol && tx.price && tx.price > 0 && tx.asset !== 'Cash') {
+        defaultSymbolPrices[tx.symbol] = tx.price;
+      }
+    });
+
+    let lastKnownPrices: Record<string, number> = {};
 
     return validDates.map((date) => {
       let dailyCash = activePortfolio?.initial_cash || 0;
@@ -182,8 +199,12 @@ export const MobileDashboard: React.FC = () => {
             }
           }
         }
-        if (!lastKnownPrices[s] && prices[s]) {
-          lastKnownPrices[s] = prices[s].price;
+        if (!lastKnownPrices[s]) {
+          if (prices[s]) {
+            lastKnownPrices[s] = prices[s].price;
+          } else if (defaultSymbolPrices[s]) {
+            lastKnownPrices[s] = defaultSymbolPrices[s];
+          }
         }
       });
 
@@ -219,8 +240,12 @@ export const MobileDashboard: React.FC = () => {
       };
     }
     if (timeRange === 'ALL') {
-      if (allDailyPoints.length >= 2) {
+      const stockSymbols = activeSymbols.filter(s => s !== 'SPY');
+      const hasStockHistorical = stockSymbols.length === 0 || stockSymbols.some(s => historical[s] && historical[s].length > 0);
+
+      if (allDailyPoints.length >= 2 && hasStockHistorical) {
         let cumTwr = 1.0;
+        let validDays = 0;
         for (let i = 1; i < allDailyPoints.length; i++) {
           const prevVal = allDailyPoints[i - 1].value;
           const currVal = allDailyPoints[i].value;
@@ -239,14 +264,22 @@ export const MobileDashboard: React.FC = () => {
             }
           }
 
-          if (prevVal > 0) {
+          // Guard against division by near-zero dust
+          if (prevVal >= 10.0) {
             const dayReturn = (currVal - dayCf - prevVal) / prevVal;
-            cumTwr *= (1 + dayReturn);
+            if (isFinite(dayReturn) && dayReturn > -0.99 && dayReturn < 3.0) {
+              cumTwr *= (1 + dayReturn);
+              validDays++;
+            }
           }
         }
+
+        const rawPct = validDays > 0 ? (cumTwr - 1) * 100 : totalPnlPercent;
+        const finalPct = isFinite(rawPct) && Math.abs(rawPct) < 10000 ? rawPct : totalPnlPercent;
+
         return {
           displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0,
-          displayPnlPercent: (cumTwr - 1) * 100,
+          displayPnlPercent: finalPct,
         };
       }
       return {

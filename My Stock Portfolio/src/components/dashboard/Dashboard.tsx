@@ -224,7 +224,10 @@ export const Dashboard = () => {
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
     if (!earliestTxDate) return oneYearAgoStr;
-    return earliestTxDate < oneYearAgoStr ? earliestTxDate : oneYearAgoStr;
+    const d = new Date(earliestTxDate);
+    d.setDate(d.getDate() - 14);
+    const safeEarliest = d.toISOString().split('T')[0];
+    return safeEarliest < oneYearAgoStr ? safeEarliest : oneYearAgoStr;
   }, [earliestTxDate]);
 
   useEffect(() => {
@@ -242,6 +245,11 @@ export const Dashboard = () => {
   const allDailyPoints = useMemo(() => {
     if (allPortfolioSymbols.length === 0) return [];
     
+    // Guard: Only calculate daily points if actual stock symbols have loaded historical data
+    const stockSymbols = allPortfolioSymbols.filter(s => s !== 'SPY');
+    const hasStockHistorical = stockSymbols.length === 0 || stockSymbols.some(s => historical[s] && historical[s].length > 0);
+    if (!hasStockHistorical) return [];
+
     const dateSet = new Set<string>();
     allPortfolioSymbols.forEach(s => {
       if (historical[s]) historical[s].forEach(d => dateSet.add(d.date));
@@ -249,11 +257,20 @@ export const Dashboard = () => {
     
     const sortedDates = Array.from(dateSet).sort();
     const validDates = sortedDates.filter(d => !earliestTxDate || d >= earliestTxDate);
-    let lastKnownPrices: Record<string, number> = {};
 
     const chronologicalTxs = [...transactions]
       .filter(t => t.status !== 'CANCELLED')
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Baseline fallback prices from transactions and live store to prevent $0 valuation during network load
+    const defaultSymbolPrices: Record<string, number> = {};
+    chronologicalTxs.forEach(tx => {
+      if (tx.symbol && tx.price && tx.price > 0 && tx.asset !== 'Cash') {
+        defaultSymbolPrices[tx.symbol] = tx.price;
+      }
+    });
+
+    let lastKnownPrices: Record<string, number> = {};
 
     return validDates.map(date => {
       let dailyCash = activePortfolio?.initial_cash || 0;
@@ -292,8 +309,15 @@ export const Dashboard = () => {
       allPortfolioSymbols.forEach(symbol => {
         if (historical[symbol]) {
           const point = historical[symbol].find(d => d.date === date);
-          if (point) {
+          if (point && typeof point.price === 'number') {
             lastKnownPrices[symbol] = point.price;
+          }
+        }
+        if (!lastKnownPrices[symbol]) {
+          if (prices[symbol]?.price) {
+            lastKnownPrices[symbol] = prices[symbol].price;
+          } else if (defaultSymbolPrices[symbol]) {
+            lastKnownPrices[symbol] = defaultSymbolPrices[symbol];
           }
         }
         if (lastKnownPrices[symbol] && dailyHolds[symbol]) {
@@ -306,7 +330,7 @@ export const Dashboard = () => {
         value: dailyCash + dailyStockValue
       };
     });
-  }, [historical, transactions, activePortfolio, allPortfolioSymbols, earliestTxDate]);
+  }, [historical, transactions, activePortfolio, allPortfolioSymbols, earliestTxDate, prices]);
 
   // 2. Filtered Chart Data for selected timeRange
   const chartData = useMemo(() => {
@@ -368,6 +392,9 @@ export const Dashboard = () => {
       .filter(t => t.status !== 'CANCELLED' && t.date)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+    const stockSymbols = allPortfolioSymbols.filter(s => s !== 'SPY');
+    const hasStockHistorical = stockSymbols.length === 0 || stockSymbols.some(s => historical[s] && historical[s].length > 0);
+
     const calcMetric = (range: DashboardTimeRange, customStart?: string, customEnd?: string) => {
       let amount = 0;
       let percent = 0;
@@ -375,6 +402,10 @@ export const Dashboard = () => {
       if (range === '1D') {
         amount = todaysProfit;
         percent = todaysProfitPercent;
+      } else if (!hasStockHistorical) {
+        // While stock historical data is still loading from API, safely show current holding metrics without flashing insane percentages
+        amount = range === 'ALL' ? totalPnl : 0;
+        percent = range === 'ALL' ? totalPnlPercent : 0;
       } else {
         const startDate = range === 'ALL'
           ? (earliestTxDate || '2024-01-01')
@@ -415,6 +446,7 @@ export const Dashboard = () => {
           // Isolates investment performance from timing and size of deposits/withdrawals
           if (pts.length >= 2) {
             let cumTwr = 1.0;
+            let validDays = 0;
             for (let i = 1; i < pts.length; i++) {
               const prevVal = pts[i - 1].value;
               const currVal = pts[i].value;
@@ -433,12 +465,21 @@ export const Dashboard = () => {
                 }
               }
 
-              if (prevVal > 0) {
+              // Guard against division by near-zero cash dust: require at least $10 NAV and realistic daily return (<300%)
+              if (prevVal >= 10.0) {
                 const dayReturn = (currVal - dayCf - prevVal) / prevVal;
-                cumTwr *= (1 + dayReturn);
+                if (isFinite(dayReturn) && dayReturn > -0.99 && dayReturn < 3.0) {
+                  cumTwr *= (1 + dayReturn);
+                  validDays++;
+                }
               }
             }
-            percent = (cumTwr - 1) * 100;
+            if (validDays > 0) {
+              percent = (cumTwr - 1) * 100;
+            } else {
+              const base = startVal + Math.max(0, periodNetCashFlow);
+              percent = base > 0 ? (amount / base) * 100 : 0;
+            }
           } else {
             const base = startVal + Math.max(0, periodNetCashFlow);
             percent = base > 0 ? (amount / base) * 100 : 0;
@@ -447,6 +488,11 @@ export const Dashboard = () => {
           amount = totalPnl;
           percent = totalPnlPercent;
         }
+      }
+
+      // Hard sanity cap: if calculation ever diverges into astronomical numbers, fallback safely
+      if (!isFinite(percent) || Math.abs(percent) > 10000) {
+        percent = range === 'ALL' ? totalPnlPercent : 0;
       }
 
       const spyPercent = calcSpyMetric(range, customStart, customEnd);
