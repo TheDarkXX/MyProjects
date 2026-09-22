@@ -108,15 +108,27 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
           <p className="text-xs text-[#CBD5E1] font-body">
             {this.state.error?.message || 'ระบบตรวจพบข้อผิดพลาดที่ไม่คาดคิด'}
           </p>
-          <button
-            onClick={() => {
-              this.setState({ hasError: false, error: null });
-              window.location.reload();
-            }}
-            className="px-5 py-2.5 bg-gradient-to-r from-[#823AFD] to-[#FC2D79] hover:opacity-90 text-white font-bold text-xs rounded-xl shadow-md transition-all font-heading"
-          >
-            รีโหลดหน้าเว็บ (Refresh)
-          </button>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className="px-5 py-2.5 bg-gradient-to-r from-[#823AFD] to-[#FC2D79] hover:opacity-90 text-white font-bold text-xs rounded-xl shadow-md transition-all font-heading cursor-pointer"
+            >
+              รีโหลดหน้าเว็บ (Refresh)
+            </button>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.hash = '#dashboard';
+                window.location.reload();
+              }}
+              className="px-5 py-2.5 bg-[#1E222D] hover:bg-[#2A2E45] border border-white/10 text-[#CBD5E1] font-bold text-xs rounded-xl shadow-md transition-all font-heading cursor-pointer"
+            >
+              กลับหน้าหลัก (Dashboard)
+            </button>
+          </div>
         </div>
       );
     }

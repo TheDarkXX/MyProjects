@@ -24,18 +24,18 @@ export function useHoldings() {
   const { activePortfolioId, portfolios, fetchPortfolios, setActivePortfolio } = usePortfolioStore();
   const { transactions, fetchTransactions, loading: txLoading } = useTransactionStore();
   const { prices, fetchPrices, fetchExchangeRate } = usePriceStore();
-  const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
+  const activePortfolio = (portfolios || []).find(p => p.id === activePortfolioId);
 
   // 1. Ensure portfolios are loaded if empty
   useEffect(() => {
-    if (portfolios.length === 0) {
+    if (!portfolios || portfolios.length === 0) {
       fetchPortfolios();
     }
-  }, [portfolios.length, fetchPortfolios]);
+  }, [portfolios?.length, fetchPortfolios]);
 
   // 2. Ensure activePortfolioId is valid if portfolios exist
   useEffect(() => {
-    if (portfolios.length > 0 && (!activePortfolioId || !portfolios.some(p => p.id === activePortfolioId))) {
+    if (portfolios && portfolios.length > 0 && (!activePortfolioId || !portfolios.some(p => p.id === activePortfolioId))) {
       setActivePortfolio(portfolios[0].id);
     }
   }, [portfolios, activePortfolioId, setActivePortfolio]);

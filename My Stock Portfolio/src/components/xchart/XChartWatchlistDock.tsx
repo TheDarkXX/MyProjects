@@ -238,7 +238,7 @@ export const XChartWatchlistDock: React.FC = () => {
       pushSettingImmediate(SYNC_KEYS.WATCHLIST, nextSections);
     } else {
       // Dynamic section: remove its symbols from all watchlist sections
-      const targetSec = activeWatchlistSections.find(s => s.id === secId);
+      const targetSec = (activeWatchlistSections || []).find(s => s.id === secId);
       if (targetSec && targetSec.symbols.length > 0) {
         const symbolSet = new Set(targetSec.symbols.map(s => s.trim().toUpperCase()));
         const nextSections = watchlistSections.map(sec => ({
@@ -256,11 +256,11 @@ export const XChartWatchlistDock: React.FC = () => {
 
   const activeWatchlistSections = useMemo(() => {
     // 1. Preserved exchange section (only if still in watchlistSections)
-    const exSec = watchlistSections.find(s => s.id === 'sec-exchange' || s.name === 'EXCHANGE');
+    const exSec = (watchlistSections || []).find(s => s.id === 'sec-exchange' || s.name === 'EXCHANGE');
     const exSymbols = exSec ? exSec.symbols : null;
 
     // 2. Preserved commodities & crypto section (only if still in watchlistSections)
-    const crSec = watchlistSections.find(s => s.id === 'sec-commodities-crypto' || s.name.includes('COMMODITIES') || s.name.includes('CRYPTO'));
+    const crSec = (watchlistSections || []).find(s => s.id === 'sec-commodities-crypto' || s.name.includes('COMMODITIES') || s.name.includes('CRYPTO'));
     const crSymbols = crSec ? crSec.symbols : null;
 
     const exSet = new Set((exSymbols || []).map(s => s.toUpperCase()));
@@ -541,7 +541,7 @@ export const XChartWatchlistDock: React.FC = () => {
   const sectionInputRef = useRef<HTMLInputElement>(null);
 
   // Active tab symbol
-  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const activeTab = (tabs || []).find((t) => t.id === activeTabId);
   const activeSymbol = activeTab?.symbol || 'VRT';
   const detailSymbol = watchlistDetailSymbol || activeSymbol;
   const detailQuote = watchlistPrices[detailSymbol];
@@ -591,13 +591,13 @@ export const XChartWatchlistDock: React.FC = () => {
     if (!clean) return;
 
     if (targetSectionId.includes('exchange')) {
-      const exSec = watchlistSections.find(s => s.id === 'sec-exchange' || s.name === 'EXCHANGE') || watchlistSections[0];
+      const exSec = (watchlistSections || []).find(s => s.id === 'sec-exchange' || s.name === 'EXCHANGE') || watchlistSections[0];
       if (exSec) addSymbolToSection(exSec.id, clean);
     } else if (targetSectionId.includes('crypto') || targetSectionId.includes('commodities')) {
-      const crSec = watchlistSections.find(s => s.id === 'sec-commodities-crypto' || s.name.includes('CRYPTO')) || watchlistSections[0];
+      const crSec = (watchlistSections || []).find(s => s.id === 'sec-commodities-crypto' || s.name.includes('CRYPTO')) || watchlistSections[0];
       if (crSec) addSymbolToSection(crSec.id, clean);
     } else {
-      const firstSec = watchlistSections.find(s => s.id !== 'sec-exchange' && s.id !== 'sec-commodities-crypto') || watchlistSections[0];
+      const firstSec = (watchlistSections || []).find(s => s.id !== 'sec-exchange' && s.id !== 'sec-commodities-crypto') || watchlistSections[0];
       if (firstSec) addSymbolToSection(firstSec.id, clean);
     }
     setSymbolInput('');
@@ -1623,7 +1623,7 @@ export const XChartWatchlistDock: React.FC = () => {
             >
               <ChevronDown className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               <span>
-                {watchlistSections.find(s => s.id === sectionContextMenu.sectionId)?.isCollapsed 
+                {(watchlistSections || []).find(s => s.id === sectionContextMenu.sectionId)?.isCollapsed 
                   ? 'Expand Section' 
                   : 'Collapse Section'}
               </span>
@@ -1640,7 +1640,7 @@ export const XChartWatchlistDock: React.FC = () => {
                 setSectionContextMenu(null);
 
                 if (isDynamic) {
-                  const targetSec = watchlistSections.find(s => s.id === secId);
+                  const targetSec = (watchlistSections || []).find(s => s.id === secId);
                   const count = targetSec?.symbols.length || 0;
                   if (count === 0) return;
                   if (window.confirm(`Remove all ${count} symbols in "${secName}" from watchlist?`)) {

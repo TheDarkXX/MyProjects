@@ -116,7 +116,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   const { transactions, fetchTransactions, loading: txLoading } = useTransactionStore();
   const { blueprints, fetchBlueprints } = useBlueprintStore();
   const { quotas, fetchQuotas, radar, fetchRadar, compactTiers } = useProject2xStore();
-  const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
+  const activePortfolio = (portfolios || []).find((p) => p.id === activePortfolioId);
 
   const lastFetchedRadarPortfolioRef = React.useRef<string | null>(null);
   useEffect(() => {

@@ -35,12 +35,12 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
   // Find currently active slice
   const activeSlice = useMemo(() => {
     if (!hoveredSymbol) return null;
-    return slices.find((s) => s.symbol.toUpperCase() === hoveredSymbol.toUpperCase()) || null;
+    return (slices || []).find((s) => s.symbol.toUpperCase() === hoveredSymbol.toUpperCase()) || null;
   }, [slices, hoveredSymbol]);
 
   const activeIndex = useMemo(() => {
     if (!hoveredSymbol) return -1;
-    return slices.findIndex((s) => s.symbol.toUpperCase() === hoveredSymbol.toUpperCase());
+    return (slices || []).findIndex((s) => s.symbol.toUpperCase() === hoveredSymbol.toUpperCase());
   }, [slices, hoveredSymbol]);
 
   // Chart data formatted for Recharts

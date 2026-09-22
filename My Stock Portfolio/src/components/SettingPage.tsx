@@ -78,8 +78,8 @@ const SettingPage: React.FC<SettingPageProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
-    if (portfolios.length > 0) {
-        const doctorbank = portfolios.find(p => p.name === "Doctorbank Growth");
+    if (portfolios && portfolios.length > 0) {
+        const doctorbank = (portfolios || []).find(p => p.name === "Doctorbank Growth");
         setTargetPortfolioId(doctorbank ? doctorbank.id : portfolios[0].id);
     }
   }, [portfolios]);

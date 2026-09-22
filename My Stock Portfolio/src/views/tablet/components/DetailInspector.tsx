@@ -59,7 +59,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
   // If a stock is selected, get its holding & transaction history
   const activeHolding = useMemo(() => {
     if (!selectedStock) return null;
-    return holdings.find((h) => h.symbol === selectedStock) || null;
+    return (holdings || []).find((h) => h.symbol === selectedStock) || null;
   }, [selectedStock, holdings]);
 
   // Stock historical chart data

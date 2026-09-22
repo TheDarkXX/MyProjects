@@ -195,7 +195,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
 
   // Helper to dynamically detect holdings for a specific portfolio from transactions
   const getDynamicHoldings = (portKeyword: string, fallback: StockItem[]): StockItem[] => {
-    const port = portfolios.find(p => p.name.toLowerCase().includes(portKeyword.toLowerCase()));
+    const port = (portfolios || []).find(p => p.name.toLowerCase().includes(portKeyword.toLowerCase()));
     if (!port || !transactions || transactions.length === 0) return fallback;
 
     const holds: Record<string, number> = {};

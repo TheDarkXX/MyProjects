@@ -34,12 +34,13 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const data = await api.portfolios.list();
-      set({ portfolios: data, loading: false });
+      const safeData: Portfolio[] = Array.isArray(data) ? data : [];
+      set({ portfolios: safeData, loading: false });
       
       // Auto-select first if none selected
       const currentActive = get().activePortfolioId;
-      if (data.length > 0 && (!currentActive || !data.find((p: Portfolio) => p.id === currentActive))) {
-        get().setActivePortfolio(data[0].id);
+      if (safeData.length > 0 && (!currentActive || !safeData.find((p: Portfolio) => p.id === currentActive))) {
+        get().setActivePortfolio(safeData[0].id);
       }
     } catch (err: any) {
       set({ error: err.message, loading: false });

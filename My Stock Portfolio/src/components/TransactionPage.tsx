@@ -194,7 +194,7 @@ const TransactionPage: React.FC<TransactionPageProps> = ({
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkModalMode, setBulkModalMode] = useState<'add' | 'edit'>('add');
 
-  const activePortfolio = useMemo(() => portfolios.find(p => p.id === selectedPortfolioId), [portfolios, selectedPortfolioId]);
+  const activePortfolio = useMemo(() => (portfolios || []).find(p => p.id === selectedPortfolioId), [portfolios, selectedPortfolioId]);
 
   useEffect(() => {
     if (prevCurrencyRef.current !== currency) {
@@ -206,8 +206,8 @@ const TransactionPage: React.FC<TransactionPageProps> = ({
   }, [currency]);
 
   useEffect(() => {
-      if (portfolios.length > 0 && (!selectedPortfolioId || !portfolios.some(p => p.id === selectedPortfolioId))) {
-          const defaultPortfolio = portfolios.find(p => p.name === "Doctorbank Growth") || portfolios[0];
+      if (portfolios && portfolios.length > 0 && (!selectedPortfolioId || !portfolios.some(p => p.id === selectedPortfolioId))) {
+          const defaultPortfolio = (portfolios || []).find(p => p.name === "Doctorbank Growth") || portfolios[0];
           setSelectedPortfolioId(defaultPortfolio.id);
       }
   }, [portfolios, selectedPortfolioId, setSelectedPortfolioId]);

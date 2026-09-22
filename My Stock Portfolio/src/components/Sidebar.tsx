@@ -36,7 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   showTopMovers = true,
 }) => {
   const selectedPortfolioData = useMemo(() => {
-    return portfolios.find(p => p.id === selectedPortfolioId)?.data ?? [];
+    return (portfolios || []).find(p => p.id === selectedPortfolioId)?.data ?? [];
   }, [portfolios, selectedPortfolioId]);
 
   return (

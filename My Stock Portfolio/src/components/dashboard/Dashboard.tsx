@@ -152,7 +152,7 @@ export const Dashboard = () => {
   const { currency, setCurrency, setActiveTab } = useUiStore();
   const [theMustCount, setTheMustCount] = useState(0);
 
-  const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
+  const activePortfolio = (portfolios || []).find(p => p.id === activePortfolioId);
 
   useEffect(() => {
     if (activePortfolioId) {
@@ -307,7 +307,7 @@ export const Dashboard = () => {
 
       let dailyStockValue = 0;
       allPortfolioSymbols.forEach(symbol => {
-        if (historical[symbol]) {
+        if (Array.isArray(historical[symbol])) {
           const point = historical[symbol].find(d => d.date === date);
           if (point && typeof point.price === 'number') {
             lastKnownPrices[symbol] = point.price;
@@ -345,9 +345,8 @@ export const Dashboard = () => {
   const periodPnl = periodEndValue - periodStartValue;
   const periodPnlPercent = periodStartValue > 0 ? (periodPnl / periodStartValue) * 100 : 0;
 
-  // 3. Multi-Period Metrics (P&L Amount & Percent + S&P 500 Benchmark & Alpha)
   const periodMetrics = useMemo(() => {
-    const spyHist = historical['SPY'] || [];
+    const spyHist = Array.isArray(historical['SPY']) ? historical['SPY'] : [];
     const spyLive = prices['SPY'];
 
     const calcSpyMetric = (range: DashboardTimeRange, customStart?: string, customEnd?: string) => {

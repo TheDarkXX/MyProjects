@@ -20,7 +20,7 @@ export const RiskPage: React.FC<RiskPageProps> = ({ showHeader = true }) => {
   const { currency } = useUiStore();
   const { holdings, cashBalance, totalNetWorth, cashWeight, securitiesWeight } = useHoldings();
 
-  const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
+  const activePortfolio = (portfolios || []).find(p => p.id === activePortfolioId);
   const activeSymbols = useMemo(() => holdings.map(h => h.symbol).filter(Boolean), [holdings]);
 
   useEffect(() => {

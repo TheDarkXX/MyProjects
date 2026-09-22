@@ -122,7 +122,7 @@ const SnapshotGeneratorPage: React.FC<SnapshotGeneratorPageProps> = ({ portfolio
               <p className="text-gray-400 text-sm mb-4">Select a portfolio to generate snapshot data for. This process can be lengthy but only needs to be run once, or re-run to update with the latest data.</p>
               <div className="bg-gray-900/50 p-4 rounded-lg">
                 <p className="text-sm">
-                  <strong>Portfolio:</strong> {portfolios.find(p => p.id === selectedPortfolioId)?.name || 'N/A'}
+                  <strong>Portfolio:</strong> {(portfolios || []).find(p => p.id === selectedPortfolioId)?.name || 'N/A'}
                 </p>
                 <p className="text-sm">
                   <strong>Processing Range:</strong> From {dateRange.from} to {dateRange.to}

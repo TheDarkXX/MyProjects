@@ -45,7 +45,7 @@ interface ChartApiResponse {
 
 export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfolioOverlay: propOverlay }) => {
   const { changeSymbolOnActiveTab, tabs, updateTabChartSettings } = useXChartStore();
-  const currentTab = tabs.find(t => t.id === tabId);
+  const currentTab = (tabs || []).find(t => t.id === tabId);
   const activeResolution: Resolution = (currentTab?.settings?.resolution || currentTab?.resolution || '1D') as Resolution;
   const activeTimeframe: TimeFrame = (currentTab?.settings?.timeframe || currentTab?.timeframe || '10M') as TimeFrame;
   const activeChartStyle: ChartStyle = (currentTab?.settings?.chartStyle || currentTab?.chartStyle || 'CANDLE') as ChartStyle;

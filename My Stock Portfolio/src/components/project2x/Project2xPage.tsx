@@ -58,7 +58,7 @@ type TableSortColumn = 'SYMBOL' | 'PRICE' | 'WEIGHT' | 'EMA150' | 'EMA200' | 'BA
 
 export const Project2xPage: React.FC = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
-  const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
+  const activePortfolio = (portfolios || []).find(p => p.id === activePortfolioId);
   const { currency } = useUiStore();
   const p2xViewProfile = useChartViewStore((s) => s.profiles.project2x);
   const toggleP2XVisibility = useChartViewStore((s) => s.toggleVisibility);
@@ -180,7 +180,7 @@ export const Project2xPage: React.FC = () => {
   const inputUsdEquivalent = (!isNaN(numInput) && fxRate > 0) ? numInput / fxRate : 0;
 
   // Selected stock row for large TradingView chart
-  const activeStockRow = radar?.rows.find(r => r.symbol === selectedStockSymbol) || radar?.rows[0];
+  const activeStockRow = radar?.rows?.find(r => r.symbol === selectedStockSymbol) || radar?.rows?.[0];
 
   // Contextual Portfolio & Overlay for active stock chart
   const { holdings } = useHoldings();
@@ -1268,7 +1268,7 @@ export const Project2xPage: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {coreQuotas.map((q) => {
-                const radarMatch = radar?.rows.find(r => r.symbol === q.symbol);
+                const radarMatch = radar?.rows?.find(r => r.symbol === q.symbol);
                 const isBuyZone = radarMatch?.traffic_light === 'BUY_ZONE';
                 const isLocked = q.progress_percent >= 100 || q.status === 'LOCKED';
 
@@ -1381,7 +1381,7 @@ export const Project2xPage: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {moonshotQuotas.map((q) => {
-                  const radarMatch = radar?.rows.find(r => r.symbol === q.symbol);
+                  const radarMatch = radar?.rows?.find(r => r.symbol === q.symbol);
                   const isBuyZone = radarMatch?.traffic_light === 'BUY_ZONE';
                   const isLocked = q.progress_percent >= 100 || q.status === 'LOCKED';
 

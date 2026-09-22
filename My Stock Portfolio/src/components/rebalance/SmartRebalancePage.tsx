@@ -336,7 +336,7 @@ export const SmartRebalancePage: React.FC = () => {
 
     return combinedPortfolio
       .map(item => {
-        const bp = blueprints.find(b => b.symbol === item.symbol);
+        const bp = (blueprints || []).find(b => b.symbol === item.symbol);
         if (!bp) return null;
         const tgtPct = bp.target_percent;
         const targetVal = (tgtPct / 100) * newTotalVal;
@@ -515,10 +515,9 @@ export const SmartRebalancePage: React.FC = () => {
     };
   }, [cashflowCandidates, activeSelectedSymbols, remainderMode, depositAmountUsd, totalNetWorth]);
 
-  // MODE 2: Target vs Actual Matrix based on Blueprint
   const matrixAnalysis = useMemo(() => {
     return combinedPortfolio.map(item => {
-      const bp = blueprints.find(b => b.symbol === item.symbol);
+      const bp = (blueprints || []).find(b => b.symbol === item.symbol);
       const actualPct = totalNetWorth > 0 ? (item.currentVal / totalNetWorth) * 100 : 0;
       const targetPct = bp ? bp.target_percent : 0;
       const deltaPct = actualPct - targetPct;
@@ -591,8 +590,8 @@ export const SmartRebalancePage: React.FC = () => {
   }, [matrixAnalysis]);
 
   // MODE 3: Trim Simulation
-  const trimHolding = useMemo(() => holdings.find(h => h.symbol === trimSymbol), [holdings, trimSymbol]);
-  const targetAsset = useMemo(() => combinedPortfolio.find(h => h.symbol === targetFundSymbol), [combinedPortfolio, targetFundSymbol]);
+  const trimHolding = useMemo(() => (holdings || []).find(h => h.symbol === trimSymbol), [holdings, trimSymbol]);
+  const targetAsset = useMemo(() => (combinedPortfolio || []).find(h => h.symbol === targetFundSymbol), [combinedPortfolio, targetFundSymbol]);
 
   const trimProceedsUsd = useMemo(() => {
     if (!trimHolding) return 0;

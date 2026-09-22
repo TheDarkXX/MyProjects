@@ -5,7 +5,7 @@ import { XChartWatchlistDock } from '../../components/xchart/XChartWatchlistDock
 
 export const MobileChartPage: React.FC = () => {
   const { tabs, activeTabId } = useXChartStore();
-  const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+  const activeTab = (tabs || []).find((t) => t.id === activeTabId) || tabs?.[0];
 
   return (
     <div className="flex-1 w-full h-full flex flex-col bg-[#0B1220] overflow-hidden relative min-h-0 select-none">

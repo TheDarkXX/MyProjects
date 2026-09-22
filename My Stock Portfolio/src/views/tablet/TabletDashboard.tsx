@@ -44,7 +44,7 @@ export const TabletDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState<DashboardTimeRange>('ALL');
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
-  const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
+  const activePortfolio = (portfolios || []).find((p) => p.id === activePortfolioId);
 
   useEffect(() => {
     if (activePortfolioId) {
@@ -169,7 +169,7 @@ export const TabletDashboard: React.FC = () => {
       }
 
       activeSymbols.forEach((s) => {
-        if (historical[s]) {
+        if (Array.isArray(historical[s])) {
           const dayMatch = historical[s].find((d) => d.date === date);
           if (dayMatch) {
             const p = typeof dayMatch.price === 'number' ? dayMatch.price : dayMatch.close;

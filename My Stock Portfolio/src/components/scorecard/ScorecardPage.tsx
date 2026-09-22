@@ -47,7 +47,7 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({
   };
 
   const activePortfolio = useMemo(() => {
-    return portfolios.find(p => p.id === activePortfolioId);
+    return (portfolios || []).find(p => p.id === activePortfolioId);
   }, [portfolios, activePortfolioId]);
 
   // Extract active symbols from holdings to ensure prices are fetched

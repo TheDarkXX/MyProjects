@@ -13,7 +13,7 @@ export const HealthRiskPage: React.FC<HealthRiskPageProps> = ({ defaultTab = 'sc
   const [activeTab, setActiveTab] = useState<'scorecard' | 'risk'>(defaultTab);
   const { activePortfolioId, portfolios } = usePortfolioStore();
 
-  const activePortfolio = portfolios.find(p => p.id === activePortfolioId);
+  const activePortfolio = (portfolios || []).find(p => p.id === activePortfolioId);
 
   // Layout preference persisted for Ultra-Wide displays (Default to 3col for 21:9)
   const [scorecardLayout, setScorecardLayout] = useState<ScorecardLayoutMode>(() => {

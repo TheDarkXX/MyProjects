@@ -176,7 +176,7 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
 
   const activeDrawerSlice = useMemo(() => {
     if (!drawerSymbol) return undefined;
-    return slices.find((s) => s.symbol.toUpperCase() === drawerSymbol.toUpperCase());
+    return (slices || []).find((s) => s.symbol.toUpperCase() === drawerSymbol.toUpperCase());
   }, [slices, drawerSymbol]);
 
   const activeDrawerBlueprint = useMemo(() => {

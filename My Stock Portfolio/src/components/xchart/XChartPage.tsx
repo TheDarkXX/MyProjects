@@ -8,7 +8,7 @@ import { MyPortTab } from './myport/MyPortTab';
 
 export const XChartPage: React.FC = () => {
   const { tabs, activeTabId } = useXChartStore();
-  const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+  const activeTab = (tabs || []).find((t) => t.id === activeTabId) || tabs?.[0];
 
   const isMyPort = activeTab?.type === 'MYPORT';
 

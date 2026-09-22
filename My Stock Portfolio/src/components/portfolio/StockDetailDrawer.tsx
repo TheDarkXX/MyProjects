@@ -50,7 +50,7 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
   // Find holding details
   const holding: Holding | undefined = useMemo(() => {
     if (!symbol) return undefined;
-    return holdings.find(h => h.symbol.toUpperCase() === symbol.toUpperCase());
+    return (holdings || []).find(h => h.symbol.toUpperCase() === symbol.toUpperCase());
   }, [symbol, holdings]);
 
   // Filter transactions for this symbol

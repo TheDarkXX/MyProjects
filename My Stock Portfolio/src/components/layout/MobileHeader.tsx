@@ -76,7 +76,7 @@ export const MobileHeader: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showPortDropdown]);
 
-  const activePort = portfolios.find(p => p.id === activePortfolioId) || portfolios[0];
+  const activePort = (portfolios || []).find(p => p.id === activePortfolioId) || (portfolios && portfolios[0]);
 
   return (
     <header className="h-14 bg-[#07090E]/90 backdrop-blur-2xl border-b border-white/[0.08] px-4 flex items-center justify-between sticky top-0 z-40 shrink-0 select-none transform-gpu">

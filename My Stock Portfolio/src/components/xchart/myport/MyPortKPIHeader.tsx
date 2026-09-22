@@ -54,7 +54,7 @@ export const MyPortKPIHeader: React.FC<MyPortKPIHeaderProps> = ({
   onToggleCurrency,
   exchangeRate,
 }) => {
-  const activePortfolio = portfolios.find((p) => p.id === activePortfolioId) || portfolios[0];
+  const activePortfolio = (portfolios || []).find((p) => p.id === activePortfolioId) || portfolios?.[0];
   const isTodayProfit = todaysProfit >= 0;
   const isTotalProfit = totalUnrealizedProfit >= 0;
 
