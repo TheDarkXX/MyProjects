@@ -22,8 +22,28 @@ async function main() {
     process.exit(0);
   }
 
+  const tickerArg = args.find(a => a.startsWith('--ticker='));
+  if (tickerArg) {
+    const ticker = tickerArg.split('=')[1].toUpperCase();
+    console.log(`🚀 Testing Direct Ticker Ingestion for: [${ticker}]...`);
+    const { fetchDirectNewsForTicker, detectPriceShocks } = await import('../services/directTickerFeed.js');
+    const shocks = await detectPriceShocks([ticker]);
+    const shockInfo = shocks.get(ticker) || null;
+    const news = await fetchDirectNewsForTicker(ticker, shockInfo);
+    console.log(`✅ Direct News for [${ticker}]: Found ${news.length} high-signal candidate(s):`);
+    news.forEach((n, i) => console.log(`  ${i + 1}. [${n.publisher}] "${n.title}" (Score: ${n.score}, Tag: ${n.catalystTag})`));
+    process.exit(0);
+  }
+
+  if (args.includes('--direct-only')) {
+    console.log('🚀 Running Engine A (Direct Ticker & Price Shock & Macro) on-demand...');
+    const result = await runNewsScan({ directOnly: true });
+    console.log('✅ Direct Scan Complete:', result);
+    process.exit(0);
+  }
+
   if (args.includes('--now')) {
-    console.log('🚀 Running News Radar scan on-demand...');
+    console.log('🚀 Running Hybrid News Radar scan on-demand...');
     const result = await runNewsScan();
     console.log('✅ Scan Complete:', result);
     process.exit(0);

@@ -107,8 +107,9 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
                 {tags.slice(0, 3).map((t, idx) => {
                   const isVip = t.startsWith('VIP');
                   const isEco = t.startsWith('ECO');
-                  const isMacro = t === 'MACRO' || t === 'MARKET_SUMMARY';
-                  const isCatalyst = t === 'CATALYST';
+                  const isMacro = t === 'MACRO' || t === 'MARKET_SUMMARY' || t === 'MACRO_PULSE';
+                  const isCatalyst = t === 'CATALYST' || t === 'DIRECT_CATALYST';
+                  const isPriceShock = t.startsWith('PRICE_SHOCK');
                   const isTagActive = selectedTag === t;
                   return (
                     <button
@@ -122,11 +123,12 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
                         isTagActive
                           ? "bg-[#823AFD] text-white border-white/30 shadow-[0_0_8px_rgba(130,58,253,0.4)]"
                           : clsx(
-                              isVip && "bg-rose-500/15 text-rose-300 border-rose-500/30 hover:bg-rose-500/25",
+                              isPriceShock && "bg-rose-500/25 text-rose-200 border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.4)] hover:bg-rose-500/35",
+                              isVip && !isPriceShock && "bg-rose-500/15 text-rose-300 border-rose-500/30 hover:bg-rose-500/25",
                               isEco && "bg-blue-500/15 text-blue-300 border-blue-500/30 hover:bg-blue-500/25",
-                              isMacro && "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25",
-                              isCatalyst && "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25",
-                              !isVip && !isEco && !isMacro && !isCatalyst && "bg-slate-800 text-slate-300 border-slate-700 hover:text-white"
+                              isMacro && "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30",
+                              isCatalyst && !isPriceShock && "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25",
+                              !isPriceShock && !isVip && !isEco && !isMacro && !isCatalyst && "bg-slate-800 text-slate-300 border-slate-700 hover:text-white"
                             )
                       )}
                       title={`กรองตามแท็ก #${t}`}

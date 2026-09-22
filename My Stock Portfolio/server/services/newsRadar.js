@@ -1,6 +1,7 @@
 import { db } from '../db/init.js';
 import YahooFinance from 'yahoo-finance2';
 import { fetchFullStoryForHeadline, generateEventFingerprint } from './gfinSearcher.js';
+import { collectDirectIntelligenceCandidates, extractArticleContentWithFallback } from './directTickerFeed.js';
 
 const yahooFinance = new YahooFinance();
 
@@ -840,8 +841,8 @@ Output ONLY a JSON object:
  * 6. Synthesize with GPT-5.6 Terra with 5D Content-Driven Scoring
  * 7. Store in seen_articles and news_intelligence tables
  */
-export async function runNewsScan() {
-  console.log('[NewsRadar] 🚀 Starting news intelligence scan with 6-Gate Pre-Filter & 5D Scoring...');
+export async function runNewsScan(options = {}) {
+  console.log('[NewsRadar] 🚀 Starting Hybrid Intelligence Scan (Engine A: Direct Ticker & Price Shock & Macro + Engine B: Beehiiv)...');
   const portfolioInfo = getPortfolioHoldings();
   const watchlist = getWatchlistTickers();
   const triageContext = {
@@ -850,6 +851,116 @@ export async function runNewsScan() {
     ecosystemMap: ECOSYSTEM_MAP
   };
 
+  const findIntel = db.prepare('SELECT id FROM news_intelligence WHERE ticker = ? AND headline = ?');
+  const insertIntel = db.prepare(`
+    INSERT INTO news_intelligence (
+      ticker, company_name, headline, headline_th, source_name, source_url,
+      summary_th, sentiment, reading_priority, priority_reason, impact_level,
+      portfolio_tag, related_portfolio_id, relevance_score, triage_tags,
+      score_breakdown, full_content, content_source, content_source_url,
+      content_fetched_at, content_relevance_score, source_count, event_fingerprint,
+      is_read, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+  `);
+
+  let directArticlesProcessed = 0;
+  let directArticlesAdded = 0;
+  let priceShocksCount = 0;
+  let macroArticlesAdded = 0;
+
+  // =========================================================================
+  // ENGINE A: Direct Ticker & Price Shock & Macro Shield Ingestion
+  // =========================================================================
+  try {
+    const directCandidates = await collectDirectIntelligenceCandidates();
+    console.log(`[NewsRadar] Engine A: Processing ${directCandidates.length} high-signal candidates...`);
+
+    for (const cand of directCandidates) {
+      directArticlesProcessed++;
+      if (cand.shockInfo?.isShock) priceShocksCount++;
+      if (cand.ticker === 'MACRO') macroArticlesAdded++;
+
+      const isMacro = cand.ticker === 'MACRO' || cand.ticker === 'MARKET';
+      const isHolding = !isMacro && (portfolioInfo.mainHoldings.has(cand.ticker) || portfolioInfo.tigerHoldings.has(cand.ticker));
+      const portMapping = isMacro ? { tag: 'global', portfolioId: null } : getTickerPortfolioTag(cand.ticker, portfolioInfo);
+
+      // Extract full content
+      const extracted = await extractArticleContentWithFallback(cand);
+
+      // AI Synthesis with 5D Scoring & Direct Portfolio Impact
+      const aiResult = await synthesizeWithAI({
+        ticker: cand.ticker,
+        headline: cand.title,
+        newsItems: [{ title: cand.title, publisher: cand.publisher, summary: cand.summary }],
+        portfolioTag: portMapping.tag,
+        isHolding,
+        relevanceScore: cand.shockInfo?.isShock ? 95 : (isMacro ? 85 : (isHolding ? 85 : 65)),
+        triageTags: [
+          cand.catalystTag || 'DIRECT_CATALYST',
+          cand.provider,
+          ...(cand.shockInfo?.isShock ? [`PRICE_SHOCK_${cand.shockInfo.changePercent}%`] : [])
+        ],
+        fullContent: extracted.fullText,
+        isPaywalled: false,
+        sourceCount: 1
+      });
+
+      const tagsList = [
+        cand.catalystTag || 'DIRECT_CATALYST',
+        ...(cand.shockInfo?.isShock ? ['PRICE_SHOCK'] : []),
+        ...(isMacro ? ['MACRO_PULSE'] : [])
+      ];
+
+      insertIntel.run(
+        cand.ticker,
+        isMacro ? 'Macro Economy' : cand.ticker,
+        cand.title,
+        aiResult.headline_th || `[${cand.ticker}] ${cand.title}`,
+        cand.publisher || 'Direct Feed',
+        extracted.resolvedUrl || cand.link,
+        aiResult.summary_th,
+        aiResult.sentiment,
+        cand.shockInfo?.isShock ? 'THE_MUST' : (isMacro ? 'THE_MUST' : aiResult.reading_priority),
+        cand.shockInfo?.isShock ? `[Price Shock ${cand.shockInfo.changePercent}%] ${aiResult.priority_reason}` : aiResult.priority_reason,
+        cand.shockInfo?.isShock ? 'significant' : (isMacro ? 'significant' : aiResult.impact_level),
+        portMapping.tag,
+        portMapping.portfolioId,
+        aiResult.total_score || (cand.shockInfo?.isShock ? 95 : 80),
+        JSON.stringify(tagsList),
+        JSON.stringify(aiResult.score_breakdown || null),
+        extracted.fullText,
+        cand.shockInfo?.isShock ? 'price_shock_detective' : (isMacro ? 'macro_shield' : 'direct_ticker_feed'),
+        extracted.resolvedUrl || cand.link,
+        new Date().toISOString(),
+        100,
+        1,
+        cand.fingerprint
+      );
+
+      directArticlesAdded++;
+      console.log(`[NewsRadar] ✨ Direct Intel Processed: [${cand.ticker}] "${cand.title}" -> ${aiResult.reading_priority} (${cand.provider})`);
+    }
+  } catch (directErr) {
+    console.error('[NewsRadar] ❌ Engine A (Direct Feed) Error:', directErr.message);
+  }
+
+  // Early return if requested to run direct-only
+  if (options.directOnly) {
+    return {
+      success: true,
+      mode: 'direct_only',
+      directArticlesProcessed,
+      directArticlesAdded,
+      priceShocksCount,
+      macroArticlesAdded,
+      newIntelCount: directArticlesAdded,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // =========================================================================
+  // ENGINE B: Beehiiv Macro & Thai Roundup (Secondary / Complementary)
+  // =========================================================================
   const articles = await fetchBeehiivArticles();
   console.log(`[NewsRadar] Fetched ${articles.length} articles from Beehiiv`);
 
@@ -869,20 +980,8 @@ export async function runNewsScan() {
       triage_tags = excluded.triage_tags
   `);
 
-  const findIntel = db.prepare('SELECT id FROM news_intelligence WHERE ticker = ? AND headline = ?');
-  const insertIntel = db.prepare(`
-    INSERT INTO news_intelligence (
-      ticker, company_name, headline, headline_th, source_name, source_url,
-      summary_th, sentiment, reading_priority, priority_reason, impact_level,
-      portfolio_tag, related_portfolio_id, relevance_score, triage_tags,
-      score_breakdown, full_content, content_source, content_source_url,
-      content_fetched_at, content_relevance_score, source_count, event_fingerprint,
-      is_read, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
-  `);
-
   let newArticlesCount = 0;
-  let newIntelCount = 0;
+  let newIntelCount = directArticlesAdded;
   let droppedCount = 0;
   let titleOnlyCount = 0;
   let fullPipelineCount = 0;
@@ -1113,7 +1212,11 @@ export async function runNewsScan() {
 
   return {
     success: true,
-    articlesScanned: articles.length,
+    directArticlesProcessed,
+    directArticlesAdded,
+    priceShocksCount,
+    macroArticlesAdded,
+    beehiivArticlesScanned: articles.length,
     newArticlesCount,
     newIntelCount,
     triageSummary: {
