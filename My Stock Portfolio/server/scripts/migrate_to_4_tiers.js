@@ -40,6 +40,24 @@ db.prepare(`
   WHERE id IN (4, 7, 52, 74, 90, 94)
 `).run();
 
+// Step 2.5: Enforce 5D score tiers for all rows that have score_breakdown
+const scoredRows = db.prepare(`SELECT id, score_breakdown FROM news_intelligence WHERE score_breakdown IS NOT NULL`).all();
+const updateScoreStmt = db.prepare(`UPDATE news_intelligence SET reading_priority = ? WHERE id = ?`);
+for (const sr of scoredRows) {
+  try {
+    const sb = JSON.parse(sr.score_breakdown);
+    if (typeof sb.total === 'number') {
+      if (sb.total < 40) {
+        updateScoreStmt.run('CHATTER', sr.id);
+      } else if (sb.total < 60) {
+        updateScoreStmt.run('WATCHLIST', sr.id);
+      } else if (sb.total < 85) {
+        updateScoreStmt.run('CATALYST', sr.id);
+      }
+    }
+  } catch {}
+}
+
 // Step 3: Enforce the 6 Red-Alert THE_MUST items (Tier 1)
 const mustIds = [18, 21, 24, 58, 87, 92];
 db.prepare(`
