@@ -3,6 +3,7 @@ export type CyberTier =
   | 'BUY_NOW' 
   | 'BUY_ZONE' 
   | 'GET_READY' 
+  | 'RUNNER'
   | 'ON_RADAR' 
   | 'SLOW_BLEED' 
   | 'FALLING_KNIFE'
@@ -36,6 +37,19 @@ export const TIER_CONFIG: Record<string, TierMetadata> = {
     textClass: 'text-violet-200',
     bgGradient: 'from-indigo-950/80 via-purple-950/70 to-[#0A0E1A]',
     descriptionTh: 'ขาขึ้นลอยฟ้า รันเทรนด์ปล่อยกำไรวิ่ง นั่งทับมือตามแผน',
+    rank: 4
+  },
+  RUNNER: {
+    id: 'RUNNER',
+    label: 'RUNNER',
+    icon: '⚡',
+    badgeClass: 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black',
+    animClass: '',
+    borderClass: 'border-cyan-400/60',
+    glowClass: 'shadow-[0_0_20px_rgba(6,182,212,0.5)]',
+    textClass: 'text-cyan-200',
+    bgGradient: 'from-cyan-950/80 via-blue-950/70 to-[#0A0E1A]',
+    descriptionTh: 'โต้คลื่นโมเมนตัมเหนือ EMA 9 รันเทรนด์ตามระบบ ห้ามไล่ราคา',
     rank: 4
   },
   BUY_NOW: {
