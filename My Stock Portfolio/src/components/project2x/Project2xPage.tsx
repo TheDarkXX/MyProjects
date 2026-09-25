@@ -48,6 +48,7 @@ import { useDossierStore } from '../../stores/dossierStore';
 type SortKey = 'STATUS' | 'PROGRESS' | 'VALUE' | 'WEIGHT' | 'NAME';
 type SortOrder = 'ASC' | 'DESC';
 type TableSortColumn = 'SYMBOL' | 'PRICE' | 'WEIGHT' | 'EMA150' | 'EMA200' | 'BANKER' | 'PE' | 'PEG' | 'CAGR' | 'BEAT' | 'STATUS';
+export type TrendLookback = '30D' | '90D' | '1Y' | 'ALL';
 
 export const Project2xPage: React.FC = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
@@ -92,6 +93,23 @@ export const Project2xPage: React.FC = () => {
   const [detailModalStock, setDetailModalStock] = useState<RadarRow | null>(null);
   const [stockCagrInputs, setStockCagrInputs] = useState<Record<string, number>>({});
   const [dnaModalSymbol, setDnaModalSymbol] = useState<string | null>(null);
+  const [trendLookback, setTrendLookback] = useState<TrendLookback>('30D');
+
+  const getLookbackCount = (lookback: TrendLookback): number => {
+    switch (lookback) {
+      case '30D': return 30;
+      case '90D': return 90;
+      case '1Y': return 252;
+      case 'ALL': return 0;
+    }
+  };
+
+  const getSparklineSlice = <T,>(arr: T[] | undefined, lookback: TrendLookback): T[] => {
+    if (!arr || arr.length === 0) return [];
+    const count = getLookbackCount(lookback);
+    if (count === 0) return arr;
+    return arr.slice(-count);
+  };
 
   const [inflowAmountInput, setInflowAmountInput] = useState<string>('35000');
   const [isConfigModalOpen, setIsConfigModalOpen] = useState<boolean>(false);
@@ -792,7 +810,31 @@ export const Project2xPage: React.FC = () => {
                         {tableSortKey === 'PRICE' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
                       </div>
                     </th>
-                    <th className="p-3.5 min-w-[140px]">30D Trend</th>
+                    <th className="p-3.5 min-w-[175px]">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="whitespace-nowrap">{trendLookback} Trend</span>
+                        <div className="flex items-center bg-[#131722] rounded-lg p-0.5 border border-white/10 text-[11px] font-bold" onClick={(e) => e.stopPropagation()}>
+                          {(['30D', '90D', '1Y', 'ALL'] as const).map((lb) => (
+                            <button
+                              key={lb}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTrendLookback(lb);
+                              }}
+                              className={`px-1.5 py-0.5 rounded cursor-pointer transition-all ${
+                                trendLookback === lb
+                                  ? 'bg-blue-600 text-white shadow-sm font-black'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                              title={`Switch trend lookback to ${lb}`}
+                            >
+                              {lb}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </th>
                     <th onClick={() => toggleTableSort('WEIGHT')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
                       <div className="flex items-center gap-1">
                         <span>สัดส่วน (Weight)</span>
@@ -877,11 +919,11 @@ export const Project2xPage: React.FC = () => {
                           ${row.currentPrice.toFixed(2)}
                         </td>
                         <td className="p-3.5">
-                          <div className="w-[120px]">
+                          <div className="w-[125px]">
                             <MiniSparkline
-                              closes={row.sparkline?.closes || []}
-                              ema150={row.sparkline?.ema150 || []}
-                              ema200={row.sparkline?.ema200 || []}
+                              closes={getSparklineSlice(row.sparkline?.closes, trendLookback)}
+                              ema150={getSparklineSlice(row.sparkline?.ema150, trendLookback)}
+                              ema200={getSparklineSlice(row.sparkline?.ema200, trendLookback)}
                               height={32}
                               showEma={true}
                             />
@@ -1890,8 +1932,26 @@ export const Project2xPage: React.FC = () => {
 
             {/* Mini Trend Preview (200x80) */}
             <div className="p-4 rounded-2xl bg-[#131722] border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="space-y-1 text-center sm:text-left">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">30-Day Trend vs EMAs</span>
+              <div className="space-y-1.5 text-center sm:text-left">
+                <div className="flex items-center gap-2 justify-center sm:justify-start">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">{trendLookback} Trend vs EMAs</span>
+                  <div className="flex items-center bg-[#0E121B] rounded-lg p-0.5 border border-white/10 text-[11px] font-bold">
+                    {(['30D', '90D', '1Y', 'ALL'] as const).map((lb) => (
+                      <button
+                        key={lb}
+                        type="button"
+                        onClick={() => setTrendLookback(lb)}
+                        className={`px-1.5 py-0.5 rounded cursor-pointer transition-all ${
+                          trendLookback === lb
+                            ? 'bg-blue-600 text-white font-black shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {lb}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="text-sm font-semibold text-slate-200">
                   EMA 150: <span className={detailModalStock.distEma150 >= 0 ? 'text-cyan-300' : 'text-rose-400'}>{detailModalStock.distEma150 >= 0 ? `+${detailModalStock.distEma150}%` : `${detailModalStock.distEma150}%`}</span>
                   {' · '}
@@ -1900,9 +1960,9 @@ export const Project2xPage: React.FC = () => {
               </div>
               <div className="w-[200px] h-[80px] bg-[#0E121B] rounded-xl p-1 border border-white/5 flex items-center justify-center">
                 <MiniSparkline
-                  closes={detailModalStock.sparkline?.closes || []}
-                  ema150={detailModalStock.sparkline?.ema150 || []}
-                  ema200={detailModalStock.sparkline?.ema200 || []}
+                  closes={getSparklineSlice(detailModalStock.sparkline?.closes, trendLookback)}
+                  ema150={getSparklineSlice(detailModalStock.sparkline?.ema150, trendLookback)}
+                  ema200={getSparklineSlice(detailModalStock.sparkline?.ema200, trendLookback)}
                   height={70}
                   showEma={true}
                 />
