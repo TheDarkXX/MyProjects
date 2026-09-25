@@ -37,7 +37,7 @@ import {
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useProject2xStore, MilestoneItem, RadarRow } from '../../stores/project2xStore';
 import { PullbackDnaModal } from './PullbackDnaModal';
-import { getTierMetadata, getTierRank } from '../../utils/tierConfig';
+import { getTierRank } from '../../utils/tierConfig';
 import { useUiStore } from '../../stores/uiStore';
 import { useXChartStore } from '../../stores/xchartStore';
 import { getTierVisualInfo } from '../xchart/TierBadgeIndicator';
@@ -552,12 +552,12 @@ export const Project2xPage: React.FC = () => {
                       />
                     </div>
                     {isCurrent && remainingThb > 0 && (
-                      <p className="text-[10px] text-cyan-300 font-medium leading-tight pt-0.5">
+                      <p className="text-[11px] text-cyan-300 font-medium leading-tight pt-0.5">
                         ขาดอีก {remainingDisplay} → แปลงร่างเป็น Lv {m.level + 1} ({nextLevelName})!
                       </p>
                     )}
                     {isDone && (
-                      <p className="text-[10px] text-amber-300 font-medium leading-tight pt-0.5">
+                      <p className="text-[11px] text-amber-300 font-medium leading-tight pt-0.5">
                         สำเร็จแล้ว! เลเวลอัปเรียบร้อย 👑
                       </p>
                     )}
@@ -705,7 +705,7 @@ export const Project2xPage: React.FC = () => {
             <span>🔥</span>
             <span>BUY NOW</span>
           </span>
-          <span className="text-slate-600">•</span>
+          <span className="text-slate-500">•</span>
           <span className="flex items-center gap-1 font-bold text-amber-300">
             <span>⏳</span>
             <span>GET READY</span>
@@ -2216,11 +2216,25 @@ export const Project2xPage: React.FC = () => {
                       {detailModalStock.category} Commander
                     </span>
                     {(() => {
-                      const mTier = getTierMetadata(detailModalStock.traffic_light);
+                      const mTierVis = getTierVisualInfo(detailModalStock, detailModalStock.symbol);
+                      // Map TierVisualInfo to badge styling
+                      const tierBadgeStyle = mTierVis.tierId === 'BUY_NOW'
+                        ? 'bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white border-orange-400/60 shadow-[0_0_25px_rgba(239,68,68,0.6)]'
+                        : mTierVis.tierId === 'TO_THE_MOON'
+                        ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white border-violet-400/50 shadow-[0_0_20px_rgba(139,92,246,0.5)]'
+                        : mTierVis.tierId === 'GET_READY'
+                        ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 border-amber-400/50 shadow-[0_0_18px_rgba(245,158,11,0.4)]'
+                        : mTierVis.tierId === 'RUNNER'
+                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.5)]'
+                        : mTierVis.tierId === 'FALLING_KNIFE' || mTierVis.tierId === 'MAYDAY_EXIT'
+                        ? 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white border-rose-500/80 shadow-[0_0_25px_rgba(225,29,72,0.7)]'
+                        : mTierVis.tierId === 'SLOW_BLEED'
+                        ? 'bg-gradient-to-r from-pink-600 via-rose-500 to-red-400 text-white border-rose-400/50'
+                        : 'bg-zinc-800 text-slate-200 border-white/10';
                       return (
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 ${mTier.badgeClass} ${mTier.borderClass} ${mTier.glowClass}`}>
-                          <span className={mTier.animClass}>{mTier.icon}</span>
-                          <span>{mTier.label}</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 ${tierBadgeStyle}`}>
+                          <span>{mTierVis.icon}</span>
+                          <span>{mTierVis.label}</span>
                         </span>
                       );
                     })()}
