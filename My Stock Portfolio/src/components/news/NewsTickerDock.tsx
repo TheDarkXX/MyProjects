@@ -207,7 +207,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
 
     const holds: Record<string, number> = {};
     transactions
-      .filter(t => t && t.portfolio_id === port.id && t.symbol && t.symbol !== 'CASH' && (!t.status || t.status.toUpperCase() === 'CONFIRMED'))
+      .filter(t => t && t.portfolio_id === port.id && t.symbol && t.symbol !== 'CASH' && (!t.status || (typeof t.status === 'string' && t.status.toUpperCase() === 'CONFIRMED')))
       .forEach(t => {
         if (!holds[t.symbol]) holds[t.symbol] = 0;
         if (t.type === 'BUY') holds[t.symbol] += (t.amount || 0);
@@ -230,11 +230,11 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
   // 🏢 Main Port Sections: Holdings vs Target · Project 2X
   const mainSections = useMemo<DockSection[]>(() => {
     const dynamicHoldings = getDynamicHoldings('Doctorbank', DEFAULT_MAIN_HOLDINGS);
-    const holdingSyms = new Set(dynamicHoldings.map(h => h.symbol.toUpperCase()));
+    const holdingSyms = new Set(dynamicHoldings.filter(h => h && h.symbol).map(h => h.symbol.toUpperCase()));
 
     // Target stocks: Project 2X unheld targets + Blueprint targets
     const project2xTargets: StockItem[] = DEFAULT_2X_TARGET_STOCKS
-      .filter(t => !holdingSyms.has(t.symbol.toUpperCase()))
+      .filter(t => t && t.symbol && !holdingSyms.has(t.symbol.toUpperCase()))
       .map(t => ({
         symbol: t.symbol,
         name: t.name,
@@ -244,7 +244,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
 
     const extraBlueprints: StockItem[] = [
       { symbol: 'GOOGL', name: 'Alphabet Inc', category: 'Compounders', targetPercent: 15 }
-    ].filter(b => !holdingSyms.has(b.symbol.toUpperCase()) && !project2xTargets.some(t => t.symbol === b.symbol));
+    ].filter(b => b && b.symbol && !holdingSyms.has(b.symbol.toUpperCase()) && !project2xTargets.some(t => t && t.symbol === b.symbol));
 
     const allMainTargets = [...project2xTargets, ...extraBlueprints];
     const targetsList = allMainTargets.length > 0 ? allMainTargets : DEFAULT_MAIN_TARGETS;
@@ -272,10 +272,10 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
   // 🐯 Tiger Sections: Holdings (NVDA, SCHG) + Target (5 จตุรเทพ DCA)
   const tigerSections = useMemo<DockSection[]>(() => {
     const dynamicTigerHoldings = getDynamicHoldings('Tiger', DEFAULT_TIGER_HOLDINGS);
-    const holdingSyms = new Set(dynamicTigerHoldings.map(h => h.symbol.toUpperCase()));
+    const holdingSyms = new Set(dynamicTigerHoldings.filter(h => h && h.symbol).map(h => h.symbol.toUpperCase()));
 
     // Target stocks from 5-Pillar Architecture (filter out any already held)
-    const targets = DEFAULT_TIGER_TARGETS.filter(t => !holdingSyms.has(t.symbol.toUpperCase()));
+    const targets = DEFAULT_TIGER_TARGETS.filter(t => t && t.symbol && !holdingSyms.has(t.symbol.toUpperCase()));
 
     return [
       {
@@ -393,7 +393,7 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
       // 1. Filter by search query
       let filtered = sec.stocks;
       if (q) {
-        filtered = filtered.filter(s => s.symbol.includes(q) || s.name.toUpperCase().includes(q));
+        filtered = filtered.filter(s => s && s.symbol && (s.symbol.toUpperCase().includes(q) || (s.name && s.name.toUpperCase().includes(q))));
       }
 
       // 2. Sort stocks

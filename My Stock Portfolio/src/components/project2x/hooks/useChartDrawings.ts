@@ -76,10 +76,12 @@ export function useChartDrawings({
   const toastNotification = useDrawingStore((s) => s.toastNotification);
 
   const drawings = useMemo(() => {
+    if (!symbol) return [];
     return drawingsBySymbol[symbol.toUpperCase().trim()] || [];
   }, [drawingsBySymbol, symbol]);
 
   const trendLines = useMemo(() => {
+    if (!symbol) return [];
     return trendLinesBySymbol[symbol.toUpperCase().trim()] || [];
   }, [trendLinesBySymbol, symbol]);
 

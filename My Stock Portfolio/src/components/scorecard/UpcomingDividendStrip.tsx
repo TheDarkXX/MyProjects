@@ -46,6 +46,7 @@ export const UpcomingDividendStrip: React.FC = () => {
     const items: ScheduledDividendItem[] = [];
 
     holdings.forEach(h => {
+      if (!h || !h.symbol) return;
       const meta = DIVIDEND_METADATA[h.symbol.toUpperCase()];
       if (!meta || h.quantity <= 0) return;
 

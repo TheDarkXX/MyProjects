@@ -158,6 +158,8 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   const isHighImpact = activeItem.reading_priority === 'HIGH_IMPACT' || activeItem.reading_priority === 'CATALYST';
   const isMacro = activeItem.reading_priority === 'MACRO' || activeItem.portfolio_tag === 'macro' || activeItem.ticker === 'MACRO' || activeItem.ticker === 'MARKET';
   const isGoodToKnow = activeItem.reading_priority === 'GOOD_TO_KNOW' || activeItem.reading_priority === 'WATCHLIST';
+  const isCatalyst = isHighImpact;
+  const isWatchlist = isGoodToKnow;
   const isRead = activeItem.is_read === 1;
 
   let tags: string[] = [];
@@ -706,11 +708,13 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                 "p-4 rounded-xl border flex items-start gap-3 shadow-md mt-4",
                 isMust
                   ? "bg-rose-950/25 border-rose-500/40 text-rose-200"
-                  : isCatalyst
+                  : isHighImpact
                     ? "bg-amber-950/25 border-amber-500/40 text-amber-200"
-                    : isWatchlist
+                    : isMacro
                       ? "bg-sky-950/25 border-sky-500/40 text-sky-200"
-                      : "bg-[#141724] border-[#2A2E45] text-slate-200"
+                      : isGoodToKnow
+                        ? "bg-blue-950/25 border-blue-500/40 text-blue-200"
+                        : "bg-[#141724] border-[#2A2E45] text-slate-200"
               )}>
                 <span className="text-lg shrink-0">💡</span>
                 <div className="space-y-0.5">

@@ -219,8 +219,8 @@ export interface CompactTierInfo {
 }
 
 interface Project2xStore {
-  selectedTab: 'radar' | 'vault' | 'inflow' | 'all';
-  setSelectedTab: (tab: 'radar' | 'vault' | 'inflow' | 'all') => void;
+  selectedTab: 'radar' | 'vault' | 'inflow';
+  setSelectedTab: (tab: 'radar' | 'vault' | 'inflow') => void;
 
   dashboard: DashboardData | null;
   quotas: ShareQuota[];

@@ -85,8 +85,6 @@ export const Project2xPage: React.FC = () => {
   // Default to Auto band (calculated via actual MWRR / Safety Guard)
   const [selectedBand, setSelectedBand] = useState<'Conservative' | 'Base' | 'Bull' | 'Auto'>('Auto');
   const [watchlistFilter, setWatchlistFilter] = useState<'ALL' | 'Core' | 'Moonshot'>('ALL');
-  const [sortKey, setSortKey] = useState<SortKey>('STATUS');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('ASC');
 
   // Matrix Table Sorting & Detail Modal
   const [tableSortKey, setTableSortKey] = useState<TableSortColumn>('WEIGHT');
@@ -96,10 +94,7 @@ export const Project2xPage: React.FC = () => {
   const [dnaModalSymbol, setDnaModalSymbol] = useState<string | null>(null);
 
   const [inflowAmountInput, setInflowAmountInput] = useState<string>('35000');
-  const [expandedRadarRow, setExpandedRadarRow] = useState<string | null>(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState<boolean>(false);
-  const [showSimPanel, setShowSimPanel] = useState<boolean>(false);
-  const [simThbInput, setSimThbInput] = useState<string>('35000');
 
   // Config modal state
   const [cfgGoalThb, setCfgGoalThb] = useState<number>(10000000);
@@ -214,38 +209,13 @@ export const Project2xPage: React.FC = () => {
   const coreQuotas = quotas.filter(q => q.category === 'Core' || (q.category as string) === 'Index');
   const moonshotQuotas = quotas.filter(q => q.category === 'Moonshot');
 
-  // Sorted and filtered watchlist rows
-  const sortedWatchlistRows = useMemo(() => {
+  // Sorted Radar Rows for Matrix Table & Inflow Slip (with category filter & multi-column sorting)
+  const sortedRadarRows = useMemo(() => {
     const list = (radar?.rows || []).filter(r => {
       if (watchlistFilter === 'ALL') return true;
       return r.category === watchlistFilter;
     });
 
-    list.sort((a, b) => {
-      let comp = 0;
-      if (sortKey === 'STATUS') {
-        comp = getTierRank(a.traffic_light) - getTierRank(b.traffic_light);
-        if (comp === 0) comp = b.progress_percent - a.progress_percent;
-      } else if (sortKey === 'PROGRESS') {
-        comp = b.progress_percent - a.progress_percent;
-      } else if (sortKey === 'VALUE') {
-        const valA = (a.owned_shares || 0) * a.currentPrice;
-        const valB = (b.owned_shares || 0) * b.currentPrice;
-        comp = valB - valA;
-      } else if (sortKey === 'WEIGHT') {
-        comp = b.target_percent - a.target_percent;
-      } else if (sortKey === 'NAME') {
-        comp = a.symbol.localeCompare(b.symbol);
-      }
-      return sortOrder === 'ASC' ? comp : -comp;
-    });
-
-    return list;
-  }, [radar?.rows, watchlistFilter, sortKey, sortOrder]);
-
-  // Sorted Radar Rows for the Inflow Slip & Full Matrix Table
-  const sortedRadarRows = useMemo(() => {
-    const list = [...(radar?.rows || [])];
     list.sort((a, b) => {
       let comp = 0;
       switch (tableSortKey) {
@@ -290,7 +260,7 @@ export const Project2xPage: React.FC = () => {
       return tableSortOrder === 'ASC' ? comp : -comp;
     });
     return list;
-  }, [radar?.rows, tableSortKey, tableSortOrder]);
+  }, [radar?.rows, watchlistFilter, tableSortKey, tableSortOrder]);
 
   // Backfill Polling Effect
   useEffect(() => {
@@ -666,7 +636,7 @@ export const Project2xPage: React.FC = () => {
             }`}
           >
             <span>🧸</span>
-            <span>Sticker Album (อัลบั้มสะสมของเล่น 12 ตัว)</span>
+            <span>Sticker Album (อัลบั้มสะสมของเล่น {quotas.length} ตัว)</span>
             <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-black/40 text-slate-200 font-bold">
               {quotas.length}
             </span>
@@ -683,19 +653,6 @@ export const Project2xPage: React.FC = () => {
           >
             <span>⚡</span>
             <span>Inflow Slip (สลิปคำนวณเติมเงิน Dime)</span>
-          </button>
-
-          {/* Tab 4: All-In-One Cockpit */}
-          <button
-            onClick={() => setSelectedTab('all')}
-            className={`px-5 py-2.5 rounded-xl font-bold text-[14px] flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-              selectedTab === 'all'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/25 font-black'
-                : 'text-slate-300 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Layers className="w-4 h-4 text-purple-300" />
-            <span>📊 All-In-One Cockpit (ดูทั้งหมด)</span>
           </button>
         </div>
 
@@ -731,7 +688,7 @@ export const Project2xPage: React.FC = () => {
       {/* ============================================================ */}
       {/* 4. QUEST OVERVIEW: LARGE TRADINGVIEW CHART (LEFT) + COMPACT WATCHLIST (RIGHT) */}
       {/* ============================================================ */}
-      {(selectedTab === 'radar' || selectedTab === 'all') && (
+      {selectedTab === 'radar' && (
         <div className="space-y-6">
           
           {/* Sell Alert Banners (if any) */}
@@ -765,30 +722,29 @@ export const Project2xPage: React.FC = () => {
           )}
 
           {/* ============================================================ */}
-          {/* FLEET SIGNAL RADAR: 12 COMMANDERS ACTION MATRIX GRID */}
+          {/* FULL TECHNICAL & FUNDAMENTAL RADAR MATRIX TABLE */}
           {/* ============================================================ */}
           <div className="space-y-4">
-            {/* Header & Filter Controls Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#1A1D2D] border border-white/10 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-2xl bg-[#1E222D] border border-white/10 shadow-lg">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">📡</span>
+                <span className="text-2xl">🎯</span>
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-base font-black text-white">
-                      Fleet Signal Radar
+                      Full Technical & Fundamental Radar Matrix
                     </h2>
                     <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      {sortedWatchlistRows.length} Stocks
+                      {sortedRadarRows.length} Stocks
                     </span>
                   </div>
                   <p className="text-[13px] text-slate-300 mt-0.5">
-                    เรดาร์ตรวจจับสัญญาณ 7-Tier Cyber Action Matrix พร้อมปุ่มลัดเชื่อมโยง X-Chart, Stock X-Ray และ 10Y DNA ทันที
+                    คลิกแถวเพื่อดูข้อมูลเจาะลึก • คลิกหัวตารางเพื่อเรียงลำดับ • ปักหมุดชาร์ต X-Chart, Stock X-Ray & 10Y DNA
                   </p>
                 </div>
               </div>
 
-              {/* Controls: Filter & Sort */}
-              <div className="flex items-center gap-2.5 flex-wrap">
+              {/* Category Filter & Status Quick Tags */}
+              <div className="flex items-center gap-3 flex-wrap">
                 {/* Category Filter Tabs */}
                 <div className="flex items-center gap-1 p-1 rounded-xl bg-[#131722] border border-white/5 text-xs font-bold">
                   {(['ALL', 'Core', 'Moonshot'] as const).map((cat) => (
@@ -806,237 +762,314 @@ export const Project2xPage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Sort dropdown */}
-                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#131722] border border-white/5 text-xs">
-                  <span className="text-slate-400 font-medium pl-1.5">Sort:</span>
-                  <select
-                    value={sortKey}
-                    onChange={(e) => setSortKey(e.target.value as SortKey)}
-                    className="bg-[#1E222D] text-slate-200 rounded-lg px-2.5 py-1 border border-white/10 font-bold focus:outline-none focus:border-cyan-400 cursor-pointer"
-                  >
-                    <option value="STATUS">Signal Status (Buy first)</option>
-                    <option value="PROGRESS">% Progress</option>
-                    <option value="VALUE">Market Value</option>
-                    <option value="WEIGHT">Target Weight %</option>
-                    <option value="NAME">Symbol Name</option>
-                  </select>
-                  <button
-                    onClick={() => setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC')}
-                    className="p-1.5 rounded-lg bg-[#1E222D] hover:bg-white/10 text-cyan-300 border border-white/10 font-bold cursor-pointer transition-colors"
-                    title={`Sort ${sortOrder === 'ASC' ? 'Ascending' : 'Descending'}`}
-                  >
-                    {sortOrder === 'ASC' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
-                  </button>
+                <div className="flex items-center gap-2 text-xs font-bold">
+                  <span className="px-2 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                    🔷 BUY ZONE
+                  </span>
+                  <span className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    🟡 WAIT
+                  </span>
+                  <span className="px-2 py-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                    🔴 DANGER
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Fleet Grid Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sortedWatchlistRows.map((row) => {
-                const tierInfo = getTierVisualInfo(row, row.symbol);
-                const hasAlert = radar?.sellAlerts.some(a => a.symbol === row.symbol);
-                const isBuyNow = tierInfo.tierId === 'BUY_NOW';
-                const isDipReady = tierInfo.tierId === 'GET_READY' && tierInfo.subMode === 'DIP_BUY';
-                const isRunner = tierInfo.tierId === 'RUNNER';
-                const isDanger = tierInfo.tierId === 'FALLING_KNIFE' || tierInfo.tierId === 'MAYDAY_EXIT';
-                const isMoon = tierInfo.tierId === 'TO_THE_MOON';
-
-                return (
-                  <div
-                    key={row.symbol}
-                    className={`rounded-2xl p-4 bg-[#1A1D2D] border transition-all duration-200 flex flex-col justify-between gap-3 shadow-lg hover:-translate-y-0.5 ${
-                      isBuyNow
-                        ? 'border-orange-500/70 shadow-[0_0_20px_rgba(249,115,22,0.25)] ring-1 ring-orange-500/40'
-                        : isDipReady
-                        ? 'border-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.2)]'
-                        : isRunner
-                        ? 'border-cyan-400/50 shadow-[0_0_16px_rgba(6,182,212,0.15)]'
-                        : isDanger
-                        ? 'border-rose-500/70 shadow-[0_0_18px_rgba(244,63,94,0.25)]'
-                        : isMoon
-                        ? 'border-purple-500/50 shadow-[0_0_16px_rgba(168,85,247,0.15)]'
-                        : 'border-white/10 hover:border-white/25'
-                    }`}
-                  >
-                    {/* Top Row: Symbol, Category, Alert, Price */}
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={async () => {
-                              if (activePortfolioId) await openDossier(activePortfolioId, row.symbol);
-                              await selectSymbol(row.symbol);
-                              setActiveTab('xray');
-                            }}
-                            className="text-xl font-black text-white hover:text-cyan-300 tracking-tight cursor-pointer transition-colors text-left"
-                            title="เปิด Stock X-Ray Dossier"
-                          >
-                            {row.symbol}
-                          </button>
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                            row.category === 'Core' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                          }`}>
-                            {row.category}
-                          </span>
-                          {hasAlert && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-rose-500 text-white animate-pulse" title="Sell Alert Triggered">
-                              ALERT
+            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#1E222D] shadow-2xl">
+              <table className="w-full text-left border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-white/10 bg-[#131722] text-slate-300 font-bold uppercase tracking-wider select-none">
+                    <th onClick={() => toggleTableSort('SYMBOL')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>Symbol</span>
+                        {tableSortKey === 'SYMBOL' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th onClick={() => toggleTableSort('PRICE')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>Price</span>
+                        {tableSortKey === 'PRICE' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th className="p-3.5 min-w-[140px]">30D Trend</th>
+                    <th onClick={() => toggleTableSort('WEIGHT')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>สัดส่วน (Weight)</span>
+                        {tableSortKey === 'WEIGHT' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th onClick={() => toggleTableSort('EMA150')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>vs EMA150</span>
+                        {tableSortKey === 'EMA150' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th onClick={() => toggleTableSort('EMA200')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>vs EMA200</span>
+                        {tableSortKey === 'EMA200' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th onClick={() => toggleTableSort('BANKER')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>Banker</span>
+                        {tableSortKey === 'BANKER' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th onClick={() => toggleTableSort('PE')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>P/E</span>
+                        {tableSortKey === 'PE' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th onClick={() => toggleTableSort('PEG')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>PEG</span>
+                        {tableSortKey === 'PEG' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th onClick={() => toggleTableSort('CAGR')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>CAGR 3Y</span>
+                        {tableSortKey === 'CAGR' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th onClick={() => toggleTableSort('BEAT')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>กำไร Q</span>
+                        {tableSortKey === 'BEAT' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th onClick={() => toggleTableSort('STATUS')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
+                      <div className="flex items-center gap-1">
+                        <span>Signal</span>
+                        {tableSortKey === 'STATUS' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
+                    <th className="p-3.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {sortedRadarRows.map((row) => {
+                    const rowTierInfo = getTierVisualInfo(row, row.symbol);
+                    const isBuy = rowTierInfo.tierId === 'BUY_NOW';
+                    const isDanger = rowTierInfo.tierId === 'FALLING_KNIFE' || rowTierInfo.tierId === 'MAYDAY_EXIT';
+                    return (
+                      <tr
+                        key={row.symbol}
+                        onClick={() => setDetailModalStock(row)}
+                        className={`hover:bg-white/5 cursor-pointer transition-colors ${
+                          isBuy ? 'bg-orange-500/[0.04]' : isDanger ? 'bg-rose-500/[0.04]' : ''
+                        }`}
+                      >
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-white text-sm">{row.symbol}</span>
+                            <span className={`px-1.5 py-0.2 rounded text-[11px] font-bold ${
+                              row.category === 'Core' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-purple-500/20 text-purple-300'
+                            }`}>
+                              {row.category[0]}
                             </span>
-                          )}
-                        </div>
-
-                        {/* Price */}
-                        <div className="text-right">
-                          <span className="text-base font-black text-white tabular-nums block">
-                            ${row.currentPrice.toFixed(2)}
-                          </span>
-                          <span className="text-[11px] text-slate-400 font-mono block">
-                            Tgt: {row.target_percent}%
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Tier Badge & Regime Strip */}
-                      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                        <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 ${
-                          isBuyNow
-                            ? 'bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white shadow-md shadow-orange-500/30'
-                            : isDipReady
-                            ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold'
-                            : isRunner
-                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
-                            : isMoon
-                            ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white'
-                            : isDanger
-                            ? 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white'
-                            : 'bg-zinc-800 text-slate-200 border border-white/10'
-                        }`}>
-                          <span>{tierInfo.icon}</span>
-                          <span>{tierInfo.label}</span>
-                        </span>
-
-                        {row.regime && (
-                          <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
-                            row.regime === 'BULL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                            row.regime === 'NEUTRAL' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                            'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                          }`}>
-                            {row.regime}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Sparkline & Trend */}
-                    <div className="w-full bg-[#131722]/80 rounded-xl p-2 border border-white/5">
-                      <MiniSparkline
-                        closes={row.sparkline?.closes || []}
-                        ema150={row.sparkline?.ema150 || []}
-                        ema200={row.sparkline?.ema200 || []}
-                        height={38}
-                        showEma={true}
-                      />
-                    </div>
-
-                    {/* Key Technical & Quant Indicators (2x2 Grid) */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="p-2 rounded-xl bg-[#131722] border border-white/5 flex flex-col justify-between">
-                        <span className="text-[11px] text-slate-400">vs EMA 150</span>
-                        <span className={`text-xs font-bold tabular-nums ${row.distEma150 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
+                          </div>
+                        </td>
+                        <td className="p-3.5 font-black text-slate-100 tabular-nums">
+                          ${row.currentPrice.toFixed(2)}
+                        </td>
+                        <td className="p-3.5">
+                          <div className="w-[120px]">
+                            <MiniSparkline
+                              closes={row.sparkline?.closes || []}
+                              ema150={row.sparkline?.ema150 || []}
+                              ema200={row.sparkline?.ema200 || []}
+                              height={32}
+                              showEma={true}
+                            />
+                          </div>
+                        </td>
+                        <td className="p-3.5 tabular-nums">
+                          <div className="font-bold text-white text-xs">
+                            {row.weight_pct}%
+                            <span className="text-slate-400 font-normal text-[11px]"> / {row.target_percent}%</span>
+                          </div>
+                          <div className="w-16 h-1 rounded-full bg-slate-800 mt-1 overflow-hidden">
+                            <div
+                              className="h-full bg-cyan-400 rounded-full"
+                              style={{ width: `${Math.min(100, (row.weight_pct / Math.max(1, row.target_percent)) * 100)}%` }}
+                            />
+                          </div>
+                        </td>
+                        <td className={`p-3.5 font-bold tabular-nums ${row.distEma150 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
                           {row.distEma150 >= 0 ? `+${row.distEma150}%` : `${row.distEma150}%`}
-                        </span>
-                      </div>
-                      <div className="p-2 rounded-xl bg-[#131722] border border-white/5 flex flex-col justify-between">
-                        <span className="text-[11px] text-slate-400">vs EMA 200</span>
-                        <span className={`text-xs font-bold tabular-nums ${row.distEma200 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
+                        </td>
+                        <td className={`p-3.5 font-bold tabular-nums ${row.distEma200 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
                           {row.distEma200 >= 0 ? `+${row.distEma200}%` : `${row.distEma200}%`}
-                        </span>
-                      </div>
-                      <div className="p-2 rounded-xl bg-[#131722] border border-white/5 flex flex-col justify-between">
-                        <span className="text-[11px] text-slate-400">Banker Flow</span>
-                        <span className="text-xs font-bold text-amber-300 tabular-nums">
-                          {row.banker.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">/20</span>
-                        </span>
-                      </div>
-                      <div className="p-2 rounded-xl bg-[#131722] border border-white/5 flex flex-col justify-between">
-                        <span className="text-[11px] text-slate-400">Owned Shares</span>
-                        <span className="text-xs font-bold text-white tabular-nums">
-                          {row.owned_shares.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">sh</span>
-                        </span>
-                      </div>
-                    </div>
+                        </td>
+                        <td className="p-3.5">
+                          <span className="font-bold text-amber-300">{row.banker.toFixed(1)}</span>
+                          <span className="text-slate-400 text-xs">/20</span>
+                        </td>
+                        <td className="p-3.5 text-slate-200 tabular-nums font-semibold">
+                          {row.pe_trailing ? row.pe_trailing.toFixed(1) : (row.pe_forward ? `${row.pe_forward.toFixed(1)}f` : '—')}
+                        </td>
+                        <td className="p-3.5 tabular-nums font-semibold">
+                          {row.peg_ratio ? (
+                            <span className={row.peg_ratio < 1.5 ? 'text-emerald-400 font-bold' : row.peg_ratio < 2.5 ? 'text-amber-300' : 'text-slate-300'}>
+                              {row.peg_ratio.toFixed(2)}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td className="p-3.5 text-amber-300 font-black tabular-nums">
+                          {row.expected_cagr ?? 26}%
+                        </td>
+                        <td className="p-3.5 text-purple-300 font-semibold tabular-nums">
+                          {row.consecutive_eps_qs > 0 ? `🔥 ${row.consecutive_eps_qs} Qs` : '—'}
+                        </td>
+                        <td className="p-3.5">
+                          <div className="flex flex-col gap-1 items-start">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 ${
+                                isBuy
+                                  ? 'bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white shadow-md shadow-orange-500/30'
+                                  : rowTierInfo.tierId === 'GET_READY'
+                                  ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold'
+                                  : rowTierInfo.tierId === 'RUNNER'
+                                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold'
+                                  : rowTierInfo.tierId === 'TO_THE_MOON'
+                                  ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white font-black'
+                                  : isDanger
+                                  ? 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white font-black'
+                                  : 'bg-zinc-800 text-slate-200 border border-white/10'
+                              }`}>
+                                <span>{rowTierInfo.icon}</span>
+                                <span>{rowTierInfo.label}</span>
+                              </span>
+                              {row.regime && (
+                                <span className={`px-1.5 py-0.2 rounded text-[11px] font-bold ${
+                                  row.regime === 'BULL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                                  row.regime === 'NEUTRAL' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                                  'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                }`}>
+                                  {row.regime}
+                                </span>
+                              )}
+                            </div>
+                            {row.badge && (
+                              <span className="text-[12px] font-semibold text-slate-300 flex items-center gap-1" title={row.reason_th || row.reason}>
+                                <span className="text-cyan-400">▪</span> {row.badge}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => {
+                                changeSymbolOnActiveTab(row.symbol);
+                                setActiveTab('xchart');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-cyan-300 text-xs font-bold border border-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                              title="Open in Full Trading Desk (X-Chart)"
+                            >
+                              <Activity className="w-3.5 h-3.5" />
+                              <span>Chart</span>
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (activePortfolioId) await openDossier(activePortfolioId, row.symbol);
+                                await selectSymbol(row.symbol);
+                                setActiveTab('xray');
+                              }}
+                              className="px-2 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/35 text-purple-300 text-xs font-bold border border-purple-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                              title="Open in Stock X-Ray"
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                              <span>X-Ray</span>
+                            </button>
+                            <button
+                              onClick={() => setDnaModalSymbol(row.symbol)}
+                              className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold border border-white/10 transition-all flex items-center gap-1 cursor-pointer"
+                              title="10-Year Pullback DNA"
+                            >
+                              <Dna className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>DNA</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                    {/* Quota Progress Bar */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-300">
-                        <span>Progress:</span>
-                        <span className="font-bold text-white tabular-nums">{row.progress_percent.toFixed(1)}%</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            row.progress_percent >= 100
-                              ? 'bg-amber-400'
-                              : isBuyNow
-                              ? 'bg-gradient-to-r from-orange-400 to-red-500'
-                              : 'bg-gradient-to-r from-cyan-400 to-blue-500'
-                          }`}
-                          style={{ width: `${Math.min(100, row.progress_percent)}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Tactical Reason Snippet */}
-                    <p className="text-[12px] text-slate-300 leading-snug line-clamp-2" title={row.reason_th || row.reason}>
-                      {row.reason_th || row.reason}
-                    </p>
-
-                    {/* Action Buttons: Bridge to X-Chart, Stock X-Ray, 10Y DNA */}
-                    <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-white/5">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          changeSymbolOnActiveTab(row.symbol);
-                          setActiveTab('xchart');
-                        }}
-                        className="py-1.5 px-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/35 text-cyan-300 text-xs font-bold border border-cyan-500/40 flex items-center justify-center gap-1 cursor-pointer transition-all shadow-sm"
-                        title="Open in Full Trading Desk (X-Chart)"
-                      >
-                        <Activity className="w-3.5 h-3.5" />
-                        <span>X-Chart</span>
-                      </button>
-
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (activePortfolioId) await openDossier(activePortfolioId, row.symbol);
-                          await selectSymbol(row.symbol);
-                          setActiveTab('xray');
-                        }}
-                        className="py-1.5 px-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 text-purple-300 text-xs font-bold border border-purple-500/40 flex items-center justify-center gap-1 cursor-pointer transition-all shadow-sm"
-                        title="Open in Stock X-Ray Dossier"
-                      >
-                        <Info className="w-3.5 h-3.5" />
-                        <span>X-Ray</span>
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDnaModalSymbol(row.symbol);
-                        }}
-                        className="py-1.5 px-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold border border-white/10 flex items-center justify-center gap-1 cursor-pointer transition-all"
-                        title="10-Year Pullback & Bedrock DNA"
-                      >
-                        <Dna className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>DNA</span>
-                      </button>
-                    </div>
-
+            {/* 7-Tier Action Matrix Legend Guide */}
+            <div className="p-5 rounded-2xl bg-[#131722] border border-white/10 space-y-3 text-[13px]">
+              <div className="font-bold text-white flex items-center gap-2">
+                <Info className="w-4 h-4 text-cyan-400" />
+                <span className="text-sm">คู่มือสัญญาณ 7-Tier Cyber Action Matrix (Signal Master Guide):</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-slate-300 mt-2">
+                {/* 1. BUY NOW */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-orange-500/40 space-y-1">
+                  <div className="font-black text-orange-400 flex items-center gap-1.5">
+                    <span>🔥 BUY NOW!! (เข้าซื้อเต็มสูบ)</span>
                   </div>
-                );
-              })}
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    สัญญาณซื้อคมกริบ คอนเฟิร์มราคาเหนือ EMA 9 + วอลุ่มหนุน + สถาบันสะสม จัดสรรเงินตามโควต้าเต็มกำลัง
+                  </p>
+                </div>
+
+                {/* 2. TO THE MOON / NO CHASE */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-purple-500/40 space-y-1">
+                  <div className="font-black text-purple-300 flex items-center gap-1.5">
+                    <span>🚀 TO THE MOON / ⛔ NO CHASE</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    ขาขึ้นลอยฟ้า รันเทรนด์ปล่อยกำไรวิ่ง นั่งทับมือตามแผน หากราคาฉีกห่างเส้นค่าเฉลี่ยมากห้ามไล่ราคาเด็ดขาด
+                  </p>
+                </div>
+
+                {/* 3. GET READY */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-amber-500/40 space-y-1">
+                  <div className="font-black text-amber-300 flex items-center gap-1.5">
+                    <span>⏳ GET READY (Dip Buy 🧲 / Reversal 🔄)</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    จ่อแนวรับใหญ่ EMA 150/200 หรือเกิด Bullish Divergence หมุนนาฬิกาทรายเตรียมกระสุน รอแท่งเขียวยืนยัน
+                  </p>
+                </div>
+
+                {/* 4. RUNNER */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-cyan-500/40 space-y-1">
+                  <div className="font-black text-cyan-300 flex items-center gap-1.5">
+                    <span>⚡ RUNNER (โต้คลื่นโมเมนตัม)</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    โมเมนตัมขาขึ้นแข็งแกร่ง ราคาวิ่งเหนือ EMA 9 ตามระบบ เฝ้าสังเกตการณ์ในเรดาร์ รอจังหวะย่อตัว
+                  </p>
+                </div>
+
+                {/* 5. SLOW BLEED */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-rose-500/30 space-y-1">
+                  <div className="font-black text-rose-300 flex items-center gap-1.5">
+                    <span>🩸 SLOW BLEED (ไหลซึมต่อเนื่อง)</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    หุ้นไหลซึมต่อเนื่อง ไร้แรงซื้อสถาบัน ห้ามถัวเฉลี่ย ถือเงินสด 100% รอโครงสร้างราคากลับมายืนเส้น
+                  </p>
+                </div>
+
+                {/* 6. FALLING KNIFE / MAYDAY EXIT */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-rose-600/50 space-y-1">
+                  <div className="font-black text-rose-400 flex items-center gap-1.5">
+                    <span>🔪 FALLING KNIFE / ❌ MAYDAY EXIT</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    มีดร่วงรุนแรงหรือหลุดแนวรับวิกฤต ห้ามรับมีดเด็ดขาด หากมีหุ้นในพอร์ตพิจารณาตัดขาดทุนสละเรือทันที
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1045,7 +1078,7 @@ export const Project2xPage: React.FC = () => {
       {/* ============================================================ */}
       {/* 5. STICKER ALBUM (HOLOGRAPHIC CARD COLLECTION) */}
       {/* ============================================================ */}
-      {(selectedTab === 'vault' || selectedTab === 'all') && (
+      {selectedTab === 'vault' && (
         <div className="space-y-8 pt-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl bg-[#1E222D] border border-white/10 shadow-xl">
             <div className="flex items-center gap-3">
@@ -1372,9 +1405,9 @@ export const Project2xPage: React.FC = () => {
       {/* 6. INFLOW SLIP & CASH SWEEP */}
       {/* ============================================================ */}
       {/* ============================================================ */}
-      {/* 6. INFLOW SLIP, CASH SWEEP & FULL RADAR MATRIX TABLE */}
+      {/* 6. INFLOW SLIP & CASH SWEEP */}
       {/* ============================================================ */}
-      {(selectedTab === 'inflow' || selectedTab === 'all') && (
+      {selectedTab === 'inflow' && (
         <div className="w-full space-y-8 pt-4">
           
           {/* Top: Inflow Slip & Recommendation Card (Centered) */}
@@ -1598,406 +1631,9 @@ export const Project2xPage: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* ============================================================ */}
-          {/* FULL TECHNICAL & FUNDAMENTAL RADAR MATRIX TABLE */}
-          {/* ============================================================ */}
-          <div className="space-y-4 pt-4 border-t border-white/10">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-2xl bg-[#1E222D] border border-white/10">
-              <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>🎯 Full Technical & Fundamental Radar Matrix</span>
-                </h2>
-                <p className="text-[13px] text-slate-300 mt-0.5">
-                  Click any row to open detail modal • Click headers to sort ASC/DESC • Click Chart to open Live Quest
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-bold">
-                <span className="px-2 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                  🔷 BUY ZONE
-                </span>
-                <span className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  🟡 WAIT
-                </span>
-                <span className="px-2 py-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40">
-                  🔴 DANGER
-                </span>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#1E222D] shadow-2xl">
-              <table className="w-full text-left border-collapse text-[13px]">
-                <thead>
-                  <tr className="border-b border-white/10 bg-[#131722] text-slate-300 font-bold uppercase tracking-wider select-none">
-                    <th onClick={() => toggleTableSort('SYMBOL')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>Symbol</span>
-                        {tableSortKey === 'SYMBOL' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th onClick={() => toggleTableSort('PRICE')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>Price</span>
-                        {tableSortKey === 'PRICE' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th className="p-3.5 min-w-[140px]">30D Trend</th>
-                    <th onClick={() => toggleTableSort('WEIGHT')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>สัดส่วน (Weight)</span>
-                        {tableSortKey === 'WEIGHT' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th onClick={() => toggleTableSort('EMA150')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>vs EMA150</span>
-                        {tableSortKey === 'EMA150' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th onClick={() => toggleTableSort('EMA200')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>vs EMA200</span>
-                        {tableSortKey === 'EMA200' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th onClick={() => toggleTableSort('BANKER')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>Banker</span>
-                        {tableSortKey === 'BANKER' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th onClick={() => toggleTableSort('PE')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>P/E</span>
-                        {tableSortKey === 'PE' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th onClick={() => toggleTableSort('PEG')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>PEG</span>
-                        {tableSortKey === 'PEG' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th onClick={() => toggleTableSort('CAGR')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>CAGR 3Y</span>
-                        {tableSortKey === 'CAGR' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th onClick={() => toggleTableSort('BEAT')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>กำไร Q</span>
-                        {tableSortKey === 'BEAT' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th onClick={() => toggleTableSort('STATUS')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
-                      <div className="flex items-center gap-1">
-                        <span>Signal</span>
-                        {tableSortKey === 'STATUS' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
-                      </div>
-                    </th>
-                    <th className="p-3.5 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {sortedRadarRows.map((row) => {
-                    const rowTierInfo = getTierVisualInfo(row, row.symbol);
-                    const isBuy = rowTierInfo.tierId === 'BUY_NOW';
-                    const isDanger = rowTierInfo.tierId === 'FALLING_KNIFE' || rowTierInfo.tierId === 'MAYDAY_EXIT';
-                    return (
-                      <tr
-                        key={row.symbol}
-                        onClick={async () => {
-                          if (activePortfolioId) await openDossier(activePortfolioId, row.symbol);
-                          await selectSymbol(row.symbol);
-                          setActiveTab('xray');
-                        }}
-                        className={`hover:bg-white/5 cursor-pointer transition-colors ${
-                          isBuy ? 'bg-orange-500/[0.04]' : isDanger ? 'bg-rose-500/[0.04]' : ''
-                        }`}
-                      >
-                        <td className="p-3.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-white text-sm">{row.symbol}</span>
-                            <span className={`px-1.5 py-0.2 rounded text-[11px] font-bold ${
-                              row.category === 'Core' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-purple-500/20 text-purple-300'
-                            }`}>
-                              {row.category[0]}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-3.5 font-black text-slate-100 tabular-nums">
-                          ${row.currentPrice.toFixed(2)}
-                        </td>
-                        <td className="p-3.5">
-                          <div className="w-[120px]">
-                            <MiniSparkline
-                              closes={row.sparkline?.closes || []}
-                              ema150={row.sparkline?.ema150 || []}
-                              ema200={row.sparkline?.ema200 || []}
-                              height={32}
-                              showEma={true}
-                            />
-                          </div>
-                        </td>
-                        <td className="p-3.5 tabular-nums">
-                          <div className="font-bold text-white text-xs">
-                            {row.weight_pct}%
-                            <span className="text-slate-400 font-normal text-[11px]"> / {row.target_percent}%</span>
-                          </div>
-                          <div className="w-16 h-1 rounded-full bg-slate-800 mt-1 overflow-hidden">
-                            <div
-                              className="h-full bg-cyan-400 rounded-full"
-                              style={{ width: `${Math.min(100, (row.weight_pct / Math.max(1, row.target_percent)) * 100)}%` }}
-                            />
-                          </div>
-                        </td>
-                        <td className={`p-3.5 font-bold tabular-nums ${row.distEma150 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
-                          {row.distEma150 >= 0 ? `+${row.distEma150}%` : `${row.distEma150}%`}
-                        </td>
-                        <td className={`p-3.5 font-bold tabular-nums ${row.distEma200 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
-                          {row.distEma200 >= 0 ? `+${row.distEma200}%` : `${row.distEma200}%`}
-                        </td>
-                        <td className="p-3.5">
-                          <span className="font-bold text-amber-300">{row.banker.toFixed(1)}</span>
-                          <span className="text-slate-400 text-xs">/20</span>
-                        </td>
-                        <td className="p-3.5 text-slate-200 tabular-nums font-semibold">
-                          {row.pe_trailing ? row.pe_trailing.toFixed(1) : (row.pe_forward ? `${row.pe_forward.toFixed(1)}f` : '—')}
-                        </td>
-                        <td className="p-3.5 tabular-nums font-semibold">
-                          {row.peg_ratio ? (
-                            <span className={row.peg_ratio < 1.5 ? 'text-emerald-400 font-bold' : row.peg_ratio < 2.5 ? 'text-amber-300' : 'text-slate-300'}>
-                              {row.peg_ratio.toFixed(2)}
-                            </span>
-                          ) : '—'}
-                        </td>
-                        <td className="p-3.5 text-amber-300 font-black tabular-nums">
-                          {row.expected_cagr ?? 26}%
-                        </td>
-                        <td className="p-3.5 text-purple-300 font-semibold tabular-nums">
-                          {row.consecutive_eps_qs > 0 ? `🔥 ${row.consecutive_eps_qs} Qs` : '—'}
-                        </td>
-                        <td className="p-3.5">
-                          <div className="flex flex-col gap-1 items-start">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 ${
-                                isBuy
-                                  ? 'bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white shadow-md shadow-orange-500/30'
-                                  : rowTierInfo.tierId === 'GET_READY'
-                                  ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold'
-                                  : rowTierInfo.tierId === 'RUNNER'
-                                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold'
-                                  : rowTierInfo.tierId === 'TO_THE_MOON'
-                                  ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white font-black'
-                                  : isDanger
-                                  ? 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white font-black'
-                                  : 'bg-zinc-800 text-slate-200 border border-white/10'
-                              }`}>
-                                <span>{rowTierInfo.icon}</span>
-                                <span>{rowTierInfo.label}</span>
-                              </span>
-                              {row.regime && (
-                                <span className={`px-1.5 py-0.2 rounded text-[11px] font-bold ${
-                                  row.regime === 'BULL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                                  row.regime === 'NEUTRAL' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                                  'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                                }`}>
-                                  {row.regime}
-                                </span>
-                              )}
-                            </div>
-                            {row.badge && (
-                              <span className="text-[12px] font-semibold text-slate-300 flex items-center gap-1" title={row.reason_th || row.reason}>
-                                <span className="text-cyan-400">▪</span> {row.badge}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => {
-                                changeSymbolOnActiveTab(row.symbol);
-                                setActiveTab('xchart');
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-cyan-300 text-xs font-bold border border-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer"
-                              title="Open in Full Trading Desk (X-Chart)"
-                            >
-                              <Activity className="w-3.5 h-3.5" />
-                              <span>Chart</span>
-                            </button>
-                            <button
-                              onClick={async () => {
-                                if (activePortfolioId) await openDossier(activePortfolioId, row.symbol);
-                                await selectSymbol(row.symbol);
-                                setActiveTab('xray');
-                              }}
-                              className="px-2 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/35 text-purple-300 text-xs font-bold border border-purple-500/30 transition-all flex items-center gap-1 cursor-pointer"
-                              title="Open in Stock X-Ray"
-                            >
-                              <Info className="w-3.5 h-3.5" />
-                              <span>X-Ray</span>
-                            </button>
-                            <button
-                              onClick={() => setDnaModalSymbol(row.symbol)}
-                              className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold border border-white/10 transition-all flex items-center gap-1 cursor-pointer"
-                              title="10-Year Pullback DNA"
-                            >
-                              <Dna className="w-3.5 h-3.5 text-cyan-400" />
-                              <span>DNA</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* 7-Tier Action Matrix Legend Guide */}
-            <div className="p-5 rounded-2xl bg-[#131722] border border-white/10 space-y-3 text-[13px]">
-              <div className="font-bold text-white flex items-center gap-2">
-                <Info className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm">คู่มือสัญญาณ 7-Tier Cyber Action Matrix (Signal Master Guide):</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-slate-300 mt-2">
-                {/* 1. BUY NOW */}
-                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-orange-500/40 space-y-1">
-                  <div className="font-black text-orange-400 flex items-center gap-1.5">
-                    <span>🔥 BUY NOW!! (เข้าซื้อเต็มสูบ)</span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    สัญญาณซื้อคมกริบ คอนเฟิร์มราคาเหนือ EMA 9 + วอลุ่มหนุน + สถาบันสะสม จัดสรรเงินตามโควต้าเต็มกำลัง
-                  </p>
-                </div>
-
-                {/* 2. TO THE MOON / NO CHASE */}
-                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-purple-500/40 space-y-1">
-                  <div className="font-black text-purple-300 flex items-center gap-1.5">
-                    <span>🚀 TO THE MOON / ⛔ NO CHASE</span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    ขาขึ้นลอยฟ้า รันเทรนด์ปล่อยกำไรวิ่ง นั่งทับมือตามแผน หากราคาฉีกห่างเส้นค่าเฉลี่ยมากห้ามไล่ราคาเด็ดขาด
-                  </p>
-                </div>
-
-                {/* 3. GET READY */}
-                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-amber-500/40 space-y-1">
-                  <div className="font-black text-amber-300 flex items-center gap-1.5">
-                    <span>⏳ GET READY (Dip Buy 🧲 / Reversal 🔄)</span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    จ่อแนวรับใหญ่ EMA 150/200 หรือเกิด Bullish Divergence หมุนนาฬิกาทรายเตรียมกระสุน รอแท่งเขียวยืนยัน
-                  </p>
-                </div>
-
-                {/* 4. RUNNER */}
-                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-cyan-500/40 space-y-1">
-                  <div className="font-black text-cyan-300 flex items-center gap-1.5">
-                    <span>⚡ RUNNER (โต้คลื่นโมเมนตัม)</span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    โมเมนตัมขาขึ้นแข็งแกร่ง ราคาวิ่งเหนือ EMA 9 ตามระบบ เฝ้าสังเกตการณ์ในเรดาร์ รอจังหวะย่อตัว
-                  </p>
-                </div>
-
-                {/* 5. SLOW BLEED */}
-                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-rose-500/30 space-y-1">
-                  <div className="font-black text-rose-300 flex items-center gap-1.5">
-                    <span>🩸 SLOW BLEED (ไหลซึมต่อเนื่อง)</span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    หุ้นไหลซึมต่อเนื่อง ไร้แรงซื้อสถาบัน ห้ามถัวเฉลี่ย ถือเงินสด 100% รอโครงสร้างราคากลับมายืนเส้น
-                  </p>
-                </div>
-
-                {/* 6. FALLING KNIFE / MAYDAY EXIT */}
-                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-rose-600/50 space-y-1">
-                  <div className="font-black text-rose-400 flex items-center gap-1.5">
-                    <span>🔪 FALLING KNIFE / ❌ MAYDAY EXIT</span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    มีดร่วงรุนแรงหรือหลุดแนวรับวิกฤต ห้ามรับมีดเด็ดขาด หากมีหุ้นในพอร์ตพิจารณาตัดขาดทุนสละเรือทันที
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
       )}
 
-      {/* ============================================================ */}
-      {/* 7. ALL TAB: SIMULATOR PANEL */}
-      {/* ============================================================ */}
-      {selectedTab === 'all' && (
-        <div className="space-y-6 pt-6 border-t border-white/10">
-          <div className="p-6 rounded-3xl bg-[#1E222D] border border-white/10 space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-base font-black text-white">
-                  🧪 Share Collection Simulator & Rules Explainer
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowSimPanel(!showSimPanel)}
-                className="px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 cursor-pointer"
-              >
-                {showSimPanel ? 'Hide Simulator' : 'Show Simulator'}
-              </button>
-            </div>
-
-            {showSimPanel && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-2xl bg-[#131722] border border-white/5">
-                    <div className="text-amber-300 font-bold text-sm mb-1">{'1. ล็อกจำนวนหุ้น (P_base)'}</div>
-                    <p className="text-[13px] text-slate-300">
-                      จำนวนหุ้นเป้าหมายล็อกไว้ตั้งแต่แรก ทำให้ไม่ต้องกังวลเรื่องราคาผันผวน มุ่งมั่นสะสมให้เต็มตู้
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-[#131722] border border-white/5">
-                    <div className="text-cyan-300 font-bold text-sm mb-1">2. ยิงซื้อเฉพาะตัวเซลล์ (Radar)</div>
-                    <p className="text-[13px] text-slate-300">
-                      เงินเติมใหม่จะถูกปันไปซื้อตัวที่ติดไฟ 🔷 BUY ZONE ก่อนเสมอ ทำให้ได้ต้นทุนต่ำสุด
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-[#131722] border border-white/5">
-                    <div className="text-purple-300 font-bold text-sm mb-1">3. สะสมครบ 100% = LOCKED 🏆</div>
-                    <p className="text-[13px] text-slate-300">
-                      ตัวที่ครบโควต้าจะหยุดซื้อทันที เงินจะหมุนไปเติมตัวที่ยังขาดจนครบทั้ง 12 ตัว!
-                    </p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[#131722] border border-white/5 flex items-center justify-between flex-wrap gap-3">
-                  <span className="text-sm font-bold text-white">ทดสอบจำลองเงินเติม:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-sm">฿</span>
-                    <input
-                      type="number"
-                      value={simThbInput}
-                      onChange={(e) => setSimThbInput(e.target.value)}
-                      className="w-32 px-3 py-1.5 rounded-xl bg-[#1E222D] border border-white/10 text-white font-bold text-sm"
-                      step={5000}
-                    />
-                    <span className="text-cyan-300 font-bold text-sm">
-                      ≈ ${( (Number(simThbInput) || 0) / fxRate ).toFixed(0)} USD
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* 8. CONFIG SETTINGS MODAL */}
-      {/* ============================================================ */}
       {/* ============================================================ */}
       {/* 8. CONFIG SETTINGS MODAL */}
       {/* ============================================================ */}

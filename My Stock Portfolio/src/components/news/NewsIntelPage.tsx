@@ -123,28 +123,28 @@ export const NewsIntelPage: React.FC = () => {
 
     // 4. Filter Selected Ticker
     if (selectedTicker) {
-      const targetTicker = selectedTicker.toUpperCase();
+      const targetTicker = (selectedTicker || '').toUpperCase();
       list = list.filter(item => {
-        if (item.ticker.toUpperCase() === targetTicker) return true;
+        if ((item.ticker || '').toUpperCase() === targetTicker) return true;
         let tags: string[] = [];
         if (Array.isArray(item.triage_tags)) tags = item.triage_tags;
         else if (typeof item.triage_tags === 'string') {
           try { tags = JSON.parse(item.triage_tags); } catch {}
         }
-        return tags.some(t => t.toUpperCase() === targetTicker);
+        return tags.some(t => typeof t === 'string' && t.toUpperCase() === targetTicker);
       });
     }
 
     // 5. Filter Selected Tag
     if (selectedTag) {
-      const targetTag = selectedTag.toUpperCase();
+      const targetTag = (selectedTag || '').toUpperCase();
       list = list.filter(item => {
         let tags: string[] = [];
         if (Array.isArray(item.triage_tags)) tags = item.triage_tags;
         else if (typeof item.triage_tags === 'string') {
           try { tags = JSON.parse(item.triage_tags); } catch {}
         }
-        return tags.some(t => t.toUpperCase() === targetTag) ||
+        return tags.some(t => typeof t === 'string' && t.toUpperCase() === targetTag) ||
                (item.headline && item.headline.toUpperCase().includes(targetTag)) ||
                (item.headline_th && item.headline_th.toUpperCase().includes(targetTag)) ||
                (item.summary_th && item.summary_th.toUpperCase().includes(targetTag));
@@ -155,7 +155,7 @@ export const NewsIntelPage: React.FC = () => {
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toUpperCase();
       list = list.filter(item => {
-        return item.ticker.toUpperCase().includes(q) ||
+        return ((item.ticker || '').toUpperCase().includes(q)) ||
                (item.headline && item.headline.toUpperCase().includes(q)) ||
                (item.headline_th && item.headline_th.toUpperCase().includes(q)) ||
                (item.summary_th && item.summary_th.toUpperCase().includes(q));
