@@ -32,24 +32,17 @@ import {
   ArrowDownUp,
   ArrowUp,
   ArrowDown,
-  Eye,
-  EyeOff,
-  Pen,
   Dna
 } from 'lucide-react';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useProject2xStore, MilestoneItem, RadarRow } from '../../stores/project2xStore';
 import { PullbackDnaModal } from './PullbackDnaModal';
-import { getTierMetadata, getTierRank } from '../../utils/tierConfig';
+import { getTierRank } from '../../utils/tierConfig';
 import { useUiStore } from '../../stores/uiStore';
-import { useChartViewStore } from '../../stores/useChartViewStore';
-import { useHoldings } from '../../hooks/useHoldings';
-import { useTransactionStore } from '../../stores/transactionStore';
-import { useBlueprintStore } from '../../stores/blueprintStore';
-import { useDrawingStore } from '../../stores/drawingStore';
+import { useXChartStore } from '../../stores/xchartStore';
+import { getTierVisualInfo } from '../xchart/TierBadgeIndicator';
 import { ProgressRing } from './ProgressRing';
 import { MiniSparkline } from './MiniSparkline';
-import { LWChart, PortfolioOverlayConfig } from './LWChart';
 import { useDossierStore } from '../../stores/dossierStore';
 
 type SortKey = 'STATUS' | 'PROGRESS' | 'VALUE' | 'WEIGHT' | 'NAME';
@@ -59,9 +52,10 @@ type TableSortColumn = 'SYMBOL' | 'PRICE' | 'WEIGHT' | 'EMA150' | 'EMA200' | 'BA
 export const Project2xPage: React.FC = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
   const activePortfolio = (portfolios || []).find(p => p.id === activePortfolioId);
-  const { currency } = useUiStore();
-  const p2xViewProfile = useChartViewStore((s) => s.profiles.project2x);
-  const toggleP2XVisibility = useChartViewStore((s) => s.toggleVisibility);
+  const { currency, setActiveTab } = useUiStore();
+  const { changeSymbolOnActiveTab } = useXChartStore();
+  const openDossier = useDossierStore((s) => s.openDossier);
+  const selectSymbol = useDossierStore((s) => s.selectSymbol);
   const {
     selectedTab,
     setSelectedTab,
@@ -88,11 +82,8 @@ export const Project2xPage: React.FC = () => {
     refreshAll
   } = useProject2xStore();
 
-  const openDossier = useDossierStore((s) => s.openDossier);
-
   // Default to Auto band (calculated via actual MWRR / Safety Guard)
   const [selectedBand, setSelectedBand] = useState<'Conservative' | 'Base' | 'Bull' | 'Auto'>('Auto');
-  const [selectedStockSymbol, setSelectedStockSymbol] = useState<string>('NVDA');
   const [watchlistFilter, setWatchlistFilter] = useState<'ALL' | 'Core' | 'Moonshot'>('ALL');
   const [sortKey, setSortKey] = useState<SortKey>('STATUS');
   const [sortOrder, setSortOrder] = useState<SortOrder>('ASC');
@@ -134,18 +125,6 @@ export const Project2xPage: React.FC = () => {
     }
   }, [config]);
 
-  // Set default selected stock to first Golden Setup or Buy Zone stock if available
-  useEffect(() => {
-    if (radar?.rows && radar.rows.length > 0) {
-      const buyZoneStock = radar.rows.find(r => r.traffic_light === 'BUY_NOW' || r.traffic_light === 'BUY_ZONE');
-      if (buyZoneStock && !selectedStockSymbol) {
-        setSelectedStockSymbol(buyZoneStock.symbol);
-      } else if (!selectedStockSymbol) {
-        setSelectedStockSymbol(radar.rows[0].symbol);
-      }
-    }
-  }, [radar]);
-
   const handleRefresh = () => {
     if (activePortfolioId) {
       refreshAll(activePortfolioId);
@@ -178,57 +157,6 @@ export const Project2xPage: React.FC = () => {
   const fxRate = dashboard?.fx_rate || 35.0;
   const numInput = parseFloat(inflowAmountInput);
   const inputUsdEquivalent = (!isNaN(numInput) && fxRate > 0) ? numInput / fxRate : 0;
-
-  // Selected stock row for large TradingView chart
-  const activeStockRow = radar?.rows?.find(r => r.symbol === selectedStockSymbol) || radar?.rows?.[0];
-
-  // Contextual Portfolio & Overlay for active stock chart
-  const { holdings } = useHoldings();
-  const { transactions } = useTransactionStore();
-  const { blueprints } = useBlueprintStore();
-
-  const activeHolding = useMemo(() => {
-    if (!activeStockRow?.symbol) return null;
-    const sym = activeStockRow.symbol.toUpperCase();
-    return (holdings || []).find(h => h && h.symbol && h.symbol.toUpperCase() === sym && h.quantity > 0) || null;
-  }, [holdings, activeStockRow?.symbol]);
-
-  const activeBlueprint = useMemo(() => {
-    if (!activeStockRow?.symbol) return null;
-    const sym = activeStockRow.symbol.toUpperCase();
-    return (blueprints || []).find(b => b && b.symbol && b.symbol.toUpperCase() === sym) || null;
-  }, [blueprints, activeStockRow?.symbol]);
-
-  const computedOverlay = useMemo<PortfolioOverlayConfig | undefined>(() => {
-    if (!activeHolding) return undefined;
-    const sym = activeHolding.symbol.toUpperCase();
-    const stockTxs = (transactions || [])
-      .filter(t => t && t.symbol && t.symbol.toUpperCase() === sym && (!t.status || t.status.toUpperCase() === 'CONFIRMED'))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    return {
-      avgCost: activeHolding.avgCost,
-      totalQuantity: activeHolding.quantity,
-      unrealizedPnLPercent: activeHolding.totalReturnPercent,
-      transactions: stockTxs.map(t => ({
-        date: t.date,
-        type: t.type as 'BUY' | 'SELL',
-        price: t.price || 0,
-        amount: t.amount || 0,
-      })),
-      blueprint: activeBlueprint ? {
-        targetPrice: activeBlueprint.target_price || undefined,
-        ceilingPrice: activeBlueprint.ceiling_price || undefined,
-      } : undefined,
-    };
-  }, [activeHolding, transactions, activeBlueprint]);
-
-  const drawingsCount = useDrawingStore((s) => {
-    const sym = (activeStockRow?.symbol || '').toUpperCase().trim();
-    const d = s.drawingsBySymbol[sym] || [];
-    const t = s.trendLinesBySymbol[sym] || [];
-    return d.length + t.length;
-  });
 
   // Milestones
   const defaultMilestones: MilestoneItem[] = [
@@ -624,12 +552,12 @@ export const Project2xPage: React.FC = () => {
                       />
                     </div>
                     {isCurrent && remainingThb > 0 && (
-                      <p className="text-[10px] text-cyan-300 font-medium leading-tight pt-0.5">
+                      <p className="text-[11px] text-cyan-300 font-medium leading-tight pt-0.5">
                         ขาดอีก {remainingDisplay} → แปลงร่างเป็น Lv {m.level + 1} ({nextLevelName})!
                       </p>
                     )}
                     {isDone && (
-                      <p className="text-[10px] text-amber-300 font-medium leading-tight pt-0.5">
+                      <p className="text-[11px] text-amber-300 font-medium leading-tight pt-0.5">
                         สำเร็จแล้ว! เลเวลอัปเรียบร้อย 👑
                       </p>
                     )}
@@ -771,19 +699,31 @@ export const Project2xPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Legend Indicator with Electric Cyan */}
-        <div className="hidden lg:flex items-center gap-4 text-xs text-slate-300 font-medium bg-[#1A1D2D] px-4 py-2 rounded-xl border border-white/10">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,229,255,0.8)]" />
-            <span className="font-bold text-cyan-300">🔷 BUY ZONE</span>
+        {/* 7-Tier Action Matrix Quick Pills */}
+        <div className="hidden xl:flex items-center gap-3 text-xs text-slate-300 font-medium bg-[#1A1D2D] px-3.5 py-2 rounded-xl border border-white/10">
+          <span className="flex items-center gap-1 font-bold text-orange-400">
+            <span>🔥</span>
+            <span>BUY NOW</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <span className="text-amber-300">🟡 WAIT</span>
+          <span className="text-slate-500">•</span>
+          <span className="flex items-center gap-1 font-bold text-amber-300">
+            <span>⏳</span>
+            <span>GET READY</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-            <span className="text-rose-400">🔴 DANGER</span>
+          <span className="text-slate-600">•</span>
+          <span className="flex items-center gap-1 font-bold text-cyan-300">
+            <span>⚡</span>
+            <span>RUNNER</span>
+          </span>
+          <span className="text-slate-600">•</span>
+          <span className="flex items-center gap-1 font-bold text-purple-300">
+            <span>🚀</span>
+            <span>TO THE MOON</span>
+          </span>
+          <span className="text-slate-600">•</span>
+          <span className="flex items-center gap-1 font-bold text-rose-400">
+            <span>🔪</span>
+            <span>KNIFE/EXIT</span>
           </span>
         </div>
       </div>
@@ -824,287 +764,40 @@ export const Project2xPage: React.FC = () => {
             </div>
           )}
 
-          {/* 2-Panel Layout: Chart on LEFT (65%), Watchlist on RIGHT (35%) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            {/* LEFT PANEL: Upgraded TradingView Chart with Dates & Banker Sub-Pane */}
-            <div className="lg:col-span-8 space-y-3">
-              {/* Quick View Controls for Project 2X Chart */}
-              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#1A1D2D]/90 border border-white/10 text-[13px] text-slate-300 flex-wrap gap-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-bold text-slate-400 text-xs uppercase tracking-wider mr-1">👁️ 2X View:</span>
-
-                  {/* HUD Eyeball Toggle */}
-                  <button
-                    onClick={() => toggleP2XVisibility('project2x', 'showHUD')}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
-                      p2xViewProfile?.showHUD
-                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
-                    }`}
-                    title={
-                      !activeHolding
-                        ? `หุ้น ${activeStockRow?.symbol} ไม่อยู่ในพอร์ต (ไม่มี Position HUD ให้แสดง)`
-                        : p2xViewProfile?.showHUD
-                        ? 'ซ่อนกล่องลอย Nano-HUD ในหน้า Project 2X'
-                        : 'แสดงกล่องลอย Nano-HUD ในหน้า Project 2X'
-                    }
-                  >
-                    {p2xViewProfile?.showHUD ? <Eye className="w-3.5 h-3.5 text-amber-400" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    <span>HUD</span>
-                    {activeHolding ? (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="มีหุ้นในพอร์ต" />
-                    ) : (
-                      <span className="text-[10px] text-slate-400 opacity-60 font-normal">(-พอร์ต)</span>
-                    )}
-                  </button>
-
-                  {/* Avg Cost Eyeball Toggle */}
-                  <button
-                    onClick={() => toggleP2XVisibility('project2x', 'showAvgCostLine')}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
-                      p2xViewProfile?.showAvgCostLine
-                        ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300 shadow-sm shadow-yellow-500/20'
-                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
-                    }`}
-                    title={
-                      !activeHolding
-                        ? `หุ้น ${activeStockRow?.symbol} ไม่อยู่ในพอร์ต (ไม่มีเส้นราคาต้นทุน)`
-                        : p2xViewProfile?.showAvgCostLine
-                        ? `ซ่อนเส้นประราคาต้นทุนเฉลี่ย ($${activeHolding.avgCost.toFixed(2)}) บนชาร์ต 2X`
-                        : `แสดงเส้นประราคาต้นทุนเฉลี่ย ($${activeHolding.avgCost.toFixed(2)}) บนชาร์ต 2X`
-                    }
-                  >
-                    {p2xViewProfile?.showAvgCostLine ? <Eye className="w-3.5 h-3.5 text-yellow-400" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    <span>Avg Cost</span>
-                    {activeHolding ? (
-                      <span className="text-[10px] font-mono font-bold text-yellow-300">
-                        ${activeHolding.avgCost.toFixed(1)}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400 opacity-60 font-normal">(-พอร์ต)</span>
-                    )}
-                  </button>
-
-                  {/* Drawings Eyeball Toggle */}
-                  <button
-                    onClick={() => toggleP2XVisibility('project2x', 'showDrawings')}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
-                      p2xViewProfile?.showDrawings
-                        ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
-                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
-                    }`}
-                    title={
-                      p2xViewProfile?.showDrawings
-                        ? 'ซ่อนเส้นวาดในหน้า Project 2X'
-                        : drawingsCount > 0
-                        ? `แสดงเส้นวาด (${drawingsCount} เส้น) ในหน้า Project 2X`
-                        : 'เปิดการแสดงเส้นวาด (ยังไม่มีเส้นวาดบนหุ้นนี้ เปิด Toolbar เพื่อเริ่มวาด)'
-                    }
-                  >
-                    {p2xViewProfile?.showDrawings ? <Eye className="w-3.5 h-3.5 text-cyan-400" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    <span>Drawings</span>
-                    {drawingsCount > 0 && (
-                      <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 font-bold">
-                        {drawingsCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Drawing Toolbar Toggle */}
-                  <button
-                    onClick={() => toggleP2XVisibility('project2x', 'showDrawingToolbar')}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
-                      p2xViewProfile?.showDrawingToolbar
-                        ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
-                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
-                    }`}
-                    title={p2xViewProfile?.showDrawingToolbar ? 'ซ่อนแถบเครื่องมือวาดซ้าย' : 'แสดงแถบเครื่องมือวาดซ้าย'}
-                  >
-                    <Pen className="w-3.5 h-3.5" />
-                    <span>Toolbar</span>
-                  </button>
-
-                  {/* SMC & Pro Indicators Toggle */}
-                  <button
-                    onClick={() => {
-                      const isCurrentlyActive = Boolean(p2xViewProfile?.showSMC || p2xViewProfile?.showVWAP);
-                      const next = !isCurrentlyActive;
-                      useChartViewStore.getState().updateProfile('project2x', {
-                        showSMC: next,
-                        showVWAP: next,
-                        showVolumeProfile: next,
-                      });
-                    }}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
-                      Boolean(p2xViewProfile?.showSMC || p2xViewProfile?.showVWAP)
-                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
-                    }`}
-                    title={Boolean(p2xViewProfile?.showSMC || p2xViewProfile?.showVWAP) ? 'ซ่อน SMC/VWAP ในหน้า Project 2X' : 'แสดง SMC/VWAP ในหน้า Project 2X'}
-                  >
-                    {Boolean(p2xViewProfile?.showSMC || p2xViewProfile?.showVWAP) ? <Eye className="w-3.5 h-3.5 text-emerald-400" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    <span>SMC & VWAP</span>
-                  </button>
-
-                  {/* Commander Stock Dossier Button */}
-                  <button
-                    onClick={() => {
-                      if (activePortfolioId && activeStockRow?.symbol) {
-                        openDossier(activePortfolioId, activeStockRow.symbol);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-black bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/50 shadow-sm shadow-cyan-500/25 transition-all cursor-pointer"
-                    title="เปิด Stock Dossier เชิงลึก สรุปพื้นฐานและการตัดสินใจ"
-                  >
-                    <span>📋 Dossier</span>
-                  </button>
+          {/* ============================================================ */}
+          {/* FLEET SIGNAL RADAR: 12 COMMANDERS ACTION MATRIX GRID */}
+          {/* ============================================================ */}
+          <div className="space-y-4">
+            {/* Header & Filter Controls Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#1A1D2D] border border-white/10 shadow-lg">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📡</span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-black text-white">
+                      Fleet Signal Radar
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                      {sortedWatchlistRows.length} Stocks
+                    </span>
+                  </div>
+                  <p className="text-[13px] text-slate-300 mt-0.5">
+                    เรดาร์ตรวจจับสัญญาณ 7-Tier Cyber Action Matrix พร้อมปุ่มลัดเชื่อมโยง X-Chart, Stock X-Ray และ 10Y DNA ทันที
+                  </p>
                 </div>
-
-                <span className="text-[11px] text-slate-400 font-mono">
-                  (ลูกตาเฉพาะหน้า 2X ไม่กระทบ X-Chart)
-                </span>
               </div>
 
-              {activeStockRow ? (
-                <>
-                  <LWChart
-                    symbol={activeStockRow.symbol}
-                    chartContext="project2x"
-                    className="w-full h-[900px]"
-                    holding={activeHolding}
-                    blueprint={activeBlueprint}
-                    portfolioOverlay={computedOverlay}
-                    dates={activeStockRow.sparkline?.dates || []}
-                    closes={activeStockRow.sparkline?.closes || []}
-                    opens={activeStockRow.sparkline?.opens || []}
-                    highs={activeStockRow.sparkline?.highs || []}
-                    lows={activeStockRow.sparkline?.lows || []}
-                    volumes={activeStockRow.sparkline?.volumes || []}
-                    ema50={activeStockRow.sparkline?.ema50 || []}
-                    ema150={activeStockRow.sparkline?.ema150 || []}
-                    ema200={activeStockRow.sparkline?.ema200 || []}
-                    bankerSeries={activeStockRow.sparkline?.bankerSeries || []}
-                    hotMoneySeries={activeStockRow.sparkline?.hotMoneySeries || []}
-                    retailSeries={activeStockRow.sparkline?.retailSeries || []}
-                    bankerMaSeries={activeStockRow.sparkline?.bankerMaSeries || []}
-                    banker={activeStockRow.banker}
-                    currentPrice={activeStockRow.currentPrice}
-                    scenario={activeStockRow.scenario}
-                    badge={activeStockRow.badge}
-                    trafficLight={activeStockRow.traffic_light}
-                    distEma150={activeStockRow.distEma150}
-                    distEma200={activeStockRow.distEma200}
-                    watchlist={radar?.rows.map(r => ({
-                      symbol: r.symbol,
-                      currentPrice: r.currentPrice,
-                      percent_change: 0,
-                      banker: r.banker,
-                      traffic_light: r.traffic_light,
-                    })) || []}
-                    onSelectSymbol={(sym) => setSelectedStockSymbol(sym)}
-                    onAddInflow={() => {
-                      setSelectedTab('inflow');
-                      if (activePortfolioId) {
-                        calculateRecommendation(activePortfolioId, Number(inflowAmountInput) || 35000);
-                      }
-                    }}
-                  />
-
-                  {/* Tactical Rationale under chart */}
-                  <div className="p-4 rounded-2xl bg-[#1E222D] border border-white/10 text-xs text-slate-300 space-y-3 shadow-lg">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
-                      <div className="flex flex-wrap items-center gap-2 font-bold text-cyan-300">
-                        <Info className="w-4 h-4" />
-                        <span>Tactical Playbook for {activeStockRow.symbol}:</span>
-                        {(() => {
-                          const tier = getTierMetadata(activeStockRow.traffic_light);
-                          return (
-                            <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 ${tier.badgeClass} ${tier.borderClass} ${tier.glowClass}`}>
-                              <span className={tier.animClass}>{tier.icon}</span>
-                              <span>{tier.label}</span>
-                            </span>
-                          );
-                        })()}
-                        {activeStockRow.badge && (
-                          <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                            {activeStockRow.badge}
-                          </span>
-                        )}
-                        {activeStockRow.regime && (
-                          <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${
-                            activeStockRow.regime === 'BULL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                            activeStockRow.regime === 'NEUTRAL' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                            'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                          }`}>
-                            Regime: {activeStockRow.regime}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Button to open Pullback DNA */}
-                      <button
-                        onClick={() => setDnaModalSymbol(activeStockRow.symbol)}
-                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-black flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
-                        title="ดูสถิติย่อตัวแตะเส้น 50 / 150 / 200 ย้อนหลัง 10 ปี"
-                      >
-                        <Dna className="w-4 h-4 text-cyan-400" />
-                        <span>🧬 Pullback DNA (10Y Stats)</span>
-                      </button>
-                    </div>
-
-                    <p className="text-slate-200 font-medium leading-relaxed">
-                      {activeStockRow.reason}
-                    </p>
-                    <p className="text-slate-300 leading-relaxed font-medium">
-                      (ไทย: {activeStockRow.reason_th})
-                    </p>
-
-                    {/* Preflight Signals Checklist Pill Strip */}
-                    {activeStockRow.signals_checklist && activeStockRow.signals_checklist.length > 0 && (
-                      <div className="pt-2 border-t border-white/5 flex flex-wrap gap-2 items-center">
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Checklist:</span>
-                        {activeStockRow.signals_checklist.map((chk, i) => (
-                          <span
-                            key={i}
-                            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 border ${
-                              chk.pass
-                                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
-                                : 'bg-rose-950/60 text-rose-300 border-rose-500/40'
-                            }`}
-                          >
-                            <span>{chk.pass ? '✓' : '✗'}</span>
-                            <span className="text-slate-400">{chk.label}:</span>
-                            <span className="font-bold text-white">{chk.value}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="p-12 rounded-3xl bg-[#1E222D] border border-white/10 text-center text-slate-400">
-                  Loading chart data...
-                </div>
-              )}
-            </div>
-
-            {/* RIGHT PANEL: Compact Single-Row Watchlist + Multi-Sorting Bar */}
-            <div className="lg:col-span-4 rounded-3xl border border-white/10 bg-[#1A1D2D] p-4 shadow-xl space-y-3">
-              
-              {/* Header with Title and Category Filter */}
-              <div className="flex items-center justify-between pb-2.5 border-b border-white/10 flex-wrap gap-2">
-                <span className="font-black text-white text-sm">📋 12 Commanders</span>
-
+              {/* Controls: Filter & Sort */}
+              <div className="flex items-center gap-2.5 flex-wrap">
                 {/* Category Filter Tabs */}
-                <div className="flex items-center gap-1 text-[11px] font-bold">
+                <div className="flex items-center gap-1 p-1 rounded-xl bg-[#131722] border border-white/5 text-xs font-bold">
                   {(['ALL', 'Core', 'Moonshot'] as const).map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setWatchlistFilter(cat)}
-                      className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                         watchlistFilter === cat
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-blue-600 text-white shadow-sm'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -1112,16 +805,14 @@ export const Project2xPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {/* Multi-Sorting Control Bar */}
-              <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-[#131722] border border-white/5 text-[11px]">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-400 font-medium">Sort:</span>
+                {/* Sort dropdown */}
+                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#131722] border border-white/5 text-xs">
+                  <span className="text-slate-400 font-medium pl-1.5">Sort:</span>
                   <select
                     value={sortKey}
                     onChange={(e) => setSortKey(e.target.value as SortKey)}
-                    className="bg-[#1E222D] text-slate-200 rounded-lg px-2 py-1 border border-white/10 font-bold focus:outline-none focus:border-cyan-400 cursor-pointer"
+                    className="bg-[#1E222D] text-slate-200 rounded-lg px-2.5 py-1 border border-white/10 font-bold focus:outline-none focus:border-cyan-400 cursor-pointer"
                   >
                     <option value="STATUS">Signal Status (Buy first)</option>
                     <option value="PROGRESS">% Progress</option>
@@ -1129,90 +820,224 @@ export const Project2xPage: React.FC = () => {
                     <option value="WEIGHT">Target Weight %</option>
                     <option value="NAME">Symbol Name</option>
                   </select>
+                  <button
+                    onClick={() => setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC')}
+                    className="p-1.5 rounded-lg bg-[#1E222D] hover:bg-white/10 text-cyan-300 border border-white/10 font-bold cursor-pointer transition-colors"
+                    title={`Sort ${sortOrder === 'ASC' ? 'Ascending' : 'Descending'}`}
+                  >
+                    {sortOrder === 'ASC' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
-
-                {/* ASC / DESC Toggle */}
-                <button
-                  onClick={() => setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC')}
-                  className="px-2 py-1 rounded-lg bg-[#1E222D] hover:bg-white/10 text-cyan-300 border border-white/10 font-bold flex items-center gap-1 cursor-pointer"
-                  title="Toggle Ascending / Descending"
-                >
-                  {sortOrder === 'ASC' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                  <span>{sortOrder}</span>
-                </button>
-              </div>
-
-              {/* Single-Row Compact Watchlist Items */}
-              <div className="space-y-1.5 max-h-[780px] overflow-y-auto pr-1">
-                {sortedWatchlistRows.map((row) => {
-                  const isSelected = selectedStockSymbol === row.symbol;
-                  const rowTier = getTierMetadata(row.traffic_light);
-                  const hasAlert = radar?.sellAlerts.some(a => a.symbol === row.symbol);
-                  const ownedVal = (row.owned_shares || 0) * row.currentPrice;
-
-                  return (
-                    <div
-                      key={row.symbol}
-                      onClick={() => setSelectedStockSymbol(row.symbol)}
-                      className={`h-12 px-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                        isSelected
-                          ? 'bg-blue-600/20 border-cyan-400 shadow-[0_0_12px_rgba(0,229,255,0.25)]'
-                          : 'bg-[#131722]/80 border-white/5 hover:border-white/20 hover:bg-[#1E222D]'
-                      }`}
-                    >
-                      {/* Left: Signal Badge + Symbol + Category */}
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`text-xs ${rowTier.animClass}`} title={`${rowTier.label} - ${row.traffic_light}`}>
-                          {rowTier.icon}
-                        </span>
-                        <span className="font-black text-white text-sm tracking-tight">{row.symbol}</span>
-                        <span className={`text-[10px] font-bold px-1 py-0.2 rounded ${
-                          row.category === 'Core' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-purple-500/20 text-purple-300'
-                        }`}>
-                          {row.category[0]}
-                        </span>
-                        {hasAlert && (
-                          <span className="text-[9px] font-black px-1 py-0.2 rounded bg-rose-500 text-white animate-pulse">
-                            !
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Middle: Progress Bar with % */}
-                      <div className="flex-1 max-w-[120px] hidden sm:flex flex-col gap-0.5">
-                        <div className="flex items-center justify-between text-[10px] text-slate-400">
-                          <span>{row.owned_shares.toFixed(1)} sh</span>
-                          <span className="font-bold text-white">{row.progress_percent}%</span>
-                        </div>
-                        <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              row.progress_percent >= 100
-                                ? 'bg-amber-400'
-                                : (rowTier.id === 'BUY_NOW' || rowTier.id === 'BUY_ZONE')
-                                ? 'bg-gradient-to-r from-cyan-400 to-blue-500'
-                                : 'bg-blue-500'
-                            }`}
-                            style={{ width: `${Math.min(100, row.progress_percent)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Right: Price & Distance vs EMA */}
-                      <div className="text-right flex flex-col items-end">
-                        <span className="font-black text-slate-100 text-xs tabular-nums">
-                          ${row.currentPrice.toFixed(1)}
-                        </span>
-                        <span className={`text-[10px] font-semibold tabular-nums ${row.distEma150 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
-                          {row.distEma150 >= 0 ? `+${row.distEma150}%` : `${row.distEma150}%`}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             </div>
 
+            {/* Fleet Grid Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {sortedWatchlistRows.map((row) => {
+                const tierInfo = getTierVisualInfo(row, row.symbol);
+                const hasAlert = radar?.sellAlerts.some(a => a.symbol === row.symbol);
+                const isBuyNow = tierInfo.tierId === 'BUY_NOW';
+                const isDipReady = tierInfo.tierId === 'GET_READY' && tierInfo.subMode === 'DIP_BUY';
+                const isRunner = tierInfo.tierId === 'RUNNER';
+                const isDanger = tierInfo.tierId === 'FALLING_KNIFE' || tierInfo.tierId === 'MAYDAY_EXIT';
+                const isMoon = tierInfo.tierId === 'TO_THE_MOON';
+
+                return (
+                  <div
+                    key={row.symbol}
+                    className={`rounded-2xl p-4 bg-[#1A1D2D] border transition-all duration-200 flex flex-col justify-between gap-3 shadow-lg hover:-translate-y-0.5 ${
+                      isBuyNow
+                        ? 'border-orange-500/70 shadow-[0_0_20px_rgba(249,115,22,0.25)] ring-1 ring-orange-500/40'
+                        : isDipReady
+                        ? 'border-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.2)]'
+                        : isRunner
+                        ? 'border-cyan-400/50 shadow-[0_0_16px_rgba(6,182,212,0.15)]'
+                        : isDanger
+                        ? 'border-rose-500/70 shadow-[0_0_18px_rgba(244,63,94,0.25)]'
+                        : isMoon
+                        ? 'border-purple-500/50 shadow-[0_0_16px_rgba(168,85,247,0.15)]'
+                        : 'border-white/10 hover:border-white/25'
+                    }`}
+                  >
+                    {/* Top Row: Symbol, Category, Alert, Price */}
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              if (activePortfolioId) await openDossier(activePortfolioId, row.symbol);
+                              await selectSymbol(row.symbol);
+                              setActiveTab('xray');
+                            }}
+                            className="text-xl font-black text-white hover:text-cyan-300 tracking-tight cursor-pointer transition-colors text-left"
+                            title="เปิด Stock X-Ray Dossier"
+                          >
+                            {row.symbol}
+                          </button>
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                            row.category === 'Core' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                          }`}>
+                            {row.category}
+                          </span>
+                          {hasAlert && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-rose-500 text-white animate-pulse" title="Sell Alert Triggered">
+                              ALERT
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Price */}
+                        <div className="text-right">
+                          <span className="text-base font-black text-white tabular-nums block">
+                            ${row.currentPrice.toFixed(2)}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-mono block">
+                            Tgt: {row.target_percent}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Tier Badge & Regime Strip */}
+                      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                        <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 ${
+                          isBuyNow
+                            ? 'bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white shadow-md shadow-orange-500/30'
+                            : isDipReady
+                            ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold'
+                            : isRunner
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
+                            : isMoon
+                            ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white'
+                            : isDanger
+                            ? 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white'
+                            : 'bg-zinc-800 text-slate-200 border border-white/10'
+                        }`}>
+                          <span>{tierInfo.icon}</span>
+                          <span>{tierInfo.label}</span>
+                        </span>
+
+                        {row.regime && (
+                          <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
+                            row.regime === 'BULL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                            row.regime === 'NEUTRAL' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                            'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          }`}>
+                            {row.regime}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Sparkline & Trend */}
+                    <div className="w-full bg-[#131722]/80 rounded-xl p-2 border border-white/5">
+                      <MiniSparkline
+                        closes={row.sparkline?.closes || []}
+                        ema150={row.sparkline?.ema150 || []}
+                        ema200={row.sparkline?.ema200 || []}
+                        height={38}
+                        showEma={true}
+                      />
+                    </div>
+
+                    {/* Key Technical & Quant Indicators (2x2 Grid) */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2 rounded-xl bg-[#131722] border border-white/5 flex flex-col justify-between">
+                        <span className="text-[11px] text-slate-400">vs EMA 150</span>
+                        <span className={`text-xs font-bold tabular-nums ${row.distEma150 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
+                          {row.distEma150 >= 0 ? `+${row.distEma150}%` : `${row.distEma150}%`}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-[#131722] border border-white/5 flex flex-col justify-between">
+                        <span className="text-[11px] text-slate-400">vs EMA 200</span>
+                        <span className={`text-xs font-bold tabular-nums ${row.distEma200 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
+                          {row.distEma200 >= 0 ? `+${row.distEma200}%` : `${row.distEma200}%`}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-[#131722] border border-white/5 flex flex-col justify-between">
+                        <span className="text-[11px] text-slate-400">Banker Flow</span>
+                        <span className="text-xs font-bold text-amber-300 tabular-nums">
+                          {row.banker.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">/20</span>
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-[#131722] border border-white/5 flex flex-col justify-between">
+                        <span className="text-[11px] text-slate-400">Owned Shares</span>
+                        <span className="text-xs font-bold text-white tabular-nums">
+                          {row.owned_shares.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">sh</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Quota Progress Bar */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px] text-slate-300">
+                        <span>Progress:</span>
+                        <span className="font-bold text-white tabular-nums">{row.progress_percent.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            row.progress_percent >= 100
+                              ? 'bg-amber-400'
+                              : isBuyNow
+                              ? 'bg-gradient-to-r from-orange-400 to-red-500'
+                              : 'bg-gradient-to-r from-cyan-400 to-blue-500'
+                          }`}
+                          style={{ width: `${Math.min(100, row.progress_percent)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Tactical Reason Snippet */}
+                    <p className="text-[12px] text-slate-300 leading-snug line-clamp-2" title={row.reason_th || row.reason}>
+                      {row.reason_th || row.reason}
+                    </p>
+
+                    {/* Action Buttons: Bridge to X-Chart, Stock X-Ray, 10Y DNA */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-white/5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          changeSymbolOnActiveTab(row.symbol);
+                          setActiveTab('xchart');
+                        }}
+                        className="py-1.5 px-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/35 text-cyan-300 text-xs font-bold border border-cyan-500/40 flex items-center justify-center gap-1 cursor-pointer transition-all shadow-sm"
+                        title="Open in Full Trading Desk (X-Chart)"
+                      >
+                        <Activity className="w-3.5 h-3.5" />
+                        <span>X-Chart</span>
+                      </button>
+
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (activePortfolioId) await openDossier(activePortfolioId, row.symbol);
+                          await selectSymbol(row.symbol);
+                          setActiveTab('xray');
+                        }}
+                        className="py-1.5 px-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 text-purple-300 text-xs font-bold border border-purple-500/40 flex items-center justify-center gap-1 cursor-pointer transition-all shadow-sm"
+                        title="Open in Stock X-Ray Dossier"
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                        <span>X-Ray</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDnaModalSymbol(row.symbol);
+                        }}
+                        className="py-1.5 px-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold border border-white/10 flex items-center justify-center gap-1 cursor-pointer transition-all"
+                        title="10-Year Pullback & Bedrock DNA"
+                      >
+                        <Dna className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>DNA</span>
+                      </button>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -1269,7 +1094,12 @@ export const Project2xPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {coreQuotas.map((q) => {
                 const radarMatch = radar?.rows?.find(r => r.symbol === q.symbol);
-                const isBuyZone = radarMatch?.traffic_light === 'BUY_ZONE';
+                const tierInfo = getTierVisualInfo(radarMatch, q.symbol);
+                const isActionable = tierInfo.tierId === 'BUY_NOW';
+                const isDipReady = tierInfo.tierId === 'GET_READY' && tierInfo.subMode === 'DIP_BUY';
+                const isRunner = tierInfo.tierId === 'RUNNER';
+                const isDanger = tierInfo.tierId === 'FALLING_KNIFE' || tierInfo.tierId === 'MAYDAY_EXIT';
+                const isMoon = tierInfo.tierId === 'TO_THE_MOON';
                 const isLocked = q.progress_percent >= 100 || q.status === 'LOCKED';
 
                 return (
@@ -1278,8 +1108,16 @@ export const Project2xPage: React.FC = () => {
                     className={`group relative rounded-3xl p-5 transition-all duration-300 border flex flex-col justify-between overflow-hidden shadow-xl hover:-translate-y-1 ${
                       isLocked
                         ? 'bg-gradient-to-br from-amber-500/20 via-[#1E222D] to-amber-600/20 border-amber-400/60 shadow-[0_0_24px_rgba(255,215,64,0.3)]'
-                        : isBuyZone
-                        ? 'bg-[#1E222D] border-cyan-400/50 shadow-[0_0_16px_rgba(0,229,255,0.15)]'
+                        : isActionable
+                        ? 'bg-[#1E222D] border-orange-500/70 shadow-[0_0_20px_rgba(249,115,22,0.3)] ring-1 ring-orange-500/40'
+                        : isDipReady
+                        ? 'bg-[#1E222D] border-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.2)]'
+                        : isRunner
+                        ? 'bg-[#1E222D] border-cyan-400/50 shadow-[0_0_16px_rgba(6,182,212,0.2)]'
+                        : isDanger
+                        ? 'bg-[#1E222D] border-rose-500/60 shadow-[0_0_18px_rgba(244,63,94,0.25)]'
+                        : isMoon
+                        ? 'bg-[#1E222D] border-purple-500/50 shadow-[0_0_16px_rgba(168,85,247,0.2)]'
                         : 'bg-[#1E222D] border-white/10 hover:border-white/30'
                     }`}
                   >
@@ -1290,11 +1128,13 @@ export const Project2xPage: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => {
-                              if (activePortfolioId) openDossier(activePortfolioId, q.symbol);
+                            onClick={async () => {
+                              if (activePortfolioId) await openDossier(activePortfolioId, q.symbol);
+                              await selectSymbol(q.symbol);
+                              setActiveTab('xray');
                             }}
                             className="text-2xl font-black text-white hover:text-cyan-300 tracking-tight cursor-pointer transition-colors text-left"
-                            title="เปิด Commander Stock Dossier"
+                            title="เปิด Commander Stock Dossier ใน X-Ray"
                           >
                             {q.symbol}
                           </button>
@@ -1314,15 +1154,19 @@ export const Project2xPage: React.FC = () => {
                             <Trophy className="w-3.5 h-3.5" />
                             <span>FULL! 🏆</span>
                           </span>
-                        ) : (() => {
-                          const cardTier = getTierMetadata(radarMatch?.traffic_light);
-                          return (
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-black flex items-center gap-1.5 ${cardTier.badgeClass} ${cardTier.borderClass} ${cardTier.glowClass}`}>
-                              <span className={cardTier.animClass}>{cardTier.icon}</span>
-                              <span>{cardTier.label}</span>
-                            </span>
-                          );
-                        })()}
+                        ) : (
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-black flex items-center gap-1.5 ${
+                            isActionable ? 'bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white shadow-md shadow-orange-500/30' :
+                            isDipReady ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold' :
+                            isRunner ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold' :
+                            isMoon ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white' :
+                            isDanger ? 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white' :
+                            'bg-zinc-800 text-slate-200 border border-white/10'
+                          }`}>
+                            <span>{tierInfo.icon}</span>
+                            <span>{tierInfo.label}</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -1341,6 +1185,8 @@ export const Project2xPage: React.FC = () => {
                           className={`h-full rounded-full transition-all duration-700 ${
                             isLocked
                               ? 'bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 shadow-[0_0_12px_rgba(255,215,64,0.8)]'
+                              : isActionable
+                              ? 'bg-gradient-to-r from-orange-400 to-red-500'
                               : 'bg-gradient-to-r from-cyan-400 to-blue-500'
                           }`}
                           style={{ width: `${Math.min(100, q.progress_percent)}%` }}
@@ -1348,22 +1194,35 @@ export const Project2xPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Card Footer: Share details */}
+                    {/* Card Footer: Share details & Quick links */}
                     <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 relative z-10">
                       <span>
                         Owned: <strong className="text-white">{q.owned_shares.toFixed(1)}</strong> / {q.target_shares} sh
                       </span>
-                      <button
-                        onClick={() => {
-                          setSelectedTab('inflow');
-                          if (activePortfolioId) {
-                            calculateRecommendation(activePortfolioId, Number(inflowAmountInput) || 35000);
-                          }
-                        }}
-                        className="text-cyan-400 font-bold hover:underline cursor-pointer"
-                      >
-                        + Inflow →
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            changeSymbolOnActiveTab(q.symbol);
+                            setActiveTab('xchart');
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-cyan-300 text-[11px] font-bold border border-cyan-500/30 cursor-pointer transition-all"
+                          title="Open in X-Chart"
+                        >
+                          📈 Chart
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedTab('inflow');
+                            if (activePortfolioId) {
+                              calculateRecommendation(activePortfolioId, Number(inflowAmountInput) || 35000);
+                            }
+                          }}
+                          className="text-cyan-400 font-bold hover:underline cursor-pointer"
+                        >
+                          + Inflow →
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1382,7 +1241,12 @@ export const Project2xPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {moonshotQuotas.map((q) => {
                   const radarMatch = radar?.rows?.find(r => r.symbol === q.symbol);
-                  const isBuyZone = radarMatch?.traffic_light === 'BUY_ZONE';
+                  const tierInfo = getTierVisualInfo(radarMatch, q.symbol);
+                  const isActionable = tierInfo.tierId === 'BUY_NOW';
+                  const isDipReady = tierInfo.tierId === 'GET_READY' && tierInfo.subMode === 'DIP_BUY';
+                  const isRunner = tierInfo.tierId === 'RUNNER';
+                  const isDanger = tierInfo.tierId === 'FALLING_KNIFE' || tierInfo.tierId === 'MAYDAY_EXIT';
+                  const isMoon = tierInfo.tierId === 'TO_THE_MOON';
                   const isLocked = q.progress_percent >= 100 || q.status === 'LOCKED';
 
                   return (
@@ -1391,8 +1255,16 @@ export const Project2xPage: React.FC = () => {
                       className={`group relative rounded-3xl p-5 transition-all duration-300 border flex flex-col justify-between overflow-hidden shadow-xl hover:-translate-y-1 ${
                         isLocked
                           ? 'bg-gradient-to-br from-purple-500/20 via-[#1E222D] to-amber-500/20 border-purple-400/60 shadow-[0_0_24px_rgba(130,58,253,0.3)]'
-                          : isBuyZone
-                          ? 'bg-[#1E222D] border-cyan-400/50 shadow-[0_0_16px_rgba(0,229,255,0.15)]'
+                          : isActionable
+                          ? 'bg-[#1E222D] border-orange-500/70 shadow-[0_0_20px_rgba(249,115,22,0.3)] ring-1 ring-orange-500/40'
+                          : isDipReady
+                          ? 'bg-[#1E222D] border-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.2)]'
+                          : isRunner
+                          ? 'bg-[#1E222D] border-cyan-400/50 shadow-[0_0_16px_rgba(6,182,212,0.2)]'
+                          : isDanger
+                          ? 'bg-[#1E222D] border-rose-500/60 shadow-[0_0_18px_rgba(244,63,94,0.25)]'
+                          : isMoon
+                          ? 'bg-[#1E222D] border-purple-500/50 shadow-[0_0_16px_rgba(168,85,247,0.2)]'
                           : 'bg-[#1E222D] border-white/10 hover:border-white/30'
                       }`}
                     >
@@ -1400,11 +1272,13 @@ export const Project2xPage: React.FC = () => {
                         <div>
                           <div className="flex items-center gap-2">
                           <button
-                            onClick={() => {
-                              if (activePortfolioId) openDossier(activePortfolioId, q.symbol);
+                            onClick={async () => {
+                              if (activePortfolioId) await openDossier(activePortfolioId, q.symbol);
+                              await selectSymbol(q.symbol);
+                              setActiveTab('xray');
                             }}
                             className="text-2xl font-black text-white hover:text-purple-300 tracking-tight cursor-pointer transition-colors text-left flex items-center gap-1.5"
-                            title="เปิด Commander Stock Dossier"
+                            title="เปิด Commander Stock Dossier ใน X-Ray"
                           >
                             <span>🚀</span>
                             <span>{q.symbol}</span>
@@ -1422,15 +1296,19 @@ export const Project2xPage: React.FC = () => {
                           <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-400 text-slate-950">
                             FULL! 🏆
                           </span>
-                        ) : (() => {
-                          const cardTier = getTierMetadata(radarMatch?.traffic_light);
-                          return (
-                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 ${cardTier.badgeClass} ${cardTier.borderClass} ${cardTier.glowClass}`}>
-                              <span className={cardTier.animClass}>{cardTier.icon}</span>
-                              <span>{cardTier.label}</span>
-                            </span>
-                          );
-                        })()}
+                        ) : (
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-black flex items-center gap-1.5 ${
+                            isActionable ? 'bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white shadow-md shadow-orange-500/30' :
+                            isDipReady ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold' :
+                            isRunner ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold' :
+                            isMoon ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white' :
+                            isDanger ? 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white' :
+                            'bg-zinc-800 text-slate-200 border border-white/10'
+                          }`}>
+                            <span>{tierInfo.icon}</span>
+                            <span>{tierInfo.label}</span>
+                          </span>
+                        )}
                       </div>
 
                       <div className="my-5 space-y-2 relative z-10">
@@ -1442,7 +1320,13 @@ export const Project2xPage: React.FC = () => {
                         </div>
                         <div className="w-full h-3.5 rounded-full bg-slate-900 p-0.5 border border-white/10 overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-700"
+                            className={`h-full rounded-full transition-all duration-700 ${
+                              isLocked
+                                ? 'bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500'
+                                : isActionable
+                                ? 'bg-gradient-to-r from-orange-400 to-red-500'
+                                : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                            }`}
                             style={{ width: `${Math.min(100, q.progress_percent)}%` }}
                           />
                         </div>
@@ -1450,17 +1334,30 @@ export const Project2xPage: React.FC = () => {
 
                       <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 relative z-10">
                         <span>{q.owned_shares.toFixed(1)} / {q.target_shares} sh</span>
-                        <button
-                          onClick={() => {
-                            setSelectedTab('inflow');
-                            if (activePortfolioId) {
-                              calculateRecommendation(activePortfolioId, Number(inflowAmountInput) || 35000);
-                            }
-                          }}
-                          className="text-purple-300 font-bold hover:underline cursor-pointer"
-                        >
-                          + Inflow →
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              changeSymbolOnActiveTab(q.symbol);
+                              setActiveTab('xchart');
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-cyan-300 text-[11px] font-bold border border-cyan-500/30 cursor-pointer transition-all"
+                            title="Open in X-Chart"
+                          >
+                            📈 Chart
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedTab('inflow');
+                              if (activePortfolioId) {
+                                calculateRecommendation(activePortfolioId, Number(inflowAmountInput) || 35000);
+                              }
+                            }}
+                            className="text-purple-300 font-bold hover:underline cursor-pointer"
+                          >
+                            + Inflow →
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -1804,15 +1701,20 @@ export const Project2xPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {sortedRadarRows.map((row) => {
-                    const isBuy = row.traffic_light === 'BUY_ZONE';
-                    const isWait = row.traffic_light === 'WAIT';
+                    const rowTierInfo = getTierVisualInfo(row, row.symbol);
+                    const isBuy = rowTierInfo.tierId === 'BUY_NOW';
+                    const isDanger = rowTierInfo.tierId === 'FALLING_KNIFE' || rowTierInfo.tierId === 'MAYDAY_EXIT';
                     return (
                       <tr
                         key={row.symbol}
-                        onClick={() => {
-                          if (activePortfolioId) openDossier(activePortfolioId, row.symbol);
+                        onClick={async () => {
+                          if (activePortfolioId) await openDossier(activePortfolioId, row.symbol);
+                          await selectSymbol(row.symbol);
+                          setActiveTab('xray');
                         }}
-                        className="hover:bg-white/5 cursor-pointer transition-colors"
+                        className={`hover:bg-white/5 cursor-pointer transition-colors ${
+                          isBuy ? 'bg-orange-500/[0.04]' : isDanger ? 'bg-rose-500/[0.04]' : ''
+                        }`}
                       >
                         <td className="p-3.5">
                           <div className="flex items-center gap-2">
@@ -1879,15 +1781,22 @@ export const Project2xPage: React.FC = () => {
                         <td className="p-3.5">
                           <div className="flex flex-col gap-1 items-start">
                             <div className="flex items-center gap-1.5">
-                              {(() => {
-                                const rowTier = getTierMetadata(row.traffic_light);
-                                return (
-                                  <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 ${rowTier.badgeClass} ${rowTier.borderClass} ${rowTier.glowClass}`}>
-                                    <span className={rowTier.animClass}>{rowTier.icon}</span>
-                                    <span>{rowTier.label}</span>
-                                  </span>
-                                );
-                              })()}
+                              <span className={`px-2 py-0.5 rounded-lg text-xs font-black inline-flex items-center gap-1.5 ${
+                                isBuy
+                                  ? 'bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white shadow-md shadow-orange-500/30'
+                                  : rowTierInfo.tierId === 'GET_READY'
+                                  ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold'
+                                  : rowTierInfo.tierId === 'RUNNER'
+                                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold'
+                                  : rowTierInfo.tierId === 'TO_THE_MOON'
+                                  ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white font-black'
+                                  : isDanger
+                                  ? 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white font-black'
+                                  : 'bg-zinc-800 text-slate-200 border border-white/10'
+                              }`}>
+                                <span>{rowTierInfo.icon}</span>
+                                <span>{rowTierInfo.label}</span>
+                              </span>
                               {row.regime && (
                                 <span className={`px-1.5 py-0.2 rounded text-[11px] font-bold ${
                                   row.regime === 'BULL' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
@@ -1909,31 +1818,34 @@ export const Project2xPage: React.FC = () => {
                           <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => {
-                                setSelectedStockSymbol(row.symbol);
-                                setSelectedTab('radar');
+                                changeSymbolOnActiveTab(row.symbol);
+                                setActiveTab('xchart');
                               }}
-                              className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 text-xs font-bold border border-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer"
-                              title="Open in Quest Live Chart"
+                              className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-cyan-300 text-xs font-bold border border-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                              title="Open in Full Trading Desk (X-Chart)"
                             >
                               <Activity className="w-3.5 h-3.5" />
                               <span>Chart</span>
                             </button>
                             <button
-                              onClick={() => setDnaModalSymbol(row.symbol)}
-                              className="px-2 py-1 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 text-xs font-bold border border-purple-500/30 transition-all flex items-center gap-1 cursor-pointer"
-                              title="10-Year Pullback DNA"
-                            >
-                              <Dna className="w-3.5 h-3.5" />
-                              <span>DNA</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (activePortfolioId) openDossier(activePortfolioId, row.symbol);
+                              onClick={async () => {
+                                if (activePortfolioId) await openDossier(activePortfolioId, row.symbol);
+                                await selectSymbol(row.symbol);
+                                setActiveTab('xray');
                               }}
-                              className="p-1 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors"
-                              title="เปิด Commander Stock Dossier"
+                              className="px-2 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/35 text-purple-300 text-xs font-bold border border-purple-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                              title="Open in Stock X-Ray"
                             >
                               <Info className="w-3.5 h-3.5" />
+                              <span>X-Ray</span>
+                            </button>
+                            <button
+                              onClick={() => setDnaModalSymbol(row.symbol)}
+                              className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold border border-white/10 transition-all flex items-center gap-1 cursor-pointer"
+                              title="10-Year Pullback DNA"
+                            >
+                              <Dna className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>DNA</span>
                             </button>
                           </div>
                         </td>
@@ -1944,35 +1856,70 @@ export const Project2xPage: React.FC = () => {
               </table>
             </div>
 
-            {/* Legend Box */}
-            <div className="p-4 rounded-2xl bg-[#131722] border border-white/10 space-y-2 text-[13px]">
+            {/* 7-Tier Action Matrix Legend Guide */}
+            <div className="p-5 rounded-2xl bg-[#131722] border border-white/10 space-y-3 text-[13px]">
               <div className="font-bold text-white flex items-center gap-2">
                 <Info className="w-4 h-4 text-cyan-400" />
-                <span>คำจำกัดความสัญญาณ Radar & Scenarios (Signal Definitions):</span>
+                <span className="text-sm">คู่มือสัญญาณ 7-Tier Cyber Action Matrix (Signal Master Guide):</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-slate-300 mt-2">
-                <div className="p-3 rounded-xl bg-[#1E222D] border border-cyan-500/20 space-y-1">
-                  <div className="font-black text-cyan-300 flex items-center gap-1.5">
-                    <span>🔷 BUY ZONE (โซนทยอยสะสม)</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-slate-300 mt-2">
+                {/* 1. BUY NOW */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-orange-500/40 space-y-1">
+                  <div className="font-black text-orange-400 flex items-center gap-1.5">
+                    <span>🔥 BUY NOW!! (เข้าซื้อเต็มสูบ)</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    ราคาลงมาแตะหรือต่ำกว่า EMA 150 / EMA 200 หรือเข้าเกณฑ์ Oversold พร้อม Banker Flow สะสม เป็นจุดเข้าซื้อตามโควต้าที่มีความคุ้มค่าสูงสุด
+                    สัญญาณซื้อคมกริบ คอนเฟิร์มราคาเหนือ EMA 9 + วอลุ่มหนุน + สถาบันสะสม จัดสรรเงินตามโควต้าเต็มกำลัง
                   </p>
                 </div>
-                <div className="p-3 rounded-xl bg-[#1E222D] border border-amber-500/20 space-y-1">
+
+                {/* 2. TO THE MOON / NO CHASE */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-purple-500/40 space-y-1">
+                  <div className="font-black text-purple-300 flex items-center gap-1.5">
+                    <span>🚀 TO THE MOON / ⛔ NO CHASE</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    ขาขึ้นลอยฟ้า รันเทรนด์ปล่อยกำไรวิ่ง นั่งทับมือตามแผน หากราคาฉีกห่างเส้นค่าเฉลี่ยมากห้ามไล่ราคาเด็ดขาด
+                  </p>
+                </div>
+
+                {/* 3. GET READY */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-amber-500/40 space-y-1">
                   <div className="font-black text-amber-300 flex items-center gap-1.5">
-                    <span>🟡 WAIT (โซนเฝ้ารอ / ชะลอซื้อ)</span>
+                    <span>⏳ GET READY (Dip Buy 🧲 / Reversal 🔄)</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    ราคาลอยตัวสูงกว่าเส้นค่าเฉลี่ย หรือพอร์ตถือครองใกล้เต็มเป้าหมาย แนะนำให้อยู่เฉยๆ หรือปันเงินไปพักใน Dime! FCD รับดอกเบี้ย ~4.5% APY
+                    จ่อแนวรับใหญ่ EMA 150/200 หรือเกิด Bullish Divergence หมุนนาฬิกาทรายเตรียมกระสุน รอแท่งเขียวยืนยัน
                   </p>
                 </div>
-                <div className="p-3 rounded-xl bg-[#1E222D] border border-rose-500/20 space-y-1">
-                  <div className="font-black text-rose-400 flex items-center gap-1.5">
-                    <span>🔴 DANGER / CEILING (ความเสี่ยงสูง / ชนเพดาน)</span>
+
+                {/* 4. RUNNER */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-cyan-500/40 space-y-1">
+                  <div className="font-black text-cyan-300 flex items-center gap-1.5">
+                    <span>⚡ RUNNER (โต้คลื่นโมเมนตัม)</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    สัดส่วนหุ้นตัวนี้ทะลุเพดานปลอดภัยของพอร์ต (&gt;30%) หรือราคาหลุดแนวรับรุนแรงพร้อมเงินไหลออก ห้ามซื้อเพิ่มเพื่อป้องกันความเสี่ยง
+                    โมเมนตัมขาขึ้นแข็งแกร่ง ราคาวิ่งเหนือ EMA 9 ตามระบบ เฝ้าสังเกตการณ์ในเรดาร์ รอจังหวะย่อตัว
+                  </p>
+                </div>
+
+                {/* 5. SLOW BLEED */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-rose-500/30 space-y-1">
+                  <div className="font-black text-rose-300 flex items-center gap-1.5">
+                    <span>🩸 SLOW BLEED (ไหลซึมต่อเนื่อง)</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    หุ้นไหลซึมต่อเนื่อง ไร้แรงซื้อสถาบัน ห้ามถัวเฉลี่ย ถือเงินสด 100% รอโครงสร้างราคากลับมายืนเส้น
+                  </p>
+                </div>
+
+                {/* 6. FALLING KNIFE / MAYDAY EXIT */}
+                <div className="p-3.5 rounded-xl bg-[#1E222D] border border-rose-600/50 space-y-1">
+                  <div className="font-black text-rose-400 flex items-center gap-1.5">
+                    <span>🔪 FALLING KNIFE / ❌ MAYDAY EXIT</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    มีดร่วงรุนแรงหรือหลุดแนวรับวิกฤต ห้ามรับมีดเด็ดขาด หากมีหุ้นในพอร์ตพิจารณาตัดขาดทุนสละเรือทันที
                   </p>
                 </div>
               </div>
@@ -2269,11 +2216,25 @@ export const Project2xPage: React.FC = () => {
                       {detailModalStock.category} Commander
                     </span>
                     {(() => {
-                      const mTier = getTierMetadata(detailModalStock.traffic_light);
+                      const mTierVis = getTierVisualInfo(detailModalStock, detailModalStock.symbol);
+                      // Map TierVisualInfo to badge styling
+                      const tierBadgeStyle = mTierVis.tierId === 'BUY_NOW'
+                        ? 'bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white border-orange-400/60 shadow-[0_0_25px_rgba(239,68,68,0.6)]'
+                        : mTierVis.tierId === 'TO_THE_MOON'
+                        ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white border-violet-400/50 shadow-[0_0_20px_rgba(139,92,246,0.5)]'
+                        : mTierVis.tierId === 'GET_READY'
+                        ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 border-amber-400/50 shadow-[0_0_18px_rgba(245,158,11,0.4)]'
+                        : mTierVis.tierId === 'RUNNER'
+                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.5)]'
+                        : mTierVis.tierId === 'FALLING_KNIFE' || mTierVis.tierId === 'MAYDAY_EXIT'
+                        ? 'bg-gradient-to-r from-red-700 via-rose-800 to-rose-900 text-white border-rose-500/80 shadow-[0_0_25px_rgba(225,29,72,0.7)]'
+                        : mTierVis.tierId === 'SLOW_BLEED'
+                        ? 'bg-gradient-to-r from-pink-600 via-rose-500 to-red-400 text-white border-rose-400/50'
+                        : 'bg-zinc-800 text-slate-200 border-white/10';
                       return (
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 ${mTier.badgeClass} ${mTier.borderClass} ${mTier.glowClass}`}>
-                          <span className={mTier.animClass}>{mTier.icon}</span>
-                          <span>{mTier.label}</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 ${tierBadgeStyle}`}>
+                          <span>{mTierVis.icon}</span>
+                          <span>{mTierVis.label}</span>
                         </span>
                       );
                     })()}
@@ -2355,24 +2316,42 @@ export const Project2xPage: React.FC = () => {
             </div>
 
             {/* Footer & Cross-Tab Jump Button */}
-            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+            {/* Footer & Direct Jump Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-white/10 flex-wrap gap-2">
               <button
                 onClick={() => setDetailModalStock(null)}
                 className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-[13px] font-bold cursor-pointer"
               >
                 Close
               </button>
-              <button
-                onClick={() => {
-                  setSelectedStockSymbol(detailModalStock.symbol);
-                  setSelectedTab('radar');
-                  setDetailModalStock(null);
-                }}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-[13px] font-black shadow-lg shadow-cyan-500/25 flex items-center gap-2 cursor-pointer transition-all"
-              >
-                <Activity className="w-4 h-4" />
-                <span>🔍 View in Live Interactive Chart</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    const sym = detailModalStock.symbol;
+                    setDetailModalStock(null);
+                    if (activePortfolioId) await openDossier(activePortfolioId, sym);
+                    await selectSymbol(sym);
+                    setActiveTab('xray');
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 text-purple-300 border border-purple-500/40 text-[13px] font-black flex items-center gap-1.5 cursor-pointer transition-all shadow-md"
+                >
+                  <Info className="w-4 h-4" />
+                  <span>🔬 Stock X-Ray</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const sym = detailModalStock.symbol;
+                    setDetailModalStock(null);
+                    changeSymbolOnActiveTab(sym);
+                    setActiveTab('xchart');
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-[13px] font-black shadow-lg shadow-cyan-500/25 flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  <Activity className="w-4 h-4" />
+                  <span>📈 Full X-Chart Trading Desk</span>
+                </button>
+              </div>
             </div>
 
           </div>

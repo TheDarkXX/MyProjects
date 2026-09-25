@@ -34,7 +34,7 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
 
   // Calculate Average Moat Index (out of 10)
   const avgMoatScore = dynamicMoats.length > 0
-    ? dynamicMoats.reduce((sum, m) => sum + (m.score / m.maxScore) * 10, 0) / dynamicMoats.length
+    ? (dynamicMoats as Array<{ score: number; maxScore: number }>).reduce((sum: number, m) => sum + (m.score / m.maxScore) * 10, 0) / dynamicMoats.length
     : 9.0;
 
   // Colors & Configuration for 3 Distinct Gauges
