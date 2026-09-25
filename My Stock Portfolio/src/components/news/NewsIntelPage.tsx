@@ -3,7 +3,7 @@ import {
   Flame, Sparkles, Filter, CheckCheck, RefreshCw, ExternalLink, 
   Clock, ShieldAlert, BookOpen, Layers, Search, Check, ChevronDown, 
   ChevronUp, BarChart2, Eye, EyeOff, Target, Star, Trash2, Plus, Zap,
-  Hash, X
+  Hash, X, Globe, MessageSquare
 } from 'lucide-react';
 import clsx from 'clsx';
 import { NewsTickerDock } from './NewsTickerDock';
@@ -35,8 +35,8 @@ export const NewsIntelPage: React.FC = () => {
   const [selectedDetailItem, setSelectedDetailItem] = useState<NewsItem | null>(null);
 
   // Filters
-  const [selectedPortfolio, setSelectedPortfolio] = useState<'all' | 'main' | 'tiger' | 'global'>('all');
-  const [selectedPriority, setSelectedPriority] = useState<'all' | 'the_must' | 'catalyst' | 'watchlist' | 'chatter' | 'focus'>(() => {
+  const [selectedPortfolio, setSelectedPortfolio] = useState<'all' | 'main' | 'tiger' | 'project2x' | 'global'>('all');
+  const [selectedPriority, setSelectedPriority] = useState<'all' | 'the_must' | 'high_impact' | 'macro' | 'good_to_know' | 'chatter' | 'focus'>(() => {
     return (localStorage.getItem('news_intel_priority') as any) || 'the_must';
   });
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -47,7 +47,7 @@ export const NewsIntelPage: React.FC = () => {
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [showMobileDock, setShowMobileDock] = useState(false);
 
-  const handlePriorityChange = (priority: 'all' | 'the_must' | 'catalyst' | 'watchlist' | 'chatter' | 'focus') => {
+  const handlePriorityChange = (priority: 'all' | 'the_must' | 'high_impact' | 'macro' | 'good_to_know' | 'chatter' | 'focus') => {
     setSelectedPriority(priority);
     localStorage.setItem('news_intel_priority', priority);
   };
@@ -94,22 +94,26 @@ export const NewsIntelPage: React.FC = () => {
       list = list.filter(item => item.portfolio_tag === 'main' || item.portfolio_tag === 'dual');
     } else if (selectedPortfolio === 'tiger') {
       list = list.filter(item => item.portfolio_tag === 'tiger' || item.portfolio_tag === 'dual');
+    } else if (selectedPortfolio === 'project2x') {
+      list = list.filter(item => item.portfolio_tag === 'project2x' || item.portfolio_tag === 'main' || item.portfolio_tag === 'tiger' || item.portfolio_tag === 'dual');
     } else if (selectedPortfolio === 'global') {
-      list = list.filter(item => item.portfolio_tag === 'global');
+      list = list.filter(item => item.portfolio_tag === 'global' || item.portfolio_tag === 'macro');
     }
 
-    // 2. Filter Priority (4-Tier)
+    // 2. Filter Priority (5-Tier Action-Driven)
     if (selectedPriority === 'the_must') {
       list = list.filter(item => item.reading_priority === 'THE_MUST');
-    } else if (selectedPriority === 'catalyst') {
-      list = list.filter(item => item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW');
-    } else if (selectedPriority === 'watchlist') {
-      list = list.filter(item => item.reading_priority === 'WATCHLIST');
+    } else if (selectedPriority === 'high_impact') {
+      list = list.filter(item => item.reading_priority === 'HIGH_IMPACT' || item.reading_priority === 'CATALYST');
+    } else if (selectedPriority === 'macro') {
+      list = list.filter(item => item.reading_priority === 'MACRO' || item.portfolio_tag === 'macro' || item.ticker === 'MACRO' || item.ticker === 'MARKET');
+    } else if (selectedPriority === 'good_to_know') {
+      list = list.filter(item => item.reading_priority === 'GOOD_TO_KNOW' || item.reading_priority === 'WATCHLIST');
     } else if (selectedPriority === 'chatter') {
       list = list.filter(item => item.reading_priority === 'CHATTER' || item.reading_priority === 'OPTIONAL');
     } else if (selectedPriority === 'focus') {
-      // Focus Mode = All in-portfolio high-signal (Tier 1 + Tier 2)
-      list = list.filter(item => item.reading_priority === 'THE_MUST' || item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW');
+      // Focus Mode = All Project 2X / Portfolio high-signal (The Must + High Impact + Macro + Good to Know)
+      list = list.filter(item => item.reading_priority !== 'CHATTER' && item.reading_priority !== 'OPTIONAL');
     }
 
     // 3. Filter Unread Only
@@ -161,9 +165,11 @@ export const NewsIntelPage: React.FC = () => {
     // 7. Client-side Sort (5 dimensions)
     const sorted = [...list];
     const priorityWeights: Record<string, number> = {
-      THE_MUST: 4,
-      CATALYST: 3,
-      GOOD_TO_KNOW: 3,
+      THE_MUST: 5,
+      HIGH_IMPACT: 4,
+      CATALYST: 4,
+      MACRO: 3,
+      GOOD_TO_KNOW: 2,
       WATCHLIST: 2,
       CHATTER: 1,
       OPTIONAL: 1,
@@ -443,11 +449,11 @@ export const NewsIntelPage: React.FC = () => {
       </div>
 
       {/* 2. Stat Badges Ribbon */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div 
           onClick={() => { handlePriorityChange('the_must'); setUnreadOnly(false); }}
           className={clsx(
-            "p-4 rounded-xl border transition-all cursor-pointer select-none",
+            "p-3.5 rounded-xl border transition-all cursor-pointer select-none",
             selectedPriority === 'the_must'
               ? "bg-rose-950/40 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.2)]"
               : "bg-[#111418] border-[#2A2E45] hover:border-rose-500/50"
@@ -458,77 +464,99 @@ export const NewsIntelPage: React.FC = () => {
               <Flame className="w-4 h-4" /> 🚨 The Must
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
-              {stats?.theMustUnread || 0} Unread
+              {stats?.theMustUnread || 0}
             </span>
           </div>
-          <div className="mt-2 text-xl font-black text-white">
-            {stats?.theMustUnread ? `🔥 ${stats.theMustUnread} ข่าวด่วนพอร์ต` : 'สะอาด ไร้วิกฤต'}
+          <div className="mt-2 text-lg sm:text-xl font-black text-white truncate">
+            {stats?.theMustUnread ? `🔥 ${stats.theMustUnread} ด่วนพอร์ต` : 'สะอาด ไร้วิกฤต'}
           </div>
         </div>
 
         <div 
-          onClick={() => { handlePriorityChange('catalyst'); setUnreadOnly(false); }}
+          onClick={() => { handlePriorityChange('high_impact'); setUnreadOnly(false); }}
           className={clsx(
-            "p-4 rounded-xl border transition-all cursor-pointer select-none",
-            selectedPriority === 'catalyst'
+            "p-3.5 rounded-xl border transition-all cursor-pointer select-none",
+            selectedPriority === 'high_impact'
               ? "bg-amber-950/40 border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
               : "bg-[#111418] border-[#2A2E45] hover:border-amber-500/50"
           )}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
-              <Zap className="w-4 h-4" /> ⚡ Catalysts
+              <Zap className="w-4 h-4" /> ⚡ High Impact
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-              {stats?.catalystUnread ?? stats?.goodToKnowUnread ?? 0} Unread
+              {stats?.highImpactUnread ?? stats?.catalystUnread ?? 0}
             </span>
           </div>
-          <div className="mt-2 text-xl font-black text-white">
-            {(stats?.catalystUnread ?? stats?.goodToKnowUnread ?? 0)} งบ & สัญญา
+          <div className="mt-2 text-lg sm:text-xl font-black text-white truncate">
+            {(stats?.highImpactUnread ?? stats?.catalystUnread ?? 0)} ควรอ่าน/ดีลใหญ่
           </div>
         </div>
 
         <div 
-          onClick={() => { setSelectedPortfolio('main'); }}
+          onClick={() => { handlePriorityChange('macro'); setUnreadOnly(false); }}
           className={clsx(
-            "p-4 rounded-xl border transition-all cursor-pointer select-none",
-            selectedPortfolio === 'main'
+            "p-3.5 rounded-xl border transition-all cursor-pointer select-none",
+            selectedPriority === 'macro'
+              ? "bg-sky-950/40 border-sky-500 shadow-[0_0_20px_rgba(56,189,248,0.2)]"
+              : "bg-[#111418] border-[#2A2E45] hover:border-sky-500/50"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1">
+              <Globe className="w-4 h-4" /> 🌐 Macro Pulse
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-bold border border-sky-500/30">
+              {stats?.macroUnread || 0}
+            </span>
+          </div>
+          <div className="mt-2 text-lg sm:text-xl font-black text-white truncate">
+            {stats?.macroUnread || 0} มหภาค/สงคราม/Fed
+          </div>
+        </div>
+
+        <div 
+          onClick={() => { setSelectedPortfolio('project2x'); }}
+          className={clsx(
+            "p-3.5 rounded-xl border transition-all cursor-pointer select-none",
+            selectedPortfolio === 'project2x'
+              ? "bg-purple-950/40 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.2)]"
+              : "bg-[#111418] border-[#2A2E45] hover:border-purple-500/50"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1">
+              <Target className="w-4 h-4" /> 🎯 Project 2X
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
+              {stats?.project2xUnread || 0}
+            </span>
+          </div>
+          <div className="mt-2 text-lg sm:text-xl font-black text-white truncate">
+            {stats?.project2xUnread || 0} ข่าวหุ้น 20 ตัว
+          </div>
+        </div>
+
+        <div 
+          onClick={() => { setSelectedPortfolio('all'); }}
+          className={clsx(
+            "p-3.5 rounded-xl border transition-all cursor-pointer select-none",
+            selectedPortfolio === 'all'
               ? "bg-indigo-950/40 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]"
               : "bg-[#111418] border-[#2A2E45] hover:border-indigo-500/50"
           )}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1">
-              🏢 พอร์ตหลัก
+              🏢 รวมพอร์ต
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
-              Doctorbank
+              Doctor+Tiger
             </span>
           </div>
-          <div className="mt-2 text-xl font-black text-white">
-            {stats?.mainUnread || 0} Unread
-          </div>
-        </div>
-
-        <div 
-          onClick={() => { setSelectedPortfolio('tiger'); }}
-          className={clsx(
-            "p-4 rounded-xl border transition-all cursor-pointer select-none",
-            selectedPortfolio === 'tiger'
-              ? "bg-orange-950/40 border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.2)]"
-              : "bg-[#111418] border-[#2A2E45] hover:border-orange-500/50"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1">
-              🐯 พอร์ตลูก
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 font-bold border border-orange-500/30">
-              Tiger
-            </span>
-          </div>
-          <div className="mt-2 text-xl font-black text-white">
-            {stats?.tigerUnread || 0} Unread
+          <div className="mt-2 text-lg sm:text-xl font-black text-white truncate">
+            {(stats?.mainUnread || 0) + (stats?.tigerUnread || 0)} Unread
           </div>
         </div>
       </div>
@@ -567,19 +595,19 @@ export const NewsIntelPage: React.FC = () => {
               🐯 พอร์ตลูก
             </button>
             <button
-              onClick={() => setSelectedPortfolio('global')}
+              onClick={() => setSelectedPortfolio('project2x')}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
-                selectedPortfolio === 'global' ? "bg-[#1F2233] text-white shadow-sm" : "text-slate-400 hover:text-white"
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
+                selectedPortfolio === 'project2x' ? "bg-purple-600 text-white shadow-sm" : "text-purple-400 hover:text-white"
               )}
             >
-              🌐 Watchlist
+              🎯 Project 2X
             </button>
           </div>
 
           <div className="h-6 w-px bg-[#2A2E45] hidden sm:block" />
 
-          {/* 4-Tier Priority Filter */}
+          {/* 5-Tier Priority Filter */}
           <div className="bg-[#0F111A] p-1 rounded-xl border border-[#1F2233] flex items-center gap-1 flex-wrap">
             <button
               onClick={() => handlePriorityChange('the_must')}
@@ -592,24 +620,34 @@ export const NewsIntelPage: React.FC = () => {
               <Flame className="w-3.5 h-3.5" /> 🚨 The Must
             </button>
             <button
-              onClick={() => handlePriorityChange('catalyst')}
+              onClick={() => handlePriorityChange('high_impact')}
               className={clsx(
                 "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
-                selectedPriority === 'catalyst' ? "bg-amber-600 text-white shadow-sm" : "text-amber-400 hover:text-amber-300"
+                selectedPriority === 'high_impact' ? "bg-amber-600 text-white shadow-sm" : "text-amber-400 hover:text-amber-300"
               )}
-              title="Tier 2: ⚡ ข่าวผลประกอบการจริง สัญญาใหม่ ARR หุ้นในพอร์ต"
+              title="Tier 2: ⚡ ข่าวผลประกอบการจริง สัญญาใหม่ ARR ดีลยักษ์ หุ้นใน Project 2X / พอร์ต"
             >
-              <Zap className="w-3.5 h-3.5" /> ⚡ Catalysts
+              <Zap className="w-3.5 h-3.5" /> ⚡ High Impact
             </button>
             <button
-              onClick={() => handlePriorityChange('watchlist')}
+              onClick={() => handlePriorityChange('macro')}
               className={clsx(
                 "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
-                selectedPriority === 'watchlist' ? "bg-sky-600 text-white shadow-sm" : "text-sky-400 hover:text-sky-300"
+                selectedPriority === 'macro' ? "bg-sky-600 text-white shadow-sm" : "text-sky-400 hover:text-sky-300"
               )}
-              title="Tier 3: 🌐 หุ้นนอกพอร์ตใน Watchlist และความเคลื่อนไหวกลุ่ม"
+              title="Tier 3: 🌐 ข่าวมหภาคภาพรวม สงคราม, ดอกเบี้ย Fed, นโยบายรัฐบาล, ตลาดหุ้นโดยรวม"
             >
-              <Target className="w-3.5 h-3.5" /> 🌐 Watchlist
+              <Globe className="w-3.5 h-3.5" /> 🌐 Macro Pulse
+            </button>
+            <button
+              onClick={() => handlePriorityChange('good_to_know')}
+              className={clsx(
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
+                selectedPriority === 'good_to_know' ? "bg-blue-600 text-white shadow-sm" : "text-blue-400 hover:text-blue-300"
+              )}
+              title="Tier 4: 📘 ข่าวผลิตภัณฑ์ ข่าวพันธมิตร รู้ไว้ใช่ว่าสำหรับหุ้นในพอร์ต/Project 2X"
+            >
+              <BookOpen className="w-3.5 h-3.5" /> 📘 Good to Know
             </button>
             <button
               onClick={() => handlePriorityChange('chatter')}
@@ -617,9 +655,9 @@ export const NewsIntelPage: React.FC = () => {
                 "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
                 selectedPriority === 'chatter' ? "bg-slate-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-300"
               )}
-              title="Tier 4: 💬 บทวิเคราะห์ ความเห็นโบรกเกอร์ ข่าวลือ"
+              title="Tier 5: 💬 บทวิเคราะห์ ความเห็นโบรกเกอร์ ข่าวลือ หุ้นนอกจักรวาล"
             >
-              <BookOpen className="w-3.5 h-3.5" /> 💬 Chatter
+              <MessageSquare className="w-3.5 h-3.5" /> 💬 Chatter
             </button>
             <button
               onClick={() => handlePriorityChange('focus')}
@@ -627,9 +665,9 @@ export const NewsIntelPage: React.FC = () => {
                 "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
                 selectedPriority === 'focus' ? "bg-[#823AFD] text-white shadow-sm" : "text-purple-400 hover:text-white"
               )}
-              title="🎯 Focus Mode: รวม Tier 1 + Tier 2 (เฉพาะหุ้นในพอร์ตทั้งหมด ตัดเสียงรบกวน 100%)"
+              title="🎯 Focus Mode: รวม The Must + High Impact + Macro + Good to Know (ตัด Chatter ทิ้ง 100%)"
             >
-              <Sparkles className="w-3.5 h-3.5" /> Focus (Port)
+              <Sparkles className="w-3.5 h-3.5" /> Focus
             </button>
             <button
               onClick={() => handlePriorityChange('all')}

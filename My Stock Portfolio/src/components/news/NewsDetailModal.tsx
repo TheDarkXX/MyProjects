@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useCallback, useRef, useState } from 'react'
 import { 
   X, ChevronLeft, ChevronRight, ExternalLink, Clock, Flame, 
   Zap, Check, EyeOff, Building, Tag, ArrowUp, ArrowDown, BookOpen,
-  FileText, ChevronDown, ChevronUp, Target, AlertTriangle
+  FileText, ChevronDown, ChevronUp, Target, AlertTriangle, Globe
 } from 'lucide-react';
 import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
@@ -155,8 +155,9 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   if (!isOpen || !activeItem) return null;
 
   const isMust = activeItem.reading_priority === 'THE_MUST';
-  const isCatalyst = activeItem.reading_priority === 'CATALYST' || activeItem.reading_priority === 'GOOD_TO_KNOW';
-  const isWatchlist = activeItem.reading_priority === 'WATCHLIST';
+  const isHighImpact = activeItem.reading_priority === 'HIGH_IMPACT' || activeItem.reading_priority === 'CATALYST';
+  const isMacro = activeItem.reading_priority === 'MACRO' || activeItem.portfolio_tag === 'macro' || activeItem.ticker === 'MACRO' || activeItem.ticker === 'MARKET';
+  const isGoodToKnow = activeItem.reading_priority === 'GOOD_TO_KNOW' || activeItem.reading_priority === 'WATCHLIST';
   const isRead = activeItem.is_read === 1;
 
   let tags: string[] = [];
@@ -229,8 +230,9 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               {items.map((item, idx) => {
                 const isItemActive = item.id === activeItem.id;
                 const isItemMust = item.reading_priority === 'THE_MUST';
-                const isItemCatalyst = item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW';
-                const isItemWatchlist = item.reading_priority === 'WATCHLIST';
+                const isItemHighImpact = item.reading_priority === 'HIGH_IMPACT' || item.reading_priority === 'CATALYST';
+                const isItemMacro = item.reading_priority === 'MACRO' || item.portfolio_tag === 'macro' || item.ticker === 'MACRO' || item.ticker === 'MARKET';
+                const isItemGoodToKnow = item.reading_priority === 'GOOD_TO_KNOW' || item.reading_priority === 'WATCHLIST';
                 const isItemRead = item.is_read === 1;
 
                 return (
@@ -253,8 +255,9 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                         <span className={clsx(
                           "w-2 h-2 rounded-full shrink-0",
                           isItemMust ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]" :
-                          isItemCatalyst ? "bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]" :
-                          isItemWatchlist ? "bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.6)]" :
+                          isItemHighImpact ? "bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]" :
+                          isItemMacro ? "bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.6)]" :
+                          isItemGoodToKnow ? "bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.6)]" :
                           "bg-slate-500"
                         )} />
 
@@ -307,18 +310,22 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                   #{activeItem.ticker}
                 </span>
 
-                {/* Priority Pill */}
+                {/* 5-Tier Priority Pill */}
                 {isMust ? (
                   <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/50 flex items-center gap-1 animate-pulse">
                     <Flame className="w-3.5 h-3.5 text-rose-400" /> 🚨 THE MUST
                   </span>
-                ) : isCatalyst ? (
+                ) : isHighImpact ? (
                   <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                    <Zap className="w-3.5 h-3.5 text-amber-400" /> ⚡ CATALYST
+                    <Zap className="w-3.5 h-3.5 text-amber-400" /> ⚡ HIGH IMPACT
                   </span>
-                ) : isWatchlist ? (
+                ) : isMacro ? (
                   <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-1">
-                    🌐 WATCHLIST
+                    <Globe className="w-3.5 h-3.5 text-sky-400" /> 🌐 MACRO
+                  </span>
+                ) : isGoodToKnow ? (
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30 flex items-center gap-1">
+                    📘 GOOD TO KNOW
                   </span>
                 ) : (
                   <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
@@ -342,9 +349,19 @@ export const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                     ⚡ 2 พอร์ต
                   </span>
                 )}
+                {activeItem.portfolio_tag === 'project2x' && (
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    🎯 Project 2X
+                  </span>
+                )}
+                {activeItem.portfolio_tag === 'macro' && (
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                    🌐 มหภาค
+                  </span>
+                )}
                 {activeItem.portfolio_tag === 'global' && (
                   <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                    🌐 Watchlist
+                    🌐 ทั่วไป
                   </span>
                 )}
 

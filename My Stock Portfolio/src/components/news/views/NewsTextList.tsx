@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Sparkles, Clock, Check, EyeOff, ExternalLink, Zap } from 'lucide-react';
+import { Flame, Sparkles, Clock, Check, EyeOff, ExternalLink, Zap, Globe } from 'lucide-react';
 import clsx from 'clsx';
 import { NewsItem } from '../types';
 
@@ -26,8 +26,9 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
     <div className="bg-[#111418] border border-[#2A2E45] rounded-2xl divide-y divide-[#1F2233] overflow-hidden w-full shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
       {items.map((item) => {
         const isMust = item.reading_priority === 'THE_MUST';
-        const isCatalyst = item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW';
-        const isWatchlist = item.reading_priority === 'WATCHLIST';
+        const isHighImpact = item.reading_priority === 'HIGH_IMPACT' || item.reading_priority === 'CATALYST';
+        const isMacro = item.reading_priority === 'MACRO' || item.portfolio_tag === 'macro' || item.ticker === 'MACRO' || item.ticker === 'MARKET';
+        const isGoodToKnow = item.reading_priority === 'GOOD_TO_KNOW' || item.reading_priority === 'WATCHLIST';
         const isRead = item.is_read === 1;
 
         let tags: string[] = [];
@@ -53,8 +54,9 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
                 <span className={clsx(
                   "inline-block w-2.5 h-2.5 rounded-full",
                   isMust ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]" :
-                  isCatalyst ? "bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]" :
-                  isWatchlist ? "bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.5)]" :
+                  isHighImpact ? "bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]" :
+                  isMacro ? "bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.5)]" :
+                  isGoodToKnow ? "bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]" :
                   "bg-slate-500"
                 )} />
               </span>
@@ -76,18 +78,22 @@ export const NewsTextList: React.FC<NewsTextListProps> = ({
                 #{item.ticker}
               </button>
 
-              {/* 4-Tier Priority Pill */}
+              {/* 5-Tier Priority Pill */}
               {isMust ? (
                 <span className="px-1.5 py-0.5 rounded-md text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-0.5 shrink-0">
                   <Flame className="w-3 h-3 text-rose-400" /> MUST
                 </span>
-              ) : isCatalyst ? (
+              ) : isHighImpact ? (
                 <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-0.5 shrink-0">
-                  <Zap className="w-3 h-3 text-amber-400" /> CATALYST
+                  <Zap className="w-3 h-3 text-amber-400" /> HIGH IMPACT
                 </span>
-              ) : isWatchlist ? (
-                <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 shrink-0">
-                  WATCHLIST
+              ) : isMacro ? (
+                <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-0.5 shrink-0">
+                  <Globe className="w-3 h-3 text-sky-400" /> MACRO
+                </span>
+              ) : isGoodToKnow ? (
+                <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30 shrink-0">
+                  GOOD TO KNOW
                 </span>
               ) : (
                 <span className="px-1.5 py-0.5 rounded-md text-xs font-normal bg-slate-800 text-slate-400 border border-slate-700 shrink-0">

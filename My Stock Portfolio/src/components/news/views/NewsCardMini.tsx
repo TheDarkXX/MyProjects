@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Sparkles, Clock, Check, EyeOff, ExternalLink, Zap } from 'lucide-react';
+import { Flame, Sparkles, Clock, Check, EyeOff, ExternalLink, Zap, Globe } from 'lucide-react';
 import clsx from 'clsx';
 import { NewsItem } from '../types';
 
@@ -22,8 +22,9 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5 w-full">
       {items.map((item) => {
         const isMust = item.reading_priority === 'THE_MUST';
-        const isCatalyst = item.reading_priority === 'CATALYST' || item.reading_priority === 'GOOD_TO_KNOW';
-        const isWatchlist = item.reading_priority === 'WATCHLIST';
+        const isHighImpact = item.reading_priority === 'HIGH_IMPACT' || item.reading_priority === 'CATALYST';
+        const isMacro = item.reading_priority === 'MACRO' || item.portfolio_tag === 'macro' || item.ticker === 'MACRO' || item.ticker === 'MARKET';
+        const isGoodToKnow = item.reading_priority === 'GOOD_TO_KNOW' || item.reading_priority === 'WATCHLIST';
         const isRead = item.is_read === 1;
 
         const summaryFirstBullet = item.summary_th
@@ -40,13 +41,17 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
                 ? isRead
                   ? "bg-[#111418] border-rose-500/30 opacity-85 hover:opacity-100"
                   : "bg-[#16121D] border-rose-500 shadow-[0_4px_16px_rgba(244,63,94,0.16)]"
-                : isCatalyst
+                : isHighImpact
                   ? isRead
                     ? "bg-[#111418] border-[#2A2E45] opacity-85 hover:opacity-100"
                     : "bg-[#111418] border-amber-500/30 hover:border-amber-500/50"
-                  : isWatchlist
-                    ? "bg-[#0D1017] border-sky-500/25 opacity-85 hover:opacity-100"
-                    : "bg-[#0D1017] border-[#1F2233] opacity-80 hover:opacity-100"
+                  : isMacro
+                    ? isRead
+                      ? "bg-[#0D1017] border-sky-500/25 opacity-85 hover:opacity-100"
+                      : "bg-[#0D1017] border-sky-500/50 shadow-[0_4px_16px_rgba(56,189,248,0.12)] hover:border-sky-400"
+                    : isGoodToKnow
+                      ? "bg-[#0D1017] border-blue-500/25 opacity-85 hover:opacity-100"
+                      : "bg-[#0D1017] border-[#1F2233] opacity-80 hover:opacity-100"
             )}
           >
             {/* Top Accent Stripe */}
@@ -73,18 +78,22 @@ export const NewsCardMini: React.FC<NewsCardMiniProps> = ({
                     #{item.ticker}
                   </button>
 
-                  {/* 4-Tier Priority Badge */}
+                  {/* 5-Tier Priority Badge */}
                   {isMust ? (
                     <span className="px-1.5 py-0.5 rounded text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-0.5">
                       <Flame className="w-3 h-3 text-rose-400" /> MUST
                     </span>
-                  ) : isCatalyst ? (
+                  ) : isHighImpact ? (
                     <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-0.5">
-                      <Zap className="w-3 h-3 text-amber-400" /> CATALYST
+                      <Zap className="w-3 h-3 text-amber-400" /> HIGH IMPACT
                     </span>
-                  ) : isWatchlist ? (
-                    <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
-                      WATCHLIST
+                  ) : isMacro ? (
+                    <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-0.5">
+                      <Globe className="w-3 h-3 text-sky-400" /> MACRO
+                    </span>
+                  ) : isGoodToKnow ? (
+                    <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                      GOOD TO KNOW
                     </span>
                   ) : (
                     <span className="px-1.5 py-0.5 rounded text-xs font-normal bg-slate-800 text-slate-400 border border-slate-700">

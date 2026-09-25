@@ -23,10 +23,10 @@ export interface NewsItem {
   source_url: string;
   summary_th: string;
   sentiment: 'bullish' | 'bearish' | 'neutral';
-  reading_priority: 'THE_MUST' | 'CATALYST' | 'WATCHLIST' | 'CHATTER' | 'GOOD_TO_KNOW' | 'OPTIONAL';
+  reading_priority: 'THE_MUST' | 'HIGH_IMPACT' | 'MACRO' | 'GOOD_TO_KNOW' | 'CHATTER' | 'CATALYST' | 'WATCHLIST' | 'OPTIONAL';
   priority_reason: string;
   impact_level: 'routine' | 'significant' | 'moat_breaker';
-  portfolio_tag: 'main' | 'tiger' | 'dual' | 'global';
+  portfolio_tag: 'main' | 'tiger' | 'dual' | 'project2x' | 'macro' | 'global';
   related_portfolio_id: string | null;
   relevance_score?: number;
   triage_tags?: string | string[];
@@ -50,12 +50,15 @@ export type SortOrder = 'desc' | 'asc';
 
 export interface NewsStats {
   theMustUnread: number;
+  highImpactUnread?: number;
+  macroUnread?: number;
   catalystUnread: number;
   watchlistUnread: number;
   chatterUnread: number;
   goodToKnowUnread?: number;
   mainUnread: number;
   tigerUnread: number;
+  project2xUnread?: number;
   totalUnread: number;
   totalArticles: number;
 }

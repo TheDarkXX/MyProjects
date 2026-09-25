@@ -152,20 +152,24 @@ export function getPortfolioHoldings() {
 }
 
 /**
- * Get dynamic watchlist tickers from database
+ * Get dynamic Project 2X & Target Universe tickers from database
  */
 export function getWatchlistTickers() {
-  const list = new Set(['AMD', 'GOOGL', 'AVGO', 'TSM', 'AMZN', 'MSFT', 'PANW', 'PLTR']);
+  const list = new Set();
   try {
-    // 1. Check portfolio_blueprints
-    const blueprintRows = db.prepare("SELECT symbol FROM portfolio_blueprints WHERE status = 'WATCHLIST'").all();
+    // 1. Check Project 2X share quotas
+    const quotaRows = db.prepare('SELECT DISTINCT symbol FROM project2x_share_quotas').all();
+    quotaRows.forEach(r => list.add(r.symbol.toUpperCase()));
+
+    // 2. Check portfolio_blueprints
+    const blueprintRows = db.prepare("SELECT symbol FROM portfolio_blueprints").all();
     blueprintRows.forEach(r => list.add(r.symbol.toUpperCase()));
 
-    // 2. Check watchlist_tickers table
+    // 3. Check watchlist_tickers table
     const dbRows = db.prepare("SELECT symbol FROM watchlist_tickers").all();
     dbRows.forEach(r => list.add(r.symbol.toUpperCase()));
   } catch (err) {
-    console.warn('[NewsRadar] Error reading watchlist tickers:', err.message);
+    console.warn('[NewsRadar] Error reading project2x/target tickers:', err.message);
   }
   return list;
 }
@@ -173,10 +177,15 @@ export function getWatchlistTickers() {
 /**
  * Determine portfolio tag for a ticker symbol
  */
-export function getTickerPortfolioTag(symbol, { mainHoldings, tigerHoldings, mainPortId, tigerPortId }) {
+export function getTickerPortfolioTag(symbol, { mainHoldings, tigerHoldings, mainPortId, tigerPortId, watchlistTickers }) {
   const upper = symbol.toUpperCase();
-  const inMain = mainHoldings.has(upper);
-  const inTiger = tigerHoldings.has(upper);
+  if (upper === 'MACRO' || upper === 'MARKET') {
+    return { tag: 'macro', portfolioId: null };
+  }
+
+  const inMain = mainHoldings?.has(upper);
+  const inTiger = tigerHoldings?.has(upper);
+  const inTarget = watchlistTickers ? watchlistTickers.has(upper) : false;
 
   if (inMain && inTiger) {
     return { tag: 'dual', portfolioId: mainPortId };
@@ -186,6 +195,9 @@ export function getTickerPortfolioTag(symbol, { mainHoldings, tigerHoldings, mai
   }
   if (inTiger) {
     return { tag: 'tiger', portfolioId: tigerPortId };
+  }
+  if (inTarget) {
+    return { tag: 'project2x', portfolioId: mainPortId || tigerPortId };
   }
   return { tag: 'global', portfolioId: null };
 }
@@ -764,23 +776,24 @@ Output ONLY a JSON object:
 
     calculatedTotal = Math.max(0, Math.min(100, Math.round(calculatedTotal)));
 
-    // Determine strict tier
+    // Determine strict tier (5-Tier Action-Driven)
+    const upperTicker = ticker.toUpperCase();
+    const isMacro = upperTicker === 'MACRO' || upperTicker === 'MARKET';
+
     let calculatedPriority = 'CHATTER';
-    if (isHolding && calculatedTotal >= 85 && (financial >= 20 || moat >= 20) && actionability >= 12 && parsed.impact_level === 'moat_breaker') {
+    if (isMacro) {
+      calculatedPriority = isOpinionOrCommentary ? 'CHATTER' : 'MACRO';
+    } else if (portfolioTag === 'global') {
+      // Untracked stock outside Project 2X / Portfolio -> Drop to CHATTER
+      calculatedPriority = 'CHATTER';
+    } else if (isHolding && calculatedTotal >= 85 && (financial >= 20 || moat >= 20) && actionability >= 12 && parsed.impact_level === 'moat_breaker') {
       calculatedPriority = 'THE_MUST';
-    } else if (isHolding && calculatedTotal >= 60 && !isOpinionOrCommentary && !isPaywalled) {
-      calculatedPriority = 'CATALYST';
+    } else if (calculatedTotal >= 70 && !isOpinionOrCommentary && !isPaywalled) {
+      calculatedPriority = 'HIGH_IMPACT';
     } else if (calculatedTotal >= 40 && !isOpinionOrCommentary && !isPaywalled) {
-      calculatedPriority = 'WATCHLIST';
+      calculatedPriority = 'GOOD_TO_KNOW';
     } else {
       calculatedPriority = 'CHATTER';
-    }
-
-    // Non-holding stocks can NEVER be THE_MUST or CATALYST
-    if (!isHolding) {
-      if (calculatedPriority === 'THE_MUST' || calculatedPriority === 'CATALYST') {
-        calculatedPriority = calculatedTotal >= 40 ? 'WATCHLIST' : 'CHATTER';
-      }
     }
 
     const finalScoreBreakdown = {

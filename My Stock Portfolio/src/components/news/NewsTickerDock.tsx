@@ -88,27 +88,34 @@ const DEFAULT_TIGER_TARGETS: StockItem[] = [
   { symbol: 'QQQM', name: 'Invesco NASDAQ 100 ETF', category: 'Index 30%', targetPercent: 30 },
 ];
 
-const DEFAULT_WATCHLIST_STOCKS: StockItem[] = [
+const DEFAULT_PROJECT2X_STOCKS: StockItem[] = [
+  { symbol: 'ALAB', name: 'Astera Labs Inc' },
+  { symbol: 'ANET', name: 'Arista Networks' },
+  { symbol: 'APH', name: 'Amphenol Corp' },
   { symbol: 'AVGO', name: 'Broadcom Inc' },
-  { symbol: 'TSM', name: 'Taiwan Semiconductor' },
-  { symbol: 'AMD', name: 'Advanced Micro Devices' },
-  { symbol: 'PANW', name: 'Palo Alto Networks' },
-  { symbol: 'NET', name: 'Cloudflare Inc' },
-  { symbol: 'LRCX', name: 'Lam Research' },
-  { symbol: 'ALAB', name: 'Astera Labs' },
-  { symbol: 'ON', name: 'ON Semiconductor' },
-  { symbol: 'TSLA', name: 'Tesla Inc' },
-  { symbol: 'AAPL', name: 'Apple Inc' },
-  { symbol: 'MSFT', name: 'Microsoft Corp' },
+  { symbol: 'CLS', name: 'Celestica Inc' },
+  { symbol: 'CRWD', name: 'CrowdStrike Holdings' },
+  { symbol: 'GOOGL', name: 'Alphabet Inc' },
+  { symbol: 'HIMS', name: 'Hims & Hers Health' },
+  { symbol: 'KLAC', name: 'KLA Corporation' },
+  { symbol: 'MELI', name: 'MercadoLibre Inc' },
+  { symbol: 'META', name: 'Meta Platforms' },
+  { symbol: 'NVDA', name: 'NVIDIA Corp' },
   { symbol: 'PLTR', name: 'Palantir Technologies' },
+  { symbol: 'QQQM', name: 'Invesco NASDAQ 100 ETF' },
+  { symbol: 'RBRK', name: 'Rubrik Inc' },
+  { symbol: 'SCHG', name: 'Schwab US Large-Cap Growth' },
+  { symbol: 'STRL', name: 'Sterling Infrastructure' },
+  { symbol: 'TSM', name: 'Taiwan Semiconductor' },
+  { symbol: 'VRT', name: 'Vertiv Holdings' },
 ];
 
 const THEMATIC_TAGS = [
   { tag: 'MACRO', label: 'Macro & Fed', color: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10' },
-  { tag: 'CATALYST', label: 'Catalyst & Moves', color: 'text-rose-400 border-rose-500/30 bg-rose-500/10' },
-  { tag: 'MARKET_SUMMARY', label: 'Market Summary', color: 'text-amber-400 border-amber-500/30 bg-amber-500/10' },
+  { tag: 'HIGH_IMPACT', label: 'High Impact Deals', color: 'text-amber-400 border-amber-500/30 bg-amber-500/10' },
+  { tag: 'WAR', label: 'Geopolitics & War', color: 'text-rose-400 border-rose-500/30 bg-rose-500/10' },
+  { tag: 'MARKET_SUMMARY', label: 'Market Summary', color: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10' },
   { tag: 'AI', label: 'AI Ecosystem', color: 'text-purple-400 border-purple-500/30 bg-purple-500/10' },
-  { tag: 'SECURITY', label: 'Cyber Security', color: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' },
 ];
 
 interface TickerStat {
@@ -308,20 +315,20 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
     }
 
     // Fallback if no sections in store
-    const list: StockItem[] = [...DEFAULT_WATCHLIST_STOCKS];
+    const list: StockItem[] = [...DEFAULT_PROJECT2X_STOCKS];
     const seen = new Set(list.map(s => s.symbol));
     (customWatchlist || []).forEach(sym => {
       if (!seen.has(sym)) {
         seen.add(sym);
-        list.push({ symbol: sym, name: `${sym} Watchlist`, category: 'Watchlist' });
+        list.push({ symbol: sym, name: `${sym} 2X`, category: 'Project 2X' });
       }
     });
 
     return [
       {
         id: 'wl-default',
-        title: 'Watchlist ทั้งหมด',
-        icon: <Star className="w-3.5 h-3.5 text-blue-400 shrink-0" />,
+        title: 'Project 2X Universe',
+        icon: <Target className="w-3.5 h-3.5 text-purple-400 shrink-0" />,
         stocks: list,
         badge: `${list.length}`,
         isCollapsed: Boolean(collapsedSections['wl-default'])
@@ -573,12 +580,12 @@ export const NewsTickerDock: React.FC<NewsTickerDockProps> = ({
           className={clsx(
             "py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer",
             activeTab === 'watchlist'
-              ? "bg-blue-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.4)]"
+              ? "bg-purple-600 text-white shadow-[0_0_12px_rgba(168,85,247,0.4)]"
               : "text-slate-300 hover:text-white hover:bg-white/5"
           )}
         >
-          <span>⭐</span>
-          <span className="truncate">Watchlist</span>
+          <span>🎯</span>
+          <span className="truncate">Project 2X</span>
         </button>
       </div>
 

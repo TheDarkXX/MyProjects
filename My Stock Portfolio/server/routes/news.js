@@ -28,24 +28,30 @@ newsRoutes.get('/', (c) => {
       query += ` AND portfolio_tag IN ('main', 'dual')`;
     } else if (portfolio === 'tiger') {
       query += ` AND portfolio_tag IN ('tiger', 'dual')`;
+    } else if (portfolio === 'project2x') {
+      query += ` AND portfolio_tag IN ('project2x', 'main', 'tiger', 'dual')`;
     } else if (portfolio === 'global') {
-      query += ` AND portfolio_tag = 'global'`;
+      query += ` AND portfolio_tag IN ('global', 'macro')`;
     }
 
-    // Filter by reading priority (4-Tier Support + Legacy compatibility)
+    // Filter by reading priority (5-Tier Support + Legacy compatibility)
     if (priority === 'the_must') {
       query += ` AND reading_priority = 'THE_MUST'`;
+    } else if (priority === 'high_impact') {
+      query += ` AND reading_priority IN ('HIGH_IMPACT', 'CATALYST')`;
     } else if (priority === 'catalyst') {
-      query += ` AND reading_priority = 'CATALYST'`;
-    } else if (priority === 'watchlist') {
-      query += ` AND reading_priority = 'WATCHLIST'`;
-    } else if (priority === 'chatter') {
-      query += ` AND reading_priority = 'CHATTER'`;
-    } else if (priority === 'focus') {
-      // The Must + Catalysts (all in-portfolio high-signal news)
-      query += ` AND reading_priority IN ('THE_MUST', 'CATALYST')`;
+      query += ` AND reading_priority IN ('HIGH_IMPACT', 'CATALYST')`;
+    } else if (priority === 'macro') {
+      query += ` AND (reading_priority = 'MACRO' OR portfolio_tag = 'macro' OR ticker IN ('MACRO', 'MARKET'))`;
     } else if (priority === 'good_to_know') {
-      query += ` AND reading_priority IN ('CATALYST', 'GOOD_TO_KNOW')`;
+      query += ` AND reading_priority IN ('GOOD_TO_KNOW', 'WATCHLIST')`;
+    } else if (priority === 'watchlist') {
+      query += ` AND reading_priority IN ('GOOD_TO_KNOW', 'WATCHLIST')`;
+    } else if (priority === 'chatter') {
+      query += ` AND reading_priority IN ('CHATTER', 'OPTIONAL')`;
+    } else if (priority === 'focus') {
+      // Focus: all high-signal news (The Must, High Impact, Macro, Good to Know)
+      query += ` AND reading_priority NOT IN ('CHATTER', 'OPTIONAL')`;
     } else if (priority === 'optional') {
       query += ` AND reading_priority IN ('CHATTER', 'OPTIONAL')`;
     }
@@ -66,16 +72,19 @@ newsRoutes.get('/', (c) => {
       params.push(`%${tag}%`, `%${tag}%`, `%${tag}%`, `%${tag}%`);
     }
 
-    // Priority ordering: THE_MUST (1) > CATALYST (2) > WATCHLIST (3) > CHATTER (4)
+    // Priority ordering: THE_MUST (1) > HIGH_IMPACT/CATALYST (2) > MACRO (3) > GOOD_TO_KNOW/WATCHLIST (4) > CHATTER (5)
     query += `
       ORDER BY 
         CASE reading_priority 
           WHEN 'THE_MUST' THEN 1 
+          WHEN 'HIGH_IMPACT' THEN 2
           WHEN 'CATALYST' THEN 2 
-          WHEN 'WATCHLIST' THEN 3 
-          WHEN 'CHATTER' THEN 4 
-          WHEN 'GOOD_TO_KNOW' THEN 2
-          ELSE 5 
+          WHEN 'MACRO' THEN 3
+          WHEN 'GOOD_TO_KNOW' THEN 4
+          WHEN 'WATCHLIST' THEN 4 
+          WHEN 'CHATTER' THEN 5 
+          WHEN 'OPTIONAL' THEN 5
+          ELSE 6 
         END ASC,
         created_at DESC
       LIMIT ?
@@ -100,12 +109,15 @@ newsRoutes.get('/stats', (c) => {
     const stats = db.prepare(`
       SELECT 
         SUM(CASE WHEN reading_priority = 'THE_MUST' AND is_read = 0 THEN 1 ELSE 0 END) as theMustUnread,
+        SUM(CASE WHEN reading_priority IN ('HIGH_IMPACT', 'CATALYST') AND is_read = 0 THEN 1 ELSE 0 END) as highImpactUnread,
+        SUM(CASE WHEN (reading_priority = 'MACRO' OR portfolio_tag = 'macro' OR ticker IN ('MACRO', 'MARKET')) AND is_read = 0 THEN 1 ELSE 0 END) as macroUnread,
+        SUM(CASE WHEN reading_priority IN ('GOOD_TO_KNOW', 'WATCHLIST') AND is_read = 0 THEN 1 ELSE 0 END) as goodToKnowUnread,
+        SUM(CASE WHEN reading_priority IN ('CHATTER', 'OPTIONAL') AND is_read = 0 THEN 1 ELSE 0 END) as chatterUnread,
         SUM(CASE WHEN reading_priority = 'CATALYST' AND is_read = 0 THEN 1 ELSE 0 END) as catalystUnread,
         SUM(CASE WHEN reading_priority = 'WATCHLIST' AND is_read = 0 THEN 1 ELSE 0 END) as watchlistUnread,
-        SUM(CASE WHEN reading_priority = 'CHATTER' AND is_read = 0 THEN 1 ELSE 0 END) as chatterUnread,
-        SUM(CASE WHEN reading_priority IN ('CATALYST', 'GOOD_TO_KNOW') AND is_read = 0 THEN 1 ELSE 0 END) as goodToKnowUnread,
         SUM(CASE WHEN portfolio_tag IN ('main', 'dual') AND is_read = 0 THEN 1 ELSE 0 END) as mainUnread,
         SUM(CASE WHEN portfolio_tag IN ('tiger', 'dual') AND is_read = 0 THEN 1 ELSE 0 END) as tigerUnread,
+        SUM(CASE WHEN portfolio_tag IN ('project2x', 'main', 'tiger', 'dual') AND is_read = 0 THEN 1 ELSE 0 END) as project2xUnread,
         SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as totalUnread,
         COUNT(*) as totalArticles
       FROM news_intelligence
@@ -113,12 +125,15 @@ newsRoutes.get('/stats', (c) => {
 
     return c.json({
       theMustUnread: stats?.theMustUnread || 0,
+      highImpactUnread: stats?.highImpactUnread || 0,
+      macroUnread: stats?.macroUnread || 0,
+      goodToKnowUnread: stats?.goodToKnowUnread || 0,
+      chatterUnread: stats?.chatterUnread || 0,
       catalystUnread: stats?.catalystUnread || 0,
       watchlistUnread: stats?.watchlistUnread || 0,
-      chatterUnread: stats?.chatterUnread || 0,
-      goodToKnowUnread: stats?.goodToKnowUnread || 0,
       mainUnread: stats?.mainUnread || 0,
       tigerUnread: stats?.tigerUnread || 0,
+      project2xUnread: stats?.project2xUnread || 0,
       totalUnread: stats?.totalUnread || 0,
       totalArticles: stats?.totalArticles || 0
     });
