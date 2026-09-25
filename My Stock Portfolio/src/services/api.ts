@@ -118,6 +118,7 @@ export const api = {
     dashboard: (portfolioId: string) => authFetch(`/project-2x/dashboard/${portfolioId}`),
     quotas: (portfolioId: string) => authFetch(`/project-2x/quotas/${portfolioId}`),
     resetQuotas: (portfolioId: string) => authFetch(`/project-2x/quotas/${portfolioId}/reset`, { method: 'POST' }),
+    renewEpoch: (portfolioId: string, data: { symbol: string; anchor_date?: string; start_price?: number; horizon_years?: number }) => authFetch(`/project-2x/quotas/${portfolioId}/renew-epoch`, { method: 'POST', body: JSON.stringify(data) }),
     scan: (portfolioId: string) => authFetch(`/project-2x/scan/${portfolioId}`),
     recommend: (portfolioId: string, amount_thb: number) => authFetch(`/project-2x/recommend/${portfolioId}`, { method: 'POST', body: JSON.stringify({ amount_thb }) }),
     config: (portfolioId: string) => authFetch(`/project-2x/config/${portfolioId}`),

@@ -32,7 +32,8 @@ import {
   ArrowDownUp,
   ArrowUp,
   ArrowDown,
-  Dna
+  Dna,
+  Clock
 } from 'lucide-react';
 import { usePortfolioStore } from '../../stores/portfolioStore';
 import { useProject2xStore, MilestoneItem, RadarRow } from '../../stores/project2xStore';
@@ -47,7 +48,7 @@ import { useDossierStore } from '../../stores/dossierStore';
 
 type SortKey = 'STATUS' | 'PROGRESS' | 'VALUE' | 'WEIGHT' | 'NAME';
 type SortOrder = 'ASC' | 'DESC';
-type TableSortColumn = 'SYMBOL' | 'PRICE' | 'WEIGHT' | 'EMA150' | 'EMA200' | 'BANKER' | 'PE' | 'PEG' | 'CAGR' | 'BEAT' | 'STATUS';
+type TableSortColumn = 'SYMBOL' | 'PRICE' | 'WEIGHT' | 'THESIS' | 'EMA150' | 'EMA200' | 'BANKER' | 'PE' | 'PEG' | 'CAGR' | 'BEAT' | 'STATUS';
 export type TrendLookback = '30D' | '90D' | '1Y' | 'ALL';
 
 export const Project2xPage: React.FC = () => {
@@ -246,6 +247,12 @@ export const Project2xPage: React.FC = () => {
         case 'WEIGHT':
           comp = (a.weight_pct || 0) - (b.weight_pct || 0);
           break;
+        case 'THESIS': {
+          const daysA = a.thesis_days_remaining ?? 9999;
+          const daysB = b.thesis_days_remaining ?? 9999;
+          comp = daysA - daysB;
+          break;
+        }
         case 'EMA150':
           comp = a.distEma150 - b.distEma150;
           break;
@@ -841,6 +848,13 @@ export const Project2xPage: React.FC = () => {
                         {tableSortKey === 'WEIGHT' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
                       </div>
                     </th>
+                    <th onClick={() => toggleTableSort('THESIS')} className="p-3.5 cursor-pointer hover:text-white transition-colors min-w-[155px]">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>⏱️ Thesis (3Y)</span>
+                        {tableSortKey === 'THESIS' && (tableSortOrder === 'ASC' ? <ArrowUp className="w-3 h-3 text-cyan-400" /> : <ArrowDown className="w-3 h-3 text-cyan-400" />)}
+                      </div>
+                    </th>
                     <th onClick={() => toggleTableSort('EMA150')} className="p-3.5 cursor-pointer hover:text-white transition-colors">
                       <div className="flex items-center gap-1">
                         <span>vs EMA150</span>
@@ -900,6 +914,7 @@ export const Project2xPage: React.FC = () => {
                         <td className="p-3.5"><div className="h-5 w-14 bg-white/10 rounded" /></td>
                         <td className="p-3.5"><div className="h-8 w-28 bg-white/5 rounded" /></td>
                         <td className="p-3.5"><div className="h-5 w-20 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-24 bg-white/10 rounded" /></td>
                         <td className="p-3.5"><div className="h-5 w-14 bg-white/10 rounded" /></td>
                         <td className="p-3.5"><div className="h-5 w-14 bg-white/10 rounded" /></td>
                         <td className="p-3.5"><div className="h-5 w-12 bg-white/10 rounded" /></td>
@@ -913,7 +928,7 @@ export const Project2xPage: React.FC = () => {
                     ))
                   ) : sortedRadarRows.length === 0 ? (
                     <tr>
-                      <td colSpan={13} className="text-center py-12 text-slate-300 font-semibold text-sm">
+                      <td colSpan={14} className="text-center py-12 text-slate-300 font-semibold text-sm">
                         ไม่พบหุ้นในเงื่อนไขที่เลือก
                       </td>
                     </tr>
@@ -969,6 +984,51 @@ export const Project2xPage: React.FC = () => {
                               style={{ width: `${Math.min(100, (row.weight_pct / Math.max(1, row.target_percent)) * 100)}%` }}
                             />
                           </div>
+                        </td>
+                        {/* ⏱️ THESIS (3Y Doubler Clock & Pace) */}
+                        <td className="p-3.5">
+                          {row.thesis_status === 'NOT_STARTED' || !row.thesis_anchor_date ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-white/5 text-slate-300 border border-white/10" title="ยังไม่เคยซื้อหุ้นตัวนี้ — วิทยานิพนธ์จะเริ่มนับเมื่อซื้อไม้แรก">
+                              ⏳ Not Started
+                            </span>
+                          ) : row.thesis_status === 'DOUBLED' ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                                🏆 DOUBLED!
+                              </span>
+                              <span className="text-[12px] font-bold text-emerald-400 tabular-nums">
+                                +{row.thesis_price_growth_pct?.toFixed(0)}% (${row.thesis_start_price} → ${row.currentPrice.toFixed(0)})
+                              </span>
+                            </div>
+                          ) : row.thesis_status === 'EXPIRED' ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                                🔴 EXPIRED
+                              </span>
+                              <span className="text-[12px] text-slate-300 tabular-nums">
+                                {row.thesis_price_growth_pct != null ? `${row.thesis_price_growth_pct >= 0 ? '+' : ''}${row.thesis_price_growth_pct.toFixed(0)}%` : '0%'} in 3Y
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5 font-bold tabular-nums">
+                                <span className={`text-xs px-1.5 py-0.5 rounded font-black ${
+                                  (row.thesis_months_remaining ?? 36) > 18
+                                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                    : (row.thesis_months_remaining ?? 36) >= 6
+                                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                    : 'bg-rose-500/15 text-rose-300 border border-rose-500/30 animate-pulse'
+                                }`}>
+                                  ⏱️ {row.thesis_months_remaining ?? 36}M left
+                                </span>
+                              </div>
+                              <span className={`text-[12px] font-semibold tabular-nums ${
+                                (row.thesis_pace_pct ?? 0) >= 0 ? 'text-emerald-300' : (row.thesis_pace_pct ?? 0) > -12 ? 'text-amber-300' : 'text-rose-400'
+                              }`} title={`เริ่ม ${row.thesis_anchor_date} @ $${row.thesis_start_price} -> เป้า 2X $${row.thesis_target_price}`}>
+                                {row.thesis_pace_label}
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className={`p-3.5 font-bold tabular-nums ${row.distEma150 >= 0 ? 'text-cyan-300' : 'text-rose-400'}`}>
                           {row.distEma150 >= 0 ? `+${row.distEma150}%` : `${row.distEma150}%`}

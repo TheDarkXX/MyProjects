@@ -63,8 +63,10 @@ export const DossierCockpitTab: React.FC = () => {
             <DoublerConeChart
               symbol={data.symbol}
               currentPrice={data.currentPrice}
-              basePrice={data.basePrice}
-              targetPrice3Y={data.targetPrice3Y}
+              basePrice={data.thesis?.startPrice || data.basePrice}
+              targetPrice3Y={data.thesis?.targetPrice || data.targetPrice3Y}
+              anchorDate={data.thesis?.anchorDate || data.holding?.firstBuyDate}
+              horizonYears={data.thesis?.horizonYears || 3}
             />
           </div>
 
@@ -100,8 +102,10 @@ export const DossierCockpitTab: React.FC = () => {
             <DoublerConeChart
               symbol={data.symbol}
               currentPrice={data.currentPrice}
-              basePrice={data.basePrice}
-              targetPrice3Y={data.targetPrice3Y}
+              basePrice={data.thesis?.startPrice || data.basePrice}
+              targetPrice3Y={data.thesis?.targetPrice || data.targetPrice3Y}
+              anchorDate={data.thesis?.anchorDate || data.holding?.firstBuyDate}
+              horizonYears={data.thesis?.horizonYears || 3}
             />
           </div>
 
@@ -139,8 +143,10 @@ export const DossierCockpitTab: React.FC = () => {
             <DoublerConeChart
               symbol={data.symbol}
               currentPrice={data.currentPrice}
-              basePrice={data.basePrice}
-              targetPrice3Y={data.targetPrice3Y}
+              basePrice={data.thesis?.startPrice || data.basePrice}
+              targetPrice3Y={data.thesis?.targetPrice || data.targetPrice3Y}
+              anchorDate={data.thesis?.anchorDate || data.holding?.firstBuyDate}
+              horizonYears={data.thesis?.horizonYears || 3}
             />
           </div>
 

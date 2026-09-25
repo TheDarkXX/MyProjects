@@ -71,6 +71,9 @@ export interface ShareQuota {
   owned_shares: number;
   progress_percent: number;
   status: 'EMPTY' | 'COLLECTING' | 'LOCKED';
+  thesis_anchor_date?: string | null;
+  thesis_start_price?: number | null;
+  thesis_horizon_years?: number;
 }
 
 export interface RadarRow {
@@ -141,6 +144,20 @@ export interface RadarRow {
   peg_ratio?: number | null;
   expected_cagr?: number;
   consecutive_eps_qs?: number;
+  // Thesis Tracking (1 เด้ง ใน 3 ปี)
+  thesis_anchor_date?: string | null;
+  thesis_start_price?: number | null;
+  thesis_horizon_years?: number;
+  thesis_target_price?: number | null;
+  thesis_days_elapsed?: number;
+  thesis_days_remaining?: number;
+  thesis_months_remaining?: number;
+  thesis_progress_days_pct?: number;
+  thesis_price_growth_pct?: number;
+  thesis_ideal_price?: number | null;
+  thesis_pace_pct?: number;
+  thesis_pace_label?: string;
+  thesis_status?: 'NOT_STARTED' | 'DOUBLED' | 'ON_TRACK' | 'BEHIND' | 'EXPIRED';
 }
 
 export interface FundamentalItem {
@@ -250,6 +267,7 @@ interface Project2xStore {
   checkBackfillStatus: (portfolioId: string) => Promise<void>;
   fetchFundamentalsList: (portfolioId: string) => Promise<void>;
   updateFundamentalItem: (portfolioId: string, data: { symbol: string; expected_cagr_3y?: number; consecutive_eps_qs?: number }) => Promise<void>;
+  renewThesisEpoch: (portfolioId: string, symbol: string, params?: { anchor_date?: string; start_price?: number; horizon_years?: number }) => Promise<void>;
   refreshAll: (portfolioId: string) => Promise<void>;
 }
 
@@ -426,6 +444,19 @@ export const useProject2xStore = create<Project2xStore>((set, get) => ({
       await get().fetchRadar(portfolioId);
     } catch (err: any) {
       set({ error: err.message });
+    }
+  },
+
+  renewThesisEpoch: async (portfolioId: string, symbol: string, params = {}) => {
+    try {
+      await api.project2x.renewEpoch(portfolioId, { symbol, ...params });
+      await Promise.all([
+        get().fetchQuotas(portfolioId),
+        get().fetchRadar(portfolioId)
+      ]);
+    } catch (err: any) {
+      set({ error: err.message });
+      throw err;
     }
   },
 

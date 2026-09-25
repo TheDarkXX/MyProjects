@@ -10,7 +10,8 @@ import {
   getBackfillStatus,
   backfillHistoricalData,
   getAllFundamentals,
-  updateFundamentalsOverride
+  updateFundamentalsOverride,
+  renewThesisEpoch
 } from '../services/project2xEngine.js';
 import {
   getDossierData,
@@ -90,6 +91,29 @@ project2xRoutes.post('/quotas/:pid/reset', async (c) => {
   } catch (error) {
     console.error('[Project2X API] Quotas reset error:', error);
     return c.json({ error: error.message || 'Failed to reset quotas' }, 500);
+  }
+});
+
+/**
+ * POST /api/project-2x/quotas/:pid/renew-epoch
+ * Renew or manually adjust Thesis Epoch (start date, price, horizon)
+ */
+project2xRoutes.post('/quotas/:pid/renew-epoch', async (c) => {
+  const pid = c.req.param('pid');
+  try {
+    const body = await c.req.json();
+    const { symbol, anchor_date, start_price, horizon_years } = body;
+    if (!symbol) return c.json({ error: 'Symbol is required' }, 400);
+
+    const result = renewThesisEpoch(pid, symbol, {
+      anchor_date,
+      start_price,
+      horizon_years
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error('[Project2X API] Renew epoch error:', error);
+    return c.json({ error: error.message || 'Failed to renew thesis epoch' }, 500);
   }
 });
 

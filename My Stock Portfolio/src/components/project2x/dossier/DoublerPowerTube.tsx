@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Target, Flame, Sparkles, Clock, CheckCircle2, Trophy, Compass } from 'lucide-react';
+import { Target, Flame, Sparkles, Clock, CheckCircle2, Trophy, Compass, RotateCcw } from 'lucide-react';
 import { DossierPayload } from '../../../stores/dossierStore';
+import { usePortfolioStore } from '../../../stores/portfolioStore';
+import { useProject2xStore } from '../../../stores/project2xStore';
+import { useDossierStore } from '../../../stores/dossierStore';
 
 interface DoublerPowerTubeProps {
   currentPrice: number;
@@ -21,15 +24,40 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
   data
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isRenewing, setIsRenewing] = useState(false);
 
-  // 1. Base price for doubler milestone
-  const basePrice = data?.basePrice && data.basePrice > 0 
-    ? data.basePrice 
-    : (avgCost > 0 ? avgCost : currentPrice * 0.5);
+  const { activePortfolioId } = usePortfolioStore();
+  const renewThesisEpoch = useProject2xStore((s) => s.renewThesisEpoch);
+  const openDossier = useDossierStore((s) => s.openDossier);
 
-  const effectiveTarget = targetPrice3Y && targetPrice3Y > 0 
-    ? targetPrice3Y 
-    : (basePrice * 2);
+  const handleRenew = async () => {
+    if (!data?.symbol || !activePortfolioId) return;
+    const confirmed = window.confirm(
+      `ยืนยันการ Reset / ต่ออายุ Thesis Epoch สำหรับ ${data.symbol}?\n\n• วันเริ่มนับใหม่: วันนี้ (${new Date().toLocaleDateString('th-TH')})\n• ราคาเริ่มใหม่: $${currentPrice.toFixed(2)}\n• เป้าหมาย 1 เด้ง (2X) ใหม่: $${(currentPrice * 2).toFixed(2)}\n• กรอบเวลานับใหม่: 3 ปี (36 เดือน)`
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsRenewing(true);
+      await renewThesisEpoch(activePortfolioId, data.symbol, {
+        start_price: currentPrice,
+        anchor_date: new Date().toISOString().slice(0, 10),
+        horizon_years: 3.0
+      });
+      await openDossier(activePortfolioId, data.symbol);
+    } catch (err: any) {
+      alert(`ต่ออายุ Thesis ไม่สำเร็จ: ${err.message}`);
+    } finally {
+      setIsRenewing(false);
+    }
+  };
+
+  // 1. Base price for doubler milestone: prioritize thesis start price
+  const basePrice = (data as any)?.thesis?.startPrice 
+    || (data?.basePrice && data.basePrice > 0 ? data.basePrice : (avgCost > 0 ? avgCost : currentPrice * 0.5));
+
+  const effectiveTarget = (data as any)?.thesis?.targetPrice
+    || (targetPrice3Y && targetPrice3Y > 0 ? targetPrice3Y : (basePrice * 2));
 
   const pnlDollar = currentPrice - basePrice;
   const pnlPct = basePrice > 0 ? (pnlDollar / basePrice) * 100 : unrealizedPnlPct;
@@ -51,30 +79,40 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
   const targetY2 = Number((basePrice * 1.5876).toFixed(2));
   const targetY3 = Number(effectiveTarget.toFixed(2));
 
-  // 4. First Buy Date & Time Telemetry
-  const firstBuyDateStr = data?.holding?.firstBuyDate 
+  // 4. First Buy Date & Thesis Horizon Telemetry
+  const firstBuyDateStr = (data as any)?.thesis?.anchorDate
+    || data?.holding?.firstBuyDate 
     || (data?.holding?.lots && data.holding.lots.length > 0 
         ? [...data.holding.lots].sort((a, b) => a.date.localeCompare(b.date))[0]?.date 
         : null);
 
+  const hasStarted = Boolean(firstBuyDateStr && (data?.holding?.shares || 0) > 0.0001);
+  const horizonYears = (data as any)?.thesis?.horizonYears || 3;
+
   const timeTelemetry = useMemo(() => {
-    const now = new Date();
-    let startDate = firstBuyDateStr ? new Date(firstBuyDateStr) : null;
-    
-    // Fallback if no lot date: assume 180 days default
-    if (!startDate || isNaN(startDate.getTime())) {
-      startDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+    if (!hasStarted || !firstBuyDateStr) {
+      return {
+        hasStarted: false,
+        daysHeld: 0,
+        monthsHeld: 0,
+        yearsHeld: 0,
+        daysRemaining: Math.round(horizonYears * 365.25),
+        monthsRemaining: Math.round(horizonYears * 12),
+        heldText: '—',
+        remainingText: `${Math.round(horizonYears * 12)}M (ยังไม่เริ่ม)`
+      };
     }
 
+    const now = new Date();
+    const startDate = new Date(firstBuyDateStr);
     const diffMs = Math.max(0, now.getTime() - startDate.getTime());
     const daysHeld = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-    const monthsHeld = Math.floor(daysHeld / 30.44);
+    const monthsHeld = Math.floor(daysHeld / 30.4375);
     const yearsHeld = Number((daysHeld / 365.25).toFixed(1));
 
-    // 3-Year Horizon (36 months / 1,095 days)
-    const totalDays3Y = 365.25 * 3;
-    const daysRemaining = Math.max(0, Math.round(totalDays3Y - daysHeld));
-    const monthsRemaining = Math.max(0, Math.round(36 - monthsHeld));
+    const totalDays = Math.round(horizonYears * 365.25);
+    const daysRemaining = Math.max(0, totalDays - daysHeld);
+    const monthsRemaining = Math.max(0, Math.round(daysRemaining / 30.4375));
 
     let heldText = '';
     if (monthsHeld >= 12) {
@@ -87,7 +125,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
 
     let remainingText = '';
     if (daysRemaining <= 0) {
-      remainingText = 'ครบ 3Y';
+      remainingText = `ครบ ${horizonYears}Y`;
     } else if (monthsRemaining >= 12) {
       const y = Math.floor(monthsRemaining / 12);
       const m = monthsRemaining % 12;
@@ -97,6 +135,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
     }
 
     return {
+      hasStarted: true,
       daysHeld,
       monthsHeld,
       yearsHeld,
@@ -105,11 +144,32 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
       heldText,
       remainingText
     };
-  }, [firstBuyDateStr]);
+  }, [firstBuyDateStr, hasStarted, horizonYears]);
 
   // 5. Pace Telemetry (Current Price vs Ideal Exponential Pace Curve)
   const paceAnalysis = useMemo(() => {
-    const tYears = Math.min(3, Math.max(0.08, timeTelemetry.yearsHeld));
+    if (!timeTelemetry.hasStarted) {
+      return {
+        idealPrice: basePrice,
+        paceDeltaPct: 0,
+        status: 'ON_TRACK' as const,
+        label: '⏳ Not Started',
+        badgeClass: 'text-slate-300 bg-white/5 border-white/10'
+      };
+    }
+
+    if (currentPrice >= targetY3) {
+      const gainPct = basePrice > 0 ? ((currentPrice - basePrice) / basePrice) * 100 : 100;
+      return {
+        idealPrice: targetY3,
+        paceDeltaPct: gainPct - 100,
+        status: 'AHEAD' as const,
+        label: `🏆 Doubled (+${gainPct.toFixed(0)}%)`,
+        badgeClass: 'text-amber-300 bg-amber-950/60 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.25)]'
+      };
+    }
+
+    const tYears = Math.min(horizonYears, Math.max(0.08, timeTelemetry.yearsHeld));
     const idealPrice = basePrice * Math.pow(1.26, tYears);
     const paceDeltaPct = idealPrice > 0 ? ((currentPrice - idealPrice) / idealPrice) * 100 : 0;
 
@@ -119,7 +179,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
 
     if (timeTelemetry.daysRemaining <= 0 && currentPrice < targetY3) {
       status = 'OVERDUE';
-      label = '🔴 Time Expired (>3Y)';
+      label = `🔴 Time Expired (>${horizonYears}Y)`;
       badgeClass = 'text-rose-300 bg-rose-950/60 border-rose-500/40';
     } else if (paceDeltaPct >= 6) {
       status = 'AHEAD';
@@ -132,7 +192,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
     }
 
     return { idealPrice, paceDeltaPct, status, label, badgeClass };
-  }, [basePrice, currentPrice, timeTelemetry, targetY3]);
+  }, [basePrice, currentPrice, timeTelemetry, targetY3, horizonYears]);
 
   // 6. Determine Active Mission Stage
   const activeMission = useMemo(() => {
@@ -192,14 +252,26 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
           </div>
         </div>
 
-        {/* Right: Time Dimension Telemetry (ถือมาแล้ว vs เวลาคงเหลือ) */}
-        <div className="flex items-center gap-1.5 text-[12px] font-mono text-slate-300 bg-slate-950/80 px-2.5 py-1 rounded-xl border border-white/10 shadow-inner">
-          <Clock className="w-3.5 h-3.5 text-orange-400" />
-          <span className="text-slate-400 text-[11px]">ถือ:</span>
-          <strong className="text-white font-bold">{timeTelemetry.heldText}</strong>
-          <span className="text-slate-500">•</span>
-          <span className="text-slate-400 text-[11px]">เหลือ:</span>
-          <strong className="text-orange-300 font-bold">{timeTelemetry.remainingText}</strong>
+        {/* Right: Time Dimension Telemetry & Renew 3Y Epoch */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-[12px] font-mono text-slate-300 bg-slate-950/80 px-2.5 py-1 rounded-xl border border-white/10 shadow-inner">
+            <Clock className="w-3.5 h-3.5 text-orange-400" />
+            <span className="text-slate-400 text-[11px]">ถือ:</span>
+            <strong className="text-white font-bold">{timeTelemetry.heldText}</strong>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-400 text-[11px]">เหลือ:</span>
+            <strong className="text-orange-300 font-bold">{timeTelemetry.remainingText}</strong>
+          </div>
+
+          <button
+            onClick={handleRenew}
+            disabled={isRenewing}
+            title="รีเซ็ต/ต่ออายุรอบ Thesis 3 ปีใหม่จากราคาวันนี้"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-orange-950/60 border border-white/10 hover:border-orange-500/50 text-slate-300 hover:text-orange-200 text-[12px] font-mono font-medium transition-all shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer"
+          >
+            <RotateCcw className={`w-3.5 h-3.5 text-orange-400 ${isRenewing ? 'animate-spin' : ''}`} />
+            <span>{isRenewing ? 'กำลังต่ออายุ...' : 'Renew 3Y'}</span>
+          </button>
         </div>
       </div>
 

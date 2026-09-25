@@ -37,22 +37,26 @@ export interface ThesisScenario {
 }
 
 export interface ThesisData {
-  secularTrend: string;
-  catalysts: Array<{ quarter: string; title: string; desc: string }>;
-  tamCurrentB: number;
-  tamFuture3YB: number;
-  marketSharePct: number;
-  moatBreakdown: {
+  anchorDate?: string | null;
+  startPrice?: number;
+  horizonYears?: number;
+  targetPrice?: number;
+  secularTrend?: string;
+  catalysts?: Array<{ quarter: string; title: string; desc: string }>;
+  tamCurrentB?: number;
+  tamFuture3YB?: number;
+  marketSharePct?: number;
+  moatBreakdown?: {
     scaleAdvantage: { score: number; maxScore: number; reason: string };
     switchingCost: { score: number; maxScore: number; reason: string };
     networkEffect: { score: number; maxScore: number; reason: string };
   };
-  scenarios: {
+  scenarios?: {
     bear: ThesisScenario;
     base: ThesisScenario;
     bull: ThesisScenario;
   };
-  milestones: Array<{ year: string; target: string; status: 'DONE' | 'IN_PROGRESS' | 'PENDING' }>;
+  milestones?: Array<{ year: string; target: string; status: 'DONE' | 'IN_PROGRESS' | 'PENDING' }>;
 }
 
 export interface AnalystConsensus {

@@ -258,6 +258,9 @@ export function initDb() {
         split_factor REAL DEFAULT 1.0,
         target_shares REAL NOT NULL DEFAULT 0,
         status TEXT DEFAULT 'COLLECTING',
+        thesis_anchor_date TEXT DEFAULT NULL,
+        thesis_start_price REAL DEFAULT NULL,
+        thesis_horizon_years REAL DEFAULT 3.0,
         created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now')),
         UNIQUE(portfolio_id, symbol)
@@ -508,6 +511,16 @@ export function initDb() {
     }
   } catch (err) {
     console.error('[DB] Migration error on symbol_fundamentals:', err.message);
+  }
+
+  // Migration for project2x_share_quotas (Thesis Epoch Columns)
+  try {
+    const existingQuotaCols = new Set(db.pragma('table_info(project2x_share_quotas)').map(col => col.name));
+    if (!existingQuotaCols.has('thesis_anchor_date')) db.exec("ALTER TABLE project2x_share_quotas ADD COLUMN thesis_anchor_date TEXT DEFAULT NULL;");
+    if (!existingQuotaCols.has('thesis_start_price')) db.exec("ALTER TABLE project2x_share_quotas ADD COLUMN thesis_start_price REAL DEFAULT NULL;");
+    if (!existingQuotaCols.has('thesis_horizon_years')) db.exec("ALTER TABLE project2x_share_quotas ADD COLUMN thesis_horizon_years REAL DEFAULT 3.0;");
+  } catch (err) {
+    console.error('[DB] Migration error on project2x_share_quotas:', err.message);
   }
 
   console.log('✅ SQLite DB Initialized at', dbPath);

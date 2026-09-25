@@ -234,6 +234,62 @@ export async function syncShareQuotas(portfolioId, forceDefault = false) {
     if (ownedShares <= 0.0001) status = 'EMPTY';
     else if (progress >= 100) status = 'LOCKED';
 
+    // Auto-detect or sync Thesis Epoch (First Buy Date & Start Price)
+    let thesisAnchorDate = q.thesis_anchor_date;
+    let thesisStartPrice = q.thesis_start_price;
+    let thesisHorizonYears = q.thesis_horizon_years || 3.0;
+
+    if (!thesisAnchorDate || !thesisStartPrice) {
+      const firstBuy = db.prepare(`
+        SELECT date, price 
+        FROM transactions 
+        WHERE portfolio_id = ? AND symbol = ? AND type = 'BUY'
+        ORDER BY date ASC LIMIT 1
+      `).get(portfolioId, q.symbol);
+
+      if (firstBuy && firstBuy.date) {
+        thesisAnchorDate = firstBuy.date.slice(0, 10);
+        let detectedPrice = firstBuy.price > 0 ? firstBuy.price : 0;
+        if (!detectedPrice) {
+          const hist = db.prepare(`
+            SELECT close FROM historical_prices 
+            WHERE symbol = ? AND date <= ? 
+            ORDER BY date DESC LIMIT 1
+          `).get(q.symbol, thesisAnchorDate);
+          detectedPrice = hist?.close || q.base_price;
+        }
+        thesisStartPrice = Number(detectedPrice.toFixed(2));
+
+        db.prepare(`
+          UPDATE project2x_share_quotas 
+          SET thesis_anchor_date = ?, thesis_start_price = ?, thesis_horizon_years = ?, updated_at = datetime('now') 
+          WHERE id = ?
+        `).run(thesisAnchorDate, thesisStartPrice, thesisHorizonYears, q.id);
+      } else if (isTiger && q.symbol === 'QQQM') {
+        const schgFirstBuy = db.prepare(`
+          SELECT date, price 
+          FROM transactions 
+          WHERE portfolio_id = ? AND symbol = 'SCHG' AND type = 'BUY'
+          ORDER BY date ASC LIMIT 1
+        `).get(portfolioId);
+        if (schgFirstBuy && schgFirstBuy.date) {
+          thesisAnchorDate = schgFirstBuy.date.slice(0, 10);
+          const qqqmHist = db.prepare(`
+            SELECT close FROM historical_prices 
+            WHERE symbol = 'QQQM' AND date <= ? 
+            ORDER BY date DESC LIMIT 1
+          `).get(thesisAnchorDate);
+          thesisStartPrice = Number((qqqmHist?.close || q.base_price || 520.0).toFixed(2));
+
+          db.prepare(`
+            UPDATE project2x_share_quotas 
+            SET thesis_anchor_date = ?, thesis_start_price = ?, thesis_horizon_years = ?, updated_at = datetime('now') 
+            WHERE id = ?
+          `).run(thesisAnchorDate, thesisStartPrice, thesisHorizonYears, q.id);
+        }
+      }
+    }
+
     // Update status in DB if changed
     if (status !== q.status) {
       db.prepare('UPDATE project2x_share_quotas SET status = ?, updated_at = datetime(\'now\') WHERE id = ?').run(status, q.id);
@@ -241,6 +297,9 @@ export async function syncShareQuotas(portfolioId, forceDefault = false) {
 
     enriched.push({
       ...q,
+      thesis_anchor_date: thesisAnchorDate,
+      thesis_start_price: thesisStartPrice,
+      thesis_horizon_years: thesisHorizonYears,
       owned_shares: Number(ownedShares.toFixed(4)),
       progress_percent: progress,
       status
@@ -248,6 +307,120 @@ export async function syncShareQuotas(portfolioId, forceDefault = false) {
   }
 
   return enriched;
+}
+
+/**
+ * Calculate Thesis Metrics (1 เด้ง ใน 3 ปี)
+ * Measures whether the stock itself is compounding towards 2X on schedule from first buy date.
+ * Independent of portfolio DCA / personal cash return.
+ */
+export function calculateThesisMetrics(anchorDate, startPrice, horizonYears = 3.0, currentPrice = 0, ownedShares = 0) {
+  if (!anchorDate || !startPrice || startPrice <= 0 || ownedShares <= 0.0001) {
+    return {
+      thesis_anchor_date: anchorDate || null,
+      thesis_start_price: startPrice || null,
+      thesis_horizon_years: horizonYears,
+      thesis_target_price: startPrice ? Number((startPrice * 2).toFixed(2)) : null,
+      thesis_days_elapsed: 0,
+      thesis_days_remaining: Math.round(horizonYears * 365.25),
+      thesis_months_remaining: Math.round(horizonYears * 12),
+      thesis_progress_days_pct: 0,
+      thesis_price_growth_pct: 0,
+      thesis_ideal_price: startPrice || null,
+      thesis_pace_pct: 0,
+      thesis_pace_label: 'Not Started',
+      thesis_status: 'NOT_STARTED'
+    };
+  }
+
+  const now = new Date();
+  const start = new Date(anchorDate);
+  const diffMs = Math.max(0, now.getTime() - start.getTime());
+  const daysElapsed = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const totalDays = Math.round(horizonYears * 365.25);
+  const daysRemaining = Math.max(0, totalDays - daysElapsed);
+  const monthsRemaining = Math.max(0, Math.round(daysRemaining / 30.4375));
+  const progressDaysPct = Math.min(100, Number(((daysElapsed / totalDays) * 100).toFixed(1)));
+
+  const targetPrice = Number((startPrice * 2).toFixed(2));
+  const priceGrowthPct = Number((((currentPrice - startPrice) / startPrice) * 100).toFixed(1));
+
+  // Ideal Exponential Pace Curve (2^(t / totalDays))
+  const tFraction = Math.min(1, Math.max(0, daysElapsed / totalDays));
+  const idealPrice = Number((startPrice * Math.pow(2, tFraction)).toFixed(2));
+  const pacePct = idealPrice > 0 ? Number((((currentPrice - idealPrice) / idealPrice) * 100).toFixed(1)) : 0;
+
+  const isDoubled = currentPrice >= targetPrice || priceGrowthPct >= 100;
+  const isExpired = daysRemaining <= 0 && !isDoubled;
+
+  let thesisStatus = 'ON_TRACK';
+  let paceLabel = '🟢 On Track';
+
+  if (isDoubled) {
+    thesisStatus = 'DOUBLED';
+    paceLabel = '🏆 DOUBLED';
+  } else if (isExpired) {
+    thesisStatus = 'EXPIRED';
+    paceLabel = '🔴 Expired (>3Y)';
+  } else if (pacePct >= 6) {
+    thesisStatus = 'ON_TRACK';
+    paceLabel = `🚀 Ahead (+${pacePct}%)`;
+  } else if (pacePct <= -12) {
+    thesisStatus = 'BEHIND';
+    paceLabel = `🔴 Behind (${pacePct}%)`;
+  } else if (pacePct < 0) {
+    thesisStatus = 'BEHIND';
+    paceLabel = `🟡 -${Math.abs(pacePct)}% Behind`;
+  } else {
+    thesisStatus = 'ON_TRACK';
+    paceLabel = '🟢 On Track';
+  }
+
+  return {
+    thesis_anchor_date: anchorDate,
+    thesis_start_price: startPrice,
+    thesis_horizon_years: horizonYears,
+    thesis_target_price: targetPrice,
+    thesis_days_elapsed: daysElapsed,
+    thesis_days_remaining: daysRemaining,
+    thesis_months_remaining: monthsRemaining,
+    thesis_progress_days_pct: progressDaysPct,
+    thesis_price_growth_pct: priceGrowthPct,
+    thesis_ideal_price: idealPrice,
+    thesis_pace_pct: pacePct,
+    thesis_pace_label: paceLabel,
+    thesis_status: thesisStatus
+  };
+}
+
+/**
+ * Renew or manually update Thesis Epoch
+ */
+export function renewThesisEpoch(portfolioId, symbol, params = {}) {
+  const upper = symbol.toUpperCase();
+  const quota = db.prepare('SELECT * FROM project2x_share_quotas WHERE portfolio_id = ? AND symbol = ?').get(portfolioId, upper);
+  if (!quota) {
+    throw new Error(`Symbol ${upper} quota not found in portfolio`);
+  }
+
+  const anchorDate = params.anchor_date || new Date().toISOString().slice(0, 10);
+  const startPrice = Number(params.start_price) || quota.base_price;
+  const horizonYears = Number(params.horizon_years) || 3.0;
+
+  db.prepare(`
+    UPDATE project2x_share_quotas 
+    SET thesis_anchor_date = ?, thesis_start_price = ?, thesis_horizon_years = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `).run(anchorDate, startPrice, horizonYears, quota.id);
+
+  return {
+    success: true,
+    symbol: upper,
+    thesis_anchor_date: anchorDate,
+    thesis_start_price: startPrice,
+    thesis_horizon_years: horizonYears,
+    thesis_target_price: Number((startPrice * 2).toFixed(2))
+  };
 }
 
 /**
@@ -1491,6 +1664,14 @@ async function doScanRadarMatrix(portfolioId) {
       ema200: (signalData.sparkline.ema200?.slice(-365) || []).map(v => typeof v === 'number' ? Math.round(v * 100) / 100 : v)
     } : undefined;
 
+    const thesisMetrics = calculateThesisMetrics(
+      q.thesis_anchor_date,
+      q.thesis_start_price,
+      q.thesis_horizon_years || 3.0,
+      currentPrice,
+      ownedShares
+    );
+
     radarRows.push({
       symbol,
       category: q.category,
@@ -1524,7 +1705,8 @@ async function doScanRadarMatrix(portfolioId) {
       owned_shares: ownedShares,
       target_shares: q.target_shares,
       progress_percent: q.progress_percent,
-      status: q.status
+      status: q.status,
+      ...thesisMetrics
     });
   }
 
@@ -1574,6 +1756,21 @@ async function doScanRadarMatrix(portfolioId) {
         ema200: (signalData.sparkline.ema200?.slice(-365) || []).map(v => typeof v === 'number' ? Math.round(v * 100) / 100 : v)
       } : undefined;
 
+      const firstBuy = db.prepare(`
+        SELECT date, price FROM transactions 
+        WHERE portfolio_id = ? AND symbol = ? AND type = 'BUY' 
+        ORDER BY date ASC LIMIT 1
+      `).get(portfolioId, sym);
+      const heldAnchorDate = firstBuy?.date ? firstBuy.date.slice(0, 10) : null;
+      const heldStartPrice = firstBuy?.price || currentPrice;
+      const thesisMetrics = calculateThesisMetrics(
+        heldAnchorDate,
+        heldStartPrice,
+        3.0,
+        currentPrice,
+        ownedInThisPort
+      );
+
       radarRows.push({
         symbol: sym,
         category: 'Held',
@@ -1607,7 +1804,8 @@ async function doScanRadarMatrix(portfolioId) {
         owned_shares: ownedInThisPort,
         target_shares: 0,
         progress_percent: 0,
-        status: ownedInThisPort > 0 ? 'HELD' : 'PORT_2'
+        status: ownedInThisPort > 0 ? 'HELD' : 'PORT_2',
+        ...thesisMetrics
       });
       existingSymbols.add(sym);
     }
@@ -1723,6 +1921,28 @@ async function doScanRadarMatrix(portfolioId) {
         severity: 'WARNING',
         message: `${row.symbol} has dropped ${row.drawdownFrom52W}% from its 52W High ($${row.high52W}). Monitor long-term structural trend.`,
         message_th: `${row.symbol} ย่อตัวลงมาลึก (${row.drawdownFrom52W}% จากจุดสูงสุด 52W $${row.high52W}) — เฝ้าระวังโครงสร้างเทรนด์ใหญ่`
+      });
+    }
+
+    // Layer 6: Thesis Timeout Alert (Expired & not doubled within horizon)
+    if (row.thesis_status === 'EXPIRED' && row.owned_shares > 0) {
+      sellAlerts.push({
+        symbol: row.symbol,
+        layer: 'Thesis Timeout',
+        severity: 'WARNING',
+        message: `Thesis Expired: ${row.symbol} has reached ${row.thesis_horizon_years || 3}Y deadline without doubling (${(row.thesis_price_growth_pct || 0) >= 0 ? '+' : ''}${row.thesis_price_growth_pct || 0}% vs +100% target). Re-evaluate thesis or reallocate capital.`,
+        message_th: `วิทยานิพนธ์ครบกำหนด ${row.thesis_horizon_years || 3} ปี (Thesis Expired): ${row.symbol} ยังไม่ถึงเป้า 1 เด้ง (${(row.thesis_price_growth_pct || 0) >= 0 ? '+' : ''}${row.thesis_price_growth_pct || 0}% vs เป้า +100%) — ทบทวนว่าจะต่ออายุ (Renew) หรือโยกเงินไปหาตัวที่โตแรงกว่า!`
+      });
+    }
+
+    // Layer 7: Thesis Doubled 2X Alert (Free-Ride Candidate)
+    if (row.thesis_status === 'DOUBLED' && row.owned_shares > 0) {
+      sellAlerts.push({
+        symbol: row.symbol,
+        layer: 'Thesis Doubled 2X',
+        severity: 'PROFIT_TAKE',
+        message: `Thesis Validated: ${row.symbol} has DOUBLED (+${row.thesis_price_growth_pct}%) from thesis start ($${row.thesis_start_price} -> $${row.currentPrice.toFixed(2)})! Free-ride 50% or renew epoch.`,
+        message_th: `บรรลุวิทยานิพนธ์ 1 เด้ง 2X! ${row.symbol} ทะลุเป้า (+${row.thesis_price_growth_pct}% จาก $${row.thesis_start_price} เป็น $${row.currentPrice.toFixed(2)}) — พิจารณาขาย 50% ดึงทุนคืน (Free-Ride) หรือกด Reset ต่ออายุ Epoch!`
       });
     }
   }

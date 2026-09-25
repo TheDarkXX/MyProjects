@@ -97,20 +97,6 @@ export async function getDossierData(portfolioId, symbol) {
     status: 'COLLECTING'
   };
 
-  // Target 1-Doubler Price: Prioritize avgCost if owned, else quota.base_price, else currentPrice
-  const basePrice = (avgCost > 0)
-    ? avgCost
-    : (quota.base_price > 0 ? quota.base_price : (currentPrice || 100));
-  const targetPrice3Y = Number((basePrice * 2).toFixed(2));
-  const doublerProgressPct = targetPrice3Y > 0 
-    ? Number(Math.min(100, Math.max(0, (currentPrice / targetPrice3Y) * 100)).toFixed(1))
-    : 0;
-
-  const quotaSharesRemaining = Math.max(0, (quota.target_shares || 0) - holdingShares);
-  const quotaProgressPct = quota.target_shares > 0
-    ? Number(Math.min(100, (holdingShares / quota.target_shares) * 100).toFixed(1))
-    : 0;
-
   // Lots history for execution slip
   const lots = db.prepare(`
     SELECT id, date, type, amount as shares, price, fee, note
@@ -119,13 +105,29 @@ export async function getDossierData(portfolioId, symbol) {
     ORDER BY date DESC LIMIT 10
   `).all(actualPortfolioId, upper);
 
-  // First Buy Date for Time Dimension Telemetry
+  // First Buy Date & Thesis Anchor
   const firstTx = db.prepare(`
-    SELECT MIN(date) as first_buy_date
+    SELECT MIN(date) as first_buy_date, price
     FROM transactions
     WHERE portfolio_id = ? AND symbol = ? AND type = 'BUY'
   `).get(actualPortfolioId, upper);
-  const firstBuyDate = firstTx?.first_buy_date || (lots.length > 0 ? lots[lots.length - 1]?.date : null);
+  const firstBuyDate = quota.thesis_anchor_date || firstTx?.first_buy_date || (lots.length > 0 ? lots[lots.length - 1]?.date : null);
+
+  // Target 1-Doubler Price: Use Thesis Start Price (NOT avgCost!)
+  // Measures pure stock doubling from thesis inception
+  const thesisStartPrice = (quota.thesis_start_price > 0)
+    ? quota.thesis_start_price
+    : (quota.base_price > 0 ? quota.base_price : (currentPrice || 100));
+  const basePrice = thesisStartPrice;
+  const targetPrice3Y = Number((thesisStartPrice * 2).toFixed(2));
+  const doublerProgressPct = targetPrice3Y > 0 
+    ? Number(Math.min(100, Math.max(0, (currentPrice / targetPrice3Y) * 100)).toFixed(1))
+    : 0;
+
+  const quotaSharesRemaining = Math.max(0, (quota.target_shares || 0) - holdingShares);
+  const quotaProgressPct = quota.target_shares > 0
+    ? Number(Math.min(100, (holdingShares / quota.target_shares) * 100).toFixed(1))
+    : 0;
 
   // 3. Real-time Technical Signals & Radar Calculation (with live intraday price)
   const signalRadar = await calculateStockRadarSignal(upper, {
@@ -298,6 +300,12 @@ export async function getDossierData(portfolioId, symbol) {
     verdict,
     verdictReason,
     portfolioWeightPct,
+    thesis: {
+      anchorDate: firstBuyDate,
+      startPrice: thesisStartPrice,
+      horizonYears: quota.thesis_horizon_years || 3.0,
+      targetPrice: targetPrice3Y
+    },
     holding: {
       shares: holdingShares,
       avgCost,
