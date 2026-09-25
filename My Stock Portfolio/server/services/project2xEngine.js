@@ -1528,34 +1528,45 @@ async function doScanRadarMatrix(portfolioId) {
     });
   }
 
-  // Also scan all other active watchlist stocks stored in historical_prices (e.g. COST, ISRG, AAPL, etc.)
+  // Also scan all other stocks held across ANY portfolio (e.g. RBRK, SCHG)
   const existingSymbols = new Set(radarRows.map(r => r.symbol.toUpperCase()));
   try {
-    const extraRows = db.prepare(`
-      SELECT DISTINCT symbol 
-      FROM historical_prices 
-      WHERE symbol NOT LIKE '%=%' AND symbol NOT LIKE '%-USD%'
-      ORDER BY symbol ASC
-    `).all();
+    const allPorts = db.prepare('SELECT id FROM portfolios').all();
+    const allHeldSymbols = new Set();
+    for (const p of allPorts) {
+      const { holdings: portHoldings } = getPortfolioHoldings(p.id);
+      for (const sym in portHoldings) {
+        if (portHoldings[sym].shares > 0.001 && sym !== 'CASH') {
+          allHeldSymbols.add(sym.toUpperCase());
+        }
+      }
+    }
 
-    const unScanned = extraRows
-      .map(r => r.symbol.toUpperCase())
-      .filter(sym => !existingSymbols.has(sym));
+    const unScannedHeld = Array.from(allHeldSymbols).filter(sym => !existingSymbols.has(sym));
 
-    // Parallel signal calculation for watchlist stocks
+    // Parallel signal calculation for held stocks across portfolios
     const extraSignals = await Promise.all(
-      unScanned.map(sym => calculateStockRadarSignal(sym, {
+      unScannedHeld.map(sym => calculateStockRadarSignal(sym, {
         portfolioId,
-        ownedShares: 0,
-        category: 'Watchlist',
+        ownedShares: holdings[sym]?.shares || 0,
+        category: 'Held',
         skipLiveFetch: true
       }))
     );
 
-    for (let i = 0; i < unScanned.length; i++) {
-      const sym = unScanned[i];
+    for (let i = 0; i < unScannedHeld.length; i++) {
+      const sym = unScannedHeld[i];
       const signalData = extraSignals[i];
       if (!signalData) continue;
+
+      const ownedInThisPort = holdings[sym]?.shares || 0;
+      const currentPrice = signalData.currentPrice;
+      const marketValueUsd = ownedInThisPort * currentPrice;
+      stockMarketValues[sym] = marketValueUsd;
+
+      const past252Closes = signalData.sparkline?.closes?.slice(-252) || [];
+      const high52W = past252Closes.length > 0 ? Math.max(...past252Closes) : currentPrice;
+      const drawdownFrom52W = high52W > 0 ? Number((((currentPrice - high52W) / high52W) * 100).toFixed(1)) : 0;
 
       const trimmedSparkline = signalData.sparkline ? {
         closes: (signalData.sparkline.closes?.slice(-365) || []).map(v => typeof v === 'number' ? Math.round(v * 100) / 100 : v),
@@ -1565,9 +1576,9 @@ async function doScanRadarMatrix(portfolioId) {
 
       radarRows.push({
         symbol: sym,
-        category: 'Watchlist',
+        category: 'Held',
         target_percent: 0,
-        currentPrice: signalData.currentPrice,
+        currentPrice,
         ema9: signalData.ema9,
         ema50: signalData.ema50,
         ema150: signalData.ema150,
@@ -1582,8 +1593,8 @@ async function doScanRadarMatrix(portfolioId) {
         rsi14: signalData.rsi14,
         regime: signalData.regime,
         volRatio: signalData.volRatio,
-        high52W: signalData.currentPrice,
-        drawdownFrom52W: 0,
+        high52W,
+        drawdownFrom52W,
         scenario: signalData.scenario,
         traffic_light: signalData.traffic_light,
         ready_sub_mode: signalData.ready_sub_mode || null,
@@ -1593,15 +1604,15 @@ async function doScanRadarMatrix(portfolioId) {
         checklist: signalData.checklist,
         signals_checklist: signalData.signals_checklist,
         sparkline: trimmedSparkline,
-        owned_shares: 0,
+        owned_shares: ownedInThisPort,
         target_shares: 0,
         progress_percent: 0,
-        status: 'WATCHLIST'
+        status: ownedInThisPort > 0 ? 'HELD' : 'PORT_2'
       });
       existingSymbols.add(sym);
     }
   } catch (err) {
-    console.error('[ScanRadarMatrix] Error scanning extra watchlist symbols:', err.message);
+    console.error('[ScanRadarMatrix] Error scanning extra held symbols:', err.message);
   }
 
   // Calculate true total portfolio market value (ALL held securities + actual cash)

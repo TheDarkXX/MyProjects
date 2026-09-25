@@ -85,7 +85,7 @@ export const Project2xPage: React.FC = () => {
 
   // Default to Auto band (calculated via actual MWRR / Safety Guard)
   const [selectedBand, setSelectedBand] = useState<'Conservative' | 'Base' | 'Bull' | 'Auto'>('Auto');
-  const [watchlistFilter, setWatchlistFilter] = useState<'ALL' | 'Core' | 'Moonshot'>('ALL');
+  const [watchlistFilter, setWatchlistFilter] = useState<'ALL' | 'Core' | 'Moonshot' | 'Held'>('ALL');
 
   // Matrix Table Sorting & Detail Modal
   const [tableSortKey, setTableSortKey] = useState<TableSortColumn>('WEIGHT');
@@ -765,7 +765,7 @@ export const Project2xPage: React.FC = () => {
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Category Filter Tabs */}
                 <div className="flex items-center gap-1 p-1 rounded-xl bg-[#131722] border border-white/5 text-xs font-bold">
-                  {(['ALL', 'Core', 'Moonshot'] as const).map((cat) => (
+                  {(['ALL', 'Core', 'Moonshot', 'Held'] as const).map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setWatchlistFilter(cat)}
@@ -933,10 +933,14 @@ export const Project2xPage: React.FC = () => {
                         <td className="p-3.5">
                           <div className="flex items-center gap-2">
                             <span className="font-black text-white text-sm">{row.symbol}</span>
-                            <span className={`px-1.5 py-0.2 rounded text-[11px] font-bold ${
-                              row.category === 'Core' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-purple-500/20 text-purple-300'
+                            <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
+                              row.category === 'Core'
+                                ? 'bg-cyan-500/20 text-cyan-300'
+                                : row.category === 'Moonshot'
+                                ? 'bg-purple-500/20 text-purple-300'
+                                : 'bg-emerald-500/20 text-emerald-300'
                             }`}>
-                              {row.category[0]}
+                              {row.category === 'Core' ? 'C' : row.category === 'Moonshot' ? 'M' : 'H'}
                             </span>
                           </div>
                         </td>
