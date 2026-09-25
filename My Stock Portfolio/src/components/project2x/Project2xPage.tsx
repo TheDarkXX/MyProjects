@@ -893,7 +893,32 @@ export const Project2xPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {sortedRadarRows.map((row) => {
+                  {isLoadingRadar && sortedRadarRows.length === 0 ? (
+                    Array.from({ length: 8 }).map((_, idx) => (
+                      <tr key={`skel-${idx}`} className="animate-pulse">
+                        <td className="p-3.5"><div className="h-5 w-16 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-14 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-8 w-28 bg-white/5 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-20 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-14 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-14 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-12 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-12 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-12 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-12 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-5 w-12 bg-white/10 rounded" /></td>
+                        <td className="p-3.5"><div className="h-6 w-24 bg-white/10 rounded-lg" /></td>
+                        <td className="p-3.5 text-right"><div className="h-7 w-20 bg-white/10 rounded ml-auto" /></td>
+                      </tr>
+                    ))
+                  ) : sortedRadarRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={13} className="text-center py-12 text-slate-300 font-semibold text-sm">
+                        ไม่พบหุ้นในเงื่อนไขที่เลือก
+                      </td>
+                    </tr>
+                  ) : (
+                    sortedRadarRows.map((row) => {
                     const rowTierInfo = getTierVisualInfo(row, row.symbol);
                     const isBuy = rowTierInfo.tierId === 'BUY_NOW';
                     const isDanger = rowTierInfo.tierId === 'FALLING_KNIFE' || rowTierInfo.tierId === 'MAYDAY_EXIT';
@@ -1040,7 +1065,8 @@ export const Project2xPage: React.FC = () => {
                         </td>
                       </tr>
                     );
-                  })}
+                  })
+                )}
                 </tbody>
               </table>
             </div>

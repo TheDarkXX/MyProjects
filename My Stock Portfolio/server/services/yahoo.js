@@ -137,7 +137,16 @@ export async function fetchYahooRealtimeQuote(symbol) {
  * Fetch real-time exchange rate from Yahoo Finance.
  * e.g. USD to THB -> 'THB=X'
  */
+const fxRateCache = new Map();
+const FX_CACHE_TTL_MS = 15 * 60 * 1000; // 15 mins
+
 export async function fetchYahooExchangeRate(from = 'USD', to = 'THB') {
+  const cacheKey = `${from}_${to}`;
+  const cached = fxRateCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < FX_CACHE_TTL_MS)) {
+    return cached.data;
+  }
+
   try {
     let symbol = `${to}=X`;
     if (from !== 'USD') {
@@ -145,18 +154,20 @@ export async function fetchYahooExchangeRate(from = 'USD', to = 'THB') {
     }
     const quote = await yahooFinance.quote(symbol);
     if (quote && quote.regularMarketPrice) {
-      return {
+      const data = {
         rate: quote.regularMarketPrice,
         from,
         to,
         date: new Date().toISOString().split('T')[0],
         source: 'yahoo'
       };
+      fxRateCache.set(cacheKey, { timestamp: Date.now(), data });
+      return data;
     }
   } catch (error) {
     console.error(`[Yahoo] Error fetching exchange rate ${from}->${to}:`, error.message);
   }
-  return null;
+  return cached?.data || null;
 }
 
 /**
