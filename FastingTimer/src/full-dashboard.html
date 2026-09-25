@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>Fasting & Autophagy Timer — DOCTORBANK</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="full-dashboard.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- ════ Top Header & Segmented Navigation ════ -->
+    <header class="top-header" style="-webkit-app-region: drag;">
+      <button class="icon-btn no-drag" id="btn-back-hub" onclick="window.close()" title="Close Dashboard" style="-webkit-app-region: no-drag;">✕</button>
+      <div class="segmented-nav">
+        <button class="nav-tab active" data-tab="timer" id="tab-btn-timer">Timer</button>
+        <button class="nav-tab" data-tab="analytics" id="tab-btn-analytics">Analytics</button>
+        <button class="nav-tab" data-tab="ledger" id="tab-btn-ledger">History</button>
+      </div>
+      <button class="icon-btn protocol-badge-btn" id="btn-protocol-menu" title="Select IF Protocol">
+        <span id="header-protocol-label">16:8</span>
+      </button>
+    </header>
+
+    <!-- ════════════ VIEW 1: TIMER HUD ════════════ -->
+    <section id="view-timer" class="view-content active">
+
+      <!-- Top Summary Ticker -->
+      <div class="metrics-ticker">
+        <div class="ticker-col">
+          <span class="ticker-val" id="ticker-streak">0 Days</span>
+          <span class="ticker-lbl">CURRENT STREAK</span>
+        </div>
+        <div class="ticker-col">
+          <span class="ticker-val" id="ticker-total-hours">0 hrs</span>
+          <span class="ticker-lbl">TOTAL TIME</span>
+        </div>
+        <div class="ticker-col">
+          <span class="ticker-val" id="ticker-completed">0</span>
+          <span class="ticker-lbl">COMPLETED FASTS</span>
+        </div>
+      </div>
+
+      <!-- Living Bioluminescent Ring Stage with Dynamic Environment -->
+      <div class="ring-stage-wrap" id="ringStageWrap">
+        
+        <!-- Layer 1: Atmospheric Environment around the Ring -->
+        <div class="ring-environment-stage" id="ringEnvironmentStage">
+          <!-- Aurora energy clouds and solar corona mesh -->
+          <div class="env-aurora-mesh" id="envAuroraMesh"></div>
+          <!-- Corona flare licks and electric tendrils -->
+          <div class="env-corona-flares" id="envCoronaFlares"></div>
+          <!-- Dynamic particle field (embers, stardust, sparks) -->
+          <canvas class="env-particles-canvas" id="envParticlesCanvas" width="360" height="360"></canvas>
+        </div>
+
+        <div class="ambient-glow" id="ambientGlow"></div>
+
+        <div class="circular-ring-container">
+          <svg class="ring-svg" viewBox="0 0 320 320">
+            <defs>
+              <linearGradient id="ringGradFasting" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#38bdf8" />
+                <stop offset="40%" stop-color="#10b981" />
+                <stop offset="75%" stop-color="#8b5cf6" />
+                <stop offset="100%" stop-color="#f59e0b" />
+              </linearGradient>
+              <linearGradient id="ringGradEating" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#f59e0b" />
+                <stop offset="50%" stop-color="#fb923c" />
+                <stop offset="100%" stop-color="#f43f5e" />
+              </linearGradient>
+              <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+
+            <!-- Background Track -->
+            <circle class="ring-bg" cx="160" cy="160" r="130" />
+            <!-- Active Progress Arc -->
+            <circle class="ring-progress" id="ringProgress" cx="160" cy="160" r="130" />
+          </svg>
+
+          <!-- Center Content inside Ring -->
+          <div class="ring-center-content">
+            <!-- Morphing Glassmorphic Stage Orb -->
+            <div class="stage-orb-wrap" id="stageOrbWrap" onclick="window.openBioScanModal()" title="Tap to inspect biological stage">
+              <div class="stage-orb-glass" id="stageOrbGlass">
+                <div class="stage-orb-emblem" id="stageOrbEmblem">
+                  <!-- Injected by JS -->
+                </div>
+              </div>
+            </div>
+
+            <div class="state-badge" id="stateBadge">🔥 FASTING</div>
+            <div class="main-clock" id="mainClock">00:00:00</div>
+            <div class="clock-subtitle" id="clockSubtitle">Target: 16h 00m (0%)</div>
+            <div class="stage-pill" id="stagePill" onclick="window.openBioScanModal()" title="Tap to inspect biological stage">
+              <span class="stage-dot" id="stageDot"></span>
+              <span id="stageName">Anabolic / Digestion (0-4h)</span>
+              <span class="stage-inspect-badge">🔬</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editable Timestamp Bar -->
+      <div class="time-adjust-bar" id="btnOpenTimeAdjust" title="Tap to adjust start time">
+        <div class="time-adjust-content">
+          <span class="time-icon">⏱️</span>
+          <span id="lblStartTime">Started: Today 20:00</span>
+          <span class="edit-badge">Adjust ✏️</span>
+        </div>
+      </div>
+
+      <!-- Bottom Main Action Button -->
+      <div class="action-footer">
+        <button class="btn-main-action btn-break-fast" id="btnMainAction">
+          <span class="btn-action-icon" id="actionBtnIcon">🍽️</span>
+          <span class="btn-action-text" id="actionBtnText">Break Fast (Start Eating)</span>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ════════════ VIEW 2: ANALYTICS & BIOMETRIC LAB ════════════ -->
+    <section id="view-analytics" class="view-content">
+
+      <!-- Consistency KPIs -->
+      <div class="analytics-card">
+        <div class="card-title-row">
+          <span class="card-heading">IF Consistency Overview</span>
+          <span class="card-badge-gold">Consistency</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-item">
+            <span class="kpi-val" id="ana-current-streak">0 Days</span>
+            <span class="kpi-lbl">Current Streak</span>
+          </div>
+          <div class="kpi-item">
+            <span class="kpi-val" id="ana-best-streak">0 Days</span>
+            <span class="kpi-lbl">Longest Streak</span>
+          </div>
+          <div class="kpi-item">
+            <span class="kpi-val" id="ana-total-fasts">0</span>
+            <span class="kpi-lbl">Completed Fasts</span>
+          </div>
+          <div class="kpi-item">
+            <span class="kpi-val" id="ana-total-hours">0 hrs</span>
+            <span class="kpi-lbl">Total Fasting</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7-Day Adherence Matrix -->
+      <div class="analytics-card">
+        <div class="card-title-row">
+          <span class="card-heading">Last 7 Days Adherence</span>
+          <span class="card-sub-muted">Target ≥ 16h</span>
+        </div>
+        <div class="weekly-matrix-bars" id="weeklyMatrixBars">
+          <!-- Injected by JS -->
+        </div>
+      </div>
+
+      <!-- 5 Biological Stages Reference -->
+      <div class="analytics-card">
+        <div class="card-title-row">
+          <span class="card-heading">🔬 5 Biological Stages of Fasting</span>
+        </div>
+        <div class="stage-timeline-list">
+          <div class="stage-item" onclick="window.openBioScanModal(0)" title="Tap to view Stage 1">
+            <div class="stage-icon-col" style="color: #38bdf8;">0-4h</div>
+            <div class="stage-text-col">
+              <div class="stage-t-title">Anabolic Phase (Digestion)</div>
+              <div class="stage-t-desc">Blood sugar and insulin decline. The body digests food and utilizes recent energy intake.</div>
+            </div>
+            <span class="stage-arrow-col">›</span>
+          </div>
+          <div class="stage-item" onclick="window.openBioScanModal(1)" title="Tap to view Stage 2">
+            <div class="stage-icon-col" style="color: #10b981;">4-12h</div>
+            <div class="stage-text-col">
+              <div class="stage-t-title">Fat Burning Zone</div>
+              <div class="stage-t-desc">Liver glycogen depletes. Metabolic switch initiates primary fat oxidation for fuel.</div>
+            </div>
+            <span class="stage-arrow-col">›</span>
+          </div>
+          <div class="stage-item" onclick="window.openBioScanModal(2)" title="Tap to view Stage 3">
+            <div class="stage-icon-col" style="color: #8b5cf6;">12-16h</div>
+            <div class="stage-text-col">
+              <div class="stage-t-title">Ketosis Switch</div>
+              <div class="stage-t-desc">Ketone body production accelerates. Mental clarity peaks, systemic inflammation subsides.</div>
+            </div>
+            <span class="stage-arrow-col">›</span>
+          </div>
+          <div class="stage-item" onclick="window.openBioScanModal(3)" title="Tap to view Stage 4">
+            <div class="stage-icon-col" style="color: #f59e0b;">16-24h</div>
+            <div class="stage-text-col">
+              <div class="stage-t-title">Autophagy Peak</div>
+              <div class="stage-t-desc">Intracellular cleansing activates—recycling senescent proteins, defective mitochondria, and cellular debris.</div>
+            </div>
+            <span class="stage-arrow-col">›</span>
+          </div>
+          <div class="stage-item" onclick="window.openBioScanModal(4)" title="Tap to view Stage 5">
+            <div class="stage-icon-col" style="color: #f43f5e;">24h+</div>
+            <div class="stage-text-col">
+              <div class="stage-t-title">Deep Cellular Renewal</div>
+              <div class="stage-t-desc">Stem cell rejuvenation and immune reset triggered. (Maintain hydration and essential electrolytes).</div>
+            </div>
+            <span class="stage-arrow-col">›</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ════════════ VIEW 3: HISTORY LEDGER ════════════ -->
+    <section id="view-ledger" class="view-content">
+      <div class="analytics-card" style="padding: 16px 20px;">
+        <div class="card-title-row" style="margin-bottom: 0;">
+          <div>
+            <div class="card-heading">Session History</div>
+            <div class="card-sub-muted">Comprehensive log of Fast & Eat sessions</div>
+          </div>
+          <span class="ledger-count-pill" id="lblLedgerCount">0 Sessions</span>
+        </div>
+      </div>
+
+      <div class="history-list" id="historyList">
+        <!-- Injected by JS -->
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ════════════ MODAL 1: BOTTOM SHEET TIME ADJUSTER ════════════ -->
+  <div class="modal-backdrop" id="modalTimeAdjust">
+    <div class="bottom-sheet">
+      <div class="sheet-drag-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title">Adjust Start Time</span>
+        <button class="sheet-close-btn" onclick="window.closeTimeModal()">✕</button>
+      </div>
+
+      <div class="sheet-body">
+        <label class="sheet-label">Quick Presets:</label>
+        <div class="preset-chips-row">
+          <button type="button" class="preset-chip" onclick="window.applyTimeOffset(-15)">-15 min</button>
+          <button type="button" class="preset-chip" onclick="window.applyTimeOffset(-30)">-30 min</button>
+          <button type="button" class="preset-chip" onclick="window.applyTimeOffset(-60)">-1 hr</button>
+          <button type="button" class="preset-chip" onclick="window.applyTimeOffset(-120)">-2 hrs</button>
+        </div>
+
+        <!-- Section 1: Date Selector -->
+        <label class="sheet-label" style="margin-top: 16px;">Select Start Date:</label>
+        <div class="date-selector-row">
+          <button type="button" class="date-chip active" id="btnDateToday" onclick="window.selectAdjustDate('today')">Today</button>
+          <button type="button" class="date-chip" id="btnDateYesterday" onclick="window.selectAdjustDate('yesterday')">Yesterday</button>
+          <label class="date-chip-picker" id="lblCustomDate">
+            <span id="txtCustomDate">📅 Pick Date</span>
+            <input type="date" id="inputAdjustDate" class="hidden-date-native" onchange="window.onCustomDatePicked(this.value)">
+          </label>
+        </div>
+
+        <!-- Section 2: 24h Safe-Lock Drum Roller -->
+        <div class="drum-roller-header">
+          <label class="sheet-label" style="margin-top: 0;">Start Time (24h Safe-Lock Roller):</label>
+          <span class="drum-time-preview" id="drumTimePreview">12:00</span>
+        </div>
+        
+        <div class="time-drum-roller-wrap" id="timeDrumRollerWrap">
+          <div class="drum-roller-lens"></div>
+          
+          <!-- Hours Cylinder (00 - 23) -->
+          <div class="drum-cylinder" id="drumHoursCylinder">
+            <div class="drum-cylinder-pad"></div>
+            <!-- Dynamically populated 00-23 by JS -->
+            <div class="drum-cylinder-pad"></div>
+          </div>
+          
+          <div class="drum-cylinder-colon">:</div>
+          
+          <!-- Minutes Cylinder (00 - 59) -->
+          <div class="drum-cylinder" id="drumMinutesCylinder">
+            <div class="drum-cylinder-pad"></div>
+            <!-- Dynamically populated 00-59 by JS -->
+            <div class="drum-cylinder-pad"></div>
+          </div>
+        </div>
+
+        <input type="hidden" id="inputCustomDateTime">
+
+        <div class="sheet-error-msg" id="sheetErrorMsg" style="display: none;"></div>
+
+        <button type="button" class="btn-sheet-save" id="btnSaveTimeAdjust">Save Adjusted Time</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ MODAL 2: PROTOCOL SELECTOR ════════════ -->
+  <div class="modal-backdrop" id="modalProtocol">
+    <div class="bottom-sheet">
+      <div class="sheet-drag-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title">Select Fasting Protocol</span>
+        <button class="sheet-close-btn" onclick="window.closeProtocolModal()">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="protocol-list">
+          <div class="protocol-option active" data-protocol="16:8" data-target="16">
+            <div class="proto-info">
+              <span class="proto-name">16:8 LeanGains (Most Popular)</span>
+              <span class="proto-desc">16h Fast • 8h Eating Window (Sustainable daily lifestyle)</span>
+            </div>
+            <span class="proto-check">✓</span>
+          </div>
+          <div class="protocol-option" data-protocol="18:6" data-target="18">
+            <div class="proto-info">
+              <span class="proto-name">18:6 Advanced Burn</span>
+              <span class="proto-desc">18h Fast • 6h Eating Window (Accelerated fat oxidation)</span>
+            </div>
+            <span class="proto-check"></span>
+          </div>
+          <div class="protocol-option" data-protocol="20:4" data-target="20">
+            <div class="proto-info">
+              <span class="proto-name">20:4 The Warrior Fast</span>
+              <span class="proto-desc">20h Fast • 4h Eating Window (Intense autophagy stimulation)</span>
+            </div>
+            <span class="proto-check"></span>
+          </div>
+          <div class="protocol-option" data-protocol="24h" data-target="24">
+            <div class="proto-info">
+              <span class="proto-name">24h Monk Fast (OMAD)</span>
+              <span class="proto-desc">One meal a day • Deep cellular & immune reset</span>
+            </div>
+            <span class="proto-check"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ MODAL 3: ZOMBIE FAST REVIEW (>36h) ════════════ -->
+  <div class="modal-backdrop" id="modalZombieReview">
+    <div class="alert-dialog-card">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-title">Session Exceeds 36 Hours</div>
+      <div class="alert-desc">
+        This session started over 36 hours ago. Are you still actively fasting, or did you forget to end the session?
+      </div>
+      <div class="alert-actions-col">
+        <button class="btn-alert-choice" onclick="window.resolveZombieFast('keep')">Still Fasting (Continue Timer)</button>
+        <button class="btn-alert-choice primary" onclick="window.resolveZombieFast('cap_target')">End at 16h Target</button>
+        <button class="btn-alert-choice danger" onclick="window.resolveZombieFast('discard')">Discard Forgotten Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ MODAL 4: DELETE CONFIRMATION ════════════ -->
+  <div class="modal-backdrop" id="modalDeleteConfirm">
+    <div class="alert-dialog-card">
+      <div class="alert-icon">🗑️</div>
+      <div class="alert-title">Delete Session?</div>
+      <div class="alert-desc">
+        This session will be permanently removed and your historical streak will be recalculated.
+      </div>
+      <div class="alert-actions-row">
+        <button class="btn-cancel" onclick="window.closeDeleteModal()">Cancel</button>
+        <button class="btn-confirm-delete" id="btnConfirmDeleteSession">Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ MODAL 5: BIOLOGICAL STAGE BIO-SCAN (PIXAR 3D) ════════════ -->
+  <div class="modal-backdrop bio-scan-backdrop" id="modalBioScan" onclick="if(event.target === this) window.closeBioScanModal()">
+    <div class="bio-scan-sheet">
+      <div class="bio-sheet-handle"></div>
+      <div class="bio-sheet-header">
+        <div class="bio-sheet-title-col">
+          <span class="bio-tag-label" id="bioModalTag">BIOLOGICAL JOURNEY</span>
+          <h2 class="bio-sheet-heading" id="bioModalTitle">Stage 2: Fat Burning Zone</h2>
+          <span class="bio-timing-badge" id="bioModalTiming">4 - 12 hours</span>
+        </div>
+        <button class="bio-sheet-close" onclick="window.closeBioScanModal()" aria-label="Close">✕</button>
+      </div>
+
+      <!-- 5-Stage Stepper Pills -->
+      <div class="bio-stage-stepper" id="bioStageStepper">
+        <button class="bio-step-btn" data-stage="0" onclick="window.switchBioStage(0)">1</button>
+        <button class="bio-step-btn active" data-stage="1" onclick="window.switchBioStage(1)">2</button>
+        <button class="bio-step-btn" data-stage="2" onclick="window.switchBioStage(2)">3</button>
+        <button class="bio-step-btn" data-stage="3" onclick="window.switchBioStage(3)">4</button>
+        <button class="bio-step-btn" data-stage="4" onclick="window.switchBioStage(4)">5</button>
+      </div>
+
+      <!-- Hero Character Illustration -->
+      <div class="bio-hero-container">
+        <img class="bio-hero-img" id="bioHeroImg" src="assets/fasting/stage2_fatburn.jpg" alt="Biological Stage Character" />
+        <div class="bio-hero-badge" id="bioHeroBadge">CURRENT ACTIVE STAGE</div>
+      </div>
+
+      <!-- Plain English Story / Explanation -->
+      <div class="bio-story-box">
+        <p class="bio-story-text" id="bioStoryText">
+          Sugar is all gone! Your body has lit the furnace and is melting stored body fat into clean daily energy.
+        </p>
+      </div>
+
+      <!-- Biological Status Meters (The 3 Bio-Meters) -->
+      <div class="bio-meters-grid" id="bioMetersGrid">
+        <!-- Injected dynamically by JS -->
+      </div>
+
+      <!-- Nav Footer -->
+      <div class="bio-sheet-nav">
+        <button class="bio-nav-btn prev" id="bioNavPrev" onclick="window.stepBioStage(-1)">← Previous</button>
+        <button class="bio-nav-btn next" id="bioNavNext" onclick="window.stepBioStage(1)">Next Stage →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="full-dashboard.js"></script>
+</body>
+</html>

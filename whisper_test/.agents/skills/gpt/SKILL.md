@@ -181,9 +181,25 @@ call_mcp_tool:
 
 ---
 
+## 🔒 กฎเหล็ก: เมื่อเรียกใช้เพื่อรัน Skill `/update` (Update Skill Mandatory Lock)
+
+> ⛔ **CRITICAL MANDATORY LOCK:**
+> เมื่อผู้ใช้สั่ง `/gpt` เพื่อรันหรือสนับสนุน **Skill `/update`** (Plan Hardening, RFC/ADR Review, ปรับปรุง `implementation_plan.md`):
+> - **โมเดลที่ต้องใช้:** **`gpt-5.6-sol` เท่านั้น** (ห้ามใช้ `terra`, `luna`, หรือ `5.5` เด็ดขาด!)
+> - **ระดับ Thinking (Reasoning Effort):** **`high` เท่านั้น** (ห้ามใช้ `low` หรือ `none`)
+> - **เหตุผลเชิงสถาปัตยกรรม:**
+>   1. การวิเคราะห์สถาปัตยกรรม 9-Pillar Enterprise Matrix (Root Cause, Data Contracts, Deduplication, Failure Modes, Rollback) ต้องการสติปัญญาเชิงสถาปัตยกรรมระดับ Senior Architect สูงสุด ซึ่ง `gpt-5.6-sol` ถูกสร้างมาเพื่อทดแทน Claude Opus 4.6 โดยตรง
+>   2. ระดับ `high` เป็น Sweet Spot (60–90 วินาที) ที่เผาผลาญ 15,000–25,000 thinking tokens อย่างลึกซึ้ง โดยไม่ติดเพดาน Hard Timeout (3 นาที / 180s) ของ Antigravity IDE
+> - **Syntax ที่ถูกต้อง:**
+>   - Background Script Bypass: `node "C:\XBrain\tools\gpt-invoke.cjs" -m gpt-5.6-sol -e high ...`
+>   - MCP Tool Call: `call_mcp_tool(gpt, codex, { model: "gpt-5.6-sol", config: { model_reasoning_effort: "high" }, ... })` หรือ `call_mcp_tool(codex_tools, gpt_review, { model: "gpt-5.6-sol", ... })`
+
+---
+
 ## ⚙️ กฎการทำงานของ Agent เมื่อเจอ `/gpt` (Step-by-Step)
 
 1. **ถอดรหัสคำสั่ง (Parse Command):**
+   - **กรณีพิเศษ (Update Skill Trigger):** ถ้าเป็นการเรียกเพื่อรัน/สนับสนุนงานของ Skill `/update` ➔ **บังคับล็อกเป็น `gpt-5.6-sol` + `high` เท่านั้นทันทีโดยอัตโนมัติ**
    - ตรวจสอบคำแรกหลัง `/gpt` เพื่อเลือก Model และ Reasoning Effort
    - ถ้าเป็นคำถามทั่วไป → ใช้ `gpt-5.6-terra` + `high`
    - ถ้าเป็น `sol` → ใช้ `gpt-5.6-sol` + `high` ⚡ (Default ปลอดภัย จบใน 60–90s ทดแทน Opus 4.6 สบายๆ)

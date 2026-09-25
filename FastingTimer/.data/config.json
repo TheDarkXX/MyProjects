@@ -1,0 +1,31 @@
+{
+  "activeSession": {
+    "id": "0e77b092-9da9-4ed3-a04a-03ea6f49ab49",
+    "user_id": "owner",
+    "session_type": "eating",
+    "protocol": "16:8",
+    "target_hours": 8,
+    "started_at_utc": "2026-09-24T05:17:00.000Z",
+    "ended_at_utc": null,
+    "duration_seconds": 0,
+    "status": "active",
+    "start_tz_offset_min": 420,
+    "end_tz_offset_min": null,
+    "revision": 2,
+    "notes": "",
+    "created_at": "2026-09-24 07:47:34"
+  },
+  "stats": {
+    "user_id": "owner",
+    "current_status": "eating",
+    "current_session_id": "0e77b092-9da9-4ed3-a04a-03ea6f49ab49",
+    "current_protocol": "16:8",
+    "current_streak_days": 3,
+    "best_streak_days": 3,
+    "total_fasting_hours": 50.4,
+    "total_fasts_completed": 3,
+    "last_fast_completed_at": "2026-09-24",
+    "updated_at": "2026-09-24 07:52:24"
+  },
+  "currentStatus": "eating"
+}

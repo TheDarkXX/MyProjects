@@ -1,6 +1,6 @@
 ---
 name: update
-description: World-Class Architecture Review & Plan Hardening Engine (RFC/ADR Grade) — ยกระดับ implementation_plan.md จากร่างเดิมสู่แผนสถาปัตยกรรมระดับท็อปคลาส (มาตรฐาน Stripe, Google, GitHub RFC) ด้วยขุมพลัง Opus 4.6 (มหาเทพ 👁️‍🗨️) หรือ GPT-5.6-Sol (Senior Architect ⚡ ผ่าน /gpt sol) มีระบบ Auto-Snapshot สำรองแผนเดิม, Plan Delta ชี้จุดต่างชัดเจน, 9-Pillar Audit Matrix, Task Identity Protection ป้องกันสถานะงานหาย, และ Architecture Decision Record (ADR) ใช้เมื่อ: /update หรือ /update sol หรือ /update opus
+description: World-Class Architecture Review & Plan Hardening Engine (RFC/ADR Grade) — ยกระดับ implementation_plan.md จากร่างเดิมสู่แผนสถาปัตยกรรมระดับท็อปคลาส (มาตรฐาน Stripe, Google, GitHub RFC) ด้วยขุมพลัง Opus 4.6 (มหาเทพ 👁️‍🗨️) หรือ GPT-5.6-Sol (Senior Architect ⚡ ผ่าน /gpt sol) [กฎเหล็ก: เมื่อเรียกผ่าน /gpt ต้องล็อกใช้ Sol (gpt-5.6-sol) - high เท่านั้น] มีระบบ Auto-Snapshot สำรองแผนเดิม, Plan Delta ชี้จุดต่างชัดเจน, 9-Pillar Audit Matrix, Task Identity Protection ป้องกันสถานะงานหาย, และ Architecture Decision Record (ADR) ใช้เมื่อ: /update หรือ /update sol หรือ /update opus
 ---
 
 # 🧠 Skill: `/update` (World-Class Plan Hardening & RFC/ADR Review)
@@ -23,8 +23,8 @@ description: World-Class Architecture Review & Plan Hardening Engine (RFC/ADR Gr
 [Stage 1: Baseline Snapshot] ──► สำรอง implementation_plan.v1.snapshot.md อัตโนมัติ
              │                   พร้อมบันทึก Task Status [x] และ Git Status
              ▼
-[Stage 2: Engine Routing]    ──► เลือก Opus 4.6 (เมื่ออยู่บน Claude) หรือ GPT-5.6-Sol (บน Flash ฟรี 100%)
-             │                   ส่ง 4-Layer Context + Plan เดิม + Code Diff
+[Stage 2: Engine Routing]    ──► เลือก Opus 4.6 (เมื่ออยู่บน Claude) หรือ GPT-5.6-Sol - high เท่านั้น (บน Flash ฟรี 100%)
+             │                   [กฎเหล็ก: ฝั่ง GPT บังคับใช้ gpt-5.6-sol + reasoning_effort: high เท่านั้น ห้ามใช้ตัวอื่น!]
              ▼
 [Stage 3: 9-Pillar Audit]    ──► ชำแหละสถาปัตยกรรม 9 เสาหลัก (ครอบคลุม Security & Observability)
              │
@@ -64,6 +64,20 @@ description: World-Class Architecture Review & Plan Hardening Engine (RFC/ADR Gr
 > 1. หากในแผนเดิมมี Task ที่ทำเสร็จแล้ว (`- [x] ...`) **ต้องคงสถานะ `[x]` ไว้เสมอ** ห้ามรีเซ็ตกลับเป็น `[ ]`
 > 2. หาก Task เดิมถูกยกเลิกเนื่องจากสถาปัตยกรรมเปลี่ยน ให้ทำเครื่องหมายเป็น `~~- [ ] Task เดิม~~ (Superseded by Task XYZ)` พร้อมระบุเหตุผล
 > 3. Task ใหม่ทุกตัวต้องมี **Stable ID** (เช่น `[TASK-01]`, `[TASK-02]`) เพื่อให้ตามรอยได้ง่าย
+
+---
+
+## 🔒 กฎเหล็ก Engine Selection สำหรับ `/update` (Sol High Only Enforcement)
+
+> ⛔ **CRITICAL MANDATORY RULE:**
+> เมื่อสั่ง `/update` หรือมีการเรียก `/gpt` เพื่อสนับสนุนหรือรันสถาปัตยกรรมใน Skill `/update`:
+> 1. **โหมด Claude / Opus:** สวมบทบาท **มหาเทพ 👁️‍🗨️** (Opus 4.6 Thinking) ชำแหละแผนตามกฎ 9-Pillar Matrix
+> 2. **โหมด Gemini Flash / ระบบ GPT (`/gpt`):**
+>    - **โมเดลที่อนุญาต:** **`gpt-5.6-sol` เท่านั้น** (ห้ามใช้ `terra`, `luna`, หรือ `5.5` เด็ดขาด เพราะโจทย์ Plan Hardening ระดับ RFC/ADR ต้องการพลังคิดวิเคราะห์ระดับ Senior Architect สูงสุด)
+>    - **ระดับ Thinking (Reasoning Effort):** **`high` เท่านั้น** (ห้ามใช้ `low` หรือ `none`; `high` เป็น Sweet Spot 60–90s ที่เผาผลาญ 15k–25k thinking tokens ได้ลึกซึ้งโดยไม่ชน Timeout 3 นาทีของ IDE)
+>    - **Command Parameters:**
+>      - Background Script Bypass: `node "C:\XBrain\tools\gpt-invoke.cjs" -m gpt-5.6-sol -e high ...`
+>      - MCP Tool: `call_mcp_tool(gpt, codex, { model: "gpt-5.6-sol", config: { model_reasoning_effort: "high" }, ... })` หรือ `call_mcp_tool(codex_tools, gpt_review, { model: "gpt-5.6-sol", ... })`
 
 ---
 
@@ -155,7 +169,7 @@ node "tools/test_feature.js"
 
 ### Step 2: รวบรวมบริบทและเลือก Engine (Engine Routing)
 - **โหมด Claude / Opus:** สวมบทบาทมหาเทพ 👁️‍🗨️ ชำแหละแผนเดิมผ่าน 9-Pillar Matrix
-- **โหมด Gemini Flash:** รวบรวม Plan เดิม + Snapshot + คำสั่งล่าสุด ส่งให้ **GPT-5.6-Sol** ผ่าน `tools/gpt-invoke.cjs` หรือ `call_mcp_tool(gpt, codex)` (ฟรี 100%)
+- **โหมด Gemini Flash:** รวบรวม Plan เดิม + Snapshot + คำสั่งล่าสุด ส่งให้ **GPT-5.6-Sol (Reasoning Effort: high เท่านั้น ห้ามใช้โมเดลอื่นหรือระดับอื่นเด็ดขาด)** ผ่าน `tools/gpt-invoke.cjs -m gpt-5.6-sol -e high` หรือ `call_mcp_tool` (ฟรี 100%)
 
 ### Step 3: ประกอบแผน V2 และบันทึกแบบ Atomic Promotion
 1. คำนวณตาราง **Plan Delta** (สิ่งที่เปลี่ยนไประหว่าง V1 กับ V2)

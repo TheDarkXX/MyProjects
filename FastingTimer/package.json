@@ -1,0 +1,24 @@
+{
+  "name": "fasting-sentinel",
+  "version": "1.0.0",
+  "description": "Fasting & IF Sentinel — Native Windows Floating HUD & Kitchen Timer",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "keywords": [
+    "fasting",
+    "intermittent-fasting",
+    "autophagy",
+    "timer",
+    "desktop-widget",
+    "floating-hud",
+    "windows-native"
+  ],
+  "author": "DOCTORBANK",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^43.4.1"
+  }
+}

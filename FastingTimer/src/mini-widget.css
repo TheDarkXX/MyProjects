@@ -1,0 +1,516 @@
+/* src/mini-widget.css */
+/* 1:1 Living Ring HUD — Borderless, Frameless Floating Desktop Sentinel */
+
+:root {
+  --bg-obsidian: rgba(6, 10, 19, 0.92);
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-cyan: #38bdf8;
+  --accent-emerald: #10b981;
+  --accent-violet: #8b5cf6;
+  --accent-gold: #f59e0b;
+  --accent-ruby: #f43f5e;
+  --current-glow: var(--accent-emerald);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  user-select: none;
+}
+
+html, body {
+  background: transparent !important;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag !important;
+}
+
+/* ════ HUD MAIN CONTAINER (PURE BORDERLESS FLOATING CIRCLE) ════ */
+.living-ring-hud {
+  width: 250px;
+  height: 280px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: drag;
+  transition: transform 0.25s ease;
+}
+
+/* ════ HOVER BARS (TOP & BOTTOM) ════ */
+/* Default: hidden (opacity: 0). On hover over .living-ring-hud: smooth fade-in */
+.hover-bar {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 30;
+}
+
+.living-ring-hud:hover .hover-bar {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) !important;
+}
+
+/* TOP HOVER BAR */
+.top-hover-bar {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: rgba(6, 10, 19, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  transform: translateY(-8px);
+}
+
+.drag-grip {
+  cursor: grab;
+  color: var(--text-secondary);
+  font-size: 13px;
+  letter-spacing: -1px;
+  opacity: 0.7;
+  padding: 0 4px;
+  -webkit-app-region: drag;
+}
+
+.drag-grip:active {
+  cursor: grabbing;
+}
+
+.mode-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.mode-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-tab:hover {
+  color: var(--text-primary);
+}
+
+.mode-tab.active {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.win-btns {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.win-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.win-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.win-btn.active {
+  color: var(--accent-gold);
+}
+
+.win-btn.btn-close:hover {
+  background: rgba(244, 63, 94, 0.35);
+  color: #f43f5e;
+}
+
+/* ════ RING STAGE CONTAINER (1:1 Web Parity) ════ */
+.ring-stage-container {
+  width: 240px;
+  height: 240px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(6, 10, 19, 0.92) 0%, rgba(6, 10, 19, 0.85) 62%, rgba(6, 10, 19, 0.3) 85%, transparent 100%);
+  border-radius: 50%;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
+}
+
+/* Layer 1: Ambient Corona Mesh */
+.ambient-corona-glow {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(6, 10, 19, 0.8) 64%, transparent 100%);
+  filter: blur(14px);
+  z-index: 1;
+  pointer-events: none;
+  transition: background 0.6s ease;
+}
+
+/* Particle Canvas */
+.particle-flame-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Layer 2: SVG Living Ring */
+.living-ring-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 240px;
+  height: 240px;
+  transform: rotate(-90deg);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.ring-bg-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 8.5;
+}
+
+.ring-active-arc {
+  fill: none;
+  stroke-width: 8.5;
+  stroke-linecap: round;
+  stroke-dasharray: 578.05;
+  stroke-dashoffset: 400; /* Calculated dynamically: 578.05 - (578.05 * ratio) */
+  filter: url(#ringGlow);
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.6s ease;
+}
+
+/* Layer 3: Center HUD Content */
+.ring-center-hud {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  max-width: 170px;
+}
+
+/* Center Stage Orb */
+.center-stage-orb {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.22), rgba(16, 185, 129, 0.3) 60%, rgba(6, 10, 19, 0.95) 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 3px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s, border-color 0.4s;
+}
+
+.center-stage-orb:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.6), inset 0 2px 6px rgba(255, 255, 255, 0.5);
+}
+
+.orb-glass-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-icon {
+  font-size: 19px;
+  filter: drop-shadow(0 0 8px var(--current-glow));
+  transition: transform 0.2s ease;
+}
+
+/* Status Badge */
+.state-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 2px 9px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+  margin-bottom: 2px;
+}
+
+.state-badge.eating {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+}
+
+.state-badge.kitchen {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+/* Main Digital Clock */
+.main-clock {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.8px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 14px rgba(255, 255, 255, 0.35);
+  line-height: 1.1;
+  margin: 1px 0;
+}
+
+.main-clock.kitchen-mode {
+  color: #fed7aa;
+  text-shadow: 0 0 14px rgba(251, 146, 60, 0.4);
+}
+
+/* Clock Subtitle */
+.clock-subtitle {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+
+/* Biological Stage Pill */
+.stage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.stage-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--current-glow);
+  box-shadow: 0 0 6px var(--current-glow);
+}
+
+.stage-name {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.stage-chart-icon {
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+/* ════ BOTTOM HOVER ACTION OVERLAY ════ */
+.bottom-hover-bar {
+  position: absolute;
+  bottom: 4px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(8px);
+}
+
+.bottom-action-panel {
+  display: none;
+  width: 100%;
+}
+
+.bottom-action-panel.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(6, 10, 19, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* Pill Action Buttons */
+.pill-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pill-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text-primary);
+}
+
+.pill-btn.main-action-pill {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(244, 63, 94, 0.25));
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fef08a;
+  text-align: center;
+}
+
+.pill-btn.main-action-pill:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(244, 63, 94, 0.4));
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+}
+
+.pill-btn.kitchen-main {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(56, 189, 248, 0.25));
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #a7f3d0;
+}
+
+.pill-btn.kitchen-main:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(56, 189, 248, 0.4));
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
+/* Kitchen Strip inside bottom panel */
+#bottomKitchenPanel {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kitchen-presets-strip {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  justify-content: center;
+}
+
+.preset-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-pill:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text-primary);
+}
+
+.preset-pill.active {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.kitchen-btn-row {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+/* Sync Dot */
+.sync-dot {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  z-index: 35;
+  pointer-events: none;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.sync-dot.offline {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+/* Kitchen Completed Alarm Animation */
+.living-ring-hud.pulse-alert .ambient-corona-glow {
+  animation: coronaPulseAlert 1.2s infinite ease-in-out;
+}
+
+@keyframes coronaPulseAlert {
+  0%, 100% {
+    background: radial-gradient(circle, rgba(244, 63, 94, 0.45) 0%, rgba(6, 10, 19, 0.8) 65%, transparent 100%);
+  }
+  50% {
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.55) 0%, rgba(6, 10, 19, 0.8) 65%, transparent 100%);
+  }
+}

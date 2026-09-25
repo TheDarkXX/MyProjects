@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fasting Sentinel Living Ring HUD</title>
+  <link rel="stylesheet" href="mini-widget.css">
+</head>
+<body>
+  <div class="living-ring-hud" id="hudContainer">
+
+    <!-- ════ TOP HOVER CONTROL OVERLAY ════ -->
+    <div class="hover-bar top-hover-bar no-drag" id="topHoverBar">
+      <div class="drag-grip" id="dragGrip" title="Drag to reposition">⋮⋮</div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tabFasting" title="IF Fasting Mode">🧬 IF</button>
+        <button class="mode-tab" id="tabKitchen" title="Kitchen & Boil Egg Timer">🍳 Timer</button>
+      </div>
+      <div class="win-btns">
+        <button class="win-btn active" id="btnPin" title="Toggle Always on Top">📌</button>
+        <button class="win-btn" id="btnExpand" title="Open Full Dashboard">⛶</button>
+        <button class="win-btn btn-close" id="btnClose" title="Minimize to System Tray">✕</button>
+      </div>
+    </div>
+
+    <!-- ════ CIRCULAR LIVING RING STAGE (1:1 Web Parity) ════ -->
+    <div class="ring-stage-container" id="ringStageContainer">
+      <!-- Layer 1: Ambient Dynamic Corona Glow & Swirling Flame Particles -->
+      <div class="ambient-corona-glow" id="ambientCorona"></div>
+      <canvas class="particle-flame-canvas" id="particleCanvas" width="240" height="240"></canvas>
+
+      <!-- Layer 2: SVG Living Ring -->
+      <svg class="living-ring-svg" viewBox="0 0 240 240" id="livingRingSvg">
+        <defs>
+          <linearGradient id="ringGradFasting" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#38bdf8" />
+            <stop offset="40%" stop-color="#10b981" />
+            <stop offset="75%" stop-color="#8b5cf6" />
+            <stop offset="100%" stop-color="#f59e0b" />
+          </linearGradient>
+          <linearGradient id="ringGradEating" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#f59e0b" />
+            <stop offset="50%" stop-color="#fb923c" />
+            <stop offset="100%" stop-color="#f43f5e" />
+          </linearGradient>
+          <linearGradient id="ringGradKitchen" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#38bdf8" />
+            <stop offset="100%" stop-color="#10b981" />
+          </linearGradient>
+          <filter id="ringGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="4.5" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        <!-- Track Background -->
+        <circle class="ring-bg-track" cx="120" cy="120" r="92" />
+        <!-- Active Progress Arc (r=92, Circumference = 578.05) -->
+        <circle class="ring-active-arc" id="ringActiveArc" cx="120" cy="120" r="92" />
+      </svg>
+
+      <!-- Layer 3: Center HUD Content Inside Ring (1:1 Web Parity) -->
+      <div class="ring-center-hud" id="ringCenterHud">
+        
+        <!-- Center Stage Orb -->
+        <div class="center-stage-orb no-drag" id="centerStageOrb" title="Double click to open Dashboard">
+          <div class="orb-glass-inner" id="orbGlassInner">
+            <span class="orb-icon" id="orbIcon">🔥</span>
+          </div>
+        </div>
+
+        <!-- Status Badge -->
+        <div class="state-badge" id="stateBadge">🔥 FASTING</div>
+
+        <!-- Main Digital Clock -->
+        <div class="main-clock" id="mainClock">00:00:00</div>
+
+        <!-- Target Subtitle -->
+        <div class="clock-subtitle" id="clockSubtitle">Target: 16h 00m (0%)</div>
+
+        <!-- Biological Stage Pill -->
+        <div class="stage-pill" id="stagePill">
+          <span class="stage-dot" id="stageDot"></span>
+          <span class="stage-name" id="stageName">Digestion (0-4h)</span>
+          <span class="stage-chart-icon">📊</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ BOTTOM HOVER ACTION OVERLAY ════ -->
+    <div class="hover-bar bottom-hover-bar no-drag" id="bottomHoverBar">
+      <!-- Fasting Controls -->
+      <div class="bottom-action-panel active" id="bottomFastingPanel">
+        <button class="pill-btn" id="btnAdjustMinus" title="Subtract 15 mins">-15m</button>
+        <button class="pill-btn main-action-pill" id="btnFastingToggle">🍽️ END</button>
+        <button class="pill-btn" id="btnAdjustPlus" title="Add 15 mins">+15m</button>
+      </div>
+
+      <!-- Kitchen Controls -->
+      <div class="bottom-action-panel" id="bottomKitchenPanel">
+        <div class="kitchen-presets-strip">
+          <button class="preset-pill active" data-name="ไข่ยางมะตูม" data-secs="360" title="Soft Boil (6m)">6m</button>
+          <button class="preset-pill" data-name="ไข่ตานี" data-secs="480" title="Medium Boil (8m)">8m</button>
+          <button class="preset-pill" data-name="ไข่สุกเต็ม" data-secs="600" title="Hard Boil (10m)">10m</button>
+          <button class="preset-pill" data-name="Pomodoro" data-secs="1500" title="Focus (25m)">25m</button>
+        </div>
+        <div class="kitchen-btn-row">
+          <button class="pill-btn" id="btnKitchenReset" title="Reset Timer">↺</button>
+          <button class="pill-btn main-action-pill kitchen-main" id="btnKitchenToggle">START</button>
+          <button class="pill-btn" id="btnKitchenAddTwo" title="Add 2 Minutes">+2m</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sync Dot (Top Right) -->
+    <div class="sync-dot" id="syncDot" title="VPS Hub Synced"></div>
+  </div>
+
+  <script src="mini-widget.js"></script>
+</body>
+</html>
