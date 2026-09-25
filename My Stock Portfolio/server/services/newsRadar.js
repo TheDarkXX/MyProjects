@@ -2,6 +2,7 @@ import { db } from '../db/init.js';
 import YahooFinance from 'yahoo-finance2';
 import { fetchFullStoryForHeadline, generateEventFingerprint } from './gfinSearcher.js';
 import { collectDirectIntelligenceCandidates, extractArticleContentWithFallback } from './directTickerFeed.js';
+import { triageBatchWithLaya } from './layaClient.js';
 
 const yahooFinance = new YahooFinance();
 
@@ -641,11 +642,12 @@ Evaluate the news across 5 Content-Driven Dimensions (100 Points Total):
    - 0: Retail blog, Seeking Alpha contributor, Motley Fool clickbait.
    - Penalty: If clickbait/whale gossip/speculative fluff, source score is 0.
 
-Strict Rules for reading_priority (4 Tiers) & Summary Length:
-- "THE_MUST": Held stock ONLY + Total Score >= 85 + (Financial >= 20 OR Moat >= 20) + Actionability >= 12. (Summary: 5-7 detailed points + analysis)
-- "CATALYST": Held stock ONLY + Total Score >= 60 + verified company fundamental event. (Summary: 5-7 detailed points)
-- "WATCHLIST": Watchlist / ecosystem peers (Total Score >= 40, or non-held stocks). (Summary: 3-5 points)
-- "CHATTER": Market opinions, 13F whale gossip, retail clickbait, blogs, or Total Score < 40. (Summary: 2-3 short points)
+Strict Rules for reading_priority (5 Tiers) & Summary Length:
+- "THE_MUST": Severe crisis, transformative breakthrough, or existential risk for held stock ONLY (Total Score >= 85, impact_level = "moat_breaker"). (Summary: 5-7 detailed bullet points + strategic analysis)
+- "HIGH_IMPACT": High-impact catalyst! Multi-billion contract win, blowout earnings beat/miss, major strategic acquisition, or pricing power shift. (Summary: 4-6 bullet points)
+- "MACRO": Macroeconomic events affecting broad market: Federal Reserve interest rates, inflation (CPI/PCE), bond yields, tariffs, war. (Summary: 3-5 bullet points)
+- "GOOD_TO_KNOW": Routine company operations, standard partnership, product releases, normal market updates (Score 40-69). (Summary: 2-4 bullet points)
+- "CHATTER": Market sentiment, 13F whale gossip, retail talk, opinions, or Score < 40. (Summary: 1-2 short bullet points)
 
 Output ONLY a JSON object:
 {
@@ -665,7 +667,7 @@ Output ONLY a JSON object:
     "financial": "Quote from article supporting financial score (or empty)",
     "moat": "Quote from article supporting moat score (or empty)"
   },
-  "reading_priority": "THE_MUST" | "CATALYST" | "WATCHLIST" | "CHATTER",
+  "reading_priority": "THE_MUST" | "HIGH_IMPACT" | "MACRO" | "GOOD_TO_KNOW" | "CHATTER",
   "priority_reason": "เหตุผลสั้นๆ 1 ประโยคภาษาไทย (ชี้ชัดว่าทำไมถึงจัดอยู่ Tier นี้)",
   "impact_level": "routine" | "significant" | "moat_breaker"
 }`;
@@ -886,9 +888,15 @@ export async function runNewsScan(options = {}) {
   // =========================================================================
   try {
     const directCandidates = await collectDirectIntelligenceCandidates();
-    console.log(`[NewsRadar] Engine A: Processing ${directCandidates.length} high-signal candidates...`);
+    console.log(`[NewsRadar] Engine A: Processing ${directCandidates.length} candidate headlines...`);
 
-    for (const cand of directCandidates) {
+    // Tier-1 Fast Neural Gatekeeper: Run Laya batch triage on candidates
+    const layaTriageMap = await triageBatchWithLaya(
+      directCandidates.map((c, i) => ({ id: i, ticker: c.ticker, title: c.title }))
+    );
+
+    for (let i = 0; i < directCandidates.length; i++) {
+      const cand = directCandidates[i];
       directArticlesProcessed++;
       if (cand.shockInfo?.isShock) priceShocksCount++;
       if (cand.ticker === 'MACRO') macroArticlesAdded++;
@@ -897,31 +905,72 @@ export async function runNewsScan(options = {}) {
       const isHolding = !isMacro && (portfolioInfo.mainHoldings.has(cand.ticker) || portfolioInfo.tigerHoldings.has(cand.ticker));
       const portMapping = isMacro ? { tag: 'global', portfolioId: null } : getTickerPortfolioTag(cand.ticker, portfolioInfo);
 
-      // Extract full content
-      const extracted = await extractArticleContentWithFallback(cand);
+      const triage = layaTriageMap.get(i);
+      const isNoise = triage ? triage.is_noise : false;
 
-      // AI Synthesis with 5D Scoring & Direct Portfolio Impact
-      const aiResult = await synthesizeWithAI({
-        ticker: cand.ticker,
-        headline: cand.title,
-        newsItems: [{ title: cand.title, publisher: cand.publisher, summary: cand.summary }],
-        portfolioTag: portMapping.tag,
-        isHolding,
-        relevanceScore: cand.shockInfo?.isShock ? 95 : (isMacro ? 85 : (isHolding ? 85 : 65)),
-        triageTags: [
-          cand.catalystTag || 'DIRECT_CATALYST',
-          cand.provider,
-          ...(cand.shockInfo?.isShock ? [`PRICE_SHOCK_${cand.shockInfo.changePercent}%`] : [])
-        ],
-        fullContent: extracted.fullText,
-        isPaywalled: false,
-        sourceCount: 1
-      });
+      // 1. Noise Filter for Out-of-Universe Stocks: Drop completely!
+      if (isNoise && !isHolding && portMapping.tag === 'global') {
+        console.log(`[NewsRadar] 🛡️ Laya Gatekeeper: Dropped noise headline [${cand.ticker}] "${cand.title}" (${triage?.source || 'heuristic'})`);
+        continue;
+      }
+
+      // 2. Chatter Routing for Tracked / Project 2X stocks:
+      // If Laya identifies it as retail fluff/gossip, route directly to CHATTER without wasting GPT-5.6 Terra tokens!
+      let aiResult = null;
+      let fullContentText = null;
+      let resolvedSourceUrl = cand.link;
+
+      if (isNoise) {
+        console.log(`[NewsRadar] 💬 Laya Gatekeeper: Auto-routed to CHATTER (Zero-Token Fast Path) [${cand.ticker}] "${cand.title}"`);
+        aiResult = {
+          headline_th: `[${cand.ticker}] ${cand.title}`,
+          summary_th: `• บทความแสดงความคิดเห็น / การเก็งกำไรระยะสั้น (คัดกรองโดย Laya Gatekeeper)\n• ไม่พบเหตุการณ์กระทบปัจจัยพื้นฐานหรือตัวเลขงบการเงินที่มีนัยสำคัญ\n• สามารถติดตามความเห็นเพิ่มเติมจากลิงก์ต้นทาง`,
+          sentiment: 'neutral',
+          reading_priority: 'CHATTER',
+          priority_reason: 'คัดกรองโดย Laya Gatekeeper: จัดเป็นข่าวซุบซิบหรือ Sentiment ตลาดทั่วไป',
+          impact_level: 'routine',
+          total_score: 30,
+          score_breakdown: {
+            financial: 5,
+            moat: 5,
+            ownership: isHolding ? 10 : 5,
+            actionability: 5,
+            source: 5,
+            total: 30,
+            penalties: ['LAYA_NOISE_TRIAGE'],
+            notes: 'Laya Gatekeeper Zero-Token Triage: Classified as Chatter'
+          }
+        };
+      } else {
+        // High Signal / Catalyst / Macro -> Extract full content & Run Full GPT-5.6 Terra Synthesis
+        const extracted = await extractArticleContentWithFallback(cand);
+        fullContentText = extracted.fullText;
+        resolvedSourceUrl = extracted.resolvedUrl || cand.link;
+
+        aiResult = await synthesizeWithAI({
+          ticker: cand.ticker,
+          headline: cand.title,
+          newsItems: [{ title: cand.title, publisher: cand.publisher, summary: cand.summary }],
+          portfolioTag: portMapping.tag,
+          isHolding,
+          relevanceScore: cand.shockInfo?.isShock ? 95 : (isMacro ? 85 : (isHolding ? 85 : 65)),
+          triageTags: [
+            cand.catalystTag || 'DIRECT_CATALYST',
+            cand.provider,
+            ...(cand.shockInfo?.isShock ? [`PRICE_SHOCK_${cand.shockInfo.changePercent}%`] : []),
+            ...(triage?.is_macro ? ['LAYA_MACRO'] : [])
+          ],
+          fullContent: fullContentText,
+          isPaywalled: false,
+          sourceCount: 1
+        });
+      }
 
       const tagsList = [
         cand.catalystTag || 'DIRECT_CATALYST',
         ...(cand.shockInfo?.isShock ? ['PRICE_SHOCK'] : []),
-        ...(isMacro ? ['MACRO_PULSE'] : [])
+        ...(isMacro ? ['MACRO_PULSE'] : []),
+        ...(isNoise ? ['LAYA_CHATTER'] : ['HIGH_SIGNAL'])
       ];
 
       insertIntel.run(
@@ -930,7 +979,7 @@ export async function runNewsScan(options = {}) {
         cand.title,
         aiResult.headline_th || `[${cand.ticker}] ${cand.title}`,
         cand.publisher || 'Direct Feed',
-        extracted.resolvedUrl || cand.link,
+        resolvedSourceUrl,
         aiResult.summary_th,
         aiResult.sentiment,
         aiResult.reading_priority || 'CHATTER',
@@ -941,9 +990,9 @@ export async function runNewsScan(options = {}) {
         aiResult.total_score ?? (cand.shockInfo?.isShock ? 95 : 80),
         JSON.stringify(tagsList),
         JSON.stringify(aiResult.score_breakdown || null),
-        extracted.fullText,
+        fullContentText,
         cand.shockInfo?.isShock ? 'price_shock_detective' : (isMacro ? 'macro_shield' : 'direct_ticker_feed'),
-        extracted.resolvedUrl || cand.link,
+        resolvedSourceUrl,
         new Date().toISOString(),
         100,
         1,
