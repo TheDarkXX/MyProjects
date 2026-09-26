@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Target, Flame, Sparkles, Clock, CheckCircle2, Trophy, Compass, RotateCcw } from 'lucide-react';
+import { Target, Flame, Sparkles, Clock, CheckCircle2, Trophy, Compass, RotateCcw, Lock, Zap, Shield } from 'lucide-react';
 import { DossierPayload } from '../../../stores/dossierStore';
 import { usePortfolioStore } from '../../../stores/portfolioStore';
 import { useProject2xStore } from '../../../stores/project2xStore';
@@ -23,7 +23,6 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
   unrealizedPnlPct = 0,
   data
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
   const [isRenewing, setIsRenewing] = useState(false);
 
   const { activePortfolioId } = usePortfolioStore();
@@ -56,30 +55,48 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
   const basePrice = (data as any)?.thesis?.startPrice 
     || (data?.basePrice && data.basePrice > 0 ? data.basePrice : (avgCost > 0 ? avgCost : currentPrice * 0.5));
 
-  const effectiveTarget = (data as any)?.thesis?.targetPrice
-    || (targetPrice3Y && targetPrice3Y > 0 ? targetPrice3Y : (basePrice * 2));
+  // Multi-Bagger Exponential Milestones (1X ➔ 2X ➔ 4X ➔ 8X)
+  const target1X = basePrice;
+  const target2X = Number((basePrice * 2).toFixed(2));
+  const target4X = Number((basePrice * 4).toFixed(2));
+  const target8X = Number((basePrice * 8).toFixed(2));
 
+  const multiplier = basePrice > 0 ? currentPrice / basePrice : 1;
   const pnlDollar = currentPrice - basePrice;
   const pnlPct = basePrice > 0 ? (pnlDollar / basePrice) * 100 : unrealizedPnlPct;
   const isProfit = pnlDollar >= 0;
 
-  // 2. Compute progress on 2X track (0% to 100%)
-  const computedProgress = effectiveTarget > basePrice
-    ? ((currentPrice - basePrice) / (effectiveTarget - basePrice)) * 100
-    : doublerProgressPct;
+  // 2. Compute Active Multi-Bagger Level & Pod Progress
+  let activeLevel = 1;
+  if (currentPrice >= target8X) activeLevel = 4;
+  else if (currentPrice >= target4X) activeLevel = 3;
+  else if (currentPrice >= target2X) activeLevel = 2;
 
-  const displayProgress = Number.isFinite(computedProgress) ? Math.max(0, computedProgress) : doublerProgressPct;
-  const clampedTrackProgress = Math.min(100, Math.max(2, displayProgress));
+  // Pod 1 Progress (1X ➔ 2X)
+  let pod1Pct = 0;
+  if (currentPrice >= target2X) {
+    pod1Pct = 100;
+  } else if (currentPrice > target1X) {
+    pod1Pct = Math.min(100, Math.max(0, ((currentPrice - target1X) / (target2X - target1X)) * 100));
+  }
 
-  // 3. 3 Annual Stepping Milestones (Compound Growth ~26% CAGR)
-  // Year 1: +26.0% (1.26^1)
-  // Year 2: +58.8% (1.26^2)
-  // Year 3: +100.0% (2X Doubler Boss)
-  const targetY1 = Number((basePrice * 1.26).toFixed(2));
-  const targetY2 = Number((basePrice * 1.5876).toFixed(2));
-  const targetY3 = Number(effectiveTarget.toFixed(2));
+  // Pod 2 Progress (2X ➔ 4X)
+  let pod2Pct = 0;
+  if (currentPrice >= target4X) {
+    pod2Pct = 100;
+  } else if (currentPrice > target2X) {
+    pod2Pct = Math.min(100, Math.max(0, ((currentPrice - target2X) / (target4X - target2X)) * 100));
+  }
 
-  // 4. First Buy Date & Thesis Horizon Telemetry
+  // Pod 3 Progress (4X ➔ 8X)
+  let pod3Pct = 0;
+  if (currentPrice >= target8X) {
+    pod3Pct = 100;
+  } else if (currentPrice > target4X) {
+    pod3Pct = Math.min(100, Math.max(0, ((currentPrice - target4X) / (target8X - target4X)) * 100));
+  }
+
+  // 3. First Buy Date & Thesis Horizon Telemetry
   const firstBuyDateStr = (data as any)?.thesis?.anchorDate
     || data?.holding?.firstBuyDate 
     || (data?.holding?.lots && data.holding.lots.length > 0 
@@ -146,7 +163,7 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
     };
   }, [firstBuyDateStr, hasStarted, horizonYears]);
 
-  // 5. Pace Telemetry (Current Price vs Ideal Exponential Pace Curve)
+  // 4. Pace Telemetry (Current Price vs Ideal Exponential Pace Curve)
   const paceAnalysis = useMemo(() => {
     if (!timeTelemetry.hasStarted) {
       return {
@@ -158,10 +175,10 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
       };
     }
 
-    if (currentPrice >= targetY3) {
+    if (currentPrice >= target2X) {
       const gainPct = basePrice > 0 ? ((currentPrice - basePrice) / basePrice) * 100 : 100;
       return {
-        idealPrice: targetY3,
+        idealPrice: target2X,
         paceDeltaPct: gainPct - 100,
         status: 'AHEAD' as const,
         label: `🏆 Doubled (+${gainPct.toFixed(0)}%)`,
@@ -175,9 +192,9 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
 
     let status: 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'OVERDUE' = 'ON_TRACK';
     let label = '🟢 On Track';
-    let badgeClass = 'text-emerald-300 bg-emerald-950/60 border-emerald-500/40';
+    let badgeClass = 'text-amber-300 bg-amber-950/60 border-amber-500/40';
 
-    if (timeTelemetry.daysRemaining <= 0 && currentPrice < targetY3) {
+    if (timeTelemetry.daysRemaining <= 0 && currentPrice < target2X) {
       status = 'OVERDUE';
       label = `🔴 Time Expired (>${horizonYears}Y)`;
       badgeClass = 'text-rose-300 bg-rose-950/60 border-rose-500/40';
@@ -192,59 +209,22 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
     }
 
     return { idealPrice, paceDeltaPct, status, label, badgeClass };
-  }, [basePrice, currentPrice, timeTelemetry, targetY3, horizonYears]);
-
-  // 6. Determine Active Mission Stage
-  const activeMission = useMemo(() => {
-    if (currentPrice >= targetY3) {
-      return {
-        stage: 3,
-        stepName: 'Stage 3 (2X)',
-        title: '🎉 บรรลุเป้าหมาย 2X แล้ว!',
-        targetPrice: targetY3,
-        remainingToStage: 0,
-        isComplete: true
-      };
-    }
-    if (currentPrice >= targetY2) {
-      return {
-        stage: 3,
-        stepName: 'Stage 3 (2X Boss)',
-        title: 'กำลังล่าเป้าใหญ่ 2X',
-        targetPrice: targetY3,
-        remainingToStage: targetY3 - currentPrice,
-        isComplete: false
-      };
-    }
-    if (currentPrice >= targetY1) {
-      return {
-        stage: 2,
-        stepName: 'Stage 2 (Y2)',
-        title: 'กำลังพิชิตเป้า Y2 (+59%)',
-        targetPrice: targetY2,
-        remainingToStage: targetY2 - currentPrice,
-        isComplete: false
-      };
-    }
-    return {
-      stage: 1,
-      stepName: 'Stage 1 (Y1)',
-      title: 'กำลังพิชิตเป้า Y1 (+26%)',
-      targetPrice: targetY1,
-      remainingToStage: targetY1 - currentPrice,
-      isComplete: false
-    };
-  }, [currentPrice, targetY1, targetY2, targetY3]);
+  }, [basePrice, currentPrice, timeTelemetry, target2X, horizonYears]);
 
   return (
-    <div className="bg-[#12162B]/95 p-3.5 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md flex flex-col justify-between gap-2.5 h-full transition-all group select-none">
-      {/* Top Header: 2X Progress Milestone, Pace Velocity Pill & Time Dimension */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* Left: 2X Progress & Pace Status */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-violet-900/50 to-orange-900/50 border border-orange-500/40 text-orange-200 text-[13px] font-bold font-mono shadow-[0_0_12px_rgba(253,85,20,0.25)]">
-            <Flame className="w-3.5 h-3.5 text-orange-400" />
-            <span>2X: {displayProgress.toFixed(0)}%</span>
+    <div className="bg-[#12162B] p-4 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-md flex flex-col justify-between gap-3.5 h-full transition-all group select-none">
+      {/* 1. Top Header: Symbol, Tier, Multi-Bagger Level Title & Total Gain */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        {/* Left: Symbol & Compounder Category */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#1A1D2D] border border-white/10 text-white font-black font-heading text-sm shadow-md">
+            <span>{data?.symbol || 'STOCK'}</span>
+            <span className="text-[#9898C8] text-[11px] font-bold">•</span>
+            <span className="text-amber-300 text-[12px] font-extrabold">TIER {data?.category || 'S'}</span>
+            <span className="text-[#9898C8] text-[11px] font-bold">•</span>
+            <span className="text-[#FC2D79] text-[12px] font-bold tracking-tight">
+              {activeLevel >= 3 ? 'DYNASTY COMPOUNDER' : activeLevel === 2 ? 'MONSTER COMPOUNDER' : 'LEVEL 1 RUNNER'}
+            </span>
           </div>
 
           <div className={`flex items-center gap-1 px-2.5 py-0.5 rounded-lg border text-[11px] font-mono font-bold tracking-tight ${paceAnalysis.badgeClass}`}>
@@ -252,22 +232,20 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
           </div>
         </div>
 
-        {/* Right: Time Dimension Telemetry & Renew 3Y Epoch */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-[12px] font-mono text-slate-300 bg-slate-950/80 px-2.5 py-1 rounded-xl border border-white/10 shadow-inner">
-            <Clock className="w-3.5 h-3.5 text-orange-400" />
-            <span className="text-slate-400 text-[11px]">ถือ:</span>
-            <strong className="text-white font-bold">{timeTelemetry.heldText}</strong>
-            <span className="text-slate-500">•</span>
-            <span className="text-slate-400 text-[11px]">เหลือ:</span>
-            <strong className="text-orange-300 font-bold">{timeTelemetry.remainingText}</strong>
+        {/* Right: Total Gain in Hot Pink & Renew 3Y Action */}
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end">
+            <span className="text-[#9898C8] text-[11px] font-bold uppercase tracking-wider">TOTAL GAIN</span>
+            <span className="text-[#FC2D79] font-mono font-black text-lg tabular-nums drop-shadow-[0_0_12px_rgba(252,45,121,0.4)]">
+              {isProfit ? '+' : ''}{pnlPct.toFixed(1)}%
+            </span>
           </div>
 
           <button
             onClick={handleRenew}
             disabled={isRenewing}
             title="รีเซ็ต/ต่ออายุรอบ Thesis 3 ปีใหม่จากราคาวันนี้"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-orange-950/60 border border-white/10 hover:border-orange-500/50 text-slate-300 hover:text-orange-200 text-[12px] font-mono font-medium transition-all shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#1A1D2D] hover:bg-orange-950/60 border border-white/10 hover:border-orange-500/50 text-slate-300 hover:text-orange-200 text-[12px] font-mono font-medium transition-all shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             <RotateCcw className={`w-3.5 h-3.5 text-orange-400 ${isRenewing ? 'animate-spin' : ''}`} />
             <span>{isRenewing ? 'กำลังต่ออายุ...' : 'Renew 3Y'}</span>
@@ -275,142 +253,194 @@ export const DoublerPowerTube: React.FC<DoublerPowerTubeProps> = ({
         </div>
       </div>
 
-      {/* Center: Seamless Horizon Capsule Track with 3 Annual Stepping Milestones */}
-      <div 
-        className="pt-7 pb-2 relative flex flex-col justify-center select-none"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {/* Floating Tooltip when Track is Hovered */}
-        {isHovered && (
-          <div className="absolute top-0 right-0 bg-[#0A0E1A]/95 text-white text-[11px] font-mono px-2.5 py-0.5 rounded-lg border border-orange-500/30 shadow-[0_4px_16px_rgba(0,0,0,0.8)] backdrop-blur-md z-30 pointer-events-none animate-fadeIn flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-orange-400" />
-            <span className="text-orange-300 font-bold">{displayProgress.toFixed(1)}% สู่ 2X</span>
-            <span className="text-slate-400">•</span>
-            <span className="text-slate-300">เหลืออีก ${activeMission.remainingToStage > 0 ? activeMission.remainingToStage.toFixed(2) : '0'}</span>
-          </div>
-        )}
-
-        {/* The Rail (Thicker h-4 power tube) */}
-        <div className="relative w-full h-4 bg-slate-950/90 rounded-full border border-white/20 overflow-visible shadow-inner">
-          {/* Progress Gradient Fill: Deep Orange to Deep Red */}
-          <div
-            className={`h-full rounded-full transition-all duration-700 ${
-              isProfit
-                ? 'bg-gradient-to-r from-[#FF6A00] via-[#FD3A18] to-[#B91C1C] shadow-[0_0_18px_rgba(253,58,24,0.45)]'
-                : 'bg-gradient-to-r from-[#7F1D1D] to-[#DC2626]'
-            }`}
-            style={{ width: `${clampedTrackProgress}%` }}
-          />
-
-          {/* Annual Milestone Ticks on Rail (Y1 at 26%, Y2 at 58.8%) */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div 
-              className="absolute top-0 bottom-0 w-0.5 bg-white/25 z-10" 
-              style={{ left: '26%' }}
-              title="Y1 Benchmark (+26%)"
-            />
-            <div 
-              className="absolute top-0 bottom-0 w-0.5 bg-white/25 z-10" 
-              style={{ left: '58.8%' }}
-              title="Y2 Benchmark (+59%)"
-            />
-          </div>
-
-          {/* Integrated Glowing Marker on Track (Elevated with ample breathing space) */}
-          <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 flex items-center justify-center cursor-pointer group/orb"
-            style={{ left: `${clampedTrackProgress}%` }}
-          >
-            {/* Glowing Orb */}
-            <div className="relative flex items-center justify-center">
-              <span className="absolute w-5 h-5 rounded-full bg-orange-500/40 animate-ping" />
-              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-amber-200 via-[#FF6A00] to-[#FD3A18] border-2 border-slate-950 shadow-[0_0_14px_rgba(253,58,24,0.9)] z-10 group-hover/orb:scale-125 transition-transform" />
-            </div>
-
-            {/* Anchored Speech Bubble Price Tag with % (Elevated to -top-9 for generous clearance) */}
-            <div className="absolute -top-9 flex flex-col items-center pointer-events-none transition-all duration-300 group-hover/orb:-translate-y-0.5">
-              <div className="px-2.5 py-0.5 rounded-md bg-[#1C0F0A] text-white font-mono text-[12px] font-black border border-orange-500/80 shadow-[0_0_14px_rgba(253,58,24,0.6)] flex items-center gap-1.5 whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
-                <span>${currentPrice.toFixed(2)}</span>
-                <span className="text-orange-300/90 text-[11px] font-bold">({displayProgress.toFixed(0)}%)</span>
-              </div>
-              <div className="w-1.5 h-1.5 bg-[#1C0F0A] border-r border-b border-orange-500/80 rotate-45 -mt-1 shadow-sm" />
-            </div>
-          </div>
+      {/* 2. Middle Hero: MULTI-BAGGER COMBO GAUGE (3 Horizontal Segmented Pods) */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between text-[#9898C8] text-[12px] font-mono font-bold px-0.5">
+          <span className="tracking-wide text-slate-200 uppercase font-heading">
+            MULTI-BAGGER COMBO GAUGE
+          </span>
+          <span className="text-[12px] text-[#9898C8] flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5 text-orange-400 inline" />
+            <span>ถือ: <strong className="text-white font-bold">{timeTelemetry.heldText}</strong></span>
+            <span className="text-slate-500">•</span>
+            <span>เหลือ: <strong className="text-orange-300 font-bold">{timeTelemetry.remainingText}</strong></span>
+          </span>
         </div>
 
-        {/* 3 Annual Stepping Milestones Under Track (Y1 ➔ Y2 ➔ Y3 2X Boss) */}
-        <div className="flex justify-between items-start text-[11px] font-mono mt-2.5 px-0.5 select-none">
-          {/* Milestone 1: Y1 (+26%) */}
-          <div className={`flex flex-col items-start transition-colors ${currentPrice >= targetY1 ? 'text-emerald-300' : 'text-slate-400'}`}>
-            <div className="flex items-center gap-1 font-bold">
-              {currentPrice >= targetY1 ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block" />
-              )}
-              <span>Y1: +26%</span>
+        {/* The 3 Segmented Pods Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* ========================================================
+              POD 1: LEVEL 1 (1X ➔ 2X)
+              Range: $target1X ➔ $target2X
+             ======================================================== */}
+          <div className="flex flex-col gap-1.5 bg-[#0D111F]/80 p-2.5 rounded-xl border border-white/10 shadow-inner">
+            <div className="flex items-center justify-between text-[11px] font-mono">
+              <span className="text-slate-300 font-bold">LEVEL 1: 1X ➔ 2X</span>
+              <span className="text-[#9898C8]">${target1X.toFixed(0)} ➔ ${target2X.toFixed(0)}</span>
             </div>
-            <span className="text-[10px] text-slate-400 font-medium">${targetY1.toFixed(0)}</span>
+
+            {/* Pod 1 Rail */}
+            <div className="relative h-10 w-full rounded-xl bg-slate-950/90 border border-white/15 overflow-hidden flex items-center p-1 shadow-inner">
+              <div
+                className={`h-full rounded-lg transition-all duration-700 flex items-center justify-center ${
+                  pod1Pct >= 100
+                    ? 'bg-gradient-to-r from-[#FD5514] to-[#B91C1C] shadow-[0_0_16px_rgba(253,58,24,0.45)]'
+                    : 'bg-gradient-to-r from-[#FD5514]/70 to-[#B91C1C]/70 shadow-[0_0_12px_rgba(253,58,24,0.25)]'
+                }`}
+                style={{ width: `${Math.max(8, pod1Pct)}%` }}
+              >
+                <span className="font-mono font-black text-white text-[12px] tracking-wider px-1">
+                  {pod1Pct.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+
+            {/* Pod 1 Bottom Badge */}
+            <div className="pt-0.5">
+              {pod1Pct >= 100 ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FC2D79]/15 border border-[#FC2D79]/40 text-[#FC2D79] text-[11px] font-bold font-mono shadow-sm">
+                  <Trophy className="w-3 h-3 text-[#FC2D79]" />
+                  <span>ACHIEVED in {timeTelemetry.heldText}</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-950/40 border border-orange-500/40 text-orange-300 text-[11px] font-bold font-mono">
+                  <Flame className="w-3 h-3 text-orange-400" />
+                  <span>RACING TO 2X (${target2X.toFixed(0)})</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Milestone 2: Y2 (+59%) */}
-          <div className={`flex flex-col items-center transition-colors ${currentPrice >= targetY2 ? 'text-emerald-300' : activeMission.stage === 2 ? 'text-orange-300' : 'text-slate-400'}`}>
-            <div className="flex items-center gap-1 font-bold">
-              {currentPrice >= targetY2 ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              ) : activeMission.stage === 2 ? (
-                <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shadow-[0_0_8px_rgba(251,146,60,0.8)]" />
-              ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block" />
-              )}
-              <span>Y2: +59%</span>
+          {/* ========================================================
+              POD 2: LEVEL 2 (2X ➔ 4X)
+              Range: $target2X ➔ $target4X
+             ======================================================== */}
+          <div className="flex flex-col gap-1.5 bg-[#0D111F]/80 p-2.5 rounded-xl border border-white/10 shadow-inner">
+            <div className="flex items-center justify-between text-[11px] font-mono">
+              <span className="text-slate-300 font-bold">LEVEL 2: 2X ➔ 4X</span>
+              <span className="text-[#9898C8]">${target2X.toFixed(0)} ➔ ${target4X.toFixed(0)}</span>
             </div>
-            <span className="text-[10px] text-slate-400 font-medium">${targetY2.toFixed(0)}</span>
+
+            {/* Pod 2 Rail */}
+            <div className="relative h-10 w-full rounded-xl bg-slate-950/90 border border-white/15 overflow-hidden flex items-center p-1 shadow-inner">
+              {pod2Pct > 0 ? (
+                <div
+                  className={`h-full rounded-lg transition-all duration-700 flex items-center justify-center ${
+                    pod2Pct >= 100
+                      ? 'bg-gradient-to-r from-[#823AFD] to-[#FC2D79] shadow-[0_0_18px_rgba(252,45,121,0.5)]'
+                      : 'bg-gradient-to-r from-[#823AFD] via-[#FC2D79] to-[#FD5514] shadow-[0_0_18px_rgba(252,45,121,0.4)]'
+                  }`}
+                  style={{ width: `${Math.max(12, pod2Pct)}%` }}
+                >
+                  <span className="font-mono font-black text-white text-[12px] tracking-wider px-1">
+                    {pod2Pct.toFixed(0)}%
+                  </span>
+                </div>
+              ) : (
+                <div className="w-full h-full rounded-lg bg-[#1A1D2D]/60 flex items-center justify-center text-[#9898C8] text-[11px] font-mono">
+                  <Lock className="w-3 h-3 mr-1 text-[#9898C8]" />
+                  <span>LOCKED (รอแตะ ${target2X.toFixed(0)})</span>
+                </div>
+              )}
+            </div>
+
+            {/* Pod 2 Bottom Badge */}
+            <div className="pt-0.5">
+              {pod2Pct >= 100 ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FC2D79]/20 border border-[#FC2D79]/50 text-white text-[11px] font-bold font-mono shadow-sm">
+                  <Trophy className="w-3 h-3 text-[#FC2D79]" />
+                  <span>4X ACHIEVED!</span>
+                </div>
+              ) : pod2Pct > 0 ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-violet-950/60 border border-violet-500/40 text-violet-200 text-[11px] font-bold font-mono shadow-sm">
+                  <Zap className="w-3 h-3 text-violet-400" />
+                  <span>RACING TO 4X TARGET (${target4X.toFixed(0)})</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-300 text-[11px] font-medium font-mono">
+                  <Lock className="w-3 h-3 text-slate-400" />
+                  <span>NEXT TARGET (${target4X.toFixed(0)})</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Milestone 3: Y3 2X Boss */}
-          <div className={`flex flex-col items-end transition-colors ${currentPrice >= targetY3 ? 'text-amber-300' : 'text-orange-400'}`}>
-            <div className="flex items-center gap-1 font-bold">
-              {currentPrice >= targetY3 ? (
-                <Trophy className="w-3.5 h-3.5 text-amber-400" />
-              ) : (
-                <Flame className="w-3.5 h-3.5 text-orange-400" />
-              )}
-              <span>Y3: 100% (2X)</span>
+          {/* ========================================================
+              POD 3: LEVEL 3 (4X ➔ 8X)
+              Range: $target4X ➔ $target8X
+             ======================================================== */}
+          <div className="flex flex-col gap-1.5 bg-[#0D111F]/80 p-2.5 rounded-xl border border-white/10 shadow-inner">
+            <div className="flex items-center justify-between text-[11px] font-mono">
+              <span className="text-slate-300 font-bold">LEVEL 3: 4X ➔ 8X</span>
+              <span className="text-[#9898C8]">${target4X.toFixed(0)} ➔ ${target8X.toFixed(0)}</span>
             </div>
-            <span className="text-[10px] text-orange-300 font-medium">${targetY3.toFixed(0)}</span>
+
+            {/* Pod 3 Rail */}
+            <div className="relative h-10 w-full rounded-xl bg-slate-950/90 border border-white/15 overflow-hidden flex items-center p-1 shadow-inner">
+              {pod3Pct > 0 ? (
+                <div
+                  className="h-full rounded-lg bg-gradient-to-r from-amber-400 via-rose-500 to-[#FC2D79] shadow-[0_0_18px_rgba(251,191,36,0.4)] flex items-center justify-center transition-all duration-700"
+                  style={{ width: `${Math.max(12, pod3Pct)}%` }}
+                >
+                  <span className="font-mono font-black text-white text-[12px] tracking-wider px-1">
+                    {pod3Pct.toFixed(0)}%
+                  </span>
+                </div>
+              ) : (
+                <div className="w-full h-full rounded-lg bg-[#1A1D2D]/60 flex items-center justify-center text-[#9898C8] text-[11px] font-mono">
+                  <Lock className="w-3 h-3 mr-1 text-[#9898C8]" />
+                  <span>NEXT DYNASTY (${target8X.toFixed(0)})</span>
+                </div>
+              )}
+            </div>
+
+            {/* Pod 3 Bottom Badge */}
+            <div className="pt-0.5">
+              {pod3Pct >= 100 ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-200 text-[11px] font-bold font-mono">
+                  <Trophy className="w-3 h-3 text-amber-300" />
+                  <span>8X DYNASTY ACHIEVED!</span>
+                </div>
+              ) : pod3Pct > 0 ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-950/60 border border-amber-500/40 text-amber-300 text-[11px] font-bold font-mono">
+                  <Zap className="w-3 h-3 text-amber-400" />
+                  <span>RACING TO 8X TARGET (${target8X.toFixed(0)})</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-300 text-[11px] font-medium font-mono">
+                  <Lock className="w-3 h-3 text-slate-400" />
+                  <span>NEXT DYNASTY (${target8X.toFixed(0)})</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Footer: Mission Control & Stepping Target Storytelling */}
-      <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between text-[12px] font-mono text-slate-300 gap-1.5">
-        {/* Step 1: Origin & Current Gain */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-slate-400">ต้นทุน:</span>
-          <strong className="text-white">${basePrice.toFixed(1)}</strong>
+      {/* 3. Bottom Footer: Origin Base, Current Market Price & Multiplier Telemetry */}
+      <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between text-[13px] font-mono text-slate-300 gap-2">
+        {/* Origin Base & Live Market Price */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[#9898C8]">ทุนตั้งต้น (1X):</span>
+          <strong className="text-white font-bold">${basePrice.toFixed(2)}</strong>
           <span className="text-slate-500">•</span>
-          <span className={isProfit ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
-            กำไร {isProfit ? '+' : ''}{pnlPct.toFixed(1)}% ({isProfit ? '+' : ''}${pnlDollar.toFixed(1)})
+          <span className="text-[#9898C8]">ราคาตลาด:</span>
+          <strong className="text-white font-bold">${currentPrice.toFixed(2)}</strong>
+          <span className="text-slate-500">•</span>
+          <span className="text-[#FC2D79] font-bold">
+            กำไร {isProfit ? '+' : ''}${pnlDollar.toFixed(2)} ({isProfit ? '+' : ''}{pnlPct.toFixed(1)}%)
           </span>
         </div>
 
-        {/* Step 2: Active Stepping Mission */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-slate-400">ภารกิจ:</span>
-          {activeMission.isComplete ? (
-            <span className="text-amber-300 font-bold flex items-center gap-1">
-              <Trophy className="w-3.5 h-3.5 text-amber-400" />
-              สำเร็จเป้าหมาย 2X แล้ว!
-            </span>
-          ) : (
-            <span className="text-orange-300 font-bold flex items-center gap-1">
-              <Compass className="w-3.5 h-3.5 text-orange-400" />
-              <span>{activeMission.title}: เหลืออีก +${activeMission.remainingToStage.toFixed(2)}</span>
-            </span>
-          )}
+        {/* Multiplier Badge & Compounding Rule */}
+        <div className="flex items-center gap-2">
+          <div className="px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-violet-900/50 to-pink-900/50 border border-[#FC2D79]/40 text-white font-mono font-bold text-[12px] flex items-center gap-1.5 shadow-sm">
+            <Zap className="w-3.5 h-3.5 text-[#FC2D79]" />
+            <span>{multiplier.toFixed(2)}X MULTIPLIER</span>
+          </div>
+          <span className="text-[#9898C8] text-[12px] font-medium hidden sm:inline">
+            (ถือทบตามกฎ 20-Year Dynasty ไม่ขายผู้ชนะ)
+          </span>
         </div>
       </div>
     </div>

@@ -937,12 +937,19 @@ export const Project2xPage: React.FC = () => {
                     const rowTierInfo = getTierVisualInfo(row, row.symbol);
                     const isBuy = rowTierInfo.tierId === 'BUY_NOW';
                     const isDanger = rowTierInfo.tierId === 'FALLING_KNIFE' || rowTierInfo.tierId === 'MAYDAY_EXIT';
+                    const isDoubled = row.thesis_status === 'DOUBLED';
                     return (
                       <tr
                         key={row.symbol}
                         onClick={() => setDetailModalStock(row)}
                         className={`hover:bg-white/5 cursor-pointer transition-colors ${
-                          isBuy ? 'bg-orange-500/[0.04]' : isDanger ? 'bg-rose-500/[0.04]' : ''
+                          isDoubled
+                            ? 'bg-amber-500/[0.06] shadow-[inset_0_0_12px_rgba(245,158,11,0.12)] border-l-2 border-l-amber-400'
+                            : isBuy
+                            ? 'bg-orange-500/[0.04]'
+                            : isDanger
+                            ? 'bg-rose-500/[0.04]'
+                            : ''
                         }`}
                       >
                         <td className="p-3.5">
@@ -993,10 +1000,10 @@ export const Project2xPage: React.FC = () => {
                             </span>
                           ) : row.thesis_status === 'DOUBLED' ? (
                             <div className="flex flex-col gap-0.5">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                                🏆 DOUBLED!
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-black bg-[#FC2D79]/20 text-[#FC2D79] border border-[#FC2D79]/40 shadow-[0_0_10px_rgba(252,45,121,0.25)]">
+                                🏆 2X CLEARED ➔ LV2
                               </span>
-                              <span className="text-[12px] font-bold text-emerald-400 tabular-nums">
+                              <span className="text-[12px] font-bold text-[#FC2D79] tabular-nums">
                                 +{row.thesis_price_growth_pct?.toFixed(0)}% (${row.thesis_start_price} → ${row.currentPrice.toFixed(0)})
                               </span>
                             </div>
@@ -1014,7 +1021,7 @@ export const Project2xPage: React.FC = () => {
                               <div className="flex items-center gap-1.5 font-bold tabular-nums">
                                 <span className={`text-xs px-1.5 py-0.5 rounded font-black ${
                                   (row.thesis_months_remaining ?? 36) > 18
-                                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                    ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
                                     : (row.thesis_months_remaining ?? 36) >= 6
                                     ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                                     : 'bg-rose-500/15 text-rose-300 border border-rose-500/30 animate-pulse'
@@ -1023,7 +1030,7 @@ export const Project2xPage: React.FC = () => {
                                 </span>
                               </div>
                               <span className={`text-[12px] font-semibold tabular-nums ${
-                                (row.thesis_pace_pct ?? 0) >= 0 ? 'text-emerald-300' : (row.thesis_pace_pct ?? 0) > -12 ? 'text-amber-300' : 'text-rose-400'
+                                (row.thesis_pace_pct ?? 0) >= 0 ? 'text-amber-300' : (row.thesis_pace_pct ?? 0) > -12 ? 'text-orange-300' : 'text-rose-400'
                               }`} title={`เริ่ม ${row.thesis_anchor_date} @ $${row.thesis_start_price} -> เป้า 2X $${row.thesis_target_price}`}>
                                 {row.thesis_pace_label}
                               </span>

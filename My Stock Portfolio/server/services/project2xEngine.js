@@ -1935,14 +1935,14 @@ async function doScanRadarMatrix(portfolioId) {
       });
     }
 
-    // Layer 7: Thesis Doubled 2X Alert (Free-Ride Candidate)
+    // Layer 7: Thesis Doubled 2X Milestone (Monster Compounder Level 2 Progression)
     if (row.thesis_status === 'DOUBLED' && row.owned_shares > 0) {
       sellAlerts.push({
         symbol: row.symbol,
         layer: 'Thesis Doubled 2X',
-        severity: 'PROFIT_TAKE',
-        message: `Thesis Validated: ${row.symbol} has DOUBLED (+${row.thesis_price_growth_pct}%) from thesis start ($${row.thesis_start_price} -> $${row.currentPrice.toFixed(2)})! Free-ride 50% or renew epoch.`,
-        message_th: `บรรลุวิทยานิพนธ์ 1 เด้ง 2X! ${row.symbol} ทะลุเป้า (+${row.thesis_price_growth_pct}% จาก $${row.thesis_start_price} เป็น $${row.currentPrice.toFixed(2)}) — พิจารณาขาย 50% ดึงทุนคืน (Free-Ride) หรือกด Reset ต่ออายุ Epoch!`
+        severity: 'INFO',
+        message: `Thesis Validated: ${row.symbol} has DOUBLED (+${row.thesis_price_growth_pct}%) from thesis start ($${row.thesis_start_price} -> $${row.currentPrice.toFixed(2)})! Advancing to Level 2 (4X Compounding Hunt).`,
+        message_th: `บรรลุวิทยานิพนธ์ 1 เด้ง 2X! ${row.symbol} ทะลุเป้า (+${row.thesis_price_growth_pct}% จาก $${row.thesis_start_price} เป็น $${row.currentPrice.toFixed(2)}) — เข้าสู่ Level 2: ล่าเป้า 4X ต่อเนื่อง (Monster Compounder) ปล่อยทบเต็มสูบ!`
       });
     }
   }
