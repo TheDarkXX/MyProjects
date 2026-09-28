@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "cron:project2x": "node crons/project2xCron.js",
+    "cron:project2x:now": "node crons/project2xCron.js --now",
+    "cron:project2x:dry": "node crons/project2xCron.js --dry-run"
   },
   "keywords": [],
   "author": "",

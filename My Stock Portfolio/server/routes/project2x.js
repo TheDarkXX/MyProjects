@@ -19,11 +19,62 @@ import {
   syncQuarterlyFinancials
 } from '../services/dossierService.js';
 import { getPullbackDna } from '../services/pullbackDnaService.js';
+import { db } from '../db/init.js';
+import { runProject2xScan } from '../crons/project2xCron.js';
 
 const project2xRoutes = new Hono();
 
 // Require auth
 project2xRoutes.use('*', authMiddleware);
+
+/**
+ * POST /api/project-2x/run-cron
+ * Manual or webhook trigger for Project 2X Autonomous Notification Cron
+ * Body: { portfolioId?: string, dryRun?: boolean, force?: boolean }
+ */
+project2xRoutes.post('/run-cron', async (c) => {
+  try {
+    let body = {};
+    try {
+      body = await c.req.json();
+    } catch (e) {
+      body = {};
+    }
+    const { portfolioId, dryRun = false, force = false } = body;
+    const result = await runProject2xScan({ portfolioId, dryRun, force });
+    return c.json(result);
+  } catch (error) {
+    console.error('[Project2X API] Run cron error:', error);
+    return c.json({ error: error.message || 'Failed to run Project 2X cron' }, 500);
+  }
+});
+
+/**
+ * GET /api/project-2x/cron-logs
+ * Fetch historical notification logs
+ * Query: ?limit=50&portfolioId=...
+ */
+project2xRoutes.get('/cron-logs', async (c) => {
+  try {
+    const limit = parseInt(c.req.query('limit') || '50', 10);
+    const portfolioId = c.req.query('portfolioId');
+
+    let query = 'SELECT * FROM project2x_cron_logs';
+    const params = [];
+    if (portfolioId) {
+      query += ' WHERE portfolio_id = ?';
+      params.push(portfolioId);
+    }
+    query += ' ORDER BY created_at DESC LIMIT ?';
+    params.push(limit);
+
+    const logs = db.prepare(query).all(...params);
+    return c.json({ logs });
+  } catch (error) {
+    console.error('[Project2X API] Fetch cron logs error:', error);
+    return c.json({ error: error.message || 'Failed to fetch cron logs' }, 500);
+  }
+});
 
 /**
  * GET /api/project-2x/pullback-dna/:symbol

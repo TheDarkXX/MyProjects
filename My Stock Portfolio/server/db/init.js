@@ -342,6 +342,25 @@ export function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_spec_drivers_sym ON project2x_specific_drivers(symbol);
 
+    -- Project 2X Autonomous Notification Cron Logs
+    CREATE TABLE IF NOT EXISTS project2x_cron_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        portfolio_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL,          -- 'BUY_NOW' | 'MAYDAY_EXIT'
+        symbol TEXT NOT NULL,
+        scenario INTEGER,
+        tier_id TEXT,
+        price REAL,
+        title TEXT NOT NULL,
+        payload_json TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_p2x_cron_dedup 
+        ON project2x_cron_logs(portfolio_id, symbol, type, date);
+    CREATE INDEX IF NOT EXISTS idx_p2x_cron_recent
+        ON project2x_cron_logs(portfolio_id, symbol, type, created_at DESC);
+
     CREATE INDEX IF NOT EXISTS idx_historical_prices_sym_date ON historical_prices(symbol, date DESC);
 
     -- Chart Drawings Cloud Sync (Horizontal lines, Trendlines, etc.)
