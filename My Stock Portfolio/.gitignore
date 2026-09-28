@@ -27,3 +27,9 @@ dist-ssr
 *.db
 *.db-wal
 *.db-shm
+
+# Environment & Secrets
+.env
+.env.*
+server/.env
+
