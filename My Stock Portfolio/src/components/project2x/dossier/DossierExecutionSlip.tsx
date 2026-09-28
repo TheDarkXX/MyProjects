@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, PauseCircle, ShieldAlert, History, ArrowUpRight, ArrowDownRight, Layers } from 'lucide-react';
+import { ShoppingCart, PauseCircle, ShieldAlert, History, ArrowUpRight, ArrowDownRight, Layers, Zap } from 'lucide-react';
 import { DossierPayload } from '../../../stores/dossierStore';
 
 interface DossierExecutionSlipProps {
@@ -23,9 +23,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
   // Cost needed to complete quota
   const buyCostNeeded = missingShares * currentPrice;
 
-  // Free-Ride 50% calculation
-  const freeRideShares = Math.floor(ownedShares / 2);
-  const freeRideCashReturn = freeRideShares * currentPrice;
+  // Multi-Bagger Level 2 eligibility (+100% / 2X reached)
   const isFreeRideEligible = pnlPct >= 100.0;
 
   // Trailing stop cushion
@@ -157,33 +155,33 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
           </div>
         </button>
 
-        {/* Action 3: Free-Ride 50% */}
+        {/* Action 3: 20Y Dynasty Multi-Bagger Level 2 */}
         <button
           type="button"
           onClick={() => setActiveAction(activeAction === 'FREERIDE' ? null : 'FREERIDE')}
           className={`p-3 rounded-xl border transition-all text-left flex flex-col justify-between cursor-pointer ${
             activeAction === 'FREERIDE'
-              ? 'bg-[#FC2D79]/20 border-[#FC2D79]/60 shadow-[0_0_12px_rgba(252,45,121,0.25)]'
+              ? 'bg-[#823AFD]/20 border-[#823AFD]/60 shadow-[0_0_12px_rgba(130,58,253,0.25)]'
               : isFreeRideEligible
-                ? 'bg-[#1A0A14] border-[#FC2D79]/60 shadow-[0_0_12px_rgba(252,45,121,0.3)] animate-pulse'
-                : 'bg-[#0A0E1A] hover:bg-[#12162B] border-white/10 hover:border-[#FC2D79]/40'
+                ? 'bg-[#18112C] border-[#823AFD]/60 shadow-[0_0_12px_rgba(130,58,253,0.3)] animate-pulse'
+                : 'bg-[#0A0E1A] hover:bg-[#12162B] border-white/10 hover:border-[#823AFD]/40'
           }`}
         >
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[14px] font-bold text-[#FF5388] flex items-center gap-1.5">
-              <ShieldAlert className="w-4 h-4 text-[#FC2D79]" />
-              3. Free-Ride
+            <span className="text-[14px] font-bold text-[#A78BFA] flex items-center gap-1.5">
+              <Zap className="w-4 h-4 text-[#823AFD]" />
+              3. Dynasty LV2
             </span>
             <span className={`text-[12px] font-mono font-semibold px-2 py-0.5 rounded border ${
               isFreeRideEligible
-                ? 'bg-[#FC2D79]/30 text-rose-200 border-[#FC2D79]/50'
+                ? 'bg-[#823AFD]/30 text-violet-200 border-[#823AFD]/50'
                 : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}>
-              {isFreeRideEligible ? 'พร้อม 🚀' : 'รอ +100%'}
+              {isFreeRideEligible ? '🏆 LV2 Active' : 'รอ +100%'}
             </span>
           </div>
           <div className="text-[13px] text-slate-300 font-mono">
-            {isFreeRideEligible ? `ดึงทุนคืน $${freeRideCashReturn.toFixed(0)}` : 'ขาย 50% ดึงทุนออก'}
+            {isFreeRideEligible ? 'พลังทบต้นสู่เป้า 4X' : 'ถือยาวไม่ขายหมู'}
           </div>
         </button>
       </div>
@@ -212,10 +210,10 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
       )}
 
       {activeAction === 'FREERIDE' && (
-        <div className="p-3 bg-[#FC2D79]/15 border border-[#FC2D79]/40 rounded-xl mb-2.5 text-[13px] text-slate-200">
-          <span className="text-[#FF5388] font-semibold">ดึงเงินต้นคืน (Zero-Risk):</span>
+        <div className="p-3 bg-[#823AFD]/15 border border-[#823AFD]/40 rounded-xl mb-2.5 text-[13px] text-slate-200">
+          <span className="text-[#A78BFA] font-semibold">20-Year Dynasty Multi-Bagger Stacking:</span>
           <span className="text-slate-200 font-mono ml-2">
-            ขาย <span className="font-bold text-white">{freeRideShares} หุ้น</span> ได้เงินสดคืน <span className="text-rose-200 font-bold">${freeRideCashReturn.toFixed(0)}</span> เหลืออีก <span className="text-violet-300 font-bold">{ownedShares - freeRideShares} หุ้น</span> ต้นทุนเป็น $0.00 ปล่อยรันกำไรไร้ความเสี่ยง
+            กำไรแตะ +100% แล้ว! <span className="font-bold text-white">ห้ามขายหมูทำลายพลังทบต้น</span> ถือสะสม <span className="text-violet-300 font-bold">{ownedShares.toFixed(2)} หุ้น</span> ข้ามสู่ Level 2 ล่าเป้า 4X (@${(avgCost * 4).toFixed(1)}) ปล่อยดอกเบี้ยทบต้นทำงานเต็มสูบ
           </span>
         </div>
       )}

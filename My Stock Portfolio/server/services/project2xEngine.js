@@ -1875,19 +1875,19 @@ async function doScanRadarMatrix(portfolioId) {
       });
     }
 
-    // Layer 2: Moonshot Rules (Free-ride or Breakdown)
+    // Layer 2: Moonshot Rules (20Y Dynasty Stacking or Breakdown)
     if (row.category === 'Moonshot' && row.owned_shares > 0) {
       const avgCost = holdings[row.symbol]?.totalCost ? holdings[row.symbol].totalCost / row.owned_shares : row.currentPrice;
       const gainPct = avgCost > 0 ? ((row.currentPrice - avgCost) / avgCost) * 100 : 0;
 
       if (gainPct >= 100) {
-        const halfShares = Number((row.owned_shares / 2).toFixed(4));
+        // Aligned with 20-Year Dynasty Playbook (Never sell winners! Compounding to 4X Level 2)
         sellAlerts.push({
           symbol: row.symbol,
-          layer: 'Moonshot Free-Ride',
-          severity: 'PROFIT_TAKE',
-          message: `${row.symbol} has gained +${gainPct.toFixed(1)}%! Sell ${halfShares} shares (50%) to lock in your initial capital and ride 100% free money!`,
-          message_th: `${row.symbol} ฟันกำไร +${gainPct.toFixed(1)}% (เด้งแล้ว!) — ขาย 50% (${halfShares} หุ้น) ดึงทุนคืน ปล่อยกำไรวิ่งกินฟรีไร้ความเสี่ยง!`
+          layer: 'Multi-Bagger Milestone',
+          severity: 'INFO',
+          message: `${row.symbol} has cleared 2X (+${gainPct.toFixed(1)}%)! 20-Year Dynasty Rule: Never sell winners! Riding forward to Level 2 (Target 4X).`,
+          message_th: `🏆 ${row.symbol} ทำทะลุ 1 เด้ง (+${gainPct.toFixed(1)}%)! กฎเหล็ก 20-Year Dynasty: ห้ามขายหมูทำลายพลังทบต้น! ถือสะสมต่อเข้าสู่ Level 2 ล่าเป้า 4X!`
         });
       } else if (row.distEma150 < -5 && row.banker === 0) {
         sellAlerts.push({

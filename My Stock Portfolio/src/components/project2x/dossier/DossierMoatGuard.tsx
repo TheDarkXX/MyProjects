@@ -14,7 +14,7 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
     businessMoat: 'Market Leadership & High Switching Cost',
     sellingProtocol: {
       stopLossRule: 'EMA 200 Trailing Stop',
-      freeRideRule: 'กำไรแตะ +100% ขาย 50% ดึงทุนคืน',
+      dynastyRule: 'กำไรแตะ +100% สู่ Level 2 (ห้ามขายหมู!)',
       moatBreakerCondition: 'Gross Margin ลดลง 3Q ติดต่อกัน'
     }
   };
@@ -28,7 +28,7 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
 
   const isMoatBreaker = data.moatAutoFlags?.grossMarginDeclining3Q;
   const pnlPct = data.holding?.unrealizedPnlPct || 0;
-  const isFreeRideReady = pnlPct >= 100.0;
+  const is2xCleared = pnlPct >= 100.0;
   const stopLevel = data.radar?.ema200 || (data.holding?.avgCost ? data.holding.avgCost * 0.9 : 0);
   const stopCushionPct = data.currentPrice > 0 && stopLevel > 0 ? ((data.currentPrice - stopLevel) / data.currentPrice) * 100 : 0;
 
@@ -143,21 +143,21 @@ export const DossierMoatGuard: React.FC<DossierMoatGuardProps> = ({ data, classN
 
       {/* 3 Tactical Defense Protocol Strips */}
       <div className="space-y-2">
-        {/* Protocol 1: Free-Ride 50% */}
+        {/* Protocol 1: 20Y Dynasty Stacking */}
         <div className="p-2.5 bg-[#0A0E1A] rounded-xl border border-white/5 flex items-center justify-between text-[13px]">
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isFreeRideReady ? 'bg-orange-400 animate-pulse' : 'bg-slate-500'}`} />
-            <span className="text-slate-200 font-semibold">Free-Ride 50%:</span>
-            <span className="text-slate-300 font-normal">เป้ากำไรแตะ +100% ขาย 50% ดึงทุนคืน</span>
+            <span className={`w-2 h-2 rounded-full ${is2xCleared ? 'bg-[#823AFD] animate-pulse' : 'bg-slate-500'}`} />
+            <span className="text-slate-200 font-semibold">20Y Dynasty Stacking:</span>
+            <span className="text-slate-300 font-normal">เป้ากำไรแตะ +100% สู่ Level 2 (ห้ามขายหมู!)</span>
           </div>
           <span
             className={`font-mono text-[12px] px-2.5 py-0.5 rounded border ${
-              isFreeRideReady
-                ? 'bg-orange-500/20 text-orange-200 border-orange-500/40 font-bold'
+              is2xCleared
+                ? 'bg-violet-600/30 text-violet-200 border-violet-500/50 font-bold'
                 : 'bg-slate-800 text-slate-300 border-slate-700 font-medium'
             }`}
           >
-            {isFreeRideReady ? '🚀 READY TO HARVEST' : `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(0)}% PnL`}
+            {is2xCleared ? '🏆 2X CLEARED ➔ LV2' : `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(0)}% PnL`}
           </span>
         </div>
 

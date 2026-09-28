@@ -261,19 +261,19 @@ export async function getDossierData(portfolioId, symbol) {
   let verdict = 'HOLD_RIDE';
   let verdictReason = signalRadar?.reason_th || 'ราคาอยู่ในกรอบปกติ นั่งทับมือถือตามแผน ไม่ต้องเทรดพร่ำเพรื่อ';
 
-  const isFreeRideEligible = (unrealizedPnlPct || 0) >= 100.0;
+  const is2xCleared = (unrealizedPnlPct || 0) >= 100.0;
   const isEma200Broken = signalRadar?.ema200 && currentPrice < signalRadar.ema200;
   const isDangerTraffic = signalRadar?.traffic_light === 'DANGER' || signalRadar?.traffic_light === 'MAYDAY_EXIT' || signalRadar?.traffic_light === 'FALLING_KNIFE' || signalRadar?.traffic_light === 'SLOW_BLEED';
 
-  if (isFreeRideEligible) {
-    verdict = 'TRIM_SELL';
-    verdictReason = `กำไรครบ 100% (+${unrealizedPnlPct.toFixed(1)}%) — แนะนำกดปุ่ม Free-Ride 50% ดึงทุนคืน เล่นด้วยกำไรฟรี!`;
-  } else if (grossMarginDeclining3Q) {
+  if (grossMarginDeclining3Q) {
     verdict = 'TRIM_SELL';
     verdictReason = 'Moat Breaker Alert: Gross Margin ลดลง 3 ไตรมาสติดต่อกัน ส่อแววโดนตัดราคา แนะนำพิจารณาตัดลดความเสี่ยง';
   } else if (isEma200Broken || isDangerTraffic) {
     verdict = 'TRIM_SELL';
     verdictReason = signalRadar?.reason_th || 'สัญญาณเทคนิคเข้าเขตอันตราย แนะนำพิจารณาตัดลดความเสี่ยง';
+  } else if (is2xCleared) {
+    verdict = 'HOLD_RIDE';
+    verdictReason = `🏆 2X CLEARED (+${unrealizedPnlPct.toFixed(1)}%): ก้าวเข้าสู่ Level 2 ตามหลักการ 20-Year Dynasty ห้ามขายหมูทำลายพลังทบต้น! นั่งทับมือปล่อยดอกเบี้ยทบต้นวิ่งต่อสู่เป้า 4X`;
   } else if (signalRadar?.traffic_light === 'TO_THE_MOON') {
     verdict = 'HOLD_RIDE';
     verdictReason = signalRadar?.reason_th || 'หุ้นติดเทอร์โบขาขึ้นลอยฟ้า (TO THE MOON 🚀) สถาบันเกาะแน่น นั่งทับมือปล่อยกำไรวิ่ง';

@@ -8,3 +8,4 @@
   5. `git add . && git commit -m "..." && git push origin master`
   DO NOT stop or finish the turn without pushing. The user must NEVER have to remind you to push.
 - **No Browser Subagent Testing Unless Explicitly Commanded**: หลังเขียนโค้ดและดีพลอยเสร็จ ห้ามเปิด browser subagent เพื่อทดสอบหน้าเว็บเองเด็ดขาด ถ้าผู้ใช้ไม่ได้พิมพ์สั่งให้เปิดเบราว์เซอร์เทสอย่างชัดเจน เพราะทำให้เสียเวลาและอาจติดปัญหา auth/rate-limit. ให้ยืนยันความถูกต้องผ่าน `npx tsc --noEmit`, `npm run build`, และ Code Inspection โดยตรงเท่านั้น
+- **Project 2X Non-Negotiable: Obsolete 'Free-Ride 50%' Rule is Permanently Banned**: ห้ามพูดถึงหรือแนะนำ "Free-Ride ขาย 50% ดึงทุนคืน" เด็ดขาด! ใน Project 2X เราใช้หลักการ **20-Year Dynasty Playbook: NEVER SELL WINNERS!** ให้ถือยาวทบต้นข้ามระดับ Multi-Bagger Rail (1X➔2X➔4X➔8X) เติมเงิน DCA/Inflow สม่ำเสมอ ขายเฉพาะเมื่อเกิด Moat Breaker (คอขวดพัง) หรือ Thesis Timeout (หมดกรอบ 3 ปีไม่ทำ 1 เด้ง) เท่านั้น!
