@@ -71,6 +71,7 @@ export function formatMaydayExitMessage(item) {
   const distEma200 = fmtPct(item.distEma200);
   const banker = item.banker ?? 0;
   const shares = item.owned_shares ? Number(item.owned_shares).toFixed(3) : '0';
+  const category = item.category || 'Core';
 
   let bankerDesc = 'ไร้สถาบัน';
   if (banker > 0) bankerDesc = 'สถาบันบางตา';
@@ -82,15 +83,23 @@ export function formatMaydayExitMessage(item) {
     positionDesc += ` (${fmtPct(pnlPct)} / ${pnlUsd >= 0 ? '+' : ''}$${pnlUsd.toFixed(2)})`;
   }
 
+  let actionAdvice = '';
+  if (category === 'Moonshot' || category === 'Momo') {
+    actionAdvice = '🛡️ [Moonshot]: Cut Loss 100% สละเรือรักษากระสุนทันที!';
+  } else {
+    actionAdvice = '🛡️ [Core ทัพหลวง]: พิจารณา Trim 50% หรือห้ามถัวเฉลี่ยเด็ดขาดจนกว่าสะเด็ดน้ำ!';
+  }
+
   const lines = [
-    `🚨 MAYDAY EXIT — ${symbol}`,
+    `🚨 MAYDAY ALERT — ${symbol} (${category})`,
     `━━━━━━━━━━━━━━━━━━`,
-    `⚠️ Scenario ${scenario}: ${badge}`,
-    `📉 ราคา: ${price} (EMA 200: ${distEma200})`,
-    `🏦 Banker: ${banker}/20 (${bankerDesc})`,
+    `⚠️ เสาที่ 5: Institutional Breakdown (${badge})`,
+    `📉 ราคา: ${price} (หลุด EMA 200: ${distEma200})`,
+    `🏦 Banker MCDX: ${banker}/20 (${bankerDesc})`,
     positionDesc,
     ``,
-    `❌ สละเรือ / Cut Loss ทันที!`
+    `📋 วินัยปกป้องเงินต้น:`,
+    actionAdvice
   ];
 
   return lines.join('\n');

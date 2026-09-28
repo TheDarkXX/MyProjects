@@ -315,19 +315,23 @@ export function renderMaydayExitCard(item) {
   drawRoundRect(ctx, 70, 720, W - 140, 160, 16, '#450A0A', '#B91C1C', 1.5);
   ctx.fillStyle = '#FCA5A5';
   ctx.font = 'bold 20px sans-serif';
-  ctx.fillText('🚨 MANDATORY DEFENSE ACTION', 105, 765);
+  ctx.fillText('🚨 PILLAR 5: INSTITUTIONAL BREAKDOWN', 105, 765);
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 30px sans-serif';
-  ctx.fillText('สละเรือ / Cut Loss ทันที เพื่อปกป้องเงินต้น!', 105, 815);
+  ctx.font = 'bold 28px sans-serif';
+  const isMoonshot = item.category === 'Moonshot' || item.category === 'Momo';
+  const actionText = isMoonshot 
+    ? 'Moonshot: Cut Loss 100% สละเรือรักษากระสุนทันที!' 
+    : 'Core: พิจารณา Trim 50% หรือห้ามถัวเฉลี่ยเด็ดขาด!';
+  ctx.fillText(actionText, 105, 815);
   ctx.fillStyle = '#FECACA';
-  ctx.font = 'normal 22px sans-serif';
-  ctx.fillText('ดึงกระสุนคืนมารอทบใส่ Core Commanders ผู้ชนะตัวอื่น', 105, 852);
+  ctx.font = 'normal 20px sans-serif';
+  ctx.fillText('หลุดเส้น EMA 200 ไร้แรงสถาบันหนุน — ปกป้องเงินต้นก่อนพอร์ตพัง', 105, 852);
 
   // Footer
   ctx.fillStyle = '#9CA3AF';
   ctx.font = 'bold 20px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('💡 Dynasty Rule: Cut Moat Breakers, Compound Winners!', W / 2, 970);
+  ctx.fillText('💡 Dynasty Rule: Never Sell Winners, But Cut Broken Moats!', W / 2, 970);
   ctx.font = 'normal 16px sans-serif';
   ctx.fillText(`Project 2X Autonomous Engine • First-Day Warning`, W / 2, 1005);
   ctx.textAlign = 'left';
