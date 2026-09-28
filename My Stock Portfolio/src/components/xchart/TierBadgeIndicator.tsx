@@ -68,7 +68,8 @@ export function getTierVisualInfo(
     };
   }
 
-  const { traffic_light, badge, scenario, reason_th, reason } = radarData;
+  const traffic_light = (radarData as any).traffic_light || (radarData as any).trafficLight;
+  const { badge, scenario, reason_th, reason } = radarData;
   const upperBadge = (badge || '').toUpperCase();
 
   // Tier 1: BUY NOW!! 🔥 (The Solar Fire Orb)

@@ -341,6 +341,7 @@ export async function getDossierData(portfolioId, symbol) {
     radar: {
       scenario: signalRadar?.scenario || 16,
       trafficLight: signalRadar?.traffic_light || 'ON_RADAR',
+      traffic_light: signalRadar?.traffic_light || 'ON_RADAR',
       badge: signalRadar?.badge || 'Evaluating',
       ema9: signalRadar?.ema9 || null,
       ema50: signalRadar?.ema50 || null,

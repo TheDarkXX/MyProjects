@@ -9,7 +9,7 @@ interface DossierExecutionSlipProps {
 
 export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data, className = '' }) => {
   const { holding, currentPrice, radar } = data;
-  const [activeAction, setActiveAction] = useState<'BUY' | 'HOLD' | 'FREERIDE' | null>(null);
+  const [activeAction, setActiveAction] = useState<'BUY' | 'HOLD' | 'DYNASTY' | null>(null);
 
   const ownedShares = holding.shares || 0;
   const targetShares = holding.targetShares || 0;
@@ -24,7 +24,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
   const buyCostNeeded = missingShares * currentPrice;
 
   // Multi-Bagger Level 2 eligibility (+100% / 2X reached)
-  const isFreeRideEligible = pnlPct >= 100.0;
+  const isDynastyEligible = pnlPct >= 100.0;
 
   // Trailing stop cushion
   const stopPrice = radar.ema200 || (avgCost * 0.9);
@@ -158,11 +158,11 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
         {/* Action 3: 20Y Dynasty Multi-Bagger Level 2 */}
         <button
           type="button"
-          onClick={() => setActiveAction(activeAction === 'FREERIDE' ? null : 'FREERIDE')}
+          onClick={() => setActiveAction(activeAction === 'DYNASTY' ? null : 'DYNASTY')}
           className={`p-3 rounded-xl border transition-all text-left flex flex-col justify-between cursor-pointer ${
-            activeAction === 'FREERIDE'
+            activeAction === 'DYNASTY'
               ? 'bg-[#823AFD]/20 border-[#823AFD]/60 shadow-[0_0_12px_rgba(130,58,253,0.25)]'
-              : isFreeRideEligible
+              : isDynastyEligible
                 ? 'bg-[#18112C] border-[#823AFD]/60 shadow-[0_0_12px_rgba(130,58,253,0.3)] animate-pulse'
                 : 'bg-[#0A0E1A] hover:bg-[#12162B] border-white/10 hover:border-[#823AFD]/40'
           }`}
@@ -173,15 +173,15 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
               3. Dynasty LV2
             </span>
             <span className={`text-[12px] font-mono font-semibold px-2 py-0.5 rounded border ${
-              isFreeRideEligible
+              isDynastyEligible
                 ? 'bg-[#823AFD]/30 text-violet-200 border-[#823AFD]/50'
                 : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}>
-              {isFreeRideEligible ? '🏆 LV2 Active' : 'รอ +100%'}
+              {isDynastyEligible ? '🏆 LV2 Active' : 'รอ +100%'}
             </span>
           </div>
           <div className="text-[13px] text-slate-300 font-mono">
-            {isFreeRideEligible ? 'พลังทบต้นสู่เป้า 4X' : 'ถือยาวไม่ขายหมู'}
+            {isDynastyEligible ? 'พลังทบต้นสู่เป้า 4X' : 'ถือยาวไม่ขายหมู'}
           </div>
         </button>
       </div>
@@ -209,7 +209,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
         </div>
       )}
 
-      {activeAction === 'FREERIDE' && (
+      {activeAction === 'DYNASTY' && (
         <div className="p-3 bg-[#823AFD]/15 border border-[#823AFD]/40 rounded-xl mb-2.5 text-[13px] text-slate-200">
           <span className="text-[#A78BFA] font-semibold">20-Year Dynasty Multi-Bagger Stacking:</span>
           <span className="text-slate-200 font-mono ml-2">
@@ -229,7 +229,7 @@ export const DossierExecutionSlip: React.FC<DossierExecutionSlipProps> = ({ data
             {holding.lots.slice(0, 4).map((lot) => (
               <div key={lot.id} className="p-2 bg-[#0A0E1A] rounded-lg border border-white/10 text-[12px] flex items-center justify-between font-mono">
                 <div className="flex items-center gap-1.5">
-                  <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${lot.type === 'BUY' ? 'bg-violet-600/30 text-violet-200' : 'bg-pink-600/30 text-pink-200'}`}>
+                  <span className={`px-1.5 py-0.5 rounded text-[12px] font-bold ${lot.type === 'BUY' ? 'bg-violet-600/30 text-violet-200' : 'bg-pink-600/30 text-pink-200'}`}>
                     {lot.type}
                   </span>
                   <span className="text-slate-200 font-semibold">{lot.shares} หุ้น</span>

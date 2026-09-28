@@ -11,6 +11,7 @@ import { DoublerPowerTube } from './DoublerPowerTube';
 import { DossierStrategyCard } from './DossierStrategyCard';
 import { DossierHoldingProfile } from './DossierHoldingProfile';
 import { getTierMetadata } from '../../../utils/tierConfig';
+import { getTierVisualInfo } from '../../xchart/TierBadgeIndicator';
 import { PullbackDnaModal } from '../PullbackDnaModal';
 
 interface DossierHeaderProps {
@@ -264,6 +265,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
     {/* Row 3: Cyber Quant Command HUD */}
     {(() => {
       const tier = getTierMetadata(data.radar?.trafficLight);
+      const tierVis = getTierVisualInfo(data.radar as any, data.symbol);
       const isAboveEma9 = data.radar?.isAboveEma9 ?? (data.radar?.ema9 ? currentPrice >= data.radar.ema9 : true);
       const hasDivergence = !!data.radar?.hasRsiDivergence;
       const isBullRegime = data.radar?.ema50 && data.radar?.ema150 && data.radar?.ema200 && data.radar.ema50 > data.radar.ema150 && data.radar.ema150 > data.radar.ema200;
@@ -274,15 +276,22 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
             {/* Primary Action Badge */}
             <div className={`px-3.5 py-2 rounded-xl flex items-center gap-2.5 flex-shrink-0 ${tier.badgeClass} shadow-lg border border-white/20`}>
               <span className={`text-xl ${tier.animClass}`}>
-                {tier.icon}
+                {tierVis.icon || tier.icon}
               </span>
               <div className="flex flex-col">
                 <span className="text-[14px] font-black tracking-wider uppercase leading-none">
-                  {tier.label}
+                  {tierVis.label || tier.label}
                 </span>
-                <span className="text-[11px] opacity-90 font-mono tracking-tight font-medium mt-0.5">
-                  {data.radar?.badge ? `${data.radar.badge} • Scen ${data.radar.scenario || 1}` : `Scenario ${data.radar?.scenario || 1}`}
+                <span className="text-[12px] opacity-90 font-mono tracking-tight font-medium mt-0.5">
+                  {tierVis.scenarioTitle 
+                    ? `${tierVis.scenarioTitle}${tierVis.scenarioNum ? ` • Scen ${tierVis.scenarioNum}` : ''}` 
+                    : (data.radar?.badge ? `${data.radar.badge} • Scen ${data.radar.scenario || 1}` : `Scenario ${data.radar?.scenario || 1}`)}
                 </span>
+                {tierVis.subLabel && (
+                  <span className="text-[12px] text-slate-300/80 font-normal leading-tight mt-0.5 hidden sm:inline">
+                    {tierVis.subLabel}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -327,7 +336,7 @@ export const DossierHeader: React.FC<DossierHeaderProps> = ({ onClose }) => {
 
               {/* Action Description */}
               <p className="text-[13px] text-slate-200 font-normal leading-snug">
-                {data.radar?.reason_th || data.verdictReason || tier.descriptionTh}
+                {data.radar?.reason_th || tierVis.reasonTh || data.verdictReason || tier.descriptionTh}
               </p>
             </div>
           </div>

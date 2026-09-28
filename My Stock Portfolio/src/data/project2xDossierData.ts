@@ -15,7 +15,7 @@ export interface StockDossierStatic {
   };
   sellingProtocol: {
     stopLossRule: string;
-    freeRideRule: string;
+    dynastyRule: string;
     moatBreakerCondition: string;
   };
 }
@@ -42,7 +42,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'หลุดเส้น EMA 200 สัปดาห์ติดต่อกัน หรือภาพรวม AI Capex ชะลอตัวรุนแรง',
-      freeRideRule: 'กำไรถึง +100% ให้กดขาย 50% ดึงทุนสดออก 100% ถือหุ้นฟรีตลอดกาล',
+      dynastyRule: 'กำไรแตะ +100% สู่ Level 2 (ห้ามขายหมู!) ปล่อยพลังทบต้นข้ามระดับสู่เป้า 4X',
       moatBreakerCondition: 'Gross Margin หดตัวลง 3 ไตรมาสติดต่อกันจนต่ำกว่า 68%'
     }
   },
@@ -67,7 +67,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'เกิดวิกฤตสงครามช่องแคบไต้หวัน หรือหลุด EMA 200 รายสัปดาห์',
-      freeRideRule: 'กำไร +100% ทยอยขาย 50% เก็บทุนสดเข้า Dime FCD',
+      dynastyRule: 'กำไรแตะ +100% ถือสะสมต่อตาม Dynasty Playbook ห้ามขายหมู รันเทรนด์สู่เป้าหมาย 4X',
       moatBreakerCondition: 'คู่แข่ง (เช่น Intel/Samsung) แย่งชิป 2nm สำเร็จเกิน 15%'
     }
   },
@@ -92,7 +92,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'ลูกค้า Big Tech ลดคำสั่งซื้อ Custom ASIC หรือหลุดแนวรับ EMA 200',
-      freeRideRule: 'ขาย 50% เมื่อผลตอบแทนถึง 100% ดึงเงินต้นกลับ',
+      dynastyRule: 'ผลตอบแทนทะลุ +100% เลื่อนสู่ Dynasty LV2 รันต่อด้วยกระแสเงินสดและพลังทบต้นสู่ 4X',
       moatBreakerCondition: 'Gross Margin รวมลดลงต่อเนื่องเกิน 3 ไตรมาส'
     }
   },
@@ -117,7 +117,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'ยอดคำสั่งซื้อ Backlog ติดลบ 2 ไตรมาสติด หรือราคาหลุดเส้น EMA 200',
-      freeRideRule: 'ขาย 50% ดึงเงินต้นคืนเมื่อถึงเป้า 1 เด้ง ($P = 2x$ ทุน)',
+      dynastyRule: 'กำไรแตะ +100% สู่ระดับ 2X Cleared ถือทนตามแนวรับ Liquid Cooling สู่เป้า 4X',
       moatBreakerCondition: 'คู่แข่ง (เช่น Schneider/Eaton) ชิงส่วนแบ่ง Liquid Cooling เกิน 20%'
     }
   },
@@ -142,7 +142,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'วิกฤตค่าเงินละตินอเมริกาฉุดกำไรทรุดหนัก หรือราคาหลุดแนวรับ EMA 200',
-      freeRideRule: 'ขายทำกำไร 50% ดึงทุนคืนเมื่อราคาหุ้นดับเบิ้ล (+100%)',
+      dynastyRule: 'กำไรดับเบิ้ล +100% ห้ามขายหมู ปล่อยให้ Logistics & Fintech Flywheel ทบต้นยาวสู่ 4X',
       moatBreakerCondition: 'NPL หนี้เสียพุ่งเกิน 12% หรือเสียส่วนแบ่งอีคอมเมิร์ซให้ Shopee/Amazon'
     }
   },
@@ -167,7 +167,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'การเติบโตของยอดขายหดตัวติดลบ หรือหลุดเส้น EMA 200',
-      freeRideRule: 'ดึงเงินต้นออก 50% เมื่อราคาขึ้นถึง 2 เท่าของทุน',
+      dynastyRule: 'กำไรแตะ 2 เท่าของทุน (+100%) ถือสะสมต่อตาม Dynasty Rule ปล่อยพลัง Serial M&A ทบต้นสู่ 4X',
       moatBreakerCondition: 'Optical Interconnect เข้ามาทดแทนทองแดงเร็วกว่าคาด'
     }
   },
@@ -192,7 +192,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'วัฏจักรเซมิคอนดักเตอร์หดตัวรุนแรงหรือหลุดเส้น EMA 200',
-      freeRideRule: 'ดึงเงินต้นคืนเมื่อกำไร +100%',
+      dynastyRule: 'กำไรแตะ +100% สู่ Level 2 รันเทรนด์ต่อด้วยอำนาจผูกขาด Process Control สู่เป้า 4X',
       moatBreakerCondition: 'Applied Materials แย่งส่วนแบ่ง Optical Inspection สำเร็จ'
     }
   },
@@ -217,7 +217,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'สูญเสียลูกค้ารายใหญ่รายใดรายหนึ่ง หรือหลุดแนวรับ EMA 200',
-      freeRideRule: 'ขาย 50% ดึงเงินต้นออกเมื่อผลตอบแทนถึงเป้า 1 เด้ง',
+      dynastyRule: 'ผลตอบแทนถึงเป้า 1 เด้ง (+100%) ห้ามขายหมู ถือครองผู้นำ AI Ethernet ทวีคูณสู่ 4X',
       moatBreakerCondition: 'Cisco ชิงส่วนแบ่ง AI Ethernet หรือ Gross margin ลดลงต่ำกว่า 58%'
     }
   },
@@ -242,7 +242,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'เกิดวิกฤตระบบล่มร้ายแรงซ้ำซ้อน หรือราคาหลุดแนวรับ EMA 200',
-      freeRideRule: 'ขาย 50% ดึงทุนคืนเมื่อราคาถึง $P = 2x$ ทุน',
+      dynastyRule: 'กำไรทะลุ +100% เลื่อนชั้นสู่ Dynasty LV2 ถือสะสมต่อตาม Data Moat สู่เป้า 4X',
       moatBreakerCondition: 'ARR Growth ชะลอตัวลงต่ำกว่า 15% หรือลูกค้าองค์กรยกเลิกสัญญาสูง'
     }
   },
@@ -267,7 +267,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'ขาดทุนในโครงการใหญ่ หรือราคาหลุดเส้น EMA 200',
-      freeRideRule: 'หุ้นกลุ่ม Moonshot ขายคืนทุน 50% ทันทีเมื่อกำไรครบ +100%',
+      dynastyRule: 'กำไรครบ +100% ทะลุเกณฑ์ 2X ห้ามขายหมู รันเทรนด์โครงสร้างพื้นฐาน AI สู่ 4X',
       moatBreakerCondition: 'Margin รวมลดลงต่ำกว่า 10% หรือยอด Backlog ลดลงต่อเนื่อง'
     }
   },
@@ -292,7 +292,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'ราคาหลุดเส้น EMA 150/200 หรือคู่แข่งแย่งตลาด Retimer เกิน 30%',
-      freeRideRule: 'เมื่อถึงเป้า 1 เด้ง ให้ขาย 50% ทันที เล่นด้วยกำไรฟรี 100%',
+      dynastyRule: 'กำไรแตะเป้า 1 เด้ง (+100%) สู่ Dynasty LV2 ปล่อยชิป Retimer ทบต้นสู่เป้า 4X',
       moatBreakerCondition: 'Gross Margin ลดลงฮวบต่ำกว่า 65% จากสงครามราคา'
     }
   },
@@ -317,7 +317,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'การเติบโตชะลอตัวลงอย่างมีนัยสำคัญ หรือราคาหลุดเส้น EMA 200',
-      freeRideRule: 'ขาย 50% ดึงเงินต้นคืนเมื่อราคาขึ้นถึง 2 เท่าของต้นทุน',
+      dynastyRule: 'กำไรแตะ 2 เท่าของต้นทุน (+100%) ห้ามขายหมู ถือข้ามระดับสู่เป้าหมาย 4X และ 8X',
       moatBreakerCondition: 'ลูกค้าองค์กรขนาดใหญ่เปลี่ยนใจไม่ต่อสัญญา หรือ Gross Margin ต่ำกว่า 75%'
     }
   },
@@ -342,7 +342,7 @@ export const DOSSIER_STATIC_DATA: Record<string, StockDossierStatic> = {
     },
     sellingProtocol: {
       stopLossRule: 'ลูกค้าคลาวด์ตัดงบ Capex หรือราคาหลุดเส้น EMA 200',
-      freeRideRule: 'ขาย 50% ดึงทุนคืนเมื่อราคาถึงเป้า 1 เด้ง',
+      dynastyRule: 'กำไรถึงเป้า 1 เด้ง (+100%) สู่ Dynasty LV2 ถือสะสมต่อเนื่องตามกระแส AI Hardware สู่ 4X',
       moatBreakerCondition: 'Operating Margin หดตัวลงต่ำกว่า 5% หรือสูญเสียลูกค้ารายใหญ่'
     }
   }
