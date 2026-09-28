@@ -1,9 +1,11 @@
 ---
 name: flow
+version: "2.0.0"
+updated_at: "2026-09-28"
 description: FlowKit Storyboard-to-Video Automation Engine — ออโตเมต Google Flow RPCs ควบคุม Veo 3.1 & Omni Flash, ล็อกหน้าตัวละคร/ฉาก (Reference-to-Video), ทำ Scene Chaining ต่อเนื่อง และรัน Direct API เจนวิดีโอโดยไม่ต้องคลิกหน้าเว็บ
 ---
 
-# 🎬 FlowKit Storyboard-to-Video Engine (`/flow`)
+# 🎬 FlowKit Storyboard-to-Video Engine (`/flow` v2.0.0)
 
 คู่มือการใช้งานระบบ **FlowKit** ร่วมกับ Google Flow (Veo 3.1 / Omni Flash) บนเครื่องและไดรฟ์ `P:\AI\The Viral\FlowKit`
 ระบบนี้ส่งคำสั่งตรงเข้า Google Flow RPCs (`batchexecute`) ผ่าน WebSocket Extension และ FastAPI Backend โดย **ไม่ต้องพึ่งพาการคลิกปุ่มบนหน้าเว็บ (Zero DOM Clicks)** มั่นคง รวดเร็ว ล็อกหน้าตัวละคร และสร้างวิดีโอสตอรี่บอร์ดหลายฉากต่อกันแบบอัตโนมัติ
@@ -17,7 +19,7 @@ description: FlowKit Storyboard-to-Video Automation Engine — ออโตเ�
 | **Engine Root** | `P:\AI\The Viral\FlowKit` | อยู่บน Drive P: ป้องกัน C: VPS Repo บวม |
 | **Python Virtualenv** | `P:\AI\The Viral\FlowKit\venv\Scripts\python.exe` | Python 3.10 + FastAPI + WebSockets |
 | **CLI Helper** | `P:\AI\The Viral\FlowKit\flow_cli.py` | สคริปต์กลางสำหรับ Agent สั่งงาน |
-| **Extension Path** | `P:\AI\The Viral\FlowKit\extension` | โหลดแบบ Unpacked ใน Google Chrome |
+| **Extension Path** | `C:\My Claw\Openclaw-VPS\projects\extensions\flowkit` | โหลดแบบ Unpacked ใน Google Chrome (Canonical Git Sync) |
 | **FastAPI Backend** | `http://127.0.0.1:8100` | REST API สำหรับสั่งเจนภาพ/วิดีโอ/โปรเจกต์ |
 | **WebSocket Port** | `ws://127.0.0.1:9222` | ท่อคุยระหว่าง Backend กับ Chrome Extension |
 | **Dashboard Panel** | `http://127.0.0.1:8100/docs` หรือผ่าน Side Panel | เช็คสถานะคิวงาน |
@@ -32,7 +34,7 @@ description: FlowKit Storyboard-to-Video Automation Engine — ออโตเ�
    - เปิด Chrome ไปที่ `chrome://extensions`
    - เปิดสวิตช์ **Developer mode** (มุมขวาบน)
    - กดปุ่ม **Load unpacked** (โหลดส่วนขยายที่คลายการบีบอัดแล้ว)
-   - เลือกโฟลเดอร์: `P:\AI\The Viral\FlowKit\extension`
+   - เลือกโฟลเดอร์: `C:\My Claw\Openclaw-VPS\projects\extensions\flowkit` (หรือ `C:\XBrain\projects\extensions\flowkit`)
 2. **เปิดหน้า Google Flow ค้างไว้ 1 แท็บ:**
    - เปิดเบราว์เซอร์ไปที่ `https://flow.google.com/`
    - ล็อกอินด้วยบัญชี Google ที่มีสิทธิ์ใช้งาน Flow / Veo (แท็บนี้ต้องเปิดค้างไว้เพื่อให้ Extension ส่ง RPCs ได้)

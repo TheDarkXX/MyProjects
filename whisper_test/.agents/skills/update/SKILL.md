@@ -1,9 +1,11 @@
 ---
 name: update
+version: "2.1.0"
+updated_at: "2026-09-28"
 description: World-Class Architecture Review & Plan Hardening Engine (RFC/ADR Grade) — ยกระดับ implementation_plan.md จากร่างเดิมสู่แผนสถาปัตยกรรมระดับท็อปคลาส (มาตรฐาน Stripe, Google, GitHub RFC) ด้วยขุมพลัง Opus 4.6 (มหาเทพ 👁️‍🗨️) หรือ GPT-5.6-Sol (Senior Architect ⚡ ผ่าน /gpt sol) [กฎเหล็ก: เมื่อเรียกผ่าน /gpt ต้องล็อกใช้ Sol (gpt-5.6-sol) - high เท่านั้น] มีระบบ Auto-Snapshot สำรองแผนเดิม, Plan Delta ชี้จุดต่างชัดเจน, 9-Pillar Audit Matrix, Task Identity Protection ป้องกันสถานะงานหาย, และ Architecture Decision Record (ADR) ใช้เมื่อ: /update หรือ /update sol หรือ /update opus
 ---
 
-# 🧠 Skill: `/update` (World-Class Plan Hardening & RFC/ADR Review)
+# 🧠 Skill: `/update` (World-Class Plan Hardening & RFC/ADR Review v2.1.0)
 
 ## 📌 วัตถุประสงค์
 หยุดการ "เขียนทับแผนเดิมจนประวัติและสถานะงานหาย" หรือ "ไม่รู้ว่า V2 ต่างจาก V1 ตรงไหน" สกิลนี้ยกระดับการตรวจแผนให้เทียบเท่า **ระบบ RFC (Request for Comments) & ADR (Architecture Decision Record) ของทีมวิศวกรรมระดับโลก (Stripe, Google, GitHub)**:
