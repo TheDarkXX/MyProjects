@@ -92,57 +92,33 @@ graph TD
    - ⛔ **กฎเหล็กห้าม Double Push:** ให้เปิดไฟล์ที่เกี่ยวข้อง 1-2 ไฟล์แล้วเติม Reciprocal Backlink ชี้มายังไฟล์ Quick Save ใหม่ตอนนี้เลยบน Local Disk (ใช้เวลาแค่ 50ms)
    - อัปเดต `MASTER_ROADMAP.md` (ถ้ามี) ให้เสร็จในขั้นตอนนี้เลย เพื่อให้ถูกรวมใน Commit เดียว
 
-6. **Universal Search Indexing:**
-   - รัน `node scripts/qs-indexer.js --incremental` เพื่ออัปเดต `search-manifest.md` ทันที
-
 ---
 
-### Phase 2: Single Atomic Deploy Pipeline (Target: 10–15 วินาที)
-*(ทุกคำสั่งใน Phase นี้ให้รันใน `C:\My Claw\Openclaw-VPS`)*
+### Phase 2: Turbo Single-Command Execution (Target: 10–15 วินาที)
+*(ใช้ Single-Process Orchestrator: ห้ามแยกคำสั่งเดี่ยวๆ เป็น 9-23 Tool Calls เด็ดขาด!)*
 
-7. **Pre-flight Sync:**
+6. **🚀 Execute Unified Fast-Save (ไม้เดียวจบ):**
+   เรียก `run_command` รันคำสั่งนี้เพียง **คำสั่งเดียวถ้วน**:
    ```powershell
-   git pull vps master --no-rebase
+   node scripts/fast-save.js "<path-to-your-save-file>" "[commit_message]"
    ```
+   
+   > ⛔ **CRITICAL TOOL CALL RULE:**
+   > เมื่อเรียก `run_command` ต้องตั้งพารามิเตอร์:
+   > - `WaitMsBeforeAsync: 10000` (10 วินาที) เสมอ เพื่อให้คำสั่งรันจบแบบ Synchronous ไม่หลุดเป็น Background Task!
 
-8. **Quality Gate Verification (Iron Rule):**
-   ```powershell
-   node scripts/verify-qs.js "<path-to-your-save-file>"
-   ```
-   *(ตรวจเช็คความสมบูรณ์ของ RAW ARTIFACT BACKUP, Mandatory sections, และไฟล์ขนาด $\ge 4KB$)*
+   **สิ่งที่ `scripts/fast-save.js` ทำให้โดยอัตโนมัติในโปรเซสเดียว:**
+   - [x] ตรวจสอบความปลอดภัย `.git/index.lock`
+   - [x] รัน Quality Gate ตรวจไฟล์ Quick Save (`verify-qs.js`)
+   - [x] รัน Universal Search Indexer โหมด True Incremental (`qs-indexer.js --incremental`) ใน 30ms
+   - [x] ตรวจจับไฟล์ `public/` หากมีการแก้ไขจะรัน `bump-cache.js` ให้อัตโนมัติ (ข้ามถ้าไม่มี เพื่อประหยัด 2s)
+   - [x] รวมไฟล์ทั้งหมดเข้า Staging (`git add .`)
+   - [x] สร้าง Atomic Commit เพียง Commit เดียว
+   - [x] Deploy ขึ้น VPS Production ทันที (`git push vps master`)
+   - [x] สั่งรัน Background Log Sync (`sync-ag-logs.js --bg`) แบบ Detached
+   - [x] พิมพ์ Stopwatch Telemetry แจกแจงเวลาระดับมิลลิวินาที
 
-9. **Conditional Cache Busting:**
-   - หากตรวจพบการเปลี่ยนแปลงใน `public/` ให้รัน:
-     ```powershell
-     node bump-cache.js
-     ```
-   - หากไม่มีไฟล์ใน `public/` เปลี่ยน ➔ **ข้ามขั้นตอนนี้ได้เลย**
-
-10. **Single Atomic Commit (Iron Rule - รวมทุกไฟล์ในไม้เดียว):**
-    ```powershell
-    git add .
-    git commit -m "[AG] Auto-Save & Deploy <version>"
-    ```
-
-11. **Launch Deployment (ONE PUSH ONLY - ห้ามมี Push รอบสองเด็ดขาด):**
-    ```powershell
-    git push vps master
-    ```
-    *(ตรวจสอบผลการ deploy จาก stdout ของ Git hook โดยตรง)*
-
-12. **High-Speed Log Sync (Non-blocking Detached Background):**
-    ```powershell
-    node scripts/sync-ag-logs.js --bg
-    ```
-    *(เสร็จสิ้นใน 0ms ทันทีผ่าน Detached Background Process และ Single Compressed Tar Stream เบื้องหลัง ไม่ขวาง Pipeline)*
-
-13. **Final Clean Tree Audit:**
-    ```powershell
-    git status
-    ```
-    *(ยืนยันว่า Working Tree สะอาด 100%)*
-
-14. **🛑 MANDATORY TURN STOP & INSTANT NOTIFICATION (Iron Rule):**
-    - **ห้ามเรียกเครื่องมือใดๆ ต่ออีกเด็ดขาด! จบขั้นตอนแล้วต้องหยุดเรียก Tools ทันที!**
-    - แจ้งสรุปผลให้ผู้ใช้ทราบทันทีว่าระบบทำการเซฟและ Deploy ขึ้น Production VPS เรียบร้อยแล้ว!
-    - ⛔ **ห้ามมี Phase 3, ห้ามกลับไปแก้ไฟล์, ห้ามสั่ง `git push` ซ้ำรอบสองเด็ดขาด!**
+7. **🛑 MANDATORY TURN STOP & INSTANT NOTIFICATION (Iron Rule):**
+   - **ห้ามเรียกเครื่องมือใดๆ ต่ออีกเด็ดขาด! จบขั้นตอนแล้วต้องหยุดเรียก Tools ทันที!**
+   - แจ้งสรุปผลพร้อมเวลา Stopwatch ที่ได้จาก `fast-save.js` ให้ผู้ใช้ทราบทันที!
+   - ⛔ **ห้ามมี Phase 3, ห้ามกลับไปแก้ไฟล์, ห้ามสั่ง `git push` ซ้ำรอบสองเด็ดขาด!**
