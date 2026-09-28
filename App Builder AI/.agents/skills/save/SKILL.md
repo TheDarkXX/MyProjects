@@ -1,13 +1,13 @@
 ---
 name: save
-version: "3.1.0"
+version: "3.3.0"
 updated_at: "2026-09-28"
-description: "High-Speed Auto-Save & Deploy Pipeline V3.1 (Single Atomic Deploy + Zero Double-Push)"
+description: "High-Speed Auto-Save & Deploy Pipeline V3.3 (QS Auto-Compiler + Smart Diff Zero-Downtime VPS Deploy)"
 ---
-# 💾 Skill: `/save` (v3.1.0)
+# 💾 Skill: `/save` (v3.3.0)
 
 ## Objective
-The ultimate high-performance end-of-task pipeline. Unifies Quick Save context gathering, reciprocal backlinks, quality gates, conditional cache-busting, single atomic git commit, and VPS deployment into a frictionless flow that deploys to VPS in **under 15–20 seconds** with **ZERO double-pushing**.
+The ultimate high-performance end-of-task pipeline. Unifies Quick Save context gathering, reciprocal backlinks, quality gates, conditional cache-busting, single atomic git commit, and VPS deployment into a frictionless flow that deploys to VPS in **under 15–20 seconds** with **ZERO double-pushing**. Seamlessly adapts across **PC Home & PC Office** with zero manual configuration.
 
 ## 🛑 End-of-Session Iron Rule
 **งานเสร็จแล้ว อัปเดต Changelog/Quick Save และ Deploy ขึ้น VPS ไม้เดียวจบก่อนปิดแชทเสมอ**
@@ -51,13 +51,13 @@ graph TD
    - ตรวจนับไฟล์ที่ลอยอยู่ที่ root ของ `Quick Save/Complete/<Subfolder>/`
    - หากมีไฟล์เวอร์ชันปัจจุบันลอยอยู่ $\ge 7$ ไฟล์ ให้ `git mv` ไฟล์ที่เก่ากว่าเข้าไปในโฟลเดอร์ย่อย (เช่น `V13/`) ให้เหลือลอยอยู่เพียง 5 ไฟล์ล่าสุด (ใช้ Semantic Versioning `[version]` ใน PowerShell เรียงลำดับเสมอ)
 
-3. **Fast Context Gathering:**
-   - รัน `list_dir` ในโฟลเดอร์ Artifacts (`<appDataDir>\brain\<conversation-id>/`)
-   - เรียก `view_file` อ่านไฟล์ `.md` ทุกตัวที่พบ
-   - รัน `git diff --name-only HEAD~5` หรือ `git status -s` เพื่อดึงรายชื่อไฟล์ที่ถูกแก้ไขในเซสชันนี้
+3. **Fast Context Gathering (QS Auto-Compiler Powered):**
+   - AI **ไม่ต้อง** นั่ง `view_file` กวาด Artifact ทุกตัว เพื่อพิมพ์ซ้ำ (ตัดคอขวด 30–90 วินาทีทิ้ง!)
+   - AI เพียงสังเคราะห์สิ่งที่ทำจริงในเซสชัน เพื่อเขียน **"แก่น"** (Compiled Truth + Decisions + Timeline)
+   - ส่วน `## 📦 RAW ARTIFACT BACKUP` และ `## 📋 Files Changed This Session` จะถูกประกอบให้อัตโนมัติใน **~50ms** โดย `scripts/qs-compiler.js` ตอนรัน `fast-save.js`
 
-4. **Write Quick Save File (Full Depth Required):**
-   - เขียนไฟล์ Quick Save ตรงเข้าไปยัง `Quick Save/Complete/<Subfolder>/` (หรือ `Active/` หากงานยังไม่เสร็จสมบูรณ์) ตามโครงสร้างมาตรฐาน:
+4. **Write Quick Save File (Streamlined Core):**
+   - เขียนไฟล์ Quick Save ตรงเข้าไปยัง `Quick Save/Complete/<Subfolder>/` (หรือ `Active/` หากงานยังไม่เสร็จสมบูรณ์):
      ```markdown
      ---
      version: "13.x.x"
@@ -75,20 +75,13 @@ graph TD
      ## 📌 Context & Implementation (Compiled Truth)
      (เหตุผลเชิงสถาปัตยกรรม + โค้ดสำคัญ ห้ามย่อ)
 
-     ## 📋 Files Changed This Session
-     | File | What Changed | Why |
-     |------|-------------|-----|
-     | `path/to/file` | รายละเอียด | เหตุผล |
-
-     ## 📦 RAW ARTIFACT BACKUP (Iron Rule)
-     (วางเนื้อหาเต็ม 100% จาก artifacts ทุกตัว ห้ามตัดทอน)
-
      ## 🔬 Timeline & Debugging Log
      (บันทึกการแก้ปัญหา ข้อผิดพลาดที่เจอ และการตัดสินใจ)
 
      ## 🔗 GBRAIN Backlinks
      - **YYYY-MM-DD HH:MM** | [page title](file:///C:/path/to/file.md) -- context
      ```
+   - ⚡ **Auto-Assembly (Automatic in fast-save.js):** สคริปต์ `fast-save.js` Step 0.5 จะเรียก `qs-compiler.js` เพื่อแทรก `## 📋 Files Changed` และ `## 📦 RAW ARTIFACT BACKUP` ให้ครบ 100% อัตโนมัติก่อนผ่าน Quality Gate
 
 5. **Reciprocal GBRAIN Backlinks & Roadmap (ทำบน Local ทันทีใน Phase นี้!):**
    - ⛔ **กฎเหล็กห้าม Double Push:** ให้เปิดไฟล์ที่เกี่ยวข้อง 1-2 ไฟล์แล้วเติม Reciprocal Backlink ชี้มายังไฟล์ Quick Save ใหม่ตอนนี้เลยบน Local Disk (ใช้เวลาแค่ 50ms)
@@ -99,10 +92,11 @@ graph TD
 ### Phase 2: Turbo Single-Command Execution (Target: 10–15 วินาที)
 *(ใช้ Single-Process Orchestrator: ห้ามแยกคำสั่งเดี่ยวๆ เป็น 9-23 Tool Calls เด็ดขาด!)*
 
-6. **🚀 Execute Unified Fast-Save (ไม้เดียวจบ):**
-   เรียก `run_command` รันคำสั่งนี้เพียง **คำสั่งเดียวถ้วน**:
+6. **🚀 Execute Unified Fast-Save (ไม้เดียวจบ + True Wall-Clock):**
+   - ดึงเวลาที่ผู้ใช้กดส่งคำสั่งจาก `<ADDITIONAL_METADATA>` (`The current local time is: <timestamp>`)
+   - เรียก `run_command` รันคำสั่งนี้เพียง **คำสั่งเดียวถ้วน**:
    ```powershell
-   node scripts/fast-save.js "<path-to-your-save-file>" "[commit_message]"
+   node scripts/fast-save.js "<path-to-your-save-file>" "[commit_message]" --start "<prompt_timestamp>"
    ```
    
    > ⛔ **CRITICAL TOOL CALL RULE:**
@@ -111,16 +105,20 @@ graph TD
 
    **สิ่งที่ `scripts/fast-save.js` ทำให้โดยอัตโนมัติในโปรเซสเดียว:**
    - [x] ตรวจสอบความปลอดภัย `.git/index.lock`
+   - [x] รัน **Step 0.5: QS Auto-Compiler** ประกอบ Artifact Backup + Files Changed อัตโนมัติใน ~200ms
    - [x] รัน Quality Gate ตรวจไฟล์ Quick Save (`verify-qs.js`)
    - [x] รัน Universal Search Indexer โหมด True Incremental (`qs-indexer.js --incremental`) ใน 30ms
    - [x] ตรวจจับไฟล์ `public/` หากมีการแก้ไขจะรัน `bump-cache.js` ให้อัตโนมัติ (ข้ามถ้าไม่มี เพื่อประหยัด 2s)
    - [x] รวมไฟล์ทั้งหมดเข้า Staging (`git add .`)
    - [x] สร้าง Atomic Commit เพียง Commit เดียว
-   - [x] Deploy ขึ้น VPS Production ทันที (`git push vps master`)
+   - [x] Deploy ขึ้น VPS Production ทันที (`git push vps master`) พร้อม Smart Diff ข้าม PM2 บน VPS
    - [x] สั่งรัน Background Log Sync (`sync-ag-logs.js --bg`) แบบ Detached
-   - [x] พิมพ์ Stopwatch Telemetry แจกแจงเวลาระดับมิลลิวินาที
+   - [x] คำนวณและพิมพ์ Stopwatch Telemetry: **ทั้ง Engine Pipeline และ True Wall-Clock**
 
-7. **🛑 MANDATORY TURN STOP & INSTANT NOTIFICATION (Iron Rule):**
+7. **🛑 MANDATORY TURN STOP & DUAL-TELEMETRY NOTIFICATION (Iron Rule):**
    - **ห้ามเรียกเครื่องมือใดๆ ต่ออีกเด็ดขาด! จบขั้นตอนแล้วต้องหยุดเรียก Tools ทันที!**
-   - แจ้งสรุปผลพร้อมเวลา Stopwatch ที่ได้จาก `fast-save.js` ให้ผู้ใช้ทราบทันที!
+   - แสดงตารางสรุปผล Telemetry 2 มิติให้ผู้ใช้เห็นทันที:
+     - ⏱️ **True Wall-Clock (User Reality):** เวลารวมตั้งแต่วินาทีที่ User กดส่งคำสั่งจนตอบกลับ
+     - ⚡ **Engine Pipeline:** เวลาที่ Node.js + Git + Deploy Hook ทำงานจริง
+     - 📊 ตารางแจกแจงทุก Phase (Compiler, Quality Gate, Indexer, Push, etc.)
    - ⛔ **ห้ามมี Phase 3, ห้ามกลับไปแก้ไฟล์, ห้ามสั่ง `git push` ซ้ำรอบสองเด็ดขาด!**

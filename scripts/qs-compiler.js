@@ -1,0 +1,251 @@
+#!/usr/bin/env node
+// ═══════════════════════════════════════════════════════════════════════════
+// QS Auto-Compiler Engine (scripts/qs-compiler.js)
+// Assembles Quick Save artifacts + Git Diff into complete QS files in <50ms.
+// Eliminates the 30-90s AI token generation bottleneck.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT = path.resolve(__dirname, '..');
+
+const startTime = Date.now();
+
+// ─── 1. Resolve Target Quick Save File & Conv Flag ───────────────────────────
+const rawArgs = process.argv.slice(2);
+let convOverride = null;
+const convIdx = rawArgs.indexOf('--conv');
+if (convIdx !== -1 && rawArgs[convIdx + 1]) {
+  convOverride = rawArgs[convIdx + 1].trim();
+}
+
+let targetFile = rawArgs.find(arg => !arg.startsWith('--') && arg !== convOverride);
+
+if (!targetFile) {
+  const searchDirs = [
+    path.join(ROOT, 'Quick Save', 'Active'),
+    path.join(ROOT, 'Quick Save', 'Complete', 'Core-VPS')
+  ];
+
+  let newestFile = null;
+  let newestMtime = 0;
+
+  for (const dir of searchDirs) {
+    if (!fs.existsSync(dir)) continue;
+    const walk = (d) => {
+      for (const item of fs.readdirSync(d)) {
+        const full = path.join(d, item);
+        const stat = fs.statSync(full);
+        if (stat.isDirectory()) {
+          walk(full);
+        } else if (item.endsWith('.md') && !item.startsWith('.')) {
+          if (stat.mtimeMs > newestMtime) {
+            newestMtime = stat.mtimeMs;
+            newestFile = full;
+          }
+        }
+      }
+    };
+    walk(dir);
+  }
+
+  if (newestFile) {
+    targetFile = path.relative(ROOT, newestFile);
+  }
+}
+
+if (!targetFile) {
+  console.log('⚡ [qs-compiler] No target Quick Save file found or specified. Exiting.');
+  process.exit(0);
+}
+
+const fullTargetFile = path.resolve(ROOT, targetFile);
+if (!fs.existsSync(fullTargetFile)) {
+  console.error(`❌ [qs-compiler] Target file does not exist: ${fullTargetFile}`);
+  process.exit(1);
+}
+
+let content = fs.readFileSync(fullTargetFile, 'utf8');
+
+// ─── 2. Parse Frontmatter & Extract Conversation ID ───────────────────────────
+let convIds = [];
+if (convOverride) {
+  convIds.push(convOverride);
+}
+
+const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+if (fmMatch) {
+  const convMatches = fmMatch[1].matchAll(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi);
+  for (const m of convMatches) {
+    if (!convIds.includes(m[1])) {
+      convIds.push(m[1]);
+    }
+  }
+}
+
+if (convIds.length === 0) {
+  console.log('ℹ️ [qs-compiler] No conversation ID found. Skipping artifact backup.');
+}
+
+// ─── 3. Locate & Read Brain Artifacts ─────────────────────────────────────────
+let artifactBlocks = [];
+
+for (const convId of convIds) {
+  const homeDir = os.homedir();
+  const possibleBrainDirs = [
+    path.join(homeDir, '.gemini', 'antigravity-ide', 'brain', convId),
+    path.join(homeDir, '.gemini', 'antigravity', 'brain', convId),
+    path.join('C:', 'Users', 'Admin', '.gemini', 'antigravity-ide', 'brain', convId),
+    path.join('C:', 'Users', 'Admin', '.gemini', 'antigravity', 'brain', convId)
+  ];
+
+  let brainDir = possibleBrainDirs.find(d => fs.existsSync(d));
+
+  if (brainDir) {
+    try {
+      const items = fs.readdirSync(brainDir);
+      for (const item of items) {
+        if (!item.endsWith('.md')) continue;
+        const itemPath = path.join(brainDir, item);
+        const stat = fs.statSync(itemPath);
+        if (stat.isFile()) {
+          const rawArtifact = fs.readFileSync(itemPath, 'utf8');
+          const title = item.replace(/\.md$/, '').replace(/_/g, ' ');
+          if (!artifactBlocks.some(a => a.filename === item)) {
+            artifactBlocks.push({
+              filename: item,
+              title,
+              content: rawArtifact
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`⚠️ [qs-compiler] Error reading brain artifacts: ${err.message}`);
+    }
+  } else {
+    console.log(`ℹ️ [qs-compiler] Brain dir for conversation ${convId} not found on this machine.`);
+  }
+}
+
+// ─── 4. Build or Merge Files Changed Table ─────────────────────────────────────
+let filesChangedSectionRegex = /##\s*📋\s*Files Changed This Session[\s\S]*?(?=\r?\n##|$)/i;
+const hasFilesChangedSection = filesChangedSectionRegex.test(content);
+
+let changedFiles = [];
+try {
+  const statusOut = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf8' }).trim();
+  if (statusOut) {
+    statusOut.split(/\r?\n/).forEach(line => {
+      const file = line.slice(3).trim();
+      if (file && !file.includes('Quick Save/') && !changedFiles.includes(file)) {
+        changedFiles.push(file);
+      }
+    });
+  }
+
+  // Also check recent commit diffs
+  try {
+    const logDiff = execSync('git diff --name-only HEAD~3 HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
+    if (logDiff) {
+      logDiff.split(/\r?\n/).forEach(file => {
+        file = file.trim();
+        if (file && !file.includes('Quick Save/') && !changedFiles.includes(file)) {
+          changedFiles.push(file);
+        }
+      });
+    }
+  } catch {}
+} catch {}
+
+function classifyScope(filePath) {
+  if (/^scripts\//.test(filePath)) return 'Scripts / Automation';
+  if (/^tools\//.test(filePath)) return 'Tools / Templates';
+  if (/^routes\//.test(filePath)) return 'Backend / API Routes';
+  if (/^lib\//.test(filePath)) return 'Core Library';
+  if (/^public\//.test(filePath)) return 'Frontend / UI';
+  if (/^\.agents\//.test(filePath)) return 'Agent Skills / Prompts';
+  if (/^docs\//.test(filePath)) return 'Documentation';
+  if (/^discord-bot\//.test(filePath)) return 'Discord Bot';
+  if (/^data\//.test(filePath)) return 'Runtime Data';
+  return 'Core Repository';
+}
+
+// ─── 5. Inject / Merge Artifacts (Idempotent) ──────────────────────────────────
+let modified = false;
+
+if (artifactBlocks.length > 0) {
+  const rawArtifactRegex = /##\s*📦\s*RAW ARTIFACT BACKUP[^\r\n]*([\s\S]*?)(?=\r?\n##|$)/i;
+  const match = content.match(rawArtifactRegex);
+
+  let artifactsToAdd = [];
+  for (const block of artifactBlocks) {
+    // Check if block is already embedded
+    const alreadyPresent = match && (match[1].includes(block.filename) || match[1].includes(block.title));
+    if (!alreadyPresent) {
+      artifactsToAdd.push(`
+<details>
+<summary>Click to view ${block.title} (${block.filename} — 100% Raw Copy)</summary>
+
+${block.content}
+
+</details>`);
+    }
+  }
+
+  if (artifactsToAdd.length > 0) {
+    const combinedNewArtifacts = artifactsToAdd.join('\n\n');
+    if (match) {
+      // Append inside existing section
+      const fullExistingSection = match[0];
+      const updatedSection = fullExistingSection + '\n' + combinedNewArtifacts;
+      content = content.replace(fullExistingSection, updatedSection);
+      modified = true;
+    } else {
+      // Create new section
+      const newSection = `\n\n## 📦 RAW ARTIFACT BACKUP (Iron Rule)\n${combinedNewArtifacts}\n`;
+      // Try to insert before Timeline, Backlinks, or bottom
+      if (/##\s*🔬\s*Timeline/i.test(content)) {
+        content = content.replace(/(##\s*🔬\s*Timeline)/i, `${newSection}\n$1`);
+      } else if (/##\s*🔗\s*GBRAIN/i.test(content)) {
+        content = content.replace(/(##\s*🔗\s*GBRAIN)/i, `${newSection}\n$1`);
+      } else {
+        content += newSection;
+      }
+      modified = true;
+    }
+    console.log(`📦 [qs-compiler] Injected ${artifactsToAdd.length} artifact(s) into RAW ARTIFACT BACKUP.`);
+  } else {
+    console.log('ℹ️ [qs-compiler] All artifacts already present in RAW ARTIFACT BACKUP.');
+  }
+}
+
+// If Files Changed table is missing or empty, inject table
+if (!hasFilesChangedSection && changedFiles.length > 0) {
+  const tableRows = changedFiles.map(f => `| \`${f}\` | Auto-detected session change | ${classifyScope(f)} |`).join('\n');
+  const filesSection = `\n\n## 📋 Files Changed This Session\n| File | What Changed | Scope |\n|---|---|---|\n${tableRows}\n`;
+  if (/##\s*📦\s*RAW ARTIFACT/i.test(content)) {
+    content = content.replace(/(##\s*📦\s*RAW ARTIFACT)/i, `${filesSection}\n$1`);
+    modified = true;
+  } else if (/##\s*🔬\s*Timeline/i.test(content)) {
+    content = content.replace(/(##\s*🔬\s*Timeline)/i, `${filesSection}\n$1`);
+    modified = true;
+  }
+}
+
+if (modified) {
+  fs.writeFileSync(fullTargetFile, content, 'utf8');
+  console.log(`✅ [qs-compiler] Updated: ${targetFile}`);
+} else {
+  console.log(`ℹ️ [qs-compiler] No changes needed for: ${targetFile}`);
+}
+
+const elapsedMs = Date.now() - startTime;
+console.log(`⚡ [qs-compiler] Completed in ${elapsedMs}ms.`);
+process.exit(0);
