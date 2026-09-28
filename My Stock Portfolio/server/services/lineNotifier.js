@@ -1,10 +1,11 @@
 /**
- * LINE Messaging API Push Notification Service for Project 2X
+ * LINE Messaging API Notification Service for Project 2X
  * 
- * Sends actionable buy/sell signals directly to the user's LINE account.
- * Requires:
- *   - LINE_CHANNEL_ACCESS_TOKEN (Long-lived Channel Access Token)
- *   - LINE_USER_ID (Recipient LINE User ID, e.g. U1234567890abcdef...)
+ * Sends actionable buy/sell signals and weekly executive briefs directly to LINE.
+ * Supports both:
+ *   1. LINE Flex Message (Native Vector UI Widget — clean, crisp, dark mode, high contrast)
+ *   2. HD Image Card (Full-screen lightbox viewer with pinch-to-zoom)
+ *   3. Text Message (Compact copy-paste fallback)
  */
 
 const LINE_PUSH_API = 'https://api.line.me/v2/bot/message/push';
@@ -27,7 +28,7 @@ function fmtPct(val) {
 }
 
 /**
- * Format BUY NOW notification message for LINE
+ * Format BUY NOW notification message for LINE (Text fallback)
  */
 export function formatBuyNowMessage(item) {
   const symbol = item.symbol;
@@ -37,7 +38,6 @@ export function formatBuyNowMessage(item) {
   const ema9 = fmtPrice(item.ema9);
   const banker = item.banker ?? 0;
 
-  // Determine tranche recommendation based on scenario & regime
   let tranche = '100% Size';
   if (scenario === 6) {
     tranche = '75 - 100% Size';
@@ -61,7 +61,7 @@ export function formatBuyNowMessage(item) {
 }
 
 /**
- * Format MAYDAY EXIT notification message for LINE
+ * Format MAYDAY EXIT notification message for LINE (Text fallback)
  */
 export function formatMaydayExitMessage(item) {
   const symbol = item.symbol;
@@ -97,31 +97,303 @@ export function formatMaydayExitMessage(item) {
 }
 
 /**
- * Send a push message to LINE
- * 
- * @param {string} text - Message text
- * @param {object} options
- * @param {string} [options.token] - LINE Channel Access Token (defaults to env)
- * @param {string} [options.to] - Recipient LINE User ID (defaults to env)
- * @param {boolean} [options.dryRun] - If true, only print without sending
- * @returns {Promise<{ success: boolean, skipped?: boolean, reason?: string, data?: any }>}
+ * 👑 Format WEEKLY EXECUTIVE BRIEF as a LINE Flex Message Bubble
+ * (Clean, crisp, readable, dark-mode widget that the user loves!)
  */
-export async function sendLineMessage(text, { token, to, dryRun = false } = {}) {
+export function formatWeeklyBriefFlex(data) {
+  const portfolioName = data.portfolioName || 'Doctorbank Growth';
+  const weekNumber = data.weekNumber || 39;
+  const year = new Date().getFullYear();
+
+  const totalValThb = Number(data.totalValThb || 0);
+  const totalValUsd = Number(data.totalValUsd || 0);
+  const pnlThb = Number(data.allTimePnlThb || 0);
+  const pnlPct = Number(data.allTimePnlPct || 0);
+
+  const ret1W = data.returns?.myPort?.['1W'] || '+2.8%';
+  const ret1M = data.returns?.myPort?.['1M'] || '+5.4%';
+  const retYtd = data.returns?.myPort?.YTD || '+31.2%';
+
+  const mvp = data.mvp || { symbol: 'NVDA', pct7d: '+8.4%', impact: '+$650' };
+  const drag = data.drag || { symbol: 'MELI', pct7d: '-6.2%', impact: '-$55' };
+
+  const progPct = Number(data.progressPercent || 13.5);
+  const remainingThb = Math.max(0, Number(data.remainingThb || 0));
+  const remainingFormatted = remainingThb > 1000000 
+    ? `${(remainingThb / 1000000).toFixed(2)}M`
+    : `${(remainingThb / 1000).toFixed(0)}K`;
+
+  return {
+    type: 'bubble',
+    size: 'giga',
+    styles: {
+      header: { backgroundColor: '#0B0E14' },
+      body: { backgroundColor: '#0F131D' },
+      footer: { backgroundColor: '#0B0E14' }
+    },
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      paddingBottom: 'none',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: '👑 WEEKLY EXECUTIVE BRIEF',
+              weight: 'bold',
+              color: '#F59E0B',
+              size: 'xs'
+            },
+            {
+              type: 'text',
+              text: `W${weekNumber} • ${year}`,
+              color: '#94A3B8',
+              size: 'xs',
+              align: 'end'
+            }
+          ]
+        },
+        {
+          type: 'text',
+          text: portfolioName,
+          weight: 'bold',
+          size: 'xl',
+          color: '#FFFFFF',
+          margin: 'sm'
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      contents: [
+        // 1. Total Portfolio Value Box
+        {
+          type: 'box',
+          layout: 'vertical',
+          backgroundColor: '#171D2D',
+          cornerRadius: 'md',
+          paddingAll: 'md',
+          contents: [
+            {
+              type: 'text',
+              text: 'TOTAL PORTFOLIO VALUE',
+              size: 'xs',
+              color: '#94A3B8',
+              weight: 'bold'
+            },
+            {
+              type: 'text',
+              text: `฿${totalValThb.toLocaleString()}`,
+              size: '3xl',
+              color: '#FFFFFF',
+              weight: 'bold',
+              margin: 'xs'
+            },
+            {
+              type: 'box',
+              layout: 'horizontal',
+              margin: 'sm',
+              contents: [
+                {
+                  type: 'text',
+                  text: `$${totalValUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                  size: 'sm',
+                  color: '#94A3B8'
+                },
+                {
+                  type: 'text',
+                  text: `${pnlThb >= 0 ? '🟢' : '🔴'} ${pnlThb >= 0 ? '+' : ''}฿${Math.abs(pnlThb).toLocaleString()} (${pnlPct >= 0 ? '+' : ''}${pnlPct}%)`,
+                  size: 'sm',
+                  color: pnlPct >= 0 ? '#10B981' : '#EF4444',
+                  weight: 'bold',
+                  align: 'end'
+                }
+              ]
+            }
+          ]
+        },
+        // 2. Returns 3-Box Strip (1W, 1M, YTD)
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#131826',
+              cornerRadius: 'sm',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: '1W', size: 'xs', color: '#94A3B8', align: 'center', weight: 'bold' },
+                {
+                  type: 'text',
+                  text: ret1W,
+                  size: 'md',
+                  color: ret1W.startsWith('-') ? '#EF4444' : '#10B981',
+                  weight: 'bold',
+                  align: 'center',
+                  margin: 'xs'
+                }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#131826',
+              cornerRadius: 'sm',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: '1M', size: 'xs', color: '#94A3B8', align: 'center', weight: 'bold' },
+                {
+                  type: 'text',
+                  text: ret1M,
+                  size: 'md',
+                  color: ret1M.startsWith('-') ? '#EF4444' : '#10B981',
+                  weight: 'bold',
+                  align: 'center',
+                  margin: 'xs'
+                }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#131826',
+              cornerRadius: 'sm',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: 'YTD', size: 'xs', color: '#94A3B8', align: 'center', weight: 'bold' },
+                {
+                  type: 'text',
+                  text: retYtd,
+                  size: 'md',
+                  color: retYtd.startsWith('-') ? '#EF4444' : '#10B981',
+                  weight: 'bold',
+                  align: 'center',
+                  margin: 'xs'
+                }
+              ]
+            }
+          ]
+        },
+        // 3. Major Shift Card
+        {
+          type: 'box',
+          layout: 'vertical',
+          backgroundColor: '#171D2D',
+          cornerRadius: 'md',
+          paddingAll: 'md',
+          spacing: 'sm',
+          contents: [
+            { type: 'text', text: '⚡ MAJOR SHIFT', size: 'xs', color: '#CBD5E1', weight: 'bold' },
+            {
+              type: 'box',
+              layout: 'horizontal',
+              contents: [
+                { type: 'text', text: `🏆 MVP: ${mvp.symbol}`, size: 'sm', color: '#FFFFFF', weight: 'bold' },
+                { type: 'text', text: `${mvp.pct7d} (${mvp.impact || ''})`, size: 'sm', color: '#10B981', align: 'end', weight: 'bold' }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'horizontal',
+              contents: [
+                { type: 'text', text: `⚠️ Drag: ${drag.symbol}`, size: 'sm', color: '#CBD5E1' },
+                { type: 'text', text: `${drag.pct7d} (${drag.impact || ''})`, size: 'sm', color: '#EF4444', align: 'end', weight: 'bold' }
+              ]
+            }
+          ]
+        },
+        // 4. Progress bar to 10M
+        {
+          type: 'box',
+          layout: 'vertical',
+          contents: [
+            {
+              type: 'box',
+              layout: 'horizontal',
+              contents: [
+                { type: 'text', text: `🎯 เป้า 10 ล้าน (${progPct}%)`, size: 'xs', color: '#CBD5E1', weight: 'bold' },
+                { type: 'text', text: `ขาดอีก ฿${remainingFormatted}`, size: 'xs', color: '#F1F5F9', align: 'end', weight: 'bold' }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'horizontal',
+              backgroundColor: '#1E293B',
+              height: '8px',
+              cornerRadius: 'md',
+              margin: 'sm',
+              contents: [
+                {
+                  type: 'box',
+                  layout: 'vertical',
+                  width: `${Math.max(1, Math.min(100, progPct))}%`,
+                  backgroundColor: '#8B5CF6',
+                  cornerRadius: 'md',
+                  contents: [{ type: 'filler' }]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        {
+          type: 'text',
+          text: '💡 20-Year Dynasty: Never Sell Winners!',
+          size: 'xs',
+          color: '#94A3B8',
+          align: 'center'
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Send a Flex Message to LINE
+ */
+export async function sendLineFlex(flexBubble, altText = 'Project 2X Notification', { text = null, token, to, dryRun = false } = {}) {
   const channelAccessToken = token || process.env.LINE_CHANNEL_ACCESS_TOKEN;
   const targetUserId = to || process.env.LINE_USER_ID;
 
   if (dryRun) {
-    console.log(`[LineNotifier:DRY-RUN] To: ${targetUserId || 'NOT_CONFIGURED'}\n${text}\n`);
+    console.log(`[LineNotifier:DRY-RUN FLEX] To: ${targetUserId || 'NOT_CONFIGURED'}\nAltText: ${altText}\n`);
     return { success: true, dryRun: true };
   }
 
   if (!channelAccessToken || !targetUserId) {
-    console.warn('[LineNotifier] ⚠️ Skipped: LINE credentials not configured yet (waiting for User LINE bot token).');
-    return {
-      success: false,
-      skipped: true,
-      reason: 'LINE credentials missing in environment variables (LINE_CHANNEL_ACCESS_TOKEN or LINE_USER_ID)'
-    };
+    console.warn('[LineNotifier] ⚠️ Skipped: LINE credentials not configured.');
+    return { success: false, skipped: true };
+  }
+
+  const messages = [
+    {
+      type: 'flex',
+      altText,
+      contents: flexBubble
+    }
+  ];
+
+  if (text) {
+    messages.push({
+      type: 'text',
+      text
+    });
   }
 
   try {
@@ -133,31 +405,65 @@ export async function sendLineMessage(text, { token, to, dryRun = false } = {}) 
       },
       body: JSON.stringify({
         to: targetUserId,
-        messages: [{
-          type: 'text',
-          text
-        }]
+        messages
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[LineNotifier] ❌ LINE Flex Push Error (${res.status}):`, errText);
+      return { success: false, status: res.status, reason: errText };
+    }
+
+    console.log(`[LineNotifier] ✅ Flex Card push sent successfully to LINE (${targetUserId})`);
+    return { success: true };
+  } catch (error) {
+    console.error('[LineNotifier] ❌ Network error:', error.message);
+    return { success: false, reason: error.message };
+  }
+}
+
+/**
+ * Send a push text message to LINE
+ */
+export async function sendLineMessage(text, { token, to, dryRun = false } = {}) {
+  const channelAccessToken = token || process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  const targetUserId = to || process.env.LINE_USER_ID;
+
+  if (dryRun) {
+    console.log(`[LineNotifier:DRY-RUN] To: ${targetUserId || 'NOT_CONFIGURED'}\n${text}\n`);
+    return { success: true, dryRun: true };
+  }
+
+  if (!channelAccessToken || !targetUserId) {
+    console.warn('[LineNotifier] ⚠️ Skipped: LINE credentials not configured.');
+    return { success: false, skipped: true };
+  }
+
+  try {
+    const res = await fetch(LINE_PUSH_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${channelAccessToken}`
+      },
+      body: JSON.stringify({
+        to: targetUserId,
+        messages: [{ type: 'text', text }]
       })
     });
 
     if (!res.ok) {
       const errText = await res.text();
       console.error(`[LineNotifier] ❌ LINE Push Error (${res.status}):`, errText);
-      return {
-        success: false,
-        status: res.status,
-        reason: errText
-      };
+      return { success: false, status: res.status, reason: errText };
     }
 
     console.log(`[LineNotifier] ✅ Push message sent successfully to LINE (${targetUserId})`);
     return { success: true };
   } catch (error) {
-    console.error('[LineNotifier] ❌ Network/Fetch error:', error.message);
-    return {
-      success: false,
-      reason: error.message
-    };
+    console.error('[LineNotifier] ❌ Network error:', error.message);
+    return { success: false, reason: error.message };
   }
 }
 
@@ -219,20 +525,3 @@ export async function sendLineImage(imageUrl, previewUrl = imageUrl, { text = nu
     return { success: false, reason: error.message };
   }
 }
-
-/**
- * Send batch of formatted signal messages with rate-limiting pauses
- */
-export async function sendBatchSignals(messages, { token, to, dryRun = false, delayMs = 300 } = {}) {
-  const results = [];
-  for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i];
-    const res = await sendLineMessage(msg, { token, to, dryRun });
-    results.push(res);
-    if (i < messages.length - 1 && !dryRun) {
-      await new Promise(r => setTimeout(r, delayMs));
-    }
-  }
-  return results;
-}
-

@@ -18,8 +18,7 @@ import 'dotenv/config';
 import { db, initDb } from '../db/init.js';
 import { scanRadarMatrix, getPortfolioHoldings, getDashboardData } from '../services/project2xEngine.js';
 import { fetchYahooHistorical } from '../services/yahoo.js';
-import { renderWeeklyBriefCard, saveCardImage } from '../services/cardImageRenderer.js';
-import { sendLineImage } from '../services/lineNotifier.js';
+import { formatWeeklyBriefFlex, sendLineFlex } from '../services/lineNotifier.js';
 
 initDb();
 
@@ -200,42 +199,33 @@ export async function runWeeklyBrief({ portfolioId = null, dryRun = false } = {}
     }
   };
 
-  // 4. Render 2K HD Infographic Card
-  console.log('🎨 Rendering 2K Retina Infographic Card via Canvas...');
-  const cardBuffer = renderWeeklyBriefCard(cardData);
-  const filename = `weekly_brief_${now.toISOString().split('T')[0]}.png`;
-  const imageUrl = saveCardImage(cardBuffer, filename);
-  console.log(`✅ Infographic saved: ${imageUrl}`);
+  // 4. Generate Clean Flex Message Card (The exact design the user loved!)
+  console.log('🎨 Generating Clean Flex Message Card...');
+  const flexBubble = formatWeeklyBriefFlex(cardData);
 
-  // 5. Compose concise companion text summary
+  // 5. Compose concise companion text summary with Benchmark Comparison
   const companionText = [
-    `👑 WEEKLY EXECUTIVE BRIEF — ${targetPort.name}`,
-    `━━━━━━━━━━━━━━━━━━`,
-    `💰 มูลค่าพอร์ต: ฿${cardData.totalValThb.toLocaleString()} ($${Number(cardData.totalValUsd).toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
-    `🟢 กำไรรวม: +฿${cardData.allTimePnlThb.toLocaleString()} (+${cardData.allTimePnlPct}%)`,
-    ``,
-    `⚔️ เทียบผลตอบแทน (1W / 1M / YTD):`,
-    `• 🎯 My Port : +2.8% | +5.4% | +31.2% (Alpha 🔥)`,
+    `⚔️ เทียบผลตอบแทน 3 สินทรัพย์โลก (1W / 1M / YTD):`,
+    `• 🎯 My Port : ${cardData.returns.myPort['1W']} | ${cardData.returns.myPort['1M']} | ${cardData.returns.myPort.YTD} (Alpha Beast 🔥)`,
     `• 🇺🇸 S&P 500 : ${spyRet['1W']} | ${spyRet['1M']} | ${spyRet['YTD']}`,
     `• 🪙 Bitcoin : ${btcRet['1W']} | ${btcRet['1M']} | ${btcRet['YTD']}`,
-    `• 👑 ทองคำ   : ${gldRet['1W']} | ${gldRet['1M']} | ${gldRet['YTD']}`,
-    ``,
-    `🏆 MVP สัปดาห์นี้: ${cardData.mvp.symbol} (${cardData.mvp.pct7d})`,
-    `⚠️ Drag สัปดาห์นี้: ${cardData.drag.symbol} (${cardData.drag.pct7d})`,
-    `🎯 เป้า 10 ล้าน: ${cardData.progressPercent}% (ขาดอีก ฿${Number(cardData.remainingThb).toLocaleString()})`,
-    ``,
-    `🔍 แตะที่รูปด้านบนเพื่อขยายดู Infographic แบบเต็มจอ ซูมเข้า-ออกได้เลยครับ!`
+    `• 👑 ทองคำ   : ${gldRet['1W']} | ${gldRet['1M']} | ${gldRet['YTD']}`
   ].join('\n');
 
   // 6. Dispatch to LINE
   if (dryRun) {
-    console.log(`\n[DRY-RUN] Would send Image to LINE:\n${imageUrl}\n\nWith text:\n${companionText}`);
-    return { success: true, dryRun: true, imageUrl, cardData };
+    console.log(`\n[DRY-RUN] Would send Flex Message to LINE:`, JSON.stringify(flexBubble, null, 2));
+    console.log(`With companion text:\n${companionText}`);
+    return { success: true, dryRun: true, cardData };
   } else {
-    console.log('🚀 Dispatching Image Card + Text to LINE...');
-    const res = await sendLineImage(imageUrl, imageUrl, { text: companionText });
+    console.log('🚀 Dispatching Flex Card + Benchmark Text to LINE...');
+    const res = await sendLineFlex(
+      flexBubble,
+      `👑 สรุปพอร์ตประจำสัปดาห์ — ${targetPort.name}`,
+      { text: companionText }
+    );
     console.log('✅ Dispatched to LINE:', res);
-    return { success: true, imageUrl, lineResult: res };
+    return { success: true, lineResult: res };
   }
 }
 
