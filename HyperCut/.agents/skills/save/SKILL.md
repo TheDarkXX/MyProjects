@@ -1,8 +1,10 @@
 ---
 name: save
-description: "High-Speed Auto-Save & Deploy Pipeline V3 (Single Atomic Deploy + Zero Double-Push)"
+version: "3.1.0"
+updated_at: "2026-09-28"
+description: "High-Speed Auto-Save & Deploy Pipeline V3.1 (Single Atomic Deploy + Zero Double-Push)"
 ---
-# 💾 Skill: `/save`
+# 💾 Skill: `/save` (v3.1.0)
 
 ## Objective
 The ultimate high-performance end-of-task pipeline. Unifies Quick Save context gathering, reciprocal backlinks, quality gates, conditional cache-busting, single atomic git commit, and VPS deployment into a frictionless flow that deploys to VPS in **under 15–20 seconds** with **ZERO double-pushing**.
