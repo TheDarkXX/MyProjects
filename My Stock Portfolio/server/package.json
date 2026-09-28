@@ -17,6 +17,7 @@
   "dependencies": {
     "@hono/node-server": "^1.13.7",
     "@mozilla/readability": "^0.6.0",
+    "@napi-rs/canvas": "^1.0.9",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "decode-google-news-url": "^0.1.0",

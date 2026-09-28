@@ -21,10 +21,36 @@ import {
 import { getPullbackDna } from '../services/pullbackDnaService.js';
 import { db } from '../db/init.js';
 import { runProject2xScan } from '../crons/project2xCron.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const CARDS_DIR = path.resolve(__dirname, '..', 'data', 'cards');
 
 const project2xRoutes = new Hono();
 
-// Require auth
+/**
+ * Public Card Image Serving for LINE Messaging API Lightbox
+ * GET /api/project-2x/cards/:filename
+ */
+project2xRoutes.get('/cards/:filename', async (c) => {
+  const filename = c.req.param('filename');
+  const safeFilename = path.basename(filename);
+  const cardPath = path.join(CARDS_DIR, safeFilename);
+
+  if (!fs.existsSync(cardPath)) {
+    return c.text('Image not found', 404);
+  }
+
+  const imageBuffer = fs.readFileSync(cardPath);
+  c.header('Content-Type', 'image/png');
+  c.header('Cache-Control', 'public, max-age=86400');
+  return c.body(imageBuffer);
+});
+
+// Require auth for other API routes
 project2xRoutes.use('*', authMiddleware);
 
 /**

@@ -19,7 +19,8 @@
 import 'dotenv/config';
 import { db, initDb } from '../db/init.js';
 import { scanRadarMatrix, getPortfolioHoldings } from '../services/project2xEngine.js';
-import { formatBuyNowMessage, formatMaydayExitMessage, sendLineMessage } from '../services/lineNotifier.js';
+import { formatBuyNowMessage, formatMaydayExitMessage, sendLineMessage, sendLineImage } from '../services/lineNotifier.js';
+import { renderBuyNowCard, renderMaydayExitCard, saveCardImage } from '../services/cardImageRenderer.js';
 
 // Ensure DB is initialized
 initDb();
@@ -166,8 +167,13 @@ export async function runProject2xScan({
             dryRun: true
           });
         } else {
-          // Live send
-          const sendRes = await sendLineMessage(msgText);
+          // Render 2K HD Retina Card Image
+          const cardBuf = renderBuyNowCard(itemWithCost);
+          const cardFilename = `${sym}_BUY_NOW_${today}.png`;
+          const cardUrl = saveCardImage(cardBuf, cardFilename);
+
+          // Live send with full-screen expandable image card + companion text
+          const sendRes = await sendLineImage(cardUrl, cardUrl, { text: msgText });
           
           // Log into DB
           db.prepare(`
@@ -194,9 +200,10 @@ export async function runProject2xScan({
             scenario,
             price: itemWithCost.currentPrice,
             title: alertTitle,
+            imageUrl: cardUrl,
             lineStatus: sendRes
           });
-          console.log(`   🔥 [BUY_NOW SENT] ${sym} -> Alert logged in DB & dispatched to LINE.`);
+          console.log(`   🔥 [BUY_NOW SENT] ${sym} -> HD Image Card (${cardUrl}) dispatched to LINE.`);
         }
       }
 
@@ -259,8 +266,13 @@ export async function runProject2xScan({
             dryRun: true
           });
         } else {
-          // Live send
-          const sendRes = await sendLineMessage(msgText);
+          // Render 2K HD Retina Card Image
+          const cardBuf = renderMaydayExitCard(itemWithCost);
+          const cardFilename = `${sym}_MAYDAY_EXIT_${today}.png`;
+          const cardUrl = saveCardImage(cardBuf, cardFilename);
+
+          // Live send with full-screen expandable image card + companion text
+          const sendRes = await sendLineImage(cardUrl, cardUrl, { text: msgText });
 
           // Log into DB
           db.prepare(`
@@ -287,9 +299,10 @@ export async function runProject2xScan({
             scenario,
             price: itemWithCost.currentPrice,
             title: alertTitle,
+            imageUrl: cardUrl,
             lineStatus: sendRes
           });
-          console.log(`   🚨 [MAYDAY_EXIT SENT] ${sym} -> Alert logged in DB & dispatched to LINE.`);
+          console.log(`   🚨 [MAYDAY_EXIT SENT] ${sym} -> HD Image Card (${cardUrl}) dispatched to LINE.`);
         }
       }
     }

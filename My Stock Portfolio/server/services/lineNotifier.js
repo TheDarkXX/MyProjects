@@ -162,6 +162,65 @@ export async function sendLineMessage(text, { token, to, dryRun = false } = {}) 
 }
 
 /**
+ * Send an HD Image message (with optional follow-up text summary) to LINE
+ */
+export async function sendLineImage(imageUrl, previewUrl = imageUrl, { text = null, token, to, dryRun = false } = {}) {
+  const channelAccessToken = token || process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  const targetUserId = to || process.env.LINE_USER_ID;
+
+  if (dryRun) {
+    console.log(`[LineNotifier:DRY-RUN IMAGE] To: ${targetUserId || 'NOT_CONFIGURED'}\nImage: ${imageUrl}\nText: ${text || 'none'}\n`);
+    return { success: true, dryRun: true };
+  }
+
+  if (!channelAccessToken || !targetUserId) {
+    console.warn('[LineNotifier] ⚠️ Skipped: LINE credentials not configured.');
+    return { success: false, skipped: true };
+  }
+
+  const messages = [
+    {
+      type: 'image',
+      originalContentUrl: imageUrl,
+      previewImageUrl: previewUrl
+    }
+  ];
+
+  if (text) {
+    messages.push({
+      type: 'text',
+      text
+    });
+  }
+
+  try {
+    const res = await fetch(LINE_PUSH_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${channelAccessToken}`
+      },
+      body: JSON.stringify({
+        to: targetUserId,
+        messages
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[LineNotifier] ❌ LINE Image Push Error (${res.status}):`, errText);
+      return { success: false, status: res.status, reason: errText };
+    }
+
+    console.log(`[LineNotifier] ✅ Image card push sent successfully to LINE (${targetUserId})`);
+    return { success: true };
+  } catch (error) {
+    console.error('[LineNotifier] ❌ Network error:', error.message);
+    return { success: false, reason: error.message };
+  }
+}
+
+/**
  * Send batch of formatted signal messages with rate-limiting pauses
  */
 export async function sendBatchSignals(messages, { token, to, dryRun = false, delayMs = 300 } = {}) {
@@ -176,3 +235,4 @@ export async function sendBatchSignals(messages, { token, to, dryRun = false, de
   }
   return results;
 }
+
