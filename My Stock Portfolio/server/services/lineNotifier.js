@@ -37,12 +37,35 @@ export function formatBuyNowMessage(item) {
   const price = fmtPrice(item.currentPrice);
   const ema9 = fmtPrice(item.ema9);
   const banker = item.banker ?? 0;
+  const shares = Number(item.owned_shares || 0);
+  const targetShares = item.target_shares ? Number(item.target_shares) : null;
+  const progressPct = item.progress_percent !== undefined && item.progress_percent !== null 
+    ? Number(item.progress_percent) 
+    : (targetShares && targetShares > 0 ? (shares / targetShares) * 100 : null);
 
   let tranche = '100% Size';
   if (scenario === 6) {
     tranche = '75 - 100% Size';
   } else if (scenario === 8 && item.regime !== 'BULL') {
     tranche = '75% Size';
+  }
+
+  // 1. Recheck holding status and provide tailored advice
+  let holdingStatus = '';
+  let actionGuide = '⏰ ตลาดกำลังเปิด — เคาะซื้อได้เลย!';
+
+  if (shares <= 0.001) {
+    holdingStatus = `📦 สถานะพอร์ต: ยังไม่มีหุ้นในพอร์ต (0 หุ้น)`;
+    actionGuide = `🎯 คำแนะนำ: สับไกเปิดสถานะไม้แรก (${tranche})`;
+  } else if (progressPct !== null && progressPct >= 100) {
+    holdingStatus = `📦 สถานะพอร์ต: มีครบโควตา 100% แล้ว (${shares.toFixed(3)} หุ้น)`;
+    actionGuide = `⚠️ คำแนะนำ: โควตาเต็มแล้ว! นั่งทับมือ ห้ามซื้อเพิ่มเด็ดขาด รันเทรนด์ตาม Dynasty`;
+  } else if (progressPct !== null) {
+    holdingStatus = `📦 สถานะพอร์ต: มีอยู่แล้ว ${shares.toFixed(3)} หุ้น (${progressPct.toFixed(1)}% ของเป้า)`;
+    actionGuide = `🎯 คำแนะนำ: จังหวะสะสมไม้เพิ่มตามโควตา (${tranche})`;
+  } else {
+    holdingStatus = `📦 สถานะพอร์ต: มีอยู่แล้ว ${shares.toFixed(3)} หุ้น`;
+    actionGuide = `🎯 คำแนะนำ: เคาะซื้อสะสมเพิ่ม (${tranche})`;
   }
 
   const lines = [
@@ -52,9 +75,9 @@ export function formatBuyNowMessage(item) {
     `💰 ราคา: ${price}`,
     `⚡ EMA 9 Trigger: ${ema9} (Unlocked ✅)`,
     `🏦 Banker MCDX: ${banker}/20`,
-    `🎯 ขนาดไม้: ${tranche}`,
+    holdingStatus,
     ``,
-    `⏰ ตลาดกำลังเปิด — เคาะซื้อได้เลย!`
+    actionGuide
   ];
 
   return lines.join('\n');
@@ -70,24 +93,40 @@ export function formatMaydayExitMessage(item) {
   const price = fmtPrice(item.currentPrice);
   const distEma200 = fmtPct(item.distEma200);
   const banker = item.banker ?? 0;
-  const shares = item.owned_shares ? Number(item.owned_shares).toFixed(3) : '0';
+  const shares = Number(item.owned_shares || 0);
   const category = item.category || 'Core';
 
   let bankerDesc = 'ไร้สถาบัน';
   if (banker > 0) bankerDesc = 'สถาบันบางตา';
 
-  let positionDesc = `📦 ถือ: ${shares} หุ้น`;
+  // 1. Recheck holding status: If NOT owned, NEVER tell to cut loss!
+  if (shares <= 0.001) {
+    return [
+      `🔪 FALLING KNIFE ALERT — ${symbol} (${category})`,
+      `━━━━━━━━━━━━━━━━━━`,
+      `⚠️ สัญญาณอันตราย: หลุดเส้น EMA 200 ลึก (${distEma200})`,
+      `💰 ราคา: ${price}`,
+      `🏦 Banker MCDX: ${banker}/20 (${bankerDesc})`,
+      `📦 สถานะพอร์ต: ยังไม่มีหุ้นตัวนี้ในพอร์ต`,
+      ``,
+      `📋 วินัยปกป้องเงินต้น:`,
+      `❌ ห้ามรับมีดเด็ดขาด! ถือเงินสด 100% รอสะเด็ดน้ำรอตั้งลำใหม่`
+    ].join('\n');
+  }
+
+  // 2. If Owned: Differentiate advice between Core vs Moonshot
+  let positionDesc = `📦 ถือ: ${shares.toFixed(3)} หุ้น`;
   if (item.costBasis && item.costBasis > 0 && item.currentPrice) {
-    const pnlUsd = (item.currentPrice - item.costBasis) * item.owned_shares;
+    const pnlUsd = (item.currentPrice - item.costBasis) * shares;
     const pnlPct = ((item.currentPrice - item.costBasis) / item.costBasis) * 100;
     positionDesc += ` (${fmtPct(pnlPct)} / ${pnlUsd >= 0 ? '+' : ''}$${pnlUsd.toFixed(2)})`;
   }
 
   let actionAdvice = '';
   if (category === 'Moonshot' || category === 'Momo') {
-    actionAdvice = '🛡️ [Moonshot]: Cut Loss 100% สละเรือรักษากระสุนทันที!';
+    actionAdvice = '🛡️ [Moonshot]: หลุด EMA 200 ไร้สถาบัน — Cut Loss 100% สละเรือรักษากระสุนทันที!';
   } else {
-    actionAdvice = '🛡️ [Core ทัพหลวง]: พิจารณา Trim 50% หรือห้ามถัวเฉลี่ยเด็ดขาดจนกว่าสะเด็ดน้ำ!';
+    actionAdvice = '🛡️ [Core ทัพหลวง]: พิจารณา Trim 50% หรือ Freeze ห้ามถัวเฉลี่ยเด็ดขาดจนกว่าสะเด็ดน้ำ!';
   }
 
   const lines = [

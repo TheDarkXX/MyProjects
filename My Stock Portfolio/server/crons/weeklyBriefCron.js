@@ -59,6 +59,7 @@ async function getBenchmarkReturns(symbol) {
 
 /**
  * Calculate 1W return for individual tracked stocks to find MVP & Drag
+ * Rechecks actual ownership in portfolio so impact is 100% relevant.
  */
 async function findWeeklyMVPAndDrag(portfolioId) {
   const radar = await scanRadarMatrix(portfolioId);
@@ -81,7 +82,7 @@ async function findWeeklyMVPAndDrag(portfolioId) {
 
     if (p7Row && p7Row.price > 0) {
       const pct7d = ((curPrice - p7Row.price) / p7Row.price) * 100;
-      const shares = r.owned_shares || 0;
+      const shares = Number(r.owned_shares || 0);
       const dollarImpact = (curPrice - p7Row.price) * shares;
       stockPerformance.push({
         symbol: sym,
@@ -89,18 +90,65 @@ async function findWeeklyMVPAndDrag(portfolioId) {
         dollarImpact,
         shares,
         curPrice,
-        price7d: p7Row.price
+        price7d: p7Row.price,
+        category: r.category || 'Core',
+        traffic_light: r.traffic_light,
+        badge: r.badge,
+        distEma200: r.distEma200
       });
     }
   }
 
-  // Sort by percentage gain
-  stockPerformance.sort((a, b) => b.pct7d - a.pct7d);
+  // Priority 1: Stocks actually held in portfolio (shares > 0.001)
+  const heldStocks = stockPerformance.filter(s => s.shares > 0.001);
+  const pool = heldStocks.length > 0 ? heldStocks : stockPerformance;
 
-  const mvp = stockPerformance[0] || { symbol: 'NVDA', pct7d: 8.4, dollarImpact: 650 };
-  const drag = stockPerformance[stockPerformance.length - 1] || { symbol: 'MELI', pct7d: -6.2, dollarImpact: -55 };
+  // Sort by percentage gain
+  pool.sort((a, b) => b.pct7d - a.pct7d);
+
+  const mvp = pool[0] || { symbol: 'NVDA', pct7d: 8.4, dollarImpact: 650, shares: 3.1, traffic_light: 'TO_THE_MOON', category: 'Core' };
+  const drag = pool[pool.length - 1] || { symbol: 'MELI', pct7d: -6.2, dollarImpact: -55, shares: 0.14, traffic_light: 'GET_READY', category: 'Core' };
 
   return { mvp, drag };
+}
+
+/**
+ * Determine accurate impact description based on holding & technical status
+ */
+function getImpactDescription(item, isMvp = false) {
+  const isHeld = (item.shares || 0) > 0.001;
+  const tf = item.traffic_light;
+  const cat = item.category || 'Core';
+
+  if (isMvp) {
+    if (isHeld && Math.abs(item.dollarImpact) >= 1) {
+      return `ลากพอร์ต ${item.dollarImpact >= 0 ? '+' : ''}$${Math.round(item.dollarImpact)}`;
+    }
+    return 'นำทัพบวกแรง';
+  }
+
+  // For Drag:
+  if (!isHeld) {
+    if (tf === 'FALLING_KNIFE' || tf === 'MAYDAY_EXIT') {
+      return 'มีดร่วง (ยังไม่มีหุ้น)';
+    }
+    return 'เฝ้าเรดาร์ (ยังไม่มีหุ้น)';
+  }
+
+  // Held in portfolio:
+  if (tf === 'MAYDAY_EXIT') {
+    return cat === 'Moonshot' ? 'หลุด EMA 200 / Cut Loss' : 'หลุด EMA 200 / Trim 50%';
+  }
+  if (tf === 'GET_READY') {
+    return 'ย่อทดสอบแนวรับ (Ready)';
+  }
+  if (tf === 'BUY_NOW') {
+    return 'ย่อเข้าโซนซื้อสะสม';
+  }
+  if (item.pct7d < -5.0) {
+    return 'พักฐานตามรอบตลาด';
+  }
+  return 'ย่อตัวปกติ';
 }
 
 /**
@@ -190,12 +238,12 @@ export async function runWeeklyBrief({ portfolioId = null, dryRun = false } = {}
     mvp: {
       symbol: mvp.symbol,
       pct7d: `${mvp.pct7d >= 0 ? '+' : ''}${mvp.pct7d.toFixed(1)}%`,
-      impact: `ลากพอร์ต ${mvp.dollarImpact >= 0 ? '+' : ''}$${Math.abs(mvp.dollarImpact).toFixed(0)}`
+      impact: getImpactDescription(mvp, true)
     },
     drag: {
       symbol: drag.symbol,
       pct7d: `${drag.pct7d >= 0 ? '+' : ''}${drag.pct7d.toFixed(1)}%`,
-      impact: drag.pct7d < -5.0 ? 'หลุด EMA 200 / Mayday Exit' : 'พักตัวย่อรับสถาบัน'
+      impact: getImpactDescription(drag, false)
     }
   };
 
