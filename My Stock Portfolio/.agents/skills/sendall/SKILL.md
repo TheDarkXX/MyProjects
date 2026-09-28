@@ -1,9 +1,11 @@
 ---
 name: sendall
+version: "1.0.0"
+updated_at: "2026-09-28"
 description: Spiderweb Mesh Universal Skill Broadcaster — สกิลกระจายและซิงก์สกิลข้าม 13 โปรเจกต์ทั่วทั้งจักรวาล Spiderweb Mesh อัตโนมัติในคำสั่งเดียว ก๊อปปี้ไฟล์จาก XBrain ไปยังทุกโปรเจกต์ดาวเทียม + Global Config + Master Backup พร้อมระบบ Targeted Git Staging ล็อกเป้าเฉพาะไฟล์สกิล และ Auto-Push ขึ้น GitHub (`origin`) และ VPS ทันที ปลอดภัย 100% ไร้ความเสี่ยงต่อโค้ด WIP ใช้เมื่อ: /sendall [skill_name] หรือ /sendall [skill_name] --dry-run
 ---
 
-# 🕷️ Skill: `/sendall` (Spiderweb Mesh Universal Skill Broadcaster)
+# 🕷️ Skill: `/sendall` (v1.0.0)
 
 ## 📌 วัตถุประสงค์
 เมื่อมีการสร้างหรืออัปเกรดสกิลใน **XBrain (`C:\XBrain\.agents\skills\<skill_name>`)** และต้องการส่งต่อให้ **ทุกโปรเจกต์ดาวเทียมในเครือข่าย Spiderweb (13 โหนด)** ได้ใช้งานทันที พร้อมอัปเดตขึ้น GitHub และ VPS เพื่อให้เครื่อง **PC Home** ซิงก์ได้ทันทีผ่าน `/gitpull`
