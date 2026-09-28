@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { execSync, spawnSync } from 'child_process';
+import { execSync, spawnSync, spawn } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,10 +22,21 @@ function recordTime(phase, durationMs) {
 
 // ─── CLI Arguments Parsing ────────────────────────────────────────────────────
 const rawArgs = process.argv.slice(2);
+let startTimestamp = null;
+const startIdx = rawArgs.indexOf('--start');
+if (startIdx !== -1 && rawArgs[startIdx + 1]) {
+  const rawStart = rawArgs[startIdx + 1].trim();
+  const parsed = !isNaN(Number(rawStart)) ? Number(rawStart) : Date.parse(rawStart);
+  if (!isNaN(parsed)) {
+    startTimestamp = parsed;
+  }
+}
+
 const flags = {
   dryRun: rawArgs.includes('--dry-run'),
   skipVerify: rawArgs.includes('--skip-verify'),
   skipCacheBust: rawArgs.includes('--skip-cache-bust'),
+  skipCompile: rawArgs.includes('--skip-compile'),
   help: rawArgs.includes('--help') || rawArgs.includes('-h')
 };
 
@@ -34,7 +45,9 @@ if (flags.help) {
 Usage: node scripts/fast-save.js [options] [target_quick_save_path] [commit_message]
 
 Options:
+  --start <time>     User prompt timestamp (ISO or ms) for True Wall-Clock calculation
   --dry-run          Run validation, indexer and check cache-bust without committing/pushing
+  --skip-compile     Skip qs-compiler.js artifact & diff auto-assembly
   --skip-verify      Skip verify-qs.js quality gate (use only in emergency)
   --skip-cache-bust  Skip bump-cache.js even if public/ files changed
   -h, --help         Show this help message
@@ -42,12 +55,12 @@ Options:
   process.exit(0);
 }
 
-const positionalArgs = rawArgs.filter(arg => !arg.startsWith('--'));
+const positionalArgs = rawArgs.filter((arg, i) => !arg.startsWith('--') && (i === 0 || rawArgs[i - 1] !== '--start'));
 let targetQuickSave = positionalArgs[0] || null;
 let commitMessage = positionalArgs[1] || null;
 
 console.log('═══════════════════════════════════════════════════════════');
-console.log('  ⚡ Turbo Save Pipeline V3.1 (Single-Process Orchestrator)');
+console.log('  ⚡ Turbo Save Pipeline V3.3 (Single-Process Orchestrator)');
 console.log('═══════════════════════════════════════════════════════════');
 
 const pipelineStart = Date.now();
@@ -96,7 +109,6 @@ if (!targetQuickSave) {
   }
 }
 
-// ─── Step 1: Preflight Quality Gate (verify-qs) ───────────────────────────────
 // ─── Resolve Script (Local with XBrain Hub Fallback) ─────────────────────────
 const HUB_SCRIPTS = 'C:\\XBrain\\scripts';
 function resolveScript(scriptName) {
@@ -105,6 +117,29 @@ function resolveScript(scriptName) {
   const hub = path.join(HUB_SCRIPTS, scriptName);
   if (fs.existsSync(hub)) return hub;
   return null;
+}
+
+// ─── Step 0.5: QS Auto-Compiler Engine (Assembly in ~50ms) ───────────────────
+const step05Start = Date.now();
+if (flags.skipCompile) {
+  console.log('\n[0.5/6] QS Auto-Compiler: ⚠️ SKIPPED by flag');
+  recordTime('QS Compiler', 0);
+} else if (targetQuickSave) {
+  const compilerScript = resolveScript('qs-compiler.js');
+  if (compilerScript) {
+    console.log(`\n[0.5/6] QS Auto-Compiler: Assembling artifacts & diff for ${path.basename(targetQuickSave)}...`);
+    try {
+      execSync(`node "${compilerScript}" "${targetQuickSave}"`, { cwd: ROOT, stdio: 'inherit' });
+      recordTime('QS Compiler', Date.now() - step05Start);
+    } catch (err) {
+      console.warn(`⚠️ [QS Compiler Warning] Compiler error (${err.message}). Continuing...`);
+      recordTime('QS Compiler', Date.now() - step05Start);
+    }
+  } else {
+    recordTime('QS Compiler', 0);
+  }
+} else {
+  recordTime('QS Compiler', 0);
 }
 
 // ─── Step 1: Preflight Quality Gate (verify-qs) ───────────────────────────────
@@ -216,7 +251,10 @@ try {
     if (flags.dryRun) {
       console.log(`[Dry-Run] Would commit with message: "${commitMessage}"`);
     } else {
-      execSync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, { cwd: ROOT, stdio: 'inherit' });
+      const commitRes = spawnSync('git', ['commit', '-m', commitMessage], { cwd: ROOT, stdio: 'inherit' });
+      if (commitRes.status !== 0) {
+        throw new Error(`git commit failed with exit code ${commitRes.status}`);
+      }
       console.log(`✅ Committed: "${commitMessage}"`);
     }
   } else {
@@ -238,20 +276,21 @@ try {
   currentBranch = execSync('git branch --show-current', { cwd: ROOT, encoding: 'utf-8' }).trim() || 'master';
 } catch {}
 
-// Detect available remotes
-let availableRemotes = [];
+// Select target remotes: vps priority (single remote target to avoid double pushes)
+let targetRemotes = ['vps'];
 try {
   const remoteOut = execSync('git remote', { cwd: ROOT, encoding: 'utf-8' }).trim();
-  availableRemotes = remoteOut.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+  const availableRemotes = remoteOut.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+  if (availableRemotes.includes('vps')) {
+    targetRemotes = ['vps'];
+  } else if (availableRemotes.includes('origin')) {
+    targetRemotes = ['origin'];
+  } else if (availableRemotes.length > 0) {
+    targetRemotes = [availableRemotes[0]];
+  } else {
+    targetRemotes = [];
+  }
 } catch {}
-
-// Select target remotes: vps priority, origin if present
-const targetRemotes = [];
-if (availableRemotes.includes('vps')) targetRemotes.push('vps');
-if (availableRemotes.includes('origin')) targetRemotes.push('origin');
-if (targetRemotes.length === 0 && availableRemotes.length > 0) {
-  targetRemotes.push(availableRemotes[0]);
-}
 
 if (flags.dryRun) {
   console.log(`🔍 [Dry-Run] Skipping push to ${targetRemotes.join(', ')} (${currentBranch})`);
@@ -283,9 +322,16 @@ console.log('\n[6/6] Background Log Sync...');
 const logSyncScript = resolveScript('sync-ag-logs.js');
 if (logSyncScript && !flags.dryRun) {
   try {
-    execSync(`node "${logSyncScript}" --bg`, { cwd: ROOT, stdio: 'inherit' });
+    const child = spawn(process.execPath, [logSyncScript], {
+      cwd: ROOT,
+      detached: true,
+      stdio: 'ignore'
+    });
+    child.unref();
+    console.log('⚡ [sync-ag-logs] Spawned in background detached mode (0ms).');
     recordTime('Log Sync', Date.now() - step6Start);
-  } catch {
+  } catch (err) {
+    console.warn(`⚠️ [sync-ag-logs] Spawn failed: ${err.message}`);
     recordTime('Log Sync', 0);
   }
 } else {
@@ -293,7 +339,8 @@ if (logSyncScript && !flags.dryRun) {
 }
 
 // ─── Telemetry Summary ────────────────────────────────────────────────────────
-const totalElapsedSec = ((Date.now() - pipelineStart) / 1000).toFixed(2);
+const engineElapsedSec = ((Date.now() - pipelineStart) / 1000).toFixed(2);
+const trueWallClockSec = startTimestamp ? ((Date.now() - startTimestamp) / 1000).toFixed(2) : null;
 
 console.log('\n═══════════════════════════════════════════════════════════');
 console.log('  🎉 Turbo Save Pipeline Finished Successfully!');
@@ -303,7 +350,10 @@ for (const [phase, ms] of Object.entries(timings)) {
   console.log(`  • ${phase.padEnd(25)}: ${display}`);
 }
 console.log('───────────────────────────────────────────────────────────');
-console.log(`  ⏱️  Total Pipeline Elapsed: ${totalElapsedSec}s (Target: ≤ 20s) ${totalElapsedSec <= 20 ? '🟢 PASSED' : '🟡 REVIEW'}`);
+console.log(`  ⚡ Engine Pipeline Elapsed : ${engineElapsedSec}s (Target: ≤ 20s) ${engineElapsedSec <= 20 ? '🟢 PASSED' : '🟡 REVIEW'}`);
+if (trueWallClockSec) {
+  console.log(`  ⏱️  True Wall-Clock Elapsed : ${trueWallClockSec}s (User Prompt ➔ Complete)`);
+}
 console.log('═══════════════════════════════════════════════════════════\n');
 
 process.exit(0);
