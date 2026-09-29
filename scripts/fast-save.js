@@ -37,6 +37,7 @@ const flags = {
   skipVerify: rawArgs.includes('--skip-verify'),
   skipCacheBust: rawArgs.includes('--skip-cache-bust'),
   skipCompile: rawArgs.includes('--skip-compile'),
+  skipPush: rawArgs.includes('--skip-push'),
   help: rawArgs.includes('--help') || rawArgs.includes('-h')
 };
 
@@ -50,6 +51,7 @@ Options:
   --skip-compile     Skip qs-compiler.js artifact & diff auto-assembly
   --skip-verify      Skip verify-qs.js quality gate (use only in emergency)
   --skip-cache-bust  Skip bump-cache.js even if public/ files changed
+  --skip-push        Skip git push to remote VPS (preserve local commit only)
   -h, --help         Show this help message
 `);
   process.exit(0);
@@ -60,7 +62,7 @@ let targetQuickSave = positionalArgs[0] || null;
 let commitMessage = positionalArgs[1] || null;
 
 console.log('═══════════════════════════════════════════════════════════');
-console.log('  ⚡ Turbo Save Pipeline V3.3 (Single-Process Orchestrator)');
+console.log('  ⚡ Turbo Save Pipeline V3.4 (Single-Process Orchestrator)');
 console.log('═══════════════════════════════════════════════════════════');
 
 const pipelineStart = Date.now();
@@ -294,6 +296,9 @@ try {
 
 if (flags.dryRun) {
   console.log(`🔍 [Dry-Run] Skipping push to ${targetRemotes.join(', ')} (${currentBranch})`);
+  recordTime('Production Push', 0);
+} else if (flags.skipPush) {
+  console.log('ℹ️ Push skipped by --skip-push flag. Local commit preserved.');
   recordTime('Production Push', 0);
 } else if (targetRemotes.length === 0) {
   console.log('ℹ️ No git remotes configured for this workspace. Skipping push.');
