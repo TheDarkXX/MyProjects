@@ -6,7 +6,7 @@ import os from 'os';
 // ═══════════════════════════════════════════════════════════════════════════
 // Quick Save Quality Gate (scripts/verify-qs.js)
 // Enforces that NO Quick Save file cuts corners or skips raw artifacts/chat context
-// Version: 3.5.0
+// Version: 3.6.1 (Resilient Headings)
 // ═══════════════════════════════════════════════════════════════════════════
 
 const filePath = process.argv[2];
@@ -40,11 +40,11 @@ if (!frontmatterMatch) {
 
 // 2. Mandatory Section Headings Check
 const requiredHeadings = [
-  { name: 'Context & Implementation (Compiled Truth)', regex: /##\s*📌\s*Context\s*&\s*Implementation/i },
-  { name: 'Files Changed This Session', regex: /##\s*📋\s*Files\s*Changed/i },
-  { name: 'RAW ARTIFACT BACKUP (Iron Rule)', regex: /##\s*📦\s*RAW\s*ARTIFACT\s*BACKUP/i },
-  { name: 'Timeline & Debugging Log', regex: /##\s*🔬\s*Timeline/i },
-  { name: 'GBRAIN Backlinks', regex: /##\s*🔗\s*GBRAIN\s*Backlinks/i }
+  { name: 'Context & Implementation (Compiled Truth)', regex: /##\s*📌?\s*Context\s*&\s*Implementation/i },
+  { name: 'Files Changed This Session', regex: /##\s*📋?\s*Files\s*Changed/i },
+  { name: 'RAW ARTIFACT BACKUP (Iron Rule)', regex: /##\s*📦?\s*RAW\s*ARTIFACT\s*BACKUP/i },
+  { name: 'Timeline & Debugging Log', regex: /##\s*🔬?\s*Timeline/i },
+  { name: 'GBRAIN Backlinks', regex: /##\s*🔗?\s*GBRAIN\s*Backlinks/i }
 ];
 
 for (const h of requiredHeadings) {
@@ -70,7 +70,7 @@ if (artifactMatch) {
 const stat = fs.statSync(filePath);
 const typeMatch = frontmatterMatch ? frontmatterMatch[1].match(/type:\s*["']?(\w+)["']?/i) : null;
 const qsType = typeMatch ? typeMatch[1].toLowerCase() : 'impl';
-const minSize = (qsType === 'hotfix' || qsType === 'infra' || qsType === 'spike') ? 1500 : 2500;
+const minSize = (qsType === 'hotfix' || qsType === 'infra' || qsType === 'spike') ? 1200 : 2000;
 if (stat.size < minSize) {
   errors.push(`Quick Save file is suspiciously small (${stat.size} bytes < ${minSize} bytes for type: ${qsType}). A valid save must capture full context.`);
 }

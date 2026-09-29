@@ -140,7 +140,12 @@ function scanQuickSave() {
       if (item.startsWith('.') || item === 'qs-manifest.json') continue;
       const full = path.join(dir, item);
       const rel = path.join(relBase, item);
-      const stat = statSync(full);
+      let stat;
+      try {
+        stat = statSync(full);
+      } catch (e) {
+        continue;
+      }
 
       if (stat.isDirectory()) {
         walk(full, rel);
