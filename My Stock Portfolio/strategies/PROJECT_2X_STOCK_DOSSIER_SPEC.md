@@ -27,7 +27,7 @@
   3. `Next-Gen Shipments`: ยอดส่งมอบสถาปัตยกรรม Blackwell และ Rubin
 * **Red Flag (สัญญาณเตือนภัย):** Gross Margin ร่วงต่ำกว่า 68% บ่งชี้ว่าชิป ASIC ค่ายอื่นเริ่มแย่งส่วนแบ่ง
 
-#### 2. TSM (TSMC) — สัดส่วนเป้าหมาย 10%
+#### 2. TSM (TSMC) — สัดส่วนเป้าหมาย 13% ⬆️ (เดิม 10% - แผน B)
 * **Short Story & Moat:** พระมารดาแห่งชิป AI ผูกขาดการผลิตชิปขั้นสูงโลก (3nm, 2nm) และ CoWoS 3D Packaging ให้แก่ Big Tech ทั่วโลกกว่า 90%
 * **3Y Doubler Target:** Forward P/E 20.1x | กำไรปีหน้าโต +29% | Operating Margin 60% | เป้าหมาย 3 ปีแตะ **$850 - $900 (+100%++)**
 * **Key Drivers เฉพาะตัว:**
@@ -45,8 +45,8 @@
   3. `FCF Conversion Margin`: อัตราการแปลงรายได้เป็นเงินสดอิสระ (ต้อง > 45%)
 * **Red Flag (สัญญาณเตือนภัย):** ลูกค้ารายใหญ่อย่าง Google หรือ Meta ย้ายงานพัฒนา ASIC ไปเจ้าอื่น
 
-#### 4. VRT (Vertiv Holdings) — สัดส่วนเป้าหมาย 10%
-* **Short Story & Moat:** ฟิสิกส์บังคับซื้อ — เซิร์ฟเวอร์ AI แร็ค 100kW+ ต้องใช้ระบบ Liquid Cooling ของ Vertiv เท่านั้น Backlog ในมือแน่นเอี๊ยด
+#### 4. VRT (Vertiv Holdings) — สัดส่วนเป้าหมาย 12% ⬆️ (เดิม 10% - แผน B)
+* **Short Story & Moat:** ฟิสิกส์บังคับซื้อ — เซิร์ฟเวอร์ AI แร็ค 100kW+ ต้องใช้ระบบ Liquid Cooling ของ Vertiv เท่านั้น Backlog ในมือแน่นเอี๊ยด 3Y CAGR +85.0%/ปี
 * **3Y Doubler Target:** Forward P/E 32.0x | กำไรปีหน้าโต +35.4% | เป้าหมาย 3 ปีแตะ **$600+ (+106%)**
 * **Key Drivers เฉพาะตัว:**
   1. `Order Backlog ($B)`: ยอดสั่งซื้อคงค้างที่รอส่งมอบ
@@ -54,9 +54,9 @@
   3. `Liquid Cooling Adoption`: สัดส่วนระบบหล่อเย็นด้วยของเหลวในดาต้าเซ็นเตอร์ใหม่
 * **Red Flag (สัญญาณเตือนภัย):** Book-to-Bill ต่ำกว่า 1.0 ต่อเนื่องเกิน 2 ไตรมาส
 
-#### 5. MELI (MercadoLibre) — สัดส่วนเป้าหมาย 10%
-* **Short Story & Moat:** Amazon + PayPal + FedEx แห่งลาตินอเมริกา พ้นมรสุมตั้งสำรอง เข้าสู่ยุคทองของ Mercado Ads มาร์จิ้น 70%
-* **3Y Doubler Target:** Forward P/E 34.0x | รายได้โต ~50% กำไรปีหน้าโต +45.5% | เป้าหมาย 3 ปีแตะ **$3,900 - $4,100 (+100%++)**
+#### 5. MELI (MercadoLibre) — สัดส่วนเป้าหมาย 5% ⬇️ (เดิม 10% - แผน B)
+* **Short Story & Moat:** Amazon + PayPal + FedEx แห่งลาตินอเมริกา พ้นมรสุมตั้งสำรอง เข้าสู่ยุคทองของ Mercado Ads มาร์จิ้น 70% คุมความเสี่ยงเหลือ 5% เป็นสปริงรอดีดและ Geographic Hedge
+* **3Y Doubler Target:** Forward P/E 34.0x | รายได้โต ~50% กำไรปีหน้าโต +45.5% | เป้าหมาย 3 ปีแตะ **$3,650 - $4,100 (+100%++)**
 * **Key Drivers เฉพาะตัว:**
   1. `Total Payment Volume (TPV) YoY`: การเติบโตของยอดธุรกรรมบน Mercado Pago
   2. `Credit 90-Day NPL Ratio`: อัตราหนี้เสียบัตรเครดิต (ต้องคุมให้อยู่ต่ำกว่า 8-9%)

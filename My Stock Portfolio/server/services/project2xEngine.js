@@ -5,10 +5,10 @@ import { calcEMA, calcEMASeries, calcBankerMCDX, calcBankerSeries, calcMcdxSerie
 export const DEFAULT_2X_STOCKS = [
   // Core Commanders (83%)
   { symbol: 'NVDA', name: 'NVIDIA', target_percent: 15.0, category: 'Core' },
-  { symbol: 'TSM', name: 'TSMC', target_percent: 10.0, category: 'Core' },
+  { symbol: 'TSM', name: 'TSMC', target_percent: 13.0, category: 'Core' },
   { symbol: 'AVGO', name: 'Broadcom', target_percent: 10.0, category: 'Core' },
-  { symbol: 'VRT', name: 'Vertiv', target_percent: 10.0, category: 'Core' },
-  { symbol: 'MELI', name: 'MercadoLibre', target_percent: 10.0, category: 'Core' },
+  { symbol: 'VRT', name: 'Vertiv', target_percent: 12.0, category: 'Core' },
+  { symbol: 'MELI', name: 'MercadoLibre', target_percent: 5.0, category: 'Core' },
   { symbol: 'APH', name: 'Amphenol', target_percent: 10.0, category: 'Core' },
   { symbol: 'KLAC', name: 'KLA Corp', target_percent: 7.0, category: 'Core' },
   { symbol: 'ANET', name: 'Arista Networks', target_percent: 7.0, category: 'Core' },
