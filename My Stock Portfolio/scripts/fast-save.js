@@ -2,7 +2,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Turbo Save Pipeline Orchestrator (scripts/fast-save.js)
 // Unified Single-Process Auto-Save, Quality Gate, Cache-Bust & VPS Deploy
-// Target Execution Time: 15–20 Seconds
+// Target Execution Time: 15–20 Seconds | Version: 3.5.0
 // ═══════════════════════════════════════════════════════════════════════════
 
 import fs from 'fs';
@@ -18,6 +18,30 @@ const ROOT = path.resolve(__dirname, '..');
 const timings = {};
 function recordTime(phase, durationMs) {
   timings[phase] = durationMs;
+}
+
+// ─── SemVer Natural Parser & Sorter (Armor 1) ─────────────────────────────────
+export function parseSemVer(filename) {
+  const match = filename.match(/^V(\d+)(?:\.(\d+))?(?:\.(\d+))?/i);
+  if (!match) return null;
+  return {
+    major: parseInt(match[1] || '0', 10),
+    minor: parseInt(match[2] || '0', 10),
+    patch: parseInt(match[3] || '0', 10),
+    raw: match[0]
+  };
+}
+
+export function compareSemVer(a, b) {
+  const verA = parseSemVer(a);
+  const verB = parseSemVer(b);
+  if (!verA && !verB) return a.localeCompare(b);
+  if (!verA) return -1;
+  if (!verB) return 1;
+  if (verA.major !== verB.major) return verA.major - verB.major;
+  if (verA.minor !== verB.minor) return verA.minor - verB.minor;
+  if (verA.patch !== verB.patch) return verA.patch - verB.patch;
+  return a.localeCompare(b);
 }
 
 // ─── CLI Arguments Parsing ────────────────────────────────────────────────────
@@ -37,6 +61,8 @@ const flags = {
   skipVerify: rawArgs.includes('--skip-verify'),
   skipCacheBust: rawArgs.includes('--skip-cache-bust'),
   skipCompile: rawArgs.includes('--skip-compile'),
+  skipPush: rawArgs.includes('--skip-push'),
+  skipCleanup: rawArgs.includes('--skip-cleanup'),
   help: rawArgs.includes('--help') || rawArgs.includes('-h')
 };
 
@@ -50,6 +76,8 @@ Options:
   --skip-compile     Skip qs-compiler.js artifact & diff auto-assembly
   --skip-verify      Skip verify-qs.js quality gate (use only in emergency)
   --skip-cache-bust  Skip bump-cache.js even if public/ files changed
+  --skip-push        Skip git push to remote VPS (preserve local commit only)
+  --skip-cleanup     Skip SemVer 5-7 root file auto-archiving
   -h, --help         Show this help message
 `);
   process.exit(0);
@@ -60,7 +88,7 @@ let targetQuickSave = positionalArgs[0] || null;
 let commitMessage = positionalArgs[1] || null;
 
 console.log('═══════════════════════════════════════════════════════════');
-console.log('  ⚡ Turbo Save Pipeline V3.3 (Single-Process Orchestrator)');
+console.log('  ⚡ Turbo Save Pipeline V3.5 (Enterprise Armored)');
 console.log('═══════════════════════════════════════════════════════════');
 
 const pipelineStart = Date.now();
@@ -109,25 +137,64 @@ if (!targetQuickSave) {
   }
 }
 
-// ─── Resolve Script (Local with XBrain Hub Fallback) ─────────────────────────
-const HUB_SCRIPTS = 'C:\\XBrain\\scripts';
+// ─── Resolve Script (Self-Contained Skill -> Local -> Hub Fallbacks) ──────────
 function resolveScript(scriptName) {
-  const local = path.join(ROOT, 'scripts', scriptName);
-  if (fs.existsSync(local)) return local;
-  const hub = path.join(HUB_SCRIPTS, scriptName);
-  if (fs.existsSync(hub)) return hub;
+  const candidates = [
+    path.join(__dirname, scriptName),
+    path.join(ROOT, '.agents', 'skills', 'save', 'scripts', scriptName),
+    path.join(ROOT, 'scripts', scriptName),
+    path.join('C:\\XBrain', 'scripts', scriptName),
+    path.join('C:\\XBrain', '.agents', 'skills', 'save', 'scripts', scriptName)
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
   return null;
+}
+
+// ─── Armor 1: Auto-Relocate Completed Plan (Active ➔ Complete) ────────────────
+let targetComponent = 'Core-VPS';
+if (targetQuickSave) {
+  const fullTarget = path.resolve(ROOT, targetQuickSave);
+  if (fs.existsSync(fullTarget)) {
+    try {
+      const content = fs.readFileSync(fullTarget, 'utf8');
+      const isComplete = /^status:\s*complete/m.test(content) || /^outcome:\s*shipped/m.test(content);
+      const normRel = path.relative(ROOT, fullTarget).replace(/\\/g, '/');
+
+      // Detect component
+      const subParts = normRel.split('/');
+      if (subParts.length > 3 && (subParts[1] === 'Active' || subParts[1] === 'Complete')) {
+        targetComponent = subParts[2];
+      } else {
+        const compMatch = content.match(/^component:\s*["']?([^"'\r\n]+)/m);
+        if (compMatch && compMatch[1].trim()) targetComponent = compMatch[1].trim();
+      }
+
+      if (isComplete && normRel.startsWith('Quick Save/Active/')) {
+        console.log(`\n📦 [Auto-Relocate] Completed plan detected in Active directory.`);
+        const destDir = path.join(ROOT, 'Quick Save', 'Complete', targetComponent);
+        if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+        const destFile = path.join(destDir, path.basename(fullTarget));
+        fs.renameSync(fullTarget, destFile);
+        targetQuickSave = path.relative(ROOT, destFile);
+        console.log(`  ✔ Relocated: ${normRel} ➔ ${path.relative(ROOT, destFile)}`);
+      }
+    } catch (e) {
+      console.warn(`⚠️ [Auto-Relocate Warning] ${e.message}`);
+    }
+  }
 }
 
 // ─── Step 0.5: QS Auto-Compiler Engine (Assembly in ~50ms) ───────────────────
 const step05Start = Date.now();
 if (flags.skipCompile) {
-  console.log('\n[0.5/6] QS Auto-Compiler: ⚠️ SKIPPED by flag');
+  console.log('\n[0.5/7] QS Auto-Compiler: ⚠️ SKIPPED by flag');
   recordTime('QS Compiler', 0);
 } else if (targetQuickSave) {
   const compilerScript = resolveScript('qs-compiler.js');
   if (compilerScript) {
-    console.log(`\n[0.5/6] QS Auto-Compiler: Assembling artifacts & diff for ${path.basename(targetQuickSave)}...`);
+    console.log(`\n[0.5/7] QS Auto-Compiler: Assembling artifacts & diff for ${path.basename(targetQuickSave)}...`);
     try {
       execSync(`node "${compilerScript}" "${targetQuickSave}"`, { cwd: ROOT, stdio: 'inherit' });
       recordTime('QS Compiler', Date.now() - step05Start);
@@ -145,7 +212,7 @@ if (flags.skipCompile) {
 // ─── Step 1: Preflight Quality Gate (verify-qs) ───────────────────────────────
 const step1Start = Date.now();
 if (flags.skipVerify) {
-  console.log('\n[1/6] Quality Gate (verify-qs): ⚠️ SKIPPED by flag');
+  console.log('\n[1/7] Quality Gate (verify-qs): ⚠️ SKIPPED by flag');
   recordTime('Quality Gate', 0);
 } else if (targetQuickSave) {
   const fullQsPath = path.resolve(ROOT, targetQuickSave);
@@ -154,7 +221,7 @@ if (flags.skipVerify) {
     process.exit(1);
   }
 
-  console.log(`\n[1/6] Quality Gate: Verifying ${path.basename(fullQsPath)}...`);
+  console.log(`\n[1/7] Quality Gate: Verifying ${path.basename(fullQsPath)}...`);
   const verifyScript = resolveScript('verify-qs.js');
   if (verifyScript) {
     try {
@@ -165,17 +232,17 @@ if (flags.skipVerify) {
       process.exit(1);
     }
   } else {
-    console.log('[1/6] Quality Gate: verify-qs.js not found in local or hub scripts -> skipped');
+    console.log('[1/7] Quality Gate: verify-qs.js not found -> skipped');
     recordTime('Quality Gate', 0);
   }
 } else {
-  console.log('\n[1/6] Quality Gate: Skipped (no Quick Save file provided or found)');
+  console.log('\n[1/7] Quality Gate: Skipped (no Quick Save file provided or found)');
   recordTime('Quality Gate', 0);
 }
 
 // ─── Step 2: Universal Search Indexer (True Incremental) ──────────────────────
 const step2Start = Date.now();
-console.log('\n[2/6] Search Indexer: Running true incremental update...');
+console.log('\n[2/7] Search Indexer: Running incremental update...');
 const indexerScript = resolveScript('qs-indexer.js');
 if (indexerScript) {
   try {
@@ -187,7 +254,7 @@ if (indexerScript) {
     recordTime('Universal Indexer', Date.now() - step2Start);
   }
 } else {
-  console.log('[2/6] Search Indexer: qs-indexer.js not found -> skipped');
+  console.log('[2/7] Search Indexer: qs-indexer.js not found -> skipped');
   recordTime('Universal Indexer', 0);
 }
 
@@ -204,10 +271,10 @@ if (fs.existsSync(publicDir)) {
 }
 
 if (flags.skipCacheBust) {
-  console.log('\n[3/6] Cache Busting: ⚠️ SKIPPED by flag');
+  console.log('\n[3/7] Cache Busting: ⚠️ SKIPPED by flag');
   recordTime('Cache Busting', 0);
 } else if (publicChanged) {
-  console.log('\n[3/6] Cache Busting: Changes detected in public/ -> running bump-cache.js...');
+  console.log('\n[3/7] Cache Busting: Changes detected in public/ -> running bump-cache.js...');
   const bumpScript = path.join(ROOT, 'bump-cache.js');
   if (fs.existsSync(bumpScript)) {
     try {
@@ -218,17 +285,47 @@ if (flags.skipCacheBust) {
       process.exit(1);
     }
   } else {
-    console.log('[3/6] Cache Busting: bump-cache.js not found, skipping');
+    console.log('[3/7] Cache Busting: bump-cache.js not found, skipping');
     recordTime('Cache Busting', 0);
   }
 } else {
-  console.log('\n[3/6] Cache Busting: No public/ changes detected -> skipped (saved 2s)');
+  console.log('\n[3/7] Cache Busting: No public/ changes detected -> skipped (saved 2s)');
   recordTime('Cache Busting', 0);
+}
+
+// ─── Step 3.5: SemVer Floating Files Auto-Archive (5-7 Rule Enforcement) ─────
+const step35Start = Date.now();
+if (!flags.skipCleanup) {
+  const targetCompDir = path.join(ROOT, 'Quick Save', 'Complete', targetComponent);
+  if (fs.existsSync(targetCompDir)) {
+    const entries = fs.readdirSync(targetCompDir, { withFileTypes: true });
+    const floating = entries.filter(e => e.isFile() && e.name.endsWith('.md')).map(e => e.name);
+    if (floating.length > 7) {
+      floating.sort(compareSemVer);
+      const toArchive = floating.slice(0, floating.length - 6);
+      console.log(`\n[3.5/7] Auto-Archive: ${floating.length} files floating in Complete/${targetComponent} (Limit: 7). Archiving ${toArchive.length} file(s)...`);
+      for (const f of toArchive) {
+        const sem = parseSemVer(f);
+        const folderName = sem ? `V${sem.major}` : 'V13';
+        const archiveDir = path.join(targetCompDir, folderName);
+        if (!fs.existsSync(archiveDir)) fs.mkdirSync(archiveDir, { recursive: true });
+        fs.renameSync(path.join(targetCompDir, f), path.join(archiveDir, f));
+        console.log(`  ✔ Archived: ${f} ➔ Complete/${targetComponent}/${folderName}/`);
+      }
+      recordTime('SemVer Auto-Archive', Date.now() - step35Start);
+    } else {
+      recordTime('SemVer Auto-Archive', 0);
+    }
+  } else {
+    recordTime('SemVer Auto-Archive', 0);
+  }
+} else {
+  recordTime('SemVer Auto-Archive', 0);
 }
 
 // ─── Step 4: Single Atomic Git Commit ─────────────────────────────────────────
 const step4Start = Date.now();
-console.log('\n[4/6] Git Staging & Commit...');
+console.log('\n[4/7] Git Staging & Commit...');
 
 // Determine commit message
 if (!commitMessage) {
@@ -266,9 +363,9 @@ try {
   process.exit(1);
 }
 
-// ─── Step 5: Production Deploy (Smart Multi-Remote Push) ───────────────────────
+// ─── Step 5: Production Deploy (Smart Multi-Remote Push with Fail Guard) ───────
 const step5Start = Date.now();
-console.log('\n[5/6] Production Deployment...');
+console.log('\n[5/7] Production Deployment...');
 
 // Detect active branch
 let currentBranch = 'master';
@@ -295,11 +392,15 @@ try {
 if (flags.dryRun) {
   console.log(`🔍 [Dry-Run] Skipping push to ${targetRemotes.join(', ')} (${currentBranch})`);
   recordTime('Production Push', 0);
+} else if (flags.skipPush) {
+  console.log('ℹ️ Push skipped by --skip-push flag. Local commit preserved.');
+  recordTime('Production Push', 0);
 } else if (targetRemotes.length === 0) {
   console.log('ℹ️ No git remotes configured for this workspace. Skipping push.');
   recordTime('Production Push', 0);
 } else {
   let anySuccess = false;
+  let pushErrors = [];
   for (const remote of targetRemotes) {
     try {
       console.log(`🚀 Pushing to ${remote} (git push ${remote} ${currentBranch})...`);
@@ -308,17 +409,22 @@ if (flags.dryRun) {
       anySuccess = true;
     } catch (err) {
       console.error(`⚠️ Push to ${remote} failed: ${err.message}`);
+      pushErrors.push(`${remote}: ${err.message}`);
     }
   }
   recordTime('Production Push', Date.now() - step5Start);
   if (!anySuccess) {
-    console.error('\n❌ All configured git pushes failed. Local commit preserved.\n');
+    console.error('\n🚨 [CRITICAL DEPLOY FAILURE] All configured git pushes failed!');
+    console.error(`   Errors: ${pushErrors.join(' | ')}`);
+    console.error('   Local commit was saved, but REMOTE VPS IS NOT UPDATED!');
+    console.error('   Check network/credentials or use --skip-push if offline.\n');
+    process.exit(1);
   }
 }
 
 // ─── Step 6: Detached Background Log Sync ─────────────────────────────────────
 const step6Start = Date.now();
-console.log('\n[6/6] Background Log Sync...');
+console.log('\n[6/7] Background Log Sync...');
 const logSyncScript = resolveScript('sync-ag-logs.js');
 if (logSyncScript && !flags.dryRun) {
   try {

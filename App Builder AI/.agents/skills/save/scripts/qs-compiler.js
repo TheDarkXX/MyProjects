@@ -2,7 +2,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // QS Auto-Compiler Engine (scripts/qs-compiler.js)
 // Assembles Quick Save artifacts + Git Diff into complete QS files in <50ms.
-// Eliminates the 30-90s AI token generation bottleneck. | Version: 3.5.0
+// Eliminates the 30-90s AI token generation bottleneck. | Version: 3.6.1
 // ═══════════════════════════════════════════════════════════════════════════
 
 import fs from 'fs';
@@ -28,31 +28,36 @@ if (convIdx !== -1 && rawArgs[convIdx + 1]) {
 let targetFile = rawArgs.find(arg => !arg.startsWith('--') && arg !== convOverride);
 
 if (!targetFile) {
-  const searchDirs = [
-    path.join(ROOT, 'Quick Save', 'Active'),
-    path.join(ROOT, 'Quick Save', 'Complete', 'Core-VPS')
-  ];
+  const searchDirs = [path.join(ROOT, 'Quick Save', 'Active')];
+
+  // Dynamically discover ALL subdirectories under Quick Save/Complete/ (V3.6)
+  const completeRoot = path.join(ROOT, 'Quick Save', 'Complete');
+  if (fs.existsSync(completeRoot)) {
+    for (const entry of fs.readdirSync(completeRoot, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        searchDirs.push(path.join(completeRoot, entry.name));
+      }
+    }
+  }
 
   let newestFile = null;
   let newestMtime = 0;
 
   for (const dir of searchDirs) {
     if (!fs.existsSync(dir)) continue;
-    const walk = (d) => {
-      for (const item of fs.readdirSync(d)) {
-        const full = path.join(d, item);
+    // Only scan top-level .md files (skip archive subdirs like V2/, V13/)
+    for (const item of fs.readdirSync(dir)) {
+      const full = path.join(dir, item);
+      try {
         const stat = fs.statSync(full);
-        if (stat.isDirectory()) {
-          walk(full);
-        } else if (item.endsWith('.md') && !item.startsWith('.')) {
+        if (stat.isFile() && item.endsWith('.md') && !item.startsWith('.')) {
           if (stat.mtimeMs > newestMtime) {
             newestMtime = stat.mtimeMs;
             newestFile = full;
           }
         }
-      }
-    };
-    walk(dir);
+      } catch {}
+    }
   }
 
   if (newestFile) {
@@ -134,6 +139,28 @@ if (convIds.length === 0 || hasPlaceholder) {
       modified = true;
     }
   }
+}
+
+// ─── Armor: Auto-Inject aliases if Missing or Empty ───────────────────────────
+if (!/aliases:\s*\[.+\]/i.test(content)) {
+  let fallbackAliases = [];
+  const tagsMatch = content.match(/tags:\s*\[(.*?)\]/);
+  if (tagsMatch && tagsMatch[1].trim()) {
+    fallbackAliases = tagsMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+  } else {
+    const baseName = path.basename(targetFile, '.md').replace(/^V\d+(\.\d+)*_\[.*?\]_/, '');
+    fallbackAliases = baseName.split('_').filter(Boolean);
+  }
+  if (fallbackAliases.length === 0) fallbackAliases = ['general', 'quick-save'];
+  
+  const aliasesStr = `aliases: [${fallbackAliases.join(', ')}]`;
+  if (/aliases:\s*(\[\])?/i.test(content)) {
+    content = content.replace(/aliases:\s*(\[\])?/i, aliasesStr);
+  } else {
+    content = content.replace(/^(---[\s\S]*?)(\r?\n---)/, `$1\n${aliasesStr}$2`);
+  }
+  modified = true;
+  console.log(`💡 [qs-compiler] Auto-injected missing aliases: ${aliasesStr}`);
 }
 
 if (convIds.length === 0) {
@@ -289,7 +316,29 @@ if (!hasFilesChangedSection) {
   }
 }
 
-// ─── 5.5: Auto-Scaffold Missing Mandatory Sections ──────────────────────────
+// ─── 5.5: Normalize & Auto-Scaffold Missing Mandatory Sections ──────────────
+// Check if Context & Implementation heading exists (even with slight variation)
+const contextRegex = /##\s*📌?\s*Context\s*&\s*Implementation/i;
+if (!contextRegex.test(content)) {
+  // If there's an Architecture or Implementation heading, normalize it
+  const similarHeadingRegex = /##\s*[\p{Emoji}\u200d\uFE0F\w\s]*?(Architecture|Implementation Details|Technical Overview)[\s\S]*?(?=\r?\n|$)/iu;
+  if (similarHeadingRegex.test(content)) {
+    content = content.replace(similarHeadingRegex, `## 📌 Context & Implementation (Compiled Truth)`);
+    modified = true;
+    console.log(`🔧 [qs-compiler] Normalized existing architecture/implementation heading to: Context & Implementation (Compiled Truth)`);
+  } else {
+    // Scaffold it after the main H1 or Frontmatter
+    const scaffoldContext = `\n\n## 📌 Context & Implementation (Compiled Truth)\n(Auto-compiled architecture and implementation record)\n`;
+    if (/#\s+[^\r\n]+/i.test(content)) {
+      content = content.replace(/(#\s+[^\r\n]+)/i, `$1${scaffoldContext}`);
+    } else {
+      content += scaffoldContext;
+    }
+    modified = true;
+    console.log(`🔧 [qs-compiler] Auto-scaffolded missing section: Context & Implementation (Compiled Truth)`);
+  }
+}
+
 const mandatoryScaffolds = [
   {
     name: 'RAW ARTIFACT BACKUP (Iron Rule)',

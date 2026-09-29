@@ -13,6 +13,7 @@ import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createHash } from 'crypto';
+import { homedir } from 'os';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -23,15 +24,12 @@ const DOCS_DIR = path.join(ROOT, 'docs');
 const MEMORY_DIR = path.join(ROOT, 'memory');
 const SELF_IMPROVING_DIR = path.join(ROOT, 'self-improving');
 
-// AG brain paths (local Windows dev)
+// AG brain paths (dynamic detection for Home / Office PC and cross-platform)
+const userHome = process.env.USERPROFILE || process.env.HOME || homedir();
 const BRAIN_BASE = process.env.AG_BRAIN_PATH ||
-  (process.platform === 'win32'
-    ? (existsSync(path.join(process.env.USERPROFILE || 'C:\\Users\\Admin', '.gemini', 'antigravity-ide'))
-        ? path.join(process.env.USERPROFILE || 'C:\\Users\\Admin', '.gemini', 'antigravity-ide')
-        : path.join(process.env.USERPROFILE || 'C:\\Users\\Admin', '.gemini', 'antigravity'))
-    : (existsSync(path.join(process.env.HOME || '/root', '.gemini', 'antigravity-ide'))
-        ? path.join(process.env.HOME || '/root', '.gemini', 'antigravity-ide')
-        : path.join(process.env.HOME || '/root', '.gemini', 'antigravity')));
+  (existsSync(path.join(userHome, '.gemini', 'antigravity-ide'))
+    ? path.join(userHome, '.gemini', 'antigravity-ide')
+    : path.join(userHome, '.gemini', 'antigravity'));
 const KNOWLEDGE_DIR = path.join(BRAIN_BASE, 'knowledge');
 const CONVERSATIONS_DIR = path.join(BRAIN_BASE, 'brain');
 

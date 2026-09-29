@@ -2,7 +2,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Turbo Save Pipeline Orchestrator (scripts/fast-save.js)
 // Unified Single-Process Auto-Save, Quality Gate, Cache-Bust & VPS Deploy
-// Target Execution Time: 15–20 Seconds | Version: 3.5.0
+// Target Execution Time: ≤10 Seconds | Version: 3.6.1 (Self-Healing Devil-Speed)
 // ═══════════════════════════════════════════════════════════════════════════
 
 import fs from 'fs';
@@ -88,7 +88,7 @@ let targetQuickSave = positionalArgs[0] || null;
 let commitMessage = positionalArgs[1] || null;
 
 console.log('═══════════════════════════════════════════════════════════');
-console.log('  ⚡ Turbo Save Pipeline V3.5 (Enterprise Armored)');
+console.log('  ⚡ Turbo Save Pipeline V3.6 (Devil-Speed Architecture)');
 console.log('═══════════════════════════════════════════════════════════');
 
 const pipelineStart = Date.now();
@@ -101,34 +101,39 @@ if (fs.existsSync(gitLockFile)) {
   process.exit(1);
 }
 
-// ─── Auto-Detect Target Quick Save if not supplied ────────────────────────────
+// ─── Auto-Detect Target Quick Save if not supplied (Dynamic Scanner V3.6) ─────
 if (!targetQuickSave) {
-  console.log('[Auto-Detect] No target Quick Save path provided. Searching for most recent file...');
-  const searchDirs = [
-    path.join(ROOT, 'Quick Save', 'Active'),
-    path.join(ROOT, 'Quick Save', 'Complete', 'Core-VPS')
-  ];
+  console.log('[Auto-Detect] No target Quick Save path provided. Scanning all Complete/* subdirectories...');
+  const searchDirs = [path.join(ROOT, 'Quick Save', 'Active')];
+
+  // Dynamically discover ALL subdirectories under Quick Save/Complete/
+  const completeRoot = path.join(ROOT, 'Quick Save', 'Complete');
+  if (fs.existsSync(completeRoot)) {
+    for (const entry of fs.readdirSync(completeRoot, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        searchDirs.push(path.join(completeRoot, entry.name));
+      }
+    }
+  }
 
   let newestFile = null;
   let newestMtime = 0;
 
   for (const dir of searchDirs) {
     if (!fs.existsSync(dir)) continue;
-    const walk = (d) => {
-      for (const item of fs.readdirSync(d)) {
-        const full = path.join(d, item);
+    // Only scan top-level .md files (skip archive subdirs like V2/, V13/)
+    for (const item of fs.readdirSync(dir)) {
+      const full = path.join(dir, item);
+      try {
         const stat = fs.statSync(full);
-        if (stat.isDirectory()) {
-          walk(full);
-        } else if (item.endsWith('.md') && !item.startsWith('.')) {
+        if (stat.isFile() && item.endsWith('.md') && !item.startsWith('.')) {
           if (stat.mtimeMs > newestMtime) {
             newestMtime = stat.mtimeMs;
             newestFile = full;
           }
         }
-      }
-    };
-    walk(dir);
+      } catch {}
+    }
   }
 
   if (newestFile) {
@@ -322,6 +327,55 @@ if (!flags.skipCleanup) {
 } else {
   recordTime('SemVer Auto-Archive', 0);
 }
+
+// ─── Step 3.8: Auto-Sync MASTER_ROADMAP.md ──────────────────────────────────
+const step38Start = Date.now();
+const roadmapPath = path.join(ROOT, 'docs', 'MASTER_ROADMAP.md');
+if (fs.existsSync(roadmapPath) && targetQuickSave) {
+  try {
+    const qsFullPath = path.resolve(ROOT, targetQuickSave);
+    const qsContent = fs.readFileSync(qsFullPath, 'utf8');
+    const qsRelPath = targetQuickSave.replace(/\\/g, '/');
+
+    // Extract metadata from frontmatter
+    const versionM = qsContent.match(/^version:\s*["']?([^"'\r\n]+)/m);
+    const summaryM = qsContent.match(/^summary:\s*>\s*\r?\n\s+(.+)/m);
+    const titleM   = qsContent.match(/^#\s+(.+)$/m);
+    const typeM    = qsContent.match(/^type:\s*["']?(\w+)/m);
+
+    const ver = versionM ? versionM[1].trim() : null;
+    const summary = summaryM ? summaryM[1].trim().slice(0, 300) : '';
+    const rawTitle = titleM ? titleM[1].replace(/[🔴🟢🟡⚠️✅❌🚀🔥💡🎯📌📋🔧🛠️📦🔬🔗🏗️📊🤖💾🧠⛔🔍]/g, '').replace(/^V\d+\.\d+\.\d+\s*[—–-]\s*/,'').trim() : '';
+    const qsType = typeM ? typeM[1].trim() : 'impl';
+
+    if (ver && rawTitle) {
+      let roadmapContent = fs.readFileSync(roadmapPath, 'utf8');
+      const completedHeading = /## 🔵 3\. Completed[^\r\n]*/;
+      const match = roadmapContent.match(completedHeading);
+
+      // Build clean relative file link
+      const linkPath = `file:///c:/My%20Claw/${path.basename(ROOT)}/${qsRelPath}`.replace(/ /g, '%20').replace(/\[/g, '%5B').replace(/\]/g, '%5D');
+      const entryLabel = `[${targetComponent}] ${rawTitle} (V${ver})`;
+      const newItem = `- **${entryLabel}**: ${summary}\r\n  - 📂 **Context File**: [${path.basename(targetQuickSave)}](${linkPath})`;
+
+      // Check if already synced (idempotent)
+      if (match && !roadmapContent.includes(`V${ver}`)) {
+        roadmapContent = roadmapContent.replace(completedHeading, `${match[0]}\r\n${newItem}`);
+        fs.writeFileSync(roadmapPath, roadmapContent, 'utf8');
+        console.log(`\n[3.8/7] Auto-Sync Roadmap: Injected V${ver} into MASTER_ROADMAP.md ✅`);
+      } else {
+        console.log(`\n[3.8/7] Auto-Sync Roadmap: V${ver} already present or heading not found. Skipped.`);
+      }
+    } else {
+      console.log('\n[3.8/7] Auto-Sync Roadmap: Could not extract version/title from QS. Skipped.');
+    }
+  } catch (e) {
+    console.warn(`⚠️ [Auto-Sync Roadmap] ${e.message}`);
+  }
+} else {
+  console.log('\n[3.8/7] Auto-Sync Roadmap: No MASTER_ROADMAP.md found or no QS target. Skipped.');
+}
+recordTime('Roadmap Sync', Date.now() - step38Start);
 
 // ─── Step 4: Single Atomic Git Commit ─────────────────────────────────────────
 const step4Start = Date.now();
