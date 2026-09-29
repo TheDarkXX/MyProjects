@@ -264,5 +264,6 @@
 ---
 *เอกสารอ้างอิงและเชื่อมโยง:*
 * [PROJECT_2X_EXECUTION_PLAYBOOK.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/PROJECT_2X_EXECUTION_PLAYBOOK.md) -- แผนปฏิบัติการพอร์ต Project 2X ฐาน 26%
+* [US_STOCK_TAX_STRATEGY_PLAYBOOK.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/US_STOCK_TAX_STRATEGY_PLAYBOOK.md) -- คัมภีร์ยุทธศาสตร์ภาษีหุ้นนอก & ท่อส่งเงินสดบริษัท x โบรกเกอร์
 * [HYPER_GROWTH_PORTFOLIO_GUIDE.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/HYPER_GROWTH_PORTFOLIO_GUIDE.md) -- คู่มือจัดทัพ 8 จอมราชันย์ผูกขาดโลก
 * [SIGNAL_MATRIX_GUIDE.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/SIGNAL_MATRIX_GUIDE.md) -- จุดสไนเปอร์ช้อนซื้อ EMA 150/200 + MCDX Banker
