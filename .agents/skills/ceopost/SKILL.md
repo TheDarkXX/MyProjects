@@ -58,3 +58,21 @@ description: "The CEO Unfiltered Content Engine — สกัดคำถาม�
 
 ### STEP 4: พ่นผลลัพธ์ให้ User ก๊อปปี้ไปโพสต์ได้ทันที
 - พ่นบทความฉบับเต็มในช่องแชทพร้อมจัดหน้าและเคาะบรรทัดแบบ Direct-Response อ่านง่ายสะกดสายตา
+
+### STEP 5: ยิงโพสต์และตั้งเวลาอัตโนมัติด้วย `ceoupload.py`
+สคริปต์ประจำตัวโปรเจกต์อยู่ที่: [`C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py`](file:///C:/My/Claw/MyProjects/The%20CEO%20Unfiltered/ceoupload.py)
+
+**คำสั่งที่ใช้ยิงงานได้ทันที:**
+```powershell
+# 1. เช็คความพร้อมของ Draft (Dry Run):
+python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --dry-run
+
+# 2. โพสต์บทความ + รูปภาพ ขึ้น Facebook Page ทันที:
+python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --image visual.jpg --publish-now
+
+# 3. ตั้งเวลาโพสต์บทความ + รูปภาพ บน Facebook Page (เวลาทองคำ):
+python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --image visual.jpg --schedule "2026-10-01 19:30"
+
+# 4. เมื่อมีคลิปวิดีโอ (Reel) ยิงดันขึ้น VPS Viral Planner Pro Dashboard:
+python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --video clip.mp4 --thumb cover.jpg
+```
