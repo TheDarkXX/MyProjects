@@ -427,19 +427,19 @@ try {
   currentBranch = execSync('git branch --show-current', { cwd: ROOT, encoding: 'utf-8' }).trim() || 'master';
 } catch {}
 
-// Select target remotes: vps priority (single remote target to avoid double pushes)
-let targetRemotes = ['vps'];
+// Select target remotes: try available remotes (origin and/or vps)
+let targetRemotes = [];
 try {
   const remoteOut = execSync('git remote', { cwd: ROOT, encoding: 'utf-8' }).trim();
   const availableRemotes = remoteOut.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
-  if (availableRemotes.includes('vps')) {
+  if (availableRemotes.includes('vps') && availableRemotes.includes('origin')) {
+    targetRemotes = ['vps', 'origin'];
+  } else if (availableRemotes.includes('vps')) {
     targetRemotes = ['vps'];
   } else if (availableRemotes.includes('origin')) {
     targetRemotes = ['origin'];
   } else if (availableRemotes.length > 0) {
     targetRemotes = [availableRemotes[0]];
-  } else {
-    targetRemotes = [];
   }
 } catch {}
 
