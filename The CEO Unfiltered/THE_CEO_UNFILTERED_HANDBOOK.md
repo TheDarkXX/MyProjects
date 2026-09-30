@@ -108,7 +108,7 @@
 
 ---
 
-## ⚡ 7. วงจรการผลิตด้วยสกิล `/ceopost` (Operational Engine)
+## ⚡ 7. วงจรการผลิตด้วยสกิล `/ceopost` & สคริปต์ `ceoupload.py` (Operational Engine)
 
 ```
 [ผู้ใช้มีไอเดีย/คำถามดิบ] ➔ พิมพ์ /ceopost [คำถาม]
@@ -123,8 +123,31 @@
 [สร้างผลลัพธ์] ➔ พ่นแคปชั่นพร้อมโพสต์ + ออโต้เซฟลง /The CEO Unfiltered/drafts/
        │
        ▼
-[Next Phase] ➔ ดันขึ้นคิว Viral Planner VPS อัตโนมัติ!
+[ยิงงานด้วย ceoupload.py]
+       ├─► [โหมดบทความ + รูป]: ยิงตรงขึ้น Facebook Graph API (Publish Now หรือ Schedule เวลาทองคำ)
+       ├─► [โหมดคลิปสั้น VDO/Reel]: ดันขึ้น VPS Viral Planner Pro Dashboard อัตโนมัติ!
+       └─► [โหมดเข้าคิว VPS]: หยอดลง fb_post_queue รันตาม Cron
 ```
+
+### คำสั่งใช้งาน `ceoupload.py`:
+สคริปต์ประจำตัวโปรเจกต์อยู่ที่: `C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py`
+
+* **ตรวจสอบความพร้อม (Dry-Run):**
+  ```powershell
+  python ceoupload.py drafts/EP01_self_help_habits.md --dry-run
+  ```
+* **โพสต์บทความ + รูปภาพ ทันที:**
+  ```powershell
+  python ceoupload.py drafts/EP01_self_help_habits.md --image visual.jpg --publish-now
+  ```
+* **ตั้งเวลาโพสต์บทความ + รูปภาพ (เวลาทองคำ):**
+  ```powershell
+  python ceoupload.py drafts/EP01_self_help_habits.md --image visual.jpg --schedule "2026-10-01 19:30"
+  ```
+* **ดันคลิปวิดีโอ (Reel) เข้า Viral Planner Pro บน VPS:**
+  ```powershell
+  python ceoupload.py drafts/EP01_self_help_habits.md --video clip.mp4 --thumb cover.jpg
+  ```
 
 ---
 
