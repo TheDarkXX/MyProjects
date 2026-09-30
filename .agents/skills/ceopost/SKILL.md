@@ -68,7 +68,7 @@ description: "The CEO Unfiltered Content Engine — สกัดคำถาม�
 python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --dry-run
 
 # 2. ฟอร์แมตหลัก (Primary King): โพสต์ภาพปก Pattern Interrupt + พาดหัวหมัดฮุกขึ้นเพจทันที:
-python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --image assets/EP01_interrupt_v1_books_fire_sarcastic.jpg --publish-now
+python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --image assets/EP01_cover_master_final.jpg --publish-now
 
 # 3. ตั้งเวลาโพสต์ภาพปก Pattern Interrupt (เวลาทองคำ):
 python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --image assets/EP01_interrupt_v1_books_fire_sarcastic.jpg --schedule "2026-10-01 19:30"

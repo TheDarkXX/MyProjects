@@ -231,7 +231,7 @@ Cinematic ultra-wide photo of a modern minimalist tech entrepreneur command cent
   ```
 * **คำสั่งโพสต์ภาพปกหลักขึ้น Facebook Page ทันที:**
   ```powershell
-  python scripts/ceoupload.py drafts/EP01_self_help_habits.md --image assets/EP01_interrupt_v1_books_fire_sarcastic.jpg --publish-now
+  python scripts/ceoupload.py drafts/EP01_self_help_habits.md --image assets/EP01_cover_master_final.jpg --publish-now
   ```
 
 ---
