@@ -56,8 +56,8 @@ TYPOGRAPHY SYSTEM (Refined Kanit Font Hierarchy & Micro-Badge):
 - Main hero banner (Kanit Bold / ExtraBold): "เรื่องจริง หรือ หลอกเด็ก?!" in massive crisp white text inside a vivid solid red rounded rectangle banner (#E50000), sharp and clean without looking chubby or congested.
 - Subheadline capsule (Kanit Medium / Weight 500): "80% นิทานหลอกแดก vs 20% ฟิสิกส์โลกความจริง" in gold text inside a black rounded capsule with a thin gold border.
 - Generous dark negative space / vertical gap between the subheadline capsule and the flames below.
-- Bottom-left corner signature: "THE CEO UNFILTERED" minimalist brand signature.
-- Bottom-right corner micro-badge: "AI ตบกะโหลก!" as a VERY SMALL, subtle, sleek micro-badge—significantly smaller and more discreet than the logo on the bottom-left.
+- Bottom-left corner signature: The official "THE CEO UNFILTERED" two-tier tilted sticker badge: top tier is a solid white rounded pill with bold black text "THE CEO", bottom tier is a solid black rounded badge with thick white border outline and bold white text "UNFILTERED", tilted slightly counter-clockwise at ~6 degrees, positioned cleanly in the bottom-left corner.
+- Bottom-right corner micro-badge: "AI ตบกะโหลก!" as a VERY SMALL, subtle, sleek micro-badge—significantly smaller and more discreet than the logo on the bottom-left, functioning as a subtle forensic watermark/stamp.
 
 NEGATIVE CONSTRAINTS (STRICT):
 No cartoonish flames, no fantasy illustrations, no medieval antique leather books, no EP.01 tag, no oversized badges, no cluttered text, no watermark. Photorealistic, dramatic editorial magazine quality, high dynamic range.
@@ -65,7 +65,19 @@ No cartoonish flames, no fantasy illustrations, no medieval antique leather book
 
 ---
 
-## 🎯 3. ถอดรหัสสูตรแปรผันสำหรับ EP ต่อๆ ไป (Template Generator)
+## 🏷️ 3. สเปกโลโก้ทางการ (Official Brand Sticker Logo)
+
+![The CEO Unfiltered Sticker Logo](file:///c:/My%20Claw/MyProjects/The%20CEO%20Unfiltered/assets/logo_the_ceo_unfiltered_sticker.jpg)
+
+* **พิกัดไฟล์ภาพโลโก้ต้นฉบับ:** [`The CEO Unfiltered/assets/logo_the_ceo_unfiltered_sticker.jpg`](file:///c:/My%20Claw/MyProjects/The%20CEO%20Unfiltered/assets/logo_the_ceo_unfiltered_sticker.jpg)
+* **โครงสร้างดีไซน์ (Two-Tier Inverted Sticker):**
+  1. **Tier บน (The CEO):** สี่เหลี่ยมผืนผ้ามุมมนสีขาวทึบ (Solid White) พิมพ์ตัวอักษรสีดำหนา `THE CEO`
+  2. **Tier ล่าง (UNFILTERED):** สี่เหลี่ยมผืนผ้ามุมมนสีดำสนิท ขลิบขอบเส้นสีขาวหนาเด่นชัด (Thick White Outline) พิมพ์ตัวอักษรสีขาวหนา `UNFILTERED`
+  3. **การจัดวาง (Orientation):** วางเอียงทวนเข็มนาฬิกาประมาณ 6 องศา (-6deg tilt) สไตล์ Sticker ทันสมัย ปรากฏอยู่ที่มุมล่างซ้ายเสมอ
+
+---
+
+## 🎯 4. ถอดรหัสสูตรแปรผันสำหรับ EP ต่อๆ ไป (Template Generator)
 
 เมื่อต้องการเปลี่ยนหัวข้อหรือเปลี่ยนวัตถุใน EP ถัดไป ให้คงโครงสร้างเดิมไว้ แล้วเปลี่ยนเฉพาะตัวแปรในตารางนี้:
 
