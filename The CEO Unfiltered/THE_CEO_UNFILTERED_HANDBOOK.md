@@ -211,7 +211,37 @@ Cinematic ultra-wide photo of a modern minimalist tech entrepreneur command cent
 
 ---
 
+## 🎯 10. ภาพจำประจำตระกูล & วิศวกรรมการยิง Native Card (Brand Visual Signature)
+
+เพื่อให้เพจ **The CEO Unfiltered** มีภาพจำอันทรงพลังที่ไม่เปลี่ยนไปเปลี่ยนมา เราได้ล็อก **"สีประจำตระกูล"** และกฎเกณฑ์การยิงโพสต์ไว้เป็นมาตรฐานถาวร:
+
+### 1) สีประจำแบรนด์ตลอดกาล (The Signature Color)
+* **สีหลัก:** 🔥 **Fiery Orange / ส้มแดงเพลิง (`fiery`)**
+* **รหัส Meta Preset ID:** `1777259175857338`
+* **เหตุผลเชิงจิตวิทยา:** เป็นสีแห่ง **"ความตื่นตัว (Alarm) และไฟแห่งการทำลายภาพลวงตา"** เข้ากับคอนเซปต์ *AI มารบูรพา 🔥 ตบกะโหลก* 100% มีพลังหยุดนิ้วโป้งบนฟีด Facebook สูงสุด
+
+### 2) กฎเหล็ก 130 ตัวอักษร (The 130-Character Limit)
+* ระบบพื้นหลังสี Native ของ Facebook กำหนดเพดานไว้ว่า **"ข้อความต้องไม่เกิน 130 ตัวอักษร"** (หากเกิน ระบบจะปลดพื้นหลังสีออกกลายเป็นตัวหนังสือธรรมดาทันที)
+* ข้อความบนการ์ดจึงต้องเป็น **"หมัดสั้นฮุกติดไซเรน"** เท่านั้น เช่น:
+  > *"เมื่อคืนถาม AI เล่นๆ ว่า:  
+  > 'หนังสือพัฒนาตัวเอง ตื่นตี 5 มันจริงไหม หรือแค่หลอกเด็ก?'  
+  > แม่งตอบ: 'จริง 20% อีก 80% คือนิทานหลอกแดกเงิน!'  
+  > (อ่านต่อในเมนต์👇)"* *(นับแล้วได้ 118 ตัวอักษร พอดีเป๊ะ)*
+
+### 3) วิศวกรรมยิง 2 ชั้น (The 2-Tier Viral Engine)
+* **ชั้นที่ 1 (The Hook Card):** ภาพการ์ดสีส้มเพลิง `fiery` พร้อมข้อความสั้น < 130 ตัว สรุปหมัดเด็ด
+* **ชั้นที่ 2 (The Value Payload):** เนื้อหาบทความฉบับเต็มจะถูกส่งไป **"ปักหมุดไว้ในคอมเมนต์แรก (First Pinned Comment)"** อัตโนมัติ เพื่อกระตุ้นให้อัลกอริทึมดันโพสต์จากการคลิกเข้าคอมเมนต์
+
+### 4) คำสั่งไม้เดียวจบด้วย `ceoupload.py`:
+```powershell
+python scripts/ceoupload.py drafts/EP01_self_help_habits.md --card fiery --publish-now
+```
+*(สคริปต์จะเจนการ์ดสีส้มเพลิงอัตโนมัติ ➔ โพสต์ขึ้นเพจ ➔ แล้วเอาเนื้อหาเต็มไปหยอดลงคอมเมนต์แรกให้ทันที!)*
+
+---
+
 *เอกสารอ้างอิงและไฟล์เชื่อมโยง:*
+* [Viral_Pattern_Interrupt_Master_Playbook.md](file:///C:/My%20Claw/Openclaw-VPS/docs/content-strategy/Viral_Pattern_Interrupt_Master_Playbook.md)
 * [manifesto.md](file:///C:/My%20Claw/MyProjects/The%20CEO%20Unfiltered/manifesto.md)
 * [SKILL.md (`/ceopost`)](file:///C:/My%20Claw/MyProjects/.agents/skills/ceopost/SKILL.md)
 * [EP01_self_help_habits.md](file:///C:/My%20Claw/MyProjects/The%20CEO%20Unfiltered/drafts/EP01_self_help_habits.md)
