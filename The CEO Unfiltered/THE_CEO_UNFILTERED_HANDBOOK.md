@@ -211,40 +211,39 @@ Cinematic ultra-wide photo of a modern minimalist tech entrepreneur command cent
 
 ---
 
-## 🎯 10. ภาพจำประจำตระกูล & วิศวกรรมการยิง Native Card (Brand Visual Signature)
+## 🎯 10. วิศวกรรมคอนเทนต์หน้าฟีด: ภาพ Pattern Interrupt + พาดหัวหมัดฮุก (Primary King)
 
-เพื่อให้เพจ **The CEO Unfiltered** มีภาพจำอันทรงพลังที่ไม่เปลี่ยนไปเปลี่ยนมา เราได้ล็อก **"สีประจำตระกูล"** และกฎเกณฑ์การยิงโพสต์ไว้เป็นมาตรฐานถาวร:
+ตามกฎของ [Viral Pattern Interrupt Master Playbook](file:///C:/My%20Claw/Openclaw-VPS/docs/content-strategy/Viral_Pattern_Interrupt_Master_Playbook.md) เราได้ล็อกโครงสร้างคอนเทนต์หน้าฟีดของ **The CEO Unfiltered** โดยแบ่งเป็น **"ฟอร์แมตหลักตัวจริง"** และ **"ฟอร์แมตทางเลือกคั่นจังหวะ"**:
 
-### 1) สีประจำแบรนด์ตลอดกาล (The Signature Color)
-* **สีหลัก:** 🔥 **Fiery Orange / ส้มแดงเพลิง (`fiery`)**
-* **รหัส Meta Preset ID:** `1777259175857338`
-* **เหตุผลเชิงจิตวิทยา:** เป็นสีแห่ง **"ความตื่นตัว (Alarm) และไฟแห่งการทำลายภาพลวงตา"** เข้ากับคอนเซปต์ *AI มารบูรพา 🔥 ตบกะโหลก* 100% มีพลังหยุดนิ้วโป้งบนฟีด Facebook สูงสุด
+### 🏆 1. ฟอร์แมตหลักตัวจริง (The Primary King: Pattern Interrupt Cover)
+เพื่อเอาชนะอาการเลื่อนผ่าน (Zombie Scrolling) บนจอมือถือ คอนเทนต์หลัก 80% จะใช้ **ภาพความละเอียดสูงที่เกิด Cognitive Dissonance (สมอง Error 404) + พาดหัวสไตล์ DoctorBank `/cover` (Prompt-Black + กล่องแดงมน #E50000)**:
 
-### 2) กฎเหล็ก 130 ตัวอักษร (The 130-Character Limit)
-* ระบบพื้นหลังสี Native ของ Facebook กำหนดเพดานไว้ว่า **"ข้อความต้องไม่เกิน 130 ตัวอักษร"** (หากเกิน ระบบจะปลดพื้นหลังสีออกกลายเป็นตัวหนังสือธรรมดาทันที)
-* ข้อความบนการ์ดจึงต้องเป็น **"หมัดสั้นฮุกติดไซเรน"** เท่านั้น เช่น:
-  > *"เมื่อคืนถาม AI เล่นๆ ว่า:  
-  > 'หนังสือพัฒนาตัวเอง ตื่นตี 5 มันจริงไหม หรือแค่หลอกเด็ก?'  
-  > แม่งตอบ: 'จริง 20% อีก 80% คือนิทานหลอกแดกเงิน!'  
-  > (อ่านต่อในเมนต์👇)"* *(นับแล้วได้ 118 ตัวอักษร พอดีเป๊ะ)*
+* **วิศวกรรมภาพหยุดนิ้ว (Thumb-Stop Visual):**
+  * **Candidate 1 (Cognitive Dissonance):** กองหนังสือพัฒนาตัวเองระดับโลก (Atomic Habits, The 5 AM Club) กำลังถูกไฟลุกไหม้พวยพุ่ง มีขี้เถ้าและควันไฟลอยฟุ้ง บนโต๊ะทำงานผู้บริหารตอนตี 5 (`EP01_interrupt_v1_books_fire_sarcastic.jpg`)
+  * **Candidate 2 (Mid-Shot Human Distress):** ซีอีโอ/คนทำงานสตาร์ตอัป สภาพตาลอย ขอบตาดำคล้ำ ตาแดงก่ำ เหงื่อแตก มือสั่นทำกาแฟดำหกราดกองหนังสือ Atomic Habits ตอนตี 5 (`EP01_interrupt_v3_zombie_breakdown.jpg`)
+* **วิศวกรรมพาดหัว (Typography Standards):**
+  * **บรรทัดที่ 1 (Line 1):** ใช้ฟอนต์ **`Prompt-Black`** สีเหลืองนีออน `#FFF200` หรือสีขาว `#FFFFFF` ขอบดำสนิทหนา 7-10px คมกริบ
+  * **บรรทัดที่ 2 (Line 2):** กล่องสี่เหลี่ยมผืนผ้าสีแดงสด **`#E50000`** มุมมน 24px พร้อมตัวหนังสือสีขาว 3D Bevel ปลดแอกความสนใจ
+  * **Sub-Pill:** แถบทองเตือนสติ เช่น `[ 80% นิทานหลอกแดก vs 20% ฟิสิกส์โลกความจริง ]`
+* **สคริปต์เจนปกอัตโนมัติ:**
+  ```powershell
+  python scripts/render_pattern_interrupt_cover.py
+  ```
+* **คำสั่งโพสต์ภาพปกหลักขึ้น Facebook Page ทันที:**
+  ```powershell
+  python scripts/ceoupload.py drafts/EP01_self_help_habits.md --image assets/EP01_interrupt_v1_books_fire_sarcastic.jpg --publish-now
+  ```
 
-### 3) วิศวกรรมยิง 2 ชั้น (The 2-Tier Viral Engine)
-* **ชั้นที่ 1 (The Hook Card):** ภาพการ์ดสีส้มเพลิง `fiery` พร้อมข้อความสั้น < 130 ตัว สรุปหมัดเด็ด
-* **ชั้นที่ 2 (The Value Payload):** เนื้อหาบทความฉบับเต็มจะถูกส่งไป **"ปักหมุดไว้ในคอมเมนต์แรก (First Pinned Comment)"** อัตโนมัติ เพื่อกระตุ้นให้อัลกอริทึมดันโพสต์จากการคลิกเข้าคอมเมนต์
+---
 
-### 4) คำสั่งไม้เดียวจบด้วย `ceoupload.py`:
-
-**แบบที่ 1: ยิง Facebook Native Color Status แท้ๆ (Meta Preset ID: 1777259175857338)**
-```powershell
-python scripts/ceoupload.py drafts/EP01_self_help_habits.md --native fiery --publish-now
-```
-*(ระบบจะตรวจข้อความให้ไม่เกิน 130 ตัวอักษร ➔ ยิงโพสต์พื้นหลังสีส้มเพลิง Native บน Facebook Feed ทันที ➔ แล้วหยอดบทความฉบับเต็มลงคอมเมนต์แรกอัตโนมัติ!)*
-
-**แบบที่ 2: เจนเป็นไฟล์ภาพกราฟิกการ์ดสีส้มเพลิง 1080x1080 (Image Card Mode)**
-```powershell
-python scripts/ceoupload.py drafts/EP01_self_help_habits.md --card fiery --publish-now
-```
-*(ระบบจะเรนเดอร์ภาพการ์ดสีส้มเพลิงด้วยฟอนต์ Leelawadee UI Bold ➔ อัปโหลดเป็น Photo Post ➔ แล้วหยอดบทความฉบับเต็มลงคอมเมนต์แรกให้อัตโนมัติ)*
+### ⚡ 2. ฟอร์แมตทางเลือกคั่นจังหวะ (The Secondary Auxiliary: Native Color Card)
+ใช้สำหรับคั่นจังหวะฟีด หรือยิงคำถามสั้นกระตุ้นความอยากรู้อยากเห็น:
+* **สีหลักประจำแบรนด์:** 🔥 **Fiery Orange (`fiery`)** / Meta Preset ID: `1777259175857338`
+* **กฎ 130 ตัวอักษร:** ข้อความหมัดสั้นตัดจบแบบ Cliffhanger ชี้ให้อ่านคำตอบในคอมเมนต์แรก
+* **คำสั่งยิง Native FB:**
+  ```powershell
+  python scripts/ceoupload.py drafts/EP01_self_help_habits.md --native fiery --publish-now
+  ```
 
 ---
 

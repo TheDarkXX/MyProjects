@@ -67,17 +67,17 @@ description: "The CEO Unfiltered Content Engine — สกัดคำถาม�
 # 1. เช็คความพร้อมของ Draft (Dry Run):
 python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --dry-run
 
-# 2. ยิง Facebook Native Color Status (ลายเซ็นส้มเพลิง fiery < 130 ตัว + ปักหมุดบทความเต็มในคอมเมนต์แรก):
+# 2. ฟอร์แมตหลัก (Primary King): โพสต์ภาพปก Pattern Interrupt + พาดหัวหมัดฮุกขึ้นเพจทันที:
+python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --image assets/EP01_interrupt_v1_books_fire_sarcastic.jpg --publish-now
+
+# 3. ตั้งเวลาโพสต์ภาพปก Pattern Interrupt (เวลาทองคำ):
+python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --image assets/EP01_interrupt_v1_books_fire_sarcastic.jpg --schedule "2026-10-01 19:30"
+
+# 4. ฟอร์แมตทางเลือกคั่นจังหวะ (Secondary): ยิง Facebook Native Color Status (ลายเซ็นส้มเพลิง fiery < 130 ตัว + ปักหมุดบทความเต็มในคอมเมนต์แรก):
 python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --native fiery --publish-now
 
-# 3. เจนการ์ดส้มเพลิง 1080x1080 + ปักหมุดบทความเต็มในคอมเมนต์แรก:
+# 5. ฟอร์แมตทางเลือก (Image Card): เจนการ์ดส้มเพลิง 1080x1080 + ปักหมุดบทความเต็มในคอมเมนต์แรก:
 python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --card fiery --publish-now
-
-# 4. โพสต์บทความ + รูปภาพทั่วไป ขึ้น Facebook Page ทันที:
-python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --image visual.jpg --publish-now
-
-# 5. ตั้งเวลาโพสต์บทความ + รูปภาพ บน Facebook Page (เวลาทองคำ):
-python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --image visual.jpg --schedule "2026-10-01 19:30"
 
 # 6. เมื่อมีคลิปวิดีโอ (Reel) ยิงดันขึ้น VPS Viral Planner Pro Dashboard:
 python "C:\My Claw\MyProjects\The CEO Unfiltered\ceoupload.py" drafts/EPXX_name.md --video clip.mp4 --thumb cover.jpg
