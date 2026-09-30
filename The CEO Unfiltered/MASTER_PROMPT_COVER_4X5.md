@@ -34,30 +34,33 @@
 ```text
 Create a vertical 4:5 high-impact cinematic editorial cover photo for a Facebook thought-leadership article.
 
-COMPOSITION & CORE CONFLICT:
+COMPOSITION & VERTICAL BREATHING ROOM:
+A vertical 4:5 cinematic editorial cover photo for a Facebook thought-leadership article.
+The burning book stack is positioned lower in the frame (dominating the lower-middle and bottom section), leaving a clear band of dark executive negative space and generous breathing room between the bottom of the typography block and the tips of the flames below.
 A massive raging inferno violently incinerating a stack of 5 authentic paperback self-help books on a luxury dark executive desk at 5:00 AM.
-The fire is NOT tame—it is an intense, furious, destructive blaze: roaring orange-red flames violently engulfing and wrapping around the books, glowing embers and fiery sparks flying into the air, thick dark smoke billowing, charred curled black paper edges, and intense heat distortion. The book stack is slightly tilted and collapsing under the destruction, with ashes and flaming debris scattered across the reflective dark wooden desk.
+The fire is an intense, furious, destructive blaze: roaring orange-red flames violently engulfing and wrapping around the books, glowing embers and fiery sparks flying into the air, thick dark smoke billowing, charred curled black paper edges, and intense heat distortion. The book stack is slightly tilted and collapsing under the destruction, with ashes and flaming debris scattered across the reflective dark wooden desk.
 
 AUTHENTIC BOOK SPINES (Real Thai Paperback Edition DNA - NO antique leather books):
-1) Top book (half-consumed by intense flames with curled charred pages): "ATOMIC HABITS" (White paperback cover with tiny dots pattern, yellow/gold bold title, subtitle "Tiny Changes, Remarkable Results").
+1) Top book (half-consumed by intense flames with curled charred pages): "ATOMIC HABITS" (White paperback cover with tiny dots pattern, yellow/gold bold title, subtitle "Tiny Changes, Remarkable Results", "James Clear").
 2) Second book: "DEEP WORK" (Authentic white and blue paperback cover with concentric arch graphics, bold blue title, "Cal Newport").
-3) Third book: "MIRACLE MORNING" (Authentic white cover with iconic red rising sun horizon graphic, red title "MIRACLE MORNING", "HAL ELROD").
+3) Third book: "MIRACLE MORNING" (Authentic white cover with iconic red rising sun horizon graphic, red title "THE MIRACLE MORNING", "HAL ELROD").
 4) Fourth book: "The Psychology of Money" (Authentic clean white cover with iconic folded-money brain illustration, dark green serif title, "MORGAN HOUSEL").
 5) Bottom book: "THINKING, FAST AND SLOW" (Thick white paperback spine with iconic yellow sharpened pencil graphic, black serif text, "DANIEL KAHNEMAN").
 Spines face the camera directly with clean, readable, tactile paper textures damaged realistically by fire.
 
 ENVIRONMENT & ATMOSPHERE:
-Dark executive CEO office with deep moody shadows. Left side: softly blurred luxury office chair and glowing green digital alarm clock clearly showing "05:00 AM". Right side: large floor-to-ceiling window showing a blurred urban skyline with warm sunrise dawn glow. Desk surface covered in scattered ashes, charred flakes, and fiery embers reflecting the intense blaze.
+Dark executive CEO office with deep moody shadows. Left side: dark coffee tumbler with subtle text, softly blurred luxury office chair, glowing green digital alarm clock clearly showing "05:00 AM". Right side: large floor-to-ceiling window showing a blurred urban skyline with warm sunrise dawn glow. Desk surface covered in scattered ashes, charred flakes, and fiery embers reflecting the intense blaze.
 
-TYPOGRAPHY SYSTEM (Strict Kanit Font Family Hierarchy):
-- Top line (Kanit Bold): "หนังสือพัฒนาตัวเอง..." in solid crisp white.
-- Main hero banner (Kanit ExtraBold): "เรื่องจริง หรือ หลอกเด็ก?!" in massive bold white text inside a vivid solid red rounded rectangle banner (#E50000).
-- Subheadline capsule (Kanit Medium): "80% นิทานหลอกแดก vs 20% ฟิสิกส์โลกความจริง" in yellow/gold text inside a black rounded capsule with a thin gold border.
-- Bottom-right corner badge: Vivid red rounded badge with white text "AI ตบกะโหลก!".
-- Bottom-left corner signature: "THE CEO UNFILTERED" minimalist brand badge.
+TYPOGRAPHY SYSTEM (Refined Kanit Font Hierarchy & Micro-Badge):
+- Top line (Kanit SemiBold / Weight 600): "หนังสือพัฒนาตัวเอง..." in solid crisp white—noticeably lighter and more elegant than the red box below to establish clean contrast.
+- Main hero banner (Kanit Bold / ExtraBold): "เรื่องจริง หรือ หลอกเด็ก?!" in massive crisp white text inside a vivid solid red rounded rectangle banner (#E50000), sharp and clean without looking chubby or congested.
+- Subheadline capsule (Kanit Medium / Weight 500): "80% นิทานหลอกแดก vs 20% ฟิสิกส์โลกความจริง" in gold text inside a black rounded capsule with a thin gold border.
+- Generous dark negative space / vertical gap between the subheadline capsule and the flames below.
+- Bottom-left corner signature: "THE CEO UNFILTERED" minimalist brand signature.
+- Bottom-right corner micro-badge: "AI ตบกะโหลก!" as a VERY SMALL, subtle, sleek micro-badge—significantly smaller and more discreet than the logo on the bottom-left.
 
 NEGATIVE CONSTRAINTS (STRICT):
-No cartoonish flames, no fantasy illustrations, no medieval antique leather books, no EP.01 tag, no cluttered text, no watermark. Photorealistic, dramatic editorial magazine quality, high dynamic range.
+No cartoonish flames, no fantasy illustrations, no medieval antique leather books, no EP.01 tag, no oversized badges, no cluttered text, no watermark. Photorealistic, dramatic editorial magazine quality, high dynamic range.
 ```
 
 ---
