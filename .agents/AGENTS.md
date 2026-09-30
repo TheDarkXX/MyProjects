@@ -8,6 +8,7 @@
   - **Spiderweb Mesh Map (พิกัดทุกโปรเจกต์):** ดูแผนที่เชื่อมโยงและ Path ของทุกโปรเจกต์ในระบบได้ที่ [`C:\XBrain\docs\PROJECT_INDEX_SPIDERWEB.md`](file:///C:/XBrain/docs/PROJECT_INDEX_SPIDERWEB.md) เมื่อต้องการส่งสกิลหรือหมุนเวียนไฟล์ข้ามโปรเจกต์ ให้เปิดดูพิกัดจากไฟล์นี้ได้ทันที
 
 - **No Browser Subagent Testing Unless Explicitly Commanded**: หลังเขียนโค้ดและดีพลอยเสร็จ ห้ามเปิด browser subagent เพื่อทดสอบหน้าเว็บเองเด็ดขาด ถ้าผู้ใช้ไม่ได้พิมพ์สั่งให้เปิดเบราว์เซอร์เทสอย่างชัดเจน เพราะทำให้เสียเวลาและอาจติดปัญหา auth/rate-limit. ให้ยืนยันความถูกต้องผ่าน `npx tsc --noEmit`, `npm run build`, และ Code Inspection โดยตรงเท่านั้น
+- **No LaTeX Blocks on Plain Text/Flows**: ห้ามใช้ LaTeX/MathJax syntax (`$$` หรือ `\text{...}`) กับข้อความภาษาไทยหรือการอธิบาย Flow/สมการทั่วไปเด็ดขาด เพราะตัวเรนเดอร์ในแชทพ่นโค้ดดิบทำให้อ่านยากและดูเหมือนบัค ให้ใช้ Plain Markdown คลีนๆ พร้อมลูกศร เช่น `A ➔ B ➔ C` หรือ Code Block ธรรมดาเสมอ
 
 # UI & Typography Standards (Iron Rules)
 - **Minimum Font Size**: Text must NEVER be smaller than 13px (`text-[13px]`). Avoid 10px-11px at all costs because it is illegible on high-res / mobile displays. Use `text-sm` (14px) or `text-xs` (12px ONLY for tiny badge pills).
