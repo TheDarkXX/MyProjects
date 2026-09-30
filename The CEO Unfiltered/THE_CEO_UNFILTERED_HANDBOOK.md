@@ -299,6 +299,7 @@ Cinematic ultra-wide photo of a modern minimalist tech entrepreneur command cent
 ---
 
 *เอกสารอ้างอิงและไฟล์เชื่อมโยง:*
+* [MASTER_PROMPT_COVER_4X5.md](file:///c:/My%20Claw/MyProjects/The%20CEO%20Unfiltered/MASTER_PROMPT_COVER_4X5.md) (สูตร Master Prompt ปกแนวตั้ง 4:5 ฉบับสมบูรณ์)
 * [Viral_Pattern_Interrupt_Master_Playbook.md](file:///C:/My%20Claw/Openclaw-VPS/docs/content-strategy/Viral_Pattern_Interrupt_Master_Playbook.md)
 * [manifesto.md](file:///C:/My%20Claw/MyProjects/The%20CEO%20Unfiltered/manifesto.md)
 * [SKILL.md (`/ceopost`)](file:///C:/My%20Claw/MyProjects/.agents/skills/ceopost/SKILL.md)

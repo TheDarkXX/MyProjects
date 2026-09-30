@@ -23,8 +23,9 @@ if sys.platform == "win32":
         pass
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FONT_KANIT_SEMI = os.path.join(PROJECT_DIR, "fonts", "Kanit-SemiBold.ttf").replace("\\", "/")
+FONT_KANIT_EXTRABOLD = os.path.join(PROJECT_DIR, "fonts", "Kanit-ExtraBold.ttf").replace("\\", "/")
 FONT_KANIT_BOLD = os.path.join(PROJECT_DIR, "fonts", "Kanit-Bold.ttf").replace("\\", "/")
+FONT_KANIT_SEMI = os.path.join(PROJECT_DIR, "fonts", "Kanit-SemiBold.ttf").replace("\\", "/")
 FONT_KANIT_MED = os.path.join(PROJECT_DIR, "fonts", "Kanit-Medium.ttf").replace("\\", "/")
 
 
@@ -40,6 +41,8 @@ def render_kanit_cover(
     red_box_pad_bottom: int = 30,  # +3 levels extra bottom padding
     red_box_font_size: int = 74,
     line1_font_size: int = 72,
+    width: int = 1080,
+    height: int = 1080,
 ):
     if not os.path.exists(bg_image_path):
         raise FileNotFoundError(f"Background image not found: {bg_image_path}")
@@ -55,13 +58,18 @@ def render_kanit_cover(
 <style>
 @font-face {{
     font-family: 'KanitCustom';
-    src: url('file:///{FONT_KANIT_SEMI}') format('truetype');
-    font-weight: 600;
+    src: url('file:///{FONT_KANIT_EXTRABOLD}') format('truetype');
+    font-weight: 800;
 }}
 @font-face {{
     font-family: 'KanitCustom';
     src: url('file:///{FONT_KANIT_BOLD}') format('truetype');
     font-weight: 700;
+}}
+@font-face {{
+    font-family: 'KanitCustom';
+    src: url('file:///{FONT_KANIT_SEMI}') format('truetype');
+    font-weight: 600;
 }}
 @font-face {{
     font-family: 'KanitCustom';
@@ -75,8 +83,8 @@ def render_kanit_cover(
     user-select: none;
 }}
 body {{
-    width: 1080px;
-    height: 1080px;
+    width: {width}px;
+    height: {height}px;
     position: relative;
     background: #000;
     font-family: 'KanitCustom', -apple-system, sans-serif;
@@ -86,15 +94,15 @@ body {{
     position: absolute;
     top: 0;
     left: 0;
-    width: 1080px;
-    height: 1080px;
+    width: {width}px;
+    height: {height}px;
     object-fit: cover;
 }}
 .vignette {{
     position: absolute;
     top: 0;
     left: 0;
-    width: 1080px;
+    width: {width}px;
     height: 520px;
     background: linear-gradient(180deg, rgba(6,9,15,0.96) 0%, rgba(6,9,15,0.88) 45%, rgba(6,9,15,0.45) 80%, rgba(6,9,15,0) 100%);
 }}
@@ -145,7 +153,7 @@ body {{
     position: absolute;
     top: {headline_top}px;
     left: 0;
-    width: 1080px;
+    width: {width}px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -153,7 +161,7 @@ body {{
 }}
 .line1 {{
     font-size: {line1_font_size}px;
-    font-weight: 600;
+    font-weight: 700; /* Kanit Bold */
     color: {line1_color};
     paint-order: stroke fill;
     -webkit-text-stroke: 10px #000000;
@@ -175,7 +183,7 @@ body {{
 }}
 .line2 {{
     font-size: {red_box_font_size}px;
-    font-weight: 600;
+    font-weight: 800; /* Kanit ExtraBold */
     color: #FFFFFF;
     text-shadow: 0 3px 6px rgba(127,29,29,0.9);
     letter-spacing: -0.5px;
@@ -190,7 +198,7 @@ body {{
     padding: 7px 24px 9px 24px;
     color: #FBBF24;
     font-size: 28px;
-    font-weight: 600;
+    font-weight: 500; /* Kanit Medium */
     box-shadow: 0 4px 12px rgba(0,0,0,0.7);
     letter-spacing: 0.2px;
 }}
@@ -212,7 +220,7 @@ body {{
     <div class="top-bar">
         <div class="left-badges">
             <div class="badge-brand">THE CEO UNFILTERED</div>
-            <div class="badge-ep">{episode_tag}</div>
+            {f'<div class="badge-ep">{episode_tag}</div>' if episode_tag else ''}
         </div>
         <div class="badge-threat">AI ตบกะโหลก!</div>
     </div>
@@ -231,7 +239,7 @@ body {{
 
     with sync_playwright() as p:
         browser = p.chromium.launch(channel="chrome", headless=True)
-        page = browser.new_page(viewport={"width": 1080, "height": 1080})
+        page = browser.new_page(viewport={"width": width, "height": height})
         page.set_content(html_content)
         page.wait_for_timeout(250)
         page.screenshot(path=output_path, quality=98, type="jpeg")
