@@ -233,10 +233,18 @@ Cinematic ultra-wide photo of a modern minimalist tech entrepreneur command cent
 * **ชั้นที่ 2 (The Value Payload):** เนื้อหาบทความฉบับเต็มจะถูกส่งไป **"ปักหมุดไว้ในคอมเมนต์แรก (First Pinned Comment)"** อัตโนมัติ เพื่อกระตุ้นให้อัลกอริทึมดันโพสต์จากการคลิกเข้าคอมเมนต์
 
 ### 4) คำสั่งไม้เดียวจบด้วย `ceoupload.py`:
+
+**แบบที่ 1: ยิง Facebook Native Color Status แท้ๆ (Meta Preset ID: 1777259175857338)**
+```powershell
+python scripts/ceoupload.py drafts/EP01_self_help_habits.md --native fiery --publish-now
+```
+*(ระบบจะตรวจข้อความให้ไม่เกิน 130 ตัวอักษร ➔ ยิงโพสต์พื้นหลังสีส้มเพลิง Native บน Facebook Feed ทันที ➔ แล้วหยอดบทความฉบับเต็มลงคอมเมนต์แรกอัตโนมัติ!)*
+
+**แบบที่ 2: เจนเป็นไฟล์ภาพกราฟิกการ์ดสีส้มเพลิง 1080x1080 (Image Card Mode)**
 ```powershell
 python scripts/ceoupload.py drafts/EP01_self_help_habits.md --card fiery --publish-now
 ```
-*(สคริปต์จะเจนการ์ดสีส้มเพลิงอัตโนมัติ ➔ โพสต์ขึ้นเพจ ➔ แล้วเอาเนื้อหาเต็มไปหยอดลงคอมเมนต์แรกให้ทันที!)*
+*(ระบบจะเรนเดอร์ภาพการ์ดสีส้มเพลิงด้วยฟอนต์ Leelawadee UI Bold ➔ อัปโหลดเป็น Photo Post ➔ แล้วหยอดบทความฉบับเต็มลงคอมเมนต์แรกให้อัตโนมัติ)*
 
 ---
 

@@ -160,9 +160,10 @@ def parse_schedule_timestamp(schedule_str):
     return unix_time, dt
 
 
-def post_to_facebook_graph(page_id, page_token, message, image_path=None, schedule_time=None):
+def post_to_facebook_graph(page_id, page_token, message, image_path=None, schedule_time=None, text_format_preset_id=None):
     """
     Posts or schedules an Article / Photo to Facebook Page directly via Graph API.
+    Supports native colored status posts when text_format_preset_id is provided.
     """
     unix_ts = None
     if schedule_time:
@@ -194,14 +195,17 @@ def post_to_facebook_graph(page_id, page_token, message, image_path=None, schedu
             raise RuntimeError(f"FB Photo Error: {data['error'].get('message')}")
         return data
 
-    # 2. Text-only Post
+    # 2. Text / Native Color Status Post
     else:
-        print("[*] Publishing Text / Article Post")
+        preset_info = f" (Native Color Preset: {text_format_preset_id})" if text_format_preset_id else ""
+        print(f"[*] Publishing Text / Article Post{preset_info}")
         url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{page_id}/feed"
         payload = {
             "access_token": page_token,
             "message": message,
         }
+        if text_format_preset_id:
+            payload["text_format_preset_id"] = str(text_format_preset_id)
 
         if unix_ts:
             payload["published"] = "false"
@@ -214,6 +218,63 @@ def post_to_facebook_graph(page_id, page_token, message, image_path=None, schedu
         if "error" in data:
             raise RuntimeError(f"FB Feed Error: {data['error'].get('message')}")
         return data
+
+
+# ─── Facebook Native Background Presets ────────────────────────────────────
+FB_NATIVE_PRESETS = {
+    "fiery": "1777259175857338",         # 🔥 Fiery Orange / Red (Brand Trademark)
+    "dark_cyber": "1007907569385540",    # ⚫ Dark Gradient
+    "purple_pink": "1777259169190672",   # 🟥 Pink / Purple Gradient
+    "midnight_blue": "1007907572718873", # 🟦 Blue Gradient
+    "emerald": "1777259172524005",       # 🟩 Green Gradient
+}
+
+# Try importing Native Card renderer
+try:
+    from make_native_card import render_native_fb_card, GRADIENTS
+except ImportError:
+    try:
+        from scripts.make_native_card import render_native_fb_card, GRADIENTS
+    except ImportError:
+        render_native_fb_card = None
+        GRADIENTS = {}
+
+
+def post_facebook_comment(target_id, page_token, comment_text, page_id=None):
+    """Posts a comment on a Facebook post/photo using Graph API."""
+    # Ensure byte length is within Facebook comment limits (< 7500 bytes)
+    encoded = comment_text.encode("utf-8")
+    if len(encoded) > 7500:
+        comment_text = encoded[:7400].decode("utf-8", errors="ignore") + "\n\n... (อ่านต่อใน EP ถัดไป)"
+
+    # If target_id is a Photo ID (numeric only) without underscore, resolve the actual Feed Post ID
+    if "_" not in str(target_id) and page_id:
+        try:
+            posts_res = requests.get(
+                f"https://graph.facebook.com/{GRAPH_API_VERSION}/{page_id}/posts?limit=1",
+                params={"access_token": page_token},
+                timeout=10,
+            ).json()
+            if posts_res.get("data") and len(posts_res["data"]) > 0:
+                target_id = posts_res["data"][0]["id"]
+        except Exception:
+            pass
+
+    url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{target_id}/comments"
+    payload = {
+        "access_token": page_token,
+        "message": comment_text,
+    }
+    try:
+        res = requests.post(url, data=payload, timeout=30)
+        data = res.json()
+        if "error" in data:
+            print(f"[WARN] Failed to post comment: {data['error'].get('message')}")
+            return None
+        return data.get("id")
+    except Exception as e:
+        print(f"[WARN] Error posting comment: {e}")
+        return None
 
 
 # ─── VPS Viral Planner Import ───────────────────────────────────────────────
@@ -303,6 +364,10 @@ def main():
     parser.add_argument("--channel-id", type=int, default=13, help="VPS fb_channels ID (Default: 13 for The CEO Unfiltered)")
     parser.add_argument("--dry-run", action="store_true", help="Inspect and validate without sending")
     parser.add_argument("--delete", help="Delete a Facebook post by Post ID")
+    parser.add_argument("--native", nargs="?", const="fiery", help="Post REAL Native Facebook Colored Status (fiery, dark_cyber, purple_pink, etc.) with auto-comment")
+    parser.add_argument("--card", nargs="?", const="fiery", help="Generate & post Native Facebook style color card IMAGE (fiery, dark_cyber, purple_pink, midnight_blue, emerald)")
+    parser.add_argument("--card-text", help="Override text rendered on the card or native status")
+    parser.add_argument("--no-comment", action="store_true", help="Do NOT auto-post first comment when using --native or --card")
 
     args = parser.parse_args()
 
@@ -334,6 +399,56 @@ def main():
     if not caption:
         print("[ERROR] Please provide a draft file or --caption text!")
         sys.exit(1)
+
+    # 1.5 Handle True Native Facebook Colored Status (--native)
+    comment_text = None
+    native_preset_id = None
+    if args.native:
+        preset_key = args.native.lower()
+        native_preset_id = FB_NATIVE_PRESETS.get(preset_key, args.native)
+
+        if args.card_text:
+            hook_msg = args.card_text
+        elif title:
+            hook_msg = f"เมื่อคืนถาม AI เล่นๆ ว่า:\n'{title}'\n\nAI แม่งตอบ... (อ่านต่อในเมนต์👇)"
+        else:
+            hook_msg = caption[:110] + "\n\n(อ่านต่อในเมนต์👇)"
+
+        # Strictly enforce <= 130 characters limit
+        if len(hook_msg) > 130:
+            print(f"[WARN] Native hook text is {len(hook_msg)} chars (Facebook limit is 130). Auto-trimming...")
+            hook_msg = hook_msg[:105] + "\n\n(อ่านต่อในเมนต์👇)"
+
+        print(f"[*] Native FB Color Card Mode: Preset {preset_key} ({native_preset_id}) | Hook Length: {len(hook_msg)}/130 chars")
+        if not args.no_comment:
+            comment_text = caption
+        caption = hook_msg
+
+    # 1.6 Handle Native Card Image Generation (--card)
+    elif args.card:
+        if not render_native_fb_card:
+            print("[ERROR] make_native_card module not available for --card!")
+            sys.exit(1)
+        preset = args.card if args.card in GRADIENTS else "fiery"
+
+        if args.card_text:
+            card_hook = args.card_text
+        elif title:
+            card_hook = f"{title}\n\n(กูไปถาม AI มา... คำตอบอยู่ในคอมเมนต์ ...)"
+        else:
+            card_hook = caption[:120] + "\n\n(อ่านต่อในคอมเมนต์ ...)"
+
+        base_dir = os.path.dirname(args.draft) if args.draft else "drafts"
+        slug = (story_id or "card").lower().replace(".", "")
+        card_img_path = os.path.join(base_dir, f"{slug}_native_card.jpg")
+
+        render_native_fb_card(card_hook, card_img_path, preset=preset, footer_text=f"{DEFAULT_PAGE_NAME} • บันทึกดิบหลังโต๊ะทำงาน")
+        args.image = card_img_path
+
+        post_caption = f"🔥 [{DEFAULT_PAGE_NAME}] {story_id}: {title}\n\nอ่านคำตอบฉบับเต็มที่ AI ตบกะโหลกไว้ในคอมเมนต์แรกเลย 👇\n\n#TheCEOUnfiltered #AIตบกะโหลก #ความจริงโลกธุรกิจ" if title else "อ่านต่อในคอมเมนต์แรก 👇"
+        if not args.no_comment:
+            comment_text = caption
+        caption = post_caption
 
     # 2. Determine Action Mode
     is_video_mode = bool(args.video)
@@ -432,17 +547,26 @@ def main():
                 page_token=args.token,
                 message=caption,
                 image_path=args.image,
-                schedule_time=schedule_time
+                schedule_time=schedule_time,
+                text_format_preset_id=native_preset_id
             )
+            target_id = res.get("id") or res.get("post_id")
             print("=" * 60)
             if schedule_time:
                 print(f"⏰ [SUCCESS] Post scheduled natively on Facebook Page!")
-                print(f"Post/Photo ID: {res.get('id') or res.get('post_id')}")
+                print(f"Post/Photo ID: {target_id}")
                 print(f"Scheduled For: {schedule_time}")
             else:
                 print(f"🚀 [SUCCESS] Published live to Facebook Page!")
-                print(f"Post/Photo ID: {res.get('id') or res.get('post_id')}")
+                print(f"Post/Photo ID: {target_id}")
             print("=" * 60)
+
+            # Auto-comment if present
+            if comment_text and target_id:
+                print("[*] Automatically posting First Comment with full article...")
+                cid = post_facebook_comment(target_id, args.token, comment_text, page_id=args.page_id)
+                if cid:
+                    print(f"💬 [SUCCESS] First Comment Added! (Comment ID: {cid})")
         except Exception as e:
             print(f"[FAILED] Error posting to Facebook: {e}")
             sys.exit(1)
