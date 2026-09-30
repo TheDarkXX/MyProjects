@@ -87,11 +87,13 @@ def parse_draft_file(draft_path):
                 meta[key.strip()] = val.strip().strip('"').strip("'")
 
     # Clean body for Facebook formatting:
-    # 1. Convert Markdown headers '# Header' to plain text or clean format
+    # 1. Remove markdown heading markers (#, ##, ###, ####)
+    # 2. Strip bold/italic markdown (**text**, *text*) so FB doesn't display raw asterisks
     cleaned_lines = []
     for line in body.splitlines():
-        # Remove markdown heading markers (#, ##, ###, ####)
         subbed = re.sub(r"^#{1,6}\s*", "", line)
+        subbed = re.sub(r"\*\*(.*?)\*\*", r"\1", subbed)
+        subbed = re.sub(r"\*(.*?)\*", r"\1", subbed)
         cleaned_lines.append(subbed)
 
     clean_caption = "\n".join(cleaned_lines).strip()
