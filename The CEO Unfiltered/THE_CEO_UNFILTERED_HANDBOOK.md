@@ -128,6 +128,66 @@
 
 ---
 
+## 🛠️ 8. ชุดตั้งค่าเพจบน Facebook (Facebook Setup Kit)
+
+คัดลอกข้อมูลชุดนี้ไปวางตอนสร้างเพจได้ทันที:
+
+### 1) ชื่อเพจ (Page Name Options)
+* **แบบที่ 1 (แนะนำสูงสุด — ดิบ สะใจ ดึงดูด 100%):**  
+  `The CEO Unfiltered : เมื่อโดน AI ตบกะโหลก`  
+  *(หรือ: `The CEO Unfiltered : บันทึกวันที่โดน AI ตบกะโหลก`)*
+* **แบบที่ 2 (แบบมีชั้นเชิง เซฟ Policy Meta):**  
+  `The CEO Unfiltered : บันทึกดิบ x AI ตบกะโหลก`
+* **แบบที่ 3 (สากล ติด Search ไทย):**  
+  `The CEO Unfiltered : บันทึกดิบหลังโต๊ะทำงาน`
+
+### 2) URL / Username (@handle)
+1. `@theceounfiltered` *(แนะนำอันดับ 1)*
+2. `@theceounfiltered.official`
+3. `@theceounfiltered.th`
+4. `@ceounfiltered.diary`
+
+### 3) Bio สั้น (จำกัด 101 ตัวอักษร)
+> **บันทึกดิบหลังโต๊ะทำงาน x ถอดรหัสระบบปลดแอกเวลา | ไม่มีคำคมโลกสวย มีแต่นิติวิทยาศาสตร์โลกความจริง (AI • Systems • Leverage)**
+
+### 4) หมวดหมู่เพจ (Category)
+* **ผู้ประกอบการ (Entrepreneur)**
+* **ครีเอเตอร์ดิจิทัล (Digital Creator)**
+* **ธุรกิจและผู้จัดการ (Business & Management Consultant)**
+
+### 5) เกี่ยวกับเราแบบยาว (About / Details)
+> ยินดีต้อนรับสู่ห้องทำงานที่ไม่มีม่านบังตา  
+> 
+> "The CEO Unfiltered" คือบันทึกเบื้องหลังการสร้างอาณาจักรธุรกิจคนเดียว (Company of One) ผ่านสายตาของ CEO ที่นั่งหน้างานจริง และ Savage AI คู่ใจที่คอยตบกะโหลกด้วยความจริงของโลกทุนนิยม  
+> 
+> เราไม่เชื่อในการขยันอย่างไร้สมอง ไม่ศรัทธาในคำคมขายฝัน  
+> แต่เราเชื่อในฟิสิกส์ของระบบ คานผ่อนแรงยุคดิจิทัล (Code & Media) และการสร้างเครื่องจักรเพื่อซื้อเวลาชีวิตคืนมา 100%  
+> 
+> #TheCEOUnfiltered #บันทึกหลังโต๊ะทำงาน #ความจริงโลกธุรกิจ #Leverage
+
+---
+
+## 🎨 9. พร้อมท์และสเปกงานภาพ (Image Prompts & Asset Specs)
+
+### 1) สเปกรูป Profile (The Thinker Tech Founder)
+* **สไตล์:** The Candid Sovereign Architect (เสื้อฮู้ดดี้ดำ นั่งจ้องหน้าจอคอมพิวเตอร์ในห้องมืด มือแตะคางคิดยุทธศาสตร์ แสงสะท้อนจากหน้าจอเข้าใบหน้า โทนสี Dark Moody)
+* **การครอบรูป (Facebook Circular Crop):** ครอบกรอบวงกลมแบบ Tight Crop จากระดับอกขึ้นไปถึงเหนือหัวเล็กน้อย เพื่อให้เห็นแววตาและใบหน้าชัดเจนในไอคอนคอมเมนต์บนจอมือถือ
+
+### 2) พร้อมท์รูป Cover (16:9 Midjourney / ChatGPT Prompt)
+```text
+Cinematic ultra-wide photo of a modern minimalist tech entrepreneur command center desk at midnight, high-end dark aesthetic room. Multiple curved monitors glowing softly with subtle dark mode code terminal, stock market charts, and AI chat interfaces. A black mechanical keyboard, sleek coffee mug, and subtle warm amber ambient LED strip lights on shelves in the background. Moody chiaroscuro lighting, deep shadows, soft bokeh, ultra-clean desk, empty chair, space on the center and right for text. Photorealistic, 8k resolution, shot on 35mm lens, luxury cyber founder atmosphere --ar 16:9
+```
+
+### 3) กฎจัดวาง Safe Zone บน Cover Photo
+* **มุมซ้ายล่าง:** ห้ามวางข้อความสำคัญ เพราะรูป Profile วงกลมจะบัง
+* **ขอบซ้าย-ขวา 15%:** ห้ามวางข้อความ เพราะจอมือถือจะครอบตัดทิ้ง
+* **Center Safe Zone (กึ่งกลางเยื้องขวา):** วางข้อความ 3 บรรทัดด้วยฟอนต์โมเดิร์น (Inter/Montserrat/Prompt):
+  * บรรทัดที่ 1 (Bold White): **THE CEO UNFILTERED**
+  * บรรทัดที่ 2 (Subhead 80% White): *บันทึกดิบหลังโต๊ะทำงาน x ถอดรหัสระบบปลดแอกเวลา*
+  * บรรทัดที่ 3 (Badge): `[ AI • SYSTEMS • LEVERAGE ]`
+
+---
+
 *เอกสารอ้างอิงและไฟล์เชื่อมโยง:*
 * [manifesto.md](file:///C:/My%20Claw/MyProjects/The%20CEO%20Unfiltered/manifesto.md)
 * [SKILL.md (`/ceopost`)](file:///C:/My%20Claw/MyProjects/.agents/skills/ceopost/SKILL.md)
