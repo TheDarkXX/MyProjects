@@ -2,8 +2,10 @@
 episode: "EP.01"
 title: "นิสัยคนสำเร็จในหนังสือ... เรื่องจริงหรือหลอกเด็ก?"
 pillar: "The Unfiltered Reality"
-status: "ready_to_publish"
-created_at: "2026-09-30"
+status: "published"
+published_at: "2026-10-01T16:41:00+07:00"
+post_id: "122096445753500794"
+post_url: "https://www.facebook.com/photo.php?fbid=122096445753500794&set=a.122096033877500794&type=3"
 platforms: ["facebook_page", "facebook_profile"]
 ---
 
