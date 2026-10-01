@@ -13,7 +13,15 @@ import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, '..');
+function findProjectRoot(startDir) {
+  let cur = startDir;
+  while (cur !== path.dirname(cur)) {
+    if (fs.existsSync(path.join(cur, '.git'))) return cur;
+    cur = path.dirname(cur);
+  }
+  return path.resolve(startDir, '..');
+}
+const ROOT = findProjectRoot(__dirname);
 
 const startTime = Date.now();
 
