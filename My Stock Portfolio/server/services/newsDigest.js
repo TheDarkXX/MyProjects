@@ -117,28 +117,41 @@ export async function generateNewsDigest({ days = 7, type = 'ondemand', force = 
 
   // 5. Build AI Prompts
   const systemPrompt = `คุณคือ Chief Investment Officer (CIO) & Senior Portfolio Strategist ส่วนตัว
-หน้าที่ของคุณคือ สังเคราะห์และกลั่นกรองข่าวกรองตลาดหุ้นต่างประเทศรอบ ${days} วันที่ผ่านมา ให้เป็น "Executive Briefing" ที่เฉียบคม ทรงคุณค่า ตัดเสียงรบกวนทิ้งทั้งหมด
+หน้าที่ของคุณคือ สังเคราะห์ข่าวกรองตลาดหุ้นรอบ ${days} วันที่ผ่านมา ให้เป็น "Executive Briefing" ระดับผู้จัดการกองทุนชั้นนำ — "สั้น กระชับ ฟันธง ไม่เอาน้ำ ไม่ออกทะเล"
 
-กฎเหล็กในการสรุป:
-1. ภาษาไทยกระชับ คมกริบ ระดับผู้จัดการกองทุนมืออาชีพ (ตรงประเด็น ไม่อารัมภบท ไม่ใช้น้ำ ไม่แปลกูเกิลตรงๆ)
-2. โฟกัสเข้มข้นที่ "ผลกระทบต่อพื้นฐานกิจการและ Valuation" ไม่ใช่แค่รายงานการเคลื่อนไหวของราคาฉาบฉวย
-3. พอร์ตหลักของผู้ใช้ถือหุ้น: [${allHoldings.join(', ')}] ให้ความสำคัญสูงสุดกับหุ้นกลุ่มนี้
-4. รูปแบบโครงสร้าง Output ต้องเป็น Plain Markdown (ห้ามใช้ LaTeX หรือ $$ เด็ดขาด) แบ่ง 4 หมวดชัดเจน:
-   - ## 🌍 1. Macro Pulse & Regime Shift (ภาพรวมเศรษฐกิจและนโยบายการเงิน)
-     • สรุป 2-4 ประเด็นมาโครใหญ่ (Fed, ดอกเบี้ย, จีน, สภาพคล่อง, น้ำมัน, นโยบาย) ที่ส่งผลต่อกระแสตลาด
-   - ## 🎯 2. Portfolio Deep-Dive (เจาะลึกหุ้นและสินทรัพย์ในพอร์ต)
-     • ชี้ชัดสถานะหุ้นที่ถืออยู่ (${allHoldings.join(', ')}) ทุกตัวที่มีข่าว ระบุ [$TICKER] กำกับเสมอ
-   - ## 🧭 3. Signal vs Noise (จุดเปลี่ยนสำคัญ vs สัญญาณลวง)
-     • ชี้ว่าข่าวไหนคือของจริงที่กระทบ Moat/Earning และข่าวไหนเป็นแค่ FUD/Sentiment ชั่วคราว
-   - ## ⏰ 4. Upcoming Catalysts & Strategy (ปัจจัยจับตาและแผนรับมือ)
-     • กำหนดการสำคัญสัปดาห์ถัดไป (Earnings, ข้อมูลเศรษฐกิจ) และข้อควรระวัง`;
+🎯 กฎเหล็ก 5 ข้อ (ฝ่าฝืนไม่ได้เด็ดขาด):
+1. เปิดหัวด้วย "The 3-Line Punch" เสมอ: สรุปภาพรวมและประเด็นชี้ขาดทั้งหมดจบใน 3 บรรทัดแรกเท่านั้น (1. Regime ตลาดตอนนี้ 2. พอร์ตของเราได้รับผลกระทบยังไง 3. Action สัปดาห์นี้ต้องทำอะไร)
+2. ห้ามใช้น้ำลาย ห้ามอารัมภบท ห้ามแปลกูเกิลตรงๆ ห้ามออกทะเลเรื่องการเมืองที่ไม่กระทบราคาหุ้น
+3. พอร์ตหลักของผู้ใช้ถือหุ้น: [${allHoldings.join(', ')}] ต้องระบุแท็ก [$TICKER] ทุกครั้งที่เอ่ยถึงหุ้น เช่น [$NVDA], [$CRWD], [$MELI], [$RBRK], [$SCHG]
+4. แม้ไม่มีข่าวของหุ้นเดี่ยวตรงๆ ต้องฟันธงผลกระทบทางอ้อม (Macro-to-Portfolio Transmission) ต่อหุ้นในพอร์ตเสมอ
+5. ห้ามใช้สูตร LaTeX หรือ $$ เด็ดขาด ให้ใช้ Plain Markdown ตามโครงสร้างด้านล่างเป๊ะ 100%
 
-  const userPrompt = `ข่าวกรองที่คัดเลือกมาแล้วรอบ ${days} วันล่าสุด (${selectedArticles.length} ข่าว):\n\n${articleListText}\n\nกรุณาสังเคราะห์เป็น Executive Briefing ตามโครงสร้าง 4 หมวดทันที`;
+โครงสร้าง Output ที่ต้องใช้เป๊ะๆ (ห้ามเปลี่ยนชื่อหัวข้อเด็ดขาด):
+
+## ⚡ 1. The 3-Line Punch (สรุปประเด็นชี้ขาดใน 3 บรรทัด)
+• **Market Regime:** [ฟันธงใน 1 บรรทัดว่าตลาดกำลังอยู่ในโหมดอะไร Fed/ดอกเบี้ย/สภาพคล่องชี้ทางไหน]
+• **Portfolio Impact:** [ฟันธงใน 1 บรรทัดว่าหุ้นในพอร์ต ${allHoldings.slice(0, 5).map(t => '[$' + t + ']').join(', ')} ใครได้ประโยชน์ ใครเสียประโยชน์]
+• **Tactical Action:** [ฟันธงใน 1 บรรทัดว่าสัปดาห์นี้ควรทำอะไร: เช่น ทยอยสะสม, ชะลอซื้อรอดูตัวเลข, หรือถือรอ]
+
+## 🌍 2. Macro Pulse & Rates (ปัจจัยชี้นำตลาด)
+• 2-3 บุลเล็ตเจาะเฉพาะตัวเลขและนโยบายที่มีผลต่อราคาจริง (Fed, Bond Yields, ดอกเบี้ย, เงินเฟ้อ) ตัดประเด็นการเมืองทิ้งทั้งหมด
+
+## 🎯 3. Portfolio Deep-Dive (เจาะลึกหุ้นในพอร์ต)
+• ประเมินผลกระทบต่อหุ้นที่เราถือ [${allHoldings.join(', ')}] โดยระบุ [$TICKER] กำกับเสมอ พร้อมชี้ชัดว่ากระทบ Valuation หรือ Earnings อย่างไร
+
+## 🧭 4. Signal vs Noise (อะไรของจริง vs อะไรเสียงนกเสียงกา)
+• **Signal (ของจริง):** [ข่าวหรือตัวเลขที่มีผลต่อกระแสเงินสด/พื้นฐานระยะยาว]
+• **Noise (สัญญาณลวง):** [ข่าว FUD ชั่วคราว หรือการเคลื่อนไหวฉาบฉวยที่ตลาดตื่นตระหนกเกินจริง ไม่ต้องตื่นตูม]
+
+## ⏰ 5. Watchlist & Next Catalysts (ปฏิทินจับตาสัปดาห์หน้า)
+• วันสำคัญและตัวเลขเศรษฐกิจ/งบการเงินสัปดาห์ถัดไปที่ต้องเฝ้าระวัง`;
+
+  const userPrompt = `ข่าวกรองที่คัดเลือกมาแล้วรอบ ${days} วันล่าสุด (${selectedArticles.length} ข่าว):\n\n${articleListText}\n\nกรุณาสังเคราะห์เป็น Executive Briefing ตามโครงสร้าง 5 หมวด (ขึ้นต้นด้วย The 3-Line Punch) ทันที`;
 
   let rawMarkdown = '';
   let aiError = null;
 
-  // 6. Dual-Fallback AI Gateway Call (25s timeout)
+  // 6. Dual-Fallback AI Gateway Call (80s timeout for deep financial synthesis)
   try {
     console.log(`[NewsDigest] 🧠 Calling Primary AI Gateway (gpt-5.6-terra) for ${selectedArticles.length} articles...`);
     let res = await fetch(AI_GATEWAY_URL, {
@@ -151,7 +164,7 @@ export async function generateNewsDigest({ days = 7, type = 'ondemand', force = 
           { role: 'user', content: userPrompt }
         ]
       }),
-      signal: AbortSignal.timeout(25000)
+      signal: AbortSignal.timeout(80000)
     }).catch(err => {
       console.warn('[NewsDigest] Primary gateway error/timeout:', err.message);
       return null;
@@ -173,7 +186,7 @@ export async function generateNewsDigest({ days = 7, type = 'ondemand', force = 
           context: systemPrompt,
           message: userPrompt
         }),
-        signal: AbortSignal.timeout(25000)
+        signal: AbortSignal.timeout(60000)
       }).catch(err => {
         console.warn('[NewsDigest] Brain gateway error/timeout:', err.message);
         return null;
@@ -196,9 +209,10 @@ export async function generateNewsDigest({ days = 7, type = 'ondemand', force = 
   }
 
   // 8. Extract High-Level Sections for DB columns
-  const macroSummary = extractSection(rawMarkdown, '1. Macro Pulse', '2. Portfolio Deep-Dive');
-  const portfolioSummary = extractSection(rawMarkdown, '2. Portfolio Deep-Dive', '3. Signal vs Noise');
-  const actionableNotes = extractSection(rawMarkdown, '4. Upcoming Catalysts', null);
+  const punchSummary = extractSection(rawMarkdown, '1. The 3-Line Punch', '2. Macro Pulse');
+  const macroSummary = extractSection(rawMarkdown, '2. Macro Pulse', '3. Portfolio Deep-Dive') || extractSection(rawMarkdown, '1. Macro Pulse', '2. Portfolio Deep-Dive');
+  const portfolioSummary = extractSection(rawMarkdown, '3. Portfolio Deep-Dive', '4. Signal vs Noise') || extractSection(rawMarkdown, '2. Portfolio Deep-Dive', '3. Signal vs Noise');
+  const actionableNotes = extractSection(rawMarkdown, '5. Watchlist', null) || extractSection(rawMarkdown, '4. Upcoming Catalysts', null);
 
   // 9. Save into Database
   const insertStmt = db.prepare(`
@@ -261,19 +275,38 @@ export async function sendLineDigestNotification(digest, holdings = []) {
   const title = digest.title || '⚡ AI Weekly Market Brief';
   const tickers = (digest.tickers_covered || []).slice(0, 8).join(', ');
   
-  // Extract top highlights from markdown
-  const lines = digest.raw_markdown.split('\n');
-  const bullets = [];
+  // Extract 3-line punch or top highlights
+  const lines = (digest.raw_markdown || '').split('\n');
+  const punchLines = [];
+  let inPunch = false;
+
   for (const line of lines) {
     const trimmed = line.trim();
-    if ((trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) && trimmed.length > 15) {
-      bullets.push(trimmed.replace(/^[-*•]\s*/, ''));
-      if (bullets.length >= 4) break;
+    if (trimmed.includes('The 3-Line Punch') || trimmed.includes('1. The 3-Line Punch')) {
+      inPunch = true;
+      continue;
+    }
+    if (inPunch && trimmed.startsWith('## ')) {
+      inPunch = false;
+      break;
+    }
+    if (inPunch && (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*'))) {
+      punchLines.push(trimmed.replace(/^[-*•]\s*/, ''));
     }
   }
 
-  const bulletText = bullets.length > 0 
-    ? bullets.map(b => `• ${b}`).join('\n') 
+  if (punchLines.length === 0) {
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if ((trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) && trimmed.length > 15) {
+        punchLines.push(trimmed.replace(/^[-*•]\s*/, ''));
+        if (punchLines.length >= 3) break;
+      }
+    }
+  }
+
+  const bulletText = punchLines.length > 0 
+    ? punchLines.map(b => `• ${b}`).join('\n\n') 
     : '• มีการประมวลผลข่าวกรองการลงทุนครบถ้วนทุกมิติ';
 
   const webUrl = 'https://stock.doctorbankonline.com/news';
@@ -307,22 +340,27 @@ function buildFallbackMarkdown(articles, holdings, rangeTitle, days) {
 
 > ⚠️ *หมายเหตุ: สร้างจาก Rule-based Fallback Engine เนื่องจาก AI Gateway ออฟไลน์ชั่วคราว — รวบรวมจาก ${articles.length} ข่าวกรองที่ผ่านการประเมินความสำคัญสูงสุด*
 
-## 🌍 1. Macro Pulse & Regime Shift (ภาพรวมเศรษฐกิจมหภาค)
+## ⚡ 1. The 3-Line Punch (สรุปประเด็นชี้ขาดใน 3 บรรทัด)
+• **Market Regime:** ภาพรวมตลาดยังอยู่ในช่วงปรับตัวซึมซับดอกเบี้ยและนโยบายการเงินของ Fed
+• **Portfolio Impact:** หุ้นหลักในพอร์ต [${holdings.join(', ')}] พื้นฐานยังแข็งแกร่ง ไม่มีข่าวลบรุนแรงกระทบ Valuation
+• **Tactical Action:** ถือครองตามสัดส่วนเดิม และชะลอการไล่ราคาเพื่อรอดูตัวเลขเศรษฐกิจสำคัญในสัปดาห์หน้า
+
+## 🌍 2. Macro Pulse & Rates (ปัจจัยชี้นำตลาด)
 ${macroArticles.length > 0 
   ? macroArticles.slice(0, 5).map(a => `• **[${a.ticker}] ${a.headline_th || a.headline}**\n  - ${a.summary_th || a.priority_reason || '-'}`).join('\n')
   : '• ไม่พบประเด็นมาโครรุนแรงที่มีนัยยะสำคัญเป็นพิเศษในช่วงเวลานี้'}
 
-## 🎯 2. Portfolio Deep-Dive (เจาะลึกหุ้นในพอร์ตโฟลิโอ)
+## 🎯 3. Portfolio Deep-Dive (เจาะลึกหุ้นในพอร์ต)
 ${holdingArticles.length > 0 
   ? holdingArticles.slice(0, 8).map(a => `• **[$${a.ticker}] ${a.headline_th || a.headline}** (${a.sentiment})\n  - ${a.summary_th || a.priority_reason || '-'}`).join('\n')
   : `• หุ้นหลักในพอร์ต (${holdings.join(', ')}) เคลื่อนไหวตามปกติ ไม่มีข่าวลบที่กระทบปัจจัยพื้นฐาน`}
 
-## 🧭 3. Signal vs Noise (ข่าวเด่นสำคัญและทิศทางอุตสาหกรรม)
+## 🧭 4. Signal vs Noise (อะไรของจริง vs อะไรเสียงนกเสียงกา)
 ${otherHighImpact.length > 0 
   ? otherHighImpact.slice(0, 6).map(a => `• **[${a.ticker}] ${a.headline_th || a.headline}**\n  - ${a.summary_th || a.priority_reason || '-'}`).join('\n')
   : '• ข่าวส่วนใหญ่เป็นความผันผวนระยะสั้น ไม่พบสัญญาณเปลี่ยนปัจจัยพื้นฐาน'}
 
-## ⏰ 4. Upcoming Catalysts & Strategy
+## ⏰ 5. Watchlist & Next Catalysts (ปฏิทินจับตาสัปดาห์หน้า)
 • ติดตามปฏิทินงบการเงินและตัวเลขเศรษฐกิจสหรัฐฯ ในสัปดาห์ถัดไป
 • ดำเนินกลยุทธ์ตาม Scenario Matrix ของ Project 2X และรันเทรนด์ตามแผน`;
 }
