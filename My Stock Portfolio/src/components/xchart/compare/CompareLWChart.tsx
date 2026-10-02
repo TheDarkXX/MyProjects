@@ -13,6 +13,7 @@ import {
   RawChartData,
   normalizeTickerData,
 } from './useCompareData';
+import { CompareTimeFrame } from '../../../stores/xchartStore';
 import { TV_FONT_FAMILY } from '../../../types/chart';
 
 export interface CompareHoverData {
@@ -28,6 +29,7 @@ export interface DynamicBaseStats {
 }
 
 interface CompareLWChartProps {
+  timeframe?: CompareTimeFrame;
   targetSeries: NormalizedTickerSeries | null;
   refSeriesList: NormalizedTickerSeries[];
   rawDataMapRef: React.MutableRefObject<Record<string, RawChartData>>;
@@ -82,6 +84,7 @@ function hexToRgba(hex: string, alpha: number = 1): string {
 }
 
 export const CompareLWChart: React.FC<CompareLWChartProps> = ({
+  timeframe = '1Y',
   targetSeries,
   refSeriesList,
   rawDataMapRef,
@@ -89,7 +92,7 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
   showBaselineZero = true,
   baselineStyle = 'DASHED',
   baselineColor = 'rgba(255, 255, 255, 0.45)',
-  showPointMarkers = true,
+  showPointMarkers,
   pointMarkersRadius = 4,
   applyMarkersToRefs = false,
   onCrosshairMove,
@@ -175,9 +178,14 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
     let targetSeriesApi: ISeriesApi<'Line'> | null = null;
     const refSeriesMap = new Map<string, ISeriesApi<'Line'>>();
 
-    const targetMarkersVisible = targetSeries?.pointMarkersVisible !== undefined
-      ? targetSeries.pointMarkersVisible
-      : showPointMarkers;
+    const isLongTermTimeframe = timeframe === '3Y' || timeframe === '5Y' || timeframe === 'MAX';
+    // If showPointMarkers is explicitly passed as boolean, use it.
+    // Otherwise: <= 1Y -> true, > 1Y -> false (auto-off to avoid visual clutter)
+    const initialMarkersEnabled = showPointMarkers !== undefined 
+      ? showPointMarkers 
+      : !isLongTermTimeframe;
+
+    const targetMarkersVisible = initialMarkersEnabled && (targetSeries?.pointMarkersVisible !== false);
     const targetMarkersRadius = targetSeries?.pointMarkersRadius || pointMarkersRadius || 4;
 
     // 1. Add Target Series (if data exists)
@@ -202,9 +210,11 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
     // 2. Add Visible Reference Series
     const visibleRefs = refSeriesList.filter((r) => r.visible && r.data.length > 0);
     for (const ref of visibleRefs) {
-      const refMarkersVisible = ref.pointMarkersVisible !== undefined
-        ? ref.pointMarkersVisible
-        : (applyMarkersToRefs ? showPointMarkers : false);
+      const refMarkersVisible = initialMarkersEnabled && (
+        ref.pointMarkersVisible !== undefined
+          ? ref.pointMarkersVisible
+          : applyMarkersToRefs
+      );
       const refMarkersRadius = ref.pointMarkersRadius || Math.max(2, targetMarkersRadius - 1);
 
       const seriesApi = chart.addSeries(LineSeries, {
@@ -326,6 +336,46 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
 
     chart.timeScale().subscribeVisibleTimeRangeChange(onVisibleTimeRangeChange);
 
+    // 3.4 Dynamic Point Markers Adaptive Engine (TradingView Style):
+    // When zoomed in (<= 240 visible bars / 1 yr): show dots for high resolution
+    // When zoomed out (> 240 visible bars / > 1 yr): hide dots automatically to prevent visual clutter
+    let currentMarkersVisible = initialMarkersEnabled;
+
+    const onVisibleLogicalRangeChange = (logicalRange: any) => {
+      if (!logicalRange) return;
+      const visibleBars = logicalRange.to - logicalRange.from;
+
+      let shouldShow: boolean;
+      if (showPointMarkers === false && !isLongTermTimeframe) {
+        // User manually turned off dots on <= 1Y chart -> respect user choice
+        shouldShow = false;
+      } else {
+        // Adaptive threshold: show dots when <= 240 bars visible
+        shouldShow = visibleBars <= 240;
+      }
+
+      if (shouldShow !== currentMarkersVisible) {
+        currentMarkersVisible = shouldShow;
+        if (targetSeriesApiRef.current) {
+          const tVisible = shouldShow && (targetSeries?.pointMarkersVisible !== false);
+          targetSeriesApiRef.current.applyOptions({ pointMarkersVisible: tVisible });
+        }
+
+        for (const [id, api] of refSeriesMapRef.current.entries()) {
+          const refConfig = refSeriesList.find((r) => r.id === id);
+          if (!refConfig) continue;
+          const refVisible = shouldShow && (
+            refConfig.pointMarkersVisible !== undefined
+              ? refConfig.pointMarkersVisible
+              : applyMarkersToRefs
+          );
+          api.applyOptions({ pointMarkersVisible: refVisible });
+        }
+      }
+    };
+
+    chart.timeScale().subscribeVisibleLogicalRangeChange(onVisibleLogicalRangeChange);
+
     // 4. Subscribe to Crosshair moves for real-time live % legend HUD
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point) {
@@ -369,6 +419,7 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
       if (rafId != null) cancelAnimationFrame(rafId);
       try {
         chart.timeScale().unsubscribeVisibleTimeRangeChange(onVisibleTimeRangeChange);
+        chart.timeScale().unsubscribeVisibleLogicalRangeChange(onVisibleLogicalRangeChange);
       } catch (_) {}
       resizeObserver.disconnect();
       chart.remove();
@@ -377,6 +428,7 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
       refSeriesMapRef.current.clear();
     };
   }, [
+    timeframe,
     targetSeries,
     refSeriesList,
     showBaselineZero,

@@ -73,8 +73,15 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
     setIsConfigOpen(true);
   };
 
+  const isOverOneYear = (tf: CompareTimeFrame) => tf === '3Y' || tf === '5Y' || tf === 'MAX';
+
   const handleSelectTimeframe = (tf: CompareTimeFrame) => {
-    updateCompareConfig(tabId, { timeframe: tf });
+    // TradingView rule: <= 1Y -> showPointMarkers = true, > 1Y -> showPointMarkers = false (auto-off)
+    const autoMarkers = !isOverOneYear(tf);
+    updateCompareConfig(tabId, {
+      timeframe: tf,
+      showPointMarkers: autoMarkers,
+    });
   };
 
   const handleToggleFullscreen = useCallback(() => {
@@ -213,6 +220,7 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
 
         {/* Lightweight Chart Engine */}
         <CompareLWChart
+          timeframe={compareConfig.timeframe}
           targetSeries={targetSeries}
           refSeriesList={refSeriesList}
           rawDataMapRef={rawDataMapRef}
