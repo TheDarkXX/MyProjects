@@ -34,12 +34,12 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   const NAV_ITEMS = [
-    { id: 'news', label: 'News Intel Feed', desc: 'AI-curated news & radar', icon: Newspaper, color: 'text-rose-400' },
     { id: 'project2x', label: 'Project 2X Simulator', desc: 'Compounding forecast & goals', icon: Rocket, color: 'text-orange-400' },
     { id: 'xray', label: 'Stock X-Ray', desc: '4 Vital Signs & 3 High-Impact Charts', icon: ScanSearch, color: 'text-cyan-400' },
     { id: 'rebalance', label: 'Smart Rebalance', desc: 'AI-driven asset allocation', icon: Scale, color: 'text-blue-400' },
     { id: 'analysis', label: 'Analysis & Returns', desc: 'Performance attribution & sectors', icon: PieChart, color: 'text-cyan-400' },
     { id: 'health', label: 'Health & Risk', desc: 'Portfolio health, beta & volatility', icon: ShieldCheck, color: 'text-emerald-400' },
+    { id: 'news', label: 'News Intel Feed', desc: 'AI-curated news & radar', icon: Newspaper, color: 'text-rose-400' },
     { id: 'transactions', label: 'Transactions', desc: 'Order history & cash flows', icon: ReceiptText, color: 'text-amber-400' },
     { id: 'portfolios', label: 'Portfolios', desc: 'Manage & switch portfolios', icon: Briefcase, color: 'text-purple-400' },
     { id: 'settings', label: 'Settings', desc: 'App settings & cloud sync', icon: Settings, color: 'text-indigo-400' },

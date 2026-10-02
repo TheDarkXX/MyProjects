@@ -24,9 +24,9 @@ const NAV_SECTIONS: NavSection[] = [
     id: 'insights',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { id: 'news', label: 'News Intel', icon: Newspaper },
       { id: 'analysis', label: 'Analysis', icon: PieChart },
       { id: 'health', label: 'Health & Risk', icon: ShieldCheck },
+      { id: 'news', label: 'News Intel', icon: Newspaper },
     ],
   },
   {
