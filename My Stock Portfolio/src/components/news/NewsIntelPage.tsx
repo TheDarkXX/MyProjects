@@ -491,7 +491,7 @@ export const NewsIntelPage: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      {activeSubTab === 'digest' ? (
+      <div className={activeSubTab === 'digest' ? 'block' : 'hidden'}>
         <NewsDigestReaderView
           onSelectTicker={(t) => {
             setSelectedTicker(t);
@@ -499,8 +499,11 @@ export const NewsIntelPage: React.FC = () => {
           }}
           onSwitchToFeed={() => setActiveSubTab('feed')}
           initialDigestId={targetDigestId}
+          initialDigests={digestHistory}
         />
-      ) : (
+      </div>
+
+      <div className={activeSubTab === 'feed' ? 'block' : 'hidden'}>
         <div className="flex flex-col xl:flex-row gap-5 w-full items-start">
           {/* Left Column: Main News Feed */}
           <div className="flex-1 min-w-0 space-y-6 w-full">
@@ -1050,7 +1053,7 @@ export const NewsIntelPage: React.FC = () => {
         />
       </div>
         </div>
-      )}
+      </div>
 
       {/* Mobile News Ticker Dock Drawer */}
       {showMobileDock && (

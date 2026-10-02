@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   Sparkles, BookOpen, Clock, Calendar, Copy, Check, Send, 
   ExternalLink, RefreshCw, Search, ChevronRight, Layers, ArrowLeft
@@ -10,17 +10,19 @@ interface NewsDigestReaderViewProps {
   onSelectTicker?: (ticker: string) => void;
   onSwitchToFeed?: () => void;
   initialDigestId?: number | null;
+  initialDigests?: NewsDigest[];
 }
 
 export const NewsDigestReaderView: React.FC<NewsDigestReaderViewProps> = ({
   onSelectTicker,
   onSwitchToFeed,
-  initialDigestId
+  initialDigestId,
+  initialDigests
 }) => {
-  const [digests, setDigests] = useState<NewsDigest[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(initialDigestId || null);
+  const [digests, setDigests] = useState<NewsDigest[]>(initialDigests || []);
+  const [selectedId, setSelectedId] = useState<number | null>(initialDigestId || initialDigests?.[0]?.id || null);
   const [selectedDigest, setSelectedDigest] = useState<NewsDigest | null>(null);
-  const [loadingList, setLoadingList] = useState(true);
+  const [loadingList, setLoadingList] = useState(!initialDigests || initialDigests.length === 0);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [generatingDays, setGeneratingDays] = useState<number | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'weekly' | 'ondemand'>('all');
@@ -31,8 +33,17 @@ export const NewsDigestReaderView: React.FC<NewsDigestReaderViewProps> = ({
   const [sendingLine, setSendingLine] = useState(false);
   const [lineSent, setLineSent] = useState(false);
   
-  // Local cache for full digests so switching is 0ms
-  const [digestCache, setDigestCache] = useState<Record<number, NewsDigest>>({});
+  // High-speed ref cache for full digests (0ms switching, no effect re-triggers)
+  const digestCacheRef = useRef<Record<number, NewsDigest>>({});
+
+  // Sync initialDigests if parent updates
+  useEffect(() => {
+    if (initialDigests && initialDigests.length > 0) {
+      setDigests(initialDigests);
+      setLoadingList(false);
+      setSelectedId(prev => prev ?? initialDigests[0].id);
+    }
+  }, [initialDigests]);
 
   // Helper for safe Thai date format
   const formatDigestDate = (dateStr?: string) => {
@@ -53,7 +64,7 @@ export const NewsDigestReaderView: React.FC<NewsDigestReaderViewProps> = ({
     }
   };
 
-  // Fetch list of all digests
+  // Fetch list of all digests (zero external deps, runs once or on manual refresh)
   const fetchDigests = useCallback(async () => {
     try {
       setLoadingList(true);
@@ -61,48 +72,51 @@ export const NewsDigestReaderView: React.FC<NewsDigestReaderViewProps> = ({
       const data = await res.json();
       if (data.success && Array.isArray(data.digests)) {
         setDigests(data.digests);
-        if (data.digests.length > 0 && !selectedId) {
-          setSelectedId(data.digests[0].id);
-        }
+        setSelectedId(prev => prev ?? (data.digests[0]?.id || null));
       }
     } catch (err) {
       console.error('[NewsDigestReader] Failed to fetch digests:', err);
     } finally {
       setLoadingList(false);
     }
-  }, [selectedId]);
+  }, []);
 
   useEffect(() => {
-    fetchDigests();
-  }, [fetchDigests]);
+    // Only fetch if we didn't receive initialDigests
+    if (!initialDigests || initialDigests.length === 0) {
+      fetchDigests();
+    }
+  }, [fetchDigests, initialDigests]);
 
-  // Load selected digest detail
+  // Load selected digest detail with 0ms memory cache
   useEffect(() => {
     if (!selectedId) return;
 
-    if (digestCache[selectedId]) {
-      setSelectedDigest(digestCache[selectedId]);
+    if (digestCacheRef.current[selectedId]) {
+      setSelectedDigest(digestCacheRef.current[selectedId]);
       return;
     }
 
+    let isMounted = true;
     const loadDetail = async () => {
       try {
         setLoadingDetail(true);
         const res = await fetch(`/api/news/digests/${selectedId}`);
         const data = await res.json();
-        if (data.success && data.digest) {
+        if (isMounted && data.success && data.digest) {
+          digestCacheRef.current[selectedId] = data.digest;
           setSelectedDigest(data.digest);
-          setDigestCache(prev => ({ ...prev, [selectedId]: data.digest }));
         }
       } catch (err) {
         console.error('[NewsDigestReader] Failed to load digest detail:', err);
       } finally {
-        setLoadingDetail(false);
+        if (isMounted) setLoadingDetail(false);
       }
     };
 
     loadDetail();
-  }, [selectedId, digestCache]);
+    return () => { isMounted = false; };
+  }, [selectedId]);
 
   // Handle on-demand generation
   const handleGenerate = async (days: number = 7) => {
