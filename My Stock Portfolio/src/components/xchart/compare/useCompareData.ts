@@ -89,7 +89,8 @@ export function calculateStartDate(timeframe: CompareTimeFrame, availableDates?:
 export function normalizeTickerData(
   raw: RawChartData,
   masterDates: string[],
-  fromDate: string
+  fromDate: string,
+  timeframeStartDate?: string
 ): {
   points: CompareDataPoint[];
   latestReturn: number | null;
@@ -161,12 +162,17 @@ export function normalizeTickerData(
     return { points: [], latestReturn: null, basePrice: null, actualBaseDate: null };
   }
 
-  // 4. Generate points for all dates in masterDates >= effectiveStartDate
+  // 4. Generate points for all dates in masterDates >= pointInceptionDate
+  // If timeframeStartDate is provided, preserve all points >= timeframeStartDate (and >= stockFirstDate)
+  // so zoom-out / panning never loses historical bars!
+  const minStartDate = timeframeStartDate || fromDate;
+  const pointInceptionDate = stockFirstDate > minStartDate ? stockFirstDate : minStartDate;
+
   const points: CompareDataPoint[] = [];
   let lastKnownClose = basePrice;
 
   for (const d of masterDates) {
-    if (d < effectiveStartDate) continue;
+    if (d < pointInceptionDate) continue;
 
     const currentClose = priceMap.get(d);
     if (currentClose != null && currentClose > 0 && isFinite(currentClose)) {
@@ -284,22 +290,28 @@ export function useCompareData(
           }
         }
 
-        const masterDates = Array.from(dateSet).sort();
+        const allDates = Array.from(dateSet).sort();
 
-        if (masterDates.length === 0) {
+        if (allDates.length === 0) {
           setError(`No trading dates available for comparison`);
           setLoading(false);
           return;
         }
 
-        rawDataMapRef.current = rawMap;
-        masterDatesRef.current = masterDates;
-
         // 4. Compute initial startDate cutoff for active timeframe
         const startDate = calculateStartDate(timeframe, targetRaw.dates);
 
+        // Filter masterDates to active timeframe so the chart timeline starts at startDate (flush left)!
+        const masterDates = allDates.filter((d) => d >= startDate);
+        if (masterDates.length === 0) {
+          masterDates.push(...allDates.slice(-30));
+        }
+
+        rawDataMapRef.current = rawMap;
+        masterDatesRef.current = masterDates;
+
         // 5. Normalize Target
-        const targetNorm = normalizeTickerData(targetRaw, masterDates, startDate);
+        const targetNorm = normalizeTickerData(targetRaw, masterDates, startDate, startDate);
         const normTargetSeries: NormalizedTickerSeries = {
           id: `target-${cleanTarget.toLowerCase()}`,
           symbol: cleanTarget,
@@ -334,7 +346,7 @@ export function useCompareData(
             };
           }
 
-          const norm = normalizeTickerData(raw, masterDates, startDate);
+          const norm = normalizeTickerData(raw, masterDates, startDate, startDate);
           return {
             ...ref,
             isTarget: false,

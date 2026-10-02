@@ -150,7 +150,10 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
         secondsVisible: false,
         barSpacing: 8,
         minBarSpacing: 1.2,
-        rightOffset: 12,
+        rightOffset: 8,
+        fixLeftEdge: true,
+        fixRightEdge: false,
+        lockVisibleTimeRangeOnResize: true,
       },
       rightPriceScale: {
         borderColor: 'rgba(255, 255, 255, 0.12)',
@@ -237,15 +240,27 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
       }
     }
 
-    // Expose reset zoom to parent
+    // Expose reset zoom to parent (flush left)
     if (onResetZoomReady) {
       onResetZoomReady(() => {
         chart.timeScale().fitContent();
+        if (targetSeries && targetSeries.data.length > 0) {
+          chart.timeScale().setVisibleLogicalRange({
+            from: 0,
+            to: targetSeries.data.length + 6,
+          });
+        }
       });
     }
 
-    // Fit content initially
+    // Fit content initially and pin flush to left edge (Logical index 0)
     chart.timeScale().fitContent();
+    if (targetSeries && targetSeries.data.length > 0) {
+      chart.timeScale().setVisibleLogicalRange({
+        from: 0,
+        to: targetSeries.data.length + 6,
+      });
+    }
 
     // 3. Dynamic Left-Edge 0% Base Re-normalization
     let rafPending = false;
@@ -267,13 +282,15 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
         const masterDates = masterDatesRef.current;
         if (!masterDates || masterDates.length === 0) return;
 
-        // 3.1 Re-normalize Target Series
+        const timeframeStartDate = masterDates[0];
+
+        // 3.1 Re-normalize Target Series (preserve points from timeframeStartDate, base at fromDateStr)
         let newTargetReturn: number | null = null;
         if (targetSeries && targetSeriesApiRef.current) {
           const cleanTarget = targetSeries.symbol.toUpperCase();
           const rawTarget = rawMap[cleanTarget];
           if (rawTarget) {
-            const norm = normalizeTickerData(rawTarget, masterDates, fromDateStr);
+            const norm = normalizeTickerData(rawTarget, masterDates, fromDateStr, timeframeStartDate);
             if (norm.points.length > 0) {
               targetSeriesApiRef.current.setData(norm.points as any);
               newTargetReturn = norm.latestReturn;
@@ -281,7 +298,7 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
           }
         }
 
-        // 3.2 Re-normalize Reference Series
+        // 3.2 Re-normalize Reference Series (preserve points from timeframeStartDate, base at fromDateStr)
         const newRefReturns: Record<string, number | null> = {};
         for (const ref of refSeriesList) {
           if (!ref.visible) continue;
@@ -290,7 +307,7 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
 
           const raw = rawMap[ref.symbol.toUpperCase()];
           if (raw) {
-            const norm = normalizeTickerData(raw, masterDates, fromDateStr);
+            const norm = normalizeTickerData(raw, masterDates, fromDateStr, timeframeStartDate);
             if (norm.points.length > 0) {
               seriesApi.setData(norm.points as any);
               newRefReturns[ref.id] = norm.latestReturn;
