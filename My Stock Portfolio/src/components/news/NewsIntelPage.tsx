@@ -14,7 +14,8 @@ import { NewsCardMini } from './views/NewsCardMini';
 import { NewsCardBig } from './views/NewsCardBig';
 import { NewsCardFull } from './views/NewsCardFull';
 import { NewsDetailModal } from './NewsDetailModal';
-import { NewsItem, NewsStats, TimingStats, TriageStats, ViewMode, SortKey, SortOrder } from './types';
+import { NewsDigestModal } from './NewsDigestModal';
+import { NewsItem, NewsStats, TimingStats, TriageStats, ViewMode, SortKey, SortOrder, NewsDigest } from './types';
 
 export const NewsIntelPage: React.FC = () => {
   const [items, setItems] = useState<NewsItem[]>([]);
@@ -33,6 +34,13 @@ export const NewsIntelPage: React.FC = () => {
   const [showTriageModal, setShowTriageModal] = useState(false);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<NewsItem | null>(null);
+
+  // AI News Digest States
+  const [selectedDigest, setSelectedDigest] = useState<NewsDigest | null>(null);
+  const [showDigestModal, setShowDigestModal] = useState(false);
+  const [generatingDigestDays, setGeneratingDigestDays] = useState<number | null>(null);
+  const [digestHistory, setDigestHistory] = useState<NewsDigest[]>([]);
+  const [showDigestHistoryModal, setShowDigestHistoryModal] = useState(false);
 
   // Filters
   const [selectedPortfolio, setSelectedPortfolio] = useState<'all' | 'main' | 'tiger' | 'project2x' | 'global'>('all');
@@ -361,6 +369,56 @@ export const NewsIntelPage: React.FC = () => {
     }
   };
 
+  const handleGenerateDigest = async (days: number) => {
+    setGeneratingDigestDays(days);
+    try {
+      const res = await fetch('/api/news/digests/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days, type: 'ondemand' })
+      });
+      const data = await res.json();
+      if (data.success && data.digest) {
+        setSelectedDigest(data.digest);
+        setShowDigestModal(true);
+      } else {
+        alert(data.message || 'ไม่สามารถสร้างสรุปข่าวได้ในขณะนี้');
+      }
+    } catch (err: any) {
+      console.error('Digest generation error:', err);
+      alert('เกิดข้อผิดพลาดในการสังเคราะห์ข่าว: ' + err.message);
+    } finally {
+      setGeneratingDigestDays(null);
+    }
+  };
+
+  const handleFetchDigestHistory = async () => {
+    try {
+      const res = await fetch('/api/news/digests');
+      const data = await res.json();
+      if (data.success && data.digests) {
+        setDigestHistory(data.digests);
+        setShowDigestHistoryModal(true);
+      }
+    } catch (err) {
+      console.error('Failed to fetch digest history:', err);
+    }
+  };
+
+  const handleOpenDigestById = async (id: number) => {
+    try {
+      const res = await fetch(`/api/news/digests/${id}`);
+      const data = await res.json();
+      if (data.success && data.digest) {
+        setSelectedDigest(data.digest);
+        setShowDigestHistoryModal(false);
+        setShowDigestModal(true);
+      }
+    } catch (err) {
+      console.error('Failed to open digest:', err);
+    }
+  };
+
   return (
     <div className="flex flex-col xl:flex-row gap-5 w-full pb-12 items-start">
       {/* Left Column: Main News Feed */}
@@ -388,6 +446,46 @@ export const NewsIntelPage: React.FC = () => {
 
         {/* Quick Action Buttons */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* AI Digest Quick Action Buttons */}
+          <button
+            onClick={() => handleGenerateDigest(3)}
+            disabled={generatingDigestDays !== null}
+            className={clsx(
+              "px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer",
+              generatingDigestDays === 3
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/50 animate-pulse"
+                : "bg-[#1A1D2D] hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border-amber-500/30 hover:border-amber-500/50"
+            )}
+            title="ให้ AI สรุปข่าวกรองรอบ 3 วันล่าสุดแบบกระชับ"
+          >
+            <Zap className={clsx("w-3.5 h-3.5 text-amber-400", generatingDigestDays === 3 && "animate-spin")} />
+            {generatingDigestDays === 3 ? 'กำลังสรุป 3 วัน...' : '⚡ สรุป 3 วัน'}
+          </button>
+
+          <button
+            onClick={() => handleGenerateDigest(7)}
+            disabled={generatingDigestDays !== null}
+            className={clsx(
+              "px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer",
+              generatingDigestDays === 7
+                ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 animate-pulse"
+                : "bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-300 hover:text-white border-indigo-500/40 hover:border-indigo-400"
+            )}
+            title="สร้าง AI Weekly Market & Portfolio Brief รอบ 7 วันล่าสุด"
+          >
+            <Sparkles className={clsx("w-3.5 h-3.5 text-indigo-400", generatingDigestDays === 7 && "animate-spin")} />
+            {generatingDigestDays === 7 ? 'กำลังสรุป 7 วัน...' : '⚡ สรุป 7 วัน'}
+          </button>
+
+          <button
+            onClick={handleFetchDigestHistory}
+            className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-slate-300 hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+            title="ดูประวัติบทสรุป AI News Digest ทั้งหมด"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+            คลังสรุป AI
+          </button>
+
           <button
             onClick={() => setShowMobileDock(true)}
             className="xl:hidden px-3.5 py-2 rounded-xl bg-[#823AFD]/20 hover:bg-[#823AFD]/30 text-[#C4B5FD] border border-[#823AFD]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
@@ -1212,6 +1310,100 @@ export const NewsIntelPage: React.FC = () => {
           setSelectedTicker(null);
         }}
       />
+
+      {/* 6. AI News Digest Reader Modal */}
+      <NewsDigestModal
+        isOpen={showDigestModal}
+        onClose={() => setShowDigestModal(false)}
+        digest={selectedDigest}
+        onSelectTicker={(t) => {
+          setSelectedTicker(t);
+          setShowDigestModal(false);
+        }}
+      />
+
+      {/* 7. AI Digest History Library Modal */}
+      {showDigestHistoryModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between border-b border-[#2A2E45] pb-4 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white font-heading">คลังประวัติ AI News Digest</h3>
+                  <p className="text-xs text-slate-400">บทสรุปรายสัปดาห์ (Weekly) และสรุปด่วน (On-Demand) ทั้งหมด</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDigestHistoryModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+              {digestHistory.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-sm">
+                  ยังไม่มีประวัติบทสรุป AI ในระบบ กดปุ่ม [ ⚡ สรุป 3 วัน ] หรือ [ ⚡ สรุป 7 วัน ] ด้านบนเพื่อสร้างบทสรุปแรกได้ทันที
+                </div>
+              ) : (
+                digestHistory.map((d) => (
+                  <div
+                    key={d.id}
+                    onClick={() => handleOpenDigestById(d.id)}
+                    className="p-4 rounded-2xl bg-[#0F111A] hover:bg-[#1A1D2D] border border-[#1F2233] hover:border-indigo-500/50 transition-all cursor-pointer flex items-center justify-between gap-4 group"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={clsx(
+                          "px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border",
+                          d.digest_type === 'weekly' 
+                            ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40" 
+                            : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                        )}>
+                          {d.digest_type === 'weekly' ? 'Weekly' : 'On-Demand'}
+                        </span>
+                        <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          {new Date(d.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">
+                          • {d.article_count} ข่าวกรอง
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors truncate">
+                        {d.title}
+                      </h4>
+                      {d.tickers_covered && d.tickers_covered.length > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-slate-400 flex-wrap">
+                          <span className="text-slate-500">ครอบคลุม:</span>
+                          {d.tickers_covered.slice(0, 6).map(t => (
+                            <span key={t} className="px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded font-mono text-[11px]">
+                              ${t}
+                            </span>
+                          ))}
+                          {d.tickers_covered.length > 6 && (
+                            <span className="text-[11px] text-slate-500">+{d.tickers_covered.length - 6}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600/20 group-hover:bg-indigo-600 text-indigo-300 group-hover:text-white border border-indigo-500/40 text-xs font-bold transition-all flex items-center gap-1 flex-shrink-0"
+                    >
+                      เปิดอ่าน
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

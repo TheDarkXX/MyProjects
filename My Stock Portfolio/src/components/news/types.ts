@@ -73,3 +73,19 @@ export interface TriageStats {
   byAction: { action: string; count: number; avgScore: number }[];
   recentTriage: any[];
 }
+
+export interface NewsDigest {
+  id: number;
+  digest_type: 'weekly' | 'ondemand';
+  period_start: string;
+  period_end: string;
+  title: string;
+  macro_summary_th?: string | null;
+  portfolio_summary_th?: string | null;
+  actionable_notes_th?: string | null;
+  raw_markdown: string;
+  tickers_covered: string[];
+  source_article_ids?: number[];
+  article_count: number;
+  created_at: string;
+}

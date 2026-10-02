@@ -8,6 +8,12 @@ import {
   rescoreArticle,
   rescoreRecentArticles
 } from '../services/newsRadar.js';
+import {
+  generateNewsDigest,
+  getDigestHistory,
+  getDigestById,
+  getLatestDigest
+} from '../services/newsDigest.js';
 
 const newsRoutes = new Hono();
 
@@ -362,6 +368,70 @@ newsRoutes.delete('/watchlist/:symbol', (c) => {
     return c.json({ success: true, symbol });
   } catch (error) {
     return c.json({ error: 'Failed to delete ticker from watchlist' }, 500);
+  }
+});
+
+// ==========================================
+// AI NEWS DIGEST ENDPOINTS
+// ==========================================
+
+// GET /api/news/digests — List previous digests
+newsRoutes.get('/digests', (c) => {
+  try {
+    const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 100);
+    const type = c.req.query('type') || null;
+    const digests = getDigestHistory({ limit, type });
+    return c.json({ success: true, digests });
+  } catch (error) {
+    console.error('[NewsRoutes] Failed to fetch digests:', error);
+    return c.json({ error: 'Failed to fetch news digests' }, 500);
+  }
+});
+
+// GET /api/news/digests/latest — Get latest generated digest
+newsRoutes.get('/digests/latest', (c) => {
+  try {
+    const type = c.req.query('type') || null;
+    const digest = getLatestDigest(type);
+    if (!digest) {
+      return c.json({ success: false, message: 'No digest found' }, 404);
+    }
+    return c.json({ success: true, digest });
+  } catch (error) {
+    console.error('[NewsRoutes] Failed to fetch latest digest:', error);
+    return c.json({ error: 'Failed to fetch latest digest' }, 500);
+  }
+});
+
+// GET /api/news/digests/:id — Get specific digest by ID
+newsRoutes.get('/digests/:id', (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    const digest = getDigestById(id);
+    if (!digest) {
+      return c.json({ success: false, message: 'Digest not found' }, 404);
+    }
+    return c.json({ success: true, digest });
+  } catch (error) {
+    console.error('[NewsRoutes] Failed to fetch digest by id:', error);
+    return c.json({ error: 'Failed to fetch digest' }, 500);
+  }
+});
+
+// POST /api/news/digests/generate — Trigger digest generation on-demand or weekly
+newsRoutes.post('/digests/generate', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const days = parseInt(body.days || '7', 10);
+    const type = body.type === 'weekly' ? 'weekly' : 'ondemand';
+    const force = Boolean(body.force);
+    const notifyLine = Boolean(body.notifyLine);
+
+    const result = await generateNewsDigest({ days, type, force, notifyLine });
+    return c.json(result);
+  } catch (error) {
+    console.error('[NewsRoutes] Failed to generate digest:', error);
+    return c.json({ success: false, error: error.message }, 500);
   }
 });
 

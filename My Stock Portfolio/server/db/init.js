@@ -429,11 +429,29 @@ export function initDb() {
         added_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS news_digests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        digest_type TEXT NOT NULL,         -- 'weekly' | 'ondemand'
+        period_start TEXT NOT NULL,
+        period_end TEXT NOT NULL,
+        title TEXT NOT NULL,
+        macro_summary_th TEXT,
+        portfolio_summary_th TEXT,
+        actionable_notes_th TEXT,
+        raw_markdown TEXT NOT NULL,
+        tickers_covered TEXT DEFAULT '[]',
+        source_article_ids TEXT DEFAULT '[]',
+        article_count INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_news_ticker ON news_intelligence(ticker);
     CREATE INDEX IF NOT EXISTS idx_news_portfolio ON news_intelligence(portfolio_tag);
     CREATE INDEX IF NOT EXISTS idx_news_priority ON news_intelligence(reading_priority);
     CREATE INDEX IF NOT EXISTS idx_news_is_read ON news_intelligence(is_read);
     CREATE INDEX IF NOT EXISTS idx_news_created ON news_intelligence(created_at);
+    CREATE INDEX IF NOT EXISTS idx_digests_type ON news_digests(digest_type);
+    CREATE INDEX IF NOT EXISTS idx_digests_created ON news_digests(created_at);
   `);
 
   // Migration for seen_articles & news_intelligence triage columns
