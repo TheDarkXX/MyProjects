@@ -212,7 +212,7 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
                           </span>
                           {isIpoAfterBase && (
                             <span
-                              className="text-[10px] text-amber-300 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30 shrink-0 font-medium"
+                              className="text-[11px] text-amber-300 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30 shrink-0 font-medium"
                               title={`IPO / เริ่มเทรดเมื่อ ${ref.startDate}`}
                             >
                               IPO {ref.startDate?.slice(0, 4)}
