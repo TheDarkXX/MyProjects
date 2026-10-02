@@ -530,7 +530,17 @@ export const NewsIntelPage: React.FC = () => {
 
         {/* Quick Action Buttons */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* AI Digest Quick Action Buttons */}
+          {/* Mobile Dock Drawer Trigger */}
+          <button
+            onClick={() => setShowMobileDock(true)}
+            className="xl:hidden px-3.5 py-2 rounded-xl bg-[#823AFD]/20 hover:bg-[#823AFD]/30 text-[#C4B5FD] border border-[#823AFD]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            title="เปิดเมนูกรองหุ้น 3 พอร์ต"
+          >
+            <Hash className="w-4 h-4 text-[#FC2D79]" />
+            หุ้น & พอร์ต (3 Tabs)
+          </button>
+
+          {/* AI Digest Trigger */}
           <button
             onClick={() => handleGenerateDigest(7)}
             disabled={generatingDigestDays !== null}
@@ -546,69 +556,12 @@ export const NewsIntelPage: React.FC = () => {
             {generatingDigestDays === 7 ? 'กำลังสรุป 7 วัน...' : '⚡ สรุป 7 วัน'}
           </button>
 
-          <button
-            onClick={handleOpenDigestHistory}
-            className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-slate-300 hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
-            title="ดูประวัติบทสรุป AI News Digest ทั้งหมด"
-          >
-            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
-            คลังสรุป AI
-            {digestHistory.length > 0 && (
-              <span className="px-1.5 py-0.2 bg-indigo-500/20 text-indigo-300 rounded-full text-[10px] font-mono font-bold border border-indigo-500/30 ml-0.5">
-                {digestHistory.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setShowMobileDock(true)}
-            className="xl:hidden px-3.5 py-2 rounded-xl bg-[#823AFD]/20 hover:bg-[#823AFD]/30 text-[#C4B5FD] border border-[#823AFD]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-            title="เปิดเมนูกรองหุ้น 3 พอร์ต"
-          >
-            <Hash className="w-4 h-4 text-[#FC2D79]" />
-            หุ้น & พอร์ต (3 Tabs)
-          </button>
-
-          <button
-            onClick={() => { fetchTriageData(); setShowTriageModal(true); }}
-            className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-[#94A3B8] hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all"
-            title="ดูกระบวนการคัดกรอง 6 ประตู (Triage Radar Funnel)"
-          >
-            <Target className="w-4 h-4 text-rose-400" />
-            Triage Radar
-          </button>
-
-          <button
-            onClick={() => { fetchWatchlistData(); setShowWatchlistModal(true); }}
-            className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-[#94A3B8] hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all"
-            title="จัดการหุ้นใน Watchlist"
-          >
-            <Star className="w-4 h-4 text-amber-400" />
-            Watchlist
-          </button>
-
-          <button
-            onClick={() => { fetchTiming(); setShowTimingModal(true); }}
-            className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-[#94A3B8] hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all"
-            title="ดูสถิติเวลาที่ต้นทางมักปล่อยบทความ"
-          >
-            <BarChart2 className="w-4 h-4 text-[#823AFD]" />
-            Timing Profiler
-          </button>
-
-          <button
-            onClick={handleMarkAllRead}
-            className="px-3.5 py-2 rounded-xl bg-[#1A1D2D] hover:bg-[#252A40] text-[#94A3B8] hover:text-white border border-[#2A2E45] text-xs font-semibold flex items-center gap-1.5 transition-all"
-          >
-            <CheckCheck className="w-4 h-4 text-emerald-400" />
-            Mark all read
-          </button>
-
+          {/* Check Radar Now */}
           <button
             onClick={handleScanNow}
             disabled={scanning}
             className={clsx(
-              "px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-md",
+              "px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer",
               scanning 
                 ? "bg-slate-700 text-slate-300 cursor-not-allowed" 
                 : "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] hover:opacity-95 text-white shadow-[0_4px_16px_rgba(130,58,253,0.3)]"
@@ -853,8 +806,17 @@ export const NewsIntelPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Unread Toggle & Search */}
-        <div className="flex items-center gap-3">
+        {/* Right: Actions, Unread Toggle & Search */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={handleMarkAllRead}
+            className="px-3 py-1.5 rounded-xl bg-[#0F111A] hover:bg-[#1A1D2D] text-slate-400 hover:text-emerald-400 border border-[#1F2233] hover:border-emerald-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+            title="ทำเครื่องหมายว่าอ่านแล้วทั้งหมด"
+          >
+            <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">อ่านทั้งหมด</span>
+          </button>
+
           <button
             onClick={() => setUnreadOnly(!unreadOnly)}
             className={clsx(
