@@ -32,8 +32,15 @@ interface CompareLWChartProps {
   refSeriesList: NormalizedTickerSeries[];
   rawDataMapRef: React.MutableRefObject<Record<string, RawChartData>>;
   masterDatesRef: React.MutableRefObject<string[]>;
+  showBaselineZero?: boolean;
+  baselineStyle?: 'SOLID' | 'DASHED' | 'DOTTED';
+  baselineColor?: string;
+  showPointMarkers?: boolean;
+  pointMarkersRadius?: number;
+  applyMarkersToRefs?: boolean;
   onCrosshairMove?: (hoverData: CompareHoverData | null) => void;
   onDynamicBaseChange?: (stats: DynamicBaseStats) => void;
+  onResetZoomReady?: (resetFn: () => void) => void;
 }
 
 export function parseTimeToDateStr(time: any): string {
@@ -79,8 +86,15 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
   refSeriesList,
   rawDataMapRef,
   masterDatesRef,
+  showBaselineZero = true,
+  baselineStyle = 'DASHED',
+  baselineColor = 'rgba(255, 255, 255, 0.45)',
+  showPointMarkers = true,
+  pointMarkersRadius = 4,
+  applyMarkersToRefs = false,
   onCrosshairMove,
   onDynamicBaseChange,
+  onResetZoomReady,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -158,12 +172,19 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
     let targetSeriesApi: ISeriesApi<'Line'> | null = null;
     const refSeriesMap = new Map<string, ISeriesApi<'Line'>>();
 
+    const targetMarkersVisible = targetSeries?.pointMarkersVisible !== undefined
+      ? targetSeries.pointMarkersVisible
+      : showPointMarkers;
+    const targetMarkersRadius = targetSeries?.pointMarkersRadius || pointMarkersRadius || 4;
+
     // 1. Add Target Series (if data exists)
     if (targetSeries && targetSeries.data.length > 0) {
       targetSeriesApi = chart.addSeries(LineSeries, {
         color: hexToRgba(targetSeries.color, targetSeries.opacity),
         lineWidth: targetSeries.lineWidth,
         lineStyle: mapLineStyle(targetSeries.lineStyle),
+        pointMarkersVisible: targetMarkersVisible,
+        pointMarkersRadius: targetMarkersRadius,
         crosshairMarkerVisible: true,
         priceLineVisible: false,
         lastValueVisible: true,
@@ -171,16 +192,6 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
       });
 
       targetSeriesApi.setData(targetSeries.data as any);
-
-      // Create 0.00% Zero Baseline
-      targetSeriesApi.createPriceLine({
-        price: 0,
-        color: '#64748B',
-        lineWidth: 1,
-        lineStyle: LineStyle.Dotted,
-        axisLabelVisible: true,
-        title: '0.00%',
-      });
     }
 
     targetSeriesApiRef.current = targetSeriesApi;
@@ -188,10 +199,17 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
     // 2. Add Visible Reference Series
     const visibleRefs = refSeriesList.filter((r) => r.visible && r.data.length > 0);
     for (const ref of visibleRefs) {
+      const refMarkersVisible = ref.pointMarkersVisible !== undefined
+        ? ref.pointMarkersVisible
+        : (applyMarkersToRefs ? showPointMarkers : false);
+      const refMarkersRadius = ref.pointMarkersRadius || Math.max(2, targetMarkersRadius - 1);
+
       const seriesApi = chart.addSeries(LineSeries, {
         color: hexToRgba(ref.color, ref.opacity),
         lineWidth: ref.lineWidth,
         lineStyle: mapLineStyle(ref.lineStyle),
+        pointMarkersVisible: refMarkersVisible,
+        pointMarkersRadius: refMarkersRadius,
         crosshairMarkerVisible: true,
         priceLineVisible: false,
         lastValueVisible: true,
@@ -203,6 +221,28 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
     }
 
     refSeriesMapRef.current = refSeriesMap;
+
+    // 3. Create High-Contrast 0.00% Zero Baseline
+    if (showBaselineZero) {
+      const anchorSeries = targetSeriesApi || (refSeriesMap.size > 0 ? Array.from(refSeriesMap.values())[0] : null);
+      if (anchorSeries) {
+        anchorSeries.createPriceLine({
+          price: 0,
+          color: baselineColor || 'rgba(255, 255, 255, 0.45)',
+          lineWidth: 1,
+          lineStyle: mapLineStyle(baselineStyle || 'DASHED'),
+          axisLabelVisible: true,
+          title: '0.00%',
+        });
+      }
+    }
+
+    // Expose reset zoom to parent
+    if (onResetZoomReady) {
+      onResetZoomReady(() => {
+        chart.timeScale().fitContent();
+      });
+    }
 
     // Fit content initially
     chart.timeScale().fitContent();
@@ -319,7 +359,16 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
       targetSeriesApiRef.current = null;
       refSeriesMapRef.current.clear();
     };
-  }, [targetSeries, refSeriesList]);
+  }, [
+    targetSeries,
+    refSeriesList,
+    showBaselineZero,
+    baselineStyle,
+    baselineColor,
+    showPointMarkers,
+    pointMarkersRadius,
+    applyMarkersToRefs,
+  ]);
 
   return (
     <div className="relative w-full h-full min-h-0 flex-1 overflow-hidden select-none bg-[#0B1220]">

@@ -9,8 +9,10 @@ import {
   Sliders,
   Sparkles,
   TrendingUp,
+  CircleDot,
+  Check,
+  Layers,
   Loader2,
-  ChevronRight,
 } from 'lucide-react';
 import {
   useXChartStore,
@@ -18,6 +20,7 @@ import {
   CompareLineStyleConfig,
   CompareRefSeries,
   DEFAULT_COMPARE_PRESETS,
+  COMPARE_BUNDLES,
 } from '../../../stores/xchartStore';
 import { api } from '../../../services/api';
 import clsx from 'clsx';
@@ -27,7 +30,7 @@ interface CompareConfigModalProps {
   onClose: () => void;
   tabId: string;
   targetSymbol: string;
-  initialSection?: 'target' | 'refs';
+  initialSection?: 'target' | 'refs' | 'display';
 }
 
 const PRESET_COLORS = [
@@ -62,11 +65,13 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
 }) => {
   const {
     tabs,
+    updateCompareConfig,
     updateCompareTargetStyle,
     addCompareRef,
     removeCompareRef,
     toggleCompareRefVisible,
     updateCompareRefStyle,
+    applyCompareBundle,
   } = useXChartStore();
 
   const currentTab = tabs.find((t) => t.id === tabId);
@@ -76,10 +81,19 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
     lineWidth: 3,
     lineStyle: 'SOLID',
     opacity: 1.0,
+    pointMarkersVisible: true,
+    pointMarkersRadius: 4,
   };
   const refs = compareConfig?.refs || [];
 
-  const [activeTab, setActiveTab] = useState<'target' | 'refs'>(initialSection);
+  const showBaselineZero = compareConfig?.showBaselineZero !== false;
+  const baselineStyle = compareConfig?.baselineStyle || 'DASHED';
+  const baselineColor = compareConfig?.baselineColor || 'rgba(255, 255, 255, 0.45)';
+  const showPointMarkers = compareConfig?.showPointMarkers !== false;
+  const pointMarkersRadius = compareConfig?.pointMarkersRadius || 4;
+  const applyMarkersToRefs = compareConfig?.applyMarkersToRefs || false;
+
+  const [activeTab, setActiveTab] = useState<'target' | 'refs' | 'display'>(initialSection);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -189,11 +203,11 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
         </div>
 
         {/* Section Tabs */}
-        <div className="flex border-b border-[#1F2438] bg-[#0B0F1D] px-6">
+        <div className="flex border-b border-[#1F2438] bg-[#0B0F1D] px-6 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('refs')}
             className={clsx(
-              'px-4 py-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2 cursor-pointer',
+              'px-4 py-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2 cursor-pointer shrink-0',
               activeTab === 'refs'
                 ? 'border-cyan-400 text-cyan-400'
                 : 'border-transparent text-slate-300 hover:text-white'
@@ -204,7 +218,7 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
           <button
             onClick={() => setActiveTab('target')}
             className={clsx(
-              'px-4 py-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2 cursor-pointer',
+              'px-4 py-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2 cursor-pointer shrink-0',
               activeTab === 'target'
                 ? 'border-amber-400 text-amber-400'
                 : 'border-transparent text-slate-300 hover:text-white'
@@ -212,13 +226,49 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
           >
             <span>🎯 Target Stock ({targetSymbol})</span>
           </button>
+          <button
+            onClick={() => setActiveTab('display')}
+            className={clsx(
+              'px-4 py-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2 cursor-pointer shrink-0',
+              activeTab === 'display'
+                ? 'border-emerald-400 text-emerald-400'
+                : 'border-transparent text-slate-300 hover:text-white'
+            )}
+          >
+            <span>⚙️ Display & Base 0</span>
+          </button>
         </div>
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-          {activeTab === 'refs' ? (
+          {activeTab === 'refs' && (
             /* Reference Stocks Manager */
             <div className="space-y-6">
+              {/* 0. 1-Click Bundles Selector */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    Quick Bundles (ชุดสำเร็จรูป 1-Click)
+                  </label>
+                  <span className="text-[11px] text-slate-400">แทนที่รายการเปรียบเทียบทั้งชุด</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {COMPARE_BUNDLES.map((bundle) => (
+                    <button
+                      key={bundle.id}
+                      onClick={() => applyCompareBundle(tabId, bundle.id)}
+                      className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 hover:bg-cyan-500/15 border border-white/5 hover:border-cyan-500/35 text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer group text-left"
+                    >
+                      <span className="flex items-center gap-1.5 truncate">
+                        <span>{bundle.icon}</span>
+                        <span className="group-hover:text-cyan-300 truncate">{bundle.name}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* 1. Quick Presets (Requested: SCHG, Google, Nvidia, Gold, BTC, SPY, QQQ) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -505,7 +555,9 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
                 )}
               </div>
             </div>
-          ) : (
+          )}
+
+          {activeTab === 'target' && (
             /* Target Stock Customizer */
             <div className="space-y-6">
               <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
@@ -616,6 +668,218 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
                   }
                   className="w-full accent-amber-400 cursor-pointer"
                 />
+              </div>
+
+              {/* Target Point Markers */}
+              <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                    <CircleDot className="w-3.5 h-3.5 text-amber-400" />
+                    จุดไข่ปลาบนเส้น Target (Point Markers)
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={targetStyle.pointMarkersVisible !== false}
+                      onChange={(e) =>
+                        updateCompareTargetStyle(tabId, { pointMarkersVisible: e.target.checked })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-xs text-slate-300 font-medium">ขนาดจุด:</span>
+                  {[2, 3, 4, 5, 6].map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => updateCompareTargetStyle(tabId, { pointMarkersRadius: r })}
+                      className={clsx(
+                        'px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer',
+                        (targetStyle.pointMarkersRadius || 4) === r
+                          ? 'bg-amber-500/20 border-amber-400 text-white'
+                          : 'bg-white/5 border-transparent text-slate-300 hover:text-white'
+                      )}
+                    >
+                      {r}px
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'display' && (
+            /* Display & Base 0 Settings Tab */
+            <div className="space-y-6">
+              {/* 1. Base Line 0 (0.00% Anchor) */}
+              <div className="p-4 rounded-xl bg-[#141A2D] border border-[#242C48] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
+                    <span className="text-sm font-bold text-white">เส้น Base Line 0 (0.00% Baseline)</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showBaselineZero}
+                      onChange={(e) => updateCompareConfig(tabId, { showBaselineZero: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                  </label>
+                </div>
+
+                <p className="text-xs text-slate-300">
+                  เส้นแนวนอนอ้างอิงจุดสมดุลผลตอบแทน 0.00% พร้อมตรึงป้ายกำกับบนแกนราคาขวาสุด ช่วยให้อ่านจุดที่ชนะหรือแพ้ตลาดได้ทันที
+                </p>
+
+                {showBaselineZero && (
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#1F253C]">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-300">สไตล์เส้น Base 0</label>
+                      <div className="flex gap-1.5">
+                        {(['DASHED', 'SOLID', 'DOTTED'] as const).map((st) => (
+                          <button
+                            key={st}
+                            onClick={() => updateCompareConfig(tabId, { baselineStyle: st })}
+                            className={clsx(
+                              'flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer',
+                              baselineStyle === st
+                                ? 'bg-cyan-500/20 border-cyan-400 text-white'
+                                : 'bg-white/5 border-transparent text-slate-300 hover:text-white'
+                            )}
+                          >
+                            {st === 'DASHED' ? 'Dashed' : st === 'SOLID' ? 'Solid' : 'Dotted'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-300">สีเส้น Base 0</label>
+                      <div className="flex gap-2 items-center flex-wrap">
+                        {[
+                          { label: 'White', color: 'rgba(255, 255, 255, 0.55)' },
+                          { label: 'Slate', color: '#94A3B8' },
+                          { label: 'Amber', color: '#F59E0B' },
+                          { label: 'Cyan', color: '#06B6D4' },
+                        ].map((c) => (
+                          <button
+                            key={c.label}
+                            onClick={() => updateCompareConfig(tabId, { baselineColor: c.color })}
+                            className={clsx(
+                              'px-2.5 py-1 text-xs font-medium rounded-lg border transition-all cursor-pointer flex items-center gap-1.5',
+                              baselineColor === c.color
+                                ? 'bg-white/10 border-white text-white'
+                                : 'bg-white/5 border-transparent text-slate-300 hover:text-white'
+                            )}
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                            <span>{c.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Point Markers on Data Points (จุดไข่ปลา) */}
+              <div className="p-4 rounded-xl bg-[#141A2D] border border-[#242C48] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CircleDot className="w-4 h-4 text-amber-400" />
+                    <span className="text-sm font-bold text-white">จุดไข่ปลาบนเส้นกราฟ (Point Markers)</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showPointMarkers}
+                      onChange={(e) => updateCompareConfig(tabId, { showPointMarkers: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+
+                <p className="text-xs text-slate-300">
+                  แสดงจุดไข่ปลาทรงกลมที่พิกัดราคาของแต่ละแท่งเทียน ช่วยให้เห็นจุดเลี้ยว (Inflection Points) และการเคลื่อนที่แบบเม็ดร้อยเรียงเหมือน TradingView
+                </p>
+
+                {showPointMarkers && (
+                  <div className="space-y-4 pt-2 border-t border-[#1F253C]">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-slate-200">เปิดจุดไข่ปลาให้เส้นอ้างอิงทั้งหมด (All Refs)</div>
+                        <div className="text-[11px] text-slate-400">ถ้าปิด จะแสดงเฉพาะเส้น Target เพื่อให้เส้นเป้าหมายเด่นกว่า</div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={applyMarkersToRefs}
+                          onChange={(e) => updateCompareConfig(tabId, { applyMarkersToRefs: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                      </label>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs text-slate-300">
+                        <span className="font-semibold">ขนาดรัศมีของจุด (Point Marker Radius)</span>
+                        <span className="font-mono text-cyan-300 font-bold">{pointMarkersRadius}px</span>
+                      </div>
+                      <div className="flex gap-2">
+                        {[2, 3, 4, 5, 6].map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => updateCompareConfig(tabId, { pointMarkersRadius: r })}
+                            className={clsx(
+                              'flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1.5',
+                              pointMarkersRadius === r
+                                ? 'bg-amber-500/20 border-amber-400 text-white'
+                                : 'bg-white/5 border-transparent text-slate-300 hover:text-white'
+                            )}
+                          >
+                            <span className="rounded-full bg-amber-400 inline-block" style={{ width: `${r * 2}px`, height: `${r * 2}px` }} />
+                            <span>{r}px</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. 1-Click Comparison Bundles */}
+              <div className="p-4 rounded-xl bg-[#141A2D] border border-[#242C48] space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-bold text-white">ชุดเปรียบเทียบด่วน 1-Click (Comparison Bundles)</span>
+                </div>
+                <p className="text-xs text-slate-300">
+                  สลับชุดหุ้นอ้างอิงทั้งชุดในคลิกเดียว เหมาะสำหรับสแกนเทียบกับกลุ่มยักษ์ใหญ่ Mag 7 หรือ ดัชนี Macro
+                </p>
+                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                  {COMPARE_BUNDLES.map((bundle) => (
+                    <button
+                      key={bundle.id}
+                      onClick={() => applyCompareBundle(tabId, bundle.id)}
+                      className="p-3 rounded-xl bg-white/5 hover:bg-cyan-500/15 border border-white/5 hover:border-cyan-500/35 text-left transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-bold text-white group-hover:text-cyan-300 flex items-center gap-1.5">
+                          <span>{bundle.icon}</span>
+                          <span>{bundle.name}</span>
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-mono">({bundle.tickers.length} ตัว)</span>
+                      </div>
+                      <div className="text-[11px] text-slate-300 truncate">{bundle.description}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../../services/api';
 import { getCachedCandles, setCachedCandles } from '../../../utils/chartIdbCache';
-import { CompareTimeFrame, CompareRefSeries } from '../../../stores/xchartStore';
+import { CompareTimeFrame, CompareRefSeries, CompareLineStyleConfig } from '../../../stores/xchartStore';
 
 export interface CompareDataPoint {
   time: string; // 'YYYY-MM-DD'
@@ -16,6 +16,8 @@ export interface NormalizedTickerSeries {
   lineWidth: 1 | 2 | 3 | 4;
   lineStyle: 'SOLID' | 'DASHED' | 'DOTTED';
   opacity: number;
+  pointMarkersVisible?: boolean;
+  pointMarkersRadius?: number;
   visible: boolean;
   isTarget?: boolean;
   data: CompareDataPoint[];
@@ -192,7 +194,7 @@ export function useCompareData(
   targetSymbol: string,
   refs: CompareRefSeries[],
   timeframe: CompareTimeFrame,
-  targetStyle: { color: string; lineWidth: 1 | 2 | 3 | 4; lineStyle: 'SOLID' | 'DASHED' | 'DOTTED'; opacity: number }
+  targetStyle: CompareLineStyleConfig
 ) {
   const [targetSeries, setTargetSeries] = useState<NormalizedTickerSeries | null>(null);
   const [refSeriesList, setRefSeriesList] = useState<NormalizedTickerSeries[]>([]);
@@ -306,6 +308,8 @@ export function useCompareData(
           lineWidth: targetStyle.lineWidth,
           lineStyle: targetStyle.lineStyle,
           opacity: targetStyle.opacity,
+          pointMarkersVisible: targetStyle.pointMarkersVisible,
+          pointMarkersRadius: targetStyle.pointMarkersRadius,
           visible: true,
           isTarget: true,
           data: targetNorm.points,
@@ -361,7 +365,17 @@ export function useCompareData(
     return () => {
       isCancelled = true;
     };
-  }, [targetSymbol, refs, timeframe, targetStyle.color, targetStyle.lineWidth, targetStyle.lineStyle, targetStyle.opacity]);
+  }, [
+    targetSymbol,
+    refs,
+    timeframe,
+    targetStyle.color,
+    targetStyle.lineWidth,
+    targetStyle.lineStyle,
+    targetStyle.opacity,
+    targetStyle.pointMarkersVisible,
+    targetStyle.pointMarkersRadius,
+  ]);
 
   return {
     targetSeries,

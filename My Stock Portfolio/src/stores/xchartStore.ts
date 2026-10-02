@@ -17,6 +17,8 @@ export interface CompareLineStyleConfig {
   lineWidth: 1 | 2 | 3 | 4;
   lineStyle: 'SOLID' | 'DASHED' | 'DOTTED';
   opacity: number;
+  pointMarkersVisible?: boolean;
+  pointMarkersRadius?: number;
 }
 
 export interface CompareRefSeries extends CompareLineStyleConfig {
@@ -30,6 +32,12 @@ export interface CompareTabConfig {
   timeframe: CompareTimeFrame;
   targetStyle: CompareLineStyleConfig;
   refs: CompareRefSeries[];
+  showBaselineZero?: boolean;
+  baselineStyle?: 'SOLID' | 'DASHED' | 'DOTTED';
+  baselineColor?: string;
+  showPointMarkers?: boolean;
+  pointMarkersRadius?: number;
+  applyMarkersToRefs?: boolean;
 }
 
 export interface XChartTabChartSettings {
@@ -126,6 +134,8 @@ export const DEFAULT_COMPARE_TARGET_STYLE: CompareLineStyleConfig = {
   lineWidth: 3,
   lineStyle: 'SOLID',
   opacity: 1.0,
+  pointMarkersVisible: true,
+  pointMarkersRadius: 4,
 };
 
 export const DEFAULT_COMPARE_PRESETS = [
@@ -136,6 +146,70 @@ export const DEFAULT_COMPARE_PRESETS = [
   { symbol: 'BTC-USD', name: 'Bitcoin (BTC)', color: '#F97316' },
   { symbol: 'SPY', name: 'S&P 500 ETF', color: '#3B82F6' },
   { symbol: 'QQQ', name: 'Nasdaq 100 ETF', color: '#A855F7' },
+];
+
+export interface CompareBundleItem {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  tickers: { symbol: string; name: string; color: string }[];
+}
+
+export const COMPARE_BUNDLES: CompareBundleItem[] = [
+  {
+    id: 'mag7',
+    name: 'Mag 7 Titans',
+    icon: '👑',
+    description: 'Nvidia, Microsoft, Apple, Amazon, Google, Meta, Tesla',
+    tickers: [
+      { symbol: 'NVDA', name: 'NVIDIA Corp', color: '#22C55E' },
+      { symbol: 'MSFT', name: 'Microsoft Corp', color: '#00A4EF' },
+      { symbol: 'AAPL', name: 'Apple Inc', color: '#CBD5E1' },
+      { symbol: 'AMZN', name: 'Amazon.com', color: '#FF9900' },
+      { symbol: 'GOOGL', name: 'Alphabet Google', color: '#4285F4' },
+      { symbol: 'META', name: 'Meta Platforms', color: '#0668E1' },
+      { symbol: 'TSLA', name: 'Tesla Inc', color: '#E82127' },
+    ],
+  },
+  {
+    id: 'macro',
+    name: 'Macro Indices',
+    icon: '🏛️',
+    description: 'S&P 500, Nasdaq 100, Dow Jones, Russell 2000, Schwab Growth',
+    tickers: [
+      { symbol: 'SPY', name: 'S&P 500 ETF', color: '#3B82F6' },
+      { symbol: 'QQQ', name: 'Nasdaq 100 ETF', color: '#A855F7' },
+      { symbol: 'DIA', name: 'Dow Jones ETF', color: '#38BDF8' },
+      { symbol: 'IWM', name: 'Russell 2000 ETF', color: '#F59E0B' },
+      { symbol: 'SCHG', name: 'Schwab Growth ETF', color: '#06B6D4' },
+    ],
+  },
+  {
+    id: 'assets',
+    name: 'Asset Classes',
+    icon: '🌍',
+    description: 'Gold, Bitcoin, 20Y Treasury, Oil Fund',
+    tickers: [
+      { symbol: 'GLD', name: 'Gold Trust (GLD)', color: '#EAB308' },
+      { symbol: 'BTC-USD', name: 'Bitcoin (BTC)', color: '#F97316' },
+      { symbol: 'TLT', name: '20Y Treasury Bond', color: '#06B6D4' },
+      { symbol: 'USO', name: 'United States Oil', color: '#84CC16' },
+    ],
+  },
+  {
+    id: 'semis',
+    name: 'Semi Titans',
+    icon: '🔬',
+    description: 'Nvidia, TSMC, ASML, Broadcom, AMD',
+    tickers: [
+      { symbol: 'NVDA', name: 'NVIDIA Corp', color: '#22C55E' },
+      { symbol: 'TSM', name: 'TSMC ADR', color: '#38BDF8' },
+      { symbol: 'ASML', name: 'ASML Holding', color: '#A855F7' },
+      { symbol: 'AVGO', name: 'Broadcom Inc', color: '#EC4899' },
+      { symbol: 'AMD', name: 'Advanced Micro Devices', color: '#EF4444' },
+    ],
+  },
 ];
 
 export function createDefaultCompareConfig(symbol: string): CompareTabConfig {
@@ -154,12 +228,20 @@ export function createDefaultCompareConfig(symbol: string): CompareTabConfig {
     lineStyle: 'SOLID',
     opacity: 0.85,
     visible: true,
+    pointMarkersVisible: false,
+    pointMarkersRadius: 3,
   }));
 
   return {
     timeframe: '1Y',
     targetStyle: { ...DEFAULT_COMPARE_TARGET_STYLE },
     refs,
+    showBaselineZero: true,
+    baselineStyle: 'DASHED',
+    baselineColor: 'rgba(255, 255, 255, 0.45)',
+    showPointMarkers: true,
+    pointMarkersRadius: 4,
+    applyMarkersToRefs: false,
   };
 }
 
@@ -235,6 +317,7 @@ interface XChartState {
   toggleCompareRefVisible: (tabId: string, refId: string) => void;
   updateCompareRefStyle: (tabId: string, refId: string, style: Partial<CompareLineStyleConfig>) => void;
   updateCompareTargetStyle: (tabId: string, style: Partial<CompareLineStyleConfig>) => void;
+  applyCompareBundle: (tabId: string, bundleId: string) => void;
 
   applyCloudTabs: (data: { tabs: XChartTab[]; activeTabId?: string }) => void;
   applyCloudWatchlist: (sections: WatchlistSection[]) => void;
@@ -1054,6 +1137,30 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     });
     set({ tabs: nextTabs });
     persistTabs(nextTabs, activeTabId);
+  },
+
+  applyCompareBundle: (tabId, bundleId) => {
+    const bundle = COMPARE_BUNDLES.find((b) => b.id === bundleId);
+    if (!bundle) return;
+    const currentTab = get().tabs.find((t) => t.id === tabId);
+    const targetSymbol = (currentTab?.symbol || 'NVDA').trim().toUpperCase();
+
+    const newRefs: CompareRefSeries[] = bundle.tickers
+      .filter((t) => t.symbol.toUpperCase() !== targetSymbol)
+      .map((t, idx) => ({
+        id: `ref-${t.symbol.toLowerCase()}-${Date.now()}-${idx}`,
+        symbol: t.symbol,
+        name: t.name,
+        color: t.color,
+        lineWidth: 2,
+        lineStyle: 'SOLID',
+        opacity: 0.85,
+        visible: true,
+        pointMarkersVisible: false,
+        pointMarkersRadius: 3,
+      }));
+
+    get().updateCompareConfig(tabId, { refs: newRefs });
   },
 }));
 

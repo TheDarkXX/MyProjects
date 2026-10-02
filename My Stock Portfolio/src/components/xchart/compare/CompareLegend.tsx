@@ -13,7 +13,7 @@ interface CompareLegendProps {
   dynamicBaseDate?: string | null;
   dynamicTargetReturn?: number | null;
   dynamicRefReturns?: Record<string, number | null>;
-  onOpenConfig: (activeSection?: 'target' | 'refs') => void;
+  onOpenConfig: (activeSection?: 'target' | 'refs' | 'display') => void;
 }
 
 export const CompareLegend: React.FC<CompareLegendProps> = ({

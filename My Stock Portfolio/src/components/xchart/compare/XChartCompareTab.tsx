@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   useXChartStore,
   CompareTimeFrame,
@@ -16,6 +16,8 @@ import {
   GitCompareArrows,
   AlertCircle,
   TrendingUp,
+  CircleDot,
+  Sparkles,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -52,6 +54,7 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
 
   // Dynamic visible window stats (leftmost 0% base date & returns)
   const [dynamicStats, setDynamicStats] = useState<DynamicBaseStats | null>(null);
+  const resetZoomRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setDynamicStats(null);
@@ -63,9 +66,9 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
 
   // Config Modal State
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [configInitialSection, setConfigInitialSection] = useState<'target' | 'refs'>('refs');
+  const [configInitialSection, setConfigInitialSection] = useState<'target' | 'refs' | 'display'>('refs');
 
-  const handleOpenConfig = (section: 'target' | 'refs' = 'refs') => {
+  const handleOpenConfig = (section: 'target' | 'refs' | 'display' = 'refs') => {
     setConfigInitialSection(section);
     setIsConfigOpen(true);
   };
@@ -214,12 +217,117 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
           refSeriesList={refSeriesList}
           rawDataMapRef={rawDataMapRef}
           masterDatesRef={masterDatesRef}
+          showBaselineZero={compareConfig.showBaselineZero}
+          baselineStyle={compareConfig.baselineStyle}
+          baselineColor={compareConfig.baselineColor}
+          showPointMarkers={compareConfig.showPointMarkers}
+          pointMarkersRadius={compareConfig.pointMarkersRadius}
+          applyMarkersToRefs={compareConfig.applyMarkersToRefs}
           onCrosshairMove={setHoverData}
           onDynamicBaseChange={handleDynamicBaseChange}
+          onResetZoomReady={(resetFn) => {
+            resetZoomRef.current = resetFn;
+          }}
         />
       </div>
 
-      {/* 3. Compare Config Modal */}
+      {/* 3. TradingView-Style Bottom Dock (Height: 34px) */}
+      <div className="h-[34px] px-3 bg-[#0F1424] border-t border-[#1F2538] flex items-center justify-between shrink-0 select-none z-10 text-xs">
+        {/* Left: Quick Timeframe Selector (TradingView Style) */}
+        <div className="flex items-center gap-1">
+          {TIMEFRAMES.map((tf) => {
+            const isActive = activeTimeframe === tf;
+            return (
+              <button
+                key={tf}
+                onClick={() => handleSelectTimeframe(tf)}
+                className={clsx(
+                  'px-2 py-0.5 rounded text-xs font-bold transition-all cursor-pointer',
+                  isActive
+                    ? 'bg-cyan-500 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                )}
+              >
+                {tf}
+              </button>
+            );
+          })}
+          <div className="h-3.5 w-[1px] bg-[#2A314A] mx-1" />
+          <button
+            onClick={() => resetZoomRef.current?.()}
+            className="px-2 py-0.5 rounded text-xs text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer font-medium"
+            title="Fit / Reset Zoom"
+          >
+            Fit View
+          </button>
+        </div>
+
+        {/* Center: Dynamic 0% Anchor Info */}
+        <div className="hidden md:flex items-center gap-2">
+          {dynamicStats?.baseDate ? (
+            <span className="text-[11px] text-amber-300 font-mono flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              Day 1 (0.00%): <strong className="text-white">{dynamicStats.baseDate}</strong>
+            </span>
+          ) : (
+            <span className="text-[11px] text-slate-400 font-mono">
+              0% Baseline: Auto Viewport
+            </span>
+          )}
+        </div>
+
+        {/* Right: Quick Toggles (Base 0 & Dots & Config) */}
+        <div className="flex items-center gap-2">
+          {/* Base 0 Line Toggle */}
+          <button
+            onClick={() =>
+              updateCompareConfig(tabId, {
+                showBaselineZero: compareConfig.showBaselineZero === false ? true : false,
+              })
+            }
+            className={clsx(
+              'px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer border',
+              compareConfig.showBaselineZero !== false
+                ? 'bg-white/10 border-white/20 text-white'
+                : 'bg-transparent border-transparent text-slate-500 hover:text-slate-300'
+            )}
+            title="Toggle 0.00% Base Line"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+            <span>0% Line</span>
+          </button>
+
+          {/* Dots / Markers Toggle */}
+          <button
+            onClick={() =>
+              updateCompareConfig(tabId, {
+                showPointMarkers: compareConfig.showPointMarkers === false ? true : false,
+              })
+            }
+            className={clsx(
+              'px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer border',
+              compareConfig.showPointMarkers !== false
+                ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                : 'bg-transparent border-transparent text-slate-500 hover:text-slate-300'
+            )}
+            title="Toggle จุดไข่ปลา (Point Markers)"
+          >
+            <CircleDot className="w-3 h-3" />
+            <span>Dots</span>
+          </button>
+
+          {/* Quick Bundles Trigger */}
+          <button
+            onClick={() => handleOpenConfig('refs')}
+            className="px-2 py-0.5 rounded text-xs font-semibold text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all cursor-pointer flex items-center gap-1"
+          >
+            <Sparkles className="w-3 h-3 text-cyan-400" />
+            <span className="hidden sm:inline">Bundles</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4. Compare Config Modal */}
       <CompareConfigModal
         isOpen={isConfigOpen}
         onClose={() => setIsConfigOpen(false)}
