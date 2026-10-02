@@ -73,11 +73,11 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
     setIsConfigOpen(true);
   };
 
-  const isOverOneYear = (tf: CompareTimeFrame) => tf === '3Y' || tf === '5Y' || tf === 'MAX';
+  const isOverSixMonths = (tf: CompareTimeFrame) => tf !== '1M' && tf !== '3M' && tf !== '6M';
 
   const handleSelectTimeframe = (tf: CompareTimeFrame) => {
-    // TradingView rule: <= 1Y -> showPointMarkers = true, > 1Y -> showPointMarkers = false (auto-off)
-    const autoMarkers = !isOverOneYear(tf);
+    // TradingView rule: <= 6M -> showPointMarkers = true, > 6M -> showPointMarkers = false (auto-off)
+    const autoMarkers = !isOverSixMonths(tf);
     updateCompareConfig(tabId, {
       timeframe: tf,
       showPointMarkers: autoMarkers,

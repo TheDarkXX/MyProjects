@@ -178,9 +178,9 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
     let targetSeriesApi: ISeriesApi<'Line'> | null = null;
     const refSeriesMap = new Map<string, ISeriesApi<'Line'>>();
 
-    const isLongTermTimeframe = timeframe === '3Y' || timeframe === '5Y' || timeframe === 'MAX';
+    const isLongTermTimeframe = timeframe !== '1M' && timeframe !== '3M' && timeframe !== '6M';
     // If showPointMarkers is explicitly passed as boolean, use it.
-    // Otherwise: <= 1Y -> true, > 1Y -> false (auto-off to avoid visual clutter)
+    // Otherwise: <= 6M -> true, > 6M -> false (auto-off to avoid visual clutter)
     const initialMarkersEnabled = showPointMarkers !== undefined 
       ? showPointMarkers 
       : !isLongTermTimeframe;
@@ -337,8 +337,8 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
     chart.timeScale().subscribeVisibleTimeRangeChange(onVisibleTimeRangeChange);
 
     // 3.4 Dynamic Point Markers Adaptive Engine (TradingView Style):
-    // When zoomed in (<= 240 visible bars / 1 yr): show dots for high resolution
-    // When zoomed out (> 240 visible bars / > 1 yr): hide dots automatically to prevent visual clutter
+    // When zoomed in (<= 130 visible bars / ~6 months): show dots for high resolution
+    // When zoomed out (> 130 visible bars / > 6 months): hide dots automatically to prevent visual clutter
     let currentMarkersVisible = initialMarkersEnabled;
 
     const onVisibleLogicalRangeChange = (logicalRange: any) => {
@@ -347,11 +347,11 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
 
       let shouldShow: boolean;
       if (showPointMarkers === false && !isLongTermTimeframe) {
-        // User manually turned off dots on <= 1Y chart -> respect user choice
+        // User manually turned off dots on <= 6M chart -> respect user choice
         shouldShow = false;
       } else {
-        // Adaptive threshold: show dots when <= 240 bars visible
-        shouldShow = visibleBars <= 240;
+        // Adaptive threshold: show dots when <= 130 bars visible (~6 months)
+        shouldShow = visibleBars <= 130;
       }
 
       if (shouldShow !== currentMarkersVisible) {
