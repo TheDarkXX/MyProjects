@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Settings, X, Plus, ChevronDown, ChevronUp, Layers } from 'lucide-react';
-import { useXChartStore, CompareRefSeries } from '../../../stores/xchartStore';
+import { useXChartStore } from '../../../stores/xchartStore';
 import { NormalizedTickerSeries } from './useCompareData';
 import { CompareHoverData } from './CompareLWChart';
 import clsx from 'clsx';
@@ -10,6 +10,9 @@ interface CompareLegendProps {
   targetSeries: NormalizedTickerSeries | null;
   refSeriesList: NormalizedTickerSeries[];
   hoverData: CompareHoverData | null;
+  dynamicBaseDate?: string | null;
+  dynamicTargetReturn?: number | null;
+  dynamicRefReturns?: Record<string, number | null>;
   onOpenConfig: (activeSection?: 'target' | 'refs') => void;
 }
 
@@ -18,6 +21,9 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
   targetSeries,
   refSeriesList,
   hoverData,
+  dynamicBaseDate,
+  dynamicTargetReturn,
+  dynamicRefReturns,
   onOpenConfig,
 }) => {
   const { toggleCompareRefVisible, removeCompareRef } = useXChartStore();
@@ -46,11 +52,22 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
           <div className="flex items-center gap-2">
             <Layers className="w-3.5 h-3.5 text-cyan-400" />
             <span className="font-bold text-slate-200 tracking-wide font-heading">
-              Ref. Legend (0% Base)
+              Ref. Legend
             </span>
-            {activeHoverDate && (
+            {activeHoverDate ? (
               <span className="px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 font-mono text-[11px] border border-cyan-500/20">
                 {activeHoverDate}
+              </span>
+            ) : dynamicBaseDate ? (
+              <span
+                className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono text-[11px] border border-amber-500/20"
+                title="Dynamic 0% Left-Edge Base Date"
+              >
+                Base: {dynamicBaseDate}
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400 font-mono text-[11px]">
+                0% Base
               </span>
             )}
           </div>
@@ -58,14 +75,14 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={() => onOpenConfig()}
-              className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               title="Compare Settings & Ref Manager"
             >
               <Settings className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               title={isCollapsed ? 'Expand Legend' : 'Collapse Legend'}
             >
               {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
@@ -101,18 +118,26 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
                     className={clsx(
                       'font-mono font-bold text-[13px]',
                       getReturnColor(
-                        hoverData ? hoverData.targetReturn : targetSeries.latestReturn
+                        hoverData
+                          ? hoverData.targetReturn
+                          : dynamicTargetReturn != null
+                          ? dynamicTargetReturn
+                          : targetSeries.latestReturn
                       )
                     )}
                   >
                     {formatPercent(
-                      hoverData ? hoverData.targetReturn : targetSeries.latestReturn
+                      hoverData
+                        ? hoverData.targetReturn
+                        : dynamicTargetReturn != null
+                        ? dynamicTargetReturn
+                        : targetSeries.latestReturn
                     )}
                   </span>
 
                   <button
                     onClick={() => onOpenConfig('target')}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-400 hover:text-white transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-400 hover:text-white transition-opacity cursor-pointer"
                     title="Edit Target Style"
                   >
                     <Settings className="w-3 h-3" />
@@ -132,7 +157,12 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
                   const isVisible = ref.visible;
                   const currentReturn = hoverData
                     ? hoverData.refReturns[ref.id]
+                    : dynamicRefReturns?.[ref.id] != null
+                    ? dynamicRefReturns[ref.id]
                     : ref.latestReturn;
+
+                  const isIpoAfterBase =
+                    Boolean(ref.startDate && dynamicBaseDate && ref.startDate > dynamicBaseDate);
 
                   return (
                     <div
@@ -143,7 +173,7 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        {/* Eye Button for Show / Hide toggle (Required by User) */}
+                        {/* Eye Button for Show / Hide toggle */}
                         <button
                           onClick={() => toggleCompareRefVisible(tabId, ref.id)}
                           className={clsx(
@@ -180,6 +210,14 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
                           >
                             {ref.symbol}
                           </span>
+                          {isIpoAfterBase && (
+                            <span
+                              className="text-[10px] text-amber-300 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30 shrink-0 font-medium"
+                              title={`IPO / เริ่มเทรดเมื่อ ${ref.startDate}`}
+                            >
+                              IPO {ref.startDate?.slice(0, 4)}
+                            </span>
+                          )}
                           {ref.name && (
                             <span className="text-[11px] text-slate-400 truncate max-w-[80px]" title={ref.name}>
                               {ref.name}

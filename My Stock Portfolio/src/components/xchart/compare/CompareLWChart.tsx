@@ -8,7 +8,11 @@ import {
   LineStyle,
   ISeriesApi,
 } from 'lightweight-charts';
-import { NormalizedTickerSeries } from './useCompareData';
+import {
+  NormalizedTickerSeries,
+  RawChartData,
+  normalizeTickerData,
+} from './useCompareData';
 import { TV_FONT_FAMILY } from '../../../types/chart';
 
 export interface CompareHoverData {
@@ -17,10 +21,42 @@ export interface CompareHoverData {
   refReturns: Record<string, number | null>;
 }
 
+export interface DynamicBaseStats {
+  baseDate: string;
+  targetReturn: number | null;
+  refReturns: Record<string, number | null>;
+}
+
 interface CompareLWChartProps {
   targetSeries: NormalizedTickerSeries | null;
   refSeriesList: NormalizedTickerSeries[];
+  rawDataMapRef: React.MutableRefObject<Record<string, RawChartData>>;
+  masterDatesRef: React.MutableRefObject<string[]>;
   onCrosshairMove?: (hoverData: CompareHoverData | null) => void;
+  onDynamicBaseChange?: (stats: DynamicBaseStats) => void;
+}
+
+export function parseTimeToDateStr(time: any): string {
+  if (!time) return '';
+  if (typeof time === 'string') {
+    return time.split('T')[0];
+  }
+  if (typeof time === 'object' && time !== null) {
+    if ('year' in time && 'month' in time && 'day' in time) {
+      const y = time.year;
+      const m = String(time.month).padStart(2, '0');
+      const d = String(time.day).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+  if (typeof time === 'number' && isFinite(time)) {
+    const ms = time > 1e11 ? time : time * 1000;
+    const d = new Date(ms);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().split('T')[0];
+    }
+  }
+  return String(time);
 }
 
 function mapLineStyle(style: string): LineStyle {
@@ -41,16 +77,31 @@ function hexToRgba(hex: string, alpha: number = 1): string {
 export const CompareLWChart: React.FC<CompareLWChartProps> = ({
   targetSeries,
   refSeriesList,
+  rawDataMapRef,
+  masterDatesRef,
   onCrosshairMove,
+  onDynamicBaseChange,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+
+  // Keep callback references stable to prevent unnecessary chart re-inits
+  const onCrosshairMoveRef = useRef(onCrosshairMove);
+  onCrosshairMoveRef.current = onCrosshairMove;
+
+  const onDynamicBaseChangeRef = useRef(onDynamicBaseChange);
+  onDynamicBaseChangeRef.current = onDynamicBaseChange;
+
+  const targetSeriesApiRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const refSeriesMapRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
+  const lastBaseDateRef = useRef<string>('');
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     // Reset container DOM
     containerRef.current.innerHTML = '';
+    lastBaseDateRef.current = '';
 
     const chart = createChart(containerRef.current, {
       autoSize: true,
@@ -132,6 +183,8 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
       });
     }
 
+    targetSeriesApiRef.current = targetSeriesApi;
+
     // 2. Add Visible Reference Series
     const visibleRefs = refSeriesList.filter((r) => r.visible && r.data.length > 0);
     for (const ref of visibleRefs) {
@@ -149,38 +202,95 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
       refSeriesMap.set(ref.id, seriesApi);
     }
 
-    // Fit content nicely
+    refSeriesMapRef.current = refSeriesMap;
+
+    // Fit content initially
     chart.timeScale().fitContent();
 
-    // 3. Subscribe to Crosshair moves for real-time live % legend HUD
+    // 3. Dynamic Left-Edge 0% Base Re-normalization
+    let rafPending = false;
+    let rafId: number | null = null;
+
+    const onVisibleTimeRangeChange = (range: any) => {
+      if (!range || !range.from || rafPending) return;
+
+      const fromDateStr = parseTimeToDateStr(range.from);
+      if (!fromDateStr || fromDateStr === lastBaseDateRef.current) return;
+
+      rafPending = true;
+      rafId = requestAnimationFrame(() => {
+        rafPending = false;
+        if (fromDateStr === lastBaseDateRef.current) return;
+        lastBaseDateRef.current = fromDateStr;
+
+        const rawMap = rawDataMapRef.current;
+        const masterDates = masterDatesRef.current;
+        if (!masterDates || masterDates.length === 0) return;
+
+        // 3.1 Re-normalize Target Series
+        let newTargetReturn: number | null = null;
+        if (targetSeries && targetSeriesApiRef.current) {
+          const cleanTarget = targetSeries.symbol.toUpperCase();
+          const rawTarget = rawMap[cleanTarget];
+          if (rawTarget) {
+            const norm = normalizeTickerData(rawTarget, masterDates, fromDateStr);
+            if (norm.points.length > 0) {
+              targetSeriesApiRef.current.setData(norm.points as any);
+              newTargetReturn = norm.latestReturn;
+            }
+          }
+        }
+
+        // 3.2 Re-normalize Reference Series
+        const newRefReturns: Record<string, number | null> = {};
+        for (const ref of refSeriesList) {
+          if (!ref.visible) continue;
+          const seriesApi = refSeriesMapRef.current.get(ref.id);
+          if (!seriesApi) continue;
+
+          const raw = rawMap[ref.symbol.toUpperCase()];
+          if (raw) {
+            const norm = normalizeTickerData(raw, masterDates, fromDateStr);
+            if (norm.points.length > 0) {
+              seriesApi.setData(norm.points as any);
+              newRefReturns[ref.id] = norm.latestReturn;
+            }
+          }
+        }
+
+        // 3.3 Notify parent for real-time legend sync
+        onDynamicBaseChangeRef.current?.({
+          baseDate: fromDateStr,
+          targetReturn: newTargetReturn,
+          refReturns: newRefReturns,
+        });
+      });
+    };
+
+    chart.timeScale().subscribeVisibleTimeRangeChange(onVisibleTimeRangeChange);
+
+    // 4. Subscribe to Crosshair moves for real-time live % legend HUD
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point) {
-        onCrosshairMove?.(null);
+        onCrosshairMoveRef.current?.(null);
         return;
       }
 
-      const timeStr =
-        typeof param.time === 'string'
-          ? param.time
-          : (param.time as any)?.year
-          ? `${(param.time as any).year}-${String((param.time as any).month).padStart(2, '0')}-${String(
-              (param.time as any).day
-            ).padStart(2, '0')}`
-          : String(param.time);
+      const timeStr = parseTimeToDateStr(param.time);
 
       let targetVal: number | null = null;
-      if (targetSeriesApi) {
-        const item = param.seriesData.get(targetSeriesApi);
+      if (targetSeriesApiRef.current) {
+        const item = param.seriesData.get(targetSeriesApiRef.current);
         targetVal = item && 'value' in item ? (item as any).value : null;
       }
 
       const refReturns: Record<string, number | null> = {};
-      for (const [id, api] of refSeriesMap.entries()) {
+      for (const [id, api] of refSeriesMapRef.current.entries()) {
         const item = param.seriesData.get(api);
         refReturns[id] = item && 'value' in item ? (item as any).value : null;
       }
 
-      onCrosshairMove?.({
+      onCrosshairMoveRef.current?.({
         time: timeStr,
         targetReturn: targetVal,
         refReturns,
@@ -199,11 +309,17 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
     resizeObserver.observe(containerRef.current);
 
     return () => {
+      if (rafId != null) cancelAnimationFrame(rafId);
+      try {
+        chart.timeScale().unsubscribeVisibleTimeRangeChange(onVisibleTimeRangeChange);
+      } catch (_) {}
       resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
+      targetSeriesApiRef.current = null;
+      refSeriesMapRef.current.clear();
     };
-  }, [targetSeries, refSeriesList, onCrosshairMove]);
+  }, [targetSeries, refSeriesList]);
 
   return (
     <div className="relative w-full h-full min-h-0 flex-1 overflow-hidden select-none bg-[#0B1220]">

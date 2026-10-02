@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   useXChartStore,
   CompareTimeFrame,
   createDefaultCompareConfig,
 } from '../../../stores/xchartStore';
 import { useCompareData } from './useCompareData';
-import { CompareLWChart, CompareHoverData } from './CompareLWChart';
+import { CompareLWChart, CompareHoverData, DynamicBaseStats } from './CompareLWChart';
 import { CompareLegend } from './CompareLegend';
 import { CompareConfigModal } from './CompareConfigModal';
 import {
@@ -39,8 +39,8 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
   const targetStyle = compareConfig.targetStyle;
   const refs = compareConfig.refs;
 
-  // Custom data hook
-  const { targetSeries, refSeriesList, loading, error } = useCompareData(
+  // Custom data hook with lifetime raw data ref & master calendar
+  const { targetSeries, refSeriesList, loading, error, rawDataMapRef, masterDatesRef } = useCompareData(
     symbol,
     refs,
     activeTimeframe,
@@ -49,6 +49,17 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
 
   // Real-time hover sync state
   const [hoverData, setHoverData] = useState<CompareHoverData | null>(null);
+
+  // Dynamic visible window stats (leftmost 0% base date & returns)
+  const [dynamicStats, setDynamicStats] = useState<DynamicBaseStats | null>(null);
+
+  useEffect(() => {
+    setDynamicStats(null);
+  }, [symbol, activeTimeframe]);
+
+  const handleDynamicBaseChange = useCallback((stats: DynamicBaseStats) => {
+    setDynamicStats(stats);
+  }, []);
 
   // Config Modal State
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -160,6 +171,9 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
           targetSeries={targetSeries}
           refSeriesList={refSeriesList}
           hoverData={hoverData}
+          dynamicBaseDate={dynamicStats?.baseDate}
+          dynamicTargetReturn={dynamicStats?.targetReturn}
+          dynamicRefReturns={dynamicStats?.refReturns}
           onOpenConfig={handleOpenConfig}
         />
 
@@ -198,7 +212,10 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
         <CompareLWChart
           targetSeries={targetSeries}
           refSeriesList={refSeriesList}
+          rawDataMapRef={rawDataMapRef}
+          masterDatesRef={masterDatesRef}
           onCrosshairMove={setHoverData}
+          onDynamicBaseChange={handleDynamicBaseChange}
         />
       </div>
 

@@ -4,6 +4,7 @@ import { useHoldings } from '../../hooks/useHoldings';
 import { useDeviceLayout } from '../../hooks/useDeviceLayout';
 import { useProject2xStore, RadarRow } from '../../stores/project2xStore';
 import { usePortfolioStore } from '../../stores/portfolioStore';
+import { useDrawingStore } from '../../stores/drawingStore';
 import { pushSettingImmediate, SYNC_KEYS } from '../../services/settingsSync';
 import { MyPortWatchlist } from './myport/MyPortWatchlist';
 import { 
@@ -1390,21 +1391,58 @@ export const XChartWatchlistDock: React.FC = () => {
                             </span>
 
                             {/* Compare Mode: Add as Ref Button */}
-                            {activeTab?.type === 'COMPARE' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  addCompareRef(activeTab.id, {
-                                    symbol,
-                                    name: quote?.shortName || symbol,
-                                  });
-                                }}
-                                className="absolute right-6 opacity-0 group-hover:opacity-100 p-1 text-cyan-400 hover:text-white hover:bg-cyan-500/20 rounded transition-all cursor-pointer"
-                                title={`Add ${symbol} as Compare Reference`}
-                              >
-                                <GitCompareArrows className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                            {activeTab?.type === 'COMPARE' && (() => {
+                              const isTarget = activeTab.symbol.toUpperCase() === symbol.toUpperCase();
+                              const isAlreadyRef = activeTab.compareConfig?.refs.some(
+                                (r) => r.symbol.toUpperCase() === symbol.toUpperCase()
+                              );
+
+                              return (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isTarget) {
+                                      useDrawingStore.getState().setToastNotification(
+                                        `⚠️ ${symbol} เป็นหุ้นเป้าหมาย (Target) อยู่แล้ว ไม่สามารถเพิ่มเป็น Ref ได้`
+                                      );
+                                      setTimeout(() => useDrawingStore.getState().setToastNotification(null), 3000);
+                                      return;
+                                    }
+                                    if (isAlreadyRef) {
+                                      useDrawingStore.getState().setToastNotification(
+                                        `ℹ️ ${symbol} อยู่ในรายการ Ref อยู่แล้ว`
+                                      );
+                                      setTimeout(() => useDrawingStore.getState().setToastNotification(null), 2500);
+                                      return;
+                                    }
+                                    addCompareRef(activeTab.id, {
+                                      symbol,
+                                      name: quote?.shortName || symbol,
+                                    });
+                                    useDrawingStore.getState().setToastNotification(
+                                      `✨ เพิ่ม ${symbol} เป็น Reference เปรียบเทียบเรียบร้อย`
+                                    );
+                                    setTimeout(() => useDrawingStore.getState().setToastNotification(null), 2500);
+                                  }}
+                                  className={`absolute right-6 opacity-0 group-hover:opacity-100 p-1 rounded transition-all cursor-pointer ${
+                                    isTarget
+                                      ? 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/20'
+                                      : isAlreadyRef
+                                      ? 'text-slate-400 hover:text-slate-200 hover:bg-white/10'
+                                      : 'text-cyan-400 hover:text-white hover:bg-cyan-500/20'
+                                  }`}
+                                  title={
+                                    isTarget
+                                      ? `${symbol} เป็น Target อยู่แล้ว`
+                                      : isAlreadyRef
+                                      ? `${symbol} อยู่ใน Ref แล้ว`
+                                      : `Add ${symbol} as Compare Reference`
+                                  }
+                                >
+                                  <GitCompareArrows className="w-3.5 h-3.5" />
+                                </button>
+                              );
+                            })()}
 
                             {/* Hover Delete Action Button */}
                             <button

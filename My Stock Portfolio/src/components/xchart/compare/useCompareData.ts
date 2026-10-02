@@ -25,7 +25,7 @@ export interface NormalizedTickerSeries {
   startDate?: string;
 }
 
-interface RawChartData {
+export interface RawChartData {
   dates: string[];
   closes: number[];
   currentPrice?: number;
@@ -80,6 +80,114 @@ export function calculateStartDate(timeframe: CompareTimeFrame, availableDates?:
   }
 }
 
+/**
+ * Pure function: Transforms raw ticker historical prices into a normalized 0% baseline series
+ * starting from fromDate. Handles IPO (staggered inception), trading halts, and calendar forward-fill.
+ */
+export function normalizeTickerData(
+  raw: RawChartData,
+  masterDates: string[],
+  fromDate: string
+): {
+  points: CompareDataPoint[];
+  latestReturn: number | null;
+  basePrice: number | null;
+  actualBaseDate: string | null;
+} {
+  if (!raw.dates || raw.dates.length === 0 || !raw.closes || raw.closes.length === 0 || masterDates.length === 0) {
+    return { points: [], latestReturn: null, basePrice: null, actualBaseDate: null };
+  }
+
+  // 1. Build fast price lookup: date -> close
+  const priceMap = new Map<string, number>();
+  for (let i = 0; i < raw.dates.length; i++) {
+    const c = raw.closes[i];
+    if (c != null && c > 0 && isFinite(c)) {
+      priceMap.set(raw.dates[i], c);
+    }
+  }
+
+  if (priceMap.size === 0) {
+    return { points: [], latestReturn: null, basePrice: null, actualBaseDate: null };
+  }
+
+  const stockFirstDate = raw.dates[0];
+
+  // 2. Find first date in masterDates >= fromDate
+  let windowStartDate = masterDates.find((d) => d >= fromDate);
+  if (!windowStartDate) {
+    windowStartDate = masterDates[0];
+  }
+
+  // Effective start date for this stock:
+  // If the stock IPO'd AFTER windowStartDate, it starts on its first trading date (staggered inception)
+  const effectiveStartDate = stockFirstDate > windowStartDate ? stockFirstDate : windowStartDate;
+
+  // 3. Find base price P0 at effectiveStartDate:
+  let basePrice: number | null = null;
+  let actualBaseDate: string | null = null;
+
+  if (priceMap.has(effectiveStartDate)) {
+    basePrice = priceMap.get(effectiveStartDate)!;
+    actualBaseDate = effectiveStartDate;
+  } else {
+    // Look backwards from effectiveStartDate for last known close
+    for (let i = raw.dates.length - 1; i >= 0; i--) {
+      if (raw.dates[i] <= effectiveStartDate) {
+        const c = priceMap.get(raw.dates[i]);
+        if (c != null && c > 0 && isFinite(c)) {
+          basePrice = c;
+          actualBaseDate = raw.dates[i];
+          break;
+        }
+      }
+    }
+    // If not found backwards (e.g. IPO occurred), take the first available price
+    if (basePrice == null) {
+      for (let i = 0; i < raw.dates.length; i++) {
+        const c = priceMap.get(raw.dates[i]);
+        if (c != null && c > 0 && isFinite(c)) {
+          basePrice = c;
+          actualBaseDate = raw.dates[i];
+          break;
+        }
+      }
+    }
+  }
+
+  if (basePrice == null || basePrice <= 0 || !isFinite(basePrice)) {
+    return { points: [], latestReturn: null, basePrice: null, actualBaseDate: null };
+  }
+
+  // 4. Generate points for all dates in masterDates >= effectiveStartDate
+  const points: CompareDataPoint[] = [];
+  let lastKnownClose = basePrice;
+
+  for (const d of masterDates) {
+    if (d < effectiveStartDate) continue;
+
+    const currentClose = priceMap.get(d);
+    if (currentClose != null && currentClose > 0 && isFinite(currentClose)) {
+      lastKnownClose = currentClose;
+    }
+
+    const returnPct = ((lastKnownClose - basePrice) / basePrice) * 100;
+    points.push({
+      time: d,
+      value: Number(returnPct.toFixed(2)),
+    });
+  }
+
+  const latestReturn = points.length > 0 ? points[points.length - 1].value : null;
+
+  return {
+    points,
+    latestReturn,
+    basePrice,
+    actualBaseDate,
+  };
+}
+
 export function useCompareData(
   targetSymbol: string,
   refs: CompareRefSeries[],
@@ -93,6 +201,8 @@ export function useCompareData(
 
   // In-memory cache for fast snappy switching
   const memCacheRef = useRef<Record<string, RawChartData>>({});
+  const rawDataMapRef = useRef<Record<string, RawChartData>>({});
+  const masterDatesRef = useRef<string[]>([]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -100,14 +210,13 @@ export function useCompareData(
     setError(null);
 
     const cleanTarget = targetSymbol.trim().toUpperCase();
-    const visibleRefs = refs.filter((r) => r.visible);
     const symbolsToFetch = Array.from(new Set([cleanTarget, ...refs.map((r) => r.symbol.trim().toUpperCase())]));
 
     async function fetchAllData() {
       try {
         const rawMap: Record<string, RawChartData> = {};
 
-        // 1. First resolve from memory or IndexedDB cache for instant display
+        // 1. Resolve from memory or IndexedDB cache for instant display
         const missingSymbols: string[] = [];
         for (const sym of symbolsToFetch) {
           if (memCacheRef.current[sym]) {
@@ -131,7 +240,7 @@ export function useCompareData(
           }
         }
 
-        // 2. Fetch missing or stale symbols in parallel (only symbols not in cache)
+        // 2. Fetch missing symbols in parallel
         const fetchPromises = missingSymbols.map(async (sym) => {
           try {
             const apiRes = await api.chart.get(sym, 36500, '1D');
@@ -162,96 +271,33 @@ export function useCompareData(
           return;
         }
 
-        // 3. Compute common startDate cutoff
-        const startDate = calculateStartDate(timeframe, targetRaw.dates);
-
-        // 4. Collect all unique trading dates from target and all active visible symbols >= startDate
+        // 3. Build unified master trading dates across all fetched symbols
         const dateSet = new Set<string>();
-        for (let i = 0; i < targetRaw.dates.length; i++) {
-          if (targetRaw.dates[i] >= startDate) {
-            dateSet.add(targetRaw.dates[i]);
-          }
-        }
-
-        // Also add dates from visible refs
-        for (const ref of visibleRefs) {
-          const raw = rawMap[ref.symbol.toUpperCase()];
+        for (const sym of symbolsToFetch) {
+          const raw = rawMap[sym];
           if (raw && raw.dates) {
             for (let i = 0; i < raw.dates.length; i++) {
-              if (raw.dates[i] >= startDate) {
-                dateSet.add(raw.dates[i]);
-              }
+              dateSet.add(raw.dates[i]);
             }
           }
         }
 
-        const sortedDates = Array.from(dateSet).sort();
+        const masterDates = Array.from(dateSet).sort();
 
-        if (sortedDates.length === 0) {
-          setError(`No overlapping trading dates for ${timeframe}`);
+        if (masterDates.length === 0) {
+          setError(`No trading dates available for comparison`);
           setLoading(false);
           return;
         }
 
-        // 5. Normalizer function: transforms raw ticker data into 0% baseline series
-        const normalizeSeries = (
-          raw: RawChartData,
-          symbolName: string
-        ): { data: CompareDataPoint[]; latestReturn: number | null; basePrice: number | null; currentPrice: number | null } => {
-          // Build lookup: date -> close
-          const priceLookup = new Map<string, number>();
-          for (let i = 0; i < raw.dates.length; i++) {
-            priceLookup.set(raw.dates[i], raw.closes[i]);
-          }
+        rawDataMapRef.current = rawMap;
+        masterDatesRef.current = masterDates;
 
-          // Find earliest date >= startDate where price exists to be base price P0
-          let basePrice: number | null = null;
-          for (const d of sortedDates) {
-            const p = priceLookup.get(d);
-            if (p != null && p > 0) {
-              basePrice = p;
-              break;
-            }
-          }
+        // 4. Compute initial startDate cutoff for active timeframe
+        const startDate = calculateStartDate(timeframe, targetRaw.dates);
 
-          if (basePrice == null || basePrice <= 0) {
-            return { data: [], latestReturn: null, basePrice: null, currentPrice: null };
-          }
-
-          const points: CompareDataPoint[] = [];
-          let lastKnownClose = basePrice;
-          let hasStarted = false;
-
-          for (const d of sortedDates) {
-            const currentClose = priceLookup.get(d);
-            if (currentClose != null && currentClose > 0) {
-              lastKnownClose = currentClose;
-              hasStarted = true;
-            }
-
-            if (hasStarted) {
-              const returnPct = ((lastKnownClose - basePrice) / basePrice) * 100;
-              // Format to 2 decimal places for precision without floating point noise
-              points.push({
-                time: d,
-                value: Number(returnPct.toFixed(2)),
-              });
-            }
-          }
-
-          const latestReturn = points.length > 0 ? points[points.length - 1].value : null;
-          const currentPrice = raw.currentPrice || lastKnownClose;
-
-          return {
-            data: points,
-            latestReturn,
-            basePrice,
-            currentPrice,
-          };
-        };
-
-        // Normalize Target
-        const targetNorm = normalizeSeries(targetRaw, cleanTarget);
+        // 5. Normalize Target
+        const targetNorm = normalizeTickerData(targetRaw, masterDates, startDate);
         const normTargetSeries: NormalizedTickerSeries = {
           id: `target-${cleanTarget.toLowerCase()}`,
           symbol: cleanTarget,
@@ -262,14 +308,14 @@ export function useCompareData(
           opacity: targetStyle.opacity,
           visible: true,
           isTarget: true,
-          data: targetNorm.data,
+          data: targetNorm.points,
           latestReturn: targetNorm.latestReturn,
           basePrice: targetNorm.basePrice,
-          currentPrice: targetNorm.currentPrice,
-          startDate,
+          currentPrice: targetRaw.currentPrice || targetRaw.closes[targetRaw.closes.length - 1],
+          startDate: targetNorm.actualBaseDate || startDate,
         };
 
-        // Normalize all Refs (both visible and hidden so toggle is instantaneous)
+        // 6. Normalize all Refs (both visible and hidden so toggle is instantaneous)
         const normRefSeries: NormalizedTickerSeries[] = refs.map((ref) => {
           const raw = rawMap[ref.symbol.toUpperCase()];
           if (!raw) {
@@ -284,15 +330,15 @@ export function useCompareData(
             };
           }
 
-          const norm = normalizeSeries(raw, ref.symbol);
+          const norm = normalizeTickerData(raw, masterDates, startDate);
           return {
             ...ref,
             isTarget: false,
-            data: norm.data,
+            data: norm.points,
             latestReturn: norm.latestReturn,
             basePrice: norm.basePrice,
-            currentPrice: norm.currentPrice,
-            startDate,
+            currentPrice: raw.currentPrice || raw.closes[raw.closes.length - 1],
+            startDate: norm.actualBaseDate || startDate,
           };
         });
 
@@ -322,5 +368,7 @@ export function useCompareData(
     refSeriesList,
     loading,
     error,
+    rawDataMapRef,
+    masterDatesRef,
   };
 }

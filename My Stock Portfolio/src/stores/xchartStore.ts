@@ -659,15 +659,21 @@ export const useXChartStore = create<XChartState>((set, get) => ({
 
     // Guard COMPARE tabs: swap the target symbol, never change tab type
     if (active.type === 'COMPARE') {
-      const nextTabs = tabs.map((t) =>
-        t.id === activeTabId
-          ? {
-              ...t,
-              symbol: cleanSym,
-              title: title || `📈 Compare: ${cleanSym}`,
-            }
-          : t
-      );
+      const nextTabs = tabs.map((t) => {
+        if (t.id !== activeTabId) return t;
+        const currentConfig = t.compareConfig || createDefaultCompareConfig(cleanSym);
+        // De-duplicate: If cleanSym was previously in refs, remove it (unselect from refs)
+        const updatedRefs = currentConfig.refs.filter((r) => r.symbol.toUpperCase() !== cleanSym);
+        return {
+          ...t,
+          symbol: cleanSym,
+          title: title || `📈 Compare: ${cleanSym}`,
+          compareConfig: {
+            ...currentConfig,
+            refs: updatedRefs,
+          },
+        };
+      });
       set({ tabs: nextTabs, watchlistDetailSymbol: cleanSym });
       persistTabs(nextTabs, activeTabId);
       return;
