@@ -192,16 +192,26 @@ export const NewsDigestModal: React.FC<NewsDigestModalProps> = ({
   };
 
   const isWeekly = digest.digest_type === 'weekly';
-  const createdDate = new Date(digest.created_at).toLocaleDateString('th-TH', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const createdDate = (() => {
+    try {
+      const raw = digest.created_at || '';
+      const iso = raw.includes('T') ? raw : raw.replace(' ', 'T');
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return raw;
+      return d.toLocaleDateString('th-TH', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return digest.created_at || '';
+    }
+  })();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div 
         className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}

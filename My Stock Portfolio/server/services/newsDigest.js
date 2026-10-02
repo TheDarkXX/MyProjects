@@ -363,10 +363,18 @@ export function getDigestHistory({ limit = 20, type = null } = {}) {
   params.push(Number(limit) || 20);
 
   const rows = db.prepare(query).all(...params);
-  return rows.map(r => ({
-    ...r,
-    tickers_covered: JSON.parse(r.tickers_covered || '[]')
-  }));
+  return rows.map(r => {
+    let tickers = [];
+    try {
+      tickers = typeof r.tickers_covered === 'string' ? JSON.parse(r.tickers_covered || '[]') : (r.tickers_covered || []);
+    } catch {
+      tickers = [];
+    }
+    return {
+      ...r,
+      tickers_covered: tickers
+    };
+  });
 }
 
 /**
@@ -375,10 +383,22 @@ export function getDigestHistory({ limit = 20, type = null } = {}) {
 export function getDigestById(id) {
   const row = db.prepare('SELECT * FROM news_digests WHERE id = ?').get(id);
   if (!row) return null;
+  let tickers = [];
+  let sources = [];
+  try {
+    tickers = typeof row.tickers_covered === 'string' ? JSON.parse(row.tickers_covered || '[]') : (row.tickers_covered || []);
+  } catch {
+    tickers = [];
+  }
+  try {
+    sources = typeof row.source_article_ids === 'string' ? JSON.parse(row.source_article_ids || '[]') : (row.source_article_ids || []);
+  } catch {
+    sources = [];
+  }
   return {
     ...row,
-    tickers_covered: JSON.parse(row.tickers_covered || '[]'),
-    source_article_ids: JSON.parse(row.source_article_ids || '[]')
+    tickers_covered: tickers,
+    source_article_ids: sources
   };
 }
 
@@ -396,9 +416,21 @@ export function getLatestDigest(type = null) {
   
   const row = db.prepare(query).get(...params);
   if (!row) return null;
+  let tickers = [];
+  let sources = [];
+  try {
+    tickers = typeof row.tickers_covered === 'string' ? JSON.parse(row.tickers_covered || '[]') : (row.tickers_covered || []);
+  } catch {
+    tickers = [];
+  }
+  try {
+    sources = typeof row.source_article_ids === 'string' ? JSON.parse(row.source_article_ids || '[]') : (row.source_article_ids || []);
+  } catch {
+    sources = [];
+  }
   return {
     ...row,
-    tickers_covered: JSON.parse(row.tickers_covered || '[]'),
-    source_article_ids: JSON.parse(row.source_article_ids || '[]')
+    tickers_covered: tickers,
+    source_article_ids: sources
   };
 }
