@@ -10,12 +10,13 @@ function getAuthPassword() {
     if (existsSync(envPath)) {
       const env = readFileSync(envPath, 'utf-8');
       const match = env.match(/STOCK_PASSWORD=(.+)/);
-      if (match) return match[1].trim();
+      if (match) return match[1].trim().replace(/^["']|["']$/g, '');
     }
   } catch (e) {
     console.error("Error reading .env", e);
   }
-  return process.env.STOCK_PASSWORD || null;
+  const pass = process.env.STOCK_PASSWORD;
+  return pass ? pass.trim().replace(/^["']|["']$/g, '') : null;
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-stock-secret-key-2026';
