@@ -3,7 +3,7 @@ import {
   Flame, Sparkles, Filter, CheckCheck, RefreshCw, ExternalLink, 
   Clock, ShieldAlert, BookOpen, Layers, Search, Check, ChevronDown, 
   ChevronUp, BarChart2, Eye, EyeOff, Target, Star, Trash2, Plus, Zap,
-  Hash, X, Globe, MessageSquare
+  Hash, X, Globe, MessageSquare, Newspaper, ArrowLeft
 } from 'lucide-react';
 import clsx from 'clsx';
 import { NewsTickerDock } from './NewsTickerDock';
@@ -14,7 +14,7 @@ import { NewsCardMini } from './views/NewsCardMini';
 import { NewsCardBig } from './views/NewsCardBig';
 import { NewsCardFull } from './views/NewsCardFull';
 import { NewsDetailModal } from './NewsDetailModal';
-import { NewsDigestModal } from './NewsDigestModal';
+import { NewsDigestReaderView } from './NewsDigestReaderView';
 import { NewsItem, NewsStats, TimingStats, TriageStats, ViewMode, SortKey, SortOrder, NewsDigest } from './types';
 
 const formatDigestDate = (dateStr?: string) => {
@@ -54,14 +54,10 @@ export const NewsIntelPage: React.FC = () => {
   const [selectedDetailItem, setSelectedDetailItem] = useState<NewsItem | null>(null);
 
   // AI News Digest States
-  const [selectedDigest, setSelectedDigest] = useState<NewsDigest | null>(null);
-  const [showDigestModal, setShowDigestModal] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'feed' | 'digest'>('feed');
+  const [targetDigestId, setTargetDigestId] = useState<number | null>(null);
   const [generatingDigestDays, setGeneratingDigestDays] = useState<number | null>(null);
   const [digestHistory, setDigestHistory] = useState<NewsDigest[]>([]);
-  const [showDigestHistoryModal, setShowDigestHistoryModal] = useState(false);
-  const [loadingDigestHistory, setLoadingDigestHistory] = useState(false);
-  const [digestHistoryError, setDigestHistoryError] = useState<string | null>(null);
-  const [openingDigestId, setOpeningDigestId] = useState<number | null>(null);
 
   // Filters
   const [selectedPortfolio, setSelectedPortfolio] = useState<'all' | 'main' | 'tiger' | 'project2x' | 'global'>('all');
@@ -401,8 +397,9 @@ export const NewsIntelPage: React.FC = () => {
       });
       const data = await res.json();
       if (data.success && data.digest) {
-        setSelectedDigest(data.digest);
-        setShowDigestModal(true);
+        setTargetDigestId(data.digest.id);
+        setActiveSubTab('digest');
+        fetchDigestHistory();
       } else {
         alert(data.message || 'ไม่สามารถสร้างสรุปข่าวได้ในขณะนี้');
       }
@@ -416,52 +413,97 @@ export const NewsIntelPage: React.FC = () => {
 
   const fetchDigestHistory = useCallback(async () => {
     try {
-      setLoadingDigestHistory(true);
-      setDigestHistoryError(null);
       const res = await fetch('/api/news/digests');
       const data = await res.json();
       if (data.success && Array.isArray(data.digests)) {
         setDigestHistory(data.digests);
-      } else {
-        setDigestHistoryError(data.error || 'ไม่สามารถโหลดประวัติสรุปข่าวได้');
       }
     } catch (err: any) {
       console.error('Failed to fetch digest history:', err);
-      setDigestHistoryError(err.message || 'เกิดข้อผิดพลาดในการโหลดประวัติ');
-    } finally {
-      setLoadingDigestHistory(false);
     }
   }, []);
 
   const handleOpenDigestHistory = () => {
-    setShowDigestHistoryModal(true);
-    fetchDigestHistory();
-  };
-
-  const handleOpenDigestById = async (id: number) => {
-    try {
-      setOpeningDigestId(id);
-      const res = await fetch(`/api/news/digests/${id}`);
-      const data = await res.json();
-      if (data.success && data.digest) {
-        setSelectedDigest(data.digest);
-        setShowDigestHistoryModal(false);
-        setShowDigestModal(true);
-      } else {
-        alert(data.message || 'ไม่พบบทสรุปข่าวนี้');
-      }
-    } catch (err: any) {
-      console.error('Failed to open digest:', err);
-      alert('เกิดข้อผิดพลาดในการเปิดบทสรุป: ' + err.message);
-    } finally {
-      setOpeningDigestId(null);
-    }
+    setActiveSubTab('digest');
   };
 
   return (
-    <div className="flex flex-col xl:flex-row gap-5 w-full pb-12 items-start">
-      {/* Left Column: Main News Feed */}
-      <div className="flex-1 min-w-0 space-y-6 w-full">
+    <div className="w-full pb-12 space-y-5">
+      {/* 0. Top Segmented Sub-Tab Switcher: Live Feed vs AI Briefings */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#111418] border border-[#2A2E45] rounded-2xl p-2.5 shadow-md">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveSubTab('feed')}
+            className={clsx(
+              "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer",
+              activeSubTab === 'feed'
+                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_2px_12px_rgba(130,58,253,0.35)]"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            )}
+          >
+            <Newspaper className="w-4 h-4" />
+            <span>ข่าวกรองสด (Live Feed)</span>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/30 font-mono">
+              {sortedItems.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('digest')}
+            className={clsx(
+              "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer",
+              activeSubTab === 'digest'
+                ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-[0_2px_12px_rgba(99,102,241,0.35)]"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            )}
+          >
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+            <span>คลังสรุป AI (AI Briefings)</span>
+            {digestHistory.length > 0 && (
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono font-bold">
+                {digestHistory.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {activeSubTab === 'feed' ? (
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              onClick={() => setActiveSubTab('digest')}
+              className="px-3.5 py-1.5 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              ห้องอ่านบทสรุปเต็มจอ ➔
+            </button>
+          </div>
+        ) : (
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              onClick={() => setActiveSubTab('feed')}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              กลับไปฟีดข่าวสด
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Main Content Area */}
+      {activeSubTab === 'digest' ? (
+        <NewsDigestReaderView
+          onSelectTicker={(t) => {
+            setSelectedTicker(t);
+            setActiveSubTab('feed');
+          }}
+          onSwitchToFeed={() => setActiveSubTab('feed')}
+          initialDigestId={targetDigestId}
+        />
+      ) : (
+        <div className="flex flex-col xl:flex-row gap-5 w-full items-start">
+          {/* Left Column: Main News Feed */}
+          <div className="flex-1 min-w-0 space-y-6 w-full">
         {/* 1. Header & Title Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#111418] border border-[#2A2E45] rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
         <div>
@@ -1007,6 +1049,8 @@ export const NewsIntelPage: React.FC = () => {
           onToggleCollapse={() => setDockCollapsed(!dockCollapsed)}
         />
       </div>
+        </div>
+      )}
 
       {/* Mobile News Ticker Dock Drawer */}
       {showMobileDock && (
@@ -1339,154 +1383,7 @@ export const NewsIntelPage: React.FC = () => {
           setSelectedTicker(null);
         }}
       />
-
-      {/* 6. AI News Digest Reader Modal */}
-      <NewsDigestModal
-        isOpen={showDigestModal}
-        onClose={() => setShowDigestModal(false)}
-        digest={selectedDigest}
-        onSelectTicker={(t) => {
-          setSelectedTicker(t);
-          setShowDigestModal(false);
-        }}
-      />
-
-      {/* 7. AI Digest History Library Modal */}
-      {showDigestHistoryModal && (
-        <div 
-          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
-          onClick={() => setShowDigestHistoryModal(false)}
-        >
-          <div 
-            className="bg-[#111418] border border-[#2A2E45] rounded-3xl max-w-2xl w-full p-5 sm:p-6 space-y-4 sm:space-y-5 shadow-2xl flex flex-col max-h-[85vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[#2A2E45] pb-4 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-white font-heading flex items-center gap-2">
-                    คลังประวัติ AI News Digest
-                    {digestHistory.length > 0 && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
-                        {digestHistory.length} ชุด
-                      </span>
-                    )}
-                  </h3>
-                  <p className="text-xs text-slate-400">บทสรุปรายสัปดาห์ (Weekly) และสรุปด่วน (On-Demand) ทั้งหมด</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowDigestHistoryModal(false)}
-                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 min-h-[160px]">
-              {loadingDigestHistory && digestHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-slate-400 space-y-3">
-                  <RefreshCw className="w-7 h-7 text-indigo-400 animate-spin" />
-                  <p className="text-xs font-semibold">กำลังโหลดคลังประวัติบทสรุป AI...</p>
-                </div>
-              ) : digestHistoryError ? (
-                <div className="text-center py-12 space-y-3">
-                  <p className="text-xs text-rose-400">{digestHistoryError}</p>
-                  <button
-                    onClick={fetchDigestHistory}
-                    className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-white font-semibold transition-all cursor-pointer"
-                  >
-                    ลองใหม่อีกครั้ง
-                  </button>
-                </div>
-              ) : digestHistory.length === 0 ? (
-                <div className="text-center py-12 px-4 text-slate-400 space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto">
-                    <Sparkles className="w-6 h-6" />
-                  </div>
-                  <p className="text-sm font-semibold text-white">ยังไม่มีประวัติบทสรุป AI ในระบบ</p>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    ระบบจะสร้างอัตโนมัติทุกวันอาทิตย์ 19:00 หรือกดปุ่มสรุป 7 วันเพื่อสร้างบทสรุปชุดแรกได้ทันที
-                  </p>
-                  <button
-                    onClick={() => {
-                      setShowDigestHistoryModal(false);
-                      handleGenerateDigest(7);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer inline-flex items-center gap-1.5"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    ⚡ สรุป 7 วันทันที
-                  </button>
-                </div>
-              ) : (
-                digestHistory.map((d) => (
-                  <div
-                    key={d.id}
-                    onClick={() => handleOpenDigestById(d.id)}
-                    className="p-4 rounded-2xl bg-[#0F111A] hover:bg-[#1A1D2D] border border-[#1F2233] hover:border-indigo-500/50 transition-all cursor-pointer flex items-center justify-between gap-4 group"
-                  >
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={clsx(
-                          "px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border",
-                          d.digest_type === 'weekly' 
-                            ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40" 
-                            : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                        )}>
-                          {d.digest_type === 'weekly' ? 'Weekly' : 'On-Demand'}
-                        </span>
-                        <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
-                          <Clock className="w-3 h-3 text-slate-500" />
-                          {formatDigestDate(d.created_at)}
-                        </span>
-                        <span className="text-xs text-slate-400 font-medium">
-                          • {d.article_count} ข่าวกรอง
-                        </span>
-                      </div>
-                      <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors truncate">
-                        {d.title}
-                      </h4>
-                      {d.tickers_covered && Array.isArray(d.tickers_covered) && d.tickers_covered.length > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-slate-400 flex-wrap">
-                          <span className="text-slate-500">ครอบคลุม:</span>
-                          {d.tickers_covered.slice(0, 6).map(t => (
-                            <span key={t} className="px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded font-mono text-[11px]">
-                              ${t}
-                            </span>
-                          ))}
-                          {d.tickers_covered.length > 6 && (
-                            <span className="text-[11px] text-slate-500">+{d.tickers_covered.length - 6}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      disabled={openingDigestId === d.id}
-                      className="px-3 py-1.5 rounded-xl bg-indigo-600/20 group-hover:bg-indigo-600 text-indigo-300 group-hover:text-white border border-indigo-500/40 text-xs font-bold transition-all flex items-center gap-1 flex-shrink-0"
-                    >
-                      {openingDigestId === d.id ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>กำลังเปิด...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>เปิดอ่าน</span>
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
