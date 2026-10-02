@@ -35,7 +35,8 @@ import {
   GripVertical,
   ChevronsDownUp,
   ChevronsUpDown,
-  Filter
+  Filter,
+  GitCompareArrows
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -74,7 +75,8 @@ export const XChartWatchlistDock: React.FC = () => {
     toggleWatchlistDetail,
     fetchWatchlistQuotes,
     moveSymbol,
-    moveSection
+    moveSection,
+    addCompareRef
   } = useXChartStore();
 
   const { isMobile } = useDeviceLayout();
@@ -1386,6 +1388,23 @@ export const XChartWatchlistDock: React.FC = () => {
                             >
                               {quote ? (isPositive && percentChange > 0 ? `+${percentChange.toFixed(2)}%` : `${percentChange.toFixed(2)}%`) : '—'}
                             </span>
+
+                            {/* Compare Mode: Add as Ref Button */}
+                            {activeTab?.type === 'COMPARE' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addCompareRef(activeTab.id, {
+                                    symbol,
+                                    name: quote?.shortName || symbol,
+                                  });
+                                }}
+                                className="absolute right-6 opacity-0 group-hover:opacity-100 p-1 text-cyan-400 hover:text-white hover:bg-cyan-500/20 rounded transition-all cursor-pointer"
+                                title={`Add ${symbol} as Compare Reference`}
+                              >
+                                <GitCompareArrows className="w-3.5 h-3.5" />
+                              </button>
+                            )}
 
                             {/* Hover Delete Action Button */}
                             <button

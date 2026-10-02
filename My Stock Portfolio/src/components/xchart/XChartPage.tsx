@@ -5,6 +5,7 @@ import { XChartPanel } from './XChartPanel';
 import { MarketHeatmap } from './heatmap/MarketHeatmap';
 import { XChartWatchlistDock } from './XChartWatchlistDock';
 import { MyPortTab } from './myport/MyPortTab';
+import { XChartCompareTab } from './compare/XChartCompareTab';
 
 export const XChartPage: React.FC = () => {
   const { tabs, activeTabId } = useXChartStore();
@@ -24,13 +25,19 @@ export const XChartPage: React.FC = () => {
       <div 
         className="flex-1 flex overflow-hidden relative min-h-0 w-full h-full bg-[#0B1220]"
       >
-        {/* Main Canvas / Chart / Heatmap / MyPort Area */}
+        {/* Main Canvas / Chart / Heatmap / MyPort / Compare Area */}
         <div className="flex-1 flex flex-col h-full overflow-hidden relative min-h-0">
           {activeTab ? (
             activeTab.type === 'HEATMAP' ? (
               <MarketHeatmap key={activeTab.id} />
             ) : activeTab.type === 'MYPORT' ? (
               <MyPortTab key={activeTab.id} tabId={activeTab.id} />
+            ) : activeTab.type === 'COMPARE' ? (
+              <XChartCompareTab 
+                key={activeTab.id} 
+                tabId={activeTab.id} 
+                symbol={activeTab.symbol} 
+              />
             ) : (
               <XChartPanel 
                 key={activeTab.id} 

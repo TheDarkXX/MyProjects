@@ -12,6 +12,7 @@ export const SYNC_KEYS = {
   CHART_VIEW_P2X: 'chart_view_project2x_v1',
   CHART_VIEW_XCHART: 'chart_view_xchart_v1',
   MYPORT_PREFERENCES: 'stock_xchart_myport_prefs_v1',
+  COMPARE_CONFIG: 'xchart_compare_config_v1',
 } as const;
 
 export type SyncKey = typeof SYNC_KEYS[keyof typeof SYNC_KEYS];

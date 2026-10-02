@@ -4,11 +4,33 @@ import { SYNC_KEYS, pushSettingDebounced, registerSyncHandler } from '../service
 import { IndicatorSettings, DEFAULT_INDICATOR_SETTINGS } from '../types/indicatorConfig';
 import { useIndicatorStore, registerTabIndicatorSync } from './useIndicatorStore';
 
-export type XChartTabType = 'STOCK' | 'CURRENCY' | 'HEATMAP' | 'MYPORT';
+export type XChartTabType = 'STOCK' | 'CURRENCY' | 'HEATMAP' | 'MYPORT' | 'COMPARE';
 
 export type TimeFrame = '7D' | '1M' | '3M' | '6M' | '10M' | '1Y' | 'ALL';
 export type ChartStyle = 'CANDLE' | 'HEIKIN_ASHI' | 'AREA';
 export type Resolution = '1D' | '1W' | '4H';
+
+export type CompareTimeFrame = '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX';
+
+export interface CompareLineStyleConfig {
+  color: string;
+  lineWidth: 1 | 2 | 3 | 4;
+  lineStyle: 'SOLID' | 'DASHED' | 'DOTTED';
+  opacity: number;
+}
+
+export interface CompareRefSeries extends CompareLineStyleConfig {
+  id: string;
+  symbol: string;
+  name?: string;
+  visible: boolean;
+}
+
+export interface CompareTabConfig {
+  timeframe: CompareTimeFrame;
+  targetStyle: CompareLineStyleConfig;
+  refs: CompareRefSeries[];
+}
 
 export interface XChartTabChartSettings {
   timeframe: TimeFrame;
@@ -28,6 +50,7 @@ export interface XChartTab {
   showEnvelope?: boolean;
   showSignals?: boolean;
   settings?: XChartTabChartSettings;
+  compareConfig?: CompareTabConfig;
 }
 
 export type MyPortSortColumn = 'symbol' | 'price' | 'change' | 'percentChange' | 'tier';
@@ -98,8 +121,50 @@ export function createDefaultTabSettings(type: XChartTabType, symbol: string): X
   };
 }
 
+export const DEFAULT_COMPARE_TARGET_STYLE: CompareLineStyleConfig = {
+  color: '#F59E0B',
+  lineWidth: 3,
+  lineStyle: 'SOLID',
+  opacity: 1.0,
+};
+
+export const DEFAULT_COMPARE_PRESETS = [
+  { symbol: 'SCHG', name: 'Schwab Growth ETF', color: '#38BDF8' },
+  { symbol: 'GOOGL', name: 'Alphabet / Google', color: '#4285F4' },
+  { symbol: 'NVDA', name: 'NVIDIA Corp', color: '#22C55E' },
+  { symbol: 'GLD', name: 'Gold Trust (GLD)', color: '#EAB308' },
+  { symbol: 'BTC-USD', name: 'Bitcoin (BTC)', color: '#F97316' },
+  { symbol: 'SPY', name: 'S&P 500 ETF', color: '#3B82F6' },
+  { symbol: 'QQQ', name: 'Nasdaq 100 ETF', color: '#A855F7' },
+];
+
+export function createDefaultCompareConfig(symbol: string): CompareTabConfig {
+  const cleanTarget = (symbol || 'NVDA').trim().toUpperCase();
+  // Filter out target symbol so it does not duplicate as a reference
+  const candidatePresets = DEFAULT_COMPARE_PRESETS.filter((p) => p.symbol !== cleanTarget);
+  // Default refs requested by user: SCHG, GOOGL, NVDA, GLD, BTC-USD (or SPY/QQQ if target matches one)
+  const selectedPresets = candidatePresets.slice(0, 5);
+
+  const refs: CompareRefSeries[] = selectedPresets.map((p, idx) => ({
+    id: `ref-${p.symbol.toLowerCase()}-${Date.now()}-${idx}`,
+    symbol: p.symbol,
+    name: p.name,
+    color: p.color,
+    lineWidth: 2,
+    lineStyle: 'SOLID',
+    opacity: 0.85,
+    visible: true,
+  }));
+
+  return {
+    timeframe: '1Y',
+    targetStyle: { ...DEFAULT_COMPARE_TARGET_STYLE },
+    refs,
+  };
+}
+
 export function ensureTabSettings(tab: XChartTab): XChartTab {
-  if (tab.type === 'HEATMAP') return tab;
+  if (tab.type === 'HEATMAP' || tab.type === 'COMPARE') return tab;
   const def = createDefaultTabSettings(tab.type, tab.symbol);
   return {
     ...tab,
@@ -163,6 +228,14 @@ interface XChartState {
   toggleWatchlistDetail: () => void;
   fetchWatchlistQuotes: () => Promise<void>;
   resetToTVWatchlist: () => void;
+  // Compare tab actions
+  updateCompareConfig: (tabId: string, config: Partial<CompareTabConfig>) => void;
+  addCompareRef: (tabId: string, ref: { symbol: string; name?: string; color?: string; lineWidth?: 1 | 2 | 3 | 4; lineStyle?: 'SOLID' | 'DASHED' | 'DOTTED'; opacity?: number; visible?: boolean; id?: string }) => void;
+  removeCompareRef: (tabId: string, refId: string) => void;
+  toggleCompareRefVisible: (tabId: string, refId: string) => void;
+  updateCompareRefStyle: (tabId: string, refId: string, style: Partial<CompareLineStyleConfig>) => void;
+  updateCompareTargetStyle: (tabId: string, style: Partial<CompareLineStyleConfig>) => void;
+
   applyCloudTabs: (data: { tabs: XChartTab[]; activeTabId?: string }) => void;
   applyCloudWatchlist: (sections: WatchlistSection[]) => void;
   applyCloudDetailCollapsed: (collapsed: boolean) => void;
@@ -511,6 +584,21 @@ export const useXChartStore = create<XChartState>((set, get) => ({
       return;
     }
 
+    if (type === 'COMPARE') {
+      const compareConfig = createDefaultCompareConfig(cleanSym);
+      const newTab: XChartTab = {
+        id: `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: 'COMPARE',
+        symbol: cleanSym,
+        title: title || `📈 Compare: ${cleanSym}`,
+        compareConfig,
+      };
+      const nextTabs = [...tabs, newTab];
+      set({ tabs: nextTabs, activeTabId: newTab.id, watchlistDetailSymbol: cleanSym });
+      persistTabs(nextTabs, newTab.id);
+      return;
+    }
+
     const defaultSettings = createDefaultTabSettings(type, cleanSym);
     const newTab: XChartTab = {
       id: `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -568,6 +656,26 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     if (!active) return;
 
     const cleanSym = symbol.trim().toUpperCase();
+
+    // Guard COMPARE tabs: swap the target symbol, never change tab type
+    if (active.type === 'COMPARE') {
+      const nextTabs = tabs.map((t) =>
+        t.id === activeTabId
+          ? {
+              ...t,
+              symbol: cleanSym,
+              title: title || `📈 Compare: ${cleanSym}`,
+            }
+          : t
+      );
+      set({ tabs: nextTabs, watchlistDetailSymbol: cleanSym });
+      persistTabs(nextTabs, activeTabId);
+      return;
+    }
+
+    // Guard HEATMAP / MYPORT tabs
+    if (active.type === 'HEATMAP' || active.type === 'MYPORT') return;
+
     const isCurrency = cleanSym.includes('=X') || cleanSym.endsWith('=X');
     const type: XChartTabType = isCurrency ? 'CURRENCY' : 'STOCK';
 
@@ -818,6 +926,128 @@ export const useXChartStore = create<XChartState>((set, get) => ({
       } catch {}
     }
     set({ watchlistDetailCollapsed: collapsed });
+  },
+
+  // Compare Tab Actions
+  updateCompareConfig: (tabId, config) => {
+    const { tabs, activeTabId } = get();
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== tabId || t.type !== 'COMPARE') return t;
+      const current = t.compareConfig || createDefaultCompareConfig(t.symbol);
+      return {
+        ...t,
+        compareConfig: {
+          ...current,
+          ...config,
+        },
+      };
+    });
+    set({ tabs: nextTabs });
+    persistTabs(nextTabs, activeTabId);
+  },
+
+  addCompareRef: (tabId, ref) => {
+    const { tabs, activeTabId } = get();
+    const cleanSym = ref.symbol.trim().toUpperCase();
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== tabId || t.type !== 'COMPARE') return t;
+      const current = t.compareConfig || createDefaultCompareConfig(t.symbol);
+      // Avoid duplicate symbol in refs or adding the target symbol as ref
+      if (current.refs.some((r) => r.symbol.toUpperCase() === cleanSym) || t.symbol.toUpperCase() === cleanSym) {
+        return t;
+      }
+      const newRef: CompareRefSeries = {
+        id: ref.id || `ref-${cleanSym.toLowerCase()}-${Date.now()}`,
+        symbol: cleanSym,
+        name: ref.name || cleanSym,
+        color: ref.color || '#3B82F6',
+        lineWidth: ref.lineWidth ?? 2,
+        lineStyle: ref.lineStyle || 'SOLID',
+        opacity: ref.opacity ?? 0.85,
+        visible: ref.visible ?? true,
+      };
+      return {
+        ...t,
+        compareConfig: {
+          ...current,
+          refs: [...current.refs, newRef],
+        },
+      };
+    });
+    set({ tabs: nextTabs });
+    persistTabs(nextTabs, activeTabId);
+  },
+
+  removeCompareRef: (tabId, refId) => {
+    const { tabs, activeTabId } = get();
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== tabId || t.type !== 'COMPARE' || !t.compareConfig) return t;
+      return {
+        ...t,
+        compareConfig: {
+          ...t.compareConfig,
+          refs: t.compareConfig.refs.filter((r) => r.id !== refId),
+        },
+      };
+    });
+    set({ tabs: nextTabs });
+    persistTabs(nextTabs, activeTabId);
+  },
+
+  toggleCompareRefVisible: (tabId, refId) => {
+    const { tabs, activeTabId } = get();
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== tabId || t.type !== 'COMPARE' || !t.compareConfig) return t;
+      return {
+        ...t,
+        compareConfig: {
+          ...t.compareConfig,
+          refs: t.compareConfig.refs.map((r) =>
+            r.id === refId ? { ...r, visible: !r.visible } : r
+          ),
+        },
+      };
+    });
+    set({ tabs: nextTabs });
+    persistTabs(nextTabs, activeTabId);
+  },
+
+  updateCompareRefStyle: (tabId, refId, style) => {
+    const { tabs, activeTabId } = get();
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== tabId || t.type !== 'COMPARE' || !t.compareConfig) return t;
+      return {
+        ...t,
+        compareConfig: {
+          ...t.compareConfig,
+          refs: t.compareConfig.refs.map((r) =>
+            r.id === refId ? { ...r, ...style } : r
+          ),
+        },
+      };
+    });
+    set({ tabs: nextTabs });
+    persistTabs(nextTabs, activeTabId);
+  },
+
+  updateCompareTargetStyle: (tabId, style) => {
+    const { tabs, activeTabId } = get();
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== tabId || t.type !== 'COMPARE') return t;
+      const current = t.compareConfig || createDefaultCompareConfig(t.symbol);
+      return {
+        ...t,
+        compareConfig: {
+          ...current,
+          targetStyle: {
+            ...current.targetStyle,
+            ...style,
+          },
+        },
+      };
+    });
+    set({ tabs: nextTabs });
+    persistTabs(nextTabs, activeTabId);
   },
 }));
 
