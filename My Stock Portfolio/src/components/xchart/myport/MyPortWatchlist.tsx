@@ -64,6 +64,25 @@ export const DEFAULT_2X_TARGET_STOCKS: TargetStockItem[] = [
   { symbol: 'RKLB', name: 'Rocket Lab USA', target_percent: 2.0, category: 'Moonshot' }
 ];
 
+export interface IndexStockItem {
+  symbol: string;
+  name: string;
+  badge: string;
+  sub?: string;
+}
+
+export const DEFAULT_INDEX_ITEMS: IndexStockItem[] = [
+  { symbol: 'SPY', name: 'S&P 500', badge: '🇺🇸', sub: 'US 500 Large Cap' },
+  { symbol: 'QQQ', name: 'Nasdaq 100', badge: '💻', sub: 'Tech 100 Benchmark' },
+  { symbol: 'SCHG', name: 'US Large Growth', badge: '🚀', sub: 'Large-Cap Growth' },
+  { symbol: 'BTC-USD', name: 'Bitcoin', badge: '₿', sub: 'Crypto Flagship' },
+  { symbol: 'GLD', name: 'Gold (ทองคำ)', badge: '🪙', sub: 'SPDR Gold Trust' },
+  { symbol: 'USO', name: 'Crude Oil (น้ำมัน)', badge: '🛢️', sub: 'US Oil Fund' },
+  { symbol: 'UUP', name: 'US Dollar Index', badge: '💵', sub: 'Invesco DXY Bullish' },
+  { symbol: 'SMH', name: 'Semiconductor ETF', badge: '⚡', sub: 'VanEck Semiconductor' },
+  { symbol: 'TLT', name: '20+ Yr Treasury Bond', badge: '🏛️', sub: '20+ Year Treasury Bond' },
+];
+
 // Deterministic gradient colors for symbol badges (TradingView style)
 const BADGE_GRADIENTS = [
   'from-blue-600 to-indigo-600',
@@ -109,6 +128,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     setMyPortSort, 
     toggleMyPortHoldingsCollapse, 
     toggleMyPortTargetCollapse,
+    toggleMyPortIndexCollapse,
     fetchWatchlistQuotes
   } = useXChartStore();
   const { currency } = useUiStore();
@@ -162,8 +182,19 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   // Section Collapse State (Driven by Cloud-Synced myportPreferences)
   const holdingsCollapsed = myportPreferences.holdingsCollapsed;
   const targetCollapsed = myportPreferences.targetCollapsed;
+  const indexCollapsed = myportPreferences.indexCollapsed ?? false;
   const toggleHoldingsCollapse = toggleMyPortHoldingsCollapse;
   const toggleTargetCollapse = toggleMyPortTargetCollapse;
+  const toggleIndexCollapse = toggleMyPortIndexCollapse;
+
+  // Auto-fetch quotes on mount and keep updated every 30s
+  useEffect(() => {
+    fetchWatchlistQuotes();
+    const timer = setInterval(() => {
+      fetchWatchlistQuotes();
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [fetchWatchlistQuotes]);
 
   // Render sorting indicator arrow helper
   const renderSortIndicator = (col: MyPortSortColumn) => {
@@ -189,7 +220,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
   // Section Context Menu State (Right Click)
   const [sectionContextMenu, setSectionContextMenu] = useState<{
-    sectionId: 'holdings' | 'target';
+    sectionId: 'holdings' | 'target' | 'index';
     sectionName: string;
     x: number;
     y: number;
@@ -787,6 +818,125 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           )}
         </div>
 
+        {/* SECTION 3: INDEX */}
+        <div className="bg-[#0F111A]">
+          {/* Section Header */}
+          <div 
+            onClick={toggleIndexCollapse}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setSectionContextMenu({
+                sectionId: 'index',
+                sectionName: 'INDEX',
+                x: e.clientX,
+                y: e.clientY
+              });
+            }}
+            className="h-7 px-2.5 bg-[#131724]/95 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
+          >
+            <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
+              {indexCollapsed ? (
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors shrink-0" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors shrink-0" />
+              )}
+              <BarChart2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="tracking-wide uppercase text-slate-200 group-hover:text-white font-semibold text-[13px]">
+                INDEX
+              </span>
+              <span className="text-xs text-slate-400 font-normal shrink-0">
+                ({DEFAULT_INDEX_ITEMS.length})
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">
+                Macro Benchmarks
+              </span>
+            </div>
+          </div>
+
+          {/* Section Rows */}
+          {!indexCollapsed && (
+            <div className="divide-y divide-[#1F2233]/25">
+              {DEFAULT_INDEX_ITEMS.map((item) => {
+                const isSelected = item.symbol.toUpperCase() === selectedSymbol.toUpperCase();
+                const priceQuote = prices[item.symbol];
+                const wlQuote = watchlistPrices[item.symbol];
+                const price = priceQuote?.price ?? wlQuote?.price ?? 0;
+                const change = priceQuote?.change ?? wlQuote?.change ?? 0;
+                const percentChange = priceQuote?.percent_change ?? wlQuote?.percentChange ?? 0;
+                const isPositive = percentChange >= 0;
+                const isZero = percentChange === 0;
+
+                return (
+                  <div
+                    key={item.symbol}
+                    onClick={() => onSelectSymbol(item.symbol)}
+                    className={clsx(
+                      'h-[30px] px-3 grid grid-cols-12 items-center transition-all cursor-pointer group relative select-none',
+                      isSelected
+                        ? 'bg-purple-950/40 text-white'
+                        : 'hover:bg-white/5 text-slate-200 hover:text-white'
+                    )}
+                  >
+                    {/* Left Accent Bar */}
+                    <div
+                      className={clsx(
+                        'absolute left-[2px] top-[3.5px] bottom-[3.5px] rounded-full transition-all z-10',
+                        isSelected
+                          ? 'w-[5px] bg-[#D500F9] shadow-[0_0_12px_rgba(213,0,249,0.95)]'
+                          : 'w-[3px] bg-slate-700/60 group-hover:bg-amber-400/80'
+                      )}
+                    />
+
+                    {/* Symbol Column: Emoji Badge + Ticker + Sub-label */}
+                    <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
+                      <span className="text-xs shrink-0 select-none" title={item.sub || item.name}>
+                        {item.badge}
+                      </span>
+                      <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
+                        {item.symbol}
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-normal truncate opacity-70 group-hover:opacity-100 hidden sm:inline">
+                        ({item.name})
+                      </span>
+                    </div>
+
+                    {/* Last Price Column */}
+                    <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1">
+                      {price > 0 ? formatPriceVal(price, currency, exchangeRate) : '—'}
+                    </div>
+
+                    {/* Change Column */}
+                    <div
+                      className={clsx(
+                        'col-span-2 text-right font-mono text-[13px] font-normal truncate',
+                        isZero ? 'text-slate-400' : isPositive ? 'text-emerald-400' : 'text-rose-400'
+                      )}
+                    >
+                      {price > 0 ? (isZero ? '0.00' : `${isPositive ? '+' : ''}${change.toFixed(2)}`) : '—'}
+                    </div>
+
+                    {/* Change % Column */}
+                    <div className="col-span-2 text-right relative flex items-center justify-end pr-0.5">
+                      <span
+                        className={clsx(
+                          'font-mono text-[13px] font-normal',
+                          isZero ? 'text-slate-400' : isPositive ? 'text-emerald-400' : 'text-rose-400'
+                        )}
+                      >
+                        {price > 0 ? (isZero ? '0.00%' : `${isPositive ? '+' : ''}${percentChange.toFixed(2)}%`) : '—'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* Floating Cyber HUD Tooltip (Portal/Fixed to prevent clipping) */}
@@ -1168,6 +1318,8 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
               onClick={() => {
                 if (sectionContextMenu.sectionId === 'holdings') {
                   toggleHoldingsCollapse();
+                } else if (sectionContextMenu.sectionId === 'index') {
+                  toggleIndexCollapse();
                 } else {
                   toggleTargetCollapse();
                 }
@@ -1177,7 +1329,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
             >
               <ChevronDown className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               <span>
-                {(sectionContextMenu.sectionId === 'holdings' ? holdingsCollapsed : targetCollapsed)
+                {(sectionContextMenu.sectionId === 'holdings' ? holdingsCollapsed : sectionContextMenu.sectionId === 'index' ? indexCollapsed : targetCollapsed)
                   ? 'Expand Section'
                   : 'Collapse Section'}
               </span>
@@ -1214,7 +1366,8 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
               onClick={() => {
                 const syms = Array.from(new Set([
                   ...validHoldings.map((h) => h.symbol),
-                  ...targetStocks.map((t) => t.symbol)
+                  ...targetStocks.map((t) => t.symbol),
+                  ...DEFAULT_INDEX_ITEMS.map((idx) => idx.symbol)
                 ]));
                 if (syms.length > 0) {
                   fetchPrices(syms);

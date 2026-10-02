@@ -38,6 +38,7 @@ export interface MyPortWatchlistPreferences {
   sortDir: MyPortSortDir;
   holdingsCollapsed: boolean;
   targetCollapsed: boolean;
+  indexCollapsed?: boolean;
 }
 
 export interface WatchlistSection {
@@ -69,6 +70,7 @@ export const DEFAULT_MYPORT_PREFERENCES: MyPortWatchlistPreferences = {
   sortDir: 'desc', // 'desc' = ติดลบเยอะสุดอยู่บนสุด as default
   holdingsCollapsed: false,
   targetCollapsed: false,
+  indexCollapsed: false,
 };
 
 const MYPORT_PREFERENCES_KEY = SYNC_KEYS.MYPORT_PREFERENCES;
@@ -123,6 +125,7 @@ interface XChartState {
   setMyPortSort: (column: MyPortSortColumn) => void;
   toggleMyPortHoldingsCollapse: () => void;
   toggleMyPortTargetCollapse: () => void;
+  toggleMyPortIndexCollapse: () => void;
   applyCloudMyPortPreferences: (prefs: Partial<MyPortWatchlistPreferences>) => void;
 
   // Per-Tab Chart Settings
@@ -279,6 +282,7 @@ function loadSavedMyPortPreferences(): MyPortWatchlistPreferences {
           sortDir: parsed.sortDir || 'desc',
           holdingsCollapsed: Boolean(parsed.holdingsCollapsed),
           targetCollapsed: Boolean(parsed.targetCollapsed),
+          indexCollapsed: Boolean(parsed.indexCollapsed),
         };
       }
     }
@@ -286,10 +290,12 @@ function loadSavedMyPortPreferences(): MyPortWatchlistPreferences {
   try {
     const legH = localStorage.getItem('myport_holdings_collapsed') === 'true';
     const legT = localStorage.getItem('myport_target_collapsed') === 'true';
+    const legI = localStorage.getItem('myport_index_collapsed') === 'true';
     return {
       ...DEFAULT_MYPORT_PREFERENCES,
       holdingsCollapsed: legH,
       targetCollapsed: legT,
+      indexCollapsed: legI,
     };
   } catch (e) {}
   return DEFAULT_MYPORT_PREFERENCES;
@@ -409,6 +415,16 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     const nextPrefs: MyPortWatchlistPreferences = {
       ...myportPreferences,
       targetCollapsed: !myportPreferences.targetCollapsed,
+    };
+    set({ myportPreferences: nextPrefs });
+    persistMyPortPreferences(nextPrefs);
+  },
+
+  toggleMyPortIndexCollapse: () => {
+    const { myportPreferences } = get();
+    const nextPrefs: MyPortWatchlistPreferences = {
+      ...myportPreferences,
+      indexCollapsed: !myportPreferences.indexCollapsed,
     };
     set({ myportPreferences: nextPrefs });
     persistMyPortPreferences(nextPrefs);
@@ -741,7 +757,9 @@ export const useXChartStore = create<XChartState>((set, get) => ({
 
   fetchWatchlistQuotes: async () => {
     const { watchlistSections, watchlistPrices } = get();
-    const allSymbols = [...new Set(watchlistSections.flatMap((s) => s.symbols))];
+    const sectionSymbols = watchlistSections.flatMap((s) => s.symbols);
+    const INDEX_SYMBOLS = ['SPY', 'QQQ', 'SCHG', 'BTC-USD', 'GLD', 'USO', 'UUP', 'SMH', 'TLT'];
+    const allSymbols = [...new Set([...sectionSymbols, ...INDEX_SYMBOLS])];
     if (allSymbols.length === 0) return;
 
     set({ watchlistLoading: true });

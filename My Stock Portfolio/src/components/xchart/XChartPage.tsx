@@ -13,13 +13,15 @@ export const XChartPage: React.FC = () => {
   const isMyPort = activeTab?.type === 'MYPORT';
 
   return (
-    <div className="flex-1 w-full h-full flex flex-col bg-[#0B1220] overflow-hidden select-none min-h-0">
+    <div 
+      id="xchart-terminal-container" 
+      className="flex-1 w-full h-full flex flex-col bg-[#0B1220] overflow-hidden select-none min-h-0"
+    >
       {/* Top Multi-Tab Bar */}
       <XChartTabBar />
 
       {/* Main Terminal Body */}
       <div 
-        id="xchart-terminal-container" 
         className="flex-1 flex overflow-hidden relative min-h-0 w-full h-full bg-[#0B1220]"
       >
         {/* Main Canvas / Chart / Heatmap / MyPort Area */}

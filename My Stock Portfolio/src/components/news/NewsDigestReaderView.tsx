@@ -129,7 +129,7 @@ export const NewsDigestReaderView: React.FC<NewsDigestReaderViewProps> = ({
       });
       const data = await res.json();
       if (data.success && data.digest) {
-        setDigestCache(prev => ({ ...prev, [data.digest.id]: data.digest }));
+        digestCacheRef.current[data.digest.id] = data.digest;
         setSelectedId(data.digest.id);
         setSelectedDigest(data.digest);
         fetchDigests();
