@@ -8,7 +8,8 @@ import {
   FileText, 
   ExternalLink,
   Sparkles,
-  Clock
+  Clock,
+  Send
 } from 'lucide-react';
 import { NewsDigest } from './types';
 
@@ -26,6 +27,8 @@ export const NewsDigestModal: React.FC<NewsDigestModalProps> = ({
   onSelectTicker
 }) => {
   const [copied, setCopied] = useState(false);
+  const [sendingLine, setSendingLine] = useState(false);
+  const [lineSent, setLineSent] = useState(false);
 
   if (!isOpen || !digest) return null;
 
@@ -36,6 +39,25 @@ export const NewsDigestModal: React.FC<NewsDigestModalProps> = ({
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy markdown:', err);
+    }
+  };
+
+  const handlePushLine = async () => {
+    if (!digest) return;
+    setSendingLine(true);
+    try {
+      const res = await fetch(`/api/news/digests/${digest.id}/push-line`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setLineSent(true);
+        setTimeout(() => setLineSent(false), 3000);
+      } else {
+        alert('ส่งเข้า LINE ไม่สำเร็จ: ' + (data.error || 'กรุณาลองใหม่อีกครั้ง'));
+      }
+    } catch (err: any) {
+      alert('เกิดข้อผิดพลาดในการส่งเข้า LINE: ' + err.message);
+    } finally {
+      setSendingLine(false);
     }
   };
 
@@ -211,6 +233,29 @@ export const NewsDigestModal: React.FC<NewsDigestModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handlePushLine}
+              disabled={sendingLine || lineSent}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border transition-all ${
+                lineSent
+                  ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40'
+                  : 'text-emerald-300 bg-emerald-950/40 hover:bg-emerald-900/60 border-emerald-500/30'
+              }`}
+              title="ส่งบทสรุปข่าวกรองชุดนี้เข้า LINE (Money AI)"
+            >
+              {lineSent ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>ส่งเข้า LINE แล้ว!</span>
+                </>
+              ) : (
+                <>
+                  <Send className={`w-3.5 h-3.5 text-emerald-400 ${sendingLine ? 'animate-pulse' : ''}`} />
+                  <span>{sendingLine ? 'กำลังส่ง...' : 'ส่งเข้า LINE'}</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={handleCopy}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { db } from '../db/init.js';
 import { getPortfolioHoldings } from './newsRadar.js';
 import { sendLineMessage } from './lineNotifier.js';

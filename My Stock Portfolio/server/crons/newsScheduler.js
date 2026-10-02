@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { runNewsScan, getPublicationTimingStats } from '../services/newsRadar.js';
 import { generateNewsDigest } from '../services/newsDigest.js';
 

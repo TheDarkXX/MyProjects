@@ -12,7 +12,8 @@ import {
   generateNewsDigest,
   getDigestHistory,
   getDigestById,
-  getLatestDigest
+  getLatestDigest,
+  sendLineDigestNotification
 } from '../services/newsDigest.js';
 
 const newsRoutes = new Hono();
@@ -431,6 +432,22 @@ newsRoutes.post('/digests/generate', async (c) => {
     return c.json(result);
   } catch (error) {
     console.error('[NewsRoutes] Failed to generate digest:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// POST /api/news/digests/:id/push-line — Manually send digest to LINE
+newsRoutes.post('/digests/:id/push-line', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    const digest = getDigestById(id);
+    if (!digest) {
+      return c.json({ success: false, message: 'Digest not found' }, 404);
+    }
+    const result = await sendLineDigestNotification(digest);
+    return c.json({ success: true, result });
+  } catch (error) {
+    console.error('[NewsRoutes] Failed to push digest to LINE:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
