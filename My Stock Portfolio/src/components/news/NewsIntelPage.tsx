@@ -448,25 +448,10 @@ export const NewsIntelPage: React.FC = () => {
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* AI Digest Quick Action Buttons */}
           <button
-            onClick={() => handleGenerateDigest(3)}
-            disabled={generatingDigestDays !== null}
-            className={clsx(
-              "px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer",
-              generatingDigestDays === 3
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/50 animate-pulse"
-                : "bg-[#1A1D2D] hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border-amber-500/30 hover:border-amber-500/50"
-            )}
-            title="ให้ AI สรุปข่าวกรองรอบ 3 วันล่าสุดแบบกระชับ"
-          >
-            <Zap className={clsx("w-3.5 h-3.5 text-amber-400", generatingDigestDays === 3 && "animate-spin")} />
-            {generatingDigestDays === 3 ? 'กำลังสรุป 3 วัน...' : '⚡ สรุป 3 วัน'}
-          </button>
-
-          <button
             onClick={() => handleGenerateDigest(7)}
             disabled={generatingDigestDays !== null}
             className={clsx(
-              "px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer",
+              "px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer",
               generatingDigestDays === 7
                 ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 animate-pulse"
                 : "bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-300 hover:text-white border-indigo-500/40 hover:border-indigo-400"
@@ -1347,7 +1332,7 @@ export const NewsIntelPage: React.FC = () => {
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
               {digestHistory.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 text-sm">
-                  ยังไม่มีประวัติบทสรุป AI ในระบบ กดปุ่ม [ ⚡ สรุป 3 วัน ] หรือ [ ⚡ สรุป 7 วัน ] ด้านบนเพื่อสร้างบทสรุปแรกได้ทันที
+                  ยังไม่มีประวัติบทสรุป AI ในระบบ กดปุ่ม [ ⚡ สรุป 7 วัน ] ด้านบนเพื่อสร้างบทสรุปแรกได้ทันที
                 </div>
               ) : (
                 digestHistory.map((d) => (

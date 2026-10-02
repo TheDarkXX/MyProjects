@@ -7,8 +7,7 @@ import { generateNewsDigest } from '../services/newsDigest.js';
  * Flags:
  *   --now : Run a single scan immediately and exit
  *   --stats : Print publication timing stats and exit
- *   --digest-weekly : Run weekly AI News Digest (7-day lookback + LINE notify) and exit
- *   --digest-3d : Run 3-day AI News Digest and exit
+ *   --digest-weekly, --digest : Run weekly AI News Digest (7-day lookback + LINE notify) and exit
  */
 
 async function main() {
@@ -25,17 +24,10 @@ async function main() {
     process.exit(0);
   }
 
-  if (args.includes('--digest-weekly')) {
+  if (args.includes('--digest-weekly') || args.includes('--digest')) {
     console.log('🚀 Running Weekly AI News Digest (7-day + LINE notify)...');
     const result = await generateNewsDigest({ days: 7, type: 'weekly', force: true, notifyLine: true });
     console.log('✅ Weekly Digest Result:', result.success ? `ID #${result.digest?.id}` : result.message);
-    process.exit(0);
-  }
-
-  if (args.includes('--digest-3d')) {
-    console.log('🚀 Running 3-Day AI News Digest...');
-    const result = await generateNewsDigest({ days: 3, type: 'ondemand', force: true, notifyLine: false });
-    console.log('✅ 3-Day Digest Result:', result.success ? `ID #${result.digest?.id}` : result.message);
     process.exit(0);
   }
 
