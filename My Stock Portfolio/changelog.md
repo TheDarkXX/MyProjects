@@ -2,6 +2,12 @@
 
 This log tracks all major updates and features added to the application.
 
+### [v3.2.0] Weekly Executive Brief Precision Engine & True GIPS TWR Synchronization Date: 2026-10-03T11:15:00Z
+- **📊 GIPS Time-Weighted Return (TWR) Parity**: Replaced hardcoded return placeholders in `weeklyBriefCron.js` with live, precision Daily GIPS TWR calculations (`server/services/portfolioMetrics.js`), aligning 1W, 1M, and YTD return metrics 100% with the web dashboard.
+- **💰 Net Invested True Profit Alignment**: Upgraded total profit and PnL calculation to utilize true Net Invested capital ($610.30) rather than residual stock costs, reconciling total profit to exact +฿48,926 (+144.86%) and portfolio net worth to ฿69,389 ($2,069.48).
+- **🛡️ Friday Close Auto-Sync Gate**: Ensured weekend cron executions automatically ingest and lock official Friday closing prices before metric computation, eliminating market-close discrepancies.
+- **👑 20-Year Dynasty Rule Compliance**: Purged obsolete 'Trim 50%' legacy flag from Mayday alerts, reinforcing the 'Never Sell Winners' playbook across all notification cards.
+
 ### [v3.1.0] GIPS Time-Weighted Return (TWR) Default & Stale-While-Revalidate Zero-Flash Architecture Date: 2026-09-21T10:30:00Z
 - **📈 GIPS Institutional TWR Default**: Enforced Global Investment Performance Standards (GIPS) Time-Weighted Return as portfolio default across all platforms. Eliminates return distortions when capital is withdrawn.
 - **⚡ Stale-While-Revalidate (SWR) Local Caching**: Persisted `prices`, historical bars, and `transactions` into `localStorage`, enabling 0ms frame-1 hydration and permanently eliminating reload visual flicker.

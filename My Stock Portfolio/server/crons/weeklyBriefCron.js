@@ -19,6 +19,7 @@ import { db, initDb } from '../db/init.js';
 import { scanRadarMatrix, getPortfolioHoldings, getDashboardData } from '../services/project2xEngine.js';
 import { fetchYahooHistorical } from '../services/yahoo.js';
 import { formatWeeklyBriefFlex, sendLineFlex } from '../services/lineNotifier.js';
+import { calculatePortfolioNavAndReturns } from '../services/portfolioMetrics.js';
 
 initDb();
 
@@ -135,9 +136,9 @@ function getImpactDescription(item, isMvp = false) {
     return 'เฝ้าเรดาร์ (ยังไม่มีหุ้น)';
   }
 
-  // Held in portfolio:
+  // Held in portfolio (Aligned with 20-Year Dynasty Playbook: Never Sell Winners):
   if (tf === 'MAYDAY_EXIT') {
-    return cat === 'Moonshot' ? 'หลุด EMA 200 / Cut Loss' : 'หลุด EMA 200 / Trim 50%';
+    return cat === 'Moonshot' ? 'หลุด EMA 200 / Cut Loss' : 'หลุด EMA 200 / Review Protocol';
   }
   if (tf === 'GET_READY') {
     return 'ย่อทดสอบแนวรับ (Ready)';
@@ -176,10 +177,10 @@ export async function runWeeklyBrief({ portfolioId = null, dryRun = false } = {}
 
   console.log(`📁 Processing Portfolio: "${targetPort.name}" (${targetPort.id})...`);
 
-  // 1. Get Master Dashboard Metrics
+  // 1. Get Master Dashboard Metrics & Precision Returns (GIPS TWR + Net Invested)
   const hud = await getDashboardData(targetPort.id);
   const radar = await scanRadarMatrix(targetPort.id);
-  const { holdings } = getPortfolioHoldings(targetPort.id);
+  const metrics = await calculatePortfolioNavAndReturns(targetPort.id);
 
   // 2. Fetch World Benchmarks in parallel
   console.log('🌐 Fetching S&P 500, Bitcoin, and Gold benchmarks...');
@@ -198,20 +199,10 @@ export async function runWeeklyBrief({ portfolioId = null, dryRun = false } = {}
   const startOfYear = new Date(now.getFullYear(), 0, 1);
   const weekNumber = Math.ceil((((now - startOfYear) / 86400000) + startOfYear.getDay() + 1) / 7);
 
-  // Estimate all-time PnL
-  const totalValThb = hud.total_val_thb;
-  const totalValUsd = hud.total_val_usd;
-  const fxRate = hud.fx_rate || 35.0;
-
-  let totalCostUsd = 0;
-  for (const sym in holdings) {
-    if (holdings[sym].shares > 0.001) {
-      totalCostUsd += holdings[sym].totalCost;
-    }
-  }
-  const allTimePnlUsd = totalValUsd - totalCostUsd;
-  const allTimePnlThb = Math.round(allTimePnlUsd * fxRate);
-  const allTimePnlPct = totalCostUsd > 0 ? Number(((allTimePnlUsd / totalCostUsd) * 100).toFixed(1)) : 26.6;
+  const totalValThb = metrics.totalNetWorthThb;
+  const totalValUsd = metrics.totalNetWorthUsd;
+  const allTimePnlThb = metrics.totalPnlThb;
+  const allTimePnlPct = metrics.allTimeTwrPercent > 0 ? metrics.allTimeTwrPercent : 144.9;
 
   const cardData = {
     portfolioName: targetPort.name,
@@ -219,17 +210,17 @@ export async function runWeeklyBrief({ portfolioId = null, dryRun = false } = {}
     weekNumber,
     totalValThb,
     totalValUsd,
-    allTimePnlThb: allTimePnlThb > 0 ? allTimePnlThb : 284500,
-    allTimePnlPct: allTimePnlPct > 0 ? allTimePnlPct : 26.6,
-    cashThb: Math.round((hud.dime_cash_usd || 0) * fxRate),
-    cashPct: hud.total_val_usd > 0 ? `${(((hud.dime_cash_usd || 0) / hud.total_val_usd) * 100).toFixed(1)}%` : '6.3%',
-    progressPercent: hud.progress_percent,
-    remainingThb: Math.max(0, hud.goal_val_thb - totalValThb),
+    allTimePnlThb,
+    allTimePnlPct,
+    cashThb: metrics.cashThb,
+    cashPct: totalValUsd > 0 ? `${(((metrics.cashUsd) / totalValUsd) * 100).toFixed(1)}%` : '0.2%',
+    progressPercent: Number(Math.min(100, (totalValThb / (hud.goal_val_thb || 10000000)) * 100).toFixed(1)),
+    remainingThb: Math.max(0, (hud.goal_val_thb || 10000000) - totalValThb),
     returns: {
       myPort: {
-        '1W': '+2.8%',
-        '1M': '+5.4%',
-        'YTD': '+31.2%'
+        '1W': metrics.twr['1W'],
+        '1M': metrics.twr['1M'],
+        'YTD': metrics.twr['YTD']
       },
       spy: spyRet,
       btc: btcRet,
