@@ -163,7 +163,7 @@ export async function calculatePortfolioNavAndReturns(portfolioId) {
       } else if (tx.type === 'SELL') {
         if (isCash) dailyCash -= amount;
         else {
-          dailyCash -= (amount * price) - fee;
+          dailyCash += (amount * price) - fee;
           dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) - amount;
         }
       } else if (tx.type === 'DEPOSIT') {
