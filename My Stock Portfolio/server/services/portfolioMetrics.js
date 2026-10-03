@@ -74,8 +74,9 @@ export async function calculatePortfolioNavAndReturns(portfolioId) {
         grossInvested += amount;
       } else {
         cash -= (amount * price) + fee;
-        if (!holds[t.symbol]) holds[t.symbol] = 0;
-        holds[t.symbol] += amount;
+        if (!holds[t.symbol]) holds[t.symbol] = { quantity: 0, totalCost: 0 };
+        holds[t.symbol].quantity += amount;
+        holds[t.symbol].totalCost += (amount * price) + fee;
       }
     } else if (t.type === 'SELL') {
       if (isCash) {
@@ -83,8 +84,12 @@ export async function calculatePortfolioNavAndReturns(portfolioId) {
         netInvested -= amount;
       } else {
         cash += (amount * price) - fee;
-        if (!holds[t.symbol]) holds[t.symbol] = 0;
-        holds[t.symbol] -= amount;
+        if (!holds[t.symbol]) holds[t.symbol] = { quantity: 0, totalCost: 0 };
+        if (holds[t.symbol].quantity > 0) {
+          const avgCost = holds[t.symbol].totalCost / holds[t.symbol].quantity;
+          holds[t.symbol].quantity -= amount;
+          holds[t.symbol].totalCost = Math.max(0, holds[t.symbol].quantity * avgCost);
+        }
       }
     } else if (t.type === 'DEPOSIT') {
       cash += amount;
@@ -105,18 +110,18 @@ export async function calculatePortfolioNavAndReturns(portfolioId) {
   latestPriceRows.forEach(r => { priceMap[r.symbol] = r.price; });
 
   let totalSecuritiesValue = 0;
+  let totalSecuritiesCost = 0;
   for (const sym in holds) {
-    if (holds[sym] > 0.0001) {
+    if (holds[sym].quantity > 0.0001) {
       const p = priceMap[sym] || 0;
-      totalSecuritiesValue += holds[sym] * p;
+      totalSecuritiesValue += holds[sym].quantity * p;
+      totalSecuritiesCost += holds[sym].totalCost;
     }
   }
 
   const totalNetWorth = cash + totalSecuritiesValue;
   const totalPnl = totalNetWorth - netInvested;
-  const investedBase = (grossInvested > 0 && netInvested < grossInvested * 0.5)
-    ? grossInvested
-    : (netInvested > 0 ? netInvested : grossInvested);
+  const investedBase = totalSecuritiesCost > 0 ? totalSecuritiesCost : (netInvested > 0 ? netInvested : grossInvested);
   const totalPnlPercent = investedBase > 0 ? (totalPnl / investedBase) * 100 : 0;
 
   // 6. Build Daily Points for GIPS Daily Time-Weighted Return (TWR)
@@ -179,10 +184,6 @@ export async function calculatePortfolioNavAndReturns(portfolioId) {
     allSymbols.forEach(sym => {
       if (histMap[sym]?.[date] !== undefined) {
         lastKnownPrices[sym] = histMap[sym][date];
-      }
-      // On the latest bar, update with latest closing price if available
-      if (idx === validDates.length - 1 && priceMap[sym]) {
-        lastKnownPrices[sym] = priceMap[sym];
       }
       if (lastKnownPrices[sym] && dailyHolds[sym]) {
         dailyStockValue += dailyHolds[sym] * lastKnownPrices[sym];
