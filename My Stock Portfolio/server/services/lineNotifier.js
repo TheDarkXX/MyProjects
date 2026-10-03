@@ -210,8 +210,8 @@ export function formatWeeklyBriefFlex(data) {
             {
               type: 'text',
               text: `W${weekNumber} • ${dateTimeStr}`,
-              color: '#94A3B8',
-              size: 'xs',
+              color: '#CBD5E1',
+              size: 'sm',
               align: 'end',
               flex: 1
             }
