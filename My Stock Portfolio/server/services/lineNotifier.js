@@ -151,7 +151,15 @@ export function formatMaydayExitMessage(item) {
 export function formatWeeklyBriefFlex(data) {
   const portfolioName = data.portfolioName || 'Doctorbank Growth';
   const weekNumber = data.weekNumber || 39;
-  const year = new Date().getFullYear();
+  const now = new Date();
+  const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const bkkDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+  const bkkDay = bkkDate.getDate();
+  const bkkMonth = TH_MONTHS[bkkDate.getMonth()];
+  const bkkYear = bkkDate.getFullYear();
+  const bkkHours = String(bkkDate.getHours()).padStart(2, '0');
+  const bkkMins = String(bkkDate.getMinutes()).padStart(2, '0');
+  const dateTimeStr = data.dateTime || `${bkkDay} ${bkkMonth} ${bkkYear} ${bkkHours}:${bkkMins}`;
 
   const totalValThb = Number(data.totalValThb || 0);
   const totalValUsd = Number(data.totalValUsd || 0);
@@ -196,14 +204,16 @@ export function formatWeeklyBriefFlex(data) {
               text: '👑 WEEKLY EXECUTIVE BRIEF',
               weight: 'bold',
               color: '#F59E0B',
-              size: 'xs'
+              size: 'xs',
+              flex: 0
             },
             {
               type: 'text',
-              text: `W${weekNumber} • ${year}`,
+              text: `W${weekNumber} • ${dateTimeStr}`,
               color: '#94A3B8',
               size: 'xs',
-              align: 'end'
+              align: 'end',
+              flex: 1
             }
           ]
         },
@@ -253,16 +263,20 @@ export function formatWeeklyBriefFlex(data) {
                 {
                   type: 'text',
                   text: `$${totalValUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                  size: 'sm',
-                  color: '#94A3B8'
+                  size: 'md',
+                  color: '#94A3B8',
+                  gravity: 'bottom',
+                  flex: 0
                 },
                 {
                   type: 'text',
                   text: `${pnlThb >= 0 ? '🟢' : '🔴'} ${pnlThb >= 0 ? '+' : ''}฿${Math.abs(pnlThb).toLocaleString()} (${pnlPct >= 0 ? '+' : ''}${pnlPct}%)`,
-                  size: 'sm',
+                  size: 'xxl',
                   color: pnlPct >= 0 ? '#10B981' : '#EF4444',
                   weight: 'bold',
-                  align: 'end'
+                  align: 'end',
+                  gravity: 'bottom',
+                  flex: 1
                 }
               ]
             }
