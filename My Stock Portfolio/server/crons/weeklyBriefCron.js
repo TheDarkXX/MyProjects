@@ -203,6 +203,21 @@ export async function runWeeklyBrief({ portfolioId = null, dryRun = false } = {}
   const totalValUsd = metrics.totalNetWorthUsd;
   const allTimePnlThb = metrics.totalPnlThb;
   const allTimePnlPct = metrics.allTimeTwrPercent > 0 ? metrics.allTimeTwrPercent : 144.9;
+  const MILESTONES = [
+    { target: 100000, label: '1 แสนแรก' },
+    { target: 300000, label: '3 แสน' },
+    { target: 500000, label: '5 แสน' },
+    { target: 1000000, label: '1 ล้านแรก' },
+    { target: 2000000, label: '2 ล้าน' },
+    { target: 3000000, label: '3 ล้าน' },
+    { target: 5000000, label: '5 ล้าน' },
+    { target: 10000000, label: '10 ล้าน (Final Boss)' }
+  ];
+  const nextMilestone = MILESTONES.find(m => totalValThb < m.target) || MILESTONES[MILESTONES.length - 1];
+  const targetMilestoneLabel = nextMilestone.label;
+  const targetMilestoneValue = nextMilestone.target;
+  const progressPercent = Number(Math.min(100, (totalValThb / targetMilestoneValue) * 100).toFixed(1));
+  const remainingThb = Math.max(0, targetMilestoneValue - totalValThb);
 
   const cardData = {
     portfolioName: targetPort.name,
@@ -214,8 +229,10 @@ export async function runWeeklyBrief({ portfolioId = null, dryRun = false } = {}
     allTimePnlPct,
     cashThb: metrics.cashThb,
     cashPct: totalValUsd > 0 ? `${(((metrics.cashUsd) / totalValUsd) * 100).toFixed(1)}%` : '0.2%',
-    progressPercent: Number(Math.min(100, (totalValThb / (hud.goal_val_thb || 10000000)) * 100).toFixed(1)),
-    remainingThb: Math.max(0, (hud.goal_val_thb || 10000000) - totalValThb),
+    targetMilestoneLabel,
+    targetMilestoneValue,
+    progressPercent,
+    remainingThb,
     returns: {
       myPort: {
         '1W': metrics.twr['1W'],

@@ -176,11 +176,26 @@ export function formatWeeklyBriefFlex(data) {
   const mvp = data.mvp || { symbol: 'NVDA', pct7d: '+8.4%', impact: '+$650' };
   const drag = data.drag || { symbol: 'MELI', pct7d: '-6.2%', impact: '-$55' };
 
-  const progPct = Number(data.progressPercent || 13.5);
-  const remainingThb = Math.max(0, Number(data.remainingThb || 0));
-  const remainingFormatted = remainingThb > 1000000 
+  const MILESTONES = [
+    { target: 100000, label: '1 แสนแรก' },
+    { target: 300000, label: '3 แสน' },
+    { target: 500000, label: '5 แสน' },
+    { target: 1000000, label: '1 ล้านแรก' },
+    { target: 2000000, label: '2 ล้าน' },
+    { target: 3000000, label: '3 ล้าน' },
+    { target: 5000000, label: '5 ล้าน' },
+    { target: 10000000, label: '10 ล้าน (Final Boss)' }
+  ];
+
+  const currentMilestone = MILESTONES.find(m => totalValThb < m.target) || MILESTONES[MILESTONES.length - 1];
+  const targetLabel = data.targetMilestoneLabel || currentMilestone.label;
+  const targetVal = data.targetMilestoneValue || currentMilestone.target;
+
+  const progPct = Number(data.progressPercent !== undefined ? data.progressPercent : Math.min(100, (totalValThb / targetVal) * 100).toFixed(1));
+  const remainingThb = Math.max(0, data.remainingThb !== undefined ? Number(data.remainingThb) : targetVal - totalValThb);
+  const remainingFormatted = remainingThb >= 1000000 
     ? `${(remainingThb / 1000000).toFixed(2)}M`
-    : `${(remainingThb / 1000).toFixed(0)}K`;
+    : remainingThb.toLocaleString();
 
   return {
     type: 'bubble',
@@ -429,7 +444,7 @@ export function formatWeeklyBriefFlex(data) {
             }
           ]
         },
-        // 4. Progress bar to 10M
+        // 4. Progress bar to Next Milestone
         {
           type: 'box',
           layout: 'vertical',
@@ -438,7 +453,7 @@ export function formatWeeklyBriefFlex(data) {
               type: 'box',
               layout: 'horizontal',
               contents: [
-                { type: 'text', text: `🎯 เป้า 10 ล้าน (${progPct}%)`, size: 'xs', color: '#CBD5E1', weight: 'bold' },
+                { type: 'text', text: `🎯 เป้าถัดไป: ${targetLabel} (${progPct}%)`, size: 'xs', color: '#CBD5E1', weight: 'bold' },
                 { type: 'text', text: `ขาดอีก ฿${remainingFormatted}`, size: 'xs', color: '#F1F5F9', align: 'end', weight: 'bold' }
               ]
             },
