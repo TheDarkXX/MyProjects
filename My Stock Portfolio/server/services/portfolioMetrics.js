@@ -240,6 +240,36 @@ export async function calculatePortfolioNavAndReturns(portfolioId) {
     return 0;
   }
 
+  // 8. Calculate Dollar & Baht Profit Amount for period (End Value - Start Value - Net External Cash Flows)
+  function calcProfitAmount(startDate, endDate = lastTradingDate) {
+    const pts = allDailyPoints.filter(p => p.date >= startDate && p.date <= endDate);
+    if (pts.length === 0) return { usd: 0, thb: 0, formatted: '+฿0' };
+
+    const startVal = pts[0].value;
+    const endVal = pts[pts.length - 1].value;
+    const cutoff = pts[0].date;
+
+    let periodNetCashFlow = 0;
+    for (const tx of txs) {
+      const txDate = tx.date.split('T')[0];
+      if (txDate > cutoff && txDate <= endDate) {
+        const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
+        const type = (tx.type || '').toUpperCase();
+        const amount = Number(tx.amount) || 0;
+        if (type === 'DEPOSIT' || (type === 'BUY' && isCash)) {
+          periodNetCashFlow += amount;
+        } else if (type === 'WITHDRAW' || (type === 'SELL' && isCash)) {
+          periodNetCashFlow -= amount;
+        }
+      }
+    }
+
+    const usd = (endVal - startVal) - periodNetCashFlow;
+    const thb = Math.round(usd * fxRate);
+    const formatted = `${thb >= 0 ? '+' : '-'}฿${Math.abs(thb).toLocaleString()}`;
+    return { usd: Number(usd.toFixed(2)), thb, formatted };
+  }
+
   // Compute 1W, 1M, YTD, ALL
   const now = new Date();
   const d1w = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
@@ -250,6 +280,10 @@ export async function calculatePortfolioNavAndReturns(portfolioId) {
   const twr1m = calcTwrForRange(d1m);
   const twrYtd = calcTwrForRange(dYtd);
   const twrAll = calcTwrForRange(earliestTxDate);
+
+  const pnl1w = calcProfitAmount(d1w);
+  const pnl1m = calcProfitAmount(d1m);
+  const pnlYtd = calcProfitAmount(dYtd);
 
   const fmtPct = (val) => {
     if (!isFinite(val)) return '+0.0%';
@@ -279,6 +313,12 @@ export async function calculatePortfolioNavAndReturns(portfolioId) {
       '1M': twr1m,
       'YTD': twrYtd,
       'ALL': twrAll
+    },
+    periodPnl: {
+      '1W': pnl1w,
+      '1M': pnl1m,
+      'YTD': pnlYtd,
+      'ALL': { usd: Number(totalPnl.toFixed(2)), thb: Math.round(totalPnl * fxRate), formatted: `${Math.round(totalPnl * fxRate) >= 0 ? '+' : '-'}฿${Math.abs(Math.round(totalPnl * fxRate)).toLocaleString()}` }
     }
   };
 }

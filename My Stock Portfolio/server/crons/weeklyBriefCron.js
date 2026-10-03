@@ -220,7 +220,10 @@ export async function runWeeklyBrief({ portfolioId = null, dryRun = false } = {}
       myPort: {
         '1W': metrics.twr['1W'],
         '1M': metrics.twr['1M'],
-        'YTD': metrics.twr['YTD']
+        'YTD': metrics.twr['YTD'],
+        '1W_THB': metrics.periodPnl?.['1W']?.formatted || '',
+        '1M_THB': metrics.periodPnl?.['1M']?.formatted || '',
+        'YTD_THB': metrics.periodPnl?.['YTD']?.formatted || ''
       },
       spy: spyRet,
       btc: btcRet,
@@ -243,9 +246,13 @@ export async function runWeeklyBrief({ portfolioId = null, dryRun = false } = {}
   const flexBubble = formatWeeklyBriefFlex(cardData);
 
   // 5. Compose concise companion text summary with Benchmark Comparison
+  const p1wText = cardData.returns.myPort['1W_THB'] ? ` (${cardData.returns.myPort['1W_THB']})` : '';
+  const p1mText = cardData.returns.myPort['1M_THB'] ? ` (${cardData.returns.myPort['1M_THB']})` : '';
+  const pYtdText = cardData.returns.myPort['YTD_THB'] ? ` (${cardData.returns.myPort['YTD_THB']})` : '';
+
   const companionText = [
     `⚔️ เทียบผลตอบแทน 3 สินทรัพย์โลก (1W / 1M / YTD):`,
-    `• 🎯 My Port : ${cardData.returns.myPort['1W']} | ${cardData.returns.myPort['1M']} | ${cardData.returns.myPort.YTD} (Alpha Beast 🔥)`,
+    `• 🎯 My Port : ${cardData.returns.myPort['1W']}${p1wText} | ${cardData.returns.myPort['1M']}${p1mText} | ${cardData.returns.myPort.YTD}${pYtdText} (Alpha Beast 🔥)`,
     `• 🇺🇸 S&P 500 : ${spyRet['1W']} | ${spyRet['1M']} | ${spyRet['YTD']}`,
     `• 🪙 Bitcoin : ${btcRet['1W']} | ${btcRet['1M']} | ${btcRet['YTD']}`,
     `• 👑 ทองคำ   : ${gldRet['1W']} | ${gldRet['1M']} | ${gldRet['YTD']}`

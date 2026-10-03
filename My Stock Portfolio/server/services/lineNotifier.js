@@ -158,9 +158,12 @@ export function formatWeeklyBriefFlex(data) {
   const pnlThb = Number(data.allTimePnlThb || 0);
   const pnlPct = Number(data.allTimePnlPct || 0);
 
-  const ret1W = data.returns?.myPort?.['1W'] || '+2.8%';
-  const ret1M = data.returns?.myPort?.['1M'] || '+5.4%';
-  const retYtd = data.returns?.myPort?.YTD || '+31.2%';
+  const ret1W = data.returns?.myPort?.['1W'] || '+1.5%';
+  const ret1M = data.returns?.myPort?.['1M'] || '+11.8%';
+  const retYtd = data.returns?.myPort?.YTD || '+66.8%';
+  const pnl1WThb = data.returns?.myPort?.['1W_THB'] || '';
+  const pnl1MThb = data.returns?.myPort?.['1M_THB'] || '';
+  const pnlYtdThb = data.returns?.myPort?.['YTD_THB'] || '';
 
   const mvp = data.mvp || { symbol: 'NVDA', pct7d: '+8.4%', impact: '+$650' };
   const drag = data.drag || { symbol: 'MELI', pct7d: '-6.2%', impact: '-$55' };
@@ -288,7 +291,16 @@ export function formatWeeklyBriefFlex(data) {
                   weight: 'bold',
                   align: 'center',
                   margin: 'xs'
-                }
+                },
+                ...(pnl1WThb ? [{
+                  type: 'text',
+                  text: pnl1WThb,
+                  size: 'xs',
+                  color: pnl1WThb.startsWith('-') ? '#F87171' : '#34D399',
+                  align: 'center',
+                  weight: 'bold',
+                  margin: 'xs'
+                }] : [])
               ]
             },
             {
@@ -308,7 +320,16 @@ export function formatWeeklyBriefFlex(data) {
                   weight: 'bold',
                   align: 'center',
                   margin: 'xs'
-                }
+                },
+                ...(pnl1MThb ? [{
+                  type: 'text',
+                  text: pnl1MThb,
+                  size: 'xs',
+                  color: pnl1MThb.startsWith('-') ? '#F87171' : '#34D399',
+                  align: 'center',
+                  weight: 'bold',
+                  margin: 'xs'
+                }] : [])
               ]
             },
             {
@@ -328,7 +349,16 @@ export function formatWeeklyBriefFlex(data) {
                   weight: 'bold',
                   align: 'center',
                   margin: 'xs'
-                }
+                },
+                ...(pnlYtdThb ? [{
+                  type: 'text',
+                  text: pnlYtdThb,
+                  size: 'xs',
+                  color: pnlYtdThb.startsWith('-') ? '#F87171' : '#34D399',
+                  align: 'center',
+                  weight: 'bold',
+                  margin: 'xs'
+                }] : [])
               ]
             }
           ]
