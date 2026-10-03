@@ -263,7 +263,7 @@ export function formatWeeklyBriefFlex(data) {
                 {
                   type: 'text',
                   text: `$${totalValUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                  size: 'md',
+                  size: 'sm',
                   color: '#94A3B8',
                   gravity: 'bottom',
                   flex: 0
@@ -271,7 +271,7 @@ export function formatWeeklyBriefFlex(data) {
                 {
                   type: 'text',
                   text: `${pnlThb >= 0 ? '🟢' : '🔴'} ${pnlThb >= 0 ? '+' : ''}฿${Math.abs(pnlThb).toLocaleString()} (${pnlPct >= 0 ? '+' : ''}${pnlPct}%)`,
-                  size: 'xxl',
+                  size: 'lg',
                   color: pnlPct >= 0 ? '#10B981' : '#EF4444',
                   weight: 'bold',
                   align: 'end',
