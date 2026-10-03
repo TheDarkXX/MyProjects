@@ -294,7 +294,7 @@ export function formatWeeklyBriefFlex(data) {
                     {
                       type: 'span',
                       text: ret1W,
-                      size: 'sm',
+                      size: 'md',
                       weight: 'bold',
                       color: ret1W.startsWith('-') ? '#EF4444' : '#10B981'
                     },
@@ -302,8 +302,9 @@ export function formatWeeklyBriefFlex(data) {
                       {
                         type: 'span',
                         text: ` (${pnl1WThb})`,
-                        size: 'xs',
-                        color: pnl1WThb.startsWith('-') ? '#F87171' : '#34D399'
+                        size: 'md',
+                        weight: 'bold',
+                        color: pnl1WThb.startsWith('-') ? '#EF4444' : '#34D399'
                       }
                     ] : [])
                   ]
@@ -330,7 +331,7 @@ export function formatWeeklyBriefFlex(data) {
                     {
                       type: 'span',
                       text: ret1M,
-                      size: 'sm',
+                      size: 'md',
                       weight: 'bold',
                       color: ret1M.startsWith('-') ? '#EF4444' : '#10B981'
                     },
@@ -338,8 +339,9 @@ export function formatWeeklyBriefFlex(data) {
                       {
                         type: 'span',
                         text: ` (${pnl1MThb})`,
-                        size: 'xs',
-                        color: pnl1MThb.startsWith('-') ? '#F87171' : '#34D399'
+                        size: 'md',
+                        weight: 'bold',
+                        color: pnl1MThb.startsWith('-') ? '#EF4444' : '#34D399'
                       }
                     ] : [])
                   ]
@@ -366,7 +368,7 @@ export function formatWeeklyBriefFlex(data) {
                     {
                       type: 'span',
                       text: retYtd,
-                      size: 'sm',
+                      size: 'md',
                       weight: 'bold',
                       color: retYtd.startsWith('-') ? '#EF4444' : '#10B981'
                     },
@@ -374,8 +376,9 @@ export function formatWeeklyBriefFlex(data) {
                       {
                         type: 'span',
                         text: ` (${pnlYtdThb})`,
-                        size: 'xs',
-                        color: pnlYtdThb.startsWith('-') ? '#F87171' : '#34D399'
+                        size: 'md',
+                        weight: 'bold',
+                        color: pnlYtdThb.startsWith('-') ? '#EF4444' : '#34D399'
                       }
                     ] : [])
                   ]
