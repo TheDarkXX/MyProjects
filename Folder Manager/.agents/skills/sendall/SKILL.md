@@ -2,7 +2,8 @@
 name: sendall
 version: "1.1.0"
 updated_at: "2026-09-28"
-description: Spiderweb Mesh Universal Skill Broadcaster & Matrix Auditor — สกิลกระจายและซิงก์สกิลข้าม 13 โปรเจกต์ทั่วทั้งจักรวาล Spiderweb Mesh อัตโนมัติในคำสั่งเดียว รองรับทั้งรายสกิลและโหมดเหมาเข่ง 10 Core Skills (`--core`) ก๊อปปี้ไฟล์จาก XBrain ไปยังทุกโปรเจกต์ดาวเทียม + Global Config + Master Backup พร้อมระบบ Targeted Git Staging ล็อกเป้าเฉพาะไฟล์สกิล และ Auto-Push ขึ้น GitHub (`origin`) และ VPS ทันที ปลอดภัย 100% ไร้ความเสี่ยงต่อโค้ด WIP ใช้เมื่อ: /sendall [skill_name] หรือ /sendall --core หรือ /sendall audit
+description: >-
+  Spiderweb Mesh Universal Skill Broadcaster & Matrix Auditor — สกิลกระจายและซิงก์สกิลข้าม 13 โปรเจกต์ทั่วทั้งจักรวาล Spiderweb Mesh อัตโนมัติในคำสั่งเดียว รองรับทั้งรายสกิลและโหมดเหมาเข่ง 10 Core Skills (`--core`) ก๊อปปี้ไฟล์จาก XBrain ไปยังทุกโปรเจกต์ดาวเทียม + Global Config + Master Backup พร้อมระบบ Targeted Git Staging ล็อกเป้าเฉพาะไฟล์สกิล และ Auto-Push ขึ้น GitHub (`origin`) และ VPS ทันที ปลอดภัย 100% ไร้ความเสี่ยงต่อโค้ด WIP ใช้เมื่อ: /sendall [skill_name] หรือ /sendall --core หรือ /sendall audit
 ---
 
 # 🕷️ Skill: `/sendall` (v1.1.0)

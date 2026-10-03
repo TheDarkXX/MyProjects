@@ -2,7 +2,8 @@
 name: gpt
 version: "2.0.0"
 updated_at: "2026-09-28"
-description: OpenAI Codex / GPT Engine — สั่งรันโมเดล GPT-5.6-Terra, GPT-5.6-Sol, GPT-5.6-Luna, GPT-5.5 ในแชทหลักผ่าน ChatGPT Subscription (ฟรี 100% ไร้ค่า API) พร้อมเลือกโมเดล, ปรับระดับ Thinking (Reasoning Effort), Native Context Mirroring (ส่งบริบทแชท + ไฟล์เปิดอยู่ + developer-instructions), และ Thread Persistence สำหรับ multi-turn context ใช้เมื่อ: /gpt [คำถาม/โจทย์/โค้ด]
+description: >-
+  OpenAI Codex / GPT Engine — สั่งรันโมเดล GPT-5.6-Terra, GPT-5.6-Sol, GPT-5.6-Luna, GPT-5.5 ในแชทหลักผ่าน ChatGPT Subscription (ฟรี 100% ไร้ค่า API) พร้อมเลือกโมเดล, ปรับระดับ Thinking (Reasoning Effort), Native Context Mirroring (ส่งบริบทแชท + ไฟล์เปิดอยู่ + developer-instructions), และ Thread Persistence สำหรับ multi-turn context ใช้เมื่อ: /gpt [คำถาม/โจทย์/โค้ด]
 ---
 
 # 🧠 Skill: `/gpt` (OpenAI GPT / Codex Engine v2.0.0)

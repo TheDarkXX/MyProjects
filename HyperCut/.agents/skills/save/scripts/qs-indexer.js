@@ -16,7 +16,15 @@ import { createHash } from 'crypto';
 import { homedir } from 'os';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
+function findRepoRoot(startDir) {
+  let curr = startDir;
+  while (curr && curr !== path.dirname(curr)) {
+    if (existsSync(path.join(curr, '.git'))) return curr;
+    curr = path.dirname(curr);
+  }
+  return path.resolve(startDir, '../../..');
+}
+const ROOT = findRepoRoot(__dirname);
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const QUICK_SAVE_DIR = path.join(ROOT, 'Quick Save');

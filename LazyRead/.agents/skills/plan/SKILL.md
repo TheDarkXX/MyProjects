@@ -2,7 +2,8 @@
 name: plan
 version: "2.0.0"
 updated_at: "2026-09-28"
-description: Masterpiece Implementation Plan Engine — สกิลวางแผนงานสถาปัตยกรรมระดับ Production Grade พร้อม Fact-Based Quality Gate รองรับ 3 โหมด: (1) Flash Plan (Rapid Surveyor กวาดไฟล์จริงใน 15 วิ), (2) Opus Masterplan (มหาเทพ 👁️‍🗨️ ไม้เดียวจบด้วย Evidence Ledger & Decision Matrix), และ (3) GPT Sol Plan (/plan sol ดึงพลัง Senior Architect ผ่าน MCP ฟรี 100%) บังคับ Evidence Ledger, Non-Goals, Data Contract, Rollback Plan และ Verification Gate ที่มีอยู่จริงก่อนลงมือโค้ด ใช้เมื่อ: /plan [โจทย์] หรือ /plan sol [โจทย์] หรือ /plan opus [โจทย์]
+description: >-
+  Masterpiece Implementation Plan Engine — สกิลวางแผนงานสถาปัตยกรรมระดับ Production Grade พร้อม Fact-Based Quality Gate รองรับ 3 โหมด: (1) Flash Plan (Rapid Surveyor กวาดไฟล์จริงใน 15 วิ), (2) Opus Masterplan (มหาเทพ 👁️‍🗨️ ไม้เดียวจบด้วย Evidence Ledger & Decision Matrix), และ (3) GPT Sol Plan (/plan sol ดึงพลัง Senior Architect ผ่าน MCP ฟรี 100%) บังคับ Evidence Ledger, Non-Goals, Data Contract, Rollback Plan และ Verification Gate ที่มีอยู่จริงก่อนลงมือโค้ด ใช้เมื่อ: /plan [โจทย์] หรือ /plan sol [โจทย์] หรือ /plan opus [โจทย์]
 ---
 
 # 🧠 Skill: `/plan` (Masterpiece Implementation Plan Engine v2.0.0)

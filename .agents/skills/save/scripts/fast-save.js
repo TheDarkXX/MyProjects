@@ -12,15 +12,15 @@ import { execSync, spawnSync, spawn } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-function findProjectRoot(startDir) {
-  let cur = startDir;
-  while (cur !== path.dirname(cur)) {
-    if (fs.existsSync(path.join(cur, '.git'))) return cur;
-    cur = path.dirname(cur);
+function findRepoRoot(startDir) {
+  let curr = startDir;
+  while (curr && curr !== path.dirname(curr)) {
+    if (fs.existsSync(path.join(curr, '.git'))) return curr;
+    curr = path.dirname(curr);
   }
-  return path.resolve(startDir, '..');
+  return path.resolve(startDir, '../../..');
 }
-const ROOT = findProjectRoot(__dirname);
+const ROOT = findRepoRoot(__dirname);
 
 // ─── Telemetry Stopwatch ───────────────────────────────────────────────────────
 const timings = {};
