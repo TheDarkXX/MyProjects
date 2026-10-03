@@ -279,28 +279,35 @@ export function formatWeeklyBriefFlex(data) {
               layout: 'vertical',
               backgroundColor: '#131826',
               cornerRadius: 'sm',
-              paddingAll: 'sm',
+              paddingAll: 'xs',
+              paddingTop: 'sm',
+              paddingBottom: 'sm',
               flex: 1,
               contents: [
                 { type: 'text', text: '1W', size: 'xs', color: '#94A3B8', align: 'center', weight: 'bold' },
                 {
                   type: 'text',
-                  text: ret1W,
-                  size: 'md',
-                  color: ret1W.startsWith('-') ? '#EF4444' : '#10B981',
-                  weight: 'bold',
                   align: 'center',
-                  margin: 'xs'
-                },
-                ...(pnl1WThb ? [{
-                  type: 'text',
-                  text: pnl1WThb,
-                  size: 'xs',
-                  color: pnl1WThb.startsWith('-') ? '#F87171' : '#34D399',
-                  align: 'center',
-                  weight: 'bold',
-                  margin: 'xs'
-                }] : [])
+                  margin: 'xs',
+                  wrap: true,
+                  contents: [
+                    {
+                      type: 'span',
+                      text: ret1W,
+                      size: 'sm',
+                      weight: 'bold',
+                      color: ret1W.startsWith('-') ? '#EF4444' : '#10B981'
+                    },
+                    ...(pnl1WThb ? [
+                      {
+                        type: 'span',
+                        text: ` (${pnl1WThb})`,
+                        size: 'xs',
+                        color: pnl1WThb.startsWith('-') ? '#F87171' : '#34D399'
+                      }
+                    ] : [])
+                  ]
+                }
               ]
             },
             {
@@ -308,28 +315,35 @@ export function formatWeeklyBriefFlex(data) {
               layout: 'vertical',
               backgroundColor: '#131826',
               cornerRadius: 'sm',
-              paddingAll: 'sm',
+              paddingAll: 'xs',
+              paddingTop: 'sm',
+              paddingBottom: 'sm',
               flex: 1,
               contents: [
                 { type: 'text', text: '1M', size: 'xs', color: '#94A3B8', align: 'center', weight: 'bold' },
                 {
                   type: 'text',
-                  text: ret1M,
-                  size: 'md',
-                  color: ret1M.startsWith('-') ? '#EF4444' : '#10B981',
-                  weight: 'bold',
                   align: 'center',
-                  margin: 'xs'
-                },
-                ...(pnl1MThb ? [{
-                  type: 'text',
-                  text: pnl1MThb,
-                  size: 'xs',
-                  color: pnl1MThb.startsWith('-') ? '#F87171' : '#34D399',
-                  align: 'center',
-                  weight: 'bold',
-                  margin: 'xs'
-                }] : [])
+                  margin: 'xs',
+                  wrap: true,
+                  contents: [
+                    {
+                      type: 'span',
+                      text: ret1M,
+                      size: 'sm',
+                      weight: 'bold',
+                      color: ret1M.startsWith('-') ? '#EF4444' : '#10B981'
+                    },
+                    ...(pnl1MThb ? [
+                      {
+                        type: 'span',
+                        text: ` (${pnl1MThb})`,
+                        size: 'xs',
+                        color: pnl1MThb.startsWith('-') ? '#F87171' : '#34D399'
+                      }
+                    ] : [])
+                  ]
+                }
               ]
             },
             {
@@ -337,28 +351,35 @@ export function formatWeeklyBriefFlex(data) {
               layout: 'vertical',
               backgroundColor: '#131826',
               cornerRadius: 'sm',
-              paddingAll: 'sm',
+              paddingAll: 'xs',
+              paddingTop: 'sm',
+              paddingBottom: 'sm',
               flex: 1,
               contents: [
                 { type: 'text', text: 'YTD', size: 'xs', color: '#94A3B8', align: 'center', weight: 'bold' },
                 {
                   type: 'text',
-                  text: retYtd,
-                  size: 'md',
-                  color: retYtd.startsWith('-') ? '#EF4444' : '#10B981',
-                  weight: 'bold',
                   align: 'center',
-                  margin: 'xs'
-                },
-                ...(pnlYtdThb ? [{
-                  type: 'text',
-                  text: pnlYtdThb,
-                  size: 'xs',
-                  color: pnlYtdThb.startsWith('-') ? '#F87171' : '#34D399',
-                  align: 'center',
-                  weight: 'bold',
-                  margin: 'xs'
-                }] : [])
+                  margin: 'xs',
+                  wrap: true,
+                  contents: [
+                    {
+                      type: 'span',
+                      text: retYtd,
+                      size: 'sm',
+                      weight: 'bold',
+                      color: retYtd.startsWith('-') ? '#EF4444' : '#10B981'
+                    },
+                    ...(pnlYtdThb ? [
+                      {
+                        type: 'span',
+                        text: ` (${pnlYtdThb})`,
+                        size: 'xs',
+                        color: pnlYtdThb.startsWith('-') ? '#F87171' : '#34D399'
+                      }
+                    ] : [])
+                  ]
+                }
               ]
             }
           ]
