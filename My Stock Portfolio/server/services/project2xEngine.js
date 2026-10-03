@@ -522,10 +522,11 @@ export function classifyScenario({
   const fallingKnifeThreshold = regime === 'BULL' ? -12.0 : -10.0;
   if (d200 < fallingKnifeThreshold && banker === 0) {
     const isOwned = ownedShares > 0;
+    const isCore = category === 'Core';
     return {
       scenario: 1,
-      traffic_light: isOwned ? 'MAYDAY_EXIT' : 'FALLING_KNIFE',
-      badge: isOwned ? 'Mayday Exit' : 'Falling Knife',
+      traffic_light: isOwned ? (isCore ? 'SLOW_BLEED' : 'MAYDAY_EXIT') : 'FALLING_KNIFE',
+      badge: isOwned ? (isCore ? 'Moat Audit (Hold)' : 'Mayday Exit') : 'Falling Knife',
       distEma9: d9,
       distEma50: d50,
       distEma150: d150,
@@ -535,10 +536,14 @@ export function classifyScenario({
       regime,
       volRatio,
       reason: isOwned
-        ? `Plunged below EMA 200 (${d200}%) with 0 Banker. Critical capital risk on owned shares. Emergency Exit / Cut Loss!`
+        ? (isCore 
+            ? `Plunged below EMA 200 (${d200}%) with 0 Banker. Core Dynasty Hold: Moat Audit required before selling. Do not panic sell.` 
+            : `Plunged below EMA 200 (${d200}%) with 0 Banker. Critical capital risk on owned shares. Emergency Exit / Cut Loss!`)
         : `Plunged below EMA 200 (${d200}%) with 0 Banker. Critical danger, do not catch falling knife! Stand by for reversal.`,
       reason_th: isOwned
-        ? `ราคาดิ่งหลุดเส้น EMA 200 ลึก (${d200}%) และไร้แรงสถาบัน (Banker = 0) มีหุ้นในพอร์ต — สละเรือ พิจารณาตัดขาดทุนทันที!`
+        ? (isCore 
+            ? `หุ้น Core ผูกขาดร่วงลึกใต้ EMA 200 (${d200}%) สถาบันพักมือ — ตามกฎ Dynasty Hold ห้ามขายหมูที่ก้นเหว! ตรวจสอบคอขวดทางธุรกิจ (Moat Audit) ถือนิ่งๆ หรือเตรียมกระสุน War Chest` 
+            : `ราคาดิ่งหลุดเส้น EMA 200 ลึก (${d200}%) และไร้แรงสถาบัน (Banker = 0) มีหุ้นในพอร์ต — สละเรือ พิจารณาตัดขาดทุนทันที!`)
         : `ราคาดิ่งหลุดเส้น EMA 200 ลึก (${d200}%) และไร้แรงสถาบัน (Banker = 0) — สัญญาณอันตรายขั้นวิกฤต ห้ามรับมีดเด็ดขาด! รอสะเด็ดน้ำรอตั้งลำ`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
@@ -546,7 +551,7 @@ export function classifyScenario({
         { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
         { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Zero)` },
-        { label: 'Actionable Mandate', pass: false, value: isOwned ? 'MAYDAY EXIT (Cut Loss)' : 'FALLING KNIFE (Stand By)' }
+        { label: 'Actionable Mandate', pass: false, value: isOwned ? (isCore ? 'MOAT AUDIT (Hold Core)' : 'MAYDAY EXIT (Cut Loss)') : 'FALLING KNIFE (Stand By)' }
       ]
     };
   }
@@ -554,10 +559,11 @@ export function classifyScenario({
   // 2. Dead Cat Bounce: Plunged deep below EMA 200 (> -10%) in BEAR regime trying a weak underwater bounce (1-6)
   if (d200 < -10.0 && banker > 0 && banker <= 6 && regime === 'BEAR') {
     const isOwned = ownedShares > 0;
+    const isCore = category === 'Core';
     return {
       scenario: 2,
-      traffic_light: isOwned ? 'MAYDAY_EXIT' : 'FALLING_KNIFE',
-      badge: isOwned ? 'Mayday Exit (Dead Cat)' : 'Dead Cat Bounce',
+      traffic_light: isOwned ? (isCore ? 'SLOW_BLEED' : 'MAYDAY_EXIT') : 'FALLING_KNIFE',
+      badge: isOwned ? (isCore ? 'Moat Audit (Dead Cat)' : 'Mayday Exit (Dead Cat)') : 'Dead Cat Bounce',
       distEma9: d9,
       distEma50: d50,
       distEma150: d150,
@@ -567,10 +573,14 @@ export function classifyScenario({
       regime,
       volRatio,
       reason: isOwned
-        ? `Submerged deep below EMA 200 (${d200}%) in BEAR regime. Owned shares at risk, beware trap bounce. Exit / Cut Loss.`
+        ? (isCore 
+            ? `Submerged deep below EMA 200 (${d200}%) in BEAR regime. Core Dynasty Hold: Beware trap bounce, verify business moat before acting.` 
+            : `Submerged deep below EMA 200 (${d200}%) in BEAR regime. Owned shares at risk, beware trap bounce. Exit / Cut Loss.`)
         : `Submerged deep below EMA 200 (${d200}%) in BEAR regime with weak institutional flow (${banker}/20). High trap risk, do not catch.`,
       reason_th: isOwned
-        ? `ราคาจมลึกใต้เส้น EMA 200 (${d200}%) ในแนวโน้มขาลง มีหุ้นในพอร์ต — ระวังกับดักเด้งหลอก พิจารณาขายตัดลดความเสี่ยง`
+        ? (isCore 
+            ? `หุ้น Core จมลึกใต้เส้น EMA 200 (${d200}%) ในแนวโน้มขาลง — ตามกฎ Dynasty Hold ให้ระวังกับดักเด้งหลอก และตรวจสอบ Moat พื้นฐาน ยังไม่ขายหมู` 
+            : `ราคาจมลึกใต้เส้น EMA 200 (${d200}%) ในแนวโน้มขาลง มีหุ้นในพอร์ต — ระวังกับดักเด้งหลอก พิจารณาขายตัดลดความเสี่ยง`)
         : `ราคาจมลึกใต้เส้น EMA 200 (${d200}%) ในแนวโน้มขาลง (BEAR) สถาบันบางตา (${banker}/20) — ห้ามรับมีด ระวังการเด้งหลอกเพื่อทุบต่อ`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
@@ -578,7 +588,7 @@ export function classifyScenario({
         { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
         { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Banker MCDX', pass: false, value: `${banker}/20 (Weak)` },
-        { label: 'Bounce Quality', pass: false, value: isOwned ? 'Exit Trap Bounce' : 'Underwater Trap Bounce' }
+        { label: 'Bounce Quality', pass: false, value: isOwned ? (isCore ? 'Moat Audit (Hold)' : 'Exit Trap Bounce') : 'Underwater Trap Bounce' }
       ]
     };
   }
@@ -590,10 +600,11 @@ export function classifyScenario({
                           (regime !== 'BEAR' && d200 < -5.0 && daysBelowEma200 >= 5 && banker <= 1);
   if (isCoreBreakdown) {
     const isOwned = ownedShares > 0;
+    const isCore = category === 'Core';
     return {
       scenario: 3,
-      traffic_light: isOwned ? 'MAYDAY_EXIT' : 'FALLING_KNIFE',
-      badge: isOwned ? 'Mayday Exit (Breakdown)' : 'Core Breakdown',
+      traffic_light: isOwned ? (isCore ? 'SLOW_BLEED' : 'MAYDAY_EXIT') : 'FALLING_KNIFE',
+      badge: isOwned ? (isCore ? 'Moat Audit (Breakdown)' : 'Mayday Exit (Breakdown)') : 'Core Breakdown',
       distEma9: d9,
       distEma50: d50,
       distEma150: d150,
@@ -603,10 +614,14 @@ export function classifyScenario({
       regime,
       volRatio,
       reason: isOwned
-        ? `Core trend broken below EMA 200 for ${daysBelowEma200} days (${d200}%). Severe capital risk, stop loss now.`
+        ? (isCore 
+            ? `Price broken below EMA 200 for ${daysBelowEma200} days (${d200}%). Core Dynasty Hold: Conduct Moat Audit on fundamentals. Sell only if moat broken.` 
+            : `Core trend broken below EMA 200 for ${daysBelowEma200} days (${d200}%). Severe capital risk, stop loss now.`)
         : `Core trend broken below EMA 200 for ${daysBelowEma200} days (${d200}%). Severe falling knife, wait for base repair.`,
       reason_th: isOwned
-        ? `โครงสร้างหลักพัง หลุดต่ำกว่าเส้น EMA 200 ต่อเนื่อง ${daysBelowEma200} วัน (${d200}%) มีหุ้นในพอร์ต — สละเรือ พิจารณาตัดขาดทุน/หยุดขาดทุน`
+        ? (isCore 
+            ? `หุ้น Core หลุดต่ำกว่าเส้น EMA 200 ต่อเนื่อง ${daysBelowEma200} วัน (${d200}%) — ตามกฎ Dynasty Hold ให้เปิด Moat Audit ตรวจสอบงบและกำไร ขายทิ้งเฉพาะเมื่อพื้นฐานพังจริงเท่านั้น` 
+            : `โครงสร้างหลักพัง หลุดต่ำกว่าเส้น EMA 200 ต่อเนื่อง ${daysBelowEma200} วัน (${d200}%) มีหุ้นในพอร์ต — สละเรือ พิจารณาตัดขาดทุน/หยุดขาดทุน`)
         : `โครงสร้างหลักพัง หลุดต่ำกว่าเส้น EMA 200 ต่อเนื่อง ${daysBelowEma200} วัน (${d200}%) — มีดร่วงหนัก ห้ามรับมีด รอซ่อมสร้างฐานใหม่`,
       checklist: { regimePass: false, distPass: false, bankerPass: false, rsiPass: false, candlePass: false, volumePass: false },
       signals_checklist: [
@@ -614,7 +629,7 @@ export function classifyScenario({
         { label: 'Price', pass: false, value: fmtPrice(currentPrice), priceLevel: currentPrice },
         { label: 'EMA 200', pass: false, value: `${fmtPrice(ema200)} (${d200}%)`, priceLevel: ema200 },
         { label: 'Days Below 200', pass: false, value: `${daysBelowEma200} Days` },
-        { label: 'Action', pass: false, value: isOwned ? 'MAYDAY EXIT (Cut Loss)' : 'FALLING KNIFE (Stand By)' }
+        { label: 'Action', pass: false, value: isOwned ? (isCore ? 'MOAT AUDIT (Hold Core)' : 'MAYDAY EXIT (Cut Loss)') : 'FALLING KNIFE (Stand By)' }
       ]
     };
   }
