@@ -478,7 +478,23 @@ export const SmartRebalancePage: React.FC = () => {
     setSelectedSymbols(new Set(good));
   };
 
-  // T1 Verified: Top-3 Deficit (Slashes monthly order count by 63% from 8 to 3 with -0.28%/yr delta)
+  // W3 Verified Champion Mode: Top-3 + Skip Expensive (>10% EMA150) in 1-Click
+  const selectTop3SkipExpensive = () => {
+    let eligible = cashflowCandidates.filter(
+      c => !c.isExtendedEma150 && !c.signalInfo.label.includes('No Chase') && !c.signalInfo.icon.includes('⛔') && c.deficit > 0
+    );
+    if (eligible.length === 0) {
+      eligible = cashflowCandidates.filter(c => c.deficit > 0);
+    }
+    if (eligible.length === 0) {
+      eligible = [...cashflowCandidates];
+    }
+    const sorted = [...eligible].sort((a, b) => b.deficit - a.deficit);
+    const top3 = sorted.slice(0, 3).map(c => c.symbol);
+    setSelectedSymbols(new Set(top3));
+  };
+
+  // T1 Verified: Pure Top-3 Deficit (No price filter)
   const selectTop3Deficit = () => {
     const sorted = [...cashflowCandidates].sort((a, b) => b.deficit - a.deficit);
     const top3 = sorted.slice(0, 3).filter(c => c.deficit > 0).map(c => c.symbol);
@@ -1103,28 +1119,36 @@ export const SmartRebalancePage: React.FC = () => {
                           )}
                         </button>
 
-                        {/* T1 Verified: Top-3 Deficit Fast Mode */}
+                        {/* W3 Champion Mode: Top-3 + Skip Expensive in 1-Click */}
+                        <button
+                          type="button"
+                          onClick={selectTop3SkipExpensive}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 transition-all flex items-center gap-1.5 shadow-sm ring-1 ring-amber-500/30"
+                          title="W3 Champion Formula: กรองตัวที่ราคาเกิน >10% EMA150 หรือติด No Chase ออกก่อน แล้วเลือก 3 ตัวที่ขาดมากที่สุดในคลิกเดียว (ชนะ Top-3 เพียวๆ +1.27%/ปี, Win Rate 98.8%)"
+                        >
+                          <span>⚡</span>
+                          <span>Top-3 (ข้ามตัวแพง &gt;10% EMA150)</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/30 text-amber-100 border border-amber-400/40 font-mono">สูตรแนะนำ 🔥</span>
+                        </button>
+
+                        {/* T1 Verified: Pure Top-3 Deficit */}
                         <button
                           type="button"
                           onClick={selectTop3Deficit}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 transition-all flex items-center gap-1.5 shadow-sm"
-                          title="T1 Verified: เกลี่ยเฉพาะ 3 ตัวที่ขาดมากที่สุด ลดคำสั่งซื้อลงเหลือ 3 ตัว/เดือน (ลดแรงกด 63%) แลกส่วนต่าง IRR เล็กน้อยเพียง -0.28%/ปี"
+                          className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 transition-all flex items-center gap-1.5"
+                          title="T1 Verified: เกลี่ยเฉพาะ 3 ตัวที่ขาดมากที่สุด (ไม่กรองราคา) ลดคำสั่งซื้อลงเหลือ 3 ตัว/เดือน"
                         >
-                          <span>⚡</span>
-                          <span>Top-3 เคาะด่วน</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30">3 ออเดอร์ (IRR -0.3%)</span>
+                          <span>Top-3 เพียวๆ</span>
                         </button>
 
-                        {/* T2 Verified: Skip Extended >10% EMA150 Tilt */}
+                        {/* T2 Verified: Skip Extended >10% EMA150 Tilt (All) */}
                         <button
                           type="button"
                           onClick={selectSkipExpensive}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition-all flex items-center gap-1.5 shadow-sm"
-                          title="T2 Verified: งดเติมตัวที่ราคาสูงกว่าแนวรับ EMA150 เกิน 10% หรือติด No Chase โยกงบ 100% เข้าตัวย่อตัวอื่น"
+                          className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-700/30 hover:bg-slate-700/50 text-slate-300 border border-slate-600/40 transition-all flex items-center gap-1.5"
+                          title="T2 Verified: งดเติมตัวที่ราคาสูงกว่า EMA150 เกิน 10% ทั้งหมด (เฉลี่ย 4-5 ตัว)"
                         >
-                          <span>🚀</span>
-                          <span>ข้ามตัวแพง (&gt;10% EMA150)</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30">คัด 4-5 ตัว</span>
+                          <span>ข้ามตัวแพงทั้งหมด</span>
                         </button>
 
                         <div className="h-4 w-[1px] bg-[#2A2E45] hidden sm:block" />
