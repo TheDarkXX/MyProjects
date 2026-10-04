@@ -5,6 +5,8 @@ import { useHoldings } from '../../hooks/useHoldings';
 import { useUiStore } from '../../stores/uiStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { useBlueprintStore } from '../../stores/blueprintStore';
+import { useProject2xStore } from '../../stores/project2xStore';
+import { getTierVisualInfo } from '../xchart/TierBadgeIndicator';
 import { BlueprintEditor } from './BlueprintEditor';
 import { api } from '../../services/api';
 import { 
@@ -116,6 +118,7 @@ export const SmartRebalancePage: React.FC = () => {
   const { prices, exchangeRate, fetchExchangeRate, fetchPrices, metadata, fetchMetadata } = usePriceStore();
   
   const { blueprints, fetchBlueprints } = useBlueprintStore();
+  const { radar, fetchRadar, compactTiers } = useProject2xStore();
 
   const [mainTab, setMainTab] = useState<MainTab>('blueprint');
   const [mode, setMode] = useState<RebalanceMode>('cashflow');
@@ -142,9 +145,20 @@ export const SmartRebalancePage: React.FC = () => {
     if (activePortfolioId) {
       fetchTransactions(activePortfolioId);
       fetchBlueprints(activePortfolioId);
+      fetchRadar(activePortfolioId);
     }
     fetchExchangeRate('USD', 'THB');
-  }, [activePortfolioId, fetchTransactions, fetchExchangeRate, fetchBlueprints]);
+  }, [activePortfolioId, fetchTransactions, fetchExchangeRate, fetchBlueprints, fetchRadar]);
+
+  const radarMap = useMemo(() => {
+    const map: Record<string, any> = { ...compactTiers };
+    if (radar?.rows) {
+      for (const row of radar.rows) {
+        map[row.symbol.toUpperCase()] = row;
+      }
+    }
+    return map;
+  }, [radar?.rows, compactTiers]);
 
 
 
@@ -240,9 +254,56 @@ export const SmartRebalancePage: React.FC = () => {
     return Array.from(map.values());
   }, [holdings, blueprints, prices]);
 
-  // Price Gate Valuation Signal Helper (Target Price vs Technical Levels)
+  // Price Gate Valuation Signal Helper (7-Tier Matrix -> Target Price -> Technicals)
   const getBuySignal = useMemo(() => {
     return (symbol: string, currentPrice: number, targetPrice?: number | null) => {
+      const symUpper = symbol.toUpperCase();
+      const radarRow = radarMap[symUpper];
+
+      // Priority 0: Live Project 2X 7-Tier Cyber Action Matrix (Unified System SOT)
+      if (radarRow) {
+        const tierInfo = getTierVisualInfo(radarRow, symUpper);
+        if (tierInfo.isRecognized) {
+          let signalType: 'strong_buy' | 'fair' | 'expensive' = 'fair';
+          if (tierInfo.tierId === 'BUY_NOW' || tierInfo.subMode === 'DIP_BUY') {
+            signalType = 'strong_buy';
+          } else if (
+            (tierInfo.tierId === 'TO_THE_MOON' && (tierInfo.label.includes('No Chase') || tierInfo.icon === '⛔')) ||
+            tierInfo.tierId === 'MAYDAY_EXIT' ||
+            tierInfo.tierId === 'FALLING_KNIFE'
+          ) {
+            signalType = 'expensive';
+          } else {
+            signalType = 'fair';
+          }
+
+          let badgeClass = 'bg-slate-500/20 text-slate-200 border-slate-500/40';
+          if (tierInfo.tierId === 'BUY_NOW') {
+            badgeClass = 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+          } else if (tierInfo.tierId === 'TO_THE_MOON') {
+            badgeClass = tierInfo.icon === '⛔' 
+              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' 
+              : 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+          } else if (tierInfo.tierId === 'GET_READY') {
+            badgeClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+          } else if (tierInfo.tierId === 'RUNNER') {
+            badgeClass = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+          } else if (tierInfo.tierId === 'SLOW_BLEED' || tierInfo.tierId === 'FALLING_KNIFE' || tierInfo.tierId === 'MAYDAY_EXIT') {
+            badgeClass = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+          }
+
+          return {
+            signal: signalType,
+            tierId: tierInfo.tierId,
+            label: tierInfo.label,
+            icon: tierInfo.icon,
+            detail: tierInfo.subLabel || tierInfo.reasonTh || '7-Tier Cyber Action Matrix',
+            subtext: tierInfo.subLabel || `Scenario #${tierInfo.scenarioNum || 0}`,
+            badgeClass: clsx('font-prompt border', badgeClass)
+          };
+        }
+      }
+
       const tech = technicals[symbol];
 
       // Priority 1: Target Price from Blueprint
@@ -329,7 +390,7 @@ export const SmartRebalancePage: React.FC = () => {
         badgeClass: 'bg-slate-500/20 text-slate-200 border-slate-500/40'
       };
     };
-  }, [technicals, currency, effectiveRate]);
+  }, [radarMap, technicals, currency, effectiveRate]);
 
   // Candidates in Blueprint with Deficit & Price Signals
   const cashflowCandidates = useMemo(() => {
