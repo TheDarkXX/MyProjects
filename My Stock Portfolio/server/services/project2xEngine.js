@@ -3,16 +3,16 @@ import { fetchYahooExchangeRate, fetchYahooLatest, fetchYahooRealtimeQuote, fetc
 import { calcEMA, calcEMASeries, calcBankerMCDX, calcBankerSeries, calcMcdxSeries, calcRSI, calcRSISeries, syncCandleDelta } from './technicalAnalysis.js';
 
 export const DEFAULT_2X_STOCKS = [
-  // Core Commanders (83%)
+  // Core Commanders (89%)
   { symbol: 'NVDA', name: 'NVIDIA', target_percent: 15.0, category: 'Core' },
-  { symbol: 'TSM', name: 'TSMC', target_percent: 13.0, category: 'Core' },
-  { symbol: 'AVGO', name: 'Broadcom', target_percent: 10.0, category: 'Core' },
-  { symbol: 'VRT', name: 'Vertiv', target_percent: 12.0, category: 'Core' },
-  { symbol: 'MELI', name: 'MercadoLibre', target_percent: 5.0, category: 'Core' },
-  { symbol: 'APH', name: 'Amphenol', target_percent: 10.0, category: 'Core' },
-  { symbol: 'KLAC', name: 'KLA Corp', target_percent: 7.0, category: 'Core' },
+  { symbol: 'TSM', name: 'TSMC', target_percent: 14.0, category: 'Core' },
+  { symbol: 'VRT', name: 'Vertiv', target_percent: 13.0, category: 'Core' },
+  { symbol: 'AVGO', name: 'Broadcom', target_percent: 11.0, category: 'Core' },
+  { symbol: 'APH', name: 'Amphenol', target_percent: 11.0, category: 'Core' },
+  { symbol: 'KLAC', name: 'KLA Corp', target_percent: 8.0, category: 'Core' },
   { symbol: 'ANET', name: 'Arista Networks', target_percent: 7.0, category: 'Core' },
-  { symbol: 'CRWD', name: 'CrowdStrike', target_percent: 4.0, category: 'Core' },
+  { symbol: 'MELI', name: 'MercadoLibre', target_percent: 5.0, category: 'Core' },
+  { symbol: 'CRWD', name: 'CrowdStrike', target_percent: 5.0, category: 'Core' },
   // Moonshot Strikes (11%)
   { symbol: 'STRL', name: 'Sterling Infra', target_percent: 3.0, category: 'Moonshot' },
   { symbol: 'ALAB', name: 'Astera Labs', target_percent: 3.0, category: 'Moonshot' },
