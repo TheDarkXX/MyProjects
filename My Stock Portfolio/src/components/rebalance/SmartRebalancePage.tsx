@@ -11,7 +11,8 @@ import {
   Scale, SlidersHorizontal, DollarSign, ArrowRight, Check, Copy, Sparkles, 
   TrendingUp, Scissors, CheckCircle2, AlertCircle, CheckSquare, Square, 
   RefreshCw, Wallet, Filter, AlertTriangle, LayoutGrid, Layers, Table2,
-  Calendar, Coins, Percent, BarChart3, PieChart as PieChartIcon
+  Calendar, Coins, Percent, BarChart3, PieChart as PieChartIcon,
+  Receipt, CheckCheck, FileText
 } from 'lucide-react';
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, 
@@ -120,6 +121,7 @@ export const SmartRebalancePage: React.FC = () => {
   const [mode, setMode] = useState<RebalanceMode>('cashflow');
   const [depositAmountUsd, setDepositAmountUsd] = useState<number>(1000);
   const [copied, setCopied] = useState<boolean>(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Selective Buy & Option C Remainder Strategy States
   const [remainderMode, setRemainderMode] = useState<'redistribute' | 'reserve'>('redistribute');
@@ -350,6 +352,7 @@ export const SmartRebalancePage: React.FC = () => {
           targetVal,
           deficit,
           targetPrice: bp.target_price,
+          category: bp.category || 'Core Monopolies',
           signalInfo,
           status: bp.status || (item.isWatchlist ? 'WATCHLIST' : 'OWNED'),
           currentWeight: totalNetWorth > 0 ? (item.currentVal / totalNetWorth) * 100 : 0
@@ -689,19 +692,38 @@ export const SmartRebalancePage: React.FC = () => {
     };
   }, [holdings, metadata, prices, totalNetWorth]);
 
-  const copyBuyingPlan = () => {
+  const generateBrokerSlipText = () => {
     const selectedBuys = cashflowPlan.items.filter(r => r.isSelected && r.allocatedUsd >= 5);
-    if (selectedBuys.length === 0) return;
+    if (selectedBuys.length === 0) return '';
 
-    const text = selectedBuys
-      .map(r => `• BUY ${r.symbol}: +${r.buyShares} shares (~${formatMoney(r.allocatedUsd)}) [${r.signalInfo.label}]`)
-      .join('\n');
+    const lines = [
+      `🏛️ [PROJECT 2X] MONTHLY INFLOW EXECUTION SLIP`,
+      `💵 Total Inflow: ${formatMoney(depositAmountUsd)} (${currency === 'THB' ? `~$${depositAmountUsd.toLocaleString('en-US', { maximumFractionDigits: 0 })} USD` : `~฿${Math.round(depositAmountUsd * effectiveRate).toLocaleString()} THB`})`,
+      `🎯 Strategy: Smart Deficit DCA Rebalance (Zero-Cash Drag)`,
+      `📅 Generated: ${new Date().toLocaleDateString('th-TH')}`,
+      `--------------------------------------------------`,
+      ...selectedBuys.map((r, i) => {
+        const estThb = Math.round(r.allocatedUsd * effectiveRate);
+        const estUsd = r.allocatedUsd.toFixed(2);
+        return `${i + 1}. ${r.symbol.padEnd(5)} | BUY ${r.buyShares.toString().padStart(6)} shs | ~$${estUsd} (~฿${estThb.toLocaleString()}) | [${r.category || 'Core'}] [${r.signalInfo.label}]`;
+      }),
+      `--------------------------------------------------`,
+      `✅ Total Deployed: ${formatMoney(cashflowPlan.totalAllocatedUsd)} (${((cashflowPlan.totalAllocatedUsd / (depositAmountUsd || 1)) * 100).toFixed(1)}%)`,
+      cashflowPlan.cashReserveUsd >= 1 ? `💰 Cash Reserve: ${formatMoney(cashflowPlan.cashReserveUsd)}` : `⚡ Cash Drag: 0.0% (100% Equity Compounding)`
+    ];
+    return lines.join('\n');
+  };
 
-    let header = `📋 Blueprint Cash-Flow Plan (Deposit: ${formatMoney(depositAmountUsd)}):\n` + text;
-    if (remainderMode === 'reserve' && cashflowPlan.cashReserveUsd >= 1) {
-      header += `\n• 💰 Cash Reserve (เงินสดคงเหลือ): ${formatMoney(cashflowPlan.cashReserveUsd)}`;
-    }
-    navigator.clipboard.writeText(header);
+  const copyField = (fieldKey: string, val: string) => {
+    navigator.clipboard.writeText(val);
+    setCopiedField(fieldKey);
+    setTimeout(() => setCopiedField(null), 1500);
+  };
+
+  const copyBuyingPlan = () => {
+    const slip = generateBrokerSlipText();
+    if (!slip) return;
+    navigator.clipboard.writeText(slip);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -822,27 +844,78 @@ export const SmartRebalancePage: React.FC = () => {
                   {/* 1. Cash Injection Box */}
                   <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-6 shadow-lg space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <label className="text-xs font-bold text-[#CBD5E1] uppercase tracking-wider block font-heading">
+                      <label className="text-[13px] font-bold text-[#CBD5E1] uppercase tracking-wider block font-heading">
                         จำนวนเงินที่จะเติมเข้าพอร์ต (New Cash Injection)
                       </label>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs text-[#9898C8] mr-1">เติมด่วน:</span>
-                        {[500, 1000, 2000, 5000].map(amt => (
+                        <span className="text-xs text-slate-300 mr-1 font-bold">🎯 เป้า DCA ประจำเดือน:</span>
+                        {currency === 'THB' ? (
+                          <>
+                            {[
+                              { label: '฿100k', val: 100000 / effectiveRate },
+                              { label: '฿150k ⭐', val: 150000 / effectiveRate, highlight: true },
+                              { label: '฿200k 🚀', val: 200000 / effectiveRate },
+                              { label: '฿300k 💎', val: 300000 / effectiveRate },
+                            ].map(preset => (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                onClick={() => setDepositAmountUsd(preset.val)}
+                                className={clsx(
+                                  "px-2.5 py-1 text-xs font-bold rounded-lg transition-all border",
+                                  preset.highlight
+                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30 shadow-sm"
+                                    : "bg-[#1A1D2D] hover:bg-[#2A2E45] border-[#2A2E45] text-white"
+                                )}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            {[
+                              { label: '$2,500', val: 2500 },
+                              { label: '$4,200 ⭐', val: 4200, highlight: true },
+                              { label: '$5,700 🚀', val: 5700 },
+                              { label: '$8,500 💎', val: 8500 },
+                            ].map(preset => (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                onClick={() => setDepositAmountUsd(preset.val)}
+                                className={clsx(
+                                  "px-2.5 py-1 text-xs font-bold rounded-lg transition-all border",
+                                  preset.highlight
+                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30 shadow-sm"
+                                    : "bg-[#1A1D2D] hover:bg-[#2A2E45] border-[#2A2E45] text-white"
+                                )}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </>
+                        )}
+                        <span className="text-xs text-slate-500 mx-1">|</span>
+                        {(currency === 'THB' ? [10000, 50000] : [500, 1000]).map(amt => (
                           <button
                             key={amt}
                             type="button"
-                            onClick={() => setDepositAmountUsd(prev => (prev || 0) + amt)}
-                            className="px-2.5 py-1 bg-[#1A1D2D] hover:bg-[#2A2E45] border border-[#2A2E45] text-white text-xs font-bold rounded-lg transition-all"
+                            onClick={() => {
+                              const usdDelta = currency === 'THB' ? amt / effectiveRate : amt;
+                              setDepositAmountUsd(prev => (prev || 0) + usdDelta);
+                            }}
+                            className="px-2 py-1 bg-[#1A1D2D] hover:bg-[#2A2E45] border border-[#2A2E45] text-slate-200 text-xs font-bold rounded-lg transition-all"
                           >
-                            +{formatMoney(amt, 0)}
+                            +{currency === 'THB' ? `฿${(amt / 1000).toFixed(0)}k` : `$${amt}`}
                           </button>
                         ))}
                         <button
                           type="button"
-                          onClick={() => setDepositAmountUsd(1000)}
-                          className="px-2.5 py-1 bg-[#1A1D2D] hover:bg-rose-500/20 text-[#CBD5E1] hover:text-rose-400 border border-[#2A2E45] text-xs font-bold rounded-lg transition-all"
+                          onClick={() => setDepositAmountUsd(currency === 'THB' ? 150000 / effectiveRate : 4200)}
+                          className="px-2.5 py-1 bg-[#1A1D2D] hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 border border-[#2A2E45] text-xs font-bold rounded-lg transition-all"
                         >
-                          รีเซ็ต ($1,000)
+                          รีเซ็ต
                         </button>
                       </div>
                     </div>
@@ -1506,6 +1579,144 @@ export const SmartRebalancePage: React.FC = () => {
                       </div>
                     )}
                     </div>
+
+                    {/* 4. Dedicated Institutional Broker Order Execution Slip */}
+                    {cashflowPlan.items.filter(r => r.isSelected && r.allocatedUsd >= 5).length > 0 && (
+                      <div className="bg-[#0D1017] border-2 border-emerald-500/40 rounded-3xl p-6 shadow-xl space-y-5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2A2E45] pb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                              <Receipt className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                                📋 สลิปคำสั่งเคาะซื้อจริง (Broker Execution Ticket)
+                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                                  พร้อมคีย์โบรกเกอร์
+                                </span>
+                              </h4>
+                              <p className="text-xs text-slate-300 mt-0.5">
+                                จัดสรรเงินเติม {formatMoney(depositAmountUsd)} เข้าหุ้นที่ Deficit พร่องสุด (Zero-Cash Rebalance) ตามพิมพ์เขียว Master 89/11
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const slip = generateBrokerSlipText();
+                                navigator.clipboard.writeText(slip);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                              }}
+                              className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 shrink-0"
+                            >
+                              {copied ? <CheckCheck className="w-4 h-4 stroke-[3]" /> : <Copy className="w-4 h-4" />}
+                              <span>{copied ? 'คัดลอกสลิปทั้งหมดแล้ว!' : 'คัดลอกสลิปทั้งชุด (Copy All)'}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Summary Metrics */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="bg-[#141824] border border-[#2A2E45] rounded-xl p-3">
+                            <span className="text-xs text-slate-400 block font-bold">งบจัดสรรทั้งหมด</span>
+                            <span className="text-base font-black text-emerald-400 mt-0.5 block tabular-nums">
+                              {formatMoney(cashflowPlan.totalAllocatedUsd)}
+                            </span>
+                          </div>
+                          <div className="bg-[#141824] border border-[#2A2E45] rounded-xl p-3">
+                            <span className="text-xs text-slate-400 block font-bold">หุ้นที่เคาะซื้อ</span>
+                            <span className="text-base font-black text-white mt-0.5 block tabular-nums">
+                              {cashflowPlan.items.filter(r => r.isSelected && r.allocatedUsd >= 5).length} ตัว
+                            </span>
+                          </div>
+                          <div className="bg-[#141824] border border-[#2A2E45] rounded-xl p-3">
+                            <span className="text-xs text-slate-400 block font-bold">สัดส่วนเงินสดค้าง (Cash Drag)</span>
+                            <span className="text-base font-black text-cyan-400 mt-0.5 block tabular-nums">
+                              {cashflowPlan.cashReserveUsd <= 1 ? '0.0% (Zero Drag)' : formatMoney(cashflowPlan.cashReserveUsd)}
+                            </span>
+                          </div>
+                          <div className="bg-[#141824] border border-[#2A2E45] rounded-xl p-3">
+                            <span className="text-xs text-slate-400 block font-bold">ยุทธศาสตร์</span>
+                            <span className="text-base font-black text-amber-400 mt-0.5 block">
+                              Deficit-First DCA
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Broker Quick-Copy Table / Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pt-1">
+                          {cashflowPlan.items.filter(r => r.isSelected && r.allocatedUsd >= 5).map((r, idx) => {
+                            const estThb = Math.round(r.allocatedUsd * effectiveRate);
+                            return (
+                              <div
+                                key={r.symbol}
+                                className="bg-[#141824] border border-[#2A2E45] hover:border-emerald-500/60 rounded-2xl p-4 transition-all space-y-3"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black text-slate-400 tabular-nums">#{idx + 1}</span>
+                                    <span className="text-base font-black text-white">{r.symbol}</span>
+                                    <span className={clsx("text-xs font-bold px-2 py-0.5 rounded border", r.signalInfo.badgeClass)}>
+                                      {r.signalInfo.label}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyField(`sym_${r.symbol}`, r.symbol)}
+                                    className="text-xs text-slate-300 hover:text-white px-2 py-1 bg-[#1A1D2D] rounded-lg border border-[#2A2E45] flex items-center gap-1"
+                                    title="คัดลอกชื่อหุ้น"
+                                  >
+                                    {copiedField === `sym_${r.symbol}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                    <span>Ticker</span>
+                                  </button>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-xs bg-[#0F121C] p-2.5 rounded-xl border border-[#2A2E45]/80">
+                                  <div>
+                                    <span className="text-slate-400 block text-[11px]">จำนวนหุ้น (Shares)</span>
+                                    <div className="flex items-center justify-between mt-0.5">
+                                      <span className="text-sm font-black text-emerald-400 tabular-nums">+{r.buyShares}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => copyField(`shs_${r.symbol}`, String(r.buyShares))}
+                                        className="text-slate-400 hover:text-white"
+                                        title="คัดลอกจำนวนหุ้น"
+                                      >
+                                        {copiedField === `shs_${r.symbol}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 block text-[11px]">งบประมาณ (Est. Amount)</span>
+                                    <div className="flex items-center justify-between mt-0.5">
+                                      <span className="text-sm font-black text-white tabular-nums">
+                                        {currency === 'THB' ? `฿${estThb.toLocaleString()}` : `$${r.allocatedUsd.toFixed(2)}`}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => copyField(`amt_${r.symbol}`, currency === 'THB' ? String(estThb) : r.allocatedUsd.toFixed(2))}
+                                        className="text-slate-400 hover:text-white"
+                                        title="คัดลอกจำนวนเงิน"
+                                      >
+                                        {copiedField === `amt_${r.symbol}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
+                                  <span>ราคาตลาด: ~${r.price?.toFixed(2)}</span>
+                                  <span>หมวด: {r.category || 'Core'} (เป้า {r.targetWeight}%)</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
               )}
 
