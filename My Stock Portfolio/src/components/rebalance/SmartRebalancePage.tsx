@@ -269,8 +269,7 @@ export const SmartRebalancePage: React.FC = () => {
             signalType = 'strong_buy';
           } else if (
             (tierInfo.tierId === 'TO_THE_MOON' && (tierInfo.label.includes('No Chase') || tierInfo.icon === '⛔')) ||
-            tierInfo.tierId === 'MAYDAY_EXIT' ||
-            tierInfo.tierId === 'FALLING_KNIFE'
+            tierInfo.label.includes('No Chase') || tierInfo.icon === '⛔'
           ) {
             signalType = 'expensive';
           } else {
@@ -406,6 +405,10 @@ export const SmartRebalancePage: React.FC = () => {
         const currentVal = item.currentVal;
         const deficit = Math.max(0, targetVal - currentVal);
         const signalInfo = getBuySignal(item.symbol, item.price, bp.target_price);
+        const tech = technicals[item.symbol];
+        const anchor = tech?.ema150 || tech?.sma200 || tech?.sma50;
+        const distAnchor = anchor && anchor > 0 ? (item.price - anchor) / anchor : 0;
+        const isExtendedEma150 = distAnchor > 0.10;
 
         return {
           ...item,
@@ -415,12 +418,13 @@ export const SmartRebalancePage: React.FC = () => {
           targetPrice: bp.target_price,
           category: bp.category || 'Core Monopolies',
           signalInfo,
+          isExtendedEma150,
           status: bp.status || (item.isWatchlist ? 'WATCHLIST' : 'OWNED'),
           currentWeight: totalNetWorth > 0 ? (item.currentVal / totalNetWorth) * 100 : 0
         };
       })
       .filter(Boolean) as any[];
-  }, [combinedPortfolio, depositAmountUsd, totalNetWorth, blueprints, getBuySignal]);
+  }, [combinedPortfolio, depositAmountUsd, totalNetWorth, blueprints, getBuySignal, technicals]);
 
   // Active selected symbols (Default to ALL selected for 100% Cashflow DCA)
   const activeSelectedSymbols = useMemo(() => {
@@ -474,7 +478,7 @@ export const SmartRebalancePage: React.FC = () => {
     setSelectedSymbols(new Set(good));
   };
 
-  // T1 Finding: Top-3 Deficit (Slashes monthly order count by 63% from 8 to 3 with identical 59.2% IRR)
+  // T1 Verified: Top-3 Deficit (Slashes monthly order count by 63% from 8 to 3 with -0.28%/yr delta)
   const selectTop3Deficit = () => {
     const sorted = [...cashflowCandidates].sort((a, b) => b.deficit - a.deficit);
     const top3 = sorted.slice(0, 3).filter(c => c.deficit > 0).map(c => c.symbol);
@@ -485,13 +489,13 @@ export const SmartRebalancePage: React.FC = () => {
     }
   };
 
-  // T2 Finding: Skip Expensive >10% EMA150 / No Chase & Reallocate 100% (+1.14%/yr IRR alpha on Master Blueprint)
+  // T2 Verified Rule: Skip Extended (>10% EMA150) or No Chase & Reallocate 100% to other deficit stocks
   const selectSkipExpensive = () => {
-    const nonExpensive = cashflowCandidates
-      .filter(c => c.signalInfo.signal !== 'expensive' && !c.signalInfo.label.includes('No Chase'))
+    const nonExtended = cashflowCandidates
+      .filter(c => !c.isExtendedEma150 && !c.signalInfo.label.includes('No Chase') && !c.signalInfo.icon.includes('⛔'))
       .map(c => c.symbol);
-    if (nonExpensive.length > 0) {
-      setSelectedSymbols(new Set(nonExpensive));
+    if (nonExtended.length > 0) {
+      setSelectedSymbols(new Set(nonExtended));
     } else {
       selectAll();
     }
@@ -1099,28 +1103,28 @@ export const SmartRebalancePage: React.FC = () => {
                           )}
                         </button>
 
-                        {/* T1 Proven: Top-3 Deficit Fast Mode */}
+                        {/* T1 Verified: Top-3 Deficit Fast Mode */}
                         <button
                           type="button"
                           onClick={selectTop3Deficit}
                           className="px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 transition-all flex items-center gap-1.5 shadow-sm"
-                          title="T1 Tested: เกลี่ยเฉพาะ 3 ตัวที่ขาดมากที่สุด ลดคำสั่งซื้อลงเหลือ 3 ตัว/เดือน (ลดแรงกด 63%) โดย IRR เท่าเดิม 59.2%"
+                          title="T1 Verified: เกลี่ยเฉพาะ 3 ตัวที่ขาดมากที่สุด ลดคำสั่งซื้อลงเหลือ 3 ตัว/เดือน (ลดแรงกด 63%) แลกส่วนต่าง IRR เล็กน้อยเพียง -0.28%/ปี"
                         >
                           <span>⚡</span>
                           <span>Top-3 เคาะด่วน</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30">3 ตัว</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30">3 ออเดอร์ (IRR -0.3%)</span>
                         </button>
 
-                        {/* T2 Proven: Skip Expensive Tilt */}
+                        {/* T2 Verified: Skip Extended >10% EMA150 Tilt */}
                         <button
                           type="button"
                           onClick={selectSkipExpensive}
                           className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition-all flex items-center gap-1.5 shadow-sm"
-                          title="T2 Tested: งดเติมตัวที่แพงเกิน 10% EMA150 หรือติด No Chase โยกงบ 100% เข้าตัวย่อ (ทำ Alpha +1.14%/ปี ใน Master Blueprint)"
+                          title="T2 Verified: งดเติมตัวที่ราคาสูงกว่าแนวรับ EMA150 เกิน 10% หรือติด No Chase โยกงบ 100% เข้าตัวย่อตัวอื่น"
                         >
                           <span>🚀</span>
-                          <span>ข้ามตัวแพง โยกงบ</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30">+1.14% Alpha</span>
+                          <span>ข้ามตัวแพง (&gt;10% EMA150)</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30">คัด 4-5 ตัว</span>
                         </button>
 
                         <div className="h-4 w-[1px] bg-[#2A2E45] hidden sm:block" />
@@ -1164,19 +1168,19 @@ export const SmartRebalancePage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Helper text explaining DCA vs Opportunistic with T1-T4 insights */}
+                    {/* Helper text explaining DCA vs Opportunistic with verified T1-T4 insights */}
                     <div className="text-[13px] text-slate-200 bg-[#161926]/90 border border-[#2A2E45] rounded-xl px-4 py-2.5 space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-emerald-400 font-bold shrink-0">💡 วินัยเติมเงิน Project 2X (ผลวิจัย 85 รอบ):</span>
+                        <span className="text-emerald-400 font-bold shrink-0">💡 วินัยเติมเงิน Project 2X (ผลตรวจทานคณิตศาสตร์):</span>
                         <span className="text-slate-300">
-                          เงินเดือน ฿150k ใช้ <strong>"100% Deficit DCA"</strong> (หรือ <strong>"Top-3 เคาะด่วน"</strong> เพื่อลดเวลาคีย์) คุมพอร์ตได้อยู่หมัด
+                          เงินเดือน ฿150k ใช้ <strong>"100% Deficit DCA"</strong> เป็นมาตรฐาน | หรือกด <strong>"Top-3 เคาะด่วน"</strong> หากต้องการลดเวลาคีย์เหลือ 3 ออเดอร์
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-300 pt-1 border-t border-[#2A2E45]/50">
-                        <span>• <strong>T1:</strong> Top-3 เคาะไว ลดออเดอร์ 63% (IRR 59.2% เท่าเดิม)</span>
-                        <span>• <strong>T2:</strong> ข้ามตัวแพงรีด Alpha +1.14%/ปี สำหรับพอร์ตหลัก</span>
-                        <span>• <strong>T3:</strong> ไม่บล็อกซื้อมีดตก (จุดก้นเหวคือจังหวะสะสมดีที่สุด)</span>
-                        <span>• <strong>T4:</strong> พอร์ต &lt; ฿3.5M เงินเติมคุมสัดส่วนอยู่หมัด (เปิด Trim เมื่อพอร์ตเกิน ฿3.5M)</span>
+                        <span>• <strong>T1:</strong> Top-3 ลดคำสั่งซื้อ 63% (ยอมแลก IRR ลดลงเล็กน้อย −0.28%/ปี)</span>
+                        <span>• <strong>T2:</strong> ข้ามตัวแพง (&gt;10% EMA150) เป็นทางเลือกเสริมสำหรับพอร์ตหุ้นคัดแล้ว</span>
+                        <span>• <strong>T3:</strong> ห้ามบล็อกซื้อมีดตก (จุดก้นเหวคือจังหวะสะสมที่คุ้มที่สุดของหุ้นผูกขาด)</span>
+                        <span>• <strong>T4:</strong> หากสิ้นเดือนหุ้นตัวไหนบวมเกิน 1.5x ของเป้า ให้ใช้กฎ Trim เสาที่ 2</span>
                       </div>
                     </div>
 

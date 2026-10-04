@@ -91,8 +91,9 @@ export function getTierVisualInfo(
   }
 
   // Tier 2: TO THE MOON 🚀 / MOON (No Chase) ⛔
-  if (traffic_light === 'TO_THE_MOON') {
-    const isNoChase = upperBadge.includes('NO CHASE') || upperBadge.includes('⛔');
+  const isNoChaseBadge = upperBadge.includes('NO CHASE') || upperBadge.includes('⛔') || (upperBadge.includes('MOON') && !upperBadge.includes('MOONSHOT'));
+  if (traffic_light === 'TO_THE_MOON' || isNoChaseBadge) {
+    const isNoChase = isNoChaseBadge;
     return {
       tierId: 'TO_THE_MOON',
       icon: isNoChase ? '⛔' : '🚀',
@@ -101,9 +102,9 @@ export function getTierVisualInfo(
       scenarioNum: scenario,
       scenarioTitle: badge,
       reasonTh: reason_th || reason,
-      spineClass: 'bg-[#D500F9] shadow-[0_0_10px_rgba(213,0,249,0.9)]',
-      badgeClass: 'text-purple-300',
-      textGlowClass: 'text-purple-300 font-bold',
+      spineClass: isNoChase ? 'bg-[#FF1744] shadow-[0_0_10px_rgba(255,23,68,0.9)]' : 'bg-[#D500F9] shadow-[0_0_10px_rgba(213,0,249,0.9)]',
+      badgeClass: isNoChase ? 'text-rose-400' : 'text-purple-300',
+      textGlowClass: isNoChase ? 'text-rose-400 font-bold' : 'text-purple-300 font-bold',
       isRecognized: true
     };
   }
