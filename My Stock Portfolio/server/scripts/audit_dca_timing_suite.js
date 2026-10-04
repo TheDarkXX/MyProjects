@@ -29,6 +29,16 @@ for (const b of BP) {
   for (const d of masterDates) { if (RAW[b.symbol].has(d)) last = RAW[b.symbol].get(d); if (last) ff.set(d, last); }
   FF[b.symbol] = ff;
 }
+const EXT = {}; // price > EMA150 * 1.10
+for (const b of BP) {
+  const m = new Map(); let e = null; const k = 2 / 151; let n = 0;
+  for (const d of masterDates) {
+    const p = FF[b.symbol].get(d); if (!p) continue;
+    e = e === null ? p : p * k + e * (1 - k); n++;
+    m.set(d, n >= 150 && p > e * 1.10);
+  }
+  EXT[b.symbol] = m;
+}
 
 function irr(cfs, dates) {
   const t0 = new Date(dates[0]).getTime();
@@ -54,7 +64,8 @@ console.log('  (v2 values missing-price stocks at $0 and silently drops buy mone
 
 // ---------- Corrected event-driven simulator ----------
 function sim({ start, end = '2026-08', alloc = 'DEF', trim = null, initCap = 0, salaryDay = 1, waitDays = 0,
-  cashRate = 0, monthly = 4200, burnIn = 12, dayOverride = null, trimMult = 1.5, valueAt = null }) {
+  cashRate = 0, monthly = 4200, burnIn = 12, dayOverride = null, trimMult = 1.5, valueAt = null,
+  feeFn = (i, a) => a * FEE, pauseReview = 'MONTHLY', pauseExp = false, pauseIdle = false }) {
   const months = [...new Set(masterDates.map(d => d.slice(0, 7)))].filter(m => m >= start && m <= end);
   const h = {}; BP.forEach(b => h[b.symbol] = 0);
   const cfs = [], cfd = [];
@@ -76,14 +87,37 @@ function sim({ start, end = '2026-08', alloc = 'DEF', trim = null, initCap = 0, 
   const stopAt = lastExec > lastMonthEnd ? lastExec : lastMonthEnd;
   const span = masterDates.filter(d => d >= firstDate && d <= stopAt);
   const val = d => { const v = {}; let t = 0; BP.forEach(b => { v[b.symbol] = h[b.symbol] * FF[b.symbol].get(d); t += v[b.symbol]; }); return { v, t }; };
+  let paused = new Set(), feesPaid = 0, monthOrders = 0, curMonth = '', idle = 0;
   const deficitBuy = (d, cash, mode) => {
+    if (d.slice(0, 7) !== curMonth) { curMonth = d.slice(0, 7); monthOrders = 0; }
     const { v, t } = val(d);
     let defs = BP.map(b => ({ b, def: Math.max(0, b.weight * (t + cash) - v[b.symbol]) }));
     if (mode === 'PROP') defs = BP.map(b => ({ b, def: b.weight }));
     if (mode === 'TOP3') defs = [...defs].sort((x, y) => y.def - x.def).slice(0, 3);
+    if (mode === 'TOP3X') {
+      const ok = defs.filter(x => !EXT[x.b.symbol].get(d) && x.def > 0);
+      defs = (ok.length ? ok : defs).sort((x, y) => y.def - x.def).slice(0, 3);
+    }
+    if (mode === 'PAUSE') {
+      if (pauseReview === 'MONTHLY' || mIdx % 3 === 0 || paused === null) {
+        paused = new Set(BP.filter(b => t > 0 && (v[b.symbol] / t >= b.weight || (pauseExp && EXT[b.symbol].get(d)))).map(b => b.symbol));
+        if (paused.size === BP.length) paused = new Set();
+      }
+      defs = BP.filter(b => !paused.has(b.symbol)).map(b => ({ b, def: b.weight }));
+      if (pauseIdle) {
+        const all = BP.reduce((a, b) => a + b.weight, 0);
+        const act = defs.reduce((a, x) => a + x.def, 0);
+        idle += cash * (1 - act / all);
+        cash = cash * act / all;
+        if (mIdx % 3 === 0 && idle > 0) { const pool = idle; idle = 0; deficitBuy(d, pool, 'DEF'); }
+      }
+    }
     let s = defs.reduce((a, x) => a + x.def, 0);
-    if (s <= 0) { defs = BP.map(b => ({ b, def: b.weight })); s = 1; }
-    defs.forEach(x => { const a = cash * x.def / s; if (a >= 5) { orders++; h[x.b.symbol] += a * (1 - FEE) / FF[x.b.symbol].get(d); } });
+    if (s <= 0) { defs = BP.map(b => ({ b, def: b.weight })); s = BP.reduce((a, b) => a + b.weight, 0); }
+    defs.forEach(x => {
+      const a = cash * x.def / s;
+      if (a >= 5) { orders++; const fee = feeFn(monthOrders++, a); feesPaid += fee; h[x.b.symbol] += (a - fee) / FF[x.b.symbol].get(d); }
+    });
   };
   for (let i = 0; i < span.length; i++) {
     const d = span[i];
@@ -107,9 +141,9 @@ function sim({ start, end = '2026-08', alloc = 'DEF', trim = null, initCap = 0, 
     mIdx++;
   }
   const ld = valueAt || masterDates[masterDates.length - 1];
-  const fv = BP.reduce((s, b) => s + h[b.symbol] * FF[b.symbol].get(ld), 0);
+  const fv = BP.reduce((s, b) => s + h[b.symbol] * FF[b.symbol].get(ld), 0) + idle;
   cfs.push(fv); cfd.push(ld);
-  return { irr: irr(cfs, cfd), maxConc: maxConc * 100, over, orders: orders / months.length, sells };
+  return { irr: irr(cfs, cfd), maxConc: maxConc * 100, over, orders: orders / months.length, sells, feesPaid };
 }
 
 const ymRange = (a, b) => [...new Set(masterDates.map(d => d.slice(0, 7)))].filter(m => m >= a && m <= b);
@@ -123,8 +157,62 @@ function compare(label, rows, base) {
   for (const [name, cfg] of rows) {
     const R = W.map(s => sim({ start: s, ...cfg }));
     const d = R.map((r, i) => r.irr - B[i].irr);
-    console.log(`${name.padEnd(36)} IRR ${med(R.map(r => r.irr)).toFixed(2)} | Δ ${f(med(d))}%/yr win ${(d.filter(x => x > 0).length / d.length * 100).toFixed(0)}% | maxConc(post-12m) ${med(R.map(r => r.maxConc)).toFixed(1)}% | months>1.5x ${med(R.map(r => r.over)).toFixed(0)} | orders/mo ${med(R.map(r => r.orders)).toFixed(1)} | sells ${med(R.map(r => r.sells)).toFixed(0)}`);
+    console.log(`${name.padEnd(36)} IRR ${med(R.map(r => r.irr)).toFixed(2)} | Δ ${f(med(d))}%/yr win ${(d.filter(x => x > 0).length / d.length * 100).toFixed(0)}% | maxConc(post-12m) ${med(R.map(r => r.maxConc)).toFixed(1)}% | months>1.5x ${med(R.map(r => r.over)).toFixed(0)} | orders/mo ${med(R.map(r => r.orders)).toFixed(1)} | sells ${med(R.map(r => r.sells)).toFixed(0)} | fees $${med(R.map(r => r.feesPaid)).toFixed(0)}`);
   }
+}
+
+if (process.argv[2] === 'combo') {
+  const W = (i, a) => a * 0.0010 * 1.07;
+  const rows = x => [
+    ['C Top-3', { alloc: 'TOP3', feeFn: W, ...x }],
+    ['C Top-3 + skip >10% EMA150', { alloc: 'TOP3X', feeFn: W, ...x }],
+    ['A Auto equal', { alloc: 'PROP', feeFn: W, ...x }],
+    ['P pause qtr (money redistributed)', { alloc: 'PAUSE', pauseReview: 'QUARTERLY', feeFn: W, ...x }],
+    ['P pause qtr (paused money idle)', { alloc: 'PAUSE', pauseReview: 'QUARTERLY', pauseIdle: true, feeFn: W, ...x }]
+  ];
+  for (const [label, x] of [
+    ['CB full to 2026-09, $0', {}],
+    ['CB full to 2026-09, $150k', { initCap: 150000 }],
+    ['CB valued 2022-12-30 (bear), $0', { end: '2022-12', valueAt: '2022-12-30' }],
+    ['CB valued 2023-12-29, $0', { end: '2023-12', valueAt: '2023-12-29' }]
+  ]) compare(label, rows(x), { alloc: 'DEF', feeFn: W, ...x });
+  process.exit(0);
+}
+
+if (process.argv[2] === 'broker') {
+  const FEES = {
+    WEBULL: (i, a) => a * 0.0010 * 1.07,
+    WEBULL_DCA_FREE: () => 0,
+    DIME_1ST_FREE: (i, a) => i === 0 ? 0 : a * 0.0015 * 1.07,
+    DIME_NO_FREE: (i, a) => a * 0.0015 * 1.07,
+    HYPO_MIN_1USD: (i, a) => Math.max(a * 0.0010, 1)
+  };
+  const S = {
+    'B Deficit (manual)': { alloc: 'DEF' },
+    'C Top-3 (manual)': { alloc: 'TOP3' },
+    'C Top-3 + skip >10% EMA150': { alloc: 'TOP3X' },
+    'A Auto equal (no pause)': { alloc: 'PROP' },
+    'P Auto + pause overweight (monthly)': { alloc: 'PAUSE', pauseReview: 'MONTHLY' },
+    'P Auto + pause overweight (quarterly)': { alloc: 'PAUSE', pauseReview: 'QUARTERLY' },
+    'P Auto + pause over/expensive (qtr)': { alloc: 'PAUSE', pauseReview: 'QUARTERLY', pauseExp: true }
+  };
+  for (const cap of [0, 150000]) {
+    compare(`BR-1 STRATEGIES @ Webull fee, start capital $${cap / 1000}k`,
+      Object.entries(S).map(([n, c]) => [n, { ...c, initCap: cap, feeFn: FEES.WEBULL }]),
+      { alloc: 'DEF', initCap: cap, feeFn: FEES.WEBULL });
+  }
+  for (const [fname, fn] of Object.entries(FEES)) {
+    compare(`BR-2 FEE MODEL ${fname} ($0 start, delta vs Deficit on same fee)`,
+      ['B Deficit (manual)', 'C Top-3 (manual)', 'A Auto equal (no pause)', 'P Auto + pause overweight (quarterly)'].map(n => [n, { ...S[n], feeFn: fn }]),
+      { alloc: 'DEF', feeFn: fn });
+  }
+  console.log('\n--- BR-3 SAME STRATEGY, DIFFERENT BROKER (Top-3, $0 start): delta vs Webull ---');
+  const base = clean.map(s => sim({ start: s, alloc: 'TOP3', feeFn: FEES.WEBULL }).irr);
+  for (const [fname, fn] of Object.entries(FEES)) {
+    const d = clean.map((s, i) => sim({ start: s, alloc: 'TOP3', feeFn: fn }).irr - base[i]);
+    console.log(`  ${fname.padEnd(18)} Δ ${f(med(d), 3)}%/yr`);
+  }
+  process.exit(0);
 }
 
 if (process.argv[2] === 'trim') {
