@@ -184,4 +184,5 @@
    - **เกณฑ์แนะนำ:** พอร์ตควรมีเงินสดสำรอง **5% – 15%** เสมอ เพื่อเป็นกระสุนรอรับโอกาส และมีสัดส่วนหุ้น Watchlist ในปริมาณที่บริหารจัดการได้จริง
 
 ---
-*คู่มือฉบับนี้เชื่อมโยงและบังคับใช้ร่วมกับ `BlueprintEditor.tsx`, `BlueprintPieChart.tsx`, `StrategyConfigs.ts`, และฐานข้อมูล `stock.db` ในโปรเจกต์ My Stock Portfolio อย่างสมบูรณ์*
+*คู่มือฉบับนี้เชื่อมโยงและบังคับใช้ร่วมกับ `BlueprintEditor.tsx`, `BlueprintPieChart.tsx`, `StrategyConfigs.ts`, และฐานข้อมูล `stock.db` ในโปรเจกต์ My Stock Portfolio อย่างสมบูรณ์*  
+*สำหรับคู่มือขั้นตอนการเคาะซื้อจริงหน้างาน อ่านต่อได้ที่: [คู่มือปฏิบัติการจริง Smart Rebalance & Inflow DCA Execution Manual](file:///c:/My%20Claw/MyProjects/My%20Stock%20Portfolio/docs/REBALANCE_USER_MANUAL.md)*
