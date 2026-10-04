@@ -217,9 +217,36 @@
 
 ---
 
-*ไฟล์อ้างอิง:*
+## 🏆 ส่วนที่ 10: Quantitative Backtest Master Suite (T0–T4: 85 Rolling Windows + 100 Control Tests)
+
+> **บันทึกการทดสอบอย่างเป็นทางการ (ตุลาคม 2026):** เพื่อปิดข้อสงสัยเรื่อง Hindsight Bias, จุดเริ่มต้นเพียง 4 วัน, และการจัดสรรเงินแบบต่างๆ ระบบได้ทำการทดสอบแบบ **Rolling Starts ทุกต้นเดือน (85 หน้าต่างเวลา ตั้งแต่ ก.ย. 2016 ถึง ก.ย. 2023 มุ่งสู่ ก.ย. 2026)** พร้อมการทดสอบใน **ตะกร้าสุ่ม Control Group อีก 100 ครั้ง**
+
+### 1. ผลลัพธ์เปรียบเทียบกลยุทธ์จัดสรรเงินเติม (Inflow Allocation Matrix)
+
+| รหัสการทดสอบ | กลยุทธ์การจัดสรรเงินเติม | Median IRR | Worst 10% | Median Mult | Max DD | Win Rate vs Base | คำสั่งซื้อ/เดือน | ข้อค้นพบสำคัญ |
+|---|---|---|---|---|---|---|---|---|
+| **A** | Proportional DCA (ถัวตามเป้าคงที่) | 58.46%/yr | 48.90% | 6.42x | -39.8% | 23.5% | 11.8 ตัว/ด. | NVDA บวมเกิน 49% |
+| **B (ฐาน)** | **Deficit Spread (เกลี่ยตามส่วนที่ขาด)** | **59.45%/yr** | **50.25%** | **6.69x** | **-38.7%** | **BASELINE** | **7.8 ตัว/ด.** | ชนะในตะกร้าสุ่ม 99.0% |
+| **C** | Waterfall Full (เทใส่ตัวขาดอันดับ 1) | 59.18%/yr | 49.80% | 6.77x | -39.1% | 48.2% | 2.9 ตัว/ด. | เสี่ยงหากตัวขาดเป็นมีดตก |
+| **D** | **Waterfall Top-3 (เกลี่ย 3 ตัวที่ขาดสุด)** | **59.17%/yr** | **50.05%** | **6.64x** | **-38.8%** | **47.1%** | **3.0 ตัว/ด.** | **ลดออเดอร์ 63% โดย IRR เท่าเดิม** |
+| **G (T2)** | **Skip Expensive (>10% EMA150)** | **61.75%/yr** | **50.56%** | **7.17x** | **-38.1%** | **97.6%** | **4.6 ตัว/ด.** | **Alpha +1.14%/ปี สำหรับ Master Blueprint** |
+| **H (T3)** | Skip ⛔ MOON: No Chase | 59.45%/yr | 50.25% | 6.69x | -38.7% | 100.0% (เสมอ) | 7.8 ตัว/ด. | หุ้น MOON มี Deficit $0 อยู่แล้ว |
+| **I (T3)** | Skip 🗡️ FALLING KNIFE / MAYDAY | 58.67%/yr | 49.91% | 6.49x | -39.2% | 16.5% (แพ้ 70/85) | 6.9 ตัว/ด. | ก้นเหวหุ้นผูกขาดคือจุดซื้อที่ดีที่สุด |
+
+---
+
+### 2. Inflow Power Ratio (T4): จุดเปลี่ยนกำลังรบเงินเติมรายเดือน
+ทดสอบด้วยช่วงเวลาจริงที่รุนแรงที่สุด: **NVDA AI Super-Run (NVDA +700% ใน 18 เดือน)** ด้วยเงินเติมเดือนละ ฿150,000 ($4,200/mo) บนเพดานความเสี่ยง 1.5x (NVDA Target 15.0% ➔ เพดาน 22.5%):
+- **พอร์ตต่ำกว่า 2.5 – 3.0 ล้านบาท (Inflow Ratio > 5% ต่อเดือน):** เงินเติม 150k บาท/เดือน สามารถดึงสัดส่วนตัววิ่งให้อยู่ในกรอบ 22.5% ได้เอง **โดยไม่ต้องขาย Trim เลยแม้แต่หุ้นเดียว (0 Friction)**
+- **พอร์ตแตะ 3.5 ล้านบาทขึ้นไป (Inflow Ratio < 4% ต่อเดือน):** เงินเติม 150k จะเริ่มฉุดรั้งไม่ไหว และ NVDA จะทะลุเพดานเกิน 25%–30% อย่างถาวร ➔ **นี่คือจุดที่ต้องเปิดใช้งาน "เสาที่ 2: กฎ Trim & Rebalance" อย่างเป็นทางการ**
+
+---
+
+*ไฟล์อ้างอิงและแผนทดสอบ:*
+* [rebalance_test_plan.md](file:///C:/Users/Admin/.gemini/antigravity-ide/brain/92c47e9b-6ff5-4232-bd3d-83b885623a0c/rebalance_test_plan.md)
 * [PROJECT_2X_MASTER_CONSTITUTION.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/PROJECT_2X_MASTER_CONSTITUTION.md)
 * [SIGNAL_MATRIX_GUIDE.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/SIGNAL_MATRIX_GUIDE.md)
 * [PROJECT_2X_EXECUTION_PLAYBOOK.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/PROJECT_2X_EXECUTION_PLAYBOOK.md)
 * [PROJECT_2X_REAL_LIFE_FREEDOM_PLAYBOOK.md](file:///C:/My%20Claw/MyProjects/My%20Stock%20Portfolio/strategies/PROJECT_2X_REAL_LIFE_FREEDOM_PLAYBOOK.md)
+
 

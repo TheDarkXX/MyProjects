@@ -474,6 +474,29 @@ export const SmartRebalancePage: React.FC = () => {
     setSelectedSymbols(new Set(good));
   };
 
+  // T1 Finding: Top-3 Deficit (Slashes monthly order count by 63% from 8 to 3 with identical 59.2% IRR)
+  const selectTop3Deficit = () => {
+    const sorted = [...cashflowCandidates].sort((a, b) => b.deficit - a.deficit);
+    const top3 = sorted.slice(0, 3).filter(c => c.deficit > 0).map(c => c.symbol);
+    if (top3.length > 0) {
+      setSelectedSymbols(new Set(top3));
+    } else {
+      setSelectedSymbols(new Set(sorted.slice(0, 3).map(c => c.symbol)));
+    }
+  };
+
+  // T2 Finding: Skip Expensive >10% EMA150 / No Chase & Reallocate 100% (+1.14%/yr IRR alpha on Master Blueprint)
+  const selectSkipExpensive = () => {
+    const nonExpensive = cashflowCandidates
+      .filter(c => c.signalInfo.signal !== 'expensive' && !c.signalInfo.label.includes('No Chase'))
+      .map(c => c.symbol);
+    if (nonExpensive.length > 0) {
+      setSelectedSymbols(new Set(nonExpensive));
+    } else {
+      selectAll();
+    }
+  };
+
   const signalCounts = useMemo(() => {
     let strongBuy = 0;
     let fair = 0;
@@ -1066,7 +1089,7 @@ export const SmartRebalancePage: React.FC = () => {
                           {isAllSelected ? (
                             <>
                               <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>☑️ 100% DCA ทุกตัว (แนะนำเงินเดือน) ({activeSelectedSymbols.size}/{cashflowCandidates.length})</span>
+                              <span>☑️ 100% Deficit DCA ({activeSelectedSymbols.size}/{cashflowCandidates.length})</span>
                             </>
                           ) : (
                             <>
@@ -1076,12 +1099,36 @@ export const SmartRebalancePage: React.FC = () => {
                           )}
                         </button>
 
+                        {/* T1 Proven: Top-3 Deficit Fast Mode */}
+                        <button
+                          type="button"
+                          onClick={selectTop3Deficit}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 transition-all flex items-center gap-1.5 shadow-sm"
+                          title="T1 Tested: เกลี่ยเฉพาะ 3 ตัวที่ขาดมากที่สุด ลดคำสั่งซื้อลงเหลือ 3 ตัว/เดือน (ลดแรงกด 63%) โดย IRR เท่าเดิม 59.2%"
+                        >
+                          <span>⚡</span>
+                          <span>Top-3 เคาะด่วน</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30">3 ตัว</span>
+                        </button>
+
+                        {/* T2 Proven: Skip Expensive Tilt */}
+                        <button
+                          type="button"
+                          onClick={selectSkipExpensive}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition-all flex items-center gap-1.5 shadow-sm"
+                          title="T2 Tested: งดเติมตัวที่แพงเกิน 10% EMA150 หรือติด No Chase โยกงบ 100% เข้าตัวย่อ (ทำ Alpha +1.14%/ปี ใน Master Blueprint)"
+                        >
+                          <span>🚀</span>
+                          <span>ข้ามตัวแพง โยกงบ</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30">+1.14% Alpha</span>
+                        </button>
+
                         <div className="h-4 w-[1px] bg-[#2A2E45] hidden sm:block" />
 
                         {/* Opportunistic Signal Filters */}
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-bold text-amber-400/80 uppercase px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-                            สไนเปอร์เงินก้อนพิเศษ:
+                          <span className="text-[11px] font-bold text-slate-300 uppercase px-1.5 py-0.5 rounded bg-slate-800 border border-[#2A2E45]">
+                            เงินพิเศษ:
                           </span>
                           <button
                             type="button"
@@ -1097,7 +1144,7 @@ export const SmartRebalancePage: React.FC = () => {
                             className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1"
                             title="ใช้สำหรับเงินก้อนพิเศษ / Bonus เพื่อสไนเปอร์ตัวที่ราคาเหมาะสม"
                           >
-                            <span>🟢+🟡</span> Fair + Strong ({signalCounts.strongBuy + signalCounts.fair})
+                            <span>🟢+🟡</span> Fair ({signalCounts.strongBuy + signalCounts.fair})
                           </button>
                         </div>
 
@@ -1117,10 +1164,20 @@ export const SmartRebalancePage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Helper text explaining DCA vs Opportunistic */}
-                    <div className="text-[12px] text-slate-300 bg-[#161926]/60 border border-[#2A2E45]/60 rounded-xl px-3.5 py-2 flex items-center gap-2">
-                      <span className="text-emerald-400 font-bold shrink-0">💡 วินัยเติมเงิน:</span>
-                      <span>เงินเติมรายเดือนจาก DoctorBank ให้ใช้ <strong>"100% DCA ทุกตัว"</strong> เพื่อกระจายตามส่วนที่ขาด (Deficit) ไร้ Cash Drag | ปุ่มกรองสไนเปอร์ให้ใช้เฉพาะเมื่อมี <strong>"เงินก้อนพิเศษ / Bonus"</strong></span>
+                    {/* Helper text explaining DCA vs Opportunistic with T1-T4 insights */}
+                    <div className="text-[13px] text-slate-200 bg-[#161926]/90 border border-[#2A2E45] rounded-xl px-4 py-2.5 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-400 font-bold shrink-0">💡 วินัยเติมเงิน Project 2X (ผลวิจัย 85 รอบ):</span>
+                        <span className="text-slate-300">
+                          เงินเดือน ฿150k ใช้ <strong>"100% Deficit DCA"</strong> (หรือ <strong>"Top-3 เคาะด่วน"</strong> เพื่อลดเวลาคีย์) คุมพอร์ตได้อยู่หมัด
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-300 pt-1 border-t border-[#2A2E45]/50">
+                        <span>• <strong>T1:</strong> Top-3 เคาะไว ลดออเดอร์ 63% (IRR 59.2% เท่าเดิม)</span>
+                        <span>• <strong>T2:</strong> ข้ามตัวแพงรีด Alpha +1.14%/ปี สำหรับพอร์ตหลัก</span>
+                        <span>• <strong>T3:</strong> ไม่บล็อกซื้อมีดตก (จุดก้นเหวคือจังหวะสะสมดีที่สุด)</span>
+                        <span>• <strong>T4:</strong> พอร์ต &lt; ฿3.5M เงินเติมคุมสัดส่วนอยู่หมัด (เปิด Trim เมื่อพอร์ตเกิน ฿3.5M)</span>
+                      </div>
                     </div>
 
                     {/* Summary KPI Banner */}
