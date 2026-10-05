@@ -956,52 +956,73 @@ export const SmartRebalancePage: React.FC = () => {
                         {currency === 'THB' ? (
                           <>
                             {[
-                              { label: '฿100k', val: 100000 / effectiveRate },
-                              { label: '฿150k ⭐', val: 150000 / effectiveRate, highlight: true },
-                              { label: '฿200k 🚀', val: 200000 / effectiveRate },
-                              { label: '฿300k 💎', val: 300000 / effectiveRate },
-                            ].map(preset => (
-                              <button
-                                key={preset.label}
-                                type="button"
-                                onClick={() => setDepositAmountUsd(preset.val)}
-                                className={clsx(
-                                  "px-2.5 py-1 text-xs font-bold rounded-lg transition-all border",
-                                  preset.highlight
-                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30 shadow-sm"
-                                    : "bg-[#1A1D2D] hover:bg-[#2A2E45] border-[#2A2E45] text-white"
-                                )}
-                              >
-                                {preset.label}
-                              </button>
-                            ))}
+                              { label: '฿5k', val: 5000 / effectiveRate, title: '฿5,000' },
+                              { label: '฿10k', val: 10000 / effectiveRate, title: '฿10,000' },
+                              { label: '฿20k', val: 20000 / effectiveRate, title: '฿20,000' },
+                              { label: '฿30k', val: 30000 / effectiveRate, title: '฿30,000' },
+                              { label: '฿50k', val: 50000 / effectiveRate, title: '฿50,000' },
+                              { label: '฿100k', val: 100000 / effectiveRate, title: '฿100,000' },
+                              { label: '฿150k ⭐', val: 150000 / effectiveRate, highlight: true, title: '฿150,000 (เป้าแนะนำ)' },
+                              { label: '฿200k 🚀', val: 200000 / effectiveRate, title: '฿200,000' },
+                              { label: '฿300k 💎', val: 300000 / effectiveRate, title: '฿300,000' },
+                            ].map(preset => {
+                              const isSelected = Math.abs(Math.round(depositAmountUsd * effectiveRate) - Math.round(preset.val * effectiveRate)) < 50;
+                              return (
+                                <button
+                                  key={preset.label}
+                                  type="button"
+                                  title={preset.title}
+                                  onClick={() => setDepositAmountUsd(preset.val)}
+                                  className={clsx(
+                                    "px-2.5 py-1 text-xs font-bold rounded-lg transition-all border",
+                                    isSelected
+                                      ? "bg-emerald-500/30 text-emerald-200 border-emerald-400 ring-1 ring-emerald-400/60 shadow-sm"
+                                      : preset.highlight
+                                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25"
+                                      : "bg-[#1A1D2D] hover:bg-[#2A2E45] border-[#2A2E45] text-white"
+                                  )}
+                                >
+                                  {preset.label}
+                                </button>
+                              );
+                            })}
                           </>
                         ) : (
                           <>
                             {[
-                              { label: '$2,500', val: 2500 },
-                              { label: '$4,200 ⭐', val: 4200, highlight: true },
-                              { label: '$5,700 🚀', val: 5700 },
-                              { label: '$8,500 💎', val: 8500 },
-                            ].map(preset => (
-                              <button
-                                key={preset.label}
-                                type="button"
-                                onClick={() => setDepositAmountUsd(preset.val)}
-                                className={clsx(
-                                  "px-2.5 py-1 text-xs font-bold rounded-lg transition-all border",
-                                  preset.highlight
-                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30 shadow-sm"
-                                    : "bg-[#1A1D2D] hover:bg-[#2A2E45] border-[#2A2E45] text-white"
-                                )}
-                              >
-                                {preset.label}
-                              </button>
-                            ))}
+                              { label: '$150', val: 150, title: '$150 (~฿5,000)' },
+                              { label: '$300', val: 300, title: '$300 (~฿10,000)' },
+                              { label: '$600', val: 600, title: '$600 (~฿20,000)' },
+                              { label: '$1,000', val: 1000, title: '$1,000 (~฿33,000)' },
+                              { label: '$2,500', val: 2500, title: '$2,500' },
+                              { label: '$4,200 ⭐', val: 4200, highlight: true, title: '$4,200 (เป้าแนะนำ)' },
+                              { label: '$5,700 🚀', val: 5700, title: '$5,700' },
+                              { label: '$8,500 💎', val: 8500, title: '$8,500' },
+                            ].map(preset => {
+                              const isSelected = Math.abs(depositAmountUsd - preset.val) < 2;
+                              return (
+                                <button
+                                  key={preset.label}
+                                  type="button"
+                                  title={preset.title}
+                                  onClick={() => setDepositAmountUsd(preset.val)}
+                                  className={clsx(
+                                    "px-2.5 py-1 text-xs font-bold rounded-lg transition-all border",
+                                    isSelected
+                                      ? "bg-emerald-500/30 text-emerald-200 border-emerald-400 ring-1 ring-emerald-400/60 shadow-sm"
+                                      : preset.highlight
+                                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25"
+                                      : "bg-[#1A1D2D] hover:bg-[#2A2E45] border-[#2A2E45] text-white"
+                                  )}
+                                >
+                                  {preset.label}
+                                </button>
+                              );
+                            })}
                           </>
                         )}
                         <span className="text-xs text-slate-500 mx-1">|</span>
-                        {(currency === 'THB' ? [10000, 50000] : [500, 1000]).map(amt => (
+                        {(currency === 'THB' ? [5000, 10000, 50000] : [100, 500, 1000]).map(amt => (
                           <button
                             key={amt}
                             type="button"
