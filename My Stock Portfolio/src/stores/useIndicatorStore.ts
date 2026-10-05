@@ -47,11 +47,11 @@ function loadSavedConfig(): IndicatorSettings {
           ...(parsed.paneLayout?.assignments || {}),
         },
       },
-      ema1: { ...DEFAULT_INDICATOR_SETTINGS.ema1, ...(parsed.ema1 || {}) },
-      ema2: { ...DEFAULT_INDICATOR_SETTINGS.ema2, ...(parsed.ema2 || {}) },
-      ema3: { ...DEFAULT_INDICATOR_SETTINGS.ema3, ...(parsed.ema3 || {}) },
-      ema4: { ...DEFAULT_INDICATOR_SETTINGS.ema4, ...(parsed.ema4 || {}) },
-      ema5: { ...DEFAULT_INDICATOR_SETTINGS.ema5, ...(parsed.ema5 || {}) },
+      ema1: { ...DEFAULT_INDICATOR_SETTINGS.ema1, ...(parsed.ema1 || {}), color: parsed.ema1?.color || DEFAULT_INDICATOR_SETTINGS.ema1.color, name: parsed.ema1?.name || DEFAULT_INDICATOR_SETTINGS.ema1.name },
+      ema2: { ...DEFAULT_INDICATOR_SETTINGS.ema2, ...(parsed.ema2 || {}), color: parsed.ema2?.color || DEFAULT_INDICATOR_SETTINGS.ema2.color, name: parsed.ema2?.name || DEFAULT_INDICATOR_SETTINGS.ema2.name },
+      ema3: { ...DEFAULT_INDICATOR_SETTINGS.ema3, ...(parsed.ema3 || {}), color: parsed.ema3?.color || DEFAULT_INDICATOR_SETTINGS.ema3.color, name: parsed.ema3?.name || DEFAULT_INDICATOR_SETTINGS.ema3.name },
+      ema4: { ...DEFAULT_INDICATOR_SETTINGS.ema4, ...(parsed.ema4 || {}), color: parsed.ema4?.color || DEFAULT_INDICATOR_SETTINGS.ema4.color, name: parsed.ema4?.name || DEFAULT_INDICATOR_SETTINGS.ema4.name },
+      ema5: { ...DEFAULT_INDICATOR_SETTINGS.ema5, ...(parsed.ema5 || {}), color: parsed.ema5?.color || DEFAULT_INDICATOR_SETTINGS.ema5.color, name: parsed.ema5?.name || DEFAULT_INDICATOR_SETTINGS.ema5.name },
       liveBadge: { ...DEFAULT_INDICATOR_SETTINGS.liveBadge, ...(parsed.liveBadge || {}) },
       targetConsensus: { ...DEFAULT_INDICATOR_SETTINGS.targetConsensus!, ...(parsed.targetConsensus || {}) },
       envelope: { ...DEFAULT_INDICATOR_SETTINGS.envelope, ...(parsed.envelope || {}) },
@@ -221,11 +221,12 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
   },
 
   addCustomColor: (color: string) => {
-    if (!color) return;
+    if (!color || typeof color !== 'string') return;
     const prev = get().config;
-    const normalized = color.toUpperCase();
+    const normalized = color.trim().toUpperCase();
+    if (!normalized) return;
     const existing = prev.customColors || [];
-    const filtered = existing.filter(c => c && c.toUpperCase() !== normalized);
+    const filtered = existing.filter(c => c && typeof c === 'string' && c.trim().toUpperCase() !== normalized);
     const nextColors = [normalized, ...filtered].slice(0, 5);
     const next: IndicatorSettings = {
       ...prev,

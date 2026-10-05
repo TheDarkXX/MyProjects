@@ -11,7 +11,7 @@ const failedParqet = new Set<string>();
 const failedGoogle = new Set<string>();
 
 export const StockLogo: React.FC<StockLogoProps> = ({ symbol, domain, size = 20 }) => {
-  const cleanSymbol = symbol.toUpperCase().replace('/', '.');
+  const cleanSymbol = (symbol || '').toUpperCase().replace('/', '.');
   
   // 0: Parqet, 1: Google Favicon, 2: Monogram Fallback
   const [stage, setStage] = useState<number>(() => {

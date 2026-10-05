@@ -103,21 +103,23 @@ const RICH_SYMBOL_OPTIONS = [
 ];
 
 interface ColorPickerDropdownProps {
-  color: string;
+  color?: string | null;
   onChange: (color: string) => void;
   label?: string;
 }
 
 const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChange, label }) => {
+  const safeColor = (typeof color === 'string' && color.trim()) ? color.trim() : '#FFFFFF';
   const [isOpen, setIsOpen] = useState(false);
-  const [hexInput, setHexInput] = useState(color);
+  const [hexInput, setHexInput] = useState(safeColor);
   const containerRef = useRef<HTMLDivElement>(null);
   const isPickingRef = useRef(false);
   const customColors = useIndicatorStore((s) => s.config.customColors) || [];
   const addCustomColor = useIndicatorStore((s) => s.addCustomColor);
 
   useEffect(() => {
-    setHexInput(color.toUpperCase());
+    const valid = (typeof color === 'string' && color.trim()) ? color.trim() : '#FFFFFF';
+    setHexInput(valid.toUpperCase());
   }, [color]);
 
   useEffect(() => {
@@ -134,7 +136,7 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
   }, [isOpen]);
 
   const handleApplyHex = () => {
-    let val = hexInput.trim();
+    let val = (hexInput || '').trim();
     if (!val.startsWith('#')) val = '#' + val;
     if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
       const upper = val.toUpperCase();
@@ -151,7 +153,7 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
         onClick={() => setIsOpen(!isOpen)}
         title={label || 'Change Color'}
         className="w-6 h-6 rounded-md border border-slate-600 shadow-sm flex items-center justify-center p-0.5 hover:scale-105 transition-all cursor-pointer"
-        style={{ backgroundColor: color }}
+        style={{ backgroundColor: safeColor }}
       >
         <span className="sr-only">Choose Color</span>
       </button>
@@ -176,7 +178,7 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
                   style={{ backgroundColor: c }}
                   title={c}
                 >
-                  {color.toLowerCase() === c.toLowerCase() && (
+                  {safeColor.toLowerCase() === (c || '').toLowerCase() && (
                     <Check className={`w-3.5 h-3.5 ${['#FFFFFF', '#FFE600', '#00E5FF', '#FFF176'].includes(c) ? 'text-slate-950' : 'text-white'}`} />
                   )}
                 </button>
@@ -205,7 +207,7 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
                   style={{ backgroundColor: c }}
                   title={`Custom ${c}`}
                 >
-                  {color.toLowerCase() === c.toLowerCase() && (
+                  {safeColor.toLowerCase() === (c || '').toLowerCase() && (
                     <Check className={`w-3.5 h-3.5 ${['#FFFFFF', '#FFE600', '#00E5FF', '#FFF176'].includes(c) ? 'text-slate-950' : 'text-white'}`} />
                   )}
                 </button>
@@ -216,18 +218,18 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
                 <Plus className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform pointer-events-none" />
                 <input
                   type="color"
-                  value={color.startsWith('#') && color.length === 7 ? color : '#00E5FF'}
+                  value={safeColor.startsWith('#') && safeColor.length === 7 ? safeColor : '#00E5FF'}
                   onFocus={() => { isPickingRef.current = true; }}
                   onBlur={() => {
                     setTimeout(() => { isPickingRef.current = false; }, 250);
                   }}
                   onInput={(e) => {
-                    const chosen = (e.target as HTMLInputElement).value.toUpperCase();
+                    const chosen = ((e.target as HTMLInputElement).value || '').toUpperCase();
                     onChange(chosen);
                     setHexInput(chosen);
                   }}
                   onChange={(e) => {
-                    const chosen = (e.target as HTMLInputElement).value.toUpperCase();
+                    const chosen = ((e.target as HTMLInputElement).value || '').toUpperCase();
                     onChange(chosen);
                     setHexInput(chosen);
                     addCustomColor(chosen);
@@ -246,12 +248,12 @@ const ColorPickerDropdown: React.FC<ColorPickerDropdownProps> = ({ color, onChan
           <div className="flex items-center gap-1.5">
             <div
               className="w-6 h-6 rounded-md border border-slate-700 shrink-0"
-              style={{ backgroundColor: hexInput.length === 7 ? hexInput : color }}
+              style={{ backgroundColor: (hexInput && hexInput.length === 7) ? hexInput : safeColor }}
             />
             <input
               type="text"
-              value={hexInput}
-              onChange={(e) => setHexInput(e.target.value.toUpperCase())}
+              value={hexInput || ''}
+              onChange={(e) => setHexInput(((e.target.value || '')).toUpperCase())}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleApplyHex();
               }}
@@ -1767,7 +1769,22 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
 
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
               {emaLines.map((key) => {
-                const line = config[key] || DEFAULT_INDICATOR_SETTINGS[key];
+                const fallbackLine = DEFAULT_INDICATOR_SETTINGS[key] || {
+                  id: key,
+                  name: key.toUpperCase(),
+                  visible: false,
+                  period: 20,
+                  color: '#FFFFFF',
+                  lineWidth: 2,
+                  lineStyle: 'Solid' as const,
+                };
+                const userLine = config[key] || {};
+                const line = {
+                  ...fallbackLine,
+                  ...userLine,
+                  color: userLine.color || fallbackLine.color || '#FFFFFF',
+                  name: userLine.name || fallbackLine.name || key.toUpperCase(),
+                };
                 return (
                   <div
                     key={key}
@@ -2374,7 +2391,7 @@ export const IndicatorManagerPopover: React.FC<IndicatorManagerPopoverProps> = (
                                 : 'text-slate-400 hover:text-white'
                             }`}
                           >
-                            {size.toUpperCase()}
+                            {(size || '').toUpperCase()}
                           </button>
                         ))}
                       </div>

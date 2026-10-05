@@ -226,7 +226,7 @@ const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       id: transactionToEdit?.id,
       portfolioId: transactionToEdit?.portfolioId || selectedPortfolioId,
       date: localInputToUTCISO(formData.date),
-      symbol: formData.symbol.toUpperCase().trim(),
+      symbol: (formData.symbol || '').toUpperCase().trim(),
       type: getPayloadType(),
       asset: formData.asset,
       amount: finalAmount,

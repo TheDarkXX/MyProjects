@@ -296,7 +296,7 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
 
         // 3.1 Re-normalize Target Series (preserve points from timeframeStartDate, base at fromDateStr)
         let newTargetReturn: number | null = null;
-        if (targetSeries && targetSeriesApiRef.current) {
+        if (targetSeries && targetSeries.symbol && targetSeriesApiRef.current) {
           const cleanTarget = targetSeries.symbol.toUpperCase();
           const rawTarget = rawMap[cleanTarget];
           if (rawTarget) {
@@ -311,7 +311,7 @@ export const CompareLWChart: React.FC<CompareLWChartProps> = ({
         // 3.2 Re-normalize Reference Series (preserve points from timeframeStartDate, base at fromDateStr)
         const newRefReturns: Record<string, number | null> = {};
         for (const ref of refSeriesList) {
-          if (!ref.visible) continue;
+          if (!ref.visible || !ref.symbol) continue;
           const seriesApi = refSeriesMapRef.current.get(ref.id);
           if (!seriesApi) continue;
 

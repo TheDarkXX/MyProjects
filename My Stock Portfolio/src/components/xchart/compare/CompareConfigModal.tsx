@@ -155,11 +155,11 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
     if (!cleanSym) return;
 
     // Check if duplicate of target or existing ref
-    if (cleanSym === targetSymbol.toUpperCase()) {
+    if (targetSymbol && cleanSym === targetSymbol.toUpperCase()) {
       alert(`ไม่สามารถเพิ่ม ${cleanSym} เป็น Ref ได้เนื่องจากเป็น Target อยู่แล้ว`);
       return;
     }
-    if (refs.some((r) => r.symbol.toUpperCase() === cleanSym)) {
+    if (refs.some((r) => r.symbol && r.symbol.toUpperCase() === cleanSym)) {
       alert(`${cleanSym} มีอยู่ในรายการเปรียบเทียบแล้ว`);
       return;
     }
@@ -280,8 +280,8 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {DEFAULT_COMPARE_PRESETS.map((preset) => {
-                    const isAdded = refs.some((r) => r.symbol.toUpperCase() === preset.symbol.toUpperCase());
-                    const isTarget = targetSymbol.toUpperCase() === preset.symbol.toUpperCase();
+                    const isAdded = refs.some((r) => r.symbol && preset.symbol && r.symbol.toUpperCase() === preset.symbol.toUpperCase());
+                    const isTarget = Boolean(targetSymbol && preset.symbol && targetSymbol.toUpperCase() === preset.symbol.toUpperCase());
                     return (
                       <button
                         key={preset.symbol}
