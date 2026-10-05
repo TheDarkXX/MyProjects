@@ -103,11 +103,11 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
 
   // Transform holdings into M1 Portfolio Slices
   const slices: PortfolioSliceItem[] = useMemo(() => {
-    const validHoldings = (holdings || []).filter((h) => h && h.quantity > 0 && h.symbol !== 'CASH');
+    const validHoldings = (holdings || []).filter((h) => h && h.symbol && h.quantity > 0 && h.symbol !== 'CASH');
     const result: PortfolioSliceItem[] = [];
 
     validHoldings.forEach((h, idx) => {
-      const sym = h.symbol.toUpperCase();
+      const sym = (h.symbol || '').toUpperCase();
       const bp = (blueprints || []).find((b) => b && b.symbol && b.symbol.toUpperCase() === sym);
       const targetWeight = bp ? Number(bp.target_percent) || 0 : 0;
       const actualWeight = h.weightPercent || 0;
@@ -176,12 +176,14 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
 
   const activeDrawerSlice = useMemo(() => {
     if (!drawerSymbol) return undefined;
-    return (slices || []).find((s) => s.symbol.toUpperCase() === drawerSymbol.toUpperCase());
+    const dUpper = drawerSymbol.toUpperCase();
+    return (slices || []).find((s) => s.symbol && s.symbol.toUpperCase() === dUpper);
   }, [slices, drawerSymbol]);
 
   const activeDrawerBlueprint = useMemo(() => {
     if (!drawerSymbol) return undefined;
-    return (blueprints || []).find((b) => b && b.symbol && b.symbol.toUpperCase() === drawerSymbol.toUpperCase());
+    const dUpper = drawerSymbol.toUpperCase();
+    return (blueprints || []).find((b) => b && b.symbol && b.symbol.toUpperCase() === dUpper);
   }, [blueprints, drawerSymbol]);
 
   const rate = exchangeRate || 34.5;

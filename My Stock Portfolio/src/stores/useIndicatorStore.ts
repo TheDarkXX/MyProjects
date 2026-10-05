@@ -225,7 +225,7 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
     const prev = get().config;
     const normalized = color.toUpperCase();
     const existing = prev.customColors || [];
-    const filtered = existing.filter(c => c.toUpperCase() !== normalized);
+    const filtered = existing.filter(c => c && c.toUpperCase() !== normalized);
     const nextColors = [normalized, ...filtered].slice(0, 5);
     const next: IndicatorSettings = {
       ...prev,
@@ -266,7 +266,7 @@ export const useIndicatorStore = create<IndicatorState>((set, get) => ({
       activePreset: 'custom',
       [id]: { ...cur, visible: nextVisible },
     };
-    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} ${id.toUpperCase()}`, { [id]: next[id] }, { [id]: cur });
+    pushIndicatorToggleHistory(`${nextVisible ? 'Show' : 'Hide'} ${(id || '').toUpperCase()}`, { [id]: next[id] }, { [id]: cur });
     saveConfig(next);
     set({ config: next });
   },

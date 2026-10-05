@@ -189,7 +189,11 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
 
   // Set of actively owned symbols in portfolio
   const ownedSymbols = useMemo(() => {
-    return new Set(holdings.filter(h => h.quantity > 0.0001).map(h => h.symbol.toUpperCase()));
+    return new Set(
+      holdings
+        .filter(h => h && h.symbol && h.quantity > 0.0001)
+        .map(h => (h.symbol || '').toUpperCase())
+    );
   }, [holdings]);
 
   // Add form state
@@ -310,7 +314,7 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
     setEditSymbol(bp.symbol);
     setEditPercent(bp.target_percent);
     // Auto-detect status from ownedSymbols if desired
-    const autoStatus = ownedSymbols.has(bp.symbol.toUpperCase()) ? 'OWNED' : bp.status;
+    const autoStatus = bp?.symbol && ownedSymbols.has(bp.symbol.toUpperCase()) ? 'OWNED' : (bp.status || 'WATCHLIST');
     setEditStatus(autoStatus);
     setEditPrice(bp.target_price !== null ? bp.target_price : '');
     setEditCategory(bp.category || 'Compounders');
@@ -694,12 +698,14 @@ export const BlueprintEditor: React.FC<BlueprintEditorProps> = ({ portfolioId })
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2A2E45]/60">
-            {blueprints.map(bp => {
+            {blueprints.filter(bp => bp && bp.symbol).map(bp => {
+              const bpUpper = (bp.symbol || '').toUpperCase();
               const isEditingThis = editingSymbol === bp.symbol;
-              const isActuallyOwned = ownedSymbols.has(bp.symbol.toUpperCase());
-              const currentPriceUsd = prices[bp.symbol]?.price || holdings.find(h => h.symbol.toUpperCase() === bp.symbol.toUpperCase())?.lastPrice;
+              const isActuallyOwned = ownedSymbols.has(bpUpper);
+              const matchedHolding = holdings.find(h => h && h.symbol && (h.symbol || '').toUpperCase() === bpUpper);
+              const currentPriceUsd = prices[bp.symbol]?.price || matchedHolding?.lastPrice;
               const priceChange = prices[bp.symbol]?.percent_change;
-              const sectorInfo = holdings.find(h => h.symbol.toUpperCase() === bp.symbol.toUpperCase())?.sector || metadata[bp.symbol]?.sector || '';
+              const sectorInfo = matchedHolding?.sector || metadata[bp.symbol]?.sector || '';
 
               if (isEditingThis) {
                 return (

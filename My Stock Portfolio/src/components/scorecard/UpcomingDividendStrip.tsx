@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useHoldings } from '../../hooks/useHoldings';
 import { useUiStore } from '../../stores/uiStore';
+import { usePriceStore } from '../../stores/priceStore';
 import { Calendar, DollarSign, Clock, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -29,11 +30,12 @@ const DIVIDEND_METADATA: Record<string, { interval: 'monthly' | 'quarterly'; mon
 
 export const UpcomingDividendStrip: React.FC = () => {
   const { holdings } = useHoldings();
-  const { currency, exchangeRate } = useUiStore();
+  const { currency } = useUiStore();
+  const { exchangeRate } = usePriceStore();
 
   const currSymbol = currency === 'THB' ? '฿' : '$';
   const formatMoney = (usd: number) => {
-    const val = currency === 'THB' ? usd * exchangeRate : usd;
+    const val = currency === 'THB' ? usd * (exchangeRate || 35) : usd;
     return `${currSymbol}${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
@@ -47,7 +49,8 @@ export const UpcomingDividendStrip: React.FC = () => {
 
     holdings.forEach(h => {
       if (!h || !h.symbol) return;
-      const meta = DIVIDEND_METADATA[h.symbol.toUpperCase()];
+      const sym = (h.symbol || '').toUpperCase();
+      const meta = DIVIDEND_METADATA[sym];
       if (!meta || h.quantity <= 0) return;
 
       // Find next upcoming payout month (skip if current month's ex-date ~15th has already passed)

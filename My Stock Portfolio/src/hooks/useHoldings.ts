@@ -57,7 +57,7 @@ export function useHoldings() {
     
     // Process transactions chronologically (strictly scoped to active portfolio)
     const sortedTxs = [...transactions]
-      .filter(t => t && (!t.status || t.status.toUpperCase() === 'CONFIRMED') && (!activePortfolioId || !t.portfolio_id || t.portfolio_id === activePortfolioId))
+      .filter(t => t && (!t.status || (typeof t.status === 'string' && t.status.toUpperCase() === 'CONFIRMED')) && (!activePortfolioId || !t.portfolio_id || t.portfolio_id === activePortfolioId))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
     const symbolMeta: Record<string, { stockType?: string; sector?: string }> = {};
@@ -66,18 +66,19 @@ export function useHoldings() {
       const amount = tx.amount || 0;
       const price = tx.price || 0;
       const fee = tx.fee || 0;
-      const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
+      const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH' || !tx.symbol;
+      const sym = tx.symbol ? String(tx.symbol).trim().toUpperCase() : '';
       
-      if (tx.symbol) {
-        if (!symbolMeta[tx.symbol]) {
-          symbolMeta[tx.symbol] = {};
+      if (sym && sym !== 'CASH') {
+        if (!symbolMeta[sym]) {
+          symbolMeta[sym] = {};
         }
-        symbolMeta[tx.symbol].stockType = resolveStockCategory(tx.symbol, tx.stock_type, tx.type, tx.asset);
-        if (tx.sector) symbolMeta[tx.symbol].sector = tx.sector;
-      }
+        symbolMeta[sym].stockType = resolveStockCategory(sym, tx.stock_type, tx.type, tx.asset);
+        if (tx.sector) symbolMeta[sym].sector = tx.sector;
 
-      if (!holds[tx.symbol]) {
-        holds[tx.symbol] = { quantity: 0, totalCost: 0 };
+        if (!holds[sym]) {
+          holds[sym] = { quantity: 0, totalCost: 0 };
+        }
       }
 
       if (tx.type === 'BUY') {
@@ -85,22 +86,22 @@ export function useHoldings() {
           cash += amount;
           netInvested += amount;
           grossInvested += amount;
-        } else {
+        } else if (sym && sym !== 'CASH') {
           cash -= (amount * price) + fee;
-          holds[tx.symbol].quantity += amount;
-          holds[tx.symbol].totalCost += (amount * price) + fee;
+          holds[sym].quantity += amount;
+          holds[sym].totalCost += (amount * price) + fee;
         }
       } else if (tx.type === 'SELL') {
         if (isCash) {
           cash -= amount;
           netInvested -= amount;
-        } else {
+        } else if (sym && sym !== 'CASH' && holds[sym]) {
           cash += (amount * price) - fee;
           // Reduce cost basis proportionally
-          if (holds[tx.symbol].quantity > 0) {
-            const avgCost = holds[tx.symbol].totalCost / holds[tx.symbol].quantity;
-            holds[tx.symbol].quantity -= amount;
-            holds[tx.symbol].totalCost = holds[tx.symbol].quantity * avgCost;
+          if (holds[sym].quantity > 0) {
+            const avgCost = holds[sym].totalCost / holds[sym].quantity;
+            holds[sym].quantity -= amount;
+            holds[sym].totalCost = holds[sym].quantity * avgCost;
           }
         }
       } else if (tx.type === 'DEPOSIT') {
@@ -123,7 +124,8 @@ export function useHoldings() {
 
     // Calculate current values
     Object.keys(holds).forEach(symbol => {
-      const quantity = holds[symbol].quantity;
+      if (!symbol || symbol === 'CASH' || symbol === 'undefined' || symbol === 'null') return;
+      const quantity = holds[symbol]?.quantity || 0;
       if (quantity <= 0.0001) return; // Skip zero, negative, or residual dust holdings (< 0.0001)
 
       const totalCost = holds[symbol].totalCost;
@@ -143,23 +145,21 @@ export function useHoldings() {
       totalSecuritiesCost += totalCost;
       todaysProfit += dayReturn;
 
-      if (symbol !== 'CASH' && symbol !== '') {
-        holdingsArray.push({
-          symbol,
-          quantity,
-          avgCost,
-          totalCost,
-          currentValue,
-          lastPrice,
-          dayChangePercent,
-          dayReturn,
-          totalReturn,
-          totalReturnPercent,
-          weightPercent: 0, // Will calculate below
-          stockType: symbolMeta[symbol]?.stockType || resolveStockCategory(symbol) || 'Compounders',
-          sector: symbolMeta[symbol]?.sector || 'Technology',
-        });
-      }
+      holdingsArray.push({
+        symbol,
+        quantity,
+        avgCost,
+        totalCost,
+        currentValue,
+        lastPrice,
+        dayChangePercent,
+        dayReturn,
+        totalReturn,
+        totalReturnPercent,
+        weightPercent: 0, // Will calculate below
+        stockType: symbolMeta[symbol]?.stockType || resolveStockCategory(symbol) || 'Compounders',
+        sector: symbolMeta[symbol]?.sector || 'Technology',
+      });
     });
 
     const totalNetWorth = cash + totalSecuritiesValue;

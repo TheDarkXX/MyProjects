@@ -262,9 +262,10 @@ export const useDossierStore = create<DossierState>((set, get) => ({
     }
     const finalPid = pid || 'default';
 
-    set({ selectedSymbol: symbol.toUpperCase(), portfolioId: finalPid, isLoading: true, error: null });
+    const sym = (symbol || 'NVDA').toUpperCase();
+    set({ selectedSymbol: sym, portfolioId: finalPid, isLoading: true, error: null });
     try {
-      const data = await api.project2x.dossier(finalPid, symbol);
+      const data = await api.project2x.dossier(finalPid, sym);
       set({ data, isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Failed to switch stock', isLoading: false });

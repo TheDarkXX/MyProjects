@@ -327,9 +327,9 @@ export function AIBlueprintAdvisor({ portfolioId, blueprints, onApplySuggestion 
       } catch (e) {}
 
       // 2. Apply all items from idealBlueprint
-      const updates = aiResult.idealBlueprint.map((item: any) => {
+      const updates = (aiResult.idealBlueprint || []).filter((item: any) => item && item.symbol).map((item: any) => {
         const symbol = item.symbol.toUpperCase();
-        const existing = blueprints.find(b => b.symbol.toUpperCase() === symbol);
+        const existing = blueprints.find(b => b && b.symbol && b.symbol.toUpperCase() === symbol);
         return {
           portfolio_id: portfolioId,
           symbol,

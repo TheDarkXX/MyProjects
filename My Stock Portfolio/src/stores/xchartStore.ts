@@ -746,7 +746,7 @@ export const useXChartStore = create<XChartState>((set, get) => ({
         if (t.id !== activeTabId) return t;
         const currentConfig = t.compareConfig || createDefaultCompareConfig(cleanSym);
         // De-duplicate: If cleanSym was previously in refs, remove it (unselect from refs)
-        const updatedRefs = currentConfig.refs.filter((r) => r.symbol.toUpperCase() !== cleanSym);
+        const updatedRefs = currentConfig.refs.filter((r) => r.symbol && r.symbol.toUpperCase() !== cleanSym);
         return {
           ...t,
           symbol: cleanSym,
@@ -1042,7 +1042,7 @@ export const useXChartStore = create<XChartState>((set, get) => ({
       if (t.id !== tabId || t.type !== 'COMPARE') return t;
       const current = t.compareConfig || createDefaultCompareConfig(t.symbol);
       // Avoid duplicate symbol in refs or adding the target symbol as ref
-      if (current.refs.some((r) => r.symbol.toUpperCase() === cleanSym) || t.symbol.toUpperCase() === cleanSym) {
+      if (current.refs.some((r) => r.symbol && r.symbol.toUpperCase() === cleanSym) || (t.symbol && t.symbol.toUpperCase() === cleanSym)) {
         return t;
       }
       const newRef: CompareRefSeries = {
@@ -1146,7 +1146,7 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     const targetSymbol = (currentTab?.symbol || 'NVDA').trim().toUpperCase();
 
     const newRefs: CompareRefSeries[] = bundle.tickers
-      .filter((t) => t.symbol.toUpperCase() !== targetSymbol)
+      .filter((t) => t.symbol && t.symbol.toUpperCase() !== targetSymbol)
       .map((t, idx) => ({
         id: `ref-${t.symbol.toLowerCase()}-${Date.now()}-${idx}`,
         symbol: t.symbol,

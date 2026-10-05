@@ -15,7 +15,7 @@ import { useCanvasHistoryStore } from './canvasHistoryStore';
 
 const syncTimers = new Map<string, any>();
 function scheduleCloudSync(symbol: string, get: () => DrawingState) {
-  const sym = symbol.toUpperCase().trim();
+  const sym = (symbol || '').toUpperCase().trim();
   if (syncTimers.has(sym)) {
     clearTimeout(syncTimers.get(sym));
   }
@@ -40,11 +40,11 @@ function generateId(): string {
 }
 
 function getStorageKey(symbol: string): string {
-  return `tv_drawings_${symbol.toUpperCase().trim()}`;
+  return `tv_drawings_${(symbol || '').toUpperCase().trim()}`;
 }
 
 function getTrendLinesStorageKey(symbol: string): string {
-  return `tv_trendlines_${symbol.toUpperCase().trim()}`;
+  return `tv_trendlines_${(symbol || '').toUpperCase().trim()}`;
 }
 
 const SETTINGS_STORAGE_KEY = 'tv_drawing_settings_v1';
@@ -192,7 +192,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   syncFromCloud: async (symbol: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     try {
       const res = await api.drawings.get(sym);
       if (res) {
@@ -230,7 +230,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   loadDrawings: (symbol: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const stored = loadFromStorage(sym);
     set((state) => ({
       drawingsBySymbol: {
@@ -244,14 +244,14 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   getDrawings: (symbol: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().drawingsBySymbol[sym];
     if (current) return current;
     return get().loadDrawings(sym);
   },
 
   addLine: (symbol: string, lineData) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     const settings = get().drawingSettings;
 
@@ -294,7 +294,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   updateLine: (symbol: string, id: string, updates: Partial<HorizontalLineDrawing>, skipHistory?: boolean) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     const target = current.find((d) => d.id === id);
     if (!target) return;
@@ -323,7 +323,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   deleteLine: (symbol: string, id: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     const target = current.find((d) => d.id === id);
 
@@ -353,7 +353,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   clearLines: (symbol: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const currentHorizontals = get().getDrawings(sym);
     const currentTrends = get().getTrendLines(sym);
 
@@ -388,7 +388,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   loadTrendLines: (symbol: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const stored = loadTrendLinesFromStorage(sym);
     set((state) => ({
       trendLinesBySymbol: {
@@ -400,14 +400,14 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   getTrendLines: (symbol: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().trendLinesBySymbol[sym];
     if (current) return current;
     return get().loadTrendLines(sym);
   },
 
   addTrendLine: (symbol: string, tlData) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getTrendLines(sym);
     const settings = get().drawingSettings;
 
@@ -450,7 +450,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   updateTrendLine: (symbol: string, id: string, updates: Partial<TrendLineDrawing>, skipHistory?: boolean) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getTrendLines(sym);
     const target = current.find((tl) => tl.id === id);
     if (!target) return;
@@ -479,7 +479,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   deleteTrendLine: (symbol: string, id: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getTrendLines(sym);
     const target = current.find((tl) => tl.id === id);
 
@@ -508,7 +508,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   clearTrendLines: (symbol: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const currentTrends = get().getTrendLines(sym);
 
     if (currentTrends.length > 0 && !useCanvasHistoryStore.getState().isRestoring) {
@@ -535,7 +535,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   restoreAddLine: (symbol: string, line: HorizontalLineDrawing) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     if (current.some((d) => d.id === line.id)) return;
     const updated = [...current, line];
@@ -551,7 +551,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   restoreDeleteLine: (symbol: string, id: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     const updated = current.filter((d) => d.id !== id);
     saveToStorage(sym, updated);
@@ -567,7 +567,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   restoreUpdateLine: (symbol: string, id: string, previousOrNewState: Partial<HorizontalLineDrawing>) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     const updated = current.map((d) => (d.id === id ? { ...d, ...previousOrNewState } : d));
     saveToStorage(sym, updated);
@@ -581,7 +581,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   restoreAddTrendLine: (symbol: string, trendLine: TrendLineDrawing) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getTrendLines(sym);
     if (current.some((tl) => tl.id === trendLine.id)) return;
     const updated = [...current, trendLine];
@@ -598,7 +598,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   restoreDeleteTrendLine: (symbol: string, id: string) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getTrendLines(sym);
     const updated = current.filter((tl) => tl.id !== id);
     saveTrendLinesToStorage(sym, updated);
@@ -613,7 +613,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   restoreUpdateTrendLine: (symbol: string, id: string, previousOrNewState: Partial<TrendLineDrawing>) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getTrendLines(sym);
     const updated = current.map((tl) => (tl.id === id ? { ...tl, ...previousOrNewState } : tl));
     saveTrendLinesToStorage(sym, updated);
@@ -627,7 +627,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   restoreFullDrawings: (symbol: string, horizontals: HorizontalLineDrawing[], trends: TrendLineDrawing[]) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     saveToStorage(sym, horizontals);
     saveTrendLinesToStorage(sym, trends);
     scheduleCloudSync(sym, get);
@@ -651,7 +651,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   },
 
   cloneLine: (symbol: string, id: string, newPrice?: number) => {
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     const target = current.find((d) => d.id === id);
     if (!target) return null;
@@ -705,7 +705,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   copySelectedLine: (symbol: string) => {
     const { selectedLineId } = get();
     if (!selectedLineId) return;
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     const found = current.find((d) => d.id === selectedLineId);
     if (found) {
@@ -716,7 +716,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   pasteClipboard: (symbol: string, atPrice?: number) => {
     const { clipboardLine } = get();
     if (!clipboardLine) return null;
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
 
     const price = atPrice !== undefined ? atPrice : clipboardLine.price * 1.01;
@@ -744,7 +744,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
   nudgeSelectedLine: (symbol: string, direction: 'up' | 'down', customTick?: number) => {
     const { selectedLineId } = get();
     if (!selectedLineId) return;
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     const target = current.find((d) => d.id === selectedLineId);
     if (!target || target.locked) return;
@@ -761,7 +761,7 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     const detected = detectSupportResistance(bars, 3);
     if (detected.length === 0) return;
 
-    const sym = symbol.toUpperCase().trim();
+    const sym = (symbol || '').toUpperCase().trim();
     const current = get().getDrawings(sym);
     const settings = get().drawingSettings;
 

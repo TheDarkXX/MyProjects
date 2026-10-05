@@ -61,7 +61,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
     // Search query filter
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toUpperCase();
-      list = list.filter((s) => s.symbol.toUpperCase().includes(q) || s.category.toUpperCase().includes(q));
+      list = list.filter((s) => (s.symbol || '').toUpperCase().includes(q) || (s.category || '').toUpperCase().includes(q));
     }
 
     // Quick category filters
@@ -260,7 +260,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
               </tr>
             ) : (
               filteredSlices.map((slice) => {
-                const isHovered = hoveredSymbol?.toUpperCase() === slice.symbol.toUpperCase();
+                const isHovered = hoveredSymbol && slice.symbol ? hoveredSymbol.toUpperCase() === slice.symbol.toUpperCase() : false;
                 const isProfit = slice.totalReturn >= 0;
                 const isDayProfit = slice.dayChangePercent >= 0;
                 const valueTHB = slice.currentValue * (exchangeRate || 34.5);

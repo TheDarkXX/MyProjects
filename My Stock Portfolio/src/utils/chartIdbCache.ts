@@ -48,7 +48,7 @@ export interface CachedChartData<T = any> {
 export async function getCachedCandles<T = any>(symbol: string, resolution: string): Promise<T | null> {
   try {
     const db = await getDB();
-    const key = `${symbol.toUpperCase().trim()}_${resolution.toUpperCase().trim()}`;
+    const key = `${(symbol || '').toUpperCase().trim()}_${(resolution || '').toUpperCase().trim()}`;
 
     return new Promise((resolve) => {
       const transaction = db.transaction([STORE_NAME], 'readonly');
@@ -78,7 +78,7 @@ export async function getCachedCandles<T = any>(symbol: string, resolution: stri
 export async function setCachedCandles<T = any>(symbol: string, resolution: string, data: T): Promise<void> {
   try {
     const db = await getDB();
-    const key = `${symbol.toUpperCase().trim()}_${resolution.toUpperCase().trim()}`;
+    const key = `${(symbol || '').toUpperCase().trim()}_${(resolution || '').toUpperCase().trim()}`;
 
     return new Promise((resolve) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');

@@ -83,9 +83,9 @@ export const XChartPanel: React.FC<XChartPanelProps> = ({ symbol, tabId, portfol
   const computedOverlay = useMemo<PortfolioOverlayConfig | undefined>(() => {
     if (propOverlay) return propOverlay;
     if (!holding) return undefined;
-    const sym = symbol.toUpperCase();
+    const sym = (symbol || '').toUpperCase();
     const stockTxs = (transactions || [])
-      .filter(t => t && t.symbol && t.symbol.toUpperCase() === sym && (!t.status || t.status.toUpperCase() === 'CONFIRMED'))
+      .filter(t => t && t.symbol && t.symbol.toUpperCase() === sym && (!t.status || (typeof t.status === 'string' && t.status.toUpperCase() === 'CONFIRMED')))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     return {

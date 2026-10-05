@@ -50,14 +50,16 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
   // Find holding details
   const holding: Holding | undefined = useMemo(() => {
     if (!symbol) return undefined;
-    return (holdings || []).find(h => h && h.symbol && h.symbol.toUpperCase() === symbol.toUpperCase());
+    const sym = symbol.toUpperCase();
+    return (holdings || []).find(h => h && h.symbol && h.symbol.toUpperCase() === sym);
   }, [symbol, holdings]);
 
   // Filter transactions for this symbol
   const stockTransactions = useMemo(() => {
     if (!symbol) return [];
+    const sym = symbol.toUpperCase();
     return transactions
-      .filter(t => t.symbol?.toUpperCase() === symbol.toUpperCase() && t.status !== 'CANCELLED')
+      .filter(t => t && t.symbol && t.symbol.toUpperCase() === sym && t.status !== 'CANCELLED')
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [symbol, transactions]);
 

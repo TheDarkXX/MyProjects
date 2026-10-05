@@ -51,7 +51,8 @@ export const HoldingsPerformanceAttribution: React.FC<HoldingsPerformanceAttribu
     const buyDateMap: Record<string, string> = {};
 
     confirmedTxs.forEach(t => {
-      const sym = t.symbol.toUpperCase();
+      const sym = (t.symbol || '').toUpperCase();
+      if (!sym) return;
       const qty = Number(t.amount || 0);
       const price = Number(t.price || 0);
       const dateStr = t.date ? t.date.split('T')[0] : '';

@@ -154,18 +154,18 @@ export const SmartRebalancePage: React.FC = () => {
     const map: Record<string, any> = { ...compactTiers };
     if (radar?.rows) {
       for (const row of radar.rows) {
-        map[row.symbol.toUpperCase()] = row;
+        if (row && row.symbol) {
+          map[row.symbol.toUpperCase()] = row;
+        }
       }
     }
     return map;
   }, [radar?.rows, compactTiers]);
 
-
-
   const activeSymbols = useMemo(() => {
     const symbols = new Set<string>();
-    holdings.forEach(h => { if (h.symbol) symbols.add(h.symbol); });
-    blueprints.forEach(b => symbols.add(b.symbol));
+    holdings.forEach(h => { if (h && h.symbol) symbols.add(h.symbol); });
+    blueprints.forEach(b => { if (b && b.symbol) symbols.add(b.symbol); });
     return Array.from(symbols);
   }, [holdings, blueprints]);
 
@@ -227,6 +227,7 @@ export const SmartRebalancePage: React.FC = () => {
     
     // Add existing holdings
     holdings.forEach(h => {
+      if (!h || !h.symbol || h.symbol === 'CASH') return;
       const livePrice = prices[h.symbol]?.price || h.lastPrice || h.avgCost || 1;
       map.set(h.symbol, {
         symbol: h.symbol,
@@ -239,6 +240,7 @@ export const SmartRebalancePage: React.FC = () => {
 
     // Add blueprints
     blueprints.forEach(bp => {
+      if (!bp || !bp.symbol || bp.symbol === 'CASH') return;
       if (!map.has(bp.symbol)) {
         const livePrice = prices[bp.symbol]?.price || bp.target_price || 1;
         map.set(bp.symbol, {
@@ -257,7 +259,16 @@ export const SmartRebalancePage: React.FC = () => {
   // Price Gate Valuation Signal Helper (7-Tier Matrix -> Target Price -> Technicals)
   const getBuySignal = useMemo(() => {
     return (symbol: string, currentPrice: number, targetPrice?: number | null) => {
-      const symUpper = symbol.toUpperCase();
+      const symUpper = (symbol || '').toUpperCase();
+      if (!symUpper) {
+        return {
+          signal: 'fair',
+          badge: '🟢 ราคาเหมาะสม (Fair Value)',
+          badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+          reason: 'ราคาอยู่ในกรอบปกติ พร้อมสะสมตามรอบ DCA',
+          source: 'DEFAULT'
+        };
+      }
       const radarRow = radarMap[symUpper];
 
       // Priority 0: Live Project 2X 7-Tier Cyber Action Matrix (Unified System SOT)

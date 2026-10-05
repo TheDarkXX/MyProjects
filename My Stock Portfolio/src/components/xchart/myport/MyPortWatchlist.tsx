@@ -150,7 +150,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     const map: Record<string, any> = { ...compactTiers };
     if (radar?.rows) {
       for (const row of radar.rows) {
-        map[row.symbol.toUpperCase()] = row;
+        if (row && row.symbol) {
+          map[row.symbol.toUpperCase()] = row;
+        }
       }
     }
     return map;
@@ -255,9 +257,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
   const targetStocks = useMemo(() => {
     const sourceList = quotas && quotas.length > 0 ? quotas : DEFAULT_2X_TARGET_STOCKS;
 
-    return sourceList.map((item) => {
-      const sym = item.symbol.toUpperCase();
-      const existingHolding = validHoldings.find((h) => h.symbol.toUpperCase() === sym);
+    return sourceList.filter(item => item && item.symbol).map((item) => {
+      const sym = (item.symbol || '').toUpperCase();
+      const existingHolding = validHoldings.find((h) => h && h.symbol && h.symbol.toUpperCase() === sym);
       const ownedShares = existingHolding ? existingHolding.quantity : (item.owned_shares ?? 0);
       const targetShares = item.target_shares ?? 0;
       const progress = targetShares > 0 ? Math.min(100, (ownedShares / targetShares) * 100) : (ownedShares > 0 ? 100 : 0);
@@ -297,10 +299,10 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       const pctB = b.dayChangePercent ?? quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
 
       if (sortColumn === 'tier') {
-        const radarA = radarMap[a.symbol.toUpperCase()];
-        const radarB = radarMap[b.symbol.toUpperCase()];
-        const infoA = getTierVisualInfo(radarA, a.symbol, false);
-        const infoB = getTierVisualInfo(radarB, b.symbol, false);
+        const radarA = a.symbol ? radarMap[a.symbol.toUpperCase()] : null;
+        const radarB = b.symbol ? radarMap[b.symbol.toUpperCase()] : null;
+        const infoA = getTierVisualInfo(radarA, a.symbol || '', false);
+        const infoB = getTierVisualInfo(radarB, b.symbol || '', false);
         const rankA = TIER_SORT_ASC_RANKS[infoA.tierId] ?? 999;
         const rankB = TIER_SORT_ASC_RANKS[infoB.tierId] ?? 999;
         if (rankA !== rankB) {
@@ -345,10 +347,10 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       const pctB = quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
 
       if (sortColumn === 'tier') {
-        const radarA = radarMap[a.symbol.toUpperCase()];
-        const radarB = radarMap[b.symbol.toUpperCase()];
-        const infoA = getTierVisualInfo(radarA, a.symbol, false);
-        const infoB = getTierVisualInfo(radarB, b.symbol, false);
+        const radarA = a.symbol ? radarMap[a.symbol.toUpperCase()] : null;
+        const radarB = b.symbol ? radarMap[b.symbol.toUpperCase()] : null;
+        const infoA = getTierVisualInfo(radarA, a.symbol || '', false);
+        const infoB = getTierVisualInfo(radarB, b.symbol || '', false);
         const rankA = TIER_SORT_ASC_RANKS[infoA.tierId] ?? 999;
         const rankB = TIER_SORT_ASC_RANKS[infoB.tierId] ?? 999;
         if (rankA !== rankB) {
@@ -388,11 +390,11 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
 
   // Find blueprint and trade history for the modal holding
   const modalData = useMemo(() => {
-    if (!detailModalHolding) return null;
+    if (!detailModalHolding || !detailModalHolding.symbol) return null;
     const sym = detailModalHolding.symbol.toUpperCase();
     const bp = (blueprints || []).find((b) => b && b.symbol && b.symbol.toUpperCase() === sym);
     const txList = (transactions || [])
-      .filter((t) => t.symbol && t.symbol.toUpperCase() === sym && (!t.status || t.status.toUpperCase() === 'CONFIRMED'))
+      .filter((t) => t && t.symbol && t.symbol.toUpperCase() === sym && (!t.status || (typeof t.status === 'string' && t.status.toUpperCase() === 'CONFIRMED')))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
     return {
@@ -547,7 +549,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 </div>
               ) : (
                 sortedHoldings.map((h) => {
-                  const isSelected = h.symbol.toUpperCase() === selectedSymbol.toUpperCase();
+                  const isSelected = selectedSymbol && h.symbol ? h.symbol.toUpperCase() === selectedSymbol.toUpperCase() : false;
                   const priceQuote = prices[h.symbol];
                   const wlQuote = watchlistPrices[h.symbol];
                   const lastPrice = h.lastPrice || priceQuote?.price || wlQuote?.price || 0;
@@ -556,7 +558,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                   const isPositive = percentChange >= 0;
                   const isZero = percentChange === 0;
 
-                  const radarData = radarMap[h.symbol.toUpperCase()];
+                  const radarData = h.symbol ? radarMap[h.symbol.toUpperCase()] : null;
                   const tierInfo = getTierVisualInfo(radarData, h.symbol, false);
 
                   return (
@@ -694,7 +696,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           {!targetCollapsed && (
             <div className="divide-y divide-[#1F2233]/25">
               {sortedTargetStocks.map((item) => {
-                const isSelected = item.symbol.toUpperCase() === selectedSymbol.toUpperCase();
+                const isSelected = selectedSymbol && item.symbol ? item.symbol.toUpperCase() === selectedSymbol.toUpperCase() : false;
                 const priceQuote = prices[item.symbol];
                 const wlQuote = watchlistPrices[item.symbol];
                 const price = priceQuote?.price ?? wlQuote?.price ?? 0;
@@ -704,7 +706,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 const isZero = percentChange === 0;
                 const isCore = item.category === 'Core';
 
-                const radarData = radarMap[item.symbol.toUpperCase()];
+                const radarData = item.symbol ? radarMap[item.symbol.toUpperCase()] : null;
                 const tierInfo = getTierVisualInfo(radarData, item.symbol, false);
 
                 return (
@@ -861,7 +863,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           {!indexCollapsed && (
             <div className="divide-y divide-[#1F2233]/25">
               {DEFAULT_INDEX_ITEMS.map((item) => {
-                const isSelected = item.symbol.toUpperCase() === selectedSymbol.toUpperCase();
+                const isSelected = selectedSymbol && item.symbol ? item.symbol.toUpperCase() === selectedSymbol.toUpperCase() : false;
                 const priceQuote = prices[item.symbol];
                 const wlQuote = watchlistPrices[item.symbol];
                 const price = priceQuote?.price ?? wlQuote?.price ?? 0;

@@ -1638,7 +1638,7 @@ async function doScanRadarMatrix(portfolioId) {
   for (let i = 0; i < quotas.length; i++) {
     const q = quotas[i];
     const signalData = quotaSignals[i];
-    if (!signalData) continue;
+    if (!signalData || !q || !q.symbol) continue;
 
     const symbol = q.symbol;
     const currentPrice = signalData.currentPrice;

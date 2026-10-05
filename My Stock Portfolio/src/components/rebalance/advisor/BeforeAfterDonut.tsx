@@ -42,7 +42,8 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items, isAct
   // Map consistent colors by symbol
   const symbolColors = useMemo(() => {
     const map: Record<string, string> = {};
-    items.forEach((item, idx) => {
+    (items || []).forEach((item, idx) => {
+      if (!item || !item.symbol) return;
       const sym = item.symbol.toUpperCase();
       if (sym === 'CASH') {
         map[sym] = '#64748B'; // Slate
@@ -55,27 +56,35 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items, isAct
 
   // Current data for left pie
   const currentData = useMemo(() => {
-    return items
-      .map(it => ({
-        name: it.symbol,
-        value: parsePercent(it.currentPercent),
-        role: it.role,
-        color: symbolColors[it.symbol.toUpperCase()] || '#6366F1'
-      }))
+    return (items || [])
+      .filter(it => it && it.symbol)
+      .map(it => {
+        const sym = (it.symbol || '').toUpperCase();
+        return {
+          name: it.symbol,
+          value: parsePercent(it.currentPercent),
+          role: it.role,
+          color: symbolColors[sym] || '#6366F1'
+        };
+      })
       .filter(it => it.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [items, symbolColors]);
 
   // Ideal data for right pie
   const idealData = useMemo(() => {
-    return items
-      .map(it => ({
-        name: it.symbol,
-        value: parsePercent(it.idealPercent),
-        role: it.role,
-        isNew: parsePercent(it.currentPercent) === 0,
-        color: symbolColors[it.symbol.toUpperCase()] || '#6366F1'
-      }))
+    return (items || [])
+      .filter(it => it && it.symbol)
+      .map(it => {
+        const sym = (it.symbol || '').toUpperCase();
+        return {
+          name: it.symbol,
+          value: parsePercent(it.idealPercent),
+          role: it.role,
+          isNew: parsePercent(it.currentPercent) === 0,
+          color: symbolColors[sym] || '#6366F1'
+        };
+      })
       .filter(it => it.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [items, symbolColors]);
@@ -207,8 +216,8 @@ export const BeforeAfterDonut: React.FC<BeforeAfterDonutProps> = ({ items, isAct
 
       {/* Mini Legend of Assets */}
       <div className="flex flex-wrap items-center justify-center gap-2 pt-4 mt-2 border-t border-[#232738]/80 text-[13px]">
-        {items.map((item, idx) => {
-          const sym = item.symbol.toUpperCase();
+        {(items || []).filter(item => item && item.symbol).map((item, idx) => {
+          const sym = (item.symbol || '').toUpperCase();
           const color = symbolColors[sym] || '#6366F1';
           const isNew = (item.currentPercent || 0) === 0 && item.idealPercent > 0;
           return (

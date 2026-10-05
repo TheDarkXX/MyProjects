@@ -352,6 +352,7 @@ export const useProject2xStore = create<Project2xStore>((set, get) => ({
         try {
           const map: Record<string, CompactTierInfo> = {};
           for (const r of data.rows) {
+            if (!r || !r.symbol) continue;
             map[r.symbol.toUpperCase()] = {
               symbol: r.symbol,
               traffic_light: r.traffic_light,

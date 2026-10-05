@@ -181,7 +181,9 @@ export const XChartWatchlistDock: React.FC = () => {
     const map: Record<string, any> = { ...compactTiers };
     if (radar?.rows) {
       for (const row of radar.rows) {
-        map[row.symbol.toUpperCase()] = row;
+        if (row && row.symbol) {
+          map[row.symbol.toUpperCase()] = row;
+        }
       }
     }
     return map;
@@ -266,12 +268,13 @@ export const XChartWatchlistDock: React.FC = () => {
     const crSec = (watchlistSections || []).find(s => s.id === 'sec-commodities-crypto' || s.name.includes('COMMODITIES') || s.name.includes('CRYPTO'));
     const crSymbols = crSec ? crSec.symbols : null;
 
-    const exSet = new Set((exSymbols || []).map(s => s.toUpperCase()));
-    const crSet = new Set((crSymbols || []).map(s => s.toUpperCase()));
+    const exSet = new Set((exSymbols || []).filter(Boolean).map(s => s.toUpperCase()));
+    const crSet = new Set((crSymbols || []).filter(Boolean).map(s => s.toUpperCase()));
 
     // 3. Collect all other stock symbols from all sections
     const allStockSymbols = Array.from(new Set(
-      watchlistSections.flatMap(s => s.symbols).filter(s => {
+      watchlistSections.flatMap(s => s.symbols || []).filter(s => {
+        if (!s) return false;
         const u = s.toUpperCase();
         return !exSet.has(u) && !crSet.has(u) && !u.includes('=X') && !u.includes('=F') && !u.endsWith('-USD');
       })
@@ -287,6 +290,7 @@ export const XChartWatchlistDock: React.FC = () => {
     let reversalCount = 0;
 
     for (const sym of allStockSymbols) {
+      if (!sym) continue;
       const row = radarMap[sym.toUpperCase()];
       const info = getTierVisualInfo(row, sym);
 
@@ -984,6 +988,7 @@ export const XChartWatchlistDock: React.FC = () => {
           // Filter symbols if a tier filter is active
           const displayedSymbols = selectedTierFilter
             ? section.symbols.filter((sym) => {
+                if (!sym) return false;
                 const row = radarMap[sym.toUpperCase()];
                 const info = getTierVisualInfo(row, sym, sym.includes('=X'));
                 if (selectedTierFilter === 'BUY_NOW') {
@@ -1016,10 +1021,10 @@ export const XChartWatchlistDock: React.FC = () => {
             const quoteB = watchlistPrices[b];
 
             if (watchlistSortColumn === 'tier') {
-              const rowA = radarMap[a.toUpperCase()];
-              const rowB = radarMap[b.toUpperCase()];
-              const infoA = getTierVisualInfo(rowA, a, a.includes('=X'));
-              const infoB = getTierVisualInfo(rowB, b, b.includes('=X'));
+              const rowA = a ? radarMap[a.toUpperCase()] : null;
+              const rowB = b ? radarMap[b.toUpperCase()] : null;
+              const infoA = getTierVisualInfo(rowA, a || '', (a || '').includes('=X'));
+              const infoB = getTierVisualInfo(rowB, b || '', (b || '').includes('=X'));
 
               const rankA = TIER_SORT_ASC_RANKS[infoA.tierId] ?? 999;
               const rankB = TIER_SORT_ASC_RANKS[infoB.tierId] ?? 999;
@@ -1264,7 +1269,7 @@ export const XChartWatchlistDock: React.FC = () => {
                       const isItemBeingDragged = draggedSymbol?.symbol === symbol;
                       const isDropTarget = dropTargetSymbol?.sectionId === section.id && dropTargetSymbol.index === originalIndex;
 
-                      const radarData = radarMap[symbol.toUpperCase()];
+                      const radarData = symbol ? radarMap[symbol.toUpperCase()] : null;
                       const tierInfo = getTierVisualInfo(radarData, symbol, isCurrency);
 
                       return (
@@ -1392,9 +1397,11 @@ export const XChartWatchlistDock: React.FC = () => {
 
                             {/* Compare Mode: Add as Ref Button */}
                             {activeTab?.type === 'COMPARE' && (() => {
-                              const isTarget = activeTab.symbol.toUpperCase() === symbol.toUpperCase();
+                              const targetSym = (activeTab.symbol || '').toUpperCase();
+                              const symUpper = (symbol || '').toUpperCase();
+                              const isTarget = targetSym && symUpper ? targetSym === symUpper : false;
                               const isAlreadyRef = activeTab.compareConfig?.refs.some(
-                                (r) => r.symbol.toUpperCase() === symbol.toUpperCase()
+                                (r) => r.symbol && symUpper ? r.symbol.toUpperCase() === symUpper : false
                               );
 
                               return (

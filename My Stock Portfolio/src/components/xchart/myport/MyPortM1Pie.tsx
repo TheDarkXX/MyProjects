@@ -35,12 +35,14 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
   // Find currently active slice
   const activeSlice = useMemo(() => {
     if (!hoveredSymbol) return null;
-    return (slices || []).find((s) => s.symbol.toUpperCase() === hoveredSymbol.toUpperCase()) || null;
+    const hUpper = hoveredSymbol.toUpperCase();
+    return (slices || []).find((s) => (s.symbol || '').toUpperCase() === hUpper) || null;
   }, [slices, hoveredSymbol]);
 
   const activeIndex = useMemo(() => {
     if (!hoveredSymbol) return -1;
-    return (slices || []).findIndex((s) => s.symbol.toUpperCase() === hoveredSymbol.toUpperCase());
+    const hUpper = hoveredSymbol.toUpperCase();
+    return (slices || []).findIndex((s) => (s.symbol || '').toUpperCase() === hUpper);
   }, [slices, hoveredSymbol]);
 
   // Chart data formatted for Recharts
@@ -252,7 +254,7 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
               onClick={() => onSelectSymbol(slice.symbol)}
               className={clsx(
                 'h-full cursor-pointer transition-opacity duration-150',
-                hoveredSymbol && hoveredSymbol.toUpperCase() !== slice.symbol.toUpperCase()
+                hoveredSymbol && slice.symbol && hoveredSymbol.toUpperCase() !== slice.symbol.toUpperCase()
                   ? 'opacity-35'
                   : 'opacity-100 hover:brightness-125'
               )}
@@ -265,7 +267,7 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
       <div className="mt-2 flex-1 flex flex-col justify-start">
         <div className="flex flex-wrap items-center justify-center gap-1.5 max-h-[140px] overflow-y-auto custom-scrollbar p-1">
           {slices.map((slice) => {
-            const isHovered = hoveredSymbol?.toUpperCase() === slice.symbol.toUpperCase();
+            const isHovered = hoveredSymbol && slice.symbol ? hoveredSymbol.toUpperCase() === slice.symbol.toUpperCase() : false;
             return (
               <button
                 key={slice.symbol}
