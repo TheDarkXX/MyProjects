@@ -1021,24 +1021,10 @@ export const SmartRebalancePage: React.FC = () => {
                             })}
                           </>
                         )}
-                        <span className="text-xs text-slate-500 mx-1">|</span>
-                        {(currency === 'THB' ? [5000, 10000, 50000] : [100, 500, 1000]).map(amt => (
-                          <button
-                            key={amt}
-                            type="button"
-                            onClick={() => {
-                              const usdDelta = currency === 'THB' ? amt / effectiveRate : amt;
-                              setDepositAmountUsd(prev => (prev || 0) + usdDelta);
-                            }}
-                            className="px-2 py-1 bg-[#1A1D2D] hover:bg-[#2A2E45] border border-[#2A2E45] text-slate-200 text-xs font-bold rounded-lg transition-all"
-                          >
-                            +{currency === 'THB' ? `฿${(amt / 1000).toFixed(0)}k` : `$${amt}`}
-                          </button>
-                        ))}
                         <button
                           type="button"
                           onClick={() => setDepositAmountUsd(currency === 'THB' ? 150000 / effectiveRate : 4200)}
-                          className="px-2.5 py-1 bg-[#1A1D2D] hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 border border-[#2A2E45] text-xs font-bold rounded-lg transition-all"
+                          className="px-2.5 py-1 bg-[#1A1D2D] hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 border border-[#2A2E45] text-xs font-bold rounded-lg transition-all ml-1"
                         >
                           รีเซ็ต
                         </button>
