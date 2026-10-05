@@ -126,9 +126,9 @@ export const SmartRebalancePage: React.FC = () => {
   const [copied, setCopied] = useState<boolean>(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Selective Buy & Option C Remainder Strategy States
   const [remainderMode, setRemainderMode] = useState<'redistribute' | 'reserve'>('redistribute');
   const [selectedSymbols, setSelectedSymbols] = useState<Set<string> | null>(null);
+  const [activeStrategyPreset, setActiveStrategyPreset] = useState<'top3_skip' | 'top3_pure' | 'skip_expensive' | 'all' | 'custom' | 'none'>('all');
   const [planView, setPlanView] = useState<BuyingPlanView>(() => {
     return (localStorage.getItem('smart_rebalance_plan_view') as BuyingPlanView) || 'table';
   });
@@ -446,36 +446,25 @@ export const SmartRebalancePage: React.FC = () => {
       next.add(sym);
     }
     setSelectedSymbols(next);
+    setActiveStrategyPreset('custom');
   };
 
   const selectAll = () => {
     setSelectedSymbols(new Set(cashflowCandidates.map(c => c.symbol)));
+    setActiveStrategyPreset('all');
   };
 
   const clearAllSelections = () => {
     setSelectedSymbols(new Set());
+    setActiveStrategyPreset('none');
   };
 
   const toggleSelectAll = () => {
-    if (isAllSelected) {
+    if (activeStrategyPreset === 'all' || isAllSelected) {
       clearAllSelections();
     } else {
       selectAll();
     }
-  };
-
-  const selectBuySignalsOnly = () => {
-    const buySignals = cashflowCandidates
-      .filter(c => c.signalInfo.signal === 'strong_buy')
-      .map(c => c.symbol);
-    setSelectedSymbols(new Set(buySignals));
-  };
-
-  const selectFairAndStrong = () => {
-    const good = cashflowCandidates
-      .filter(c => c.signalInfo.signal !== 'expensive')
-      .map(c => c.symbol);
-    setSelectedSymbols(new Set(good));
   };
 
   // W3 Verified Champion Mode: Top-3 + Skip Expensive (>10% EMA150) in 1-Click
@@ -492,6 +481,7 @@ export const SmartRebalancePage: React.FC = () => {
     const sorted = [...eligible].sort((a, b) => b.deficit - a.deficit);
     const top3 = sorted.slice(0, 3).map(c => c.symbol);
     setSelectedSymbols(new Set(top3));
+    setActiveStrategyPreset('top3_skip');
   };
 
   // T1 Verified: Pure Top-3 Deficit (No price filter)
@@ -503,6 +493,7 @@ export const SmartRebalancePage: React.FC = () => {
     } else {
       setSelectedSymbols(new Set(sorted.slice(0, 3).map(c => c.symbol)));
     }
+    setActiveStrategyPreset('top3_pure');
   };
 
   // T2 Verified Rule: Skip Extended (>10% EMA150) or No Chase & Reallocate 100% to other deficit stocks
@@ -512,6 +503,7 @@ export const SmartRebalancePage: React.FC = () => {
       .map(c => c.symbol);
     if (nonExtended.length > 0) {
       setSelectedSymbols(new Set(nonExtended));
+      setActiveStrategyPreset('skip_expensive');
     } else {
       selectAll();
     }
@@ -1095,107 +1087,172 @@ export const SmartRebalancePage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Quick Selection Filters */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold text-[#CBD5E1] flex items-center gap-1.5 mr-1">
-                          <Filter className="w-3.5 h-3.5 text-[#06B6D4]" /> เลือกหุ้นรอบนี้:
-                        </span>
-                        
-                        {/* Master Select / Deselect All Toggle */}
-                        <button
-                          type="button"
-                          onClick={toggleSelectAll}
-                          className={clsx(
-                            "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-sm",
-                            isAllSelected
-                              ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40"
-                              : "bg-[#1A1D2D] hover:bg-[#2A2E45] text-white border-[#2A2E45]"
-                          )}
-                        >
-                          {isAllSelected ? (
-                            <>
-                              <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>☑️ 100% Deficit DCA ({activeSelectedSymbols.size}/{cashflowCandidates.length})</span>
-                            </>
-                          ) : (
-                            <>
-                              <Square className="w-3.5 h-3.5 text-slate-400" />
-                              <span>☑️ เลือกทั้งหมด (100% DCA)</span>
-                            </>
-                          )}
-                        </button>
-
-                        {/* W3 Champion Mode: Top-3 + Skip Expensive in 1-Click */}
-                        <button
-                          type="button"
-                          onClick={selectTop3SkipExpensive}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 transition-all flex items-center gap-1.5 shadow-sm ring-1 ring-amber-500/30"
-                          title="W3 Champion Formula: กรองตัวที่ราคาเกิน >10% EMA150 หรือติด No Chase ออกก่อน แล้วเลือก 3 ตัวที่ขาดมากที่สุดในคลิกเดียว (ชนะ Top-3 เพียวๆ +1.27%/ปี, Win Rate 98.8%)"
-                        >
-                          <span>⚡</span>
-                          <span>Top-3 (ข้ามตัวแพง &gt;10% EMA150)</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/30 text-amber-100 border border-amber-400/40 font-mono">สูตรแนะนำ 🔥</span>
-                        </button>
-
-                        {/* T1 Verified: Pure Top-3 Deficit */}
-                        <button
-                          type="button"
-                          onClick={selectTop3Deficit}
-                          className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 transition-all flex items-center gap-1.5"
-                          title="T1 Verified: เกลี่ยเฉพาะ 3 ตัวที่ขาดมากที่สุด (ไม่กรองราคา) ลดคำสั่งซื้อลงเหลือ 3 ตัว/เดือน"
-                        >
-                          <span>Top-3 เพียวๆ</span>
-                        </button>
-
-                        {/* T2 Verified: Skip Extended >10% EMA150 Tilt (All) */}
-                        <button
-                          type="button"
-                          onClick={selectSkipExpensive}
-                          className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-700/30 hover:bg-slate-700/50 text-slate-300 border border-slate-600/40 transition-all flex items-center gap-1.5"
-                          title="T2 Verified: งดเติมตัวที่ราคาสูงกว่า EMA150 เกิน 10% ทั้งหมด (เฉลี่ย 4-5 ตัว)"
-                        >
-                          <span>ข้ามตัวแพงทั้งหมด</span>
-                        </button>
-
-                        <div className="h-4 w-[1px] bg-[#2A2E45] hidden sm:block" />
-
-                        {/* Opportunistic Signal Filters */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-bold text-slate-300 uppercase px-1.5 py-0.5 rounded bg-slate-800 border border-[#2A2E45]">
-                            เงินพิเศษ:
+                    {/* Strategy Selection Radio Toolbar */}
+                    <div className="space-y-3 pt-1">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-bold text-[#CBD5E1] flex items-center gap-1.5 mr-1 font-heading">
+                            <Filter className="w-3.5 h-3.5 text-[#06B6D4]" /> กลยุทธ์เลือกหุ้น:
                           </span>
+                          
+                          {/* 1. W3 Champion Mode: Top-3 + Skip Expensive */}
                           <button
                             type="button"
-                            onClick={selectBuySignalsOnly}
-                            className="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1"
-                            title="ใช้สำหรับเงินก้อนพิเศษ / Bonus เพื่อสไนเปอร์ช้อนตัวที่ลดราคาลึก"
+                            onClick={selectTop3SkipExpensive}
+                            className={clsx(
+                              "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-sm",
+                              activeStrategyPreset === 'top3_skip'
+                                ? "bg-amber-500/25 text-amber-200 border-amber-400 ring-2 ring-amber-400/50 shadow-amber-500/20"
+                                : "bg-[#1A1D2D] hover:bg-[#2A2E45] text-slate-300 hover:text-white border-[#2A2E45]"
+                            )}
+                            title="W3 Champion Formula: กรองตัวที่ราคาเกิน >10% EMA150 หรือติด No Chase ออกก่อน แล้วเลือก 3 ตัวที่ขาดมากที่สุดในคลิกเดียว (ชนะ Top-3 เพียวๆ +1.27%/ปี, Win Rate 98.8%)"
                           >
-                            <span>🟢</span> Strong Buy ({signalCounts.strongBuy})
+                            <span>⚡</span>
+                            <span>Top-3 (ข้ามตัวแพง &gt;10% EMA150)</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/30 text-amber-100 border border-amber-400/40 font-mono">
+                              สูตรแนะนำ 🔥
+                            </span>
+                            {activeStrategyPreset === 'top3_skip' && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-400 text-black font-extrabold font-mono ml-0.5">
+                                ✓ ใช้งานอยู่
+                              </span>
+                            )}
                           </button>
+
+                          {/* 2. T1 Verified: Pure Top-3 Deficit */}
                           <button
                             type="button"
-                            onClick={selectFairAndStrong}
-                            className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1"
-                            title="ใช้สำหรับเงินก้อนพิเศษ / Bonus เพื่อสไนเปอร์ตัวที่ราคาเหมาะสม"
+                            onClick={selectTop3Deficit}
+                            className={clsx(
+                              "px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-sm",
+                              activeStrategyPreset === 'top3_pure'
+                                ? "bg-cyan-500/25 text-cyan-200 border-cyan-400 ring-2 ring-cyan-400/50 shadow-cyan-500/20"
+                                : "bg-[#1A1D2D] hover:bg-[#2A2E45] text-slate-300 hover:text-white border-[#2A2E45]"
+                            )}
+                            title="T1 Verified: เกลี่ยเฉพาะ 3 ตัวที่ขาดมากที่สุด (ไม่กรองราคา) ลดคำสั่งซื้อลงเหลือ 3 ตัว/เดือน"
                           >
-                            <span>🟢+🟡</span> Fair ({signalCounts.strongBuy + signalCounts.fair})
+                            <span>Top-3 เพียวๆ</span>
+                            {activeStrategyPreset === 'top3_pure' && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-cyan-400 text-black font-extrabold font-mono ml-0.5">
+                                ✓ ใช้งานอยู่
+                              </span>
+                            )}
+                          </button>
+
+                          {/* 3. T2 Verified: Skip Extended >10% EMA150 Tilt (All) */}
+                          <button
+                            type="button"
+                            onClick={selectSkipExpensive}
+                            className={clsx(
+                              "px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-sm",
+                              activeStrategyPreset === 'skip_expensive'
+                                ? "bg-purple-500/25 text-purple-200 border-purple-400 ring-2 ring-purple-400/50 shadow-purple-500/20"
+                                : "bg-[#1A1D2D] hover:bg-[#2A2E45] text-slate-300 hover:text-white border-[#2A2E45]"
+                            )}
+                            title="T2 Verified: งดเติมตัวที่ราคาสูงกว่า EMA150 เกิน 10% ทั้งหมด (เฉลี่ย 4-5 ตัว)"
+                          >
+                            <span>ข้ามตัวแพงทั้งหมด</span>
+                            {activeStrategyPreset === 'skip_expensive' && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-400 text-black font-extrabold font-mono ml-0.5">
+                                ✓ ใช้งานอยู่
+                              </span>
+                            )}
+                          </button>
+
+                          {/* 4. 100% Deficit DCA (Select All) */}
+                          <button
+                            type="button"
+                            onClick={toggleSelectAll}
+                            className={clsx(
+                              "px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-sm",
+                              activeStrategyPreset === 'all'
+                                ? "bg-emerald-500/25 text-emerald-200 border-emerald-400 ring-2 ring-emerald-400/50 shadow-emerald-500/20"
+                                : "bg-[#1A1D2D] hover:bg-[#2A2E45] text-slate-300 hover:text-white border-[#2A2E45]"
+                            )}
+                            title="เกลี่ยเงินให้หุ้นที่มีสัดส่วนขาด (Deficit) ครบทุกตัวตามสัดส่วน Blueprint (เหมาะสำหรับเดือน 1-2 ตั้งไข่)"
+                          >
+                            <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>100% Deficit DCA (หว่านทุกตัว)</span>
+                            {activeStrategyPreset === 'all' && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-400 text-black font-extrabold font-mono ml-0.5">
+                                ✓ ใช้งานอยู่
+                              </span>
+                            )}
+                          </button>
+
+                          <div className="h-4 w-[1px] bg-[#2A2E45] hidden sm:block mx-1" />
+
+                          {/* 5. Clear All */}
+                          <button
+                            type="button"
+                            onClick={clearAllSelections}
+                            className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#1A1D2D] hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-[#2A2E45] hover:border-rose-500/30 transition-all"
+                            title="ปลดติ๊กหุ้นทั้งหมด (งบลงทุนจะถูกเก็บเข้า Cash Reserve)"
+                          >
+                            ล้างการเลือก
                           </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={clearAllSelections}
-                          className="px-2.5 py-1 rounded-xl text-xs font-bold bg-[#1A1D2D] hover:bg-rose-500/20 text-[#CBD5E1] hover:text-rose-400 border border-[#2A2E45] transition-all"
-                        >
-                          ล้าง
-                        </button>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-[#CBD5E1]">
+                            เลือกแล้ว <strong className="text-white text-sm font-mono">{activeSelectedSymbols.size}</strong> จาก {cashflowCandidates.length} ตัว
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-[#CBD5E1]">
-                          เลือกแล้ว <strong className="text-white text-sm">{activeSelectedSymbols.size}</strong> จาก {cashflowCandidates.length} ตัว
-                        </span>
+                      {/* Live Strategy Briefing Strip */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-[#161926] border border-[#2A2E45] text-xs">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-[#CBD5E1]">สถานะคำนวณ:</span>
+                          {activeStrategyPreset === 'top3_skip' && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
+                              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                              ⚡ Top-3 (ข้ามตัวแพง &gt;10% EMA150)
+                            </span>
+                          )}
+                          {activeStrategyPreset === 'top3_pure' && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40">
+                              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                              Top-3 เพียวๆ (ตามขนาด Deficit)
+                            </span>
+                          )}
+                          {activeStrategyPreset === 'skip_expensive' && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40">
+                              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                              ข้ามตัวแพงทั้งหมด (&gt;10% EMA150)
+                            </span>
+                          )}
+                          {activeStrategyPreset === 'all' && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                              100% Deficit DCA (หว่านกระจายครบทุกตัว)
+                            </span>
+                          )}
+                          {activeStrategyPreset === 'custom' && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-500/20 text-blue-300 font-bold border border-blue-500/40">
+                              ✏️ กำหนดเอง (Custom Selection)
+                            </span>
+                          )}
+                          {activeStrategyPreset === 'none' && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40">
+                              ⚠️ ยังไม่ได้เลือกหุ้น (งบทั้งหมดพักใน Cash Reserve)
+                            </span>
+                          )}
+
+                          {activeSelectedSymbols.size > 0 && (
+                            <span className="text-slate-300 text-xs flex items-center gap-1.5 ml-1 flex-wrap">
+                              <span>➔ ซื้อ <strong className="text-white font-mono">[{Array.from(activeSelectedSymbols).slice(0, 5).join(', ')}{activeSelectedSymbols.size > 5 ? ` +${activeSelectedSymbols.size - 5}` : ''}]</strong></span>
+                              <span>• งบเฉลี่ย</span>
+                              <strong className="text-emerald-400 font-mono">
+                                {formatMoney(cashflowPlan.totalAllocatedUsd / activeSelectedSymbols.size)}/ตัว
+                              </strong>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-[#CBD5E1] text-[11px] hidden md:block">
+                          {remainderMode === 'redistribute' ? 'โหมดเกลี่ยเงินให้ตัวที่เลือก 100%' : 'โหมดเก็บเงินส่วนเกินเป็น Cash Reserve'}
+                        </div>
                       </div>
                     </div>
 
@@ -1716,10 +1773,11 @@ export const SmartRebalancePage: React.FC = () => {
                         <div className="flex justify-center gap-3 pt-2">
                           <button
                             type="button"
-                            onClick={selectFairAndStrong}
-                            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl transition-all shadow-md"
+                            onClick={selectTop3SkipExpensive}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5"
                           >
-                            เลือกตัวที่ราคาน่าซื้อ (🟢 + 🟡)
+                            <span>⚡</span>
+                            <span>เลือก Top-3 (ข้ามตัวแพง) [สูตรแนะนำ 🔥]</span>
                           </button>
                           <button
                             type="button"
