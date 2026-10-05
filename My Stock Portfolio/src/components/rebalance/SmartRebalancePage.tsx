@@ -120,7 +120,7 @@ export const SmartRebalancePage: React.FC = () => {
   const { blueprints, fetchBlueprints } = useBlueprintStore();
   const { radar, fetchRadar, compactTiers } = useProject2xStore();
 
-  const [mainTab, setMainTab] = useState<MainTab>('blueprint');
+  const [mainTab, setMainTab] = useState<MainTab>('tools');
   const [mode, setMode] = useState<RebalanceMode>('cashflow');
   const [depositAmountUsd, setDepositAmountUsd] = useState<number>(1000);
   const [copied, setCopied] = useState<boolean>(false);
@@ -860,17 +860,6 @@ export const SmartRebalancePage: React.FC = () => {
         {/* Main Tabs */}
         <div className="flex bg-[#1A1D2D] p-1.5 rounded-2xl border border-[#2A2E45] gap-1 self-start xl:self-auto">
           <button
-            onClick={() => setMainTab('blueprint')}
-            className={clsx(
-              "px-5 py-2 rounded-xl text-sm font-bold transition-all",
-              mainTab === 'blueprint'
-                ? "bg-gradient-to-r from-[#823AFD] to-[#06B6D4] text-white shadow-md"
-                : "text-[#9898C8] hover:text-white"
-            )}
-          >
-            Blueprint Setup
-          </button>
-          <button
             onClick={() => setMainTab('tools')}
             className={clsx(
               "px-5 py-2 rounded-xl text-sm font-bold transition-all",
@@ -880,6 +869,17 @@ export const SmartRebalancePage: React.FC = () => {
             )}
           >
             Rebalance Tools
+          </button>
+          <button
+            onClick={() => setMainTab('blueprint')}
+            className={clsx(
+              "px-5 py-2 rounded-xl text-sm font-bold transition-all",
+              mainTab === 'blueprint'
+                ? "bg-gradient-to-r from-[#823AFD] to-[#06B6D4] text-white shadow-md"
+                : "text-[#9898C8] hover:text-white"
+            )}
+          >
+            Blueprint Setup
           </button>
         </div>
       </div>
