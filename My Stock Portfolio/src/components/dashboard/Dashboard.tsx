@@ -1087,6 +1087,11 @@ export const Dashboard = () => {
         cashBalance={cashBalance}
         totalSecuritiesValue={totalSecuritiesValue}
         totalNetWorth={totalNetWorth}
+        periodMetrics={periodMetrics}
+        todaysProfit={todaysProfit}
+        todaysProfitPercent={todaysProfitPercent}
+        totalPnl={totalPnl}
+        totalPnlPercent={totalPnlPercent}
       />
 
       {/* Row 5: Performers (2/3) + Activity (1/3) */}

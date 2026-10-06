@@ -14,6 +14,11 @@ interface PortfolioTableProps {
   cashBalance: number;
   totalSecuritiesValue: number;
   totalNetWorth: number;
+  periodMetrics?: Record<string, { amount: number; percent: number }>;
+  todaysProfit?: number;
+  todaysProfitPercent?: number;
+  totalPnl?: number;
+  totalPnlPercent?: number;
 }
 
 export interface HoldingWithPeriod extends Holding {
@@ -138,7 +143,12 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
   formatCurrency,
   cashBalance,
   totalSecuritiesValue,
-  totalNetWorth
+  totalNetWorth,
+  periodMetrics,
+  todaysProfit,
+  todaysProfitPercent,
+  totalPnl,
+  totalPnlPercent,
 }) => {
   const { historical } = usePriceStore();
   const { currency, exchangeRate } = useUiStore();
@@ -283,6 +293,43 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
     return baseVal > 0 ? (totalNextReturn / baseVal) * 100 : 0;
   }, [totalSecuritiesValue, totalNextReturn]);
 
+  // Portfolio Net Worth Level Returns (harmonizing with the Top Dashboard Strip)
+  const netWorthActiveReturn = useMemo(() => {
+    if (periodMetrics?.[timeRange]?.amount !== undefined) {
+      return periodMetrics[timeRange].amount;
+    }
+    if (timeRange === '1D' && todaysProfit !== undefined) {
+      return todaysProfit;
+    }
+    return totalActiveReturn;
+  }, [periodMetrics, timeRange, todaysProfit, totalActiveReturn]);
+
+  const netWorthActiveReturnPercent = useMemo(() => {
+    if (periodMetrics?.[timeRange]?.percent !== undefined) {
+      return periodMetrics[timeRange].percent;
+    }
+    if (timeRange === '1D') {
+      if (todaysProfitPercent !== undefined) return todaysProfitPercent;
+      const baseNetWorth = totalNetWorth - totalActiveReturn;
+      return baseNetWorth > 0 ? (totalActiveReturn / baseNetWorth) * 100 : totalActiveReturnPercent;
+    }
+    return totalActiveReturnPercent;
+  }, [periodMetrics, timeRange, todaysProfitPercent, totalNetWorth, totalActiveReturn, totalActiveReturnPercent]);
+
+  const netWorthNextReturn = useMemo(() => {
+    if (periodMetrics?.[nextRange]?.amount !== undefined) {
+      return periodMetrics[nextRange].amount;
+    }
+    return totalNextReturn;
+  }, [periodMetrics, nextRange, totalNextReturn]);
+
+  const netWorthNextReturnPercent = useMemo(() => {
+    if (periodMetrics?.[nextRange]?.percent !== undefined) {
+      return periodMetrics[nextRange].percent;
+    }
+    return totalNextReturnPercent;
+  }, [periodMetrics, nextRange, totalNextReturnPercent]);
+
   const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
     if (sortConfig?.key === columnKey) {
       return sortConfig.direction === 'asc' 
@@ -324,7 +371,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                 ? "text-emerald-400 bg-emerald-400/10 border-emerald-500/20" 
                 : "text-rose-400 bg-rose-400/10 border-rose-500/20"
             )}>
-              {activeRangeLabel}: {totalActiveReturn >= 0 ? '+' : ''}{formatCurrency(totalActiveReturn, true)} ({totalActiveReturn >= 0 ? '+' : ''}{totalActiveReturnPercent.toFixed(2)}%)
+              Stocks {activeRangeLabel}: {totalActiveReturn >= 0 ? '+' : ''}{formatCurrency(totalActiveReturn, true)} ({totalActiveReturn >= 0 ? '+' : ''}{totalActiveReturnPercent.toFixed(2)}%)
             </span>
           </div>
           <p className="text-sm text-[#CBD5E1] mt-1">
@@ -709,33 +756,33 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
               <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
-                  totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                  netWorthActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
-                  {totalActiveReturn >= 0 ? '+' : '-'}{formatClean(totalActiveReturn)}
+                  {netWorthActiveReturn >= 0 ? '+' : '-'}{formatClean(netWorthActiveReturn)}
                 </span>
               </td>
               <td className="px-3 py-3 text-right whitespace-nowrap bg-[#181D33]/70 border-r border-[#823AFD]/30">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
-                  totalActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                  netWorthActiveReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
-                  {totalActiveReturn >= 0 ? '+' : ''}{totalActiveReturnPercent.toFixed(2)}%
+                  {netWorthActiveReturn >= 0 ? '+' : ''}{netWorthActiveReturnPercent.toFixed(2)}%
                 </span>
               </td>
               <td className="px-3 py-3 text-right whitespace-nowrap">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
-                  totalNextReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                  netWorthNextReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
-                  {totalNextReturn >= 0 ? '+' : '-'}{formatClean(totalNextReturn)}
+                  {netWorthNextReturn >= 0 ? '+' : '-'}{formatClean(netWorthNextReturn)}
                 </span>
               </td>
               <td className="px-3 py-3 text-right whitespace-nowrap">
                 <span className={clsx(
                   "font-bold text-[14px] tabular-nums font-heading",
-                  totalNextReturn >= 0 ? "text-emerald-400" : "text-rose-400"
+                  netWorthNextReturn >= 0 ? "text-emerald-400" : "text-rose-400"
                 )}>
-                  {totalNextReturn >= 0 ? '+' : ''}{totalNextReturnPercent.toFixed(2)}%
+                  {netWorthNextReturn >= 0 ? '+' : ''}{netWorthNextReturnPercent.toFixed(2)}%
                 </span>
               </td>
               <td className="px-3 py-3 text-right whitespace-nowrap">
