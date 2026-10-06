@@ -79,3 +79,16 @@ This workspace uses **two personas** that activate based on the active model. Al
 
 # Self-Improving Loop
 - Before any non-trivial work, MUST READ `self-improving/memory.md` for auto-extracted rules and `self-improving/corrections.md` for recent mistakes to avoid. This is critical for closing the learning loop.
+
+
+# Long-File Ergonomics & Interactive TOC Protocol (Rule R30)
+
+เพื่อขจัดปัญหา "ไฟล์ยาวเป็นพรืด อ่านยาก และแถบ Outline ด้านข้างกินพื้นที่หน้าจอ" ทุกครั้งที่ Agent เขียนหรือแก้ไขไฟล์ Markdown (`.md`) ใน Workspace ที่มีความยาว **≥150 บรรทัด หรือมี H2 ตั้งแต่ 4 หัวข้อขึ้นไป** ต้องปฏิบัติตามมาตรฐานใน [`docs/Markdown_Authoring_Bible.md`](file:///C:/XBrain/docs/Markdown_Authoring_Bible.md) อย่างเคร่งครัด:
+1. **Executive TL;DR Card:** บังคับใส่กล่องสรุปผลลัพธ์/Key Takeaways ภายใน 12 บรรทัดแรกใต้ H1 เสมอ (อ่านจบใน 30 วินาที)
+2. **In-File Interactive TOC:** บังคับวางสารบัญหัวไฟล์ พร้อมตั้ง `<a id="toc"></a>`
+3. **Explicit ASCII Anchors:** บังคับใช้ Semantic ASCII Anchor กำกับหน้าหัวข้อ เช่น `<a id="strategy-core"></a>` คู่กับลิงก์ `[1. กลยุทธ์หลัก](#strategy-core)` **ห้ามอาศัย auto-generated slug จากภาษาไทยหรือ Emoji เด็ดขาด** เพื่อป้องกันคลิกวืดข้ามระบบ
+4. **Jump Back Button:** ท้ายทุก Section ที่ยาว >40 บรรทัด หรือหลังกลุ่มเนื้อหาที่พับไว้ บังคับใส่ปุ่ม `[⬆️ กลับสู่สารบัญ](#toc)` คั่นด้วย `---` เสมอ
+5. **HTML Allowlist for Collapsible Sections (`<details><summary>`):** อนุญาตเฉพาะ `<a id="...">`, `<details>`, `<summary>` เท่านั้น (ห้ามใส่ style/script) โดยใช้ `<details>` พับเฉพาะเนื้อหาที่เป็น Repeated Payload (เช่น สคริปต์คลิปหลายๆ ชุด, Raw Transcripts, Benchmark Tables ละเอียดยิบ) เพื่อให้หน้าจอคงความคลีน สบายตา กางดูเมื่อต้องการ
+6. **Scope Enforcement:**
+   - **Strict 100%:** เอกสารเชิงยุทธศาสตร์, Playbooks, คู่มือระบบ, แผนสถาปัตยกรรม, คลังความรู้, สารานุกรม (`docs/`, `vault/`, `Products/`, `Brand/`)
+   - **Highly Recommended:** เอกสารบันทึกงานโค้ด (`Quick Save/`) ที่มีความยาวหลายร้อยบรรทัด แนะนำให้ใส่ In-File TOC เพื่ออำนวยความสะดวกในการกระโดดข้ามบล็อกโค้ดไปยัง Timeline หรือ GBRAIN Backlinks
