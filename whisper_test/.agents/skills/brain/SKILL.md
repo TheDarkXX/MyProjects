@@ -60,32 +60,39 @@ description: >-
 ---
 
 ### 2. `เคลียร์ inbox` (`/brain inbox`)
-1. ใช้ `list_dir` ตรวจสอบไฟล์ทั้งหมดใน `vault/0-inbox/` (ข้าม `README.md` และ `.gitkeep`)
-2. หากไม่มีไฟล์ → แจ้ง "Inbox ว่าง สะอาดเรียบร้อย โฟกัสงานต่อได้เลย"
-3. สำหรับแต่ละไฟล์:
-   - อ่านเนื้อหาด้วย `view_file`
-   - **สแกน Sensitive Data:** หากพบรหัสผ่าน/Token/เลขบัตร ให้แจ้งเตือนทันที และคงไว้ที่ `0-inbox/`
-   - **คัดแยกหมวดหมู่:**
-     - **ข้อมูลตัวตน/สไตล์ Boss:** เสนออัปเดตเข้า `vault/1-boss/` (ต้องให้ Boss ยืนยัน)
-     - **ต้นฉบับข้อมูลภายนอก/งานวิจัย:** ย้ายไป `vault/2-sources/`
-     - **ไอเดียที่ตกผลึกเป็นความรู้:** เขียนสรุปเป็นหน้าใหม่ใน `vault/3-wiki/` (ใช้กฎ `[AI เพิ่ม]`), เพิ่มชื่อใน `vault/3-wiki/_INDEX.md`, แล้วย้ายไฟล์ดิบเดิมไป `vault/9-archive/`
-4. สรุปผลการย้ายไฟล์ให้ Boss ทราบใน 1 ข้อความกระชับ
+1. รัน Air Traffic Auto-Dispatcher:
+   ```bash
+   node tools/vault-dispatcher.js --dry-run
+   ```
+2. หากมีไฟล์ที่ต้องส่งไปยังโปรเจกต์ดาวเทียม (Spiderweb Mesh เช่น `DoctorBank-Brand`, `The Viral`, `FastingTimer`, `Alpha-B` ฯลฯ):
+   - ตรวจสอบความถูกต้องและ Gate 1 (Secret Quarantine)
+   - สั่งย้ายจริงด้วย:
+     ```bash
+     node tools/vault-dispatcher.js --apply
+     ```
+   - สรุปผลการย้ายไฟล์ตามที่บันทึกใน `vault/0-inbox/_DISPATCH_LOG.md`
+3. สำหรับโน้ตที่ระบุว่าให้เก็บเข้า Wiki ของส่วนกลาง หรือตัวตนบอส:
+   - **ข้อมูลตัวตน/สไตล์ Boss:** เสนออัปเดตเข้า `vault/1-boss/about.md` (ต้องให้ Boss ยืนยัน)
+   - **ไอเดียที่ตกผลึกเป็นความรู้ส่วนกลาง:** เขียนสรุปเป็นหน้าใหม่ใน `vault/3-wiki/[topic].md` (ใช้แท็กมาตรฐานจาก `vault/3-wiki/_TAGS.md`), เพิ่มรายการใน `vault/3-wiki/_INDEX.md`, แล้วย้ายไฟล์ดิบไป `vault/9-archive/`
 
 ---
 
 ### 3. `ถามโน้ต: [คำถาม]` (`/brain ask`)
-1. โหลดข้อมูล `vault/1-boss/about.md` (ถ้ามี) เพื่อล็อก Tone of Voice และทัศนคติของ Boss
-2. ใช้ `grep_search` ค้นหาคีย์เวิร์ดใน `vault/3-wiki/` และ `vault/2-sources/`
+1. โหลดข้อมูล `vault/1-boss/about.md` เพื่อล็อก Tone of Voice และทัศนคติของ Boss
+2. **Federated Cross-Project Search:**
+   - ใช้ Step 1 ของ Universal Search Protocol: สแกน `search-manifest.md` ด้วย `grep_search` เพื่อหาโน้ตและเอกสารข้าม 13 โปรเจกต์ดาวเทียมใน Spiderweb Mesh
+   - ค้นหาใน `vault/3-wiki/` และ `vault/2-sources/`
 3. สังเคราะห์คำตอบ:
-   - ใช้ข้อเท็จจริงจากคลังโน้ตเป็นหลัก
+   - ใช้ข้อเท็จจริงจากคลังโน้ตและไฟล์โปรเจกต์ต้นทางเป็นหลัก
    - หากมีการขยายความหรือแนะนำเพิ่มเติม ให้ใส่แท็ก **`[AI เพิ่ม]`** นำหน้า
-   - แนบ Backlinks หรือ File Link ไปยังไฟล์ต้นทาง เช่น `[บทความ X](file:///c:/My%20Claw/Openclaw-VPS/vault/3-wiki/...)`
+   - แนบ File Link ตรงไปยังไฟล์ต้นทาง เช่น `[เอกสาร X](file:///c:/My%20Claw/DoctorBank-Brand/docs/...)`
 
 ---
 
 ### 4. `สรุปเข้า wiki: [เป้าหมาย]` (`/brain wiki`)
-1. อ่านไฟล์ต้นทางจาก `vault/2-sources/` หรือ `vault/0-inbox/`
-2. สร้างไฟล์ใหม่ใน `vault/3-wiki/[topic-kebab-case].md` โครงสร้าง:
+1. อ่านไฟล์ต้นทางจาก `vault/2-sources/`, โปรเจกต์ดาวเทียม, หรือ `vault/0-inbox/`
+2. ตรวจสอบแท็กมาตรฐานจาก `vault/3-wiki/_TAGS.md` เพื่อป้องกันปัญหา Tag Sprawl
+3. สร้างไฟล์ใหม่ใน `vault/3-wiki/[topic-kebab-case].md` โครงสร้าง:
    ```markdown
    # [หัวข้อความรู้]
 
@@ -100,10 +107,10 @@ description: >-
    - [AI เพิ่ม] แนวทางการนำไปปรับใช้ในช่องทางของเรา...
 
    ## 🔗 แหล่งอ้างอิงและ Backlinks
-   - ต้นฉบับ: [[vault/2-sources/...]]
+   - ต้นฉบับ: [[vault/2-sources/...]] หรือ [พิกัดโปรเจกต์ดาวเทียม](file:///...)
    - หัวข้อที่เกี่ยวข้อง: [[vault/3-wiki/...]]
    ```
-3. เพิ่มลิงก์บทความลงใน `vault/3-wiki/_INDEX.md` ตามหมวดหมู่
+4. เพิ่มลิงก์บทความลงใน `vault/3-wiki/_INDEX.md` ตามหมวดหมู่
 
 ---
 
