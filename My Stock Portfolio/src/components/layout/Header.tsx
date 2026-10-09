@@ -24,30 +24,14 @@ const PAGE_TITLES: Record<string, string> = {
   news: 'News Intel',
 };
 
+import { useMarketStatus } from '../../hooks/useMarketStatus';
+
 export const Header = () => {
   const { activeTab, currency, setCurrency } = useUiStore();
   const { portfolios, activePortfolioId, setActivePortfolio } = usePortfolioStore();
   const { exchangeRate, lastUpdated, loading, fetchExchangeRate } = usePriceStore();
-  const [isMarketOpen, setIsMarketOpen] = React.useState(false);
+  const marketStatus = useMarketStatus();
   const priceRelTime = useRelativeTime(lastUpdated);
-
-  React.useEffect(() => {
-    const checkMarketStatus = () => {
-      const nyTime = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
-      const nyDate = new Date(nyTime);
-      const day = nyDate.getDay();
-      const hours = nyDate.getHours();
-      const minutes = nyDate.getMinutes();
-      const isWeekday = day >= 1 && day <= 5;
-      const timeInMinutes = hours * 60 + minutes;
-      const marketOpenMinutes = 9 * 60 + 30; // 9:30 AM
-      const marketCloseMinutes = 16 * 60; // 4:00 PM
-      setIsMarketOpen(isWeekday && timeInMinutes >= marketOpenMinutes && timeInMinutes < marketCloseMinutes);
-    };
-    checkMarketStatus();
-    const interval = setInterval(checkMarketStatus, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   React.useEffect(() => {
     if (!lastUpdated) {
@@ -173,7 +157,7 @@ export const Header = () => {
         <button 
           onClick={() => fetchExchangeRate('USD', 'THB')}
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#151822]/80 border border-[#2A2E45]/80 hover:border-[#823AFD]/50 shadow-sm cursor-pointer transition-all hover:bg-[#1A1D2D] hover:-translate-y-0.5 group backdrop-blur-md font-heading select-none"
-          title={lastUpdated ? `Last price update: ${priceRelTime} (${lastUpdated.toLocaleTimeString('th-TH')}). Click to refresh!` : 'Click to refresh prices'}
+          title={marketStatus.tooltip}
         >
           {/* Status Indicator Dot */}
           <div className="relative flex items-center justify-center shrink-0">
@@ -181,28 +165,21 @@ export const Header = () => {
               "w-2 h-2 rounded-full transition-all duration-300",
               loading 
                 ? "bg-[#823AFD] animate-spin" 
-                : isMarketOpen 
-                  ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
-                  : "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]"
+                : marketStatus.dotClass
             )} />
-            {!loading && isMarketOpen && (
+            {!loading && marketStatus.isOpen && (
               <span className="absolute w-2 h-2 rounded-full bg-emerald-400 animate-ping opacity-40 pointer-events-none" />
             )}
           </div>
 
-          {/* Single-Line Modern Elegance Content (No Yahoo) */}
+          {/* Single-Line Modern Elegance Content */}
           <div className="flex items-center gap-1.5 text-[13px] font-heading">
-            <span className={clsx(
-              "font-bold transition-colors",
-              isMarketOpen
-                ? "text-emerald-400 group-hover:text-emerald-300"
-                : "text-rose-400 group-hover:text-rose-300"
-            )}>
-              {isMarketOpen ? 'US Live' : 'US Closed'}
+            <span className={clsx("transition-colors", marketStatus.textClass)}>
+              {marketStatus.label}
             </span>
             <span className="text-slate-600 text-[11px]">•</span>
             <span className="font-semibold text-slate-300 tabular-nums">
-              {isMarketOpen ? 'Realtime' : `Price ${priceRelTime}`}
+              {marketStatus.isOpen ? 'Realtime' : `Price ${priceRelTime}`}
             </span>
           </div>
         </button>

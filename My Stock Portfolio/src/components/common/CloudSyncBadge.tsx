@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { CloudOff, RefreshCw } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { useSyncStatusStore } from '../../stores/syncStatusStore';
 import { forceResync } from '../../services/settingsSync';
 import { useRelativeTime } from '../../hooks/useRelativeTime';
 import clsx from 'clsx';
 
 interface CloudSyncBadgeProps {
-  variant?: 'header' | 'tab';
+  variant?: 'header' | 'tab' | 'icon';
   className?: string;
 }
 
@@ -35,6 +35,49 @@ export const CloudSyncBadge: React.FC<CloudSyncBadgeProps> = ({ variant = 'tab',
       : lastSyncedAt
         ? `Universal Cloud Sync: เชื่อมต่อ VPS สำเร็จ (${relativeTime}) • คลิกเพื่อ Force Sync`
         : 'Universal Cloud Sync พร้อมใช้งาน • คลิกเพื่อซิงค์ทันที';
+
+  // 0. Icon Variant (Ultra-Sleek Micro Button for Far-Right Navigation)
+  if (variant === 'icon') {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={isSyncing}
+        className={clsx(
+          "relative flex items-center justify-center w-8 h-8 rounded-xl border text-[13px] font-bold transition-all cursor-pointer select-none group focus:outline-none",
+          status === 'error'
+            ? "bg-rose-950/40 border-rose-500/50 text-rose-300 hover:bg-rose-900/50"
+            : isSyncing
+              ? "bg-cyan-950/40 border-cyan-500/50 text-cyan-300 cursor-wait"
+              : "bg-slate-900/70 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-800",
+          className
+        )}
+        title={tooltipText}
+      >
+        {isSyncing ? (
+          <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+        ) : status === 'error' ? (
+          <CloudOff className="w-3.5 h-3.5 text-rose-400" />
+        ) : (
+          <Cloud className="w-3.5 h-3.5 text-slate-300 group-hover:text-amber-300 transition-colors" />
+        )}
+
+        {/* Micro Status LED on Corner */}
+        <span className="absolute top-1 right-1 flex h-1.5 w-1.5">
+          <span
+            className={clsx(
+              "w-1.5 h-1.5 rounded-full transition-all duration-300",
+              status === 'error'
+                ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.9)]"
+                : isSyncing
+                  ? "bg-cyan-400 animate-pulse shadow-[0_0_6px_rgba(34,211,238,0.9)]"
+                  : "bg-amber-400/90 shadow-[0_0_4px_rgba(251,191,36,0.8)]"
+            )}
+          />
+        </span>
+      </button>
+    );
+  }
 
   // 1. Tab Variant (Inside X-Chart Tab Bar capsule)
   if (variant === 'tab') {

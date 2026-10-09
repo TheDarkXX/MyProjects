@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { CloudSyncBadge } from '../common/CloudSyncBadge';
+import { useMarketStatus } from '../../hooks/useMarketStatus';
 
 export const XChartTabBar: React.FC = () => {
   const { tabs, activeTabId, setActiveTabId, closeTab, addTab, watchlistCollapsed, toggleWatchlist } = useXChartStore();
@@ -25,25 +26,7 @@ export const XChartTabBar: React.FC = () => {
   const { exchangeRate, lastUpdated, fetchExchangeRate } = usePriceStore();
   const [showAddModal, setShowAddModal] = useState(false);
   const [customTicker, setCustomTicker] = useState('');
-  const [isMarketOpen, setIsMarketOpen] = useState(false);
-
-  useEffect(() => {
-    const checkMarketStatus = () => {
-      const nyTime = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
-      const nyDate = new Date(nyTime);
-      const day = nyDate.getDay();
-      const hours = nyDate.getHours();
-      const minutes = nyDate.getMinutes();
-      const isWeekday = day >= 1 && day <= 5;
-      const timeInMinutes = hours * 60 + minutes;
-      const marketOpenMinutes = 9 * 60 + 30; // 9:30 AM
-      const marketCloseMinutes = 16 * 60; // 4:00 PM
-      setIsMarketOpen(isWeekday && timeInMinutes >= marketOpenMinutes && timeInMinutes < marketCloseMinutes);
-    };
-    checkMarketStatus();
-    const interval = setInterval(checkMarketStatus, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  const marketStatus = useMarketStatus();
 
   useEffect(() => {
     if (!lastUpdated) {
@@ -140,16 +123,21 @@ export const XChartTabBar: React.FC = () => {
       </div>
 
       {/* Right Controls: Market Status Capsule & Header Toggle */}
-      <div className="flex items-center gap-2.5 ml-auto shrink-0 pb-1.5 pl-3">
-        {/* Floating Status Pills */}
+      <div className="flex items-center gap-2 ml-auto shrink-0 pb-1.5 pl-3">
+        {/* Floating Status Pills: Unified Market Status + FX Rate */}
         <div className="hidden md:flex items-center gap-2.5 bg-[#151926]/90 border border-[#2A2E45] px-3 py-1 rounded-xl shadow-inner">
-          {/* US Market Status */}
-          <div className="flex items-center gap-1.5 text-[13px] font-bold">
-            <span className={`w-2 h-2 rounded-full ${isMarketOpen ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]' : 'bg-slate-500'}`} />
-            <span className={isMarketOpen ? 'text-emerald-400' : 'text-slate-300'}>
-              {isMarketOpen ? 'US LIVE' : 'CLOSED'}
+          {/* Unified Market Status & Price Feed Pill */}
+          <button
+            type="button"
+            onClick={() => fetchExchangeRate('USD', 'THB')}
+            className="flex items-center gap-1.5 text-[13px] font-bold cursor-pointer group focus:outline-none transition-all select-none"
+            title={marketStatus.tooltip}
+          >
+            <span className={clsx("w-2 h-2 rounded-full transition-all duration-300", marketStatus.dotClass)} />
+            <span className={clsx("tabular-nums transition-colors", marketStatus.textClass)}>
+              {marketStatus.label}
             </span>
-          </div>
+          </button>
 
           <div className="w-[1px] h-3.5 bg-slate-700" />
 
@@ -158,19 +146,6 @@ export const XChartTabBar: React.FC = () => {
             <span className="text-amber-400">💵</span>
             <span>1 USD = {exchangeRate ? exchangeRate.toFixed(2) : '33.80'} ฿</span>
           </div>
-
-          <div className="w-[1px] h-3.5 bg-slate-700" />
-
-          {/* Live Price Feed Indicator */}
-          <div className="flex items-center gap-1 text-[13px] font-semibold text-purple-300">
-            <span className="text-xs">⚡</span>
-            <span>Price Feed</span>
-          </div>
-
-          <div className="w-[1px] h-3.5 bg-slate-700" />
-
-          {/* Universal Cloud Settings Sync LED Indicator */}
-          <CloudSyncBadge variant="tab" />
         </div>
 
         {/* Toggle Watchlist Dock */}
@@ -211,6 +186,9 @@ export const XChartTabBar: React.FC = () => {
             </>
           )}
         </button>
+
+        {/* Universal Cloud Settings Sync (Moved to far right as sleek micro icon button) */}
+        <CloudSyncBadge variant="icon" />
       </div>
 
       {/* Add Tab Modal */}
