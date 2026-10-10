@@ -232,21 +232,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
               </th>
 
               <th
-                onClick={() => handleSort('weight')}
-                className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
-              >
-                <div className="flex items-center justify-end gap-1">
-                  <span>Weight / Target</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                </div>
-              </th>
-
-              <th
                 onClick={() => handleSort('price')}
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>Price</span>
+                  <span>Price / Avg</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -277,6 +267,16 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
               >
                 <div className="flex items-center justify-end gap-1">
                   <span>Total Return</span>
+                  <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                </div>
+              </th>
+
+              <th
+                onClick={() => handleSort('weight')}
+                className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
+              >
+                <div className="flex items-center justify-end gap-1">
+                  <span>Weight / Target</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -331,7 +331,82 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                       </div>
                     </td>
 
-                    {/* 2. Weight (Actual vs Target + Micro Allocation Bar) */}
+                    {/* 2. Market Price & Avg Cost: Stacked High-Contrast Mono */}
+                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
+                      {!slice.isCash ? (
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm font-bold text-white font-mono">
+                            {formatPriceVal(slice.lastPrice ?? 0, currency, exchangeRate)}
+                          </span>
+                          <span className="text-[13px] text-slate-300 font-mono font-medium mt-0.5">
+                            Avg {formatPriceVal(slice.avgCost ?? 0, currency, exchangeRate)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400 font-mono font-normal">--</span>
+                      )}
+                    </td>
+
+                    {/* 3. 1 Day Change: Single-line Bloomberg Inline */}
+                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
+                      {!slice.isCash ? (
+                        <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
+                          <span
+                            className={clsx(
+                              'text-sm font-bold',
+                              isDayProfit ? 'text-emerald-400' : 'text-rose-400'
+                            )}
+                          >
+                            {formatCurrencyVal(slice.dayReturn, currency, exchangeRate, true)}
+                          </span>
+                          <span
+                            className={clsx(
+                              'text-[13px] font-semibold',
+                              isDayProfit ? 'text-emerald-300' : 'text-rose-300'
+                            )}
+                          >
+                            ({isDayProfit ? '+' : ''}{(slice.dayChangePercent ?? 0).toFixed(2)}%)
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400 font-mono font-normal">--</span>
+                      )}
+                    </td>
+
+                    {/* 4. Holding Value: Clean Single-line Mono */}
+                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
+                      <span className="text-sm font-bold text-slate-100 font-mono">
+                        {formatCurrencyVal(slice.currentValue, currency, exchangeRate)}
+                      </span>
+                    </td>
+
+                    {/* 5. Total Return: Single-line Bloomberg Inline */}
+                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
+                      {!slice.isCash ? (
+                        <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
+                          <span
+                            className={clsx(
+                              'text-sm font-bold',
+                              isProfit ? 'text-emerald-400' : 'text-rose-400'
+                            )}
+                          >
+                            {formatCurrencyVal(slice.totalReturn, currency, exchangeRate, true)}
+                          </span>
+                          <span
+                            className={clsx(
+                              'text-[13px] font-semibold',
+                              isProfit ? 'text-emerald-300' : 'text-rose-300'
+                            )}
+                          >
+                            ({isProfit ? '+' : ''}{slice.totalReturnPercent.toFixed(2)}%)
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400 font-mono font-normal">--</span>
+                      )}
+                    </td>
+
+                    {/* 6. Weight (Actual vs Target + Micro Allocation Bar) */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       <div className="flex flex-col items-end">
                         <div className="flex items-center gap-1">
@@ -378,76 +453,6 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                           <span className="text-[12px] text-slate-500 font-mono mt-0.5">--</span>
                         )}
                       </div>
-                    </td>
-
-                    {/* 3. Market Price: Clean Single-line Mono */}
-                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
-                      {!slice.isCash ? (
-                        <span className="text-sm font-bold text-slate-100 font-mono">
-                          {formatPriceVal(slice.lastPrice ?? 0, currency, exchangeRate)}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-slate-400 font-mono font-normal">--</span>
-                      )}
-                    </td>
-
-                    {/* 4. 1 Day Change: Single-line Bloomberg Inline */}
-                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
-                      {!slice.isCash ? (
-                        <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
-                          <span
-                            className={clsx(
-                              'text-sm font-bold',
-                              isDayProfit ? 'text-emerald-400' : 'text-rose-400'
-                            )}
-                          >
-                            {formatCurrencyVal(slice.dayReturn, currency, exchangeRate, true)}
-                          </span>
-                          <span
-                            className={clsx(
-                              'text-[13px] font-semibold',
-                              isDayProfit ? 'text-emerald-300' : 'text-rose-300'
-                            )}
-                          >
-                            ({isDayProfit ? '+' : ''}{(slice.dayChangePercent ?? 0).toFixed(2)}%)
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-slate-400 font-mono font-normal">--</span>
-                      )}
-                    </td>
-
-                    {/* 5. Holding Value: Clean Single-line Mono */}
-                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
-                      <span className="text-sm font-bold text-slate-100 font-mono">
-                        {formatCurrencyVal(slice.currentValue, currency, exchangeRate)}
-                      </span>
-                    </td>
-
-                    {/* 6. Total Return: Single-line Bloomberg Inline */}
-                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
-                      {!slice.isCash ? (
-                        <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
-                          <span
-                            className={clsx(
-                              'text-sm font-bold',
-                              isProfit ? 'text-emerald-400' : 'text-rose-400'
-                            )}
-                          >
-                            {formatCurrencyVal(slice.totalReturn, currency, exchangeRate, true)}
-                          </span>
-                          <span
-                            className={clsx(
-                              'text-[13px] font-semibold',
-                              isProfit ? 'text-emerald-300' : 'text-rose-300'
-                            )}
-                          >
-                            ({isProfit ? '+' : ''}{slice.totalReturnPercent.toFixed(2)}%)
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-slate-400 font-mono font-normal">--</span>
-                      )}
                     </td>
 
                     {/* 7. Action Buttons */}
@@ -503,14 +508,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 </div>
               </td>
 
-              {/* Weight Total */}
-              <td className="py-3 px-3 text-right">
-                <span className="text-sm font-black text-purple-300 font-mono">
-                  {totals.totalWeight.toFixed(1)}%
-                </span>
-              </td>
-
-              {/* Price placeholder */}
+              {/* Price / Avg placeholder */}
               <td className="py-3 px-3 text-right">
                 <span className="text-sm text-slate-500 font-mono">--</span>
               </td>
@@ -564,6 +562,13 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                     ({totals.totalReturnPercent >= 0 ? '+' : ''}{totals.totalReturnPercent.toFixed(2)}%)
                   </span>
                 </div>
+              </td>
+
+              {/* Weight Total */}
+              <td className="py-3 px-3 text-right">
+                <span className="text-sm font-black text-purple-300 font-mono">
+                  {totals.totalWeight.toFixed(1)}%
+                </span>
               </td>
 
               {/* Actions placeholder */}
