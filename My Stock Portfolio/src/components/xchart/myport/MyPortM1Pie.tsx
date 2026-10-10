@@ -141,9 +141,9 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
         </span>
       </div>
 
-      {/* Mini Timeframe Hero Strip (Hybrid A & B) - Full Width with Dividers & Enlarged Fonts */}
+      {/* Mini Timeframe Hero Strip (Hybrid A & B) - Full Width with Bright Dividers & Enlarged Fonts */}
       <div className="w-full mb-3 px-0.5">
-        <div className="grid grid-cols-6 divide-x divide-slate-800/90 bg-[#121624] p-1.5 rounded-xl border border-slate-800 shadow-md w-full">
+        <div className="grid grid-cols-6 bg-[#121624] p-1.5 rounded-xl border border-slate-700 shadow-md w-full">
           {TIMEFRAME_OPTIONS.map((tf, idx) => {
             const m = periodMetrics?.[tf.id] || (
               tf.id === '1D' 
@@ -156,7 +156,13 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
             const isPositive = (m.percent ?? 0) >= 0;
 
             return (
-              <div key={tf.id} className={clsx('flex items-center justify-center', idx === 0 ? 'pr-1' : idx === TIMEFRAME_OPTIONS.length - 1 ? 'pl-1' : 'px-1')}>
+              <div 
+                key={tf.id} 
+                className={clsx(
+                  'flex items-center justify-center border-r border-slate-500/70 last:border-r-0',
+                  idx === 0 ? 'pr-1.5' : idx === TIMEFRAME_OPTIONS.length - 1 ? 'pl-1.5' : 'px-1.5'
+                )}
+              >
                 <button
                   onClick={() => handleTimeframeChange(tf.id)}
                   className={clsx(
