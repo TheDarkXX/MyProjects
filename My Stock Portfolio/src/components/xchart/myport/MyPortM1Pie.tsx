@@ -1,6 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Sector } from 'recharts';
-import { PortfolioSliceItem, formatCurrencyVal, formatSecondaryVal } from './types';
+import { 
+  PortfolioSliceItem, 
+  formatCurrencyVal, 
+  formatSecondaryVal,
+  MyPortTimeRange,
+  MyPortPeriodMetric
+} from './types';
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Wallet } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -17,7 +23,19 @@ interface MyPortM1PieProps {
   onSelectSymbol: (symbol: string) => void;
   currency: 'USD' | 'THB';
   exchangeRate: number;
+  selectedTimeframe?: MyPortTimeRange;
+  onSelectTimeframe?: (range: MyPortTimeRange) => void;
+  periodMetrics?: Record<string, MyPortPeriodMetric>;
 }
+
+const TIMEFRAME_OPTIONS: { id: MyPortTimeRange; label: string }[] = [
+  { id: '1D', label: '1D' },
+  { id: '1W', label: '1W' },
+  { id: '1M', label: '1M' },
+  { id: 'YTD', label: 'YTD' },
+  { id: '1Y', label: '1Y' },
+  { id: 'ALL', label: 'ALL' },
+];
 
 export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
   slices,
@@ -31,7 +49,21 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
   onSelectSymbol,
   currency,
   exchangeRate,
+  selectedTimeframe: propTimeframe,
+  onSelectTimeframe,
+  periodMetrics,
 }) => {
+  // Local active timeframe if not controlled from parent
+  const [localTimeframe, setLocalTimeframe] = useState<MyPortTimeRange>('1D');
+  const activeTimeframe = propTimeframe || localTimeframe;
+
+  const handleTimeframeChange = (tf: MyPortTimeRange) => {
+    setLocalTimeframe(tf);
+    if (onSelectTimeframe) {
+      onSelectTimeframe(tf);
+    }
+  };
+
   // Find currently active slice
   const activeSlice = useMemo(() => {
     if (!hoveredSymbol) return null;
@@ -84,13 +116,23 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
     );
   };
 
-  const isTodayProfit = todaysProfit >= 0;
-  const isTotalProfit = totalUnrealizedProfit >= 0;
+  // Get active period metric
+  const currentPeriodMetric = useMemo(() => {
+    const metric = periodMetrics?.[activeTimeframe];
+    if (metric) return metric;
+
+    if (activeTimeframe === '1D') {
+      return { amount: todaysProfit, percent: todaysProfitPercent };
+    }
+    return { amount: totalUnrealizedProfit, percent: totalUnrealizedProfitPercent };
+  }, [periodMetrics, activeTimeframe, todaysProfit, todaysProfitPercent, totalUnrealizedProfit, totalUnrealizedProfitPercent]);
+
+  const isMetricProfit = currentPeriodMetric.amount >= 0;
 
   return (
     <div className="flex flex-col h-full bg-[#0D1017] p-4 select-none overflow-y-auto custom-scrollbar">
       {/* Subtle Donut Canvas Subheader */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-2">
         <span className="text-[13px] font-bold text-slate-300 uppercase tracking-wider">
           Allocation Wheel
         </span>
@@ -99,8 +141,50 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
         </span>
       </div>
 
+      {/* Mini Timeframe Hero Strip (Hybrid A & B) */}
+      <div className="w-full max-w-[420px] mx-auto mb-2 px-0.5">
+        <div className="grid grid-cols-6 gap-1 bg-[#121624] p-1 rounded-xl border border-slate-800 shadow-md">
+          {TIMEFRAME_OPTIONS.map((tf) => {
+            const m = periodMetrics?.[tf.id] || (
+              tf.id === '1D' 
+                ? { percent: todaysProfitPercent } 
+                : tf.id === 'ALL' 
+                ? { percent: totalUnrealizedProfitPercent } 
+                : { percent: 0 }
+            );
+            const isSelected = activeTimeframe === tf.id;
+            const isPositive = (m.percent ?? 0) >= 0;
+
+            return (
+              <button
+                key={tf.id}
+                onClick={() => handleTimeframeChange(tf.id)}
+                className={clsx(
+                  'flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg transition-all cursor-pointer',
+                  isSelected
+                    ? 'bg-purple-950/70 border border-purple-500/80 shadow-[0_0_12px_rgba(168,85,247,0.35)]'
+                    : 'bg-transparent border border-transparent hover:bg-slate-800/60'
+                )}
+              >
+                <span className={clsx('text-[13px] font-bold tracking-tight', isSelected ? 'text-white' : 'text-slate-300')}>
+                  {tf.label}
+                </span>
+                <span
+                  className={clsx(
+                    'text-[12px] font-mono font-bold leading-tight mt-0.5 tabular-nums',
+                    isPositive ? 'text-emerald-400' : 'text-rose-400'
+                  )}
+                >
+                  {isPositive ? '+' : ''}{(m.percent ?? 0).toFixed(1)}%
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Donut Wheel + Ambient Glow + Center Core */}
-      <div className="relative w-full h-[370px] xl:h-[390px] flex items-center justify-center shrink-0">
+      <div className="relative w-full h-[360px] xl:h-[380px] flex items-center justify-center shrink-0">
         {/* Ambient background glow behind chart */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(147,51,234,0.08)_0%,rgba(13,16,23,0)_70%)] pointer-events-none" />
 
@@ -145,7 +229,7 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
         {/* Center Hub Display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
           {!activeSlice ? (
-            /* Default Center Core: Entire Portfolio Metrics (Reactive Currency) */
+            /* Default Center Core: Entire Portfolio Metrics (Reactive to Active Timeframe) */
             <div className="animate-fadeIn flex flex-col items-center">
               <span className="text-[13px] font-semibold text-slate-300 tracking-wider uppercase">
                 Net Worth
@@ -157,23 +241,38 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
                 ({formatSecondaryVal(totalNetWorth, currency, exchangeRate)})
               </span>
 
-              {/* Unrealized Return Badge */}
+              {/* Dynamic Timeframe Return Badge */}
               <div
                 className={clsx(
-                  'flex items-center gap-1 mt-2 px-2.5 py-0.5 rounded-full text-[13px] font-bold',
-                  isTotalProfit ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                  'flex items-center gap-1 mt-2 px-2.5 py-0.5 rounded-full text-[13px] font-bold border transition-all',
+                  isMetricProfit 
+                    ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-300' 
+                    : 'bg-rose-500/15 border-rose-500/35 text-rose-300'
                 )}
               >
-                {isTotalProfit ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                {isMetricProfit ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 <span>
-                  {formatCurrencyVal(totalUnrealizedProfit, currency, exchangeRate, true)} ({totalUnrealizedProfitPercent >= 0 ? '+' : ''}{totalUnrealizedProfitPercent.toFixed(2)}%)
+                  {activeTimeframe === '1D' ? 'Today: ' : `${activeTimeframe}: `}
+                  {formatCurrencyVal(currentPeriodMetric.amount, currency, exchangeRate, true)} ({isMetricProfit ? '+' : ''}{currentPeriodMetric.percent.toFixed(2)}%)
                 </span>
               </div>
 
-              {/* Today's Change Mini Text */}
-              <div className="text-[13px] text-slate-300 font-medium mt-1">
-                Today: {formatCurrencyVal(todaysProfit, currency, exchangeRate, true)} ({isTodayProfit ? '+' : ''}{todaysProfitPercent.toFixed(2)}%)
-              </div>
+              {/* S&P 500 Alpha Tag (if available) */}
+              {currentPeriodMetric.alpha !== undefined && (
+                <div className="flex items-center gap-1.5 mt-1 text-[12px] font-medium">
+                  <span className="text-slate-400">S&P:</span>
+                  <span className={clsx('font-bold font-mono', (currentPeriodMetric.spyPercent ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                    {(currentPeriodMetric.spyPercent ?? 0) >= 0 ? '+' : ''}{(currentPeriodMetric.spyPercent ?? 0).toFixed(1)}%
+                  </span>
+                  <span className="text-slate-500">·</span>
+                  <span className={clsx(
+                    'px-1.5 py-0.2 rounded font-bold font-mono',
+                    currentPeriodMetric.alpha >= 0 ? 'text-emerald-300 bg-emerald-500/20' : 'text-rose-300 bg-rose-500/20'
+                  )}>
+                    α {currentPeriodMetric.alpha >= 0 ? '+' : ''}{currentPeriodMetric.alpha.toFixed(1)}%
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             /* Hovered Slice Center Core: Stock Specific Details */

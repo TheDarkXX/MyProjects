@@ -12,7 +12,7 @@ import { MyPortM1Pie } from './MyPortM1Pie';
 import { MyPortTableView } from './MyPortTableView';
 import { MyPortBentoGridView } from './MyPortBentoGridView';
 import { MyPortHoldingDrawer } from './MyPortHoldingDrawer';
-import { PortfolioSliceItem, SLICE_PALETTE } from './types';
+import { PortfolioSliceItem, SLICE_PALETTE, MyPortTimeRange, MyPortPeriodMetric } from './types';
 
 interface MyPortTabProps {
   tabId: string;
@@ -38,6 +38,43 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
   const { fetchPrices, fetchExchangeRate, exchangeRate } = usePriceStore();
   const { addTab } = useXChartStore();
   const { currency, setCurrency } = useUiStore();
+
+  // Active timeframe for Mini Timeframe Strip (Hybrid A & B)
+  const [selectedTimeframe, setSelectedTimeframe] = useState<MyPortTimeRange>('1D');
+
+  // Load period metrics from Dashboard cache or derive with live fallbacks
+  const periodMetrics = useMemo(() => {
+    let cached: Record<string, MyPortPeriodMetric> | null = null;
+    if (activePortfolioId && typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(`stock_period_metrics_${activePortfolioId}`);
+        if (raw) {
+          cached = JSON.parse(raw);
+        }
+      } catch {}
+    }
+
+    const metrics: Record<string, MyPortPeriodMetric> = {
+      '1D': {
+        amount: todaysProfit,
+        percent: todaysProfitPercent,
+        spyPercent: cached?.['1D']?.spyPercent,
+        alpha: cached?.['1D']?.spyPercent !== undefined ? todaysProfitPercent - (cached?.['1D']?.spyPercent ?? 0) : undefined,
+      },
+      '1W': cached?.['1W'] || { amount: 0, percent: 0 },
+      '1M': cached?.['1M'] || { amount: 0, percent: 0 },
+      'YTD': cached?.['YTD'] || { amount: 0, percent: 0 },
+      '1Y': cached?.['1Y'] || { amount: 0, percent: 0 },
+      'ALL': {
+        amount: totalPnl,
+        percent: cached?.['ALL']?.percent ?? totalPnlPercent,
+        spyPercent: cached?.['ALL']?.spyPercent,
+        alpha: cached?.['ALL']?.spyPercent !== undefined ? (cached?.['ALL']?.percent ?? totalPnlPercent) - (cached?.['ALL']?.spyPercent ?? 0) : undefined,
+      },
+    };
+
+    return metrics;
+  }, [activePortfolioId, todaysProfit, todaysProfitPercent, totalPnl, totalPnlPercent]);
 
   // Load saved view mode or default to 'split'
   const [viewMode, setViewMode] = useState<MyPortViewMode>(() => {
@@ -232,6 +269,9 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
                 onSelectSymbol={(sym) => setDrawerSymbol(sym)}
                 currency={currency}
                 exchangeRate={rate}
+                selectedTimeframe={selectedTimeframe}
+                onSelectTimeframe={setSelectedTimeframe}
+                periodMetrics={periodMetrics}
               />
             </div>
 
