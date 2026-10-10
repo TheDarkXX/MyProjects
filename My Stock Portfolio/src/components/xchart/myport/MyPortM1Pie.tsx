@@ -141,10 +141,10 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
         </span>
       </div>
 
-      {/* Mini Timeframe Hero Strip (Hybrid A & B) - Full Width */}
+      {/* Mini Timeframe Hero Strip (Hybrid A & B) - Full Width with Dividers & Enlarged Fonts */}
       <div className="w-full mb-3 px-0.5">
-        <div className="grid grid-cols-6 gap-1.5 bg-[#121624] p-1.5 rounded-xl border border-slate-800 shadow-md w-full">
-          {TIMEFRAME_OPTIONS.map((tf) => {
+        <div className="grid grid-cols-6 divide-x divide-slate-800/90 bg-[#121624] p-1.5 rounded-xl border border-slate-800 shadow-md w-full">
+          {TIMEFRAME_OPTIONS.map((tf, idx) => {
             const m = periodMetrics?.[tf.id] || (
               tf.id === '1D' 
                 ? { percent: todaysProfitPercent } 
@@ -156,28 +156,31 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
             const isPositive = (m.percent ?? 0) >= 0;
 
             return (
-              <button
-                key={tf.id}
-                onClick={() => handleTimeframeChange(tf.id)}
-                className={clsx(
-                  'flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg transition-all cursor-pointer',
-                  isSelected
-                    ? 'bg-purple-950/70 border border-purple-500/80 shadow-[0_0_12px_rgba(168,85,247,0.35)]'
-                    : 'bg-transparent border border-transparent hover:bg-slate-800/60'
-                )}
-              >
-                <span className={clsx('text-[13px] font-bold tracking-tight', isSelected ? 'text-white' : 'text-slate-300')}>
-                  {tf.label}
-                </span>
-                <span
+              <div key={tf.id} className={clsx('flex items-center justify-center', idx === 0 ? 'pr-1' : idx === TIMEFRAME_OPTIONS.length - 1 ? 'pl-1' : 'px-1')}>
+                <button
+                  onClick={() => handleTimeframeChange(tf.id)}
                   className={clsx(
-                    'text-[12px] font-mono font-bold leading-tight mt-0.5 tabular-nums',
-                    isPositive ? 'text-emerald-400' : 'text-rose-400'
+                    'w-full flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all cursor-pointer',
+                    isSelected
+                      ? 'bg-purple-950/70 border border-purple-500/80 shadow-[0_0_12px_rgba(168,85,247,0.35)]'
+                      : 'bg-transparent border border-transparent hover:bg-slate-800/60'
                   )}
                 >
-                  {isPositive ? '+' : ''}{(m.percent ?? 0).toFixed(1)}%
-                </span>
-              </button>
+                  {/* Top row: +2px (13px -> 15px) */}
+                  <span className={clsx('text-[15px] font-bold tracking-tight', isSelected ? 'text-white' : 'text-slate-200')}>
+                    {tf.label}
+                  </span>
+                  {/* Bottom row: +5px (12px -> 17px) */}
+                  <span
+                    className={clsx(
+                      'text-[17px] font-mono font-bold leading-tight mt-0.5 tabular-nums tracking-tight',
+                      isPositive ? 'text-emerald-400' : 'text-rose-400'
+                    )}
+                  >
+                    {isPositive ? '+' : ''}{(m.percent ?? 0).toFixed(1)}%
+                  </span>
+                </button>
+              </div>
             );
           })}
         </div>
