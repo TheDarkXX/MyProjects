@@ -141,9 +141,9 @@ export const MyPortM1Pie: React.FC<MyPortM1PieProps> = ({
         </span>
       </div>
 
-      {/* Mini Timeframe Hero Strip (Hybrid A & B) */}
-      <div className="w-full max-w-[420px] mx-auto mb-2 px-0.5">
-        <div className="grid grid-cols-6 gap-1 bg-[#121624] p-1 rounded-xl border border-slate-800 shadow-md">
+      {/* Mini Timeframe Hero Strip (Hybrid A & B) - Full Width */}
+      <div className="w-full mb-3 px-0.5">
+        <div className="grid grid-cols-6 gap-1.5 bg-[#121624] p-1.5 rounded-xl border border-slate-800 shadow-md w-full">
           {TIMEFRAME_OPTIONS.map((tf) => {
             const m = periodMetrics?.[tf.id] || (
               tf.id === '1D' 

@@ -391,30 +391,26 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                       )}
                     </td>
 
-                    {/* 4. 1 Day Change: Amount & Percent */}
+                    {/* 4. 1 Day Change: Single-line Bloomberg Inline */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       {!slice.isCash ? (
-                        <div className="flex flex-col items-end">
+                        <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
                           <span
                             className={clsx(
-                              'text-sm font-bold font-mono',
+                              'text-sm font-bold',
                               isDayProfit ? 'text-emerald-400' : 'text-rose-400'
                             )}
                           >
                             {formatCurrencyVal(slice.dayReturn, currency, exchangeRate, true)}
                           </span>
-                          <div
+                          <span
                             className={clsx(
-                              'text-[13px] font-semibold flex items-center gap-0.5 mt-0.5',
-                              isDayProfit ? 'text-emerald-400' : 'text-rose-400'
+                              'text-[13px] font-semibold',
+                              isDayProfit ? 'text-emerald-300' : 'text-rose-300'
                             )}
                           >
-                            {isDayProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                            <span>
-                              {isDayProfit ? '+' : ''}
-                              {(slice.dayChangePercent ?? 0).toFixed(2)}%
-                            </span>
-                          </div>
+                            ({isDayProfit ? '+' : ''}{(slice.dayChangePercent ?? 0).toFixed(2)}%)
+                          </span>
                         </div>
                       ) : (
                         <span className="text-sm text-slate-400 font-mono font-normal">--</span>
@@ -428,13 +424,13 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                       </span>
                     </td>
 
-                    {/* 6. Total Return: Amount & Percent (Clean text, No Bulky Boxes) */}
+                    {/* 6. Total Return: Single-line Bloomberg Inline */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       {!slice.isCash ? (
-                        <div className="flex flex-col items-end">
+                        <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
                           <span
                             className={clsx(
-                              'text-sm font-bold font-mono',
+                              'text-sm font-bold',
                               isProfit ? 'text-emerald-400' : 'text-rose-400'
                             )}
                           >
@@ -442,12 +438,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                           </span>
                           <span
                             className={clsx(
-                              'text-[13px] font-semibold mt-0.5',
+                              'text-[13px] font-semibold',
                               isProfit ? 'text-emerald-300' : 'text-rose-300'
                             )}
                           >
-                            {isProfit ? '+' : ''}
-                            {slice.totalReturnPercent.toFixed(2)}%
+                            ({isProfit ? '+' : ''}{slice.totalReturnPercent.toFixed(2)}%)
                           </span>
                         </div>
                       ) : (
@@ -522,10 +517,10 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
 
               {/* 1 Day Change Total */}
               <td className="py-3 px-3 text-right">
-                <div className="flex flex-col items-end">
+                <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
                   <span
                     className={clsx(
-                      'text-sm font-black font-mono',
+                      'text-sm font-black',
                       totals.totalDayReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'
                     )}
                   >
@@ -533,12 +528,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                   </span>
                   <span
                     className={clsx(
-                      'text-[13px] font-bold mt-0.5',
-                      totals.totalDayChangePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      'text-[13px] font-bold',
+                      totals.totalDayChangePercent >= 0 ? 'text-emerald-300' : 'text-rose-300'
                     )}
                   >
-                    {totals.totalDayChangePercent >= 0 ? '+' : ''}
-                    {totals.totalDayChangePercent.toFixed(2)}%
+                    ({totals.totalDayChangePercent >= 0 ? '+' : ''}{totals.totalDayChangePercent.toFixed(2)}%)
                   </span>
                 </div>
               </td>
@@ -552,10 +546,10 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
 
               {/* Total Return Total */}
               <td className="py-3 px-3 text-right">
-                <div className="flex flex-col items-end">
+                <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
                   <span
                     className={clsx(
-                      'text-sm font-black font-mono',
+                      'text-sm font-black',
                       totals.totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'
                     )}
                   >
@@ -563,12 +557,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                   </span>
                   <span
                     className={clsx(
-                      'text-[13px] font-bold mt-0.5',
+                      'text-[13px] font-bold',
                       totals.totalReturnPercent >= 0 ? 'text-emerald-300' : 'text-rose-300'
                     )}
                   >
-                    {totals.totalReturnPercent >= 0 ? '+' : ''}
-                    {totals.totalReturnPercent.toFixed(2)}%
+                    ({totals.totalReturnPercent >= 0 ? '+' : ''}{totals.totalReturnPercent.toFixed(2)}%)
                   </span>
                 </div>
               </td>
