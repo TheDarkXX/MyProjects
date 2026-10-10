@@ -16,9 +16,17 @@ export interface PortfolioSliceItem {
   drift: number; // actualWeight - targetWeight (e.g. +5.0%)
   blueprintTargetPrice?: number | null;
   blueprintCeilingPrice?: number | null;
-  blueprintNotes?: string;
   color: string;
   isCash?: boolean;
+}
+
+export type MyPortTimeRange = '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL';
+
+export interface MyPortPeriodMetric {
+  amount: number;
+  percent: number;
+  spyPercent?: number;
+  alpha?: number;
 }
 
 export const SLICE_PALETTE: string[] = [

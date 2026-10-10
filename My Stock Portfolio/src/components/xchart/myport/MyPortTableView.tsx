@@ -2,9 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   PortfolioSliceItem, 
   formatCurrencyVal, 
-  formatSecondaryVal,
-  formatPriceVal,
-  formatSecondaryPriceVal
+  formatPriceVal 
 } from './types';
 import { 
   Search, 
@@ -14,7 +12,8 @@ import {
   Eye, 
   Target, 
   BarChart2, 
-  Scale 
+  Scale,
+  Layers
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -28,7 +27,7 @@ interface MyPortTableViewProps {
   currency: 'USD' | 'THB';
 }
 
-type SortField = 'weight' | 'pnl' | 'drift' | 'price' | 'value' | 'symbol';
+type SortField = 'weight' | 'pnl' | 'drift' | 'price' | 'value' | 'symbol' | 'dayChange';
 
 export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
   slices,
@@ -85,6 +84,9 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
         case 'price':
           comparison = (a.lastPrice || 0) - (b.lastPrice || 0);
           break;
+        case 'dayChange':
+          comparison = (a.dayReturn || 0) - (b.dayReturn || 0);
+          break;
         case 'value':
           comparison = (a.currentValue || 0) - (b.currentValue || 0);
           break;
@@ -104,6 +106,31 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
 
     return list;
   }, [slices, searchQuery, filterMode, sortField, sortAsc]);
+
+  // Aggregate totals for the sticky footer
+  const totals = useMemo(() => {
+    const totalHoldingValue = filteredSlices.reduce((sum, s) => sum + (s.currentValue || 0), 0);
+    const totalDayReturn = filteredSlices.reduce((sum, s) => sum + (s.dayReturn || 0), 0);
+    const totalReturn = filteredSlices.reduce((sum, s) => sum + (s.totalReturn || 0), 0);
+    const totalWeight = filteredSlices.reduce((sum, s) => sum + (s.actualWeight || 0), 0);
+    const totalCost = filteredSlices.reduce((sum, s) => sum + (s.totalCost || 0), 0);
+    
+    // Day return percent based on prior value
+    const prevValue = totalHoldingValue - totalDayReturn;
+    const totalDayChangePercent = prevValue > 0 ? (totalDayReturn / prevValue) * 100 : 0;
+
+    // Total return percent based on total cost
+    const totalReturnPercent = totalCost > 0 ? (totalReturn / totalCost) * 100 : 0;
+
+    return {
+      totalHoldingValue,
+      totalDayReturn,
+      totalDayChangePercent,
+      totalReturn,
+      totalReturnPercent,
+      totalWeight,
+    };
+  }, [filteredSlices]);
 
   const winnersCount = useMemo(() => slices.filter((s) => !s.isCash && s.totalReturnPercent > 0).length, [slices]);
   const losersCount = useMemo(() => slices.filter((s) => !s.isCash && s.totalReturnPercent < 0).length, [slices]);
@@ -129,7 +156,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <button
             onClick={() => setFilterMode('all')}
             className={clsx(
-              'px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
+              'px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0 cursor-pointer',
               filterMode === 'all'
                 ? 'bg-purple-600/30 text-purple-200 border border-purple-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -140,7 +167,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <button
             onClick={() => setFilterMode('winners')}
             className={clsx(
-              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
+              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0 cursor-pointer',
               filterMode === 'winners'
                 ? 'bg-emerald-600/30 text-emerald-200 border border-emerald-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -152,7 +179,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <button
             onClick={() => setFilterMode('losers')}
             className={clsx(
-              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
+              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0 cursor-pointer',
               filterMode === 'losers'
                 ? 'bg-rose-600/30 text-rose-200 border border-rose-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -164,7 +191,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <button
             onClick={() => setFilterMode('overweight')}
             className={clsx(
-              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
+              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0 cursor-pointer',
               filterMode === 'overweight'
                 ? 'bg-blue-600/30 text-blue-200 border border-blue-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -176,7 +203,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <button
             onClick={() => setFilterMode('underweight')}
             className={clsx(
-              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0',
+              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all shrink-0 cursor-pointer',
               filterMode === 'underweight'
                 ? 'bg-amber-600/30 text-amber-200 border border-amber-500/50 shadow-sm'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -188,8 +215,8 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
         </div>
       </div>
 
-      {/* Main Data Table: Consolidated 6 Essential Columns */}
-      <div className="flex-1 overflow-auto custom-scrollbar">
+      {/* Main Data Table: Clean High-Contrast Grid with Sticky Total Footer */}
+      <div className="flex-1 overflow-auto custom-scrollbar relative flex flex-col">
         <table className="w-full border-collapse text-left text-sm">
           {/* Table Header */}
           <thead className="bg-[#121622] text-slate-300 sticky top-0 z-10 border-b border-slate-800 text-[13px] font-bold">
@@ -205,21 +232,21 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
               </th>
 
               <th
-                onClick={() => handleSort('weight')}
+                onClick={() => handleSort('price')}
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>Weight / Target</span>
+                  <span>Price / Avg</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
 
               <th
-                onClick={() => handleSort('price')}
+                onClick={() => handleSort('dayChange')}
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>Price / 24h</span>
+                  <span>1 Day Change</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -239,7 +266,17 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>Total P&L</span>
+                  <span>Total Return</span>
+                  <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                </div>
+              </th>
+
+              <th
+                onClick={() => handleSort('weight')}
+                className="py-2.5 px-3 cursor-pointer hover:text-white transition-colors text-right"
+              >
+                <div className="flex items-center justify-end gap-1">
+                  <span>Weight / Target</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
@@ -254,7 +291,7 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
           <tbody className="divide-y divide-slate-800/60">
             {filteredSlices.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-slate-300 text-sm">
+                <td colSpan={7} className="py-12 text-center text-slate-300 text-sm">
                   {searchQuery ? 'No assets match the search query' : 'No assets found'}
                 </td>
               </tr>
@@ -263,7 +300,6 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                 const isHovered = hoveredSymbol && slice.symbol ? hoveredSymbol.toUpperCase() === slice.symbol.toUpperCase() : false;
                 const isProfit = slice.totalReturn >= 0;
                 const isDayProfit = slice.dayChangePercent >= 0;
-                const valueTHB = slice.currentValue * (exchangeRate || 34.5);
 
                 return (
                   <tr
@@ -277,106 +313,80 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                         : 'bg-transparent border-l-4 border-l-transparent hover:bg-slate-800/30'
                     )}
                   >
-                    {/* 1. Asset / Symbol & Category */}
+                    {/* 1. Asset / Symbol & Category Subtitle */}
                     <td className="py-2.5 px-3.5" onClick={() => onSelectSymbol(slice.symbol)}>
                       <div className="flex items-center gap-2.5">
                         <span
                           className="w-3 h-3 rounded-full shrink-0 shadow-sm"
                           style={{ backgroundColor: slice.color }}
                         />
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-bold text-white font-heading">
-                              {slice.symbol}
-                            </span>
-                            <span className="text-[13px] px-1.5 py-0.2 rounded bg-slate-800/90 text-slate-300 font-normal border border-slate-700/60">
-                              {slice.category}
-                            </span>
-                          </div>
-                          {slice.isCash && (
-                            <span className="text-[13px] text-emerald-400 font-normal">Cash Cushion</span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* 2. Weight (Actual vs Target) */}
-                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
-                      <div className="flex flex-col items-end">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-normal text-slate-200 font-mono">
-                            {slice.actualWeight.toFixed(1)}%
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white tracking-wide">
+                            {slice.symbol}
                           </span>
-                          {slice.targetWeight > 0 && (
-                            <span className="text-[13px] text-slate-400 font-normal">
-                              (Target {slice.targetWeight.toFixed(1)}%)
-                            </span>
-                          )}
+                          <span className="text-[13px] text-slate-400 font-medium">
+                            {slice.isCash ? 'Cash Cushion' : (slice.category || 'Asset')}
+                          </span>
                         </div>
-
-                        {/* Drift Badge */}
-                        {slice.targetWeight > 0 && (
-                          <div className="mt-0.5">
-                            <span
-                              className={clsx(
-                                'text-[13px] font-medium px-1.5 py-0.2 rounded-full',
-                                slice.drift >= 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
-                              )}
-                            >
-                              {slice.drift >= 0 ? `+${slice.drift.toFixed(1)}% Over` : `${slice.drift.toFixed(1)}% Under`}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </td>
 
-                    {/* 3. Market Price & 24h Change (Reactive Currency) */}
+                    {/* 2. Market Price & Avg Cost: Stacked High-Contrast Mono */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       {!slice.isCash ? (
                         <div className="flex flex-col items-end">
-                          <span className="text-sm font-normal text-slate-200 font-mono">
+                          <span className="text-sm font-bold text-white font-mono">
                             {formatPriceVal(slice.lastPrice ?? 0, currency, exchangeRate)}
                           </span>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[13px] text-slate-400 font-normal">
-                              ({formatSecondaryPriceVal(slice.lastPrice ?? 0, currency, exchangeRate)})
-                            </span>
-                            <span
-                              className={clsx(
-                                'text-[13px] font-medium flex items-center gap-0.5',
-                                isDayProfit ? 'text-emerald-400' : 'text-rose-400'
-                              )}
-                            >
-                              {isDayProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                              {isDayProfit ? '+' : ''}
-                              {(slice.dayChangePercent ?? 0).toFixed(2)}%
-                            </span>
-                          </div>
+                          <span className="text-[13px] text-slate-300 font-mono font-medium mt-0.5">
+                            Avg {formatPriceVal(slice.avgCost ?? 0, currency, exchangeRate)}
+                          </span>
                         </div>
                       ) : (
                         <span className="text-sm text-slate-400 font-mono font-normal">--</span>
                       )}
                     </td>
 
-                    {/* 4. Holding Value */}
-                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
-                      <div className="flex flex-col items-end">
-                        <span className="text-sm font-normal text-slate-200 font-mono">
-                          {formatCurrencyVal(slice.currentValue, currency, exchangeRate)}
-                        </span>
-                        <span className="text-[13px] text-slate-400 font-normal">
-                          ({formatSecondaryVal(slice.currentValue, currency, exchangeRate)})
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* 5. Total Unrealized Return */}
+                    {/* 3. 1 Day Change: Single-line Bloomberg Inline */}
                     <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
                       {!slice.isCash ? (
-                        <div className="flex flex-col items-end">
+                        <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
                           <span
                             className={clsx(
-                              'text-sm font-normal font-mono',
+                              'text-sm font-bold',
+                              isDayProfit ? 'text-emerald-400' : 'text-rose-400'
+                            )}
+                          >
+                            {formatCurrencyVal(slice.dayReturn, currency, exchangeRate, true)}
+                          </span>
+                          <span
+                            className={clsx(
+                              'text-[13px] font-semibold',
+                              isDayProfit ? 'text-emerald-300' : 'text-rose-300'
+                            )}
+                          >
+                            ({isDayProfit ? '+' : ''}{(slice.dayChangePercent ?? 0).toFixed(2)}%)
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400 font-mono font-normal">--</span>
+                      )}
+                    </td>
+
+                    {/* 4. Holding Value: Clean Single-line Mono */}
+                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
+                      <span className="text-sm font-bold text-slate-100 font-mono">
+                        {formatCurrencyVal(slice.currentValue, currency, exchangeRate)}
+                      </span>
+                    </td>
+
+                    {/* 5. Total Return: Single-line Bloomberg Inline */}
+                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
+                      {!slice.isCash ? (
+                        <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
+                          <span
+                            className={clsx(
+                              'text-sm font-bold',
                               isProfit ? 'text-emerald-400' : 'text-rose-400'
                             )}
                           >
@@ -384,12 +394,11 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                           </span>
                           <span
                             className={clsx(
-                              'text-[13px] font-medium px-1.5 py-0.2 rounded mt-0.5',
-                              isProfit ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                              'text-[13px] font-semibold',
+                              isProfit ? 'text-emerald-300' : 'text-rose-300'
                             )}
                           >
-                            {isProfit ? '+' : ''}
-                            {slice.totalReturnPercent.toFixed(2)}%
+                            ({isProfit ? '+' : ''}{slice.totalReturnPercent.toFixed(2)}%)
                           </span>
                         </div>
                       ) : (
@@ -397,7 +406,56 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                       )}
                     </td>
 
-                    {/* 6. Action Buttons: Clean & Compact */}
+                    {/* 6. Weight (Actual vs Target + Micro Allocation Bar) */}
+                    <td className="py-2.5 px-3 text-right" onClick={() => onSelectSymbol(slice.symbol)}>
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-bold text-slate-100 font-mono">
+                            {slice.actualWeight.toFixed(1)}%
+                          </span>
+                          {slice.targetWeight > 0 && (
+                            <span className="text-[13px] text-slate-400 font-normal">
+                              / {slice.targetWeight.toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+
+                        {/* M1 Finance Micro Progress Bar & Drift Indicator */}
+                        {slice.targetWeight > 0 ? (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <div className="w-14 h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
+                              <div
+                                className={clsx(
+                                  'h-full rounded-full transition-all duration-300',
+                                  slice.drift > 0.5 
+                                    ? 'bg-blue-400' 
+                                    : slice.drift < -0.5 
+                                    ? 'bg-amber-400' 
+                                    : 'bg-emerald-400'
+                                )}
+                                style={{ width: `${Math.min(100, Math.max(10, (slice.actualWeight / slice.targetWeight) * 50))}%` }}
+                              />
+                            </div>
+                            <span
+                              className={clsx(
+                                'text-[12px] font-mono font-medium',
+                                slice.drift > 0.5 
+                                  ? 'text-blue-300' 
+                                  : slice.drift < -0.5 
+                                  ? 'text-amber-300' 
+                                  : 'text-emerald-300'
+                              )}
+                            >
+                              {slice.drift >= 0 ? `+${slice.drift.toFixed(1)}%` : `${slice.drift.toFixed(1)}%`}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[12px] text-slate-500 font-mono mt-0.5">--</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* 7. Action Buttons */}
                     <td className="py-2.5 px-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
@@ -405,8 +463,8 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                             e.stopPropagation();
                             onSelectSymbol(slice.symbol);
                           }}
-                          title="Quick Inspect Drawer"
-                          className="p-1.5 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition-colors border border-slate-700/80 cursor-pointer"
+                          title="Inspect Details"
+                          className="p-1.5 rounded-lg bg-slate-800/90 text-slate-200 hover:text-white hover:bg-slate-700 transition-colors border border-slate-700/80 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
@@ -416,8 +474,8 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
                               e.stopPropagation();
                               onOpenChart(slice.symbol);
                             }}
-                            title="Launch Full Candlestick Chart in X-Chart"
-                            className="p-1.5 rounded-lg bg-purple-600/30 text-purple-200 hover:bg-purple-600/50 hover:text-white transition-all border border-purple-500/40 shadow-sm cursor-pointer"
+                            title="Open Candlestick Chart in X-Chart"
+                            className="p-1.5 rounded-lg bg-purple-600/25 text-purple-200 hover:bg-purple-600/50 hover:text-white transition-all border border-purple-500/40 shadow-sm cursor-pointer"
                           >
                             <BarChart2 className="w-3.5 h-3.5" />
                           </button>
@@ -429,6 +487,96 @@ export const MyPortTableView: React.FC<MyPortTableViewProps> = ({
               })
             )}
           </tbody>
+
+          {/* Sticky TOTAL ROW (Footer) */}
+          <tfoot className="sticky bottom-0 z-20 bg-[#0F1424] border-t-2 border-purple-500/70 shadow-[0_-8px_24px_rgba(0,0,0,0.7)] text-slate-100">
+            <tr>
+              {/* Asset Total */}
+              <td className="py-3 px-3.5">
+                <div className="flex items-center gap-2">
+                  <span className="p-1 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                    <Layers className="w-3.5 h-3.5" />
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-black text-white tracking-wide uppercase">
+                      Total
+                    </span>
+                    <span className="text-[12px] text-slate-400 font-medium">
+                      {filteredSlices.length} Slices
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              {/* Price / Avg placeholder */}
+              <td className="py-3 px-3 text-right">
+                <span className="text-sm text-slate-500 font-mono">--</span>
+              </td>
+
+              {/* 1 Day Change Total */}
+              <td className="py-3 px-3 text-right">
+                <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
+                  <span
+                    className={clsx(
+                      'text-sm font-black',
+                      totals.totalDayReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                    )}
+                  >
+                    {formatCurrencyVal(totals.totalDayReturn, currency, exchangeRate, true)}
+                  </span>
+                  <span
+                    className={clsx(
+                      'text-[13px] font-bold',
+                      totals.totalDayChangePercent >= 0 ? 'text-emerald-300' : 'text-rose-300'
+                    )}
+                  >
+                    ({totals.totalDayChangePercent >= 0 ? '+' : ''}{totals.totalDayChangePercent.toFixed(2)}%)
+                  </span>
+                </div>
+              </td>
+
+              {/* Holding Value Total */}
+              <td className="py-3 px-3 text-right">
+                <span className="text-sm font-black text-white font-mono tracking-tight">
+                  {formatCurrencyVal(totals.totalHoldingValue, currency, exchangeRate)}
+                </span>
+              </td>
+
+              {/* Total Return Total */}
+              <td className="py-3 px-3 text-right">
+                <div className="flex items-center justify-end gap-1.5 font-mono whitespace-nowrap">
+                  <span
+                    className={clsx(
+                      'text-sm font-black',
+                      totals.totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                    )}
+                  >
+                    {formatCurrencyVal(totals.totalReturn, currency, exchangeRate, true)}
+                  </span>
+                  <span
+                    className={clsx(
+                      'text-[13px] font-bold',
+                      totals.totalReturnPercent >= 0 ? 'text-emerald-300' : 'text-rose-300'
+                    )}
+                  >
+                    ({totals.totalReturnPercent >= 0 ? '+' : ''}{totals.totalReturnPercent.toFixed(2)}%)
+                  </span>
+                </div>
+              </td>
+
+              {/* Weight Total */}
+              <td className="py-3 px-3 text-right">
+                <span className="text-sm font-black text-purple-300 font-mono">
+                  {totals.totalWeight.toFixed(1)}%
+                </span>
+              </td>
+
+              {/* Actions placeholder */}
+              <td className="py-3 px-3 text-center">
+                <span className="text-sm text-slate-500 font-mono">--</span>
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
