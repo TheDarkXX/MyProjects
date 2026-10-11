@@ -1,17 +1,17 @@
 ---
 name: lr
-version: "1.2.0"
+version: "1.3.0"
 description: >-
   Intelligent Portrait Development and GPU Direct Export Engine for LightCraft and Lightroom workflows.
-  Features 4-Dimension Situational Radar, Zone VIII- Luminous Skin Pop, Universal Multi-Face Glow,
-  WB Kelvin Floor 5800K clamp, and Orange Luminance boost.
+  Features Korean Idol Glass Skin (ขาว ใส อมชมพู), 4-Dimension Situational Radar, Zone VIII- Luminous Skin Pop,
+  Universal Multi-Face Glow, WB Kelvin Floor 5800K clamp, and Orange Luminance +22 boost.
   Supports /lr (Smart Default), /lrlive (Live GUI Sync), /lrbatch (Batch Render JPEG), and /lrexport (One-Click GPU Fast Export 2048px).
 ---
 
 # Skill: `/lr` (`/lrlive` / `/lrbatch` / `/lrexport`) — Intelligent Portrait Development Engine
 
 ## 📌 ภาพรวม (Overview)
-เครื่องยนต์แต่งภาพพอร์ตเทรตอัจฉริยะระบบครบวงจร (4-Tier Architecture) รองรับทั้งการเกรดสีสดๆ บนหน้าจอ **LightCraft GUI**, การประมวลผลเรนเดอร์เบื้องหลัง, และคำสั่ง **Direct GPU Export** รวดเดียวทั้งอัลบั้ม ด้วยมาตรฐาน **"Ultra Luminous Bright & Airy Pop"** (ขาวสว่างใสวิ้ง อมชมพู มิติโปร่งตา สไตล์ญี่ปุ่น/เกาหลี)
+เครื่องยนต์แต่งภาพพอร์ตเทรตอัจฉริยะระบบครบวงจร (4-Tier Architecture) รองรับทั้งการเกรดสีสดๆ บนหน้าจอ **LightCraft GUI**, การประมวลผลเรนเดอร์เบื้องหลัง, คำสั่ง **Direct GPU Export** รวดเดียวทั้งอัลบั้ม และชุดพรีเซ็ต **"Korean Idol Glass Skin & Studio Airy Suite"** (.xmp สำหรับ Adobe Lightroom Classic / Camera Raw) ด้วยมาตรฐานผิวขาวกระจ่างใส อมชมพูระเรื่อ ดุจกระเบื้องเคลือบสไตล์ดารา-ไอดอลเกาหลี
 
 ---
 
@@ -52,9 +52,24 @@ description: >-
    - ภาพคมชัดมีมิติ สีสูทและลายผ้าเด้งชัด ไร้เงาดำจมทึบตัน (`Blacks: -1 ถึง 0`)
 4. **WB Kelvin Floor Clamp (`5800K`):**
    - ล็อกกันภาพติดฟ้าซีดถาวร ผิวคงความอุ่นละมุนและมีเลือดฝาดด้วย **Tint `+6 ถึง +10`**
-5. **Universal Multi-Face Glow Masking & Orange Lum (+15):**
+5. **Universal Multi-Face Glow Masking & Orange Lum (+22):**
    - สแกนและสวม Face Glow Mask ให้กับ **"ทุกคนในภาพ"** (พ่อ, แม่, ลูกทุกคน) ไม่ทิ้งใครไว้ข้างหลัง
-   - เพิ่ม **Orange Luminance (+15)** เจาะจงความสว่างเฉพาะเม็ดสีผิวคนเอเชียโดยตรง
+   - เพิ่ม **Orange Luminance (+22)** เจาะจงความสว่างเฉพาะเม็ดสีผิวคนเอเชีย ผิวใสกระจ่างดุจดาราเกาหลี
+
+---
+
+## 🎨 DoctorBank 2026 Korean Idol & Studio Preset Suite (.xmp)
+
+ติดตั้งและพร้อมใช้งานทันทีใน **Adobe Lightroom Classic** และ **Camera Raw**:
+- โฟลเดอร์ Lightroom: `C:\Users\The Dark\AppData\Roaming\Adobe\Lightroom\Develop Presets\DR.Bank Preset\`
+- โฟลเดอร์ Camera Raw: `C:\Users\The Dark\AppData\Roaming\Adobe\CameraRaw\Settings\DoctorBank 2026 Korean Suite\`
+
+| พรีเซ็ต | บทบาทและแนวภาพ | พารามิเตอร์เด่น |
+|---|---|---|
+| **`[DB] 01 - Korean Idol Glass Skin (Master)`** | สไตล์ดารา-ไอดอลเกาหลี ผิวขาวใส อมชมพูระเรื่อ ดุจกระเบื้องเคลือบ (Porcelain Glass Skin) | Orange Lum +22, Sat -12, Hue +5, Whites +24, High -52, Blue Calib Sat +16, Clarity -8 |
+| **`[DB] 02 - Ultra Airy Pop (Studio Japan)`** | สไตล์ High-Key ญี่ปุ่น สะอาดตา โปร่ง โล่ง สบายตา เสื้อขาววิ้ง (FEB_1600 Ground Truth) | Whites +22, High -48, Shadows +36, Green Sat -14, Texture +4 |
+| **`[DB] 03 - Warm Porcelain (Tungsten Neutralizer)`** | กู้ชีพภาพในร่ม/ร้านอาหาร/ไฟส้มทังสเตน ฆ่าคราบเหลืองเลี่ยน ดึงผิวเนียนผ่อง ไม่ติดฟ้าซีด | Yellow Sat -28, Orange Sat -14, Lum +20, Shadow +40, High -55 |
+| **`[DB Mod] Korean Pink Blush & Glow`** | เครื่องมือคลิกเสริม: สวมสีผิวอมชมพูและกลาสสกินให้รูป โดยไม่แตะ Exposure หรือ WB เดิม | Red/Orange HSL + Calibration Boost เพียวๆ ผิวเด้งทันที |
 
 ---
 
