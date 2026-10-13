@@ -16,6 +16,7 @@ pricesRoutes.post('/latest', async (c) => {
   try {
     const body = await c.req.json();
     const symbols = body.symbols || [];
+    const forceRefresh = body.forceRefresh === true || c.req.query('refresh') === 'true';
     
     if (!Array.isArray(symbols) || symbols.length === 0) {
       return c.json({ error: 'Array of symbols is required' }, 400);
@@ -24,30 +25,70 @@ pricesRoutes.post('/latest', async (c) => {
     const results = {};
     const symbolsToFetch = [];
     
-    // Check cache first (age < 5 minutes)
+    // Check cache first (age < 5 minutes) unless forceRefresh is true
     const getCached = db.prepare(`
       SELECT * FROM latest_prices 
       WHERE symbol = ? AND updated_at > datetime('now', '-5 minutes')
     `);
     
     for (const symbol of symbols) {
-      const cached = getCached.get(symbol);
-      if (cached) {
-        results[symbol] = {
-          price: cached.price,
-          change: cached.change,
-          percent_change: cached.percent_change,
-          updated_at: cached.updated_at
-        };
-      } else {
-        symbolsToFetch.push(symbol);
+      if (!forceRefresh) {
+        const cached = getCached.get(symbol);
+        if (cached) {
+          results[symbol] = {
+            price: cached.price,
+            change: cached.change,
+            percent_change: cached.percent_change,
+            updated_at: cached.updated_at
+          };
+          continue;
+        }
       }
+      symbolsToFetch.push(symbol);
     }
     
-    // Fetch missing from Finnhub
+    // Fetch missing or expired quotes from Yahoo Finance (Batch)
     if (symbolsToFetch.length > 0) {
-      const fetched = await updatePricesInCache(symbolsToFetch);
-      Object.assign(results, fetched);
+      const upsertPrice = db.prepare(`
+        INSERT INTO latest_prices (symbol, price, change, percent_change, updated_at)
+        VALUES (?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(symbol) DO UPDATE SET 
+          price = excluded.price, 
+          change = excluded.change, 
+          percent_change = excluded.percent_change, 
+          updated_at = datetime('now')
+      `);
+
+      try {
+        const quotes = await yahooFinance.quote(symbolsToFetch);
+        const quoteArray = Array.isArray(quotes) ? quotes : (quotes ? [quotes] : []);
+        for (const q of quoteArray) {
+          if (!q || !q.symbol || q.regularMarketPrice == null) continue;
+          const symKey = q.symbol.toUpperCase();
+          const p = Number(q.regularMarketPrice);
+          const chg = Number(q.regularMarketChange ?? 0);
+          const pct = Number(q.regularMarketChangePercent ?? 0);
+          upsertPrice.run(symKey, p, chg, pct);
+          results[symKey] = {
+            price: p,
+            change: chg,
+            percent_change: pct,
+            updated_at: new Date().toISOString()
+          };
+        }
+      } catch (yfErr) {
+        console.warn('[pricesRoutes] Yahoo batch quote error in /latest:', yfErr.message);
+        // Fallback to Finnhub if API key is configured
+        const hasFinnhubKey = Boolean(process.env.FINNHUB_API_KEY && !process.env.FINNHUB_API_KEY.includes('missing'));
+        if (hasFinnhubKey) {
+          try {
+            const fetched = await updatePricesInCache(symbolsToFetch);
+            Object.assign(results, fetched);
+          } catch (fhErr) {
+            console.warn('[pricesRoutes] Finnhub fallback error:', fhErr.message);
+          }
+        }
+      }
       
       // Also fetch dividend info from Yahoo Finance in the background and update metadata
       const { fetchYahooDividend } = await import('../services/yahoo.js');

@@ -288,15 +288,15 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     return list.sort((a, b) => {
       const quoteA = prices[a.symbol];
       const wlQuoteA = watchlistPrices[a.symbol];
-      const priceA = a.lastPrice || quoteA?.price || wlQuoteA?.price || 0;
-      const changeA = quoteA?.change ?? wlQuoteA?.change ?? 0;
-      const pctA = a.dayChangePercent ?? quoteA?.percent_change ?? wlQuoteA?.percentChange ?? 0;
+      const priceA = wlQuoteA?.price || a.lastPrice || quoteA?.price || 0;
+      const changeA = wlQuoteA?.change ?? quoteA?.change ?? 0;
+      const pctA = wlQuoteA?.percentChange ?? a.dayChangePercent ?? quoteA?.percent_change ?? 0;
 
       const quoteB = prices[b.symbol];
       const wlQuoteB = watchlistPrices[b.symbol];
-      const priceB = b.lastPrice || quoteB?.price || wlQuoteB?.price || 0;
-      const changeB = quoteB?.change ?? wlQuoteB?.change ?? 0;
-      const pctB = b.dayChangePercent ?? quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
+      const priceB = wlQuoteB?.price || b.lastPrice || quoteB?.price || 0;
+      const changeB = wlQuoteB?.change ?? quoteB?.change ?? 0;
+      const pctB = wlQuoteB?.percentChange ?? b.dayChangePercent ?? quoteB?.percent_change ?? 0;
 
       if (sortColumn === 'tier') {
         const radarA = a.symbol ? radarMap[a.symbol.toUpperCase()] : null;
@@ -336,15 +336,15 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     return list.sort((a, b) => {
       const quoteA = prices[a.symbol];
       const wlQuoteA = watchlistPrices[a.symbol];
-      const priceA = quoteA?.price ?? wlQuoteA?.price ?? 0;
-      const changeA = quoteA?.change ?? wlQuoteA?.change ?? 0;
-      const pctA = quoteA?.percent_change ?? wlQuoteA?.percentChange ?? 0;
+      const priceA = wlQuoteA?.price || quoteA?.price || 0;
+      const changeA = wlQuoteA?.change ?? quoteA?.change ?? 0;
+      const pctA = wlQuoteA?.percentChange ?? quoteA?.percent_change ?? 0;
 
       const quoteB = prices[b.symbol];
       const wlQuoteB = watchlistPrices[b.symbol];
-      const priceB = quoteB?.price ?? wlQuoteB?.price ?? 0;
-      const changeB = quoteB?.change ?? wlQuoteB?.change ?? 0;
-      const pctB = quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
+      const priceB = wlQuoteB?.price || quoteB?.price || 0;
+      const changeB = wlQuoteB?.change ?? quoteB?.change ?? 0;
+      const pctB = wlQuoteB?.percentChange ?? quoteB?.percent_change ?? 0;
 
       if (sortColumn === 'tier') {
         const radarA = a.symbol ? radarMap[a.symbol.toUpperCase()] : null;
@@ -384,15 +384,15 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     return list.sort((a, b) => {
       const quoteA = prices[a.symbol];
       const wlQuoteA = watchlistPrices[a.symbol];
-      const priceA = quoteA?.price ?? wlQuoteA?.price ?? 0;
-      const changeA = quoteA?.change ?? wlQuoteA?.change ?? 0;
-      const pctA = quoteA?.percent_change ?? wlQuoteA?.percentChange ?? 0;
+      const priceA = wlQuoteA?.price || quoteA?.price || 0;
+      const changeA = wlQuoteA?.change ?? quoteA?.change ?? 0;
+      const pctA = wlQuoteA?.percentChange ?? quoteA?.percent_change ?? 0;
 
       const quoteB = prices[b.symbol];
       const wlQuoteB = watchlistPrices[b.symbol];
-      const priceB = quoteB?.price ?? wlQuoteB?.price ?? 0;
-      const changeB = quoteB?.change ?? wlQuoteB?.change ?? 0;
-      const pctB = quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
+      const priceB = wlQuoteB?.price || quoteB?.price || 0;
+      const changeB = wlQuoteB?.change ?? quoteB?.change ?? 0;
+      const pctB = wlQuoteB?.percentChange ?? quoteB?.percent_change ?? 0;
 
       if (sortColumn === 'tier') {
         return a.symbol.localeCompare(b.symbol);
@@ -591,9 +591,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                   const isSelected = selectedSymbol && h.symbol ? h.symbol.toUpperCase() === selectedSymbol.toUpperCase() : false;
                   const priceQuote = prices[h.symbol];
                   const wlQuote = watchlistPrices[h.symbol];
-                  const lastPrice = h.lastPrice || priceQuote?.price || wlQuote?.price || 0;
-                  const change = priceQuote?.change ?? wlQuote?.change ?? 0;
-                  const percentChange = h.dayChangePercent ?? priceQuote?.percent_change ?? wlQuote?.percentChange ?? 0;
+                  const lastPrice = wlQuote?.price || h.lastPrice || priceQuote?.price || 0;
+                  const change = wlQuote?.change ?? priceQuote?.change ?? 0;
+                  const percentChange = wlQuote?.percentChange ?? h.dayChangePercent ?? priceQuote?.percent_change ?? 0;
                   const isPositive = percentChange >= 0;
                   const isZero = percentChange === 0;
 
@@ -738,9 +738,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 const isSelected = selectedSymbol && item.symbol ? item.symbol.toUpperCase() === selectedSymbol.toUpperCase() : false;
                 const priceQuote = prices[item.symbol];
                 const wlQuote = watchlistPrices[item.symbol];
-                const price = priceQuote?.price ?? wlQuote?.price ?? 0;
-                const change = priceQuote?.change ?? wlQuote?.change ?? 0;
-                const percentChange = priceQuote?.percent_change ?? wlQuote?.percentChange ?? 0;
+                const price = wlQuote?.price || priceQuote?.price || 0;
+                const change = wlQuote?.change ?? priceQuote?.change ?? 0;
+                const percentChange = wlQuote?.percentChange ?? priceQuote?.percent_change ?? 0;
                 const isPositive = percentChange >= 0;
                 const isZero = percentChange === 0;
                 const isCore = item.category === 'Core';
@@ -905,9 +905,9 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                 const isSelected = selectedSymbol && item.symbol ? item.symbol.toUpperCase() === selectedSymbol.toUpperCase() : false;
                 const priceQuote = prices[item.symbol];
                 const wlQuote = watchlistPrices[item.symbol];
-                const price = priceQuote?.price ?? wlQuote?.price ?? 0;
-                const change = priceQuote?.change ?? wlQuote?.change ?? 0;
-                const percentChange = priceQuote?.percent_change ?? wlQuote?.percentChange ?? 0;
+                const price = wlQuote?.price || priceQuote?.price || 0;
+                const change = wlQuote?.change ?? priceQuote?.change ?? 0;
+                const percentChange = wlQuote?.percentChange ?? priceQuote?.percent_change ?? 0;
                 const isPositive = percentChange >= 0;
                 const isZero = percentChange === 0;
 

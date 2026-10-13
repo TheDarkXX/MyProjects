@@ -308,7 +308,7 @@ interface XChartState {
   moveSection: (fromIndex: number, toIndex: number) => void;
   setWatchlistSections: (nextSections: WatchlistSection[]) => void;
   toggleWatchlistDetail: () => void;
-  fetchWatchlistQuotes: () => Promise<void>;
+  fetchWatchlistQuotes: (extraSymbols?: string[]) => Promise<void>;
   resetToTVWatchlist: () => void;
   // Compare tab actions
   updateCompareConfig: (tabId: string, config: Partial<CompareTabConfig>) => void;
@@ -958,11 +958,12 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     }
   },
 
-  fetchWatchlistQuotes: async () => {
+  fetchWatchlistQuotes: async (extraSymbols: string[] = []) => {
     const { watchlistSections, watchlistPrices } = get();
     const sectionSymbols = watchlistSections.flatMap((s) => s.symbols);
     const INDEX_SYMBOLS = ['SPY', 'QQQ', 'SCHG', 'BTC-USD', 'GLD', 'USO', 'UUP', 'SMH', 'TLT'];
-    const allSymbols = [...new Set([...sectionSymbols, ...INDEX_SYMBOLS])];
+    const TARGET_SYMBOLS = ['NVDA', 'TSM', 'AVGO', 'VRT', 'MELI', 'APH', 'KLAC', 'ANET', 'CRWD', 'STRL', 'ALAB', 'PLTR', 'RKLB'];
+    const allSymbols = [...new Set([...sectionSymbols, ...INDEX_SYMBOLS, ...TARGET_SYMBOLS, ...extraSymbols])].filter(Boolean);
     if (allSymbols.length === 0) return;
 
     set({ watchlistLoading: true });
