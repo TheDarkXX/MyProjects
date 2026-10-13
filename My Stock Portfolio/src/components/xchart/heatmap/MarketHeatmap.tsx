@@ -33,8 +33,8 @@ export const MarketHeatmap: React.FC = () => {
   const { holdings } = useHoldings();
 
   // Configuration State
-  const [scope, setScope] = useState<HeatmapScope>('sp100');
-  const [sizeMetric, setSizeMetric] = useState<SizeMetric>('marketCap');
+  const [scope, setScope] = useState<HeatmapScope>('watchlist');
+  const [sizeMetric, setSizeMetric] = useState<SizeMetric>('absPerformance');
   const [colorMetric, setColorMetric] = useState<ColorMetric>('perf_1d');
   const [groupBy, setGroupBy] = useState<GroupBy>('sector');
 
@@ -104,11 +104,13 @@ export const MarketHeatmap: React.FC = () => {
     }
   }, [scope, fetchHeatmap]);
 
-  // Adjust metrics automatically when switching between Portfolio and Market scopes
+  // Smart Adaptive Defaults: Context-aware size metric adjustment per scope
   useEffect(() => {
-    if (scope === 'portfolio') {
+    if (scope === 'watchlist') {
+      setSizeMetric('absPerformance');
+    } else if (scope === 'portfolio') {
       setSizeMetric('portfolioValue');
-    } else if (sizeMetric === 'portfolioValue') {
+    } else {
       setSizeMetric('marketCap');
     }
   }, [scope]);
@@ -235,11 +237,11 @@ export const MarketHeatmap: React.FC = () => {
               onChange={(e) => setScope(e.target.value as HeatmapScope)}
               className="bg-transparent text-[13px] font-semibold text-white focus:outline-none cursor-pointer pr-1"
             >
+              <option value="watchlist" className="bg-[#141414] text-white">Watchlist</option>
               <option value="sp100" className="bg-[#141414] text-white">S&P 500 (Top 100)</option>
               <option value="sp500" className="bg-[#141414] text-white">S&P 500 (All 503)</option>
               <option value="nasdaq100" className="bg-[#141414] text-white">Nasdaq 100</option>
               <option value="portfolio" className="bg-[#141414] text-white">My Portfolio</option>
-              <option value="watchlist" className="bg-[#141414] text-white">Watchlist</option>
             </select>
           </div>
 
@@ -256,11 +258,13 @@ export const MarketHeatmap: React.FC = () => {
                 <>
                   <option value="portfolioValue" className="bg-[#141414] text-white">Portfolio Value</option>
                   <option value="equal" className="bg-[#141414] text-white">Equal Weight</option>
+                  <option value="absPerformance" className="bg-[#141414] text-white">Absolute % Move (|P/L|)</option>
                 </>
               ) : (
                 <>
                   <option value="marketCap" className="bg-[#141414] text-white">Market Cap</option>
                   <option value="equal" className="bg-[#141414] text-white">Equal Weight</option>
+                  <option value="absPerformance" className="bg-[#141414] text-white">Absolute % Move (|P/L|)</option>
                 </>
               )}
             </select>
