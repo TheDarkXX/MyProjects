@@ -33,7 +33,7 @@ export const MarketHeatmap: React.FC = () => {
   const { holdings } = useHoldings();
 
   // Configuration State
-  const [scope, setScope] = useState<HeatmapScope>('sp100');
+  const [scope, setScope] = useState<HeatmapScope>('watchlist');
   const [sizeMetric, setSizeMetric] = useState<SizeMetric>('marketCap');
   const [colorMetric, setColorMetric] = useState<ColorMetric>('perf_1d');
   const [groupBy, setGroupBy] = useState<GroupBy>('sector');
@@ -235,11 +235,11 @@ export const MarketHeatmap: React.FC = () => {
               onChange={(e) => setScope(e.target.value as HeatmapScope)}
               className="bg-transparent text-[13px] font-semibold text-white focus:outline-none cursor-pointer pr-1"
             >
+              <option value="watchlist" className="bg-[#141414] text-white">Watchlist</option>
               <option value="sp100" className="bg-[#141414] text-white">S&P 500 (Top 100)</option>
               <option value="sp500" className="bg-[#141414] text-white">S&P 500 (All 503)</option>
               <option value="nasdaq100" className="bg-[#141414] text-white">Nasdaq 100</option>
               <option value="portfolio" className="bg-[#141414] text-white">My Portfolio</option>
-              <option value="watchlist" className="bg-[#141414] text-white">Watchlist</option>
             </select>
           </div>
 

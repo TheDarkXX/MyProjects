@@ -62,24 +62,132 @@ function getConstituentsForScope(scope) {
 }
 
 /**
- * Get Watchlist symbols from project2x_quotas
+ * Known watchlist metadata with real industry sectors (Tech / Semi / Industrials / Consumer)
  */
-function getWatchlistSymbols() {
+const WATCHLIST_PRESET_META = {
+  NVDA: { name: 'NVIDIA Corporation', sector: 'Semiconductors', domain: 'nvidia.com' },
+  TSM: { name: 'Taiwan Semiconductor Manufacturing', sector: 'Semiconductors', domain: 'tsmc.com' },
+  AVGO: { name: 'Broadcom Inc.', sector: 'Semiconductors', domain: 'broadcom.com' },
+  KLAC: { name: 'KLA Corporation', sector: 'Semiconductors', domain: 'kla.com' },
+  ALAB: { name: 'Astera Labs Inc.', sector: 'Semiconductors', domain: 'asteralabs.com' },
+  ANET: { name: 'Arista Networks Inc.', sector: 'Technology', domain: 'arista.com' },
+  APH: { name: 'Amphenol Corporation', sector: 'Technology', domain: 'amphenol.com' },
+  CRWD: { name: 'CrowdStrike Holdings Inc.', sector: 'Technology', domain: 'crowdstrike.com' },
+  PLTR: { name: 'Palantir Technologies Inc.', sector: 'Technology', domain: 'palantir.com' },
+  RBRK: { name: 'Rubrik Inc.', sector: 'Technology', domain: 'rubrik.com' },
+  VRT: { name: 'Vertiv Holdings Co.', sector: 'Industrials', domain: 'vertiv.com' },
+  STRL: { name: 'Sterling Infrastructure Inc.', sector: 'Industrials', domain: 'strl.com' },
+  MELI: { name: 'MercadoLibre Inc.', sector: 'Consumer Cyclical', domain: 'mercadolibre.com' }
+};
+
+// Explicitly excluded tickers (per user directive: CLS, RKLB, SCHG removed)
+const WATCHLIST_EXCLUDED = new Set(['CLS', 'RKLB', 'SCHG', 'QQQM', 'CASH']);
+
+/**
+ * Get Watchlist constituents combining:
+ * 1. Base 3-Year 100% Target Stocks (Project 2X / Core & Moonshot Doublers)
+ * 2. Active Portfolio Holdings (from transactions where net quantity > 0)
+ * 3. Blueprints / Share Quotas from DB
+ * Filtered by user exclusions (CLS, RKLB, SCHG)
+ * Classified by true industry sectors (Tech / Semi / Industrials / Consumer)
+ */
+function getWatchlistConstituents() {
+  const symbols = new Set(Object.keys(WATCHLIST_PRESET_META));
+
+  // 1. Fetch from project2x_share_quotas
   try {
-    const rows = db.prepare('SELECT DISTINCT symbol FROM project2x_quotas WHERE status != "inactive"').all();
-    if (rows && rows.length > 0) {
-      return rows.map((r) => r.symbol);
+    const quotaRows = db.prepare("SELECT DISTINCT symbol FROM project2x_share_quotas WHERE status != 'inactive'").all();
+    for (const r of quotaRows) {
+      if (r.symbol && !WATCHLIST_EXCLUDED.has(r.symbol.toUpperCase()) && !r.symbol.includes('=') && !r.symbol.includes('^')) {
+        symbols.add(r.symbol.toUpperCase());
+      }
     }
   } catch (e) {
-    console.warn('[marketRoutes] Could not fetch project2x_quotas:', e.message);
+    console.warn('[marketRoutes] Could not fetch project2x_share_quotas:', e.message);
   }
-  // Fallback to stock_metadata or holdings
+
+  // 2. Fetch from portfolio_blueprints
   try {
-    const rows = db.prepare('SELECT DISTINCT symbol FROM stock_metadata LIMIT 20').all();
-    return rows.map((r) => r.symbol);
-  } catch {
-    return ['NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'META', 'TSLA'];
+    const bpRows = db.prepare('SELECT DISTINCT symbol FROM portfolio_blueprints').all();
+    for (const r of bpRows) {
+      if (r.symbol && !WATCHLIST_EXCLUDED.has(r.symbol.toUpperCase()) && !r.symbol.includes('=') && !r.symbol.includes('^')) {
+        symbols.add(r.symbol.toUpperCase());
+      }
+    }
+  } catch (e) {
+    console.warn('[marketRoutes] Could not fetch portfolio_blueprints:', e.message);
   }
+
+  // 3. Fetch active holdings from transactions
+  try {
+    const txRows = db.prepare(`
+      SELECT symbol, SUM(CASE WHEN type = 'BUY' THEN amount WHEN type = 'SELL' THEN -amount ELSE 0 END) as net_qty
+      FROM transactions
+      WHERE symbol != 'CASH'
+      GROUP BY symbol
+      HAVING net_qty > 0.0001
+    `).all();
+    for (const r of txRows) {
+      if (r.symbol && !WATCHLIST_EXCLUDED.has(r.symbol.toUpperCase()) && !r.symbol.includes('=') && !r.symbol.includes('^')) {
+        symbols.add(r.symbol.toUpperCase());
+      }
+    }
+  } catch (e) {
+    console.warn('[marketRoutes] Could not fetch transactions holdings:', e.message);
+  }
+
+  // Enforce exclusions
+  for (const ex of WATCHLIST_EXCLUDED) {
+    symbols.delete(ex);
+  }
+
+  const constituents = [];
+  for (const sym of symbols) {
+    if (WATCHLIST_PRESET_META[sym]) {
+      const p = WATCHLIST_PRESET_META[sym];
+      constituents.push({
+        symbol: sym,
+        name: p.name,
+        sector: p.sector,
+        domain: p.domain
+      });
+    } else {
+      // Dynamic fallback for any newly added symbol
+      let name = sym;
+      let sector = 'Technology';
+      let domain = `${sym.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
+
+      try {
+        const sf = db.prepare('SELECT sector, industry FROM symbol_fundamentals WHERE symbol = ?').get(sym);
+        if (sf) {
+          if (sf.industry && sf.industry.toLowerCase().includes('semiconductor')) {
+            sector = 'Semiconductors';
+          } else if (sf.sector === 'Technology' || sf.sector === 'Technology services') {
+            sector = 'Technology';
+          } else if (sf.sector === 'Industrials' || sf.sector === 'Producer manufacturing') {
+            sector = 'Industrials';
+          } else if (sf.sector === 'Consumer Cyclical' || sf.sector === 'Retail trade') {
+            sector = 'Consumer Cyclical';
+          } else if (sf.sector) {
+            sector = sf.sector;
+          }
+        }
+        const meta = db.prepare('SELECT name FROM stock_metadata WHERE symbol = ?').get(sym);
+        if (meta && meta.name) {
+          name = meta.name;
+        }
+      } catch {}
+
+      constituents.push({
+        symbol: sym,
+        name,
+        sector,
+        domain
+      });
+    }
+  }
+
+  return constituents;
 }
 
 /**
@@ -135,15 +243,16 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * GET /api/market/heatmap?scope=sp100|sp500|nasdaq100|watchlist
  */
 marketRoutes.get('/heatmap', async (c) => {
-  let scope = (c.req.query('scope') || 'sp100').toLowerCase();
+  let scope = (c.req.query('scope') || 'watchlist').toLowerCase();
   // Normalize legacy scope 'top50' to 'sp100'
   if (scope === 'top50') scope = 'sp100';
 
+  const forceRefresh = c.req.query('refresh') === 'true';
   const now = Date.now();
   const ttl = SCOPE_TTLS[scope] || SCOPE_TTLS.default;
 
   const cached = heatmapCaches.get(scope);
-  if (cached && now - cached.timestamp < ttl) {
+  if (!forceRefresh && cached && now - cached.timestamp < ttl) {
     return c.json({
       scope,
       cached: true,
@@ -159,14 +268,10 @@ marketRoutes.get('/heatmap', async (c) => {
     let symbols = [];
 
     if (scope === 'watchlist') {
-      symbols = getWatchlistSymbols();
-      for (const s of symbols) {
-        constituentMap.set(s, {
-          symbol: s,
-          name: s,
-          sector: 'Watchlist',
-          domain: `${s.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`
-        });
+      const list = getWatchlistConstituents();
+      for (const item of list) {
+        constituentMap.set(item.symbol, item);
+        symbols.push(item.symbol);
       }
     } else {
       const list = getConstituentsForScope(scope);
