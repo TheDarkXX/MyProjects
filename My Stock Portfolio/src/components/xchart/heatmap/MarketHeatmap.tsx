@@ -34,7 +34,7 @@ export const MarketHeatmap: React.FC = () => {
 
   // Configuration State
   const [scope, setScope] = useState<HeatmapScope>('watchlist');
-  const [sizeMetric, setSizeMetric] = useState<SizeMetric>('marketCap');
+  const [sizeMetric, setSizeMetric] = useState<SizeMetric>('absPerformance');
   const [colorMetric, setColorMetric] = useState<ColorMetric>('perf_1d');
   const [groupBy, setGroupBy] = useState<GroupBy>('sector');
 
@@ -104,14 +104,16 @@ export const MarketHeatmap: React.FC = () => {
     }
   }, [scope, fetchHeatmap]);
 
-  // Adjust metrics automatically when switching between Portfolio and Market scopes
+  // Smart Adaptive Defaults: Context-aware size metric adjustment per scope
   useEffect(() => {
-    if (scope === 'portfolio' && sizeMetric === 'marketCap') {
+    if (scope === 'watchlist') {
+      setSizeMetric('absPerformance');
+    } else if (scope === 'portfolio') {
       setSizeMetric('portfolioValue');
-    } else if (scope !== 'portfolio' && sizeMetric === 'portfolioValue') {
+    } else {
       setSizeMetric('marketCap');
     }
-  }, [scope, sizeMetric]);
+  }, [scope]);
 
   // Build items array from holdings or fetched data
   const rawItems = useMemo<HeatmapItem[]>(() => {
