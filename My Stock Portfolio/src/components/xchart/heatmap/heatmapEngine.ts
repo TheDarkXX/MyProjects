@@ -76,6 +76,14 @@ export function computeTreemapLayout(
     return [];
   }
 
+  // Color percentage getter based on colorMetric
+  const getPercent = (d: HeatmapItem): number => {
+    if (colorMetric === 'perf_total' && d.totalReturnPercent !== undefined) {
+      return d.totalReturnPercent;
+    }
+    return d.percentChange ?? 0;
+  };
+
   // Value getter based on chosen sizeMetric
   const getValue = (d: HeatmapItem): number => {
     if (sizeMetric === 'portfolioValue') {
@@ -84,16 +92,12 @@ export function computeTreemapLayout(
     if (sizeMetric === 'equal') {
       return 1;
     }
+    if (sizeMetric === 'absPerformance') {
+      const pct = Math.abs(getPercent(d));
+      return Math.max(pct, 0.3);
+    }
     // Default marketCap
     return Math.max(d.marketCap ?? 1000000000, 1);
-  };
-
-  // Color percentage getter based on colorMetric
-  const getPercent = (d: HeatmapItem): number => {
-    if (colorMetric === 'perf_total' && d.totalReturnPercent !== undefined) {
-      return d.totalReturnPercent;
-    }
-    return d.percentChange ?? 0;
   };
 
   if (groupBy === 'none') {

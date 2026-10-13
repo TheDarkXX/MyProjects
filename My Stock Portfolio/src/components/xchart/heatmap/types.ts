@@ -1,6 +1,6 @@
 export type HeatmapScope = 'sp100' | 'sp500' | 'nasdaq100' | 'portfolio' | 'watchlist';
 
-export type SizeMetric = 'marketCap' | 'equal' | 'portfolioValue';
+export type SizeMetric = 'marketCap' | 'equal' | 'portfolioValue' | 'absPerformance';
 
 export type ColorMetric = 'perf_1d' | 'perf_total';
 

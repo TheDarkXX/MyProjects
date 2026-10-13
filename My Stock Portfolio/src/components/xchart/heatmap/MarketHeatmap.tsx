@@ -106,12 +106,12 @@ export const MarketHeatmap: React.FC = () => {
 
   // Adjust metrics automatically when switching between Portfolio and Market scopes
   useEffect(() => {
-    if (scope === 'portfolio') {
+    if (scope === 'portfolio' && sizeMetric === 'marketCap') {
       setSizeMetric('portfolioValue');
-    } else if (sizeMetric === 'portfolioValue') {
+    } else if (scope !== 'portfolio' && sizeMetric === 'portfolioValue') {
       setSizeMetric('marketCap');
     }
-  }, [scope]);
+  }, [scope, sizeMetric]);
 
   // Build items array from holdings or fetched data
   const rawItems = useMemo<HeatmapItem[]>(() => {
@@ -256,11 +256,13 @@ export const MarketHeatmap: React.FC = () => {
                 <>
                   <option value="portfolioValue" className="bg-[#141414] text-white">Portfolio Value</option>
                   <option value="equal" className="bg-[#141414] text-white">Equal Weight</option>
+                  <option value="absPerformance" className="bg-[#141414] text-white">Absolute % Move (|P/L|)</option>
                 </>
               ) : (
                 <>
                   <option value="marketCap" className="bg-[#141414] text-white">Market Cap</option>
                   <option value="equal" className="bg-[#141414] text-white">Equal Weight</option>
+                  <option value="absPerformance" className="bg-[#141414] text-white">Absolute % Move (|P/L|)</option>
                 </>
               )}
             </select>
