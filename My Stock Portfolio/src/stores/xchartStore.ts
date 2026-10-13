@@ -434,8 +434,9 @@ function loadSavedMyPortPreferences(): MyPortWatchlistPreferences {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         return {
-          sortColumn: parsed.sortColumn || 'percentChange',
-          sortDir: parsed.sortDir || 'desc',
+          // รีเฟรซใหม่ = set to default ติดลบหนักสุดขึ้นก่อน เสมอ (Session-only sort)
+          sortColumn: 'percentChange',
+          sortDir: 'desc',
           holdingsCollapsed: Boolean(parsed.holdingsCollapsed),
           targetCollapsed: Boolean(parsed.targetCollapsed),
           indexCollapsed: Boolean(parsed.indexCollapsed),
@@ -449,6 +450,8 @@ function loadSavedMyPortPreferences(): MyPortWatchlistPreferences {
     const legI = localStorage.getItem('myport_index_collapsed') === 'true';
     return {
       ...DEFAULT_MYPORT_PREFERENCES,
+      sortColumn: 'percentChange',
+      sortDir: 'desc',
       holdingsCollapsed: legH,
       targetCollapsed: legT,
       indexCollapsed: legI,
@@ -589,9 +592,12 @@ export const useXChartStore = create<XChartState>((set, get) => ({
   applyCloudMyPortPreferences: (prefs) => {
     if (!prefs || typeof prefs !== 'object') return;
     const { myportPreferences } = get();
+    // Do not let cloud sync overwrite active session sort preferences; only sync collapse states
     const nextPrefs: MyPortWatchlistPreferences = {
       ...myportPreferences,
-      ...prefs,
+      holdingsCollapsed: prefs.holdingsCollapsed !== undefined ? Boolean(prefs.holdingsCollapsed) : myportPreferences.holdingsCollapsed,
+      targetCollapsed: prefs.targetCollapsed !== undefined ? Boolean(prefs.targetCollapsed) : myportPreferences.targetCollapsed,
+      indexCollapsed: prefs.indexCollapsed !== undefined ? Boolean(prefs.indexCollapsed) : myportPreferences.indexCollapsed,
     };
     if (typeof window !== 'undefined') {
       try {

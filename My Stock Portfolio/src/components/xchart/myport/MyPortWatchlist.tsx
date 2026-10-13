@@ -376,6 +376,45 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
     });
   }, [targetStocks, prices, watchlistPrices, myportPreferences, radarMap]);
 
+  // Sort DEFAULT_INDEX_ITEMS according to Cloud-Synced myportPreferences
+  const sortedIndexItems = useMemo(() => {
+    const list = [...DEFAULT_INDEX_ITEMS];
+    const { sortColumn, sortDir } = myportPreferences;
+
+    return list.sort((a, b) => {
+      const quoteA = prices[a.symbol];
+      const wlQuoteA = watchlistPrices[a.symbol];
+      const priceA = quoteA?.price ?? wlQuoteA?.price ?? 0;
+      const changeA = quoteA?.change ?? wlQuoteA?.change ?? 0;
+      const pctA = quoteA?.percent_change ?? wlQuoteA?.percentChange ?? 0;
+
+      const quoteB = prices[b.symbol];
+      const wlQuoteB = watchlistPrices[b.symbol];
+      const priceB = quoteB?.price ?? wlQuoteB?.price ?? 0;
+      const changeB = quoteB?.change ?? wlQuoteB?.change ?? 0;
+      const pctB = quoteB?.percent_change ?? wlQuoteB?.percentChange ?? 0;
+
+      if (sortColumn === 'tier') {
+        return a.symbol.localeCompare(b.symbol);
+      }
+      if (sortColumn === 'symbol') {
+        return sortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
+      }
+      if (sortColumn === 'price') {
+        return sortDir === 'desc' ? (priceB - priceA) : (priceA - priceB);
+      }
+      if (sortColumn === 'change') {
+        // desc = ติดลบเยอะสุดอยู่บนสุด
+        return sortDir === 'desc' ? (changeA - changeB) : (changeB - changeA);
+      }
+      if (sortColumn === 'percentChange') {
+        // desc = ติดลบเยอะสุดอยู่บนสุด (-47.87%, -2.52%, ..., +2.44%)
+        return sortDir === 'desc' ? (pctA - pctB) : (pctB - pctA);
+      }
+      return 0;
+    });
+  }, [prices, watchlistPrices, myportPreferences]);
+
   // Fetch prices for any target stocks not yet in price store (Guarded to eliminate React error #185 infinite loop)
   const requestedPricesRef = React.useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -862,7 +901,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
           {/* Section Rows */}
           {!indexCollapsed && (
             <div className="divide-y divide-[#1F2233]/25">
-              {DEFAULT_INDEX_ITEMS.map((item) => {
+              {sortedIndexItems.map((item) => {
                 const isSelected = selectedSymbol && item.symbol ? item.symbol.toUpperCase() === selectedSymbol.toUpperCase() : false;
                 const priceQuote = prices[item.symbol];
                 const wlQuote = watchlistPrices[item.symbol];
@@ -893,16 +932,16 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                       )}
                     />
 
-                    {/* Symbol Column: Emoji Badge + Ticker + Sub-label */}
-                    <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
-                      <span className="text-xs shrink-0 select-none" title={item.sub || item.name}>
+                    {/* Symbol Column: Emoji Badge + Ticker (Full & Unclipped) */}
+                    <div 
+                      className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1"
+                      title={`${item.symbol} — ${item.name}${item.sub ? ` (${item.sub})` : ''}`}
+                    >
+                      <span className="text-xs shrink-0 select-none">
                         {item.badge}
                       </span>
-                      <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
+                      <span className="text-[13px] font-medium tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
                         {item.symbol}
-                      </span>
-                      <span className="text-[11px] text-slate-400 font-normal truncate opacity-70 group-hover:opacity-100 hidden sm:inline">
-                        ({item.name})
                       </span>
                     </div>
 
