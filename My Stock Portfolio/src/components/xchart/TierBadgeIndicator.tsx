@@ -91,8 +91,9 @@ export function getTierVisualInfo(
   }
 
   // Tier 2: TO THE MOON 🚀 / MOON (No Chase) ⛔
-  const isNoChaseBadge = upperBadge.includes('NO CHASE') || upperBadge.includes('⛔') || (upperBadge.includes('MOON') && !upperBadge.includes('MOONSHOT'));
-  if (traffic_light === 'TO_THE_MOON' || isNoChaseBadge) {
+  const isNoChaseBadge = upperBadge.includes('NO CHASE') || upperBadge.includes('⛔');
+  const isRunnerBadge = upperBadge.includes('RUNNER');
+  if (!isRunnerBadge && (traffic_light === 'TO_THE_MOON' || isNoChaseBadge)) {
     const isNoChase = isNoChaseBadge;
     return {
       tierId: 'TO_THE_MOON',
