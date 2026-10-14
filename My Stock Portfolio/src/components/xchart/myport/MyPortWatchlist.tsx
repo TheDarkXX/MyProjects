@@ -69,18 +69,19 @@ export interface IndexStockItem {
   name: string;
   badge: string;
   sub?: string;
+  displayName?: string;
 }
 
 export const DEFAULT_INDEX_ITEMS: IndexStockItem[] = [
-  { symbol: 'SPY', name: 'S&P 500', badge: '🇺🇸', sub: 'US 500 Large Cap' },
-  { symbol: 'QQQ', name: 'Nasdaq 100', badge: '💻', sub: 'Tech 100 Benchmark' },
-  { symbol: 'SCHG', name: 'US Large Growth', badge: '🚀', sub: 'Large-Cap Growth' },
-  { symbol: 'BTC-USD', name: 'Bitcoin', badge: '₿', sub: 'Crypto Flagship' },
-  { symbol: 'GLD', name: 'Gold (ทองคำ)', badge: '🪙', sub: 'SPDR Gold Trust' },
-  { symbol: 'USO', name: 'Crude Oil (น้ำมัน)', badge: '🛢️', sub: 'US Oil Fund' },
-  { symbol: 'UUP', name: 'US Dollar Index', badge: '💵', sub: 'Invesco DXY Bullish' },
-  { symbol: 'SMH', name: 'Semiconductor ETF', badge: '⚡', sub: 'VanEck Semiconductor' },
-  { symbol: 'TLT', name: '20+ Yr Treasury Bond', badge: '🏛️', sub: '20+ Year Treasury Bond' },
+  { symbol: 'SPY', name: 'S&P 500', badge: '🇺🇸', sub: 'US 500 Large Cap', displayName: 'SPY' },
+  { symbol: 'QQQ', name: 'Nasdaq 100', badge: '💻', sub: 'Tech 100 Benchmark', displayName: 'QQQ' },
+  { symbol: 'SCHG', name: 'US Large Growth', badge: '🚀', sub: 'Large-Cap Growth', displayName: 'SCHG' },
+  { symbol: 'BTC-USD', name: 'Bitcoin', badge: '₿', sub: 'Crypto Flagship', displayName: 'Bitcoin' },
+  { symbol: 'GLD', name: 'Gold (ทองคำ)', badge: '🪙', sub: 'SPDR Gold Trust', displayName: 'Gold' },
+  { symbol: 'USO', name: 'Crude Oil (น้ำมัน)', badge: '🛢️', sub: 'US Oil Fund', displayName: 'Crude Oil' },
+  { symbol: 'UUP', name: 'US Dollar Index', badge: '💵', sub: 'Invesco DXY Bullish', displayName: 'US Dollar' },
+  { symbol: 'SMH', name: 'Semiconductor ETF', badge: '⚡', sub: 'VanEck Semiconductor', displayName: 'Semicon ETF' },
+  { symbol: 'TLT', name: '20+ Yr Treasury Bond', badge: '🏛️', sub: '20+ Year Treasury Bond', displayName: 'US Bond' },
 ];
 
 // Deterministic gradient colors for symbol badges (TradingView style)
@@ -395,10 +396,14 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
       const pctB = wlQuoteB?.percentChange ?? quoteB?.percent_change ?? 0;
 
       if (sortColumn === 'tier') {
-        return a.symbol.localeCompare(b.symbol);
+        const nameA = a.displayName || a.symbol;
+        const nameB = b.displayName || b.symbol;
+        return nameA.localeCompare(nameB);
       }
       if (sortColumn === 'symbol') {
-        return sortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
+        const nameA = a.displayName || a.symbol;
+        const nameB = b.displayName || b.symbol;
+        return sortDir === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
       }
       if (sortColumn === 'price') {
         return sortDir === 'desc' ? (priceB - priceA) : (priceA - priceB);
@@ -932,16 +937,16 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                       )}
                     />
 
-                    {/* Symbol Column: Emoji Badge + Ticker (Full & Unclipped) */}
+                    {/* Symbol Column: Emoji Badge + Friendly Display Name / Ticker */}
                     <div 
                       className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1"
-                      title={`${item.symbol} — ${item.name}${item.sub ? ` (${item.sub})` : ''}`}
+                      title={`${item.symbol} (${item.name})${item.sub ? ` · ${item.sub}` : ''}`}
                     >
                       <span className="text-xs shrink-0 select-none">
                         {item.badge}
                       </span>
-                      <span className="text-[13px] font-medium tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
-                        {item.symbol}
+                      <span className="text-[13px] font-medium tracking-tight truncate text-slate-100 group-hover:text-white">
+                        {item.displayName || item.symbol}
                       </span>
                     </div>
 
