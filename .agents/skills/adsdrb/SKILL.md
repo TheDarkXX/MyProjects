@@ -1,19 +1,22 @@
 ---
 name: adsdrb
-version: "1.0.0"
-updated_at: "2026-10-14"
+version: "1.1.0"
+updated_at: "2026-10-15"
 description: >-
-  DoctorBank TikTok Ads Storyboard & Prompt Compiler — สร้างสตอรี่บอร์ดโฆษณา TikTok Shop 4 หมัด (Hook, Twist, Proof, CTA) พร้อม Prompt ภาพ 9:16 และ Motion Veo 3.1 สำหรับ DoctorBank Magnesium Night Plus
+  DoctorBank TikTok Ads Storyboard & Prompt Compiler — สร้างสตอรี่บอร์ดโฆษณา TikTok Shop 4 หมัด (Hook, Twist, Proof, CTA) พร้อม Prompt ภาพ 9:16 และ Motion Veo 3.1 คุม Master Character สองเพศ (หญิง/ชาย) 5 บริบท และล็อกขวดแก้วจริง
 ---
 
-# 🎬 Ads DRB: TikTok Ads Production Engine (`/adsdrb` v1.0.0)
+# 🎬 Ads DRB: TikTok Ads Production Engine (`/adsdrb` v1.1.0)
 
-เอนจินผลิตวิดีโอโฆษณา TikTok Shop (Faceless POV / UGC Commercial) สำหรับแบรนด์ **DoctorBank** โดยถอดรหัสความสำเร็จ 71 ล้านบาทจาก Nectapharma ผสานสายพาน The Viral Prompt Compiler คายไฟล์ **All-in-One Markdown Master (`.md`)** ครบจบในไฟล์เดียว: Pure Script ก้อนเดียว, ตาราง 7 คอลัมน์ทองคำสำหรับ **DrView**, และคลัง Prompt เจนภาพ 9:16 + Veo 3.1
+เอนจินผลิตวิดีโอโฆษณา TikTok Shop (Faceless POV / UGC Commercial) สำหรับแบรนด์ **DoctorBank** โดยถอดรหัสความสำเร็จ 71 ล้านบาทจาก Nectapharma ผสานสายพาน The Viral Prompt Compiler คายไฟล์ **All-in-One Markdown Master (`.md`)** ครบจบในไฟล์เดียว: Pure Script ก้อนเดียว, ตาราง 7 คอลัมน์ทองคำสำหรับ **DrView**, และคลัง Prompt เจนภาพ 9:16 + Veo 3.1 ที่ล็อกดีเอ็นเอตัวละครสองเพศ (หญิง 30-36 / ชาย 32-38) 5 สถานการณ์ และล็อกอัตลักษณ์บรรจุภัณฑ์จริง (Master Reference Packaging)
 
 ---
 
-## 📌 จุดโฟกัสสินค้า (Product Focus)
+## 📌 จุดโฟกัสสินค้าและภาพต้นแบบจริง (Product Focus & Packaging Ground Truth)
 - **Active Hero Product:** `magnesium` — **DoctorBank Magnesium Night Plus** (ขวดแก้วชาทรงหรู ฝาเกลียว ribbed ขาว ฉลากขาวคาดน้ำเงินเข้ม แคปซูลขาวด้าน matte 2 ท่อน คลายกล้ามเนื้อ หลับลึกสู่ REM Sleep)
+- **Master Reference Packshots:** โฟลเดอร์ `P:\AI\The Viral\Ads DRB\03_Production_Assets\3Ref_Master_Pack\`
+  - `DRB_MAG_REF01_front_hero.png` — ขวดหน้าตรง ฉลากคมชัด โลโก้ DOCTORBANK พระจันทร์เสี้ยว
+  - `DRB_MAG_REF02_angle_and_capsules.jpeg` — ขวดมุมเฉียง 3/4 และกองแคปซูลขาวด้านแท้ (2-Piece Hard Matte Shell)
 - **Secondary Product:** `asta` — **DoctorBank Asta Solar Prime** (AstaReal 6mg นำเข้าจากญี่ปุ่น ต้านแดด ซอฟต์เจลทับทิมใส)
 - **WIP Product:** `gluta` — **DoctorBank Liposomal Gluta Prime** *(กำลังพัฒนาสูตรและ CI ทางการ)*
 
