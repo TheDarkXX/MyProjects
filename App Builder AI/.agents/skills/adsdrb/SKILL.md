@@ -1,12 +1,12 @@
 ---
 name: adsdrb
-version: "1.1.0"
+version: "1.2.0"
 updated_at: "2026-10-15"
 description: >-
-  DoctorBank TikTok Ads Storyboard & Prompt Compiler — สร้างสตอรี่บอร์ดโฆษณา TikTok Shop 4 หมัด (Hook, Twist, Proof, CTA) พร้อม Prompt ภาพ 9:16 และ Motion Veo 3.1 คุม Master Character สองเพศ (หญิง/ชาย) 5 บริบท และล็อกขวดแก้วจริง
+  DoctorBank TikTok Ads Storyboard & Prompt Compiler — สร้างสตอรี่บอร์ดโฆษณา TikTok Shop 4 หมัด (Hook, Twist, Proof, CTA) พร้อม Prompt ภาพ 9:16 และ Motion Veo 3.1 คุม Master Character สองเพศ (หญิง/ชาย) 5 บริบท ล็อกขวดแก้วจริง และบังคับทบทวนสูตรสารสกัดจริง (ไม่มั่ว ไม่มโน)
 ---
 
-# 🎬 Ads DRB: TikTok Ads Production Engine (`/adsdrb` v1.1.0)
+# 🎬 Ads DRB: TikTok Ads Production Engine (`/adsdrb` v1.2.0)
 
 เอนจินผลิตวิดีโอโฆษณา TikTok Shop (Faceless POV / UGC Commercial) สำหรับแบรนด์ **DoctorBank** โดยถอดรหัสความสำเร็จ 71 ล้านบาทจาก Nectapharma ผสานสายพาน The Viral Prompt Compiler คายไฟล์ **All-in-One Markdown Master (`.md`)** ครบจบในไฟล์เดียว: Pure Script ก้อนเดียว, ตาราง 7 คอลัมน์ทองคำสำหรับ **DrView**, และคลัง Prompt เจนภาพ 9:16 + Veo 3.1 ที่ล็อกดีเอ็นเอตัวละครสองเพศ (หญิง 30-36 / ชาย 32-38) 5 สถานการณ์ และล็อกอัตลักษณ์บรรจุภัณฑ์จริง (Master Reference Packaging)
 
@@ -19,6 +19,34 @@ description: >-
   - `DRB_MAG_REF02_angle_and_capsules.jpeg` — ขวดมุมเฉียง 3/4 และกองแคปซูลขาวด้านแท้ (2-Piece Hard Matte Shell)
 - **Secondary Product:** `asta` — **DoctorBank Asta Solar Prime** (AstaReal 6mg นำเข้าจากญี่ปุ่น ต้านแดด ซอฟต์เจลทับทิมใส)
 - **WIP Product:** `gluta` — **DoctorBank Liposomal Gluta Prime** *(กำลังพัฒนาสูตรและ CI ทางการ)*
+
+---
+
+## 🧪 กฎเหล็กข้อที่ 0: ทบทวนสูตรและสารสกัดของจริงก่อนเขียน (Grounding Protocol — ห้ามมั่ว ห้ามมโน)
+
+ก่อนเริ่มคิดสคริปต์ เขียนประโยคขาย หรือเจน Prompt ใดๆ Agent **ต้องทบทวนสเปกสารสกัดจริง** จาก Product Memory เสมอ ห้ามแต่งสารสกัดเองเด็ดขาด:
+
+### ตารางสารสกัดและปริมาณมิลลิกรัมจริงของ Magnesium Night Plus (Dose: 2 เม็ดก่อนนอน):
+| สารสกัด / สิทธิบัตร | ปริมาณ (mg) | บทบาทหน้าที่ทางวิทยาศาสตร์ |
+|:---|:---:|:---|
+| **Magnesium Bisglycinate Chelate** | **350 mg** | ดูดซึมตรง คลายกล้ามเนื้อลึก อ่อนโยนต่อกระเพาะ ไม่ทำให้ถ่ายเหลว |
+| **Magnesium Amino Acid Chelate** | **200 mg** | เสริมคอมเพล็กซ์แร่ธาตุแมกนีเซียมคีเลตให้ครอบคลุม |
+| **Magnesium Citrate** | **60 mg** | สนับสนุนการดูดซึมและการคลายตัวของเส้นประสาท |
+| **Magnesium Malate** | **20 mg** | ฟื้นฟูกล้ามเนื้อระดับเซลล์ (Mitochondrial ATP) |
+| **รวม Magnesium Complex** | **630 mg** | **ให้เนื้อแร่ธาตุแมกนีเซียมจริง (Elemental Mg) ≈ 161.8 mg** |
+| **L-Theanine (AlphaWave® USA)** | **200 mg** | **Hero Calming:** กระตุ้นคลื่น Alpha Brainwave ตัดสวิตช์สมองคิดวน |
+| **PharmaGABA® (Japan)** | **125 mg** | **Hero Sleep Onset:** สารสื่อประสาทผ่อนคลาย เร่งการเข้าสู่การนอนหลับธรรมชาติ |
+| **Zinc Amino Acid Chelate (NovoMin®)** | **25 mg** | โคแฟกเตอร์สร้างสารสื่อประสาทและฟื้นฟูระบบร่างกาย |
+| **Vitamin B6 (Pyridoxine HCl)** | **2 mg** | วิตามินสนับสนุนการเปลี่ยน Serotonin และ GABA ในสมอง |
+
+### กฎการสื่อสารและการเคลม (Compliance Guardrails):
+- **100% Non-Melatonin:** ไม่กดฮอร์โมนธรรมชาติ ไม่ทำให้ร่างกายดื้อ ตื่นเช้ามาสมองไบรท์ ไม่อึน ไม่แฮงก์ (Zero Brain Fog)
+- **Non-Drug:** เน้นคำว่า *"ตัวช่วยตัดสวิตช์สมอง คลายกล้ามเนื้อลึก สู่ REM Sleep หลับลึก"* — **ไม่ใช่ยานอนหลับ ไม่กดประสาท**
+- ❌ **ห้ามเคลมรักษาโรคนอนไม่หลับ (Insomnia Cure)** หรือใช้คำว่า "รักษา", "หายขาด"
+- ❌ **ห้ามการันตีเวลาการหลับ** เช่น "หลับปุ๋ยใน 5 นาที" หรือ "หลับลึก 100% แน่นอน"
+- ❌ **ห้ามเคลมฮอร์โมนเพศชาย / Testosterone**
+- ❌ **ห้ามมั่วสารสกัดที่ไม่มีจริง** เช่น คาโมมายล์, เมลาโทนิน, รากวาเลอเรียน เด็ดขาด!
+- **ราคาจำหน่ายจริง TikTok Shop:** 1 ขวด 890.- / เซตคู่ 2 ขวด 1,590.- (Hero SKU / มีคูปอง -100 เหลือ 1,490.-) / เซต 4 ขวด 2,670.-
 
 ---
 
