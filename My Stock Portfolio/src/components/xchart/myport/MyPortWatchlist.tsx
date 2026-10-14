@@ -104,6 +104,62 @@ function getSymbolBadgeGradient(sym: string): string {
   return BADGE_GRADIENTS[idx];
 }
 
+function renderIndexBadge(item: IndexStockItem) {
+  if (item.symbol === 'BTC-USD') {
+    return (
+      <svg className="w-3.5 h-3.5 shrink-0 select-none" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="11" fill="#F7931A" />
+        <path
+          d="M15.2 11.2c.4-.3.6-.8.6-1.4 0-1.3-.9-2.1-2.4-2.1H9.5v8.6H14c1.6 0 2.6-.9 2.6-2.3 0-.8-.5-1.5-1.4-1.8zm-3.9-1.9h1.8c.6 0 1 .3 1 .9s-.4.9-1 .9h-1.8V9.3zm2.1 4.7h-2.1v-1.9h2.1c.7 0 1.2.3 1.2 1 0 .6-.5.9-1.2.9z"
+          fill="#FFFFFF"
+        />
+        <path d="M11.3 6.2V4.8m2.2 1.4V4.8m-2.2 14.4v-1.4m2.2 1.4v-1.4" stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (item.symbol === 'GLD') {
+    return (
+      <svg className="w-3.5 h-3.5 shrink-0 select-none" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="11" fill="url(#goldBadgeGrad)" stroke="#EAB308" strokeWidth="0.8" />
+        <circle cx="12" cy="12" r="8.5" fill="none" stroke="#CA8A04" strokeWidth="0.75" strokeDasharray="1.5 1.5" />
+        <path d="M12 6.5L13.3 10.7L17.5 12L13.3 13.3L12 17.5L10.7 13.3L6.5 12L10.7 10.7L12 6.5Z" fill="#FFFFFF" opacity="0.95" />
+        <defs>
+          <linearGradient id="goldBadgeGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#FDE047" />
+            <stop offset="0.5" stopColor="#EAB308" />
+            <stop offset="1" stopColor="#CA8A04" />
+          </linearGradient>
+        </defs>
+      </svg>
+    );
+  }
+
+  if (item.symbol === 'SPY') {
+    return (
+      <svg className="w-3.5 h-2.5 shrink-0 select-none rounded-[2px] overflow-hidden my-0.5" viewBox="0 0 24 16" fill="none">
+        <rect width="24" height="16" fill="#B22234" />
+        <rect y="2.46" width="24" height="2.46" fill="#FFFFFF" />
+        <rect y="7.38" width="24" height="2.46" fill="#FFFFFF" />
+        <rect y="12.3" width="24" height="2.46" fill="#FFFFFF" />
+        <rect width="9.6" height="8.61" fill="#3C3B6E" />
+        <circle cx="3" cy="2.5" r="0.8" fill="#FFFFFF" />
+        <circle cx="6.5" cy="2.5" r="0.8" fill="#FFFFFF" />
+        <circle cx="4.8" cy="4.3" r="0.8" fill="#FFFFFF" />
+        <circle cx="3" cy="6.1" r="0.8" fill="#FFFFFF" />
+        <circle cx="6.5" cy="6.1" r="0.8" fill="#FFFFFF" />
+      </svg>
+    );
+  }
+
+  return (
+    <span className="text-xs shrink-0 select-none">
+      {item.badge}
+    </span>
+  );
+}
+
+
 interface MyPortWatchlistProps {
   selectedSymbol: string;
   onSelectSymbol: (symbol: string) => void;
@@ -942,9 +998,7 @@ export const MyPortWatchlist: React.FC<MyPortWatchlistProps> = ({
                       className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1"
                       title={`${item.symbol} (${item.name})${item.sub ? ` · ${item.sub}` : ''}`}
                     >
-                      <span className="text-xs shrink-0 select-none">
-                        {item.badge}
-                      </span>
+                      {renderIndexBadge(item)}
                       <span className="text-[13px] font-medium tracking-tight truncate text-slate-100 group-hover:text-white">
                         {item.displayName || item.symbol}
                       </span>
