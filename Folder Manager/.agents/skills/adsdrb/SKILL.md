@@ -64,8 +64,11 @@ description: >-
    python "P:\AI\The Viral\Ads DRB\tools\drb_compiler.py" --product <product> --style <style> --id <CAMPAIGN_ID> --script "<SCRIPT_TEXT>"
    ```
 
-3. **ผลลัพธ์ที่ได้ (All-in-One Master Output):**
-   - 📝 **Markdown Master File (DrView + Pure Script):** `P:\AI\The Viral\Ads DRB\02_Creative_Blueprint\Storyboards\<CAMPAIGN_ID>_production_table.md`
+3. **ผลลัพธ์ที่ได้ (All-in-One Master Output - Clean 2-Section Structure):**
+   - 📝 **Markdown Master File (`.md`):** `P:\AI\The Viral\Ads DRB\02_Creative_Blueprint\Storyboards\<CAMPAIGN_ID>_production_table.md`
+     - **Section 1: Pure Voiceover Script** เป็นพารากราฟข้อความธรรมดา อ่านง่าย คัดลอกไปลง ElevenLabs / CapCut ได้ทันที (ไม่มี Code Block)
+     - **Section 2: Master Shot Table** ในบล็อก ````tsv ```` เพื่อให้ DrView ดักจับและเรนเดอร์เป็น **Interactive Excel-Grade Spreadsheet** ทันที (คลิกลากเซลล์, สลับ `⚡ Prompts Only`, ย่อ-ขยายแถว `📏 Compact`, ฮอตคีย์ `Ctrl+C`)
+     - **Thanwa & Squid Game Prompt Standard:** ทุก Prompt มี Prefix รหัสช็อตนำหน้า (เช่น `[MAG01-S01]`) และแบ่งหมวดหมู่ด้วย Semantic Tags `(Shot): ... (Subject): ... (Lighting & Atmosphere): ... (Quality): 4k master.` โดยใช้เครื่องหมายจุด `.` คั่นหมวด
    - 🌐 **Interactive Board:** `P:\AI\The Viral\Ads DRB\02_Creative_Blueprint\Storyboards\<CAMPAIGN_ID>_storyboard.html`
 
 4. **รายงานผลต่อผู้ใช้:**
