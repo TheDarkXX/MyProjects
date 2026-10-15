@@ -73,8 +73,18 @@ npx.cmd -y rea-agents@latest trace "<PATH>" "<FEATURE_KEYWORD>" --json
 ---
 
 ### Step 3: Analysis, Evidence & Clone Radar Scorecard
-เมื่อได้ข้อมูลจากการ Inspect ให้สรุปรายงานพร้อมตัดเกรดผ่าน **Clone Radar Scorecard (5 มิติ 100 คะแนน)** เพื่อให้เห็นความคุ้มค่าและจุดอันตรายของคู่แข่งทันที:
+เมื่อได้ข้อมูลจากการ Inspect ให้สรุปรายงานพร้อมตัดเกรดผ่าน **Clone Radar Scorecard (5 มิติ 100 คะแนน)** และบังคับคำนวณ **Clone Fidelity Index (% ความสมบูรณ์ในการโคลน)** ทุกครั้ง เพื่อให้ผู้ใช้รู้ทันทีว่าแกะออกมาได้กี่เปอร์เซ็นต์:
 
+#### 🎯 Clone Fidelity Index (% ความสมบูรณ์ในการโคลน)
+ต้องแจกแจงตัวเลข % จริงหน้างานเสมอ:
+- 📐 **Layout & DOM Structure (%):** โครงสร้างบล็อกและการจัดวางเนื้อหา
+- ⚙️ **Interactive Logic & State (%):** ตรรกะเบื้องหลัง ควิซ แบบฟอร์ม หรือการจำลอง State
+- 📡 **Tracking & API Contracts (%):** ความครบถ้วนของ Payload และเส้นทางส่งข้อมูล CAPI
+- 🎨 **CSS Tokens & Typography (%):** สี สัดส่วนฟอนต์ และความลื่นไหลของแอนิเมชัน
+- 🖼️ **Assets & Media Parity (%):** ปริมาณรูปภาพที่กู้คืนได้ (หักลบภาพลิขสิทธิ์ที่ต้องคลีนออก)
+👉 **Overall Clone Fidelity: XX%** (สรุป % ความสมบูรณ์รวมที่พร้อมใช้งาน)
+
+#### 📊 Radar Matrix (5 มิติ 100 คะแนน)
 | มิติการประเมิน (Radar Dimensions) | คะแนนเต็ม | เกณฑ์การให้คะแนน |
 |---|:---:|---|
 | **1. UX & Performance** | 20 | ความเร็วโหลด (<1.5s), Mobile Ergonomics, การใช้ Typography/CSS Tokens |
