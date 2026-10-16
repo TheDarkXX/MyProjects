@@ -33,7 +33,7 @@ def fetch_api(endpoint, params=None):
         url,
         headers={
             "x-api-key": API_KEY,
-            "User-Agent": "Antigravity-FB-Skill/1.0"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
     )
     try:
@@ -46,8 +46,10 @@ def fetch_api(endpoint, params=None):
     return None
 
 def main():
-    keyword = sys.argv[1] if len(sys.argv) > 1 else ""
-    date_range = sys.argv[2] if len(sys.argv) > 2 else "30d"
+    keyword = sys.argv[1].strip() if len(sys.argv) > 1 else ""
+    if keyword.lower() in ("all", "*", "ทั้งหมด", "--all"):
+        keyword = ""
+    date_range = sys.argv[2].strip() if len(sys.argv) > 2 else "all"
 
     print(f"\n🔍 [Facebook Trend Intelligence] กำลังสแกนข้อมูลสด: Keyword='{keyword or 'ALL'}', Range='{date_range}'...")
 
