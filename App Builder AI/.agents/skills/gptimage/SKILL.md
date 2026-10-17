@@ -12,8 +12,9 @@ description: >-
 เครื่องยนต์เจนภาพขั้นเทพผ่าน **GPT-Image-2 (OpenAI Codex Backend)** ฟรี 100% ผ่านระบบ Auth ของ Codex ในเครื่อง
 จุดเด่นที่เหนือกว่าโมเดลสร้างภาพอื่น (เช่น Imagen 3 หรือ Midjourney):
 1. **ภาษาไทยคมชัด 100%**: เรนเดอร์ตัวอักษรไทย วรรณยุกต์ สระ ตัวสะกด ได้ถูกต้องสมบูรณ์แบบ ไม่เพี้ยน ไม่เป็นภาษาต่างดาว
-2. **Infographic & Typography ในตัว**: สร้างข้อความพาดหัว 3D แถบสี และตารางเปรียบเทียบข้อมูลการแพทย์หลายช่องได้ใน Prompt เดียว
-3. **Photo-Realistic 3D & Human Emotion**: แสดงสีหน้า แววตา และกายวิภาคการแพทย์ (Anatomy 3D) ได้สมจริง น่าเชื่อถือ
+2. **Infographic & Typography ในตัว**: สร้างข้อความพาดหัว ป้ายเตือน และตารางเปรียบเทียบข้อมูลการแพทย์หลายช่องได้ใน Prompt เดียว
+3. **Photo-Realistic 3D & Human Emotion**: แสดงสีหน้า แววตา และกายวิภาคการแพทย์ (Anatomy 3D) ได้สมจริง น่าเชื่อถือ อ่อนโยน ไม่แข็งทื่อ
+4. **Preset Architecture สำหรับ DoctorBank**: มีระบบ Preset อัจฉริยะ ล็อกคาแรกเตอร์คุณหมอวัย 35 ปี ตาหยียิ้มอบอุ่น กฎ 60/20/20 และโทนสีตาม Demographic 35-60+ ครบทุก Content Type
 
 ---
 
@@ -22,57 +23,64 @@ description: >-
 รันผ่านสคริปต์ Node.js ในโฟลเดอร์ `tools/`:
 
 ```powershell
-node tools/gpt-image.cjs --prompt "PROMPT" [--ar RATIO] [--ref REF_IMAGE] [--out OUTPUT_PATH]
+node tools/gpt-image.cjs [--preset PRESET_NAME] [--prompt "PROMPT"] [--ar RATIO] [--ref REF_IMAGE] [--out OUTPUT_PATH]
 ```
 
 ### พารามิเตอร์หลัก
 | ธง (Flag) | ความหมาย | ค่าที่รองรับ / ตัวอย่าง |
 |---|---|---|
-| `--prompt`, `-p` | คำสั่งเจนภาพ (อังกฤษแนะนำที่สุด) | `--prompt "A viral medical infographic..."` |
-| `--ar` | สัดส่วนภาพ (Aspect Ratio) | `1:1`, `9:16`, `16:9`, `4:5`, `3:4` (ค่าเริ่มต้น: `1:1`) |
+| `--preset`, `-pr` | พรีเซ็ต DoctorBank สำเร็จรูป | `drb`, `drb:warning`, `drb:lab`, `drb:lifestyle`, `drb:food`, `drb:matrix`, `drb:album_cover`, `drb:album_slide` |
+| `--prompt`, `-p` | หัวข้อหรือข้อความในภาพ (ไทย/อังกฤษ) | `--prompt "ตาก็เป็นสโตรกได้ ไม่อยากตาบอดต้องอ่าน"` |
+| `--ar` | สัดส่วนภาพ (Aspect Ratio) | `1:1`, `4:5`, `9:16`, `16:9`, `3:4` (ค่าเริ่มต้น: `1:1`) |
 | `--ref`, `-r` | รูปต้นแบบสำหรับ Image-to-Image / Style | `--ref path/to/sample.jpg` (ใส่ได้หลายภาพ) |
-| `--out`, `-o` | ปลายทางไฟล์ภาพผลลัพธ์ | `--out output/my_image.png` (ค่าเริ่มต้น: `image_<timestamp>.png`) |
-| `--quality`, `-q` | ระดับคุณภาพภาพ | `auto`, `standard`, `high` (ค่าเริ่มต้น: `auto`) |
-| `--format`, `-f` | ฟอร์แมตไฟล์ | `png`, `jpeg`, `webp` (ค่าเริ่มต้น: `png`) |
+| `--out`, `-o` | ปลายทางไฟล์ภาพผลลัพธ์ | `--out scratch/my_image.png` (ค่าเริ่มต้น: `image_<timestamp>.png`) |
+| `--list-presets` | ดูรายชื่อพรีเซ็ตทั้งหมดในระบบ | `node tools/gpt-image.cjs --list-presets` |
 
 > 💡 **Auto-Mirror to Artifacts**: สคริปต์นี้จะก็อปปี้ภาพผลลัพธ์ไปยังโฟลเดอร์ Artifacts ของ Antigravity Session ปัจจุบันโดยอัตโนมัติ ทำให้สามารถแสดงภาพในแชทได้ทันทีผ่าน `view_file`!
 
 ---
 
-## 📐 กฎเหล็กการเขียน Prompt ภาษาไทยในภาพ (Prompt Engineering)
+## 🏥 DoctorBank Brand Presets (ถอดรหัสจาก `/fb dr jade`)
 
-เพื่อให้ได้ภาษาไทยที่คมกริบและเลย์เอาต์สไตล์ Facebook Viral / DoctorBank ให้ทำตามโครงสร้างนี้:
+จากการสแกนข้อมูลเชิงลึก 125 โพสต์ ยอดแชร์ 15,583 ครั้งของเพจหมอเจด ระบบได้จัดหมวดหมู่ Content Type ออกเป็น 6 หมวดหลักที่ครอบคลุม 100% ของคอนเทนต์สุขภาพ:
 
-### 1. ล็อกข้อความด้วย Single Quotes
-ระบุข้อความภาษาไทยตรงๆ ในเครื่องหมายคำพูดเดี่ยว เช่น:
-- `Top headline in bold 3D white text: 'นอนครบ 8 ชม. อย่าเพิ่งดีใจ!'`
-- `Red banner banner text in bold yellow: 'ตื่นมาเพลีย เช็กด่วน 5 ค่านี้!'`
-
-### 2. กำหนด Style ของตัวอักษร (Typography)
-- ระบุสีข้อความ สีขอบ (Stroke) และเงา เช่น `embossed 3D text with thick black outline`
-- ระบุสีแถบรองหลัง เช่น `solid bright red rectangular banner (#FF0000)`
-
-### 3. โครงสร้าง Layout สไตล์เพจการแพทย์ไวรัล
-- **TOP/HEADER**: ข้อความพาดหัว 3D ใหญ่สะดุดตา + แถบเตือนสีแดง
-- **CENTER/BODY**: หมอแสดงอารมณ์ชัดเจน (ช็อก, ชี้เตือน, ตั้งคำถาม) + กราฟิก 3D (หัวใจ, สมอง, ดวงตา, ตับ, หลอดเลือด)
-- **BOTTOM**: ตารางเปรียบเทียบ (Comparison Columns) หรือ กล่องข้อมูลไอคอน (Grid Boxes)
-- **STYLE**: Ultra-photorealistic, high-contrast, modern clean medical infographic, 8k resolution.
+| Preset Name | Content Type / Archetype | ตัวอย่างโพสต์จาก Dr. Jade | เลย์เอาต์ & กฎสายตา 60/20/20 |
+|---|---|---|---|
+| `drb:warning` | **Emergency & Symptom Alarm** (เตือนภัย & สัญญาณเสี่ยง L4/L5) | • ตาก็เป็นสโตรกได้!<br>• หัวใจเต้นผิดจังหวะเสี่ยง Stroke<br>• อาการมะเร็งรังไข่อย่าปล่อยผ่าน | **หมอ 60%**: สีหน้ากังวล/ห่วงใยเบาๆ ในชุด Scrub<br>**อวัยวะ 20%**: กราฟิก 3D (สมอง/ตา/หัวใจ) เบลอหลัง ไม่แย่งเด่น<br>**ฟอนต์ 20%**: ป้ายทรงแคปซูลสีแดงเข้ม (#E11D48) ตัวหนังสือขาว |
+| `drb:lab` | **Lab Report & Biomarkers** (ถอดรหัสผลตรวจเลือด & ตัวเลข L4) | • ไขมันในเลือด 4 ตัว อ่านยังไง?<br>• วัดความดันตัวบนสูง vs ตัวล่างสูง<br>• LDL ทะลุ 180 แก้อย่างไร | **หมอ 60%**: ถือชาร์ตสุขภาพ/แท็บเล็ต ยิ้มอธิบายผล<br>**ข้อมูล 20%**: ป้ายดิจิทัลโปร่งแสง ค่าตัวเลข 120/80, ค่า LDL พร้อมไฟสถานะ<br>**ฟอนต์ 20%**: ป้ายสี Navy/Teal ข้อความขาว คมชัด อ่านง่ายสำหรับคนสูงวัย |
+| `drb:lifestyle` | **Sleep, Biohacking & Wearables** (การนอน & อาการเพลียเรื้อรัง L1/L5) | • ใส่ WHOOP อย่าดูแค่ชั่วโมงนอน<br>• นอน 8 ชม. ร่างกายได้อะไรบ้าง<br>• ไม่ได้ออกแรงแต่ใจเต้นตุบๆ ตอนนอน | **หมอ 60%**: ใส่ชุดนอนนุ่มหรือคาร์ดิแกน ใส่ Smart Ring/WHOOP สายรัด<br>**บรรยากาศ 20%**: ห้องนอนแสงเช้าอุ่น วงแหวน Sleep Stages โปร่งแสงเรืองรองหลัง<br>**ฟอนต์ 20%**: ป้ายสีเขียวมอสหรือน้ำเงินอุ่น มู้ดผ่อนคลาย อบอุ่น |
+| `drb:food` | **Functional Nutrition & Diet** (อาหารบำบัด & ชะลอวัย L1/L4) | • 7 ของกินไฟโตสเตอรอลสูง ดูแล LDL<br>• 4 วิธีชะลอคราบไขมัน<br>• ลดน้ำตาลสะสมหลังมื้ออาหาร | **หมอ 60%**: ยิ้มสดใสในครัว/โต๊ะอาหารไม้ ชี้จานอาหารสุขภาพ<br>**อาหาร 20%**: อาหารจริงสดใหม่ (อโวคาโด, เบอร์รี่, น้ำมันมะกอก, ผักใบเขียว) + มาสคอตตับยิ้ม<br>**ฟอนต์ 20%**: ป้ายสีเขียวออร์แกนิก ตัวหนังสือขาว ชัดเจน |
+| `drb:matrix` | **Multi-Column Comparison** (ตารางเทียบความต่าง 3-5 คอลัมน์ L4/L5) | • หัวใจเต้นผิดจังหวะ 5 แบบ<br>• ตัวบนสูง vs ตัวล่างสูง อันไหนอันตรายกว่า<br>• 5 ไวรัสก่อมะเร็ง | **เลย์เอาต์ 60%**: ตาราง 3-5 คอลัมน์ หรือการ์ดแบ่งซ้ายขวา พร้อมแถบสี เขียว/เหลือง/แดง<br>**หมอ 20%**: ยืนชี้หรือแนะนำที่มุมบน/ข้าง<br>**ฟอนต์ 20%**: พาดหัวตัวใหญ่บนสุด 'เทียบชัดๆ' ตัวอักษรอ่านง่าย ไม่รก |
+| `drb:album_cover` | **Facebook 4-Slide Album Cover** (รูปแรกหน้าปกดึงนิ้วหยุดดู) | • เช็กตา = เช็กโรค! 7 ความผิดปกติ<br>• อย่ารอให้คลำเจอก้อน! 5 ปัจจัยเสี่ยง | **หมอ 65%**: แววตาสงสัย/กระตุ้นความอยากรู้ ชี้นิ้วตั้งคำถาม<br>**ป้ายกระตุ้น 15%**: แถบแคปซูล 'ปัดดูด่วน 👉' หรือ 'มี 4 ข้อต้องรู้'<br>**ฟอนต์ 20%**: คำถามพาดหัวใหญ่สะดุดตา เห็นชัดแม้ดูภาพย่อในฟีดมือถือ |
+| `drb:album_slide` | **Facebook 4-Slide Album Inner** (สไลด์เนื้อหาด้านใน 2-4) | สไลด์สรุปเนื้อหาทีละข้อ ข้อ 1 ถึง ข้อ 4 | การ์ดตัวเลข ข้อ 1-4, ไดอะแกรมอวัยวะหรืออาหารชัดเจน, หัวข้อป้ายสี + บุลเล็ต 2-3 บรรทัด |
+| `drb` | **Standard Warm Medical** (ค่ามาตรฐานอเนกประสงค์) | ใช้กับหัวข้อสุขภาพทั่วไป | หมอโทนอบอุ่น เสื้อกาวน์หรือเสื้อสเวตเตอร์ แบ็กกราวด์คลินิกโปร่งเบลอ องค์ประกอบ 60/20/20 |
 
 ---
 
-## ⚡ ตัวอย่างการใช้งานจริง
+## ⚡ ตัวอย่างการรันคำสั่งจริง
 
-### ตัวอย่าง 1: ภาพพาดหัวแนวเตือนภัย (Square 1:1)
+### ตัวอย่าง 1: เจนภาพเตือนภัย Stroke สไตล์ Soft
 ```powershell
-node tools/gpt-image.cjs --prompt "A viral medical Facebook infographic poster in Thai language. TOP: A 35-year-old Asian doctor looking shocked pointing at an eye. Behind him is a 3D medical render of a human brain with red ischemic stroke vessel. BOTTOM: Large 3D white text with black outline: 'ตาก็เป็น \"สโตรก\" ได้!'. Below it a bright red banner: 'ไม่อยากเสี่ยงตาบอดต้องอ่านโพสต์นี้!' in yellow text. Ultra-realistic, high contrast." --ar 1:1 --out scratch/eye_stroke.png
+node tools/gpt-image.cjs --preset drb:warning --prompt "ตาก็เป็น 'สโตรก' ได้! ไม่อยากเสียสายตาถาวร ต้องอ่านโพสต์นี้!" --out scratch/test_warning.png
 ```
 
-### ตัวอย่าง 2: ภาพปกแนวตั้งสำหรับ Reels / TikTok (9:16)
+### ตัวอย่าง 2: เจนภาพวิเคราะห์ผลเลือด/ความดัน
 ```powershell
-node tools/gpt-image.cjs --prompt "Vertical 9:16 poster. A friendly Asian doctor holding a stethoscope. Large bold text at the top in Thai: '5 สัญญาณเตือนไตเสื่อม' with red accent banner: 'รู้ก่อนฟอกไต'. 3D kidney illustration in the background." --ar 9:16 --out scratch/kidney_reels_cover.png
+node tools/gpt-image.cjs --preset drb:lab --prompt "วัดความดัน ตัวบนสูง กับ ตัวล่างสูง อันไหนอันตรายกว่ากัน? เช็กค่า 140/90 ด่วน" --out scratch/test_lab.png
 ```
 
-### ตัวอย่าง 3: อ้างอิงภาพจริง (Image-to-Image / Style Transfer)
+### ตัวอย่าง 3: เจนภาพไลฟ์สไตล์การนอน & นาฬิกาสุขภาพ
 ```powershell
-node tools/gpt-image.cjs --prompt "Recreate this medical poster concept featuring an Asian doctor in white coat, with exact Thai typography: 'หัวใจเต้นผิดจังหวะ มีกี่แบบ?' in identical clean 5-column infographic layout." --ref "input_photo.jpg" --out scratch/cloned_poster.png
+node tools/gpt-image.cjs --preset drb:lifestyle --prompt "ใส่ WHOOP อย่าดูแค่ชั่วโมงนอน! นอน 8 ชั่วโมงทำไมยังเพลีย เช็กค่า Recovery" --out scratch/test_sleep.png
 ```
+
+### ตัวอย่าง 4: เจนภาพอาหารล้างตับ
+```powershell
+node tools/gpt-image.cjs --preset drb:food --prompt "4 อาหารล้างตับ ช่วยลดไขมันพอกตับ ฟื้นฟูเอนไซม์ตับใน 30 วัน" --out scratch/test_food.png
+```
+
+### ตัวอย่าง 5: เจนภาพตารางเปรียบเทียบ 5 แบบ
+```powershell
+node tools/gpt-image.cjs --preset drb:matrix --prompt "หัวใจเต้นผิดจังหวะ 5 แบบ: AF, Atrial Flutter, PVC, PAC, VT อันไหนเสี่ยง Stroke ที่สุด?" --out scratch/test_matrix.png
+```
+
