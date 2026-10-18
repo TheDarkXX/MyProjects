@@ -513,8 +513,8 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                         <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
                       )}
                       {heldInfo && (
-                        <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold font-mono">
-                          ในพอร์ต {heldInfo.weightPercent.toFixed(1)}%
+                        <span className="text-xs px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold font-mono">
+                          {heldInfo.weightPercent.toFixed(1)}%
                         </span>
                       )}
                     </div>
