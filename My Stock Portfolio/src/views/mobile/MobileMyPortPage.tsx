@@ -424,14 +424,12 @@ export const MobileMyPortPage: React.FC = () => {
                 onClick={() => setSelectedSymbol(h.symbol)}
                 className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
               >
-                {/* Left: Ticker + Tier + Weight & Shares/Value */}
+                {/* Left: 7 Matrix Symbol + Ticker + Weight & Shares/Value */}
                 <div className="flex items-center gap-2.5 min-w-0">
+                  <TierBadgeIndicator symbol={h.symbol} radarData={radarData} />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-base font-bold text-white tracking-tight font-mono">{h.symbol}</span>
-                      {tierCode && (
-                        <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
-                      )}
                       <span className="text-xs px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold font-mono">
                         {h.weightPercent.toFixed(1)}%
                       </span>

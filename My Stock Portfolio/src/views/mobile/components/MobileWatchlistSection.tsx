@@ -74,12 +74,13 @@ export const INDEX_ITEMS: IndexItem[] = [
 
 export const TIER_SORT_ASC_RANKS: Record<string, number> = {
   BUY_NOW: 1,
-  GET_READY: 2,
-  SLOW_BLEED: 3,
-  FALLING_KNIFE: 4,
-  MAYDAY_EXIT: 5,
-  RUNNER: 6,
-  TO_THE_MOON: 7,
+  BUY_ZONE: 2,
+  GET_READY: 3,
+  SLOW_BLEED: 4,
+  FALLING_KNIFE: 5,
+  MAYDAY_EXIT: 6,
+  RUNNER: 7,
+  TO_THE_MOON: 8,
 };
 
 type SortMode = 'DEFAULT' | 'PERC_DESC' | 'PERC_ASC' | 'TIER' | 'SYMBOL';
@@ -205,8 +206,10 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
       });
     } else if (sortMode === 'TIER') {
       list = [...list].sort((a, b) => {
-        const tierA = radarMap[a.symbol.toUpperCase()]?.tier_code || 'ZZZ';
-        const tierB = radarMap[b.symbol.toUpperCase()]?.tier_code || 'ZZZ';
+        const itemA = radarMap[a.symbol.toUpperCase()];
+        const itemB = radarMap[b.symbol.toUpperCase()];
+        const tierA = itemA?.traffic_light || itemA?.trafficLight || itemA?.tier_code || itemA?.tier || 'ZZZ';
+        const tierB = itemB?.traffic_light || itemB?.trafficLight || itemB?.tier_code || itemB?.tier || 'ZZZ';
         return (TIER_SORT_ASC_RANKS[tierA] || 99) - (TIER_SORT_ASC_RANKS[tierB] || 99);
       });
     } else if (sortMode === 'SYMBOL') {
@@ -229,8 +232,10 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
       list = [...list].sort((a, b) => getQuote(a.symbol).percentChange - getQuote(b.symbol).percentChange);
     } else if (sortMode === 'TIER') {
       list = [...list].sort((a, b) => {
-        const tierA = radarMap[a.symbol.toUpperCase()]?.tier_code || 'ZZZ';
-        const tierB = radarMap[b.symbol.toUpperCase()]?.tier_code || 'ZZZ';
+        const itemA = radarMap[a.symbol.toUpperCase()];
+        const itemB = radarMap[b.symbol.toUpperCase()];
+        const tierA = itemA?.traffic_light || itemA?.trafficLight || itemA?.tier_code || itemA?.tier || 'ZZZ';
+        const tierB = itemB?.traffic_light || itemB?.trafficLight || itemB?.tier_code || itemB?.tier || 'ZZZ';
         return (TIER_SORT_ASC_RANKS[tierA] || 99) - (TIER_SORT_ASC_RANKS[tierB] || 99);
       });
     } else if (sortMode === 'SYMBOL') {
@@ -398,7 +403,6 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                 const currentPrice = quote.price > 0 ? quote.price : (h.lastPrice || h.avgCost);
                 const dayChange = quote.price > 0 ? quote.percentChange : h.dayChangePercent;
                 const radarItem = radarMap[h.symbol.toUpperCase()];
-                const tierCode = radarItem?.tier_code || radarItem?.tier;
                 const isPositiveDay = dayChange >= 0;
                 const isPositiveTotal = h.totalReturnPercent >= 0;
 
@@ -408,14 +412,12 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                     onClick={() => onSelectSymbol(h.symbol)}
                     className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
                   >
-                    {/* Left: Ticker + Weight + Tier + Holding details */}
+                    {/* Left: 7 Matrix Symbol + Ticker + Weight + Holding details */}
                     <div className="flex items-center gap-2.5 min-w-0">
+                      <TierBadgeIndicator symbol={h.symbol} radarData={radarItem} />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-base font-bold text-white tracking-tight font-mono">{h.symbol}</span>
-                          {tierCode && (
-                            <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
-                          )}
                           <span className="text-xs px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300 font-medium font-mono">
                             {h.weightPercent.toFixed(1)}%
                           </span>
@@ -513,7 +515,6 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
               filteredTargets.map((item) => {
                 const quote = getQuote(item.symbol);
                 const radarItem = radarMap[item.symbol.toUpperCase()];
-                const tierCode = radarItem?.tier_code || radarItem?.tier;
                 const heldInfo = holdingsMap.get(item.symbol.toUpperCase());
                 const isPositiveDay = quote.percentChange >= 0;
 
@@ -523,12 +524,10 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                     onClick={() => onSelectSymbol(item.symbol)}
                     className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
                   >
-                    {/* Left: Ticker + Tier Badge + In-Port Indicator */}
+                    {/* Left: 7 Matrix Symbol + Ticker + In-Port Indicator */}
                     <div className="flex items-center gap-2.5 min-w-0">
+                      <TierBadgeIndicator symbol={item.symbol} radarData={radarItem} />
                       <span className="text-base font-bold text-white tracking-tight font-mono">{item.symbol}</span>
-                      {tierCode && (
-                        <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
-                      )}
                       {heldInfo && (
                         <span className="text-xs px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold font-mono">
                           {heldInfo.weightPercent.toFixed(1)}%
