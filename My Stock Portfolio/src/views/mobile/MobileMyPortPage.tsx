@@ -10,8 +10,8 @@ import { DashboardTimeRange } from '../../components/dashboard/MultiPeriodReturn
 import { PortfolioHero } from './components/PortfolioHero';
 import { QuickStatsStrip } from './components/QuickStatsStrip';
 import { StockDetailDrawer } from '../../components/portfolio/StockDetailDrawer';
-import { TierBadgeIndicator, getTierVisualInfo } from '../../components/xchart/TierBadgeIndicator';
-import { Wallet, Briefcase, CandlestickChart } from 'lucide-react';
+import { TierBadgeIndicator } from '../../components/xchart/TierBadgeIndicator';
+import { Wallet, Briefcase } from 'lucide-react';
 import clsx from 'clsx';
 
 const getStartDateForRange = (range: DashboardTimeRange, earliestDate: string): string => {
@@ -382,43 +382,33 @@ export const MobileMyPortPage: React.FC = () => {
       />
 
       {/* 3. Holdings Positions Breakdown */}
-      <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+      <div className="bg-[#0B0F17]/95 border border-white/[0.08] rounded-2xl shadow-xl overflow-hidden">
         {/* Section Header */}
-        <div className="p-3.5 sm:p-4 bg-[#0E121E] border-b border-[#2A2E45] flex items-center justify-between">
+        <div className="px-4 py-3 bg-[#111726]/60 border-b border-white/[0.06] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Briefcase className="w-4 h-4 text-purple-400" />
-            <span className="text-white font-black text-sm sm:text-base font-heading">
+            <span className="text-white font-bold text-sm font-heading">
               Portfolio Holdings
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 font-mono">
-              {sortedHoldings.length} Positions
+            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono font-semibold">
+              {sortedHoldings.length} ตัว
             </span>
           </div>
           <span className="text-xs text-slate-400 font-mono">
-            Sorted by weight
+            เรียงตามสัดส่วน
           </span>
         </div>
 
-        {/* Table Column Headers */}
-        <div className="h-8 px-3 bg-[#080A10] border-b border-[#1F2233] grid grid-cols-12 items-center text-[12px] font-bold uppercase tracking-wider text-slate-300 select-none">
-          <div className="col-span-5 text-left">Position</div>
-          <div className="col-span-3 text-right pr-1">Last / Value</div>
-          <div className="col-span-2 text-right">Chg ($)</div>
-          <div className="col-span-2 text-right">Chg ({timeRange})</div>
-        </div>
-
-        {/* Holdings Rows */}
-        <div className="divide-y divide-[#1F2233]/30">
+        {/* Holdings Rows (Spacious 2-Column Golden Ratio) */}
+        <div className="divide-y divide-white/[0.04]">
           {sortedHoldings.map((h) => {
             const quote = watchlistPrices[h.symbol] || { price: h.lastPrice, change: 0, percentChange: h.dayChangePercent };
             const radarData = h.symbol ? radarMap[h.symbol.toUpperCase()] : null;
-            const tierInfo = getTierVisualInfo(radarData, h.symbol, false);
+            const tierCode = radarData?.tier_code || radarData?.tier;
 
             const price = quote?.price ?? h.lastPrice ?? 0;
             const change = quote?.change ?? 0;
             const percentChange = quote?.percentChange ?? h.dayChangePercent ?? 0;
-            const isPositive = percentChange >= 0;
-            const isZero = percentChange === 0;
 
             const displayStockPercent = getStockTimeframeReturn(h.symbol, percentChange, h.totalReturnPercent);
             const isDisplayStockPos = displayStockPercent >= 0;
@@ -432,49 +422,40 @@ export const MobileMyPortPage: React.FC = () => {
               <div
                 key={h.symbol}
                 onClick={() => setSelectedSymbol(h.symbol)}
-                className="h-[46px] px-3 grid grid-cols-12 items-center hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer group relative select-none"
+                className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
               >
-                {/* Left Indicator */}
-                {tierInfo.isFireOrb ? (
-                  <div className={clsx('absolute left-[1px] top-1/2 -translate-y-1/2 transition-all z-10', tierInfo.spineClass)} />
-                ) : (
-                  <div className={clsx('absolute left-[2px] top-[6px] bottom-[6px] rounded-full transition-all z-10 w-[4px]', tierInfo.spineClass)} />
-                )}
-
-                {/* Col 1: Symbol, Weight & Shares */}
-                <div className="col-span-5 flex flex-col justify-center overflow-hidden pr-1">
-                  <div className="flex items-center gap-1.5">
-                    <TierBadgeIndicator symbol={h.symbol} radarData={radarData} />
-                    <span className="text-[13px] font-bold tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
-                      {h.symbol}
-                    </span>
-                    <span className="text-[11px] px-1.5 py-0.2 rounded bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono font-bold">
-                      {h.weightPercent.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-mono truncate pl-5">
-                    {Number(h.quantity).toLocaleString('en-US', { maximumFractionDigits: 2 })} shares
+                {/* Left: Ticker + Tier + Weight & Shares/Value */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-base font-bold text-white tracking-tight font-mono">{h.symbol}</span>
+                      {tierCode && (
+                        <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
+                      )}
+                      <span className="text-xs px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold font-mono">
+                        {h.weightPercent.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 font-mono">
+                      <span>{Number(h.quantity).toLocaleString('en-US', { maximumFractionDigits: 3 })} หุ้น</span>
+                      <span>•</span>
+                      <span>มูลค่า {formatPrimary(h.currentValue)}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Col 2: Price & Total Current Value */}
-                <div className="col-span-3 text-right flex flex-col justify-center font-mono pr-1">
-                  <span className="text-[13px] font-normal text-slate-200 group-hover:text-white">
-                    {formattedPrice}
-                  </span>
-                  <span className="text-[11px] text-[#CBD5E1] truncate">
-                    {formatPrimary(h.currentValue)}
-                  </span>
-                </div>
-
-                {/* Col 3: Change */}
-                <div className={clsx("col-span-2 text-right font-mono text-[13px] font-normal truncate", isZero ? "text-slate-300" : isPositive ? "text-emerald-400" : "text-rose-400")}>
-                  {isZero ? '0.00' : `${isPositive && change > 0 ? '+' : ''}${change.toFixed(2)}`}
-                </div>
-
-                {/* Col 4: Percent Change in selected TimeRange */}
-                <div className="col-span-2 text-right flex items-center justify-end">
-                  <span className={clsx("font-mono text-[13px] font-bold px-1.5 py-0.5 rounded-lg", 
+                {/* Right: Price + Period Return Pill */}
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <div className="text-right font-mono">
+                    <div className="text-sm font-bold text-slate-100 tracking-tight">
+                      ${formattedPrice}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      {change !== 0 ? `${change > 0 ? '+' : ''}$${change.toFixed(2)}` : '--'}
+                    </div>
+                  </div>
+                  <span className={clsx(
+                    "inline-flex items-center text-xs font-bold px-2 py-1 rounded-md min-w-[66px] justify-center font-mono",
                     isDisplayStockPos ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
                   )}>
                     {isDisplayStockPos ? '+' : ''}{displayStockPercent.toFixed(2)}%
@@ -484,22 +465,14 @@ export const MobileMyPortPage: React.FC = () => {
             );
           })}
 
-          {/* Pinned Cash Row */}
-          <div className="h-[46px] px-3 bg-[#0A0D15] flex items-center justify-between border-t border-[#2A2E45]">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <Wallet className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-[13px] font-bold text-white font-heading">CASH</div>
-                <div className="text-[11px] text-[#CBD5E1]">Available Liquid Funds</div>
-              </div>
+          {/* Cash Balance Row */}
+          <div className="px-4 py-2.5 bg-[#0D121F]/80 flex items-center justify-between text-xs border-t border-white/[0.04]">
+            <div className="flex items-center gap-2 text-slate-400 font-medium">
+              <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>เงินสดพร้อมลงทุน (Cash Balance)</span>
             </div>
-            <div className="text-right">
-              <div className="text-sm font-bold text-emerald-400 font-mono">
-                {formatPrimary(cashBalance)}
-              </div>
-              <div className="text-[11px] text-slate-400">Unallocated</div>
+            <div className="font-bold text-slate-200 font-mono">
+              {formatPrimary(cashBalance)}
             </div>
           </div>
         </div>
