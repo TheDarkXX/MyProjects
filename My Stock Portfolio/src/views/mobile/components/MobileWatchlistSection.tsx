@@ -594,13 +594,10 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                     onClick={() => onSelectSymbol(idx.symbol)}
                     className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
                   >
-                    {/* Left: Flag/Emoji + Symbol + Name */}
+                    {/* Left: Flag/Emoji + Symbol */}
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="text-lg leading-none shrink-0">{idx.flag}</span>
-                      <div className="min-w-0 flex items-center gap-2">
-                        <span className="text-base font-bold text-white tracking-tight font-mono">{idx.symbol}</span>
-                        <span className="text-xs text-slate-400 truncate">{idx.name}</span>
-                      </div>
+                      <span className="text-base font-bold text-white tracking-tight font-mono">{idx.symbol}</span>
                     </div>
 
                     {/* Right: Price + Day Change */}
