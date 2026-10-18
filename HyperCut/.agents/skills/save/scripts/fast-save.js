@@ -2,7 +2,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Turbo Save Pipeline Orchestrator (scripts/fast-save.js)
 // Unified Single-Process Auto-Save, Quality Gate, Cache-Bust & VPS Deploy
-// Target Execution Time: ≤10 Seconds | Version: 3.6.1 (Self-Healing Devil-Speed)
+// Target Execution Time: ≤10 Seconds | Version: 4.0.0 (Canonical-First Zero-Desync)
 // ═══════════════════════════════════════════════════════════════════════════
 
 import fs from 'fs';
@@ -12,15 +12,7 @@ import { execSync, spawnSync, spawn } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-function findRepoRoot(startDir) {
-  let curr = startDir;
-  while (curr && curr !== path.dirname(curr)) {
-    if (fs.existsSync(path.join(curr, '.git'))) return curr;
-    curr = path.dirname(curr);
-  }
-  return path.resolve(startDir, '../../..');
-}
-const ROOT = findRepoRoot(__dirname);
+const ROOT = path.resolve(__dirname, '..');
 
 // ─── Telemetry Stopwatch ───────────────────────────────────────────────────────
 const timings = {};
@@ -101,12 +93,15 @@ console.log('══════════════════════�
 
 const pipelineStart = Date.now();
 
-// ─── Step 0: Check Git Lock ───────────────────────────────────────────────────
-const gitLockFile = path.join(ROOT, '.git', 'index.lock');
-if (fs.existsSync(gitLockFile)) {
-  console.error('\n❌ [GIT LOCK ERROR] Another git process is running (.git/index.lock exists).');
-  console.error('   Please wait or delete .git/index.lock if stale before running /save.\n');
-  process.exit(1);
+// ─── Step 0: Check Git Lock & Interrupted Operations ─────────────────────────
+const gitDir = path.join(ROOT, '.git');
+const lockFiles = ['index.lock', 'rebase-apply', 'rebase-merge', 'MERGE_HEAD', 'CHERRY_PICK_HEAD', 'REVERT_HEAD'];
+for (const lock of lockFiles) {
+  if (fs.existsSync(path.join(gitDir, lock))) {
+    console.error(`\n❌ [GIT LOCK/STATE ERROR] Interrupted Git state detected (.git/${lock} exists).`);
+    console.error(`   Please resolve or abort the active git operation before running /save.\n`);
+    process.exit(1);
+  }
 }
 
 // ─── Auto-Detect Target Quick Save if not supplied (Dynamic Scanner V3.6) ─────
@@ -316,14 +311,18 @@ if (!flags.skipCleanup) {
     if (floating.length > 7) {
       floating.sort(compareSemVer);
       const toArchive = floating.slice(0, floating.length - 6);
-      console.log(`\n[3.5/7] Auto-Archive: ${floating.length} files floating in Complete/${targetComponent} (Limit: 7). Archiving ${toArchive.length} file(s)...`);
+      console.log(`\n[3.5/7] Auto-Archive: ${floating.length} files floating in Complete/${targetComponent} (Limit: 7). ${flags.dryRun ? 'Would archive' : 'Archiving'} ${toArchive.length} file(s)...`);
       for (const f of toArchive) {
         const sem = parseSemVer(f);
         const folderName = sem ? `V${sem.major}` : 'V13';
         const archiveDir = path.join(targetCompDir, folderName);
-        if (!fs.existsSync(archiveDir)) fs.mkdirSync(archiveDir, { recursive: true });
-        fs.renameSync(path.join(targetCompDir, f), path.join(archiveDir, f));
-        console.log(`  ✔ Archived: ${f} ➔ Complete/${targetComponent}/${folderName}/`);
+        if (!flags.dryRun) {
+          if (!fs.existsSync(archiveDir)) fs.mkdirSync(archiveDir, { recursive: true });
+          fs.renameSync(path.join(targetCompDir, f), path.join(archiveDir, f));
+          console.log(`  ✔ Archived: ${f} ➔ Complete/${targetComponent}/${folderName}/`);
+        } else {
+          console.log(`  ✔ [Dry-Run] Would archive: ${f} ➔ Complete/${targetComponent}/${folderName}/`);
+        }
       }
       recordTime('SemVer Auto-Archive', Date.now() - step35Start);
     } else {
@@ -368,9 +367,13 @@ if (fs.existsSync(roadmapPath) && targetQuickSave) {
 
       // Check if already synced (idempotent)
       if (match && !roadmapContent.includes(`V${ver}`)) {
-        roadmapContent = roadmapContent.replace(completedHeading, `${match[0]}\r\n${newItem}`);
-        fs.writeFileSync(roadmapPath, roadmapContent, 'utf8');
-        console.log(`\n[3.8/7] Auto-Sync Roadmap: Injected V${ver} into MASTER_ROADMAP.md ✅`);
+        if (!flags.dryRun) {
+          roadmapContent = roadmapContent.replace(completedHeading, `${match[0]}\r\n${newItem}`);
+          fs.writeFileSync(roadmapPath, roadmapContent, 'utf8');
+          console.log(`\n[3.8/7] Auto-Sync Roadmap: Injected V${ver} into MASTER_ROADMAP.md ✅`);
+        } else {
+          console.log(`\n[3.8/7] [Dry-Run] Would inject V${ver} into MASTER_ROADMAP.md`);
+        }
       } else {
         console.log(`\n[3.8/7] Auto-Sync Roadmap: V${ver} already present or heading not found. Skipped.`);
       }
@@ -404,83 +407,207 @@ if (!commitMessage) {
 }
 
 try {
-  execSync('git add .', { cwd: ROOT, stdio: 'pipe' });
-  const status = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf-8' }).trim();
-  if (status) {
-    if (flags.dryRun) {
-      console.log(`[Dry-Run] Would commit with message: "${commitMessage}"`);
-    } else {
+  if (flags.dryRun) {
+    const status = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf-8' }).trim();
+    console.log(`[Dry-Run] Pending working tree changes:\n${status ? status.split('\n').map(s => '   ' + s).join('\n') : '   (none)'}`);
+    console.log(`[Dry-Run] Would commit with message: "${commitMessage}"`);
+    recordTime('Atomic Commit', 0);
+  } else {
+    execSync('git add .', { cwd: ROOT, stdio: 'pipe' });
+    const status = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf-8' }).trim();
+    if (status) {
       const commitRes = spawnSync('git', ['commit', '-m', commitMessage], { cwd: ROOT, stdio: 'inherit' });
       if (commitRes.status !== 0) {
         throw new Error(`git commit failed with exit code ${commitRes.status}`);
       }
       console.log(`✅ Committed: "${commitMessage}"`);
+    } else {
+      console.log('ℹ️ Working tree already clean. Nothing new to commit.');
     }
-  } else {
-    console.log('ℹ️ Working tree already clean. Nothing new to commit.');
+    recordTime('Atomic Commit', Date.now() - step4Start);
   }
-  recordTime('Atomic Commit', Date.now() - step4Start);
 } catch (err) {
   console.error(`\n❌ [Git Commit Error] ${err.message}`);
   process.exit(1);
 }
 
-// ─── Step 5: Production Deploy (Smart Multi-Remote Push with Fail Guard) ───────
+// ─── Step 5: Production Deploy (V4.0 Canonical-First Zero-Desync Protocol) ────
 const step5Start = Date.now();
-console.log('\n[5/7] Production Deployment...');
+console.log('\n[5/7] Production Deployment (Canonical-First Zero-Desync)...');
 
-// Detect active branch
-let currentBranch = 'master';
+// 1. Detect active branch & HEAD commit
+let currentBranch = '';
 try {
-  currentBranch = execSync('git branch --show-current', { cwd: ROOT, encoding: 'utf-8' }).trim() || 'master';
+  currentBranch = execSync('git branch --show-current', { cwd: ROOT, encoding: 'utf-8' }).trim();
 } catch {}
 
-// Select target remotes: vps priority (single remote target to avoid double pushes)
-let targetRemotes = ['vps'];
+if (!currentBranch) {
+  try {
+    const headRef = execSync('git rev-parse --abbrev-ref HEAD', { cwd: ROOT, encoding: 'utf-8' }).trim();
+    if (headRef === 'HEAD') {
+      console.error('\n🚨 [GIT DETACHED HEAD] Cannot deploy from a detached HEAD state.');
+      console.error('   Please checkout a branch first (e.g. git checkout master).\n');
+      process.exit(1);
+    }
+    currentBranch = headRef;
+  } catch {
+    currentBranch = 'master';
+  }
+}
+
+let headSha = '';
+try {
+  headSha = execSync('git rev-parse HEAD', { cwd: ROOT, encoding: 'utf-8' }).trim();
+} catch {}
+
+// 2. Discover available remotes
+let availableRemotes = [];
 try {
   const remoteOut = execSync('git remote', { cwd: ROOT, encoding: 'utf-8' }).trim();
-  const availableRemotes = remoteOut.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
-  if (availableRemotes.includes('vps')) {
-    targetRemotes = ['vps'];
-  } else if (availableRemotes.includes('origin')) {
-    targetRemotes = ['origin'];
-  } else if (availableRemotes.length > 0) {
-    targetRemotes = [availableRemotes[0]];
-  } else {
-    targetRemotes = [];
-  }
+  availableRemotes = remoteOut.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
 } catch {}
 
+const hasOrigin = availableRemotes.includes('origin');
+const hasVps = availableRemotes.includes('vps');
+
 if (flags.dryRun) {
-  console.log(`🔍 [Dry-Run] Skipping push to ${targetRemotes.join(', ')} (${currentBranch})`);
+  console.log(`🔍 [Dry-Run] Skipping push to remotes (Branch: ${currentBranch}, Commit: ${headSha.slice(0, 7)})`);
   recordTime('Production Push', 0);
 } else if (flags.skipPush) {
   console.log('ℹ️ Push skipped by --skip-push flag. Local commit preserved.');
   recordTime('Production Push', 0);
-} else if (targetRemotes.length === 0) {
+} else if (availableRemotes.length === 0) {
   console.log('ℹ️ No git remotes configured for this workspace. Skipping push.');
   recordTime('Production Push', 0);
 } else {
-  let anySuccess = false;
-  let pushErrors = [];
-  for (const remote of targetRemotes) {
-    try {
-      console.log(`🚀 Pushing to ${remote} (git push ${remote} ${currentBranch})...`);
-      execSync(`git push ${remote} ${currentBranch}`, { cwd: ROOT, stdio: 'inherit' });
-      console.log(`✅ Push to ${remote} (${currentBranch}) succeeded.`);
-      anySuccess = true;
-    } catch (err) {
-      console.error(`⚠️ Push to ${remote} failed: ${err.message}`);
-      pushErrors.push(`${remote}: ${err.message}`);
+  // Helper for safe git execution
+  function runGit(args, options = {}) {
+    return spawnSync('git', args, { cwd: ROOT, encoding: 'utf-8', ...options });
+  }
+
+  // 3. CANONICAL RECONCILIATION & PUSH (origin is the Source of Truth for Multi-PC sync)
+  if (hasOrigin) {
+    console.log(`📡 Reconciling with canonical remote 'origin' (${currentBranch})...`);
+    let pushOriginSuccess = false;
+    let lastError = '';
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      // Fetch latest canonical branch
+      const fetchRes = runGit(['fetch', '--no-tags', 'origin', currentBranch]);
+      if (fetchRes.status !== 0 && fetchRes.stderr) {
+        console.warn(`⚠️ [Fetch origin warning]: ${fetchRes.stderr.trim()}`);
+      }
+
+      // Check commit ancestry with origin
+      const originRef = `origin/${currentBranch}`;
+      const revCheck = runGit(['rev-parse', '--verify', originRef]);
+      if (revCheck.status === 0) {
+        const isOriginAncestor = runGit(['merge-base', '--is-ancestor', originRef, 'HEAD']).status === 0;
+        const isHeadAncestor = runGit(['merge-base', '--is-ancestor', 'HEAD', originRef]).status === 0;
+
+        if (isOriginAncestor && isHeadAncestor) {
+          // Identical state, proceed
+        } else if (isOriginAncestor) {
+          // Local is ahead of origin. Safe fast-forward push.
+        } else if (isHeadAncestor) {
+          // Local is behind origin. Fast-forward merge.
+          console.log(`ℹ️ Local is behind origin/${currentBranch}. Fast-forwarding...`);
+          const ffRes = runGit(['merge', '--ff-only', originRef]);
+          if (ffRes.status !== 0) {
+            console.error(`🚨 [FF Merge Failed] ${ffRes.stderr}`);
+            process.exit(1);
+          }
+        } else {
+          // Diverged! Safe rebase.
+          console.log(`🔄 Local and origin/${currentBranch} have diverged. Auto-rebasing...`);
+          const rebaseRes = runGit(['rebase', originRef]);
+          if (rebaseRes.status !== 0) {
+            console.error('\n🚨 [REBASE CONFLICT] Local commits diverged from origin and cannot rebase cleanly!');
+            console.error('   Aborting rebase automatically to protect your working state...');
+            runGit(['rebase', '--abort']);
+            console.error(`   Local commit preserved: ${headSha.slice(0, 7)}`);
+            console.error(`   Please run: git pull --rebase origin ${currentBranch} and resolve conflicts manually.\n`);
+            process.exit(1);
+          }
+          // Refresh headSha after successful rebase
+          headSha = runGit(['rev-parse', 'HEAD']).stdout.trim();
+        }
+      }
+
+      // Push to canonical origin
+      console.log(`🚀 [Attempt ${attempt}/2] Pushing to origin (GitHub) [${currentBranch}]...`);
+      const pushRes = runGit(['push', 'origin', currentBranch]);
+      if (pushRes.status === 0) {
+        console.log(`✅ Canonical origin (GitHub) updated successfully to ${headSha.slice(0, 7)}.`);
+        pushOriginSuccess = true;
+        break;
+      } else {
+        const errCombined = `${pushRes.stdout}\n${pushRes.stderr}`;
+        lastError = pushRes.stderr.trim() || pushRes.stdout.trim();
+        const isRace = /fetch first|non-fast-forward|stale info|rejected/i.test(errCombined);
+        if (isRace && attempt === 1) {
+          console.warn('⚠️ Origin push rejected (concurrent update detected). Retrying with re-fetch...');
+          continue;
+        } else {
+          break;
+        }
+      }
+    }
+
+    if (!pushOriginSuccess) {
+      console.error('\n🚨 [CRITICAL CANONICAL FAILURE] Push to origin (GitHub) failed!');
+      console.error(`   Error: ${lastError}`);
+      console.error('   VPS DEPLOYMENT ABORTED to prevent split-brain desync between PCs.');
+      console.error(`   Your local commit (${headSha.slice(0, 7)}) is intact locally.`);
+      console.error('   Fix origin connection/conflicts before deploying to VPS.\n');
+      process.exit(1);
     }
   }
+
+  // 4. DEPLOYMENT MIRROR PUSH (vps)
+  // Only executed if origin succeeded (or if origin is not configured)
+  if (hasVps) {
+    console.log(`🚀 Deploying to VPS mirror (git push vps ${currentBranch})...`);
+    const vpsPushRes = runGit(['push', 'vps', currentBranch]);
+    if (vpsPushRes.status === 0) {
+      console.log(`✅ Production VPS deployed successfully at commit ${headSha.slice(0, 7)}.`);
+    } else {
+      console.error('\n🚨 [PARTIAL DEPLOY WARNING] origin (GitHub) is UP TO DATE, but VPS push failed!');
+      console.error(`   VPS Error: ${vpsPushRes.stderr.trim() || vpsPushRes.stdout.trim()}`);
+      console.error(`   Commit SHA: ${headSha}`);
+      console.error(`   Manual retry command: git push vps ${headSha}:${currentBranch}\n`);
+      process.exit(1);
+    }
+  }
+
+  // 5. PUSH ANY OTHER REMOTES (e.g. backup remotes)
+  const otherRemotes = availableRemotes.filter(r => r !== 'origin' && r !== 'vps');
+  for (const remote of otherRemotes) {
+    try {
+      console.log(`🚀 Pushing to ${remote} (${currentBranch})...`);
+      runGit(['push', remote, currentBranch]);
+    } catch (e) {
+      console.warn(`⚠️ Push to ${remote} warning: ${e.message}`);
+    }
+  }
+
   recordTime('Production Push', Date.now() - step5Start);
-  if (!anySuccess) {
-    console.error('\n🚨 [CRITICAL DEPLOY FAILURE] All configured git pushes failed!');
-    console.error(`   Errors: ${pushErrors.join(' | ')}`);
-    console.error('   Local commit was saved, but REMOTE VPS IS NOT UPDATED!');
-    console.error('   Check network/credentials or use --skip-push if offline.\n');
-    process.exit(1);
+}
+
+// ─── Step 5.5: Satellite Repositories Dirty Guard (Cross-Project Integrity) ──
+const satellitePaths = [
+  'C:\\My Claw\\Openclaw-VPS',
+  'C:\\XBrain'
+];
+for (const satPath of satellitePaths) {
+  if (fs.existsSync(path.join(satPath, '.git'))) {
+    try {
+      const satStatus = execSync('git status --porcelain', { cwd: satPath, encoding: 'utf-8' }).trim();
+      if (satStatus) {
+        console.warn(`\n⚠️  [SATELLITE DIRTY NOTICE] Satellite repo at ${satPath} has uncommitted changes!`);
+        console.warn('   If your build scripts generated files there, remember to run /save in that workspace.');
+      }
+    } catch {}
   }
 }
 

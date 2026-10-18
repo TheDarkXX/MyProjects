@@ -1,13 +1,13 @@
 ---
 name: save
-version: "3.6.1"
-updated_at: "2026-09-29"
-description: "Devil-Speed Auto-Save & Deploy Pipeline V3.6.1 (Self-Healing Compiler + Dynamic Scanner + Auto-Roadmap Sync + SSH Acceleration)"
+version: "4.0.0"
+updated_at: "2026-10-18"
+description: "Devil-Speed Auto-Save & Deploy Pipeline V4.0 (Canonical-First Zero-Desync Architecture + Self-Healing Compiler + Multi-PC Fail Guard)"
 ---
-# 💾 Skill: `/save` (v3.6.1 Devil-Speed Architecture)
+# 💾 Skill: `/save` (v4.0.0 Canonical-First Zero-Desync Architecture)
 
 ## Objective
-The ultimate high-performance end-of-task pipeline. Target execution: **True Wall-Clock ≤ 10–15 Seconds** (Engine ≤ 5s + AI prep ≤ 5–10s). Unifies Quick Save context gathering, auto-relocation, **auto-roadmap sync**, reciprocal backlinks, auto-scaffolded quality gates, 5-7 SemVer file archiving, conditional cache-busting, single atomic git commit, and VPS deployment into a frictionless flow with **ZERO ghost deploys**.
+The ultimate high-performance end-of-task pipeline. Target execution: **True Wall-Clock ≤ 10–15 Seconds** (Engine ≤ 5s + AI prep ≤ 5–10s). Unifies Quick Save context gathering, auto-relocation, **auto-roadmap sync**, reciprocal backlinks, auto-scaffolded quality gates, 5-7 SemVer file archiving, conditional cache-busting, single atomic git commit, **Canonical-First Zero-Desync Git Push (GitHub -> VPS)**, and satellite repo dirty guard into a frictionless flow with **ZERO ghost deploys** and **ZERO Multi-PC sync loss**.
 
 ## 🛑 End-of-Session Iron Rule
 **งานเสร็จแล้ว อัปเดต Changelog/Quick Save และ Deploy ไม้เดียวจบก่อนปิดแชทเสมอ**
@@ -15,7 +15,7 @@ The ultimate high-performance end-of-task pipeline. Target execution: **True Wal
 
 ---
 
-## 🛡️ Closed Loopholes (V3.5 + V3.6 + V3.6.1 Combined — 10 Total)
+## 🛡️ Closed Loopholes (V3.5 + V3.6 + V3.6.1 + V4.0 Combined — 12 Total)
 
 1. 🔒 **Active-to-Complete Auto-Relocation:** ไฟล์ `status: complete` ใน `Active/` ย้ายเข้า `Complete/<Component>/` อัตโนมัติ
 2. 🔒 **SemVer Floating Files Auto-Archive (กฎ 5-7 ไฟล์):** Natural SemVer Sort เก็บไฟล์เก่าเข้า Major Version folder
@@ -27,6 +27,8 @@ The ultimate high-performance end-of-task pipeline. Target execution: **True Wal
 8. 🔒 **Dynamic Complete/* Subdirectory Scanner (V3.6):** ไม่ฮาร์ดโค้ด `Core-VPS` อีกต่อไป สแกนทุกโฟลเดอร์ใน `Quick Save/Complete/` อัตโนมัติ ทำให้ Zero-Arg execution ใช้ได้ทุกโปรเจกต์
 9. 🔒 **Auto-Sync MASTER_ROADMAP.md (V3.6):** สกัด Frontmatter จาก Quick Save แล้วแทรกเข้า `## 🔵 3. Completed` ของ `docs/MASTER_ROADMAP.md` อัตโนมัติใน 10ms — **AI ไม่ต้องเปิด Roadmap มาแก้เองอีกต่อไป**
 10. 🔒 **Self-Healing Quality Gate (V3.6.1):** Auto-inject missing/empty `aliases` จาก `tags` หรือชื่อไฟล์อัตโนมัติ, normalize และ scaffold หัวข้อ `Context & Implementation (Compiled Truth)` ให้อัตโนมัติใน 50ms ป้องกันการตก Quality Gate และตัดปัญหา AI Loop สะดุด 100%
+11. 🔒 **Canonical-First Zero-Desync Git Protocol (V4.0):** Origin (GitHub) ถูกล็อกเป็น Canonical Source of Truth สำหรับ Multi-PC Sync บังคับ Fetch & Reconcile บันทึก commit ขึ้น GitHub ก่อนเสมอ แล้วจึง push commit SHA เดียวกันไปยัง VPS ป้องกันภาวะ split-brain และ `[rejected] (fetch first)` ข้ามเครื่อง 100%
+12. 🔒 **Satellite Repositories Dirty Guard (V4.0):** สแกน `Openclaw-VPS` และ `XBrain` แจ้งเตือนทันทีหากมีไฟล์ generated ตกค้างจากการ build ข้าม workspace
 
 ---
 
