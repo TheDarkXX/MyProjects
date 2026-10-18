@@ -7,7 +7,7 @@ import { useHoldings } from '../../hooks/useHoldings';
 import { DashboardTimeRange } from '../../components/dashboard/MultiPeriodReturnStrip';
 import { PortfolioHero } from './components/PortfolioHero';
 import { QuickStatsStrip } from './components/QuickStatsStrip';
-import { WatchlistCard } from './components/WatchlistCard';
+import { MobileWatchlistSection } from './components/MobileWatchlistSection';
 import { StockDetailDrawer } from '../../components/portfolio/StockDetailDrawer';
 import { Wallet, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
@@ -352,54 +352,12 @@ export const MobileDashboard: React.FC = () => {
         formatPrimary={formatPrimary}
       />
 
-      {/* 3. Watchlist Section */}
-      <div className="space-y-2.5 pt-1">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <span className="text-white font-black text-sm sm:text-base font-heading">
-              ⚡ Watchlist
-            </span>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 font-mono">
-              {holdings.length} {holdings.length === 1 ? 'asset' : 'assets'}
-            </span>
-          </div>
-          <span className="text-[11px] text-slate-500 font-medium">
-            Sorted by weight
-          </span>
-        </div>
-
-        {/* Watchlist Cards */}
-        <div className="space-y-2">
-          {sortedHoldings.map((h) => (
-            <WatchlistCard
-              key={h.symbol}
-              holding={h}
-              formatCurrency={formatPrimary}
-              historicalData={historical[h.symbol]}
-              onClick={() => setSelectedSymbol(h.symbol)}
-            />
-          ))}
-
-          {/* Pinned Cash Card */}
-          <div className="bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-3.5 sm:p-4 shadow-sm flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#1A1D2D] border border-[#2A2E45] flex items-center justify-center text-emerald-400 shrink-0">
-                <Wallet className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-sm font-black text-white font-heading">CASH</div>
-                <div className="text-[11px] text-[#CBD5E1]">Available Liquid Funds</div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm font-black text-emerald-400 font-mono">
-                {formatPrimary(cashBalance)}
-              </div>
-              <div className="text-[10px] text-slate-500">Unallocated</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 3. High-Density Watchlist & Portfolio Section (PC Style) */}
+      <MobileWatchlistSection
+        onSelectSymbol={(sym) => setSelectedSymbol(sym)}
+        cashBalance={cashBalance}
+        formatPrimary={formatPrimary}
+      />
 
       {/* 4. Stock Detail Drawer */}
       <StockDetailDrawer

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, TrendingUp, TrendingDown, Layers, Calendar, DollarSign, PieChart, Shield, Clock, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Layers, Calendar, DollarSign, PieChart, Shield, Clock, ArrowUpRight, ArrowDownRight, CandlestickChart } from 'lucide-react';
 import { useHoldings, Holding } from '../../hooks/useHoldings';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { usePriceStore } from '../../stores/priceStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useXChartStore } from '../../stores/xchartStore';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import clsx from 'clsx';
 
@@ -104,8 +105,11 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
     return `${currSymbol}${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const wlQuote = useXChartStore((s) => (symbol ? s.watchlistPrices[symbol] : null));
+  const effectivePrice = holding?.lastPrice || wlQuote?.price || (symbol ? prices[symbol]?.price : 0) || 0;
+  const effectiveDayChange = holding?.dayChangePercent ?? wlQuote?.percentChange ?? (symbol ? prices[symbol]?.percent_change : 0) ?? 0;
   const isProfit = (holding?.totalReturn ?? 0) >= 0;
-  const isDayProfit = (holding?.dayChangePercent ?? 0) >= 0;
+  const isDayProfit = effectiveDayChange >= 0;
 
   // Lifecycle stage badge styling
   const getStageBadge = (type?: string | null) => {
@@ -156,12 +160,27 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
               </p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 rounded-xl bg-[#1A1D2D] text-[#9898C8] hover:text-white hover:bg-[#2A2E45] transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const isCurrency = symbol.includes('=X');
+                useXChartStore.getState().changeSymbolOnActiveTab(symbol, isCurrency && symbol === 'THB=X' ? 'USD/THB' : symbol);
+                useUiStore.getState().setActiveTab('xchart');
+                onClose();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/30 text-purple-200 border border-purple-500/40 text-xs font-bold hover:bg-purple-600 hover:text-white transition-all cursor-pointer"
+              title="Open in X-Chart"
+            >
+              <CandlestickChart className="w-3.5 h-3.5" />
+              <span>Full Chart</span>
+            </button>
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-xl bg-[#1A1D2D] text-[#9898C8] hover:text-white hover:bg-[#2A2E45] transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Content */}
@@ -173,13 +192,13 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({ symbol, is
               <div>
                 <span className="text-xs font-semibold text-[#9898C8]">Current Market Price</span>
                 <div className="text-3xl font-black text-white tabular-nums tracking-tight mt-1">
-                  {formatMoney(holding?.lastPrice || 0)}
+                  {formatMoney(effectivePrice)}
                 </div>
                 <div className={clsx("inline-flex items-center gap-1 text-xs font-bold mt-1 px-2 py-0.5 rounded-md", 
                   isDayProfit ? "text-[#FFE600] bg-[#FFE600]/10 border border-[#FFE600]/25" : "text-[#FF5252] bg-[#C62828]/15 border border-[#C62828]/30"
                 )}>
                   {isDayProfit ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-                  <span>{holding?.dayChangePercent ? `${holding.dayChangePercent > 0 ? '+' : ''}${holding.dayChangePercent.toFixed(2)}% (Today)` : '0.00%'}</span>
+                  <span>{effectiveDayChange ? `${effectiveDayChange > 0 ? '+' : ''}${effectiveDayChange.toFixed(2)}% (Today)` : '0.00%'}</span>
                 </div>
               </div>
 
