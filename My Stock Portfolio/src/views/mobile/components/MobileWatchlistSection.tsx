@@ -99,9 +99,17 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
   const { activePortfolioId } = usePortfolioStore();
   const { setActiveTab } = useUiStore();
 
-  // Local Search & Sort
+  // Local Search & Sort (Default: 'PERC_ASC' = แดงสุด)
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('DEFAULT');
+  const [sortMode, setSortMode] = useState<SortMode>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('mobile_watchlist_sort_mode');
+        if (saved) return saved as SortMode;
+      } catch {}
+    }
+    return 'PERC_ASC';
+  });
 
   // Accordion Sections Collapse State
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
@@ -290,14 +298,23 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
         <div className="relative">
           <button
             onClick={() => {
-              const modes: SortMode[] = ['DEFAULT', 'PERC_DESC', 'PERC_ASC', 'TIER', 'SYMBOL'];
+              const modes: SortMode[] = ['PERC_ASC', 'PERC_DESC', 'DEFAULT', 'TIER', 'SYMBOL'];
               const curIdx = modes.indexOf(sortMode);
               const nextMode = modes[(curIdx + 1) % modes.length];
               setSortMode(nextMode);
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.setItem('mobile_watchlist_sort_mode', nextMode);
+                } catch {}
+              }
             }}
             className={clsx(
               "flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-semibold tracking-tight transition-all active:scale-95 cursor-pointer shadow-sm",
-              sortMode !== 'DEFAULT'
+              sortMode === 'PERC_ASC'
+                ? "bg-rose-500/15 border-rose-500/40 text-rose-300"
+                : sortMode === 'PERC_DESC'
+                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                : sortMode !== 'DEFAULT'
                 ? "bg-[#823AFD]/20 border-[#823AFD]/50 text-white"
                 : "bg-[#0F1420] border-white/[0.08] text-slate-300 hover:text-white"
             )}
