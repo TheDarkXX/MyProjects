@@ -1,25 +1,76 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useXChartStore, WatchlistSortColumn, WatchlistSortDir } from '../../../stores/xchartStore';
-import { useProject2xStore, RadarRow } from '../../../stores/project2xStore';
+import { useHoldings, Holding } from '../../../hooks/useHoldings';
+import { usePriceStore } from '../../../stores/priceStore';
 import { usePortfolioStore } from '../../../stores/portfolioStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { useXChartStore } from '../../../stores/xchartStore';
+import { useProject2xStore } from '../../../stores/project2xStore';
 import { 
   TierBadgeIndicator, 
-  getTierVisualInfo,
-  TierVisualInfo 
+  getTierVisualInfo 
 } from '../../../components/xchart/TierBadgeIndicator';
 import { 
-  ChevronRight, 
+  Briefcase, 
+  Target, 
+  BarChart3, 
   ChevronDown, 
-  ArrowUp, 
-  ArrowDown, 
-  ArrowUpDown,
-  CandlestickChart,
-  RefreshCw,
-  Search,
-  Sparkles
+  ChevronRight, 
+  Search, 
+  ArrowUpDown, 
+  CandlestickChart, 
+  RefreshCw, 
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Percent,
+  CheckCircle2,
+  DollarSign
 } from 'lucide-react';
 import clsx from 'clsx';
+
+// 1. Target Stock Definition (Project 2X Target List - 13 Stocks)
+export interface TargetStockItem {
+  symbol: string;
+  name: string;
+  target_percent: number;
+  category: 'Core' | 'Moonshot';
+}
+
+export const TARGET_STOCKS: TargetStockItem[] = [
+  // Core Commanders (83%)
+  { symbol: 'NVDA', name: 'NVIDIA Corp', target_percent: 15.0, category: 'Core' },
+  { symbol: 'TSM', name: 'Taiwan Semi (TSMC)', target_percent: 10.0, category: 'Core' },
+  { symbol: 'AVGO', name: 'Broadcom Inc', target_percent: 10.0, category: 'Core' },
+  { symbol: 'VRT', name: 'Vertiv Holdings', target_percent: 10.0, category: 'Core' },
+  { symbol: 'MELI', name: 'MercadoLibre Inc', target_percent: 10.0, category: 'Core' },
+  { symbol: 'APH', name: 'Amphenol Corp', target_percent: 10.0, category: 'Core' },
+  { symbol: 'KLAC', name: 'KLA Corporation', target_percent: 7.0, category: 'Core' },
+  { symbol: 'ANET', name: 'Arista Networks', target_percent: 7.0, category: 'Core' },
+  { symbol: 'CRWD', name: 'CrowdStrike Holdings', target_percent: 4.0, category: 'Core' },
+  // Moonshot Strikes (11%)
+  { symbol: 'STRL', name: 'Sterling Infrastructure', target_percent: 3.0, category: 'Moonshot' },
+  { symbol: 'ALAB', name: 'Astera Labs Inc', target_percent: 3.0, category: 'Moonshot' },
+  { symbol: 'PLTR', name: 'Palantir Technologies', target_percent: 3.0, category: 'Moonshot' },
+  { symbol: 'RKLB', name: 'Rocket Lab USA', target_percent: 2.0, category: 'Moonshot' },
+];
+
+// 2. Index Stock Definition (Key Global Benchmarks)
+export interface IndexItem {
+  symbol: string;
+  name: string;
+  flag: string;
+  sub: string;
+}
+
+export const INDEX_ITEMS: IndexItem[] = [
+  { symbol: 'SPY', name: 'S&P 500 ETF', flag: '🇺🇸', sub: 'US 500 Benchmark' },
+  { symbol: 'QQQ', name: 'Nasdaq 100 ETF', flag: '💻', sub: 'Tech 100 Benchmark' },
+  { symbol: 'SCHG', name: 'US Large Growth', flag: '🚀', sub: 'Schwab Growth' },
+  { symbol: 'SMH', name: 'Semiconductor ETF', flag: '⚡', sub: 'VanEck Semicon' },
+  { symbol: 'GLD', name: 'SPDR Gold Trust', flag: '🪙', sub: 'Gold Bullion' },
+  { symbol: 'BTC-USD', name: 'Bitcoin', flag: '₿', sub: 'Crypto Flagship' },
+  { symbol: 'TLT', name: '20+ Yr Treasury Bond', flag: '🏛️', sub: 'US Long Bond' },
+];
 
 export const TIER_SORT_ASC_RANKS: Record<string, number> = {
   BUY_NOW: 1,
@@ -31,6 +82,8 @@ export const TIER_SORT_ASC_RANKS: Record<string, number> = {
   TO_THE_MOON: 7,
 };
 
+type SortMode = 'DEFAULT' | 'PERC_DESC' | 'PERC_ASC' | 'TIER' | 'SYMBOL';
+
 interface MobileWatchlistSectionProps {
   onSelectSymbol: (symbol: string) => void;
 }
@@ -38,34 +91,42 @@ interface MobileWatchlistSectionProps {
 export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
   onSelectSymbol,
 }) => {
-  const {
-    watchlistSections,
-    watchlistPrices,
-    watchlistSortColumn,
-    watchlistSortDir,
-    setWatchlistSort,
-    fetchWatchlistQuotes,
-    watchlistLoading,
-    changeSymbolOnActiveTab,
-  } = useXChartStore();
-
+  // Global Stores
+  const { holdings, loading: holdingsLoading, cashBalance, totalNetWorth, totalPnl, totalPnlPercent } = useHoldings();
+  const { prices, fetchPrices } = usePriceStore();
+  const { watchlistPrices, fetchWatchlistQuotes, watchlistLoading, changeSymbolOnActiveTab } = useXChartStore();
   const { radar, fetchRadar, compactTiers } = useProject2xStore();
   const { activePortfolioId } = usePortfolioStore();
   const { setActiveTab } = useUiStore();
 
-  // Quick Tier Filter for Watchlist tab
-  const [selectedTierFilter, setSelectedTierFilter] = useState<string | null>(null);
-
-  // Search query
+  // Local Search & Sort
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('DEFAULT');
 
-  // Initial data loading
-  useEffect(() => {
-    fetchRadar(activePortfolioId || 'default');
-    fetchWatchlistQuotes();
-  }, [activePortfolioId, fetchRadar, fetchWatchlistQuotes]);
+  // Accordion Sections Collapse State
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('mobile_watchlist_3sec_collapsed');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return { myport: false, targets: false, indices: false };
+  });
 
-  // Radar map
+  const toggleSection = (key: string) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('mobile_watchlist_3sec_collapsed', JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
+  };
+
+  // Radar Map Lookup
   const radarMap = useMemo(() => {
     const map: Record<string, any> = { ...compactTiers };
     if (radar?.rows) {
@@ -78,598 +139,563 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
     return map;
   }, [radar?.rows, compactTiers]);
 
-  // Section collapse state (persisted)
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('mobile_watchlist_sections_collapsed');
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return {};
-  });
+  // Eager Quote Fetching on Mount & Portfolio Change
+  useEffect(() => {
+    fetchRadar(activePortfolioId || 'default');
+    const targetSymbols = TARGET_STOCKS.map((t) => t.symbol);
+    const indexSymbols = INDEX_ITEMS.map((i) => i.symbol);
+    const heldSymbols = holdings.map((h) => h.symbol);
+    const allNeeded = Array.from(new Set([...targetSymbols, ...indexSymbols, ...heldSymbols])).filter(Boolean);
 
-  const isSectionCollapsed = (secId: string): boolean => {
-    if (secId in collapsedSections) {
-      return Boolean(collapsedSections[secId]);
+    if (allNeeded.length > 0) {
+      fetchPrices(allNeeded);
+      fetchWatchlistQuotes(allNeeded);
     }
-    // Default expanded: BUY NOW and GET READY. Others collapsed by default to save mobile space
-    return secId !== 'sec-tier-buy-now' && secId !== 'sec-tier-get-ready';
+  }, [activePortfolioId, holdings.length, fetchRadar, fetchPrices, fetchWatchlistQuotes]);
+
+  // Fast Quote Retriever
+  const getQuote = (sym: string) => {
+    const wp = watchlistPrices[sym];
+    const pp = prices[sym];
+    const price = wp?.price ?? pp?.price ?? 0;
+    const change = wp?.change ?? pp?.change ?? 0;
+    const percentChange = wp?.percentChange ?? pp?.percent_change ?? 0;
+    return { price, change, percentChange };
   };
 
-  const toggleSectionCollapse = (secId: string) => {
-    setCollapsedSections(prev => {
-      const current = isSectionCollapsed(secId);
-      const next = { ...prev, [secId]: !current };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('mobile_watchlist_sections_collapsed', JSON.stringify(next));
-      }
-      return next;
+  // Held Symbols Set for instant cross-referencing
+  const holdingsMap = useMemo(() => {
+    const map = new Map<string, Holding>();
+    holdings.forEach((h) => {
+      if (h.symbol) map.set(h.symbol.toUpperCase(), h);
     });
+    return map;
+  }, [holdings]);
+
+  // Search filter helper
+  const matchesSearch = (symbol: string, name?: string) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.trim().toUpperCase();
+    return symbol.toUpperCase().includes(q) || (name && name.toUpperCase().includes(q));
   };
 
-  // Build PC-style Dynamic Watchlist Sections
-  const activeWatchlistSections = useMemo(() => {
-    // 1. Preserved exchange / index section
-    const exSec = (watchlistSections || []).find(s => s.id === 'sec-exchange' || s.name === 'EXCHANGE');
-    const defaultExSymbols = ['SPY', 'QQQ', 'SCHG', '^GSPC', 'THB=X'];
-    const exSymbols = (exSec && exSec.symbols.length > 0) ? exSec.symbols : defaultExSymbols;
+  // Section 1: My Port Holdings Filtered & Sorted
+  const filteredHoldings = useMemo(() => {
+    let list = holdings.filter((h) => matchesSearch(h.symbol));
 
-    // 2. Preserved commodities & crypto section
-    const crSec = (watchlistSections || []).find(s => s.id === 'sec-commodities-crypto' || s.name.includes('COMMODITIES') || s.name.includes('CRYPTO'));
-    const defaultCrSymbols = ['BTC-USD', 'GC=F', 'GLD', 'CL=F'];
-    const crSymbols = (crSec && crSec.symbols.length > 0) ? crSec.symbols : defaultCrSymbols;
-
-    const exSet = new Set((exSymbols || []).filter(Boolean).map(s => s.toUpperCase()));
-    const crSet = new Set((crSymbols || []).filter(Boolean).map(s => s.toUpperCase()));
-
-    // 3. Collect all stock symbols from all sections
-    const allStockSymbols = Array.from(new Set(
-      watchlistSections.flatMap(s => s.symbols || []).filter(s => {
-        if (!s) return false;
-        const u = s.toUpperCase();
-        return !exSet.has(u) && !crSet.has(u) && !u.includes('=X') && !u.includes('=F') && !u.endsWith('-USD');
-      })
-    ));
-
-    const buyNow: string[] = [];
-    const getReady: string[] = [];
-    const runner: string[] = [];
-    const danger: string[] = [];
-    const watching: string[] = [];
-
-    let dipBuyCount = 0;
-    let reversalCount = 0;
-
-    for (const sym of allStockSymbols) {
-      if (!sym) continue;
-      const row = radarMap[sym.toUpperCase()];
-      const info = getTierVisualInfo(row, sym);
-
-      if (info.tierId === 'BUY_NOW') {
-        buyNow.push(sym);
-      } else if (info.tierId === 'GET_READY') {
-        getReady.push(sym);
-        if (info.subMode === 'DIP_BUY') {
-          dipBuyCount++;
-        } else {
-          reversalCount++;
-        }
-      } else if (info.tierId === 'TO_THE_MOON' || info.tierId === 'RUNNER') {
-        runner.push(sym);
-      } else if (
-        info.tierId === 'FALLING_KNIFE' || 
-        info.tierId === 'SLOW_BLEED' || 
-        info.tierId === 'MAYDAY_EXIT' || 
-        info.tierId === 'DANGER'
-      ) {
-        danger.push(sym);
-      } else {
-        watching.push(sym);
-      }
-    }
-
-    const list: Array<{
-      id: string;
-      name: string;
-      icon: string;
-      symbols: string[];
-      subStats?: string;
-      badgeClass?: string;
-      isCollapsed: boolean;
-    }> = [];
-
-    const buyNowSec = buyNow.length > 0 ? {
-      id: 'sec-tier-buy-now',
-      name: 'BUY NOW',
-      icon: '🔥',
-      symbols: buyNow,
-      badgeClass: 'text-orange-400 bg-orange-500/15 border-orange-500/30',
-      isCollapsed: isSectionCollapsed('sec-tier-buy-now')
-    } : null;
-
-    let readySec = null;
-    if (getReady.length > 0) {
-      const parts: string[] = [];
-      if (dipBuyCount > 0) parts.push(`🧲 Dip ${dipBuyCount}`);
-      if (reversalCount > 0) parts.push(`⏳ Break ${reversalCount}`);
-      readySec = {
-        id: 'sec-tier-get-ready',
-        name: 'GET READY',
-        icon: '⏳',
-        symbols: getReady,
-        subStats: parts.join(' · '),
-        badgeClass: 'text-yellow-300 bg-yellow-500/15 border-yellow-500/30',
-        isCollapsed: isSectionCollapsed('sec-tier-get-ready')
-      };
-    }
-
-    const runnerSec = runner.length > 0 ? {
-      id: 'sec-tier-runner',
-      name: 'TO THE MOON / RUNNER',
-      icon: '🚀',
-      symbols: runner,
-      badgeClass: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
-      isCollapsed: isSectionCollapsed('sec-tier-runner')
-    } : null;
-
-    const dangerSec = danger.length > 0 ? {
-      id: 'sec-tier-danger',
-      name: 'DANGER & BEAR ABYSS',
-      icon: '🔪',
-      symbols: danger,
-      badgeClass: 'text-red-300 bg-rose-950/40 border-red-500/30',
-      isCollapsed: isSectionCollapsed('sec-tier-danger')
-    } : null;
-
-    const watchingSec = watching.length > 0 ? {
-      id: 'sec-tier-watching',
-      name: 'WATCHING',
-      icon: '🔍',
-      symbols: watching,
-      badgeClass: 'text-slate-300 bg-slate-800/40 border-slate-700/30',
-      isCollapsed: isSectionCollapsed('sec-tier-watching')
-    } : null;
-
-    // Dynamic sections ordering
-    const dynamicSections = watchlistSortColumn === 'tier'
-      ? (watchlistSortDir === 'desc'
-          ? [runnerSec, dangerSec, readySec, buyNowSec, watchingSec]
-          : [buyNowSec, readySec, dangerSec, runnerSec, watchingSec])
-      : [buyNowSec, readySec, runnerSec, dangerSec, watchingSec];
-
-    for (const sec of dynamicSections) {
-      if (sec) list.push(sec);
-    }
-
-    // 6. EXCHANGE / INDEX
-    if (exSymbols && exSymbols.length > 0) {
-      list.push({
-        id: 'sec-exchange',
-        name: 'INDEX & BENCHMARKS',
-        icon: '🌐',
-        symbols: exSymbols,
-        badgeClass: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
-        isCollapsed: isSectionCollapsed('sec-exchange')
+    if (sortMode === 'PERC_DESC') {
+      list = [...list].sort((a, b) => {
+        const pA = getQuote(a.symbol).percentChange || a.dayChangePercent;
+        const pB = getQuote(b.symbol).percentChange || b.dayChangePercent;
+        return pB - pA;
       });
-    }
-
-    // 7. COMMODITIES & CRYPTO
-    if (crSymbols && crSymbols.length > 0) {
-      list.push({
-        id: 'sec-commodities-crypto',
-        name: 'COMMODITIES & CRYPTO',
-        icon: '🪙',
-        symbols: crSymbols,
-        badgeClass: 'text-amber-300 bg-amber-500/15 border-amber-500/30',
-        isCollapsed: isSectionCollapsed('sec-commodities-crypto')
+    } else if (sortMode === 'PERC_ASC') {
+      list = [...list].sort((a, b) => {
+        const pA = getQuote(a.symbol).percentChange || a.dayChangePercent;
+        const pB = getQuote(b.symbol).percentChange || b.dayChangePercent;
+        return pA - pB;
       });
-    }
-
-    // 8. Other custom sections if any
-    for (const sec of watchlistSections) {
-      if (
-        sec.id !== 'sec-stocks' && 
-        sec.id !== 'sec-strong-growth' && 
-        sec.id !== 'sec-small-cap' && 
-        sec.id !== 'sec-waiting' && 
-        sec.id !== 'sec-exchange' && 
-        sec.id !== 'sec-commodities-crypto' &&
-        sec.symbols.length > 0
-      ) {
-        list.push({
-          id: sec.id,
-          name: sec.name,
-          icon: '📁',
-          symbols: sec.symbols,
-          badgeClass: 'text-purple-300 bg-purple-500/15 border-purple-500/30',
-          isCollapsed: isSectionCollapsed(sec.id)
-        });
-      }
+    } else if (sortMode === 'TIER') {
+      list = [...list].sort((a, b) => {
+        const tierA = radarMap[a.symbol.toUpperCase()]?.tier_code || 'ZZZ';
+        const tierB = radarMap[b.symbol.toUpperCase()]?.tier_code || 'ZZZ';
+        return (TIER_SORT_ASC_RANKS[tierA] || 99) - (TIER_SORT_ASC_RANKS[tierB] || 99);
+      });
+    } else if (sortMode === 'SYMBOL') {
+      list = [...list].sort((a, b) => a.symbol.localeCompare(b.symbol));
+    } else {
+      // Default: sort by portfolio weight
+      list = [...list].sort((a, b) => b.weightPercent - a.weightPercent);
     }
 
     return list;
-  }, [watchlistSections, radarMap, collapsedSections, watchlistSortColumn, watchlistSortDir]);
+  }, [holdings, searchQuery, sortMode, watchlistPrices, prices, radarMap]);
 
+  // Section 2: Target Stocks Filtered & Sorted
+  const filteredTargets = useMemo(() => {
+    let list = TARGET_STOCKS.filter((t) => matchesSearch(t.symbol, t.name));
 
-
-  // Sort indicator helper
-  const renderSortIndicator = (col: WatchlistSortColumn) => {
-    if (watchlistSortColumn !== col) {
-      return <ArrowUpDown className="w-3 h-3 text-slate-500 opacity-40 shrink-0" />;
+    if (sortMode === 'PERC_DESC') {
+      list = [...list].sort((a, b) => getQuote(b.symbol).percentChange - getQuote(a.symbol).percentChange);
+    } else if (sortMode === 'PERC_ASC') {
+      list = [...list].sort((a, b) => getQuote(a.symbol).percentChange - getQuote(b.symbol).percentChange);
+    } else if (sortMode === 'TIER') {
+      list = [...list].sort((a, b) => {
+        const tierA = radarMap[a.symbol.toUpperCase()]?.tier_code || 'ZZZ';
+        const tierB = radarMap[b.symbol.toUpperCase()]?.tier_code || 'ZZZ';
+        return (TIER_SORT_ASC_RANKS[tierA] || 99) - (TIER_SORT_ASC_RANKS[tierB] || 99);
+      });
+    } else if (sortMode === 'SYMBOL') {
+      list = [...list].sort((a, b) => a.symbol.localeCompare(b.symbol));
     }
-    return watchlistSortDir === 'asc' ? (
-      <ArrowUp className="w-3 h-3 text-cyan-400 shrink-0 animate-in fade-in" />
-    ) : (
-      <ArrowDown className="w-3 h-3 text-cyan-400 shrink-0 animate-in fade-in" />
-    );
-  };
 
-  // Stock Row Click: Opens drawer
-  const handleStockClick = (symbol: string) => {
-    onSelectSymbol(symbol);
-  };
+    return list;
+  }, [searchQuery, sortMode, watchlistPrices, prices, radarMap]);
 
-  // Jump directly to XChart tab with symbol selected
-  const handleJumpToChart = (e: React.MouseEvent, symbol: string) => {
+  // Section 3: Index Stocks Filtered & Sorted
+  const filteredIndices = useMemo(() => {
+    let list = INDEX_ITEMS.filter((i) => matchesSearch(i.symbol, i.name));
+
+    if (sortMode === 'PERC_DESC') {
+      list = [...list].sort((a, b) => getQuote(b.symbol).percentChange - getQuote(a.symbol).percentChange);
+    } else if (sortMode === 'PERC_ASC') {
+      list = [...list].sort((a, b) => getQuote(a.symbol).percentChange - getQuote(b.symbol).percentChange);
+    } else if (sortMode === 'SYMBOL') {
+      list = [...list].sort((a, b) => a.symbol.localeCompare(b.symbol));
+    }
+
+    return list;
+  }, [searchQuery, sortMode, watchlistPrices, prices]);
+
+  const handleOpenChart = (e: React.MouseEvent, symbol: string) => {
     e.stopPropagation();
-    const isCurrency = symbol.includes('=X');
-    changeSymbolOnActiveTab(symbol, isCurrency && symbol === 'THB=X' ? 'USD/THB' : symbol);
+    changeSymbolOnActiveTab(symbol);
     setActiveTab('xchart');
   };
 
-  // Filter symbols based on search and tier filter
-  const filterSymbols = (symbols: string[]) => {
-    let result = symbols;
-    if (selectedTierFilter) {
-      result = result.filter(sym => {
-        if (!sym) return false;
-        const row = radarMap[sym.toUpperCase()];
-        const info = getTierVisualInfo(row, sym, sym.includes('=X'));
-        if (selectedTierFilter === 'BUY_NOW') return info.tierId === 'BUY_NOW';
-        if (selectedTierFilter === 'GET_READY') return info.tierId === 'GET_READY';
-        if (selectedTierFilter === 'DANGER') {
-          return (
-            info.tierId === 'FALLING_KNIFE' || 
-            info.tierId === 'MAYDAY_EXIT' || 
-            info.tierId === 'SLOW_BLEED' || 
-            info.tierId === 'DANGER'
-          );
-        }
-        return true;
-      });
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toUpperCase().trim();
-      result = result.filter(s => s.toUpperCase().includes(q));
-    }
-
-    return result;
-  };
-
-  // Sort symbols within a section
-  const sortSymbols = (symbols: string[]) => {
-    return [...symbols].sort((a, b) => {
-      if (!watchlistSortColumn) return 0;
-      const quoteA = watchlistPrices[a];
-      const quoteB = watchlistPrices[b];
-
-      if (watchlistSortColumn === 'tier') {
-        const rowA = a ? radarMap[a.toUpperCase()] : null;
-        const rowB = b ? radarMap[b.toUpperCase()] : null;
-        const infoA = getTierVisualInfo(rowA, a || '', (a || '').includes('=X'));
-        const infoB = getTierVisualInfo(rowB, b || '', (b || '').includes('=X'));
-
-        const rankA = TIER_SORT_ASC_RANKS[infoA.tierId] ?? 999;
-        const rankB = TIER_SORT_ASC_RANKS[infoB.tierId] ?? 999;
-
-        if (rankA !== rankB) {
-          return watchlistSortDir === 'asc' ? (rankA - rankB) : (rankB - rankA);
-        }
-        return a.localeCompare(b);
-      }
-
-      if (watchlistSortColumn === 'symbol') {
-        return watchlistSortDir === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
-      }
-
-      if (watchlistSortColumn === 'price') {
-        const priceA = quoteA?.price ?? 0;
-        const priceB = quoteB?.price ?? 0;
-        return watchlistSortDir === 'desc' ? (priceB - priceA) : (priceA - priceB);
-      }
-
-      if (watchlistSortColumn === 'change' || watchlistSortColumn === 'percentChange') {
-        const valA = quoteA?.[watchlistSortColumn] ?? 0;
-        const valB = quoteB?.[watchlistSortColumn] ?? 0;
-        return watchlistSortDir === 'desc' ? (valA - valB) : (valB - valA);
-      }
-
-      return 0;
-    });
+  const handleManualRefresh = () => {
+    fetchRadar(activePortfolioId || 'default');
+    const targetSymbols = TARGET_STOCKS.map((t) => t.symbol);
+    const indexSymbols = INDEX_ITEMS.map((i) => i.symbol);
+    const heldSymbols = holdings.map((h) => h.symbol);
+    const allNeeded = Array.from(new Set([...targetSymbols, ...indexSymbols, ...heldSymbols])).filter(Boolean);
+    fetchPrices(allNeeded);
+    fetchWatchlistQuotes(allNeeded);
   };
 
   return (
-    <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col select-none">
-      
-      {/* 1. Watchlist Header */}
-      <div className="p-3 sm:p-4 border-b border-[#2A2E45] bg-[#0E121E] flex items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-white font-black text-sm sm:text-base font-heading flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-[#823AFD]" />
-            Watchlist
-          </span>
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/[0.08] text-slate-300 font-mono font-bold">
-            {activeWatchlistSections.reduce((acc, s) => acc + s.symbols.length, 0)} Assets
-          </span>
+    <div className="space-y-4 select-none pb-6">
+      {/* 1. Header Toolbar: Fast Search + Sort Controls */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="ค้นหา Ticker หรือชื่อหุ้น..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3.5 py-2.5 bg-[#0F1420] border border-white/[0.08] focus:border-[#823AFD] rounded-xl text-sm text-slate-200 placeholder-slate-400 outline-none transition-all shadow-inner"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-200 px-1 py-0.5 rounded"
+            >
+              เคลียร์
+            </button>
+          )}
         </div>
 
-        {/* Refresh Quotes Button */}
+        {/* Sort Selector Button */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              const modes: SortMode[] = ['DEFAULT', 'PERC_DESC', 'PERC_ASC', 'TIER', 'SYMBOL'];
+              const curIdx = modes.indexOf(sortMode);
+              const nextMode = modes[(curIdx + 1) % modes.length];
+              setSortMode(nextMode);
+            }}
+            className={clsx(
+              "flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-semibold tracking-tight transition-all active:scale-95 cursor-pointer shadow-sm",
+              sortMode !== 'DEFAULT'
+                ? "bg-[#823AFD]/20 border-[#823AFD]/50 text-white"
+                : "bg-[#0F1420] border-white/[0.08] text-slate-300 hover:text-white"
+            )}
+            title="สลับโหมดจัดเรียง"
+          >
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+            <span>
+              {sortMode === 'DEFAULT' && 'จัดเรียง'}
+              {sortMode === 'PERC_DESC' && '🚀 เขียวสุด'}
+              {sortMode === 'PERC_ASC' && '🔻 แดงสุด'}
+              {sortMode === 'TIER' && '🎯 Tier Radar'}
+              {sortMode === 'SYMBOL' && '🔤 A-Z'}
+            </span>
+          </button>
+        </div>
+
+        {/* Manual Refresh Button */}
         <button
-          onClick={() => fetchWatchlistQuotes()}
-          disabled={watchlistLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shrink-0 disabled:opacity-50 text-xs font-bold font-heading"
-          title="Refresh Quotes"
+          onClick={handleManualRefresh}
+          className="p-2.5 bg-[#0F1420] hover:bg-white/[0.06] border border-white/[0.08] rounded-xl text-slate-300 hover:text-white transition-all active:scale-95 cursor-pointer shadow-sm"
+          title="รีเฟรชข้อมูลราคา"
         >
-          <RefreshCw className={clsx("w-3.5 h-3.5 text-slate-300", watchlistLoading && "animate-spin text-cyan-400")} />
-          <span>Refresh</span>
+          <RefreshCw className={clsx("w-4 h-4", (watchlistLoading || holdingsLoading) && "animate-spin text-[#823AFD]")} />
         </button>
       </div>
 
-      {/* 2. Streamlined Quick Tier Filter Bar */}
-      <div className="px-3 py-2 bg-[#090C14] border-b border-[#1F2233] grid grid-cols-4 gap-1.5 shrink-0 select-none">
-        {[
-          { id: null, label: 'ALL', icon: '🌐' },
-          { id: 'BUY_NOW', label: 'BUY NOW', icon: '🔥', activeClass: 'bg-red-500/25 text-orange-200 border-orange-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]' },
-          { id: 'GET_READY', label: 'READY', icon: '⏳', activeClass: 'bg-yellow-500/25 text-yellow-200 border-yellow-400/80 shadow-[0_0_8px_rgba(234,179,8,0.5)]' },
-          { id: 'DANGER', label: 'MAYDAY', icon: '🩸', activeClass: 'bg-rose-950 text-red-200 border-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.6)]' }
-        ].map(filter => {
-          const isActive = selectedTierFilter === filter.id;
-          return (
-            <button
-              key={filter.label}
-              onClick={() => setSelectedTierFilter(isActive ? null : filter.id)}
-              className={clsx(
-                "h-7 rounded-xl text-xs sm:text-[13px] font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer whitespace-nowrap",
-                isActive 
-                  ? (filter.activeClass || "bg-purple-600 text-white border-purple-400 shadow-sm")
-                  : "bg-white/5 border-transparent text-slate-300 hover:text-white hover:bg-white/10"
-              )}
-            >
-              <span>{filter.icon}</span>
-              <span>{filter.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* ========================================================================= */}
+      {/* SECTION 1: MY PORT (หุ้นที่เราถือจริงในพอร์ต) */}
+      {/* ========================================================================= */}
+      <div className="bg-[#0B0F17]/95 border border-white/[0.08] rounded-2xl shadow-xl overflow-hidden">
+        {/* Section Accordion Header */}
+        <button
+          onClick={() => toggleSection('myport')}
+          className="w-full px-4 py-3.5 flex items-center justify-between bg-[#111726]/60 hover:bg-[#111726]/90 transition-all border-b border-white/[0.06] cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-sm">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm font-bold text-white tracking-wide">My Port</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                {holdings.length} ตัว
+              </span>
+            </div>
+          </div>
 
-      {/* 3. Search Bar for Fast Filtering */}
-      <div className="px-3 py-2 bg-[#0B0E17] border-b border-[#1F2233] flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value.toUpperCase())}
-            placeholder={activeTabMode === 'watchlist' ? "Search symbol in watchlist..." : "Search portfolio holding..."}
-            className="w-full bg-[#07090E] border border-[#2A2E45] rounded-xl pl-8 pr-2.5 py-1.5 text-[13px] text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-all font-mono uppercase"
-          />
-        </div>
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-white/5 cursor-pointer font-bold"
-          >
-            Clear
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Quick Port P&L Pill */}
+            {totalPnl !== 0 && (
+              <span className={clsx(
+                "text-xs font-bold px-2 py-0.5 rounded-md",
+                totalPnl >= 0 ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+              )}>
+                {totalPnl >= 0 ? '+' : ''}{totalPnlPercent.toFixed(1)}%
+              </span>
+            )}
+            <div className="text-slate-400 transition-transform duration-200">
+              {collapsed.myport ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </div>
+        </button>
+
+        {/* Section Body */}
+        {!collapsed.myport && (
+          <div className="divide-y divide-white/[0.04]">
+            {filteredHoldings.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-sm">
+                {holdings.length === 0 ? (
+                  <div className="space-y-1">
+                    <p className="font-medium text-slate-300">ยังไม่มีหุ้นในพอร์ตปัจจุบัน</p>
+                    <p className="text-xs text-slate-400">เมื่อมีรายการซื้อขาย ระบบจะดึงมาแสดงที่นี่อัตโนมัติ</p>
+                  </div>
+                ) : (
+                  <p>ไม่พบหุ้นที่ตรงกับคำค้นหา "{searchQuery}"</p>
+                )}
+              </div>
+            ) : (
+              filteredHoldings.map((h) => {
+                const quote = getQuote(h.symbol);
+                const currentPrice = quote.price > 0 ? quote.price : (h.lastPrice || h.avgCost);
+                const dayChange = quote.price > 0 ? quote.percentChange : h.dayChangePercent;
+                const radarItem = radarMap[h.symbol.toUpperCase()];
+                const tierCode = radarItem?.tier_code || radarItem?.tier;
+                const isPositiveDay = dayChange >= 0;
+                const isPositiveTotal = h.totalReturnPercent >= 0;
+
+                return (
+                  <div
+                    key={h.symbol}
+                    onClick={() => onSelectSymbol(h.symbol)}
+                    className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
+                  >
+                    {/* Left: Ticker + Holding Details + Tier */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600/30 via-purple-600/20 to-slate-800/60 border border-white/[0.1] flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-inner">
+                        {h.symbol.slice(0, 2)}
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm font-bold text-white tracking-tight">{h.symbol}</span>
+                          {tierCode && (
+                            <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
+                          )}
+                          <span className="text-xs px-1.5 py-0.2 rounded bg-white/[0.06] text-slate-300 font-medium">
+                            {h.weightPercent.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+                          <span>{h.quantity.toLocaleString('en-US', { maximumFractionDigits: 3 })} หุ้น</span>
+                          <span>•</span>
+                          <span>ทุน ${h.avgCost.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Price + Day Change + Total Return */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-white tracking-tight">
+                          ${currentPrice.toFixed(2)}
+                        </div>
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                          {/* Day % pill */}
+                          <span className={clsx(
+                            "inline-flex items-center text-xs font-bold px-1.5 py-0.2 rounded",
+                            isPositiveDay ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                          )}>
+                            {isPositiveDay ? '+' : ''}{dayChange.toFixed(2)}%
+                          </span>
+                        </div>
+                        {/* Total Return subtext */}
+                        <div className={clsx(
+                          "text-xs font-medium mt-0.5",
+                          isPositiveTotal ? "text-emerald-400/80" : "text-rose-400/80"
+                        )}>
+                          P&L {isPositiveTotal ? '+' : ''}{h.totalReturnPercent.toFixed(1)}%
+                        </div>
+                      </div>
+
+                      {/* Jump to Chart Icon Button */}
+                      <button
+                        onClick={(e) => handleOpenChart(e, h.symbol)}
+                        className="p-2 rounded-lg bg-white/[0.04] hover:bg-[#823AFD]/20 border border-white/[0.06] hover:border-[#823AFD]/40 text-slate-400 hover:text-white transition-all active:scale-90"
+                        title="เปิดูกราฟ X-Chart"
+                      >
+                        <CandlestickChart className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {/* Pinned Cash Summary Footer in My Port */}
+            {cashBalance > 0 && !collapsed.myport && (
+              <div className="px-4 py-2.5 bg-[#0D121F]/80 flex items-center justify-between text-xs border-t border-white/[0.04]">
+                <div className="flex items-center gap-2 text-slate-400 font-medium">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>เงินสดพร้อมลงทุน (Cash Balance)</span>
+                </div>
+                <div className="font-bold text-slate-200">
+                  ${cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* 4. TradingView Style Sortable Table Column Headers (Height: 30px) */}
-      <div className="h-8 px-3 bg-[#080A10] border-b border-[#1F2233] grid grid-cols-12 items-center text-[12px] font-bold uppercase tracking-wider text-slate-300 shrink-0 select-none">
-        <div className="col-span-5 flex items-center gap-1 text-left overflow-hidden">
-          <button
-            onClick={() => setWatchlistSort('tier')}
-            className={clsx(
-              "flex items-center gap-0.5 transition-colors cursor-pointer shrink-0",
-              watchlistSortColumn === 'tier' ? "text-cyan-400 font-extrabold" : "text-slate-300 hover:text-white"
+      {/* ========================================================================= */}
+      {/* SECTION 2: หุ้นเป้าหมาย 13 ขุนพล (PROJECT 2X TARGET LIST) */}
+      {/* ========================================================================= */}
+      <div className="bg-[#0B0F17]/95 border border-white/[0.08] rounded-2xl shadow-xl overflow-hidden">
+        {/* Section Accordion Header */}
+        <button
+          onClick={() => toggleSection('targets')}
+          className="w-full px-4 py-3.5 flex items-center justify-between bg-[#111726]/60 hover:bg-[#111726]/90 transition-all border-b border-white/[0.06] cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-sm">
+              <Target className="w-4 h-4" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm font-bold text-white tracking-wide">หุ้นเป้าหมาย 13 ขุนพล</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                {TARGET_STOCKS.length} ตัว
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 hidden sm:inline">Project 2X Radar</span>
+            <div className="text-slate-400 transition-transform duration-200">
+              {collapsed.targets ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </div>
+        </button>
+
+        {/* Section Body */}
+        {!collapsed.targets && (
+          <div className="divide-y divide-white/[0.04]">
+            {filteredTargets.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-sm">
+                ไม่พบหุ้นเป้าหมายที่ตรงกับคำค้นหา "{searchQuery}"
+              </div>
+            ) : (
+              filteredTargets.map((item) => {
+                const quote = getQuote(item.symbol);
+                const radarItem = radarMap[item.symbol.toUpperCase()];
+                const tierCode = radarItem?.tier_code || radarItem?.tier;
+                const heldInfo = holdingsMap.get(item.symbol.toUpperCase());
+                const isPositiveDay = quote.percentChange >= 0;
+
+                return (
+                  <div
+                    key={item.symbol}
+                    onClick={() => onSelectSymbol(item.symbol)}
+                    className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
+                  >
+                    {/* Left: Ticker + Category + In Port Indicator */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-600/20 via-orange-600/20 to-slate-800/60 border border-amber-500/20 flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-inner">
+                        {item.symbol.slice(0, 2)}
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm font-bold text-white tracking-tight">{item.symbol}</span>
+                          {tierCode && (
+                            <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
+                          )}
+                          {heldInfo && (
+                            <span className="text-xs px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold">
+                              ในพอร์ต {heldInfo.weightPercent.toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 truncate">
+                          <span className="truncate">{item.name}</span>
+                          <span>•</span>
+                          <span className={clsx(
+                            "font-medium",
+                            item.category === 'Core' ? "text-amber-400" : "text-purple-400"
+                          )}>
+                            {item.category} {item.target_percent}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Price + Day Change */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-white tracking-tight">
+                          {quote.price > 0 ? `$${quote.price.toFixed(2)}` : '--'}
+                        </div>
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                          <span className={clsx(
+                            "inline-flex items-center text-xs font-bold px-1.5 py-0.2 rounded",
+                            isPositiveDay ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                          )}>
+                            {quote.percentChange !== 0 ? (
+                              <>
+                                {isPositiveDay ? '+' : ''}{quote.percentChange.toFixed(2)}%
+                              </>
+                            ) : (
+                              '0.00%'
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Jump to Chart Icon Button */}
+                      <button
+                        onClick={(e) => handleOpenChart(e, item.symbol)}
+                        className="p-2 rounded-lg bg-white/[0.04] hover:bg-[#823AFD]/20 border border-white/[0.06] hover:border-[#823AFD]/40 text-slate-400 hover:text-white transition-all active:scale-90"
+                        title="เปิดดูกราฟ X-Chart"
+                      >
+                        <CandlestickChart className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
             )}
-            title="Sort by Tier"
-          >
-            <span>Tier</span>
-            {renderSortIndicator('tier')}
-          </button>
-          <span className="text-slate-600 font-normal">/</span>
-          <button
-            onClick={() => setWatchlistSort('symbol')}
-            className={clsx(
-              "flex items-center gap-0.5 transition-colors cursor-pointer truncate",
-              watchlistSortColumn === 'symbol' ? "text-cyan-400 font-extrabold" : "text-slate-300 hover:text-white"
-            )}
-            title="Sort by Symbol"
-          >
-            <span>Symbol</span>
-            {renderSortIndicator('symbol')}
-          </button>
-        </div>
-
-        <button
-          onClick={() => setWatchlistSort('price')}
-          className="col-span-3 flex items-center justify-end gap-1 text-right hover:text-white transition-colors cursor-pointer pr-1"
-        >
-          <span>Last</span>
-          {renderSortIndicator('price')}
-        </button>
-
-        <button
-          onClick={() => setWatchlistSort('change')}
-          className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors cursor-pointer"
-        >
-          <span>Chg</span>
-          {renderSortIndicator('change')}
-        </button>
-
-        <button
-          onClick={() => setWatchlistSort('percentChange')}
-          className="col-span-2 flex items-center justify-end gap-0.5 text-right hover:text-white transition-colors cursor-pointer"
-        >
-          <span>%</span>
-          {renderSortIndicator('percentChange')}
-        </button>
+          </div>
+        )}
       </div>
 
-      {/* 5. Main Content: Sections & High-Density Rows */}
-      <div className="divide-y divide-[#1F2233]/40">
-        
-        {activeWatchlistSections.map((section) => {
-          const matchingSymbols = filterSymbols(section.symbols);
-          if (matchingSymbols.length === 0 && (selectedTierFilter || searchQuery)) {
-            return null;
-          }
-
-          const sortedSyms = sortSymbols(matchingSymbols);
-
-          return (
-            <div key={section.id} className="bg-[#0F111A]">
-              {/* Section Accordion Header (Height: ~32px) */}
-              <div
-                onClick={() => toggleSectionCollapse(section.id)}
-                className="h-8 px-3 bg-[#131724]/90 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
-              >
-                <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
-                  {section.isCollapsed ? (
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors shrink-0" />
-                  )}
-                  <span className="text-xs">{section.icon}</span>
-                  <span className="tracking-wide uppercase text-slate-200 group-hover:text-white font-bold text-[13px] truncate">
-                    {section.name}
-                  </span>
-                  <span className={clsx(
-                    "text-xs px-2 py-0.5 rounded-full font-mono font-bold shrink-0",
-                    section.badgeClass || "text-slate-300 bg-white/10"
-                  )}>
-                    {matchingSymbols.length}
-                  </span>
-                </div>
-
-                {section.subStats && (
-                  <span className="text-xs text-yellow-300/80 font-mono shrink-0 ml-1">
-                    {section.subStats}
-                  </span>
-                )}
-              </div>
-
-              {/* High-Density Symbol Rows */}
-              {!section.isCollapsed && (
-                <div className="divide-y divide-[#1F2233]/25">
-                  {sortedSyms.length === 0 ? (
-                    <div className="px-4 py-3 text-xs text-slate-400 italic text-center">
-                      ไม่มีหุ้นในหมวดนี้
-                    </div>
-                  ) : (
-                    sortedSyms.map((symbol) => {
-                      const quote = watchlistPrices[symbol];
-                      const isCurrency = symbol.includes('=X');
-                      const radarData = symbol ? radarMap[symbol.toUpperCase()] : null;
-                      const tierInfo = getTierVisualInfo(radarData, symbol, isCurrency);
-
-                      const price = quote?.price ?? 0;
-                      const change = quote?.change ?? 0;
-                      const percentChange = quote?.percentChange ?? 0;
-                      const isPositive = percentChange >= 0;
-                      const isZero = percentChange === 0;
-
-                      // Price formatting
-                      let formattedPrice = price.toFixed(2);
-                      if (price > 1000) {
-                        formattedPrice = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                      } else if (price < 1 && price > 0) {
-                        formattedPrice = price.toFixed(4);
-                      }
-
-                      return (
-                        <div
-                          key={symbol}
-                          onClick={() => handleStockClick(symbol)}
-                          className="h-[34px] px-3 grid grid-cols-12 items-center hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer group relative select-none"
-                        >
-                          {/* Left Cyber Indicator */}
-                          {tierInfo.isFireOrb ? (
-                            <div
-                              className={clsx(
-                                'absolute left-[1px] top-1/2 -translate-y-1/2 transition-all z-10',
-                                tierInfo.spineClass
-                              )}
-                            />
-                          ) : (
-                            <div
-                              className={clsx(
-                                'absolute left-[2px] top-[4px] bottom-[4px] rounded-full transition-all z-10 w-[4px]',
-                                tierInfo.spineClass
-                              )}
-                            />
-                          )}
-
-                          {/* Col 1: Symbol & Dot */}
-                          <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
-                            <TierBadgeIndicator
-                              symbol={symbol}
-                              radarData={radarData}
-                              isCurrency={isCurrency}
-                            />
-                            <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
-                              {symbol}
-                            </span>
-                          </div>
-
-                          {/* Col 2: Last Price */}
-                          <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1">
-                            {quote ? formattedPrice : '—'}
-                          </div>
-
-                          {/* Col 3: Change ($) */}
-                          <div
-                            className={clsx(
-                              "col-span-2 text-right font-mono text-[13px] font-normal truncate",
-                              isZero ? "text-slate-300" : isPositive ? "text-emerald-400" : "text-rose-400"
-                            )}
-                          >
-                            {quote ? (isPositive && change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2)) : '—'}
-                          </div>
-
-                          {/* Col 4: Change (%) & Jump Icon */}
-                          <div className="col-span-2 text-right relative flex items-center justify-end">
-                            <span
-                              className={clsx(
-                                "font-mono text-[13px] font-normal transition-opacity",
-                                isZero ? "text-slate-300" : isPositive ? "text-emerald-400" : "text-rose-400"
-                              )}
-                            >
-                              {quote ? (isPositive && percentChange > 0 ? `+${percentChange.toFixed(2)}%` : `${percentChange.toFixed(2)}%`) : '—'}
-                            </span>
-
-                            {/* Quick Chart Launch Button */}
-                            <button
-                              onClick={(e) => handleJumpToChart(e, symbol)}
-                              className="opacity-0 group-hover:opacity-100 ml-1 p-0.5 text-cyan-400 hover:text-white hover:bg-cyan-500/20 rounded transition-all"
-                              title="Open in X-Chart"
-                            >
-                              <CandlestickChart className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
+      {/* ========================================================================= */}
+      {/* SECTION 3: INDEX & MARKET BENCHMARKS */}
+      {/* ========================================================================= */}
+      <div className="bg-[#0B0F17]/95 border border-white/[0.08] rounded-2xl shadow-xl overflow-hidden">
+        {/* Section Accordion Header */}
+        <button
+          onClick={() => toggleSection('indices')}
+          className="w-full px-4 py-3.5 flex items-center justify-between bg-[#111726]/60 hover:bg-[#111726]/90 transition-all border-b border-white/[0.06] cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-sm">
+              <BarChart3 className="w-4 h-4" />
             </div>
-          );
-        })}
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm font-bold text-white tracking-wide">Index & Benchmarks</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                {INDEX_ITEMS.length} ดัชนี
+              </span>
+            </div>
+          </div>
 
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 hidden sm:inline">Global Market</span>
+            <div className="text-slate-400 transition-transform duration-200">
+              {collapsed.indices ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </div>
+        </button>
+
+        {/* Section Body */}
+        {!collapsed.indices && (
+          <div className="divide-y divide-white/[0.04]">
+            {filteredIndices.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-sm">
+                ไม่พบดัชนีที่ตรงกับคำค้นหา "{searchQuery}"
+              </div>
+            ) : (
+              filteredIndices.map((idx) => {
+                const quote = getQuote(idx.symbol);
+                const isPositiveDay = quote.percentChange >= 0;
+
+                return (
+                  <div
+                    key={idx.symbol}
+                    onClick={() => onSelectSymbol(idx.symbol)}
+                    className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
+                  >
+                    {/* Left: Flag/Emoji + Symbol + Name */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-[#131B2E] border border-white/[0.08] flex items-center justify-center text-base shrink-0 shadow-inner">
+                        {idx.flag}
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white tracking-tight">{idx.symbol}</span>
+                          <span className="text-xs text-slate-400 truncate">{idx.name}</span>
+                        </div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          {idx.sub}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Price + Day Change */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-white tracking-tight">
+                          {quote.price > 0 ? (
+                            idx.symbol === 'BTC-USD'
+                              ? `$${quote.price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                              : `$${quote.price.toFixed(2)}`
+                          ) : (
+                            '--'
+                          )}
+                        </div>
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                          <span className={clsx(
+                            "inline-flex items-center text-xs font-bold px-1.5 py-0.2 rounded",
+                            isPositiveDay ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                          )}>
+                            {quote.percentChange !== 0 ? (
+                              <>
+                                {isPositiveDay ? '+' : ''}{quote.percentChange.toFixed(2)}%
+                              </>
+                            ) : (
+                              '0.00%'
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Jump to Chart Icon Button */}
+                      <button
+                        onClick={(e) => handleOpenChart(e, idx.symbol)}
+                        className="p-2 rounded-lg bg-white/[0.04] hover:bg-[#823AFD]/20 border border-white/[0.06] hover:border-[#823AFD]/40 text-slate-400 hover:text-white transition-all active:scale-90"
+                        title="เปิดดูกราฟ X-Chart"
+                      >
+                        <CandlestickChart className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
