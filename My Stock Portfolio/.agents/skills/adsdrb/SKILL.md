@@ -1,78 +1,137 @@
 ---
 name: adsdrb
-version: "1.0.0"
-updated_at: "2026-10-14"
+version: "2.0.0"
+updated_at: "2026-10-18"
 description: >-
-  DoctorBank TikTok Ads Storyboard & Prompt Compiler — สร้างสตอรี่บอร์ดโฆษณา TikTok Shop 4 หมัด (Hook, Twist, Proof, CTA) พร้อม Prompt ภาพ 9:16 และ Motion Veo 3.1 สำหรับ DoctorBank Magnesium Night Plus
+  DoctorBank TikTok Ads & UGC Video Production Engine — รองรับ 2 โหมดหลัก: 1) โหมดใหม่ /adsdrb meta (Plan B Master Anchor Chained UGC Video Engine 40s พร้อมระบบ End-Frame Chaining, Just-In-Time 2-Product Ref, และ Pacing Ceiling 110-120 ตัวอักษร) และ 2) โหมดเดิม /adsdrb classic (Thanwa 7-Column Storyboard Compiler & Veo 3.1 Motion Prompts)
 ---
 
-# 🎬 Ads DRB: TikTok Ads Production Engine (`/adsdrb` v1.0.0)
+# 🎬 Ads DRB: TikTok Ads & Chained UGC Video Engine (`/adsdrb` v2.0.0)
 
-เอนจินผลิตวิดีโอโฆษณา TikTok Shop (Faceless POV / UGC Commercial) สำหรับแบรนด์ **DoctorBank** โดยถอดรหัสความสำเร็จ 71 ล้านบาทจาก Nectapharma ผสานสายพาน The Viral Prompt Compiler คายไฟล์ **All-in-One Markdown Master (`.md`)** ครบจบในไฟล์เดียว: Pure Script ก้อนเดียว, ตาราง 7 คอลัมน์ทองคำสำหรับ **DrView**, และคลัง Prompt เจนภาพ 9:16 + Veo 3.1
-
----
-
-## 📌 จุดโฟกัสสินค้า (Product Focus)
-- **Active Hero Product:** `magnesium` — **DoctorBank Magnesium Night Plus** (ขวดแก้วชาทรงหรู ฝาเกลียว ribbed ขาว ฉลากขาวคาดน้ำเงินเข้ม แคปซูลขาวด้าน matte 2 ท่อน คลายกล้ามเนื้อ หลับลึกสู่ REM Sleep)
-- **Secondary Product:** `asta` — **DoctorBank Asta Solar Prime** (AstaReal 6mg นำเข้าจากญี่ปุ่น ต้านแดด ซอฟต์เจลทับทิมใส)
-- **WIP Product:** `gluta` — **DoctorBank Liposomal Gluta Prime** *(กำลังพัฒนาสูตรและ CI ทางการ)*
+เอนจินผลิตวิดีโอโฆษณา TikTok Shop และ UGC Commercial สำหรับแบรนด์ **DoctorBank** อัปเกรดสู่สถาปัตยกรรม **Dual-Engine Architecture**:
+1. **Engine 1 (New): `/adsdrb meta`** ➔ **Chained UGC Talking Head & Anti-Morphing Engine (30–40s)** สำหรับสร้างคลิปครีเอเตอร์รีวิวหน้ากล้องใน Meta AI ไร้รอยต่อ หน้าไม่เปลี่ยน ขวดไม่เบี้ยว ฝาไม่กลายพันธุ์ ด้วยระบบ End-Frame Chaining และ Just-In-Time Product Reference
+2. **Engine 2 (Classic): `/adsdrb [product] [style]`** ➔ **Thanwa 7-Column Storyboard Compiler (15s)** สำหรับสร้างสตอรี่บอร์ดโฆษณาแนว Cinematic, CG แล็บวิจัย, และ Prompt สำหรับ Veo 3.1 / Kling
 
 ---
 
-## 🎨 4 พรีเซ็ตสไตล์ภาพ (Visual Presets)
-1. `sensory` *(แนะนำสำหรับ Magnesium)*: อาการเจ็บจริง/ทรมานจริง เช่น หัวถึงหมอนแล้วคิดงานวน นอนไม่หลับ เอามือกุมขมับ จ้องเพดานในห้องนอนมืดสลัว (ต้นแบบคลิป 9.1 แสน)
-2. `athlete`: กิจกรรมกลางแจ้ง หรือนักวิ่ง/สายออกกำลังกาย นั่งนวดกล้ามเนื้อขาที่เมื่อยล้าหลังซ้อมตอนหัวค่ำ (ต้นแบบคลิป 7.4 แสน)
-3. `myth_lab`: โต๊ะแล็บคลีน เครื่องแก้วทดลอง แสงขาว 5000K โชว์ผลวิเคราะห์ฟอร์มคีเลตดูดซึมตรง (ต้นแบบคลิป 4.2 แสน)
-4. `ugc_daily`: วิถีชีวิตประจำวัน โต๊ะข้างเตียงยามค่ำคืน มุมมอง POV แก้วน้ำวางข้างขวด (ดูจริงใจ ไร้การประดิษฐ์)
+## 📌 จุดโฟกัสสินค้าและภาพ Master Reference จริง (Product Packaging Ground Truth)
+
+### 🍾 2 ภาพ Master Product Reference ที่ล็อกพิกัดถาวร (Rule R34):
+- **Ref 1 (ขวดจริงหน้าตรง):**  
+  `P:\AI\The Viral\Ads DRB\03_Production_Assets\3Ref_Master_Pack\DRB_MAG_REF01_front_hero.png`  
+  *(ขวดแก้วสีชาเข้มทรงกระบอก ฝาเกลียวขาว ribbed ฉลากขาวแถบน้ำเงินเข้ม โลโก้พระจันทร์เสี้ยว DOCTORBANK)*
+- **Ref 2 (แคปซูลจริงขาวด้าน 2 ท่อน):**  
+  `P:\AI\The Viral\Ads DRB\03_Production_Assets\3Ref_Master_Pack\DRB_MAG_REF02_angle_and_capsules.jpeg`  
+  *(กองแคปซูลขาวนวลผิวซาติน 2-Piece Hard Shell แท้ ขนาดสมส่วน ไม่กลายพันธุ์)*
 
 ---
 
-## 💻 วิธีเรียกใช้งานคำสั่ง (How to Trigger)
+## 🧪 กฎเหล็กข้อที่ 0: ทบทวนสูตรและสารสกัดของจริงก่อนเขียน (Grounding Protocol)
 
-### รูปแบบคำสั่ง:
+### ตารางสารสกัดจริงของ Magnesium Night Plus (Dose: คืนละ 1 แคปซูลก่อนนอน / 1 ขวด = 1 เดือน):
+| สารสกัด / สิทธิบัตร | ปริมาณ (mg) | บทบาทหน้าที่ทางวิทยาศาสตร์ |
+|:---|:---:|:---|
+| **Magnesium Bisglycinate Chelate** | **350 mg** | ดูดซึมตรง คลายกล้ามเนื้อลึก อ่อนโยนต่อกระเพาะ ไม่ทำให้ถ่ายเหลว |
+| **Magnesium Amino Acid Chelate** | **200 mg** | เสริมคอมเพล็กซ์แร่ธาตุแมกนีเซียมคีเลตให้ครอบคลุม |
+| **Magnesium Citrate** | **60 mg** | สนับสนุนการดูดซึมและการคลายตัวของเส้นประสาท |
+| **Magnesium Malate** | **20 mg** | ฟื้นฟูกล้ามเนื้อระดับเซลล์ (Mitochondrial ATP) |
+| **รวม Magnesium Complex** | **630 mg** | **ให้เนื้อแร่ธาตุแมกนีเซียมจริง (Elemental Mg) ≈ 161.8 mg** |
+| **L-Theanine (AlphaWave® USA)** | **200 mg** | **Hero Calming:** กระตุ้นคลื่น Alpha Brainwave ตัดสวิตช์สมองคิดวน |
+| **PharmaGABA® (Japan)** | **125 mg** | **Hero Sleep Onset:** สารสื่อประสาทผ่อนคลาย เร่งการเข้าสู่การนอนหลับธรรมชาติ |
+| **Zinc Amino Acid Chelate (NovoMin®)** | **25 mg** | โคแฟกเตอร์สร้างสารสื่อประสาทและฟื้นฟูระบบร่างกาย |
+| **Vitamin B6 (Pyridoxine HCl)** | **2 mg** | วิตามินสนับสนุนการเปลี่ยน Serotonin และ GABA ในสมอง |
+
+### กฎการสื่อสารและการเคลม (Compliance Guardrails):
+- **100% Non-Melatonin:** ไม่กดฮอร์โมนธรรมชาติ ไม่ทำให้ร่างกายดื้อ ตื่นเช้ามาสมองไบรท์ ไม่อึน ไม่แฮงก์ (Zero Brain Fog)
+- **Non-Drug:** เน้นคำว่า *"ตัวช่วยตัดสวิตช์สมอง คลายกล้ามเนื้อลึก สู่การนอนหลับลึก"* — **ไม่ใช่ยานอนหลับ ไม่กดประสาท**
+- ❌ **ห้ามเคลมรักษาโรคนอนไม่หลับ (Insomnia Cure)** หรือใช้คำว่า "รักษา", "หายขาด"
+- ❌ **ห้ามการันตีเวลาการหลับ** เช่น "หลับปุ๋ยใน 5 นาที"
+- **ราคาจำหน่ายจริง TikTok Shop:** 1 ขวด 890.- / เซ็ตคู่ 2 ขวด 1,590.- (Hero SKU มีคูปองลดพิเศษ) / เซ็ต 4 ขวด 2,670.-
+
+---
+
+# 🚀 ENGINE 1: `/adsdrb meta` (Chained UGC Video Production)
+
+สูตรผลิตวิดีโอ TikTok Shop ด้วย Meta AI Video Generator โดยแก้บั๊ก Character Swapping, Cutoff Glitch, และ Bottle Morphing 100%
+
+### 1. วิธีเรียกใช้งาน (Syntax):
 ```text
-/adsdrb [product] [style] [script_or_idea]
+/adsdrb meta [product] [persona] [location] "[script_or_topic]"
 ```
 
-### ตัวอย่างการสั่งงาน:
-1. **รันสินค้าหลัก (Magnesium) สไตล์นอนไม่หลับ (Sensory) สูตรยอดขายอันดับ 1:**
-   ```text
-   /adsdrb magnesium sensory
-   ```
-2. **รันพร้อมใส่สคริปต์ของตัวเอง:**
-   ```text
-   /adsdrb magnesium sensory "ใครเป็นบ้างคะ หัวถึงหมอนแต่ในหัวยังรันงานวนไม่หยุด พลิกตัวเป็นชั่วโมงก็ไม่หลับ..."
-   ```
-3. **รันสไตล์นักวิ่งฟื้นฟูกล้ามเนื้อ:**
-   ```text
-   /adsdrb magnesium athlete
-   ```
+- **product:** `magnesium` (ค่าเริ่มต้น), `asta`, `gluta`
+- **persona:**
+  - `working_woman`: สาวออฟฟิศ 30–35 ปี ลุค Working Woman เสื้อสูทเบจ ฉลาด เป็นมิตร
+  - `gen_z`: น้องนักศึกษา/สาวรุ่นใหม่ 20–25 ปี น่ารัก สดใส ชุดนอนพาสเทล
+  - `executive_man`: ผู้บริหารหนุ่ม 32–38 ปี เสื้อเชิ้ตเรียบหรู ดูแลตัวเองดี
+  - `clean_girl`: สาวสกินแคร์คลีนเกิร์ล 25–30 ปี รักสุขภาพ ผิวใสเป็นธรรมชาติ
+- **location:** `bedside` (ข้างเตียง), `wfh` (โต๊ะทำงาน), `living_room` (โซฟา)
+- **script_or_topic:** สคริปต์ไอเดีย หรือชื่อคลิปจาก Master Matrix (เช่น `"สายคิดวน นอนจ้องเพดาน"`)
 
 ---
 
-## ⚙️ ขั้นตอนการทำงานของ Agent (Agent Execution Steps)
+### 2. กฎฟิสิกส์ 4 ข้อของโหมด Meta (Iron Rules):
 
-เมื่อได้รับคำสั่ง `/adsdrb` ให้ Agent ทำตามขั้นตอนนี้:
+1. **Pacing Ceiling (110–120 ตัวอักษรต่อซีน):**  
+   สคริปต์แต่ละซีน (ความยาว 10 วินาที) **ต้องมีความยาวระหว่าง 110–120 ตัวอักษรไทย (ห้ามเกิน 130 เด็ดขาด)** เพื่อให้สปีดการพูดเป็นธรรมชาติ มีจุดพักหายใจ 0.5–1s ป้องกันเสียงขาดรอยต่อ (Cutoff Bug)
+2. **Thai Phonetic Respelling (สะกดคำอ่านบ้านๆ):**  
+   สะกดคำให้อ่านง่าย เช่น `ด็อก-เต้อ-แบ๊ง`, `ไน้ พลัส`, `ผิวโซม`, `ซาบ`, `ทอ-ระ-มาน` ป้องกัน AI พูดสำเนียงฝรั่งหรือสะกดตัวการันต์
+3. **Posture A (Tabletop Hero Anti-Morphing):**  
+   วางขวด DoctorBank ปิดฝาแน่นบนโต๊ะข้างหน้าเสมอ ตัวละครถือแค่เม็ดแคปซูลขาว 1 เม็ดโชว์ **ห้ามสั่งให้มือแตะหรือบิดฝาขวดใน Meta AI เด็ดขาด** (ให้ตัด B-roll จริงใน CapCut แทน)
+4. **Just-In-Time Ref Protocol (แนบแคปซูลเฉพาะซีน 3):**
 
-1. **ถอดพารามิเตอร์:**
-   - ตรวจสอบ `product`: ถ้าไม่ระบุ ให้ใช้ `magnesium` เป็นค่าเริ่มต้น
-   - ตรวจสอบ `style`: ถ้าไม่ระบุ ให้ใช้ `sensory` เป็นค่าเริ่มต้น
-   - ตรวจสอบ `script`: ถ้าผู้ใช้ระบุสคริปต์ ให้ใช้สคริปต์นั้น ถ้าผู้ใช้ให้แค่คีย์เวิร์ด/หัวข้อ ให้ Agent แต่งสคริปต์ภาษาไทยตามสูตรยอดขายอันดับ 1 (Hook 0-3.5s -> Twist 3.5-7.5s -> Proof 7.5-11.5s -> Duo Pack CTA 11.5-15s)
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ 🎬 Scene 1 (Hook 10s):      แนบ [Ref 1 ขวดจริง]                         │
+│ 🎬 Scene 2 (The Truth 10s): แนบ [Ref 1 ขวดจริง] + [s1_endframe.jpg]    │
+│ 🎬 Scene 3 (Solution 10s):  แนบ [Ref 1 ขวดจริง] + [Ref 2 แคปซูลจริง]   │
+│                             + [s2_endframe.jpg] ⭐ (แคปซูลโผล่เฉพาะซีนนี้!)│
+│ 🎬 Scene 4 (CTA 10s):       แนบ [Ref 1 ขวดจริง] + [s3_endframe.jpg]    │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
-2. **รันคำสั่ง Master Compiler:**
-   ```powershell
-   python "P:\AI\The Viral\Ads DRB\tools\drb_compiler.py" --product <product> --style <style> --id <CAMPAIGN_ID> --script "<SCRIPT_TEXT>"
-   ```
+---
 
-3. **ผลลัพธ์ที่ได้ (All-in-One Master Output - Clean 2-Section Structure):**
-   - 📝 **Markdown Master File (`.md`):** `P:\AI\The Viral\Ads DRB\02_Creative_Blueprint\Storyboards\<CAMPAIGN_ID>_production_table.md`
-     - **Section 1: Pure Voiceover Script** เป็นพารากราฟข้อความธรรมดา อ่านง่าย คัดลอกไปลง ElevenLabs / CapCut ได้ทันที (ไม่มี Code Block)
-     - **Section 2: Master Shot Table** ในบล็อก ````tsv ```` เพื่อให้ DrView ดักจับและเรนเดอร์เป็น **Interactive Excel-Grade Spreadsheet** ทันที (คลิกลากเซลล์, สลับ `⚡ Prompts Only`, ย่อ-ขยายแถว `📏 Compact`, ฮอตคีย์ `Ctrl+C`)
-     - **Thanwa & Squid Game Prompt Standard:** ทุก Prompt มี Prefix รหัสช็อตนำหน้า (เช่น `[MAG01-S01]`) และแบ่งหมวดหมู่ด้วย Semantic Tags `(Shot): ... (Subject): ... (Lighting & Atmosphere): ... (Quality): 4k master.` โดยใช้เครื่องหมายจุด `.` คั่นหมวด
-   - 🌐 **Interactive Board:** `P:\AI\The Viral\Ads DRB\02_Creative_Blueprint\Storyboards\<CAMPAIGN_ID>_storyboard.html`
+### 3. Pipeline การรันจริงและการสกัด End Frame ด้วย FFmpeg:
 
-4. **รายงานผลต่อผู้ใช้:**
-   - สรุปสเปกแคมเปญและสินค้า
-   - แสดงตาราง 7 คอลัมน์ทองคำ (`ID`, `Beat`, `Timing`, `ภาพหน้าจอ`, `เสียงพากย์`, `Image Prompt`, `Motion Prompt`)
-   - ใส่ Link ไปยังไฟล์ Markdown Master File
-   - ย้ำกฎเหล็ก **Duo Pack CTA** (วางขวดคู่ 2 ขวดเสมอเพื่อเพิ่ม AOV) และ **TikTok UI Safe Zone** (เว้นซ้ายล่างสำหรับตะกร้าเหลือง)
+เมื่อผู้ใช้สั่ง `/adsdrb meta` ให้ Agent คายผลลัพธ์เป็น:
+1. **บทพูด 4 ซีน (110–120 ch/scene)**
+2. **ชุด Prompt สำเร็จรูปสำหรับ Meta AI ทีละรอบ (S1 ➔ S2 ➔ S3 ➔ S4)**
+3. **สคริปต์คำสั่ง FFmpeg สำเร็จรูป** สำหรับสกัด End Frame และ Concat รวมคลิป:
+
+```bash
+# 1. สกัด End Frame จาก Scene 1 เพื่อใช้เป็น Ref ใน Scene 2
+ffmpeg -sseof -0.1 -i scene1.mp4 -update 1 -q:v 2 s1_endframe.jpg
+
+# 2. สกัด End Frame จาก Scene 2 เพื่อใช้เป็น Ref ใน Scene 3
+ffmpeg -sseof -0.1 -i scene2.mp4 -update 1 -q:v 2 s2_endframe.jpg
+
+# 3. สกัด End Frame จาก Scene 3 เพื่อใช้เป็น Ref ใน Scene 4
+ffmpeg -sseof -0.1 -i scene3.mp4 -update 1 -q:v 2 s3_endframe.jpg
+
+# 4. รวม 4 ซีนเป็นไฟล์วิดีโอสมบูรณ์ 40s ไร้รอยต่อ
+ffmpeg -f concat -safe 0 -i filelist.txt -c copy final_master_40s.mp4
+```
+
+---
+
+# 🏛️ ENGINE 2: `/adsdrb [classic]` (Cinematic Storyboard Compiler)
+
+สูตรเดิมสำหรับการผลิตวิดีโอโฆษณา Cinematic / Myth Lab / Athlete ความยาว 15 วินาที สำหรับ Veo 3.1 และ Kling
+
+### 1. วิธีเรียกใช้งาน (Syntax):
+```text
+/adsdrb [product] [style] [gender] [location] [script_or_idea]
+```
+
+- **style:** `sensory` (อาการทรมานจริง), `athlete` (สายออกกำลังกาย), `myth_lab` (โต๊ะทดลองคลีน), `ugc_daily` (วิถีชีวิตโต๊ะข้างเตียง)
+- **gender:** `female` หรือ `male`
+- **location:** `bedside`, `wfh`, `kitchen`, `living_room`, `commute`
+
+### 2. ขั้นตอนการรัน Compiler:
+```powershell
+python "P:\AI\The Viral\Ads DRB\tools\drb_compiler.py" --product <product> --style <style> --gender <gender> --location <location> --id <CAMPAIGN_ID> --script "<SCRIPT_TEXT>"
+```
+
+### 3. ผลลัพธ์:
+- คายไฟล์ Master Markdown ใน `P:\AI\The Viral\Ads DRB\02_Creative_Blueprint\Storyboards\<CAMPAIGN_ID>_production_table.md` พร้อมตาราง 7 คอลัมน์สำหรับ DrView และ Prompt มาตรฐาน Thanwa & Squid Game
