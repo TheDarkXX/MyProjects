@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useXChartStore, WatchlistSortColumn, WatchlistSortDir } from '../../../stores/xchartStore';
 import { useProject2xStore, RadarRow } from '../../../stores/project2xStore';
 import { usePortfolioStore } from '../../../stores/portfolioStore';
-import { useHoldings, Holding } from '../../../hooks/useHoldings';
-import { usePriceStore } from '../../../stores/priceStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { 
   TierBadgeIndicator, 
@@ -16,9 +14,6 @@ import {
   ArrowUp, 
   ArrowDown, 
   ArrowUpDown,
-  Briefcase, 
-  Flame, 
-  Wallet, 
   CandlestickChart,
   RefreshCw,
   Search,
@@ -38,14 +33,10 @@ export const TIER_SORT_ASC_RANKS: Record<string, number> = {
 
 interface MobileWatchlistSectionProps {
   onSelectSymbol: (symbol: string) => void;
-  cashBalance: number;
-  formatPrimary: (val: number, isChange?: boolean) => string;
 }
 
 export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
   onSelectSymbol,
-  cashBalance,
-  formatPrimary,
 }) => {
   const {
     watchlistSections,
@@ -59,26 +50,8 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
   } = useXChartStore();
 
   const { radar, fetchRadar, compactTiers } = useProject2xStore();
-  const { activePortfolioId, portfolios } = usePortfolioStore();
-  const { holdings } = useHoldings();
-  const { prices, exchangeRate } = usePriceStore();
-  const { currency, setActiveTab } = useUiStore();
-
-  // Tab: 'watchlist' (PC 7-Tier + Index) vs 'myport' (Current Portfolio Holdings)
-  const [activeTabMode, setActiveTabMode] = useState<'watchlist' | 'myport'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mobile_watchlist_tab_mode');
-      if (saved === 'watchlist' || saved === 'myport') return saved;
-    }
-    return 'watchlist';
-  });
-
-  const handleSetTabMode = (mode: 'watchlist' | 'myport') => {
-    setActiveTabMode(mode);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('mobile_watchlist_tab_mode', mode);
-    }
-  };
+  const { activePortfolioId } = usePortfolioStore();
+  const { setActiveTab } = useUiStore();
 
   // Quick Tier Filter for Watchlist tab
   const [selectedTierFilter, setSelectedTierFilter] = useState<string | null>(null);
@@ -318,57 +291,7 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
     return list;
   }, [watchlistSections, radarMap, collapsedSections, watchlistSortColumn, watchlistSortDir]);
 
-  // Holdings in My Port mode
-  const sortedHoldings = useMemo(() => {
-    const list = [...holdings].filter(h => h && h.quantity > 0 && h.symbol !== 'CASH');
-    if (!watchlistSortColumn) {
-      return list.sort((a, b) => b.weightPercent - a.weightPercent);
-    }
 
-    return list.sort((a, b) => {
-      const quoteA = watchlistPrices[a.symbol] || { price: a.lastPrice, change: 0, percentChange: a.dayChangePercent };
-      const quoteB = watchlistPrices[b.symbol] || { price: b.lastPrice, change: 0, percentChange: b.dayChangePercent };
-
-      if (watchlistSortColumn === 'tier') {
-        const rowA = a.symbol ? radarMap[a.symbol.toUpperCase()] : null;
-        const rowB = b.symbol ? radarMap[b.symbol.toUpperCase()] : null;
-        const infoA = getTierVisualInfo(rowA, a.symbol, false);
-        const infoB = getTierVisualInfo(rowB, b.symbol, false);
-
-        const rankA = TIER_SORT_ASC_RANKS[infoA.tierId] ?? 999;
-        const rankB = TIER_SORT_ASC_RANKS[infoB.tierId] ?? 999;
-
-        if (rankA !== rankB) {
-          return watchlistSortDir === 'asc' ? (rankA - rankB) : (rankB - rankA);
-        }
-        return a.symbol.localeCompare(b.symbol);
-      }
-
-      if (watchlistSortColumn === 'symbol') {
-        return watchlistSortDir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
-      }
-
-      if (watchlistSortColumn === 'price') {
-        const pA = quoteA?.price ?? a.lastPrice ?? 0;
-        const pB = quoteB?.price ?? b.lastPrice ?? 0;
-        return watchlistSortDir === 'desc' ? (pB - pA) : (pA - pB);
-      }
-
-      if (watchlistSortColumn === 'change') {
-        const vA = quoteA?.change ?? 0;
-        const vB = quoteB?.change ?? 0;
-        return watchlistSortDir === 'desc' ? (vA - vB) : (vB - vA);
-      }
-
-      if (watchlistSortColumn === 'percentChange') {
-        const pA = quoteA?.percentChange ?? a.dayChangePercent ?? 0;
-        const pB = quoteB?.percentChange ?? b.dayChangePercent ?? 0;
-        return watchlistSortDir === 'desc' ? (pA - pB) : (pB - pA);
-      }
-
-      return 0;
-    });
-  }, [holdings, watchlistPrices, radarMap, watchlistSortColumn, watchlistSortDir]);
 
   // Sort indicator helper
   const renderSortIndicator = (col: WatchlistSortColumn) => {
@@ -470,75 +393,56 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
   return (
     <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col select-none">
       
-      {/* 1. Header with Mode Switcher (Watchlist vs My Port) */}
+      {/* 1. Watchlist Header */}
       <div className="p-3 sm:p-4 border-b border-[#2A2E45] bg-[#0E121E] flex items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-1.5 p-1 bg-[#07090E] border border-white/[0.08] rounded-2xl">
-          <button
-            onClick={() => handleSetTabMode('watchlist')}
-            className={clsx(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-[13px] font-bold transition-all cursor-pointer",
-              activeTabMode === 'watchlist'
-                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_2px_10px_rgba(130,58,253,0.4)]"
-                : "text-slate-300 hover:text-white"
-            )}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Watchlist</span>
-          </button>
-
-          <button
-            onClick={() => handleSetTabMode('myport')}
-            className={clsx(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-[13px] font-bold transition-all cursor-pointer",
-              activeTabMode === 'myport'
-                ? "bg-gradient-to-r from-[#823AFD] to-[#FC2D79] text-white shadow-[0_2px_10px_rgba(130,58,253,0.4)]"
-                : "text-slate-300 hover:text-white"
-            )}
-          >
-            <Briefcase className="w-3.5 h-3.5" />
-            <span>My Port ({holdings.filter(h => h.quantity > 0 && h.symbol !== 'CASH').length})</span>
-          </button>
+        <div className="flex items-center gap-2">
+          <span className="text-white font-black text-sm sm:text-base font-heading flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-[#823AFD]" />
+            Watchlist
+          </span>
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/[0.08] text-slate-300 font-mono font-bold">
+            {activeWatchlistSections.reduce((acc, s) => acc + s.symbols.length, 0)} Assets
+          </span>
         </div>
 
         {/* Refresh Quotes Button */}
         <button
           onClick={() => fetchWatchlistQuotes()}
           disabled={watchlistLoading}
-          className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shrink-0 disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shrink-0 disabled:opacity-50 text-xs font-bold font-heading"
           title="Refresh Quotes"
         >
           <RefreshCw className={clsx("w-3.5 h-3.5 text-slate-300", watchlistLoading && "animate-spin text-cyan-400")} />
+          <span>Refresh</span>
         </button>
       </div>
 
-      {/* 2. Streamlined Quick Tier Filter Bar (Only active in Watchlist mode) */}
-      {activeTabMode === 'watchlist' && (
-        <div className="px-3 py-2 bg-[#090C14] border-b border-[#1F2233] grid grid-cols-4 gap-1.5 shrink-0 select-none">
-          {[
-            { id: null, label: 'ALL', icon: '🌐' },
-            { id: 'BUY_NOW', label: 'BUY NOW', icon: '🔥', activeClass: 'bg-red-500/25 text-orange-200 border-orange-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]' },
-            { id: 'GET_READY', label: 'READY', icon: '⏳', activeClass: 'bg-yellow-500/25 text-yellow-200 border-yellow-400/80 shadow-[0_0_8px_rgba(234,179,8,0.5)]' },
-            { id: 'DANGER', label: 'MAYDAY', icon: '🩸', activeClass: 'bg-rose-950 text-red-200 border-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.6)]' }
-          ].map(filter => {
-            const isActive = selectedTierFilter === filter.id;
-            return (
-              <button
-                key={filter.label}
-                onClick={() => setSelectedTierFilter(isActive ? null : filter.id)}
-                className={clsx(
-                  "h-7 rounded-xl text-xs sm:text-[13px] font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer whitespace-nowrap",
-                  isActive 
-                    ? (filter.activeClass || "bg-purple-600 text-white border-purple-400 shadow-sm")
-                    : "bg-white/5 border-transparent text-slate-300 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <span>{filter.icon}</span>
-                <span>{filter.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* 2. Streamlined Quick Tier Filter Bar */}
+      <div className="px-3 py-2 bg-[#090C14] border-b border-[#1F2233] grid grid-cols-4 gap-1.5 shrink-0 select-none">
+        {[
+          { id: null, label: 'ALL', icon: '🌐' },
+          { id: 'BUY_NOW', label: 'BUY NOW', icon: '🔥', activeClass: 'bg-red-500/25 text-orange-200 border-orange-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]' },
+          { id: 'GET_READY', label: 'READY', icon: '⏳', activeClass: 'bg-yellow-500/25 text-yellow-200 border-yellow-400/80 shadow-[0_0_8px_rgba(234,179,8,0.5)]' },
+          { id: 'DANGER', label: 'MAYDAY', icon: '🩸', activeClass: 'bg-rose-950 text-red-200 border-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.6)]' }
+        ].map(filter => {
+          const isActive = selectedTierFilter === filter.id;
+          return (
+            <button
+              key={filter.label}
+              onClick={() => setSelectedTierFilter(isActive ? null : filter.id)}
+              className={clsx(
+                "h-7 rounded-xl text-xs sm:text-[13px] font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer whitespace-nowrap",
+                isActive 
+                  ? (filter.activeClass || "bg-purple-600 text-white border-purple-400 shadow-sm")
+                  : "bg-white/5 border-transparent text-slate-300 hover:text-white hover:bg-white/10"
+              )}
+            >
+              <span>{filter.icon}</span>
+              <span>{filter.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* 3. Search Bar for Fast Filtering */}
       <div className="px-3 py-2 bg-[#0B0E17] border-b border-[#1F2233] flex items-center gap-2">
@@ -618,281 +522,153 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
       {/* 5. Main Content: Sections & High-Density Rows */}
       <div className="divide-y divide-[#1F2233]/40">
         
-        {/* MODE 1: WATCHLIST TAB (7-Tier Dynamic Sections + INDEX & BENCHMARKS + CRYPTO) */}
-        {activeTabMode === 'watchlist' && (
-          <div>
-            {activeWatchlistSections.map((section) => {
-              const matchingSymbols = filterSymbols(section.symbols);
-              if (matchingSymbols.length === 0 && (selectedTierFilter || searchQuery)) {
-                return null;
-              }
+        {activeWatchlistSections.map((section) => {
+          const matchingSymbols = filterSymbols(section.symbols);
+          if (matchingSymbols.length === 0 && (selectedTierFilter || searchQuery)) {
+            return null;
+          }
 
-              const sortedSyms = sortSymbols(matchingSymbols);
+          const sortedSyms = sortSymbols(matchingSymbols);
 
-              return (
-                <div key={section.id} className="bg-[#0F111A]">
-                  {/* Section Accordion Header (Height: ~32px) */}
-                  <div
-                    onClick={() => toggleSectionCollapse(section.id)}
-                    className="h-8 px-3 bg-[#131724]/90 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
-                  >
-                    <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
-                      {section.isCollapsed ? (
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors shrink-0" />
-                      )}
-                      <span className="text-xs">{section.icon}</span>
-                      <span className="tracking-wide uppercase text-slate-200 group-hover:text-white font-bold text-[13px] truncate">
-                        {section.name}
-                      </span>
-                      <span className={clsx(
-                        "text-xs px-2 py-0.5 rounded-full font-mono font-bold shrink-0",
-                        section.badgeClass || "text-slate-300 bg-white/10"
-                      )}>
-                        {matchingSymbols.length}
-                      </span>
-                    </div>
-
-                    {section.subStats && (
-                      <span className="text-xs text-yellow-300/80 font-mono shrink-0 ml-1">
-                        {section.subStats}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* High-Density Symbol Rows */}
-                  {!section.isCollapsed && (
-                    <div className="divide-y divide-[#1F2233]/25">
-                      {sortedSyms.length === 0 ? (
-                        <div className="px-4 py-3 text-xs text-slate-400 italic text-center">
-                          ไม่มีหุ้นในหมวดนี้
-                        </div>
-                      ) : (
-                        sortedSyms.map((symbol) => {
-                          const quote = watchlistPrices[symbol];
-                          const isCurrency = symbol.includes('=X');
-                          const radarData = symbol ? radarMap[symbol.toUpperCase()] : null;
-                          const tierInfo = getTierVisualInfo(radarData, symbol, isCurrency);
-
-                          const price = quote?.price ?? 0;
-                          const change = quote?.change ?? 0;
-                          const percentChange = quote?.percentChange ?? 0;
-                          const isPositive = percentChange >= 0;
-                          const isZero = percentChange === 0;
-
-                          // Price formatting
-                          let formattedPrice = price.toFixed(2);
-                          if (price > 1000) {
-                            formattedPrice = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                          } else if (price < 1 && price > 0) {
-                            formattedPrice = price.toFixed(4);
-                          }
-
-                          return (
-                            <div
-                              key={symbol}
-                              onClick={() => handleStockClick(symbol)}
-                              className="h-[34px] px-3 grid grid-cols-12 items-center hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer group relative select-none"
-                            >
-                              {/* Left Cyber Indicator */}
-                              {tierInfo.isFireOrb ? (
-                                <div
-                                  className={clsx(
-                                    'absolute left-[1px] top-1/2 -translate-y-1/2 transition-all z-10',
-                                    tierInfo.spineClass
-                                  )}
-                                />
-                              ) : (
-                                <div
-                                  className={clsx(
-                                    'absolute left-[2px] top-[4px] bottom-[4px] rounded-full transition-all z-10 w-[4px]',
-                                    tierInfo.spineClass
-                                  )}
-                                />
-                              )}
-
-                              {/* Col 1: Symbol & Dot */}
-                              <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
-                                <TierBadgeIndicator
-                                  symbol={symbol}
-                                  radarData={radarData}
-                                  isCurrency={isCurrency}
-                                />
-                                <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
-                                  {symbol}
-                                </span>
-                              </div>
-
-                              {/* Col 2: Last Price */}
-                              <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1">
-                                {quote ? formattedPrice : '—'}
-                              </div>
-
-                              {/* Col 3: Change ($) */}
-                              <div
-                                className={clsx(
-                                  "col-span-2 text-right font-mono text-[13px] font-normal truncate",
-                                  isZero ? "text-slate-300" : isPositive ? "text-emerald-400" : "text-rose-400"
-                                )}
-                              >
-                                {quote ? (isPositive && change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2)) : '—'}
-                              </div>
-
-                              {/* Col 4: Change (%) & Jump Icon */}
-                              <div className="col-span-2 text-right relative flex items-center justify-end">
-                                <span
-                                  className={clsx(
-                                    "font-mono text-[13px] font-normal transition-opacity",
-                                    isZero ? "text-slate-300" : isPositive ? "text-emerald-400" : "text-rose-400"
-                                  )}
-                                >
-                                  {quote ? (isPositive && percentChange > 0 ? `+${percentChange.toFixed(2)}%` : `${percentChange.toFixed(2)}%`) : '—'}
-                                </span>
-
-                                {/* Quick Chart Launch Button */}
-                                <button
-                                  onClick={(e) => handleJumpToChart(e, symbol)}
-                                  className="opacity-0 group-hover:opacity-100 ml-1 p-0.5 text-cyan-400 hover:text-white hover:bg-cyan-500/20 rounded transition-all"
-                                  title="Open in X-Chart"
-                                >
-                                  <CandlestickChart className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
+          return (
+            <div key={section.id} className="bg-[#0F111A]">
+              {/* Section Accordion Header (Height: ~32px) */}
+              <div
+                onClick={() => toggleSectionCollapse(section.id)}
+                className="h-8 px-3 bg-[#131724]/90 border-b border-[#1F2233]/60 flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none transition-colors group"
+              >
+                <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
+                  {section.isCollapsed ? (
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors shrink-0" />
                   )}
+                  <span className="text-xs">{section.icon}</span>
+                  <span className="tracking-wide uppercase text-slate-200 group-hover:text-white font-bold text-[13px] truncate">
+                    {section.name}
+                  </span>
+                  <span className={clsx(
+                    "text-xs px-2 py-0.5 rounded-full font-mono font-bold shrink-0",
+                    section.badgeClass || "text-slate-300 bg-white/10"
+                  )}>
+                    {matchingSymbols.length}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
 
-        {/* MODE 2: MY PORT TAB (Current Holdings & Liquid Cash) */}
-        {activeTabMode === 'myport' && (
-          <div>
-            {/* Holdings Rows */}
-            <div className="divide-y divide-[#1F2233]/25">
-              {sortedHoldings.length === 0 ? (
-                <div className="p-6 text-center text-slate-400 text-[13px]">
-                  No holdings in this portfolio
-                </div>
-              ) : (
-                sortedHoldings
-                  .filter(h => !searchQuery.trim() || h.symbol.toUpperCase().includes(searchQuery.trim().toUpperCase()))
-                  .map((h) => {
-                    const quote = watchlistPrices[h.symbol] || { price: h.lastPrice, change: 0, percentChange: h.dayChangePercent };
-                    const radarData = h.symbol ? radarMap[h.symbol.toUpperCase()] : null;
-                    const tierInfo = getTierVisualInfo(radarData, h.symbol, false);
+                {section.subStats && (
+                  <span className="text-xs text-yellow-300/80 font-mono shrink-0 ml-1">
+                    {section.subStats}
+                  </span>
+                )}
+              </div>
 
-                    const price = quote?.price ?? h.lastPrice ?? 0;
-                    const change = quote?.change ?? 0;
-                    const percentChange = quote?.percentChange ?? h.dayChangePercent ?? 0;
-                    const isPositive = percentChange >= 0;
-                    const isZero = percentChange === 0;
+              {/* High-Density Symbol Rows */}
+              {!section.isCollapsed && (
+                <div className="divide-y divide-[#1F2233]/25">
+                  {sortedSyms.length === 0 ? (
+                    <div className="px-4 py-3 text-xs text-slate-400 italic text-center">
+                      ไม่มีหุ้นในหมวดนี้
+                    </div>
+                  ) : (
+                    sortedSyms.map((symbol) => {
+                      const quote = watchlistPrices[symbol];
+                      const isCurrency = symbol.includes('=X');
+                      const radarData = symbol ? radarMap[symbol.toUpperCase()] : null;
+                      const tierInfo = getTierVisualInfo(radarData, symbol, isCurrency);
 
-                    let formattedPrice = price.toFixed(2);
-                    if (price > 1000) {
-                      formattedPrice = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    }
+                      const price = quote?.price ?? 0;
+                      const change = quote?.change ?? 0;
+                      const percentChange = quote?.percentChange ?? 0;
+                      const isPositive = percentChange >= 0;
+                      const isZero = percentChange === 0;
 
-                    return (
-                      <div
-                        key={h.symbol}
-                        onClick={() => handleStockClick(h.symbol)}
-                        className="h-[34px] px-3 grid grid-cols-12 items-center hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer group relative select-none"
-                      >
-                        {/* Left Cyber Indicator */}
-                        {tierInfo.isFireOrb ? (
-                          <div
-                            className={clsx(
-                              'absolute left-[1px] top-1/2 -translate-y-1/2 transition-all z-10',
-                              tierInfo.spineClass
-                            )}
-                          />
-                        ) : (
-                          <div
-                            className={clsx(
-                              'absolute left-[2px] top-[4px] bottom-[4px] rounded-full transition-all z-10 w-[4px]',
-                              tierInfo.spineClass
-                            )}
-                          />
-                        )}
+                      // Price formatting
+                      let formattedPrice = price.toFixed(2);
+                      if (price > 1000) {
+                        formattedPrice = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      } else if (price < 1 && price > 0) {
+                        formattedPrice = price.toFixed(4);
+                      }
 
-                        {/* Col 1: Symbol & Weight */}
-                        <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
-                          <TierBadgeIndicator
-                            symbol={h.symbol}
-                            radarData={radarData}
-                          />
-                          <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
-                            {h.symbol}
-                          </span>
-                          <span className="text-xs px-1.5 py-0.2 rounded bg-white/[0.06] text-slate-400 font-mono shrink-0">
-                            {h.weightPercent.toFixed(1)}%
-                          </span>
-                        </div>
-
-                        {/* Col 2: Price */}
-                        <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1">
-                          {formattedPrice}
-                        </div>
-
-                        {/* Col 3: Change */}
+                      return (
                         <div
-                          className={clsx(
-                            "col-span-2 text-right font-mono text-[13px] font-normal truncate",
-                            isZero ? "text-slate-300" : isPositive ? "text-emerald-400" : "text-rose-400"
-                          )}
+                          key={symbol}
+                          onClick={() => handleStockClick(symbol)}
+                          className="h-[34px] px-3 grid grid-cols-12 items-center hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer group relative select-none"
                         >
-                          {isZero ? '0.00' : `${isPositive && change > 0 ? '+' : ''}${change.toFixed(2)}`}
-                        </div>
+                          {/* Left Cyber Indicator */}
+                          {tierInfo.isFireOrb ? (
+                            <div
+                              className={clsx(
+                                'absolute left-[1px] top-1/2 -translate-y-1/2 transition-all z-10',
+                                tierInfo.spineClass
+                              )}
+                            />
+                          ) : (
+                            <div
+                              className={clsx(
+                                'absolute left-[2px] top-[4px] bottom-[4px] rounded-full transition-all z-10 w-[4px]',
+                                tierInfo.spineClass
+                              )}
+                            />
+                          )}
 
-                        {/* Col 4: Percent Change */}
-                        <div className="col-span-2 text-right relative flex items-center justify-end">
-                          <span
+                          {/* Col 1: Symbol & Dot */}
+                          <div className="col-span-5 flex items-center gap-1.5 overflow-hidden pr-1">
+                            <TierBadgeIndicator
+                              symbol={symbol}
+                              radarData={radarData}
+                              isCurrency={isCurrency}
+                            />
+                            <span className="text-[13px] font-normal tracking-tight truncate font-mono text-slate-100 group-hover:text-white">
+                              {symbol}
+                            </span>
+                          </div>
+
+                          {/* Col 2: Last Price */}
+                          <div className="col-span-3 text-right font-mono text-[13px] font-normal text-slate-200 group-hover:text-white pr-1">
+                            {quote ? formattedPrice : '—'}
+                          </div>
+
+                          {/* Col 3: Change ($) */}
+                          <div
                             className={clsx(
-                              "font-mono text-[13px] font-normal",
+                              "col-span-2 text-right font-mono text-[13px] font-normal truncate",
                               isZero ? "text-slate-300" : isPositive ? "text-emerald-400" : "text-rose-400"
                             )}
                           >
-                            {isZero ? '0.00%' : `${isPositive && percentChange > 0 ? '+' : ''}${percentChange.toFixed(2)}%`}
-                          </span>
+                            {quote ? (isPositive && change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2)) : '—'}
+                          </div>
 
-                          <button
-                            onClick={(e) => handleJumpToChart(e, h.symbol)}
-                            className="opacity-0 group-hover:opacity-100 ml-1 p-0.5 text-cyan-400 hover:text-white hover:bg-cyan-500/20 rounded transition-all"
-                            title="Open in X-Chart"
-                          >
-                            <CandlestickChart className="w-3.5 h-3.5" />
-                          </button>
+                          {/* Col 4: Change (%) & Jump Icon */}
+                          <div className="col-span-2 text-right relative flex items-center justify-end">
+                            <span
+                              className={clsx(
+                                "font-mono text-[13px] font-normal transition-opacity",
+                                isZero ? "text-slate-300" : isPositive ? "text-emerald-400" : "text-rose-400"
+                              )}
+                            >
+                              {quote ? (isPositive && percentChange > 0 ? `+${percentChange.toFixed(2)}%` : `${percentChange.toFixed(2)}%`) : '—'}
+                            </span>
+
+                            {/* Quick Chart Launch Button */}
+                            <button
+                              onClick={(e) => handleJumpToChart(e, symbol)}
+                              className="opacity-0 group-hover:opacity-100 ml-1 p-0.5 text-cyan-400 hover:text-white hover:bg-cyan-500/20 rounded transition-all"
+                              title="Open in X-Chart"
+                            >
+                              <CandlestickChart className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })
+                  )}
+                </div>
               )}
-
-              {/* Pinned Cash Row inside My Port */}
-              <div className="h-[38px] px-3 bg-[#0A0D15] flex items-center justify-between border-t border-[#2A2E45]">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                    <Wallet className="w-3 h-3" />
-                  </div>
-                  <span className="text-[13px] font-bold text-white font-heading">CASH</span>
-                  <span className="text-xs text-[#CBD5E1]">Liquid Funds</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[13px] font-bold text-emerald-400 font-mono">
-                    {formatPrimary(cashBalance)}
-                  </span>
-                </div>
-              </div>
             </div>
-          </div>
-        )}
+          );
+        })}
 
       </div>
     </div>
