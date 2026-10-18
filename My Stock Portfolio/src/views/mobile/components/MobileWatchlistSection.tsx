@@ -391,23 +391,19 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                     onClick={() => onSelectSymbol(h.symbol)}
                     className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
                   >
-                    {/* Left: Ticker + Holding Details + Tier */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600/30 via-purple-600/20 to-slate-800/60 border border-white/[0.1] flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-inner">
-                        {h.symbol.slice(0, 2)}
-                      </div>
-
+                    {/* Left: Ticker + Weight + Tier + Holding details */}
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-sm font-bold text-white tracking-tight">{h.symbol}</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-base font-bold text-white tracking-tight font-mono">{h.symbol}</span>
                           {tierCode && (
                             <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
                           )}
-                          <span className="text-xs px-1.5 py-0.2 rounded bg-white/[0.06] text-slate-300 font-medium">
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300 font-medium font-mono">
                             {h.weightPercent.toFixed(1)}%
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 font-mono">
                           <span>{h.quantity.toLocaleString('en-US', { maximumFractionDigits: 3 })} หุ้น</span>
                           <span>•</span>
                           <span>ทุน ${h.avgCost.toFixed(2)}</span>
@@ -418,13 +414,13 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                     {/* Right: Price + Day Change + Total Return */}
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <div className="text-sm font-bold text-white tracking-tight">
+                        <div className="text-sm font-bold text-slate-100 font-mono tracking-tight">
                           ${currentPrice.toFixed(2)}
                         </div>
                         <div className="flex items-center justify-end gap-1.5 mt-0.5">
                           {/* Day % pill */}
                           <span className={clsx(
-                            "inline-flex items-center text-xs font-bold px-1.5 py-0.2 rounded",
+                            "inline-flex items-center text-xs font-bold px-1.5 py-0.5 rounded font-mono",
                             isPositiveDay ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
                           )}>
                             {isPositiveDay ? '+' : ''}{dayChange.toFixed(2)}%
@@ -432,21 +428,12 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                         </div>
                         {/* Total Return subtext */}
                         <div className={clsx(
-                          "text-xs font-medium mt-0.5",
+                          "text-xs font-medium mt-0.5 font-mono",
                           isPositiveTotal ? "text-emerald-400/80" : "text-rose-400/80"
                         )}>
                           P&L {isPositiveTotal ? '+' : ''}{h.totalReturnPercent.toFixed(1)}%
                         </div>
                       </div>
-
-                      {/* Jump to Chart Icon Button */}
-                      <button
-                        onClick={(e) => handleOpenChart(e, h.symbol)}
-                        className="p-2 rounded-lg bg-white/[0.04] hover:bg-[#823AFD]/20 border border-white/[0.06] hover:border-[#823AFD]/40 text-slate-400 hover:text-white transition-all active:scale-90"
-                        title="เปิดูกราฟ X-Chart"
-                      >
-                        <CandlestickChart className="w-4 h-4" />
-                      </button>
                     </div>
                   </div>
                 );
@@ -519,67 +506,38 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                     onClick={() => onSelectSymbol(item.symbol)}
                     className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
                   >
-                    {/* Left: Ticker + Category + In Port Indicator */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-600/20 via-orange-600/20 to-slate-800/60 border border-amber-500/20 flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-inner">
-                        {item.symbol.slice(0, 2)}
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-sm font-bold text-white tracking-tight">{item.symbol}</span>
-                          {tierCode && (
-                            <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
-                          )}
-                          {heldInfo && (
-                            <span className="text-xs px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold">
-                              ในพอร์ต {heldInfo.weightPercent.toFixed(1)}%
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 truncate">
-                          <span className="truncate">{item.name}</span>
-                          <span>•</span>
-                          <span className={clsx(
-                            "font-medium",
-                            item.category === 'Core' ? "text-amber-400" : "text-purple-400"
-                          )}>
-                            {item.category} {item.target_percent}%
-                          </span>
-                        </div>
-                      </div>
+                    {/* Left: Ticker + Tier Badge + In-Port Indicator */}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-base font-bold text-white tracking-tight font-mono">{item.symbol}</span>
+                      {tierCode && (
+                        <TierBadgeIndicator tier={tierCode} size="xs" showLabel={true} />
+                      )}
+                      {heldInfo && (
+                        <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold font-mono">
+                          ในพอร์ต {heldInfo.weightPercent.toFixed(1)}%
+                        </span>
+                      )}
                     </div>
 
                     {/* Right: Price + Day Change */}
                     <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-right">
-                        <div className="text-sm font-bold text-white tracking-tight">
+                      <div className="text-right font-mono">
+                        <span className="text-sm font-bold text-slate-100 tracking-tight">
                           {quote.price > 0 ? `$${quote.price.toFixed(2)}` : '--'}
-                        </div>
-                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                          <span className={clsx(
-                            "inline-flex items-center text-xs font-bold px-1.5 py-0.2 rounded",
-                            isPositiveDay ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
-                          )}>
-                            {quote.percentChange !== 0 ? (
-                              <>
-                                {isPositiveDay ? '+' : ''}{quote.percentChange.toFixed(2)}%
-                              </>
-                            ) : (
-                              '0.00%'
-                            )}
-                          </span>
-                        </div>
+                        </span>
                       </div>
-
-                      {/* Jump to Chart Icon Button */}
-                      <button
-                        onClick={(e) => handleOpenChart(e, item.symbol)}
-                        className="p-2 rounded-lg bg-white/[0.04] hover:bg-[#823AFD]/20 border border-white/[0.06] hover:border-[#823AFD]/40 text-slate-400 hover:text-white transition-all active:scale-90"
-                        title="เปิดดูกราฟ X-Chart"
-                      >
-                        <CandlestickChart className="w-4 h-4" />
-                      </button>
+                      <span className={clsx(
+                        "inline-flex items-center text-xs font-bold px-2 py-1 rounded-md min-w-[64px] justify-center font-mono",
+                        isPositiveDay ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                      )}>
+                        {quote.percentChange !== 0 ? (
+                          <>
+                            {isPositiveDay ? '+' : ''}{quote.percentChange.toFixed(2)}%
+                          </>
+                        ) : (
+                          '0.00%'
+                        )}
+                      </span>
                     </div>
                   </div>
                 );
@@ -637,26 +595,18 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                     className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
                   >
                     {/* Left: Flag/Emoji + Symbol + Name */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-[#131B2E] border border-white/[0.08] flex items-center justify-center text-base shrink-0 shadow-inner">
-                        {idx.flag}
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-white tracking-tight">{idx.symbol}</span>
-                          <span className="text-xs text-slate-400 truncate">{idx.name}</span>
-                        </div>
-                        <div className="text-xs text-slate-400 mt-0.5">
-                          {idx.sub}
-                        </div>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-lg leading-none shrink-0">{idx.flag}</span>
+                      <div className="min-w-0 flex items-center gap-2">
+                        <span className="text-base font-bold text-white tracking-tight font-mono">{idx.symbol}</span>
+                        <span className="text-xs text-slate-400 truncate">{idx.name}</span>
                       </div>
                     </div>
 
                     {/* Right: Price + Day Change */}
                     <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-right">
-                        <div className="text-sm font-bold text-white tracking-tight">
+                      <div className="text-right font-mono">
+                        <span className="text-sm font-bold text-slate-100 tracking-tight">
                           {quote.price > 0 ? (
                             idx.symbol === 'BTC-USD'
                               ? `$${quote.price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
@@ -664,31 +614,20 @@ export const MobileWatchlistSection: React.FC<MobileWatchlistSectionProps> = ({
                           ) : (
                             '--'
                           )}
-                        </div>
-                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                          <span className={clsx(
-                            "inline-flex items-center text-xs font-bold px-1.5 py-0.2 rounded",
-                            isPositiveDay ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
-                          )}>
-                            {quote.percentChange !== 0 ? (
-                              <>
-                                {isPositiveDay ? '+' : ''}{quote.percentChange.toFixed(2)}%
-                              </>
-                            ) : (
-                              '0.00%'
-                            )}
-                          </span>
-                        </div>
+                        </span>
                       </div>
-
-                      {/* Jump to Chart Icon Button */}
-                      <button
-                        onClick={(e) => handleOpenChart(e, idx.symbol)}
-                        className="p-2 rounded-lg bg-white/[0.04] hover:bg-[#823AFD]/20 border border-white/[0.06] hover:border-[#823AFD]/40 text-slate-400 hover:text-white transition-all active:scale-90"
-                        title="เปิดดูกราฟ X-Chart"
-                      >
-                        <CandlestickChart className="w-4 h-4" />
-                      </button>
+                      <span className={clsx(
+                        "inline-flex items-center text-xs font-bold px-2 py-1 rounded-md min-w-[64px] justify-center font-mono",
+                        isPositiveDay ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                      )}>
+                        {quote.percentChange !== 0 ? (
+                          <>
+                            {isPositiveDay ? '+' : ''}{quote.percentChange.toFixed(2)}%
+                          </>
+                        ) : (
+                          '0.00%'
+                        )}
+                      </span>
                     </div>
                   </div>
                 );

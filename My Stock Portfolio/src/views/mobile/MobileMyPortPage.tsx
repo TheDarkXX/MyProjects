@@ -49,7 +49,7 @@ export const MobileMyPortPage: React.FC = () => {
   const { changeSymbolOnActiveTab, watchlistPrices } = useXChartStore();
   const { compactTiers, radar } = useProject2xStore();
 
-  const [timeRange, setTimeRange] = useState<DashboardTimeRange>('ALL');
+  const [timeRange, setTimeRange] = useState<DashboardTimeRange>('1W');
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
 
   const activePortfolio = (portfolios || []).find((p) => p.id === activePortfolioId);
@@ -334,6 +334,24 @@ export const MobileMyPortPage: React.FC = () => {
     return map;
   }, [radar?.rows, compactTiers]);
 
+  // Calculate return of individual stock based on selected timeRange
+  const getStockTimeframeReturn = (symbol: string, defaultDayChange: number, totalReturnPct: number) => {
+    if (timeRange === '1D') return defaultDayChange;
+    if (timeRange === 'ALL') return totalReturnPct;
+    const hist = historical[symbol];
+    if (!hist || hist.length < 2) return defaultDayChange;
+    const startDate = getStartDateForRange(timeRange, earliestTxDate);
+    const relevant = hist.filter((p: any) => (p.date || '').split('T')[0] >= startDate);
+    if (relevant.length >= 2) {
+      const startPrice = relevant[0].close ?? relevant[0].price;
+      const endPrice = relevant[relevant.length - 1].close ?? relevant[relevant.length - 1].price;
+      if (startPrice > 0) {
+        return ((endPrice - startPrice) / startPrice) * 100;
+      }
+    }
+    return defaultDayChange;
+  };
+
   return (
     <div className="space-y-4 animate-fade-in-up pb-8 max-w-2xl mx-auto select-none">
       {/* 1. Hero Net Worth & Chart */}
@@ -347,7 +365,7 @@ export const MobileMyPortPage: React.FC = () => {
         formatPrimary={formatPrimary}
       />
 
-      {/* 2. Quick Stats Strip */}
+      {/* 2. Quick Stats Strip (Dynamically linked to timeRange) */}
       <QuickStatsStrip
         netInvested={netInvested}
         totalPnl={totalPnl}
@@ -358,6 +376,9 @@ export const MobileMyPortPage: React.FC = () => {
         dividendYieldOnCost={dividendYieldOnCost}
         cashBalance={cashBalance}
         formatPrimary={formatPrimary}
+        timeRange={timeRange}
+        periodPnl={displayPnl}
+        periodPnlPercent={displayPnlPercent}
       />
 
       {/* 3. Holdings Positions Breakdown */}
@@ -383,7 +404,7 @@ export const MobileMyPortPage: React.FC = () => {
           <div className="col-span-5 text-left">Position</div>
           <div className="col-span-3 text-right pr-1">Last / Value</div>
           <div className="col-span-2 text-right">Chg ($)</div>
-          <div className="col-span-2 text-right">Chg (%)</div>
+          <div className="col-span-2 text-right">Chg ({timeRange})</div>
         </div>
 
         {/* Holdings Rows */}
@@ -398,6 +419,9 @@ export const MobileMyPortPage: React.FC = () => {
             const percentChange = quote?.percentChange ?? h.dayChangePercent ?? 0;
             const isPositive = percentChange >= 0;
             const isZero = percentChange === 0;
+
+            const displayStockPercent = getStockTimeframeReturn(h.symbol, percentChange, h.totalReturnPercent);
+            const isDisplayStockPos = displayStockPercent >= 0;
 
             let formattedPrice = price.toFixed(2);
             if (price > 1000) {
@@ -448,12 +472,12 @@ export const MobileMyPortPage: React.FC = () => {
                   {isZero ? '0.00' : `${isPositive && change > 0 ? '+' : ''}${change.toFixed(2)}`}
                 </div>
 
-                {/* Col 4: Percent Change & Jump Icon */}
+                {/* Col 4: Percent Change in selected TimeRange */}
                 <div className="col-span-2 text-right flex items-center justify-end">
                   <span className={clsx("font-mono text-[13px] font-bold px-1.5 py-0.5 rounded-lg", 
-                    isPositive ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                    isDisplayStockPos ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
                   )}>
-                    {isPositive ? '+' : ''}{percentChange.toFixed(2)}%
+                    {isDisplayStockPos ? '+' : ''}{displayStockPercent.toFixed(2)}%
                   </span>
                 </div>
               </div>
