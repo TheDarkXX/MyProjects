@@ -1,15 +1,15 @@
 ---
 name: metaugc
-version: "1.0.0"
-updated_at: "2026-10-20"
+version: "1.1.0"
+updated_at: "2026-10-21"
 description: >-
-  Meta AI UGC Video Production Engine — ควบคุมสายพานผลิตวิดีโอโฆษณา DoctorBank 40 วินาทีอัตโนมัติด้วย Meta AI ผ่าน 3 สเต็ปเหล็ก (Subagent Browser Handoff -> Playwright CDP 9222 -> Scene Rendering -> Master Concatenation) รองรับ dry-run, resume ซีนที่ค้าง, และตรวจสอบความสมบูรณ์ของ Master MP4 ใช้เมื่อ: /metaugc [path/to/storyboard.md] หรือ /ugcvdo [คำสั่งเรนเดอร์]
+  Meta AI UGC Video Production Engine — ควบคุมสายพานผลิตวิดีโอโฆษณา DoctorBank 40 วินาทีอัตโนมัติด้วย Meta AI ผ่าน 3 สเต็ปเหล็ก (Subagent Browser Handoff -> Playwright CDP 9222 -> Scene Rendering -> Master Concatenation & Auto-Sync to 00_MASTER_PREVIEWS Hub) รองรับ dry-run, resume ซีนที่ค้าง, และตรวจสอบความสมบูรณ์ของ Master MP4 ใช้เมื่อ: /metaugc [path/to/storyboard.md] หรือ /ugcvdo [คำสั่งเรนเดอร์]
 ---
 
 # 🎬 Skill: `/metaugc` (Meta AI UGC Production Engine)
 
 ## 📌 วัตถุประสงค์
-ควบคุมสายพานผลิตวิดีโอโฆษณาอัตโนมัติด้วย Meta AI โดยแปลงพิมพ์เขียวจาก `storyboard.md` เป็น Master Video ความยาว 40 วินาทีเต็ม (4 ซีนต่อเนื่องแบบ Chained Endframe) พร้อมระบบป้องกัน Cloudflare/Session Drop ด้วย **3 สเต็ปเหล็ก (The 3-Phase State Machine)**
+ควบคุมสายพานผลิตวิดีโอโฆษณาอัตโนมัติด้วย Meta AI โดยแปลงพิมพ์เขียวจาก `storyboard.md` เป็น Master Video ความยาว 40 วินาทีเต็ม (4 ซีนต่อเนื่องแบบ Chained Endframe) พร้อมระบบป้องกัน Cloudflare/Session Drop ด้วย **3 สเต็ปเหล็ก (The 3-Phase State Machine)** และส่งเข้า **Preview Hub (`00_MASTER_PREVIEWS/`)** อัตโนมัติทันที
 
 ---
 
@@ -37,10 +37,12 @@ description: >-
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ [สเต็ปที่ 3: ASSEMBLY & VALIDATION] (Atomic Master Concat)                  │
+│ [สเต็ปที่ 3: ASSEMBLY & HUB SYNC] (Atomic Master Concat & Preview Mirror)   │
 │ 1. ต่อ 4 คลิปเข้าด้วยกันผ่าน FFmpeg: [s1 + s2 + s3 + s4] = 40 วินาที        │
 │ 2. ตรวจสอบขนาดไฟล์และความสมบูรณ์ (ต้อง > 10 MB และอ่านเฟรมได้)                 │
 │ 3. บันทึกผลสำเร็จลงในตาราง Master Index และรายงานขนาดไฟล์ทันที                │
+│ 4. ⚡ Auto-Sync Hub: ส่ง Master Video เข้า 00_MASTER_PREVIEWS/ อัตโนมัติ       │
+│    (Smart Mirror Cache รองรับทั้ง NTFS Hardlink และ Virtual Drive อย่าง pCloud) │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -74,6 +76,12 @@ python "P:\AI\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --st
 python "P:\AI\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --storyboard "P:\AI\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md" --from-step concatenate
 ```
 
+### 5. โหมดซิงก์คลังพรีวิวรวม (Preview Hub Sync)
+หากมีการเพิ่มหรือแก้ไขคลิปมาสเตอร์แบบ Manual หรือต้องการตรวจเช็คคลังพรีวิวรวม `00_MASTER_PREVIEWS`:
+```powershell
+python "P:\AI\The Viral\Ads DRB\tools\sync_master_previews.py"
+```
+
 ---
 
 ## 🛡️ การรับมือข้อผิดพลาด (Failure Armor)
@@ -84,6 +92,7 @@ python "P:\AI\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --st
 | `Missing Product Reference` | ไฟล์ภาพใน `Brand_Refs/` ถูกย้ายหรือพิมพ์ผิด | ตรวจสอบผ่าน `ads_drb_paths.py` ว่าภาพสินค้า 3Ref อยู่ครบ |
 | `Meta AI Filter / Warning` | มีคำต้องห้ามเกี่ยวกับยา/เคมี/อย. | ดัดแปลงคำเคลมเป็นภาษา UGC รีวิวธรรมชาติ (ตัดคำว่า `สารสื่อประสาท`, `มี อย.`) |
 | `Concat Master 0-byte` | FFmpeg หาไม่เจอหรือไฟล์ซีนย่อยไม่สมบูรณ์ | ระบบจะคงไฟล์ชั่วคราวไว้ และไม่ทับไฟล์ `master.mp4` เดิมเด็ดขาด |
+| `Preview Hub Sync Notice` | ไดรฟ์ไม่รองรับ Hardlink | ระบบจะ Fallback สลับเป็น Smart Mirror Cache (ก๊อปปี้ความเร็วสูง) อัตโนมัติ |
 
 ---
 
