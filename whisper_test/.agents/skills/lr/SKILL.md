@@ -1,10 +1,11 @@
 ---
 name: lr
-version: "1.3.0"
+version: "1.4.0"
 description: >-
   Intelligent Portrait Development and GPU Direct Export Engine for LightCraft and Lightroom workflows.
-  Features Korean Idol Glass Skin (ขาว ใส อมชมพู), 4-Dimension Situational Radar, Zone VIII- Luminous Skin Pop,
-  Universal Multi-Face Glow, WB Kelvin Floor 5800K clamp, and Orange Luminance +22 boost.
+  Features Korean Idol Glass Skin (ขาว ใส อมชมพู), Mandatory develop.reset pure-canvas guarantee,
+  4-Dimension Situational Radar, Zone VIII- Luminous Skin Pop, Universal Multi-Face Glow,
+  WB Kelvin Floor 5800K clamp, and Orange Luminance +22 boost.
   Supports /lr (Smart Default), /lrlive (Live GUI Sync), /lrbatch (Batch Render JPEG), and /lrexport (One-Click GPU Fast Export 2048px).
 ---
 
@@ -42,17 +43,20 @@ description: >-
 
 ---
 
-## 🧬 5 เสาหลักสถาปัตยกรรม (Core Architectural Pillars)
+## 🧬 6 เสาหลักสถาปัตยกรรม (Core Architectural Pillars)
 
-1. **Target Skin Zone VIII- (`0.82`):**
+1. **Mandatory Pure Clean Reset (`develop.reset` — กฎเหล็กล้างกระดานก่อนสวมพรีเซ็ต):**
+   - **ปัญหาคอขาดบาดตาย:** ใน LightCraft / RAW Developer หากสวมพรีเซ็ตใหม่ทับพรีเซ็ตเดิมโดยไม่สั่ง Reset ค่าสไลเดอร์, Curve, และ Tone ย่อยจากพรีเซ็ตเก่าจะค้างและผสมทับซ้อน (Compounded Edits) จนทำให้สีเพี้ยน/สกินโทนเน่า
+   - **กฎเหล็กเด็ดขาด (Iron Rule):** ทุกครั้งที่สั่งรัน Live Sync หรือสวมพรีเซ็ตใหม่ ไม่ว่าจะรันครั้งแรกหรือรันซ้ำ **ต้องสั่ง `develop.reset` ล้างค่าเดิมทิ้ง 100% จนเป็นกระดาษขาวสะอาด** ก่อนยิง `preset.apply` และ `develop.set` เสมอ!
+2. **Target Skin Zone VIII- (`0.82`):**
    - คำนวณความสว่างผิวจริงด้วยมาตรฐาน Rec.709 Photometric ดันผิวขาวสว่างสดใส สไตล์ High-Key หมดปัญหาภาพแอบอันเดอร์ทึมๆ
-2. **Whites (+20 ถึง +24) & Highlights Shield (-48 ถึง -55):**
+3. **Whites (+20 ถึง +24) & Highlights Shield (-48 ถึง -55):**
    - เสื้อเชิ้ตขาว เค้ก ป้าย และประกายตาขาวสว่างวิ้งสะดุดตา โดยที่หน้าผาก จมูก และเทียนวันเกิดไม่หลุดขาว (Clipped)
-3. **Pop Contrast (+12 ถึง +13) & Airy Shadows (+36 ถึง +40):**
+4. **Pop Contrast (+12 ถึง +13) & Airy Shadows (+36 ถึง +40):**
    - ภาพคมชัดมีมิติ สีสูทและลายผ้าเด้งชัด ไร้เงาดำจมทึบตัน (`Blacks: -1 ถึง 0`)
-4. **WB Kelvin Floor Clamp (`5800K`):**
+5. **WB Kelvin Floor Clamp (`5800K`):**
    - ล็อกกันภาพติดฟ้าซีดถาวร ผิวคงความอุ่นละมุนและมีเลือดฝาดด้วย **Tint `+6 ถึง +10`**
-5. **Universal Multi-Face Glow Masking & Orange Lum (+22):**
+6. **Universal Multi-Face Glow Masking & Orange Lum (+22):**
    - สแกนและสวม Face Glow Mask ให้กับ **"ทุกคนในภาพ"** (พ่อ, แม่, ลูกทุกคน) ไม่ทิ้งใครไว้ข้างหลัง
    - เพิ่ม **Orange Luminance (+22)** เจาะจงความสว่างเฉพาะเม็ดสีผิวคนเอเชีย ผิวใสกระจ่างดุจดาราเกาหลี
 
