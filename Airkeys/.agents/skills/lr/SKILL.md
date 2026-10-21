@@ -1,11 +1,11 @@
 ---
 name: lr
-version: "1.6.0"
+version: "1.7.0"
 description: >-
   Intelligent Portrait and Culinary Food Development and GPU Direct Export Engine for LightCraft and Lightroom workflows.
-  Features Korean Idol Glass Skin (ขาว ใส อมชมพูพีชระเรื่อ), Salient Neutral White & Neutral Gray Saliency Detection (Retinex Eye Emulation),
-  Dynamic Face-Scale Aware Auto-Exposure (+0.45 to +1.55 EV), DoctorBank 2026 Food Suite (Cafe Pop, Dark Michelin, Vivid Feast),
-  Mandatory develop.reset pure-canvas guarantee, 4-Dimension Situational Radar, Universal Multi-Face Glow, and Orange Luminance +18 boost.
+  Features Korean Idol Ultra Pop (ขาว ป๊อป เด้ง อมชมพูพีชระเรื่อ), Salient Neutral White & Neutral Gray Detection (Retinex Eye Emulation),
+  Dynamic Face-Scale Aware Auto-Exposure (+1.28 to +1.58 EV floor), DoctorBank 2026 Food Suite (Cafe Pop, Dark Michelin, Vivid Feast),
+  Mandatory develop.reset pure-canvas guarantee, 4-Dimension Situational Radar, Universal Multi-Face Glow, and Orange Luminance +24 boost.
   Supports /lr (Smart Default), /lrlive (Live GUI Sync), /lrbatch (Batch Render JPEG), and /lrexport (One-Click GPU Fast Export 2048px).
 ---
 
@@ -48,16 +48,16 @@ description: >-
 1. **Mandatory Pure Clean Reset (`develop.reset` — กฎเหล็กล้างกระดานก่อนสวมพรีเซ็ต):**
    - **ปัญหาคอขาดบาดตาย:** ใน LightCraft / RAW Developer หากสวมพรีเซ็ตใหม่ทับพรีเซ็ตเดิมโดยไม่สั่ง Reset ค่าสไลเดอร์, Curve, และ Tone ย่อยจากพรีเซ็ตเก่าจะค้างและผสมทับซ้อน (Compounded Edits) จนทำให้สีเพี้ยน/สกินโทนเน่า
    - **กฎเหล็กเด็ดขาด (Iron Rule):** ทุกครั้งที่สั่งรัน Live Sync หรือสวมพรีเซ็ตใหม่ ไม่ว่าจะรันครั้งแรกหรือรันซ้ำ **ต้องสั่ง `develop.reset` ล้างค่าเดิมทิ้ง 100% จนเป็นกระดาษขาวสะอาด** ก่อนยิง `preset.apply` และ `develop.set` เสมอ!
-2. **Salient Neutral White & Neutral Gray Saliency Detection (Retinex Eye Emulation):**
-   - เลียนแบบสายตามนุษย์: กวาดหาวัตถุสีขาวบริสุทธิ์ (กระดาษรองขนม, แป้ง, จานชาม, ขอบเสื้อ) และเทากลาง กักกันผิวหนังด้วย MediaPipe/YuNet แล้วคำนวณปรับ `wb.temp` และ `wb.tint` แบบไดนามิก เพื่อให้สีขาวเป็น $R = G = B$ ปราศจากคราบเหลืองเลี่ยน
-3. **Face-Scale Aware Dynamic Exposure (+0.45 ถึง +1.55 EV):**
-   - ปลดล็อกเพดานแสงคงที่ โดยชดเชยแสงตามพื้นที่ใบหน้าหลัก (`max_face_area`) สัมพันธ์กับความสว่างผิวจริง ภาพมุมแคบไม่โอเวอร์ ภาพมุมกว้างไม่จมมืด
-4. **Adaptive Tone Controls Coupling (Highlights -48 ถึง -64 & Blacks -3 ถึง -6):**
-   - สเกลลึกตามค่า EV ล็อกผมดำไม่ให้เทาลอย และกางเกราะป้องกันไม่ให้หน้าผาก/ไฮไลท์ขาวหลุด Clipping
+2. **Salient Neutral White & Neutral Gray Detection (Retinex Eye Emulation & WB Clamp <= 6220K):**
+   - เลียนแบบสายตามนุษย์: กวาดหาวัตถุสีขาวบริสุทธิ์ (กระดาษรองขนม, แป้ง, จานชาม, ขอบเสื้อ) และเทากลาง กักกันผิวหนังด้วย MediaPipe/YuNet แล้วคำนวณปรับ `wb.temp` และ `wb.tint` แบบไดนามิก พร้อมขึงเพดานความอุ่นไม่เกิน `6220K` เพื่อให้สีขาวเป็น $R = G = B$ ปราศจากคราบเหลืองเลี่ยน
+3. **Face-Scale Aware Ultra Pop Exposure (+1.28 ถึง +1.58 EV Floor):**
+   - ปลดล็อกเพดานแสงคงที่ โดยชดเชยแสงตามพื้นที่ใบหน้าหลัก (`max_face_area`) สัมพันธ์กับความสว่างผิวจริง ภาพมุมแคบไม่โอเวอร์ ภาพมุมกว้างไม่จมมืด พร้อมขึงฐานความสว่างขั้นต่ำ `+1.28 EV`
+4. **Adaptive Tone Controls Coupling (Highlights -56 ถึง -66, Whites +38 ถึง +42, & Blacks -7 ถึง -8):**
+   - สเกลลึกตามค่า EV ล็อกผมดำสนิทไม่ให้เทาลอย ขับผิวสว่างให้ "ป๊อป เด้ง" มีมิติ 3D คมชัด และกางเกราะป้องกันไม่ให้หน้าผาก/ไฮไลท์ขาวหลุด Clipping
 5. **Universal Multi-Face Glow Masking (Dewy Skin Pop):**
-   - สแกนและสวม Face Glow Mask ให้กับ **"ทุกคนในภาพ"** ไม่ทิ้งใครไว้ข้างหลัง ปรับผิวนุ่มละมุน ลบรอยสิวด้วย `Clarity -8, Shadows +15, Whites +5`
+   - สแกนและสวม Face Glow Mask ให้กับ **"ทุกคนในภาพ"** ไม่ทิ้งใครไว้ข้างหลัง ปรับผิวนุ่มละมุน ฉ่ำวาว ดุจกระจก ด้วย `Exposure +0.42, Whites +16, Shadows +25, Clarity -10, Temp -2`
 6. **Dopamine Palette & Peach Apricot Glow:**
-   - เพิ่ม **Orange Luminance (+18)**, **Red Saturation (+8)**, **Green Saturation (+4)** และ **Midtones Apricot Hue 22, Sat 10** เติมความสดใสฉ่ำวาว มีชีวิตชีวา ผิวขาวอมชมพูพีชระเรื่อ
+   - Tone Curve กระจกเงา `(192, 212)` เพิ่ม **Orange Luminance (+24)**, **Yellow Luminance (+12)**, **Red Saturation (+8)**, **Green Saturation (+4)** และ **Midtones Apricot Hue 22, Sat 10** เติมความสดใสฉ่ำวาว ผิวขาวอมชมพูพีชระเรื่อ
 
 ---
 
