@@ -1,11 +1,11 @@
 ---
 name: lr
-version: "1.4.0"
+version: "1.5.0"
 description: >-
-  Intelligent Portrait Development and GPU Direct Export Engine for LightCraft and Lightroom workflows.
-  Features Korean Idol Glass Skin (ขาว ใส อมชมพู), Mandatory develop.reset pure-canvas guarantee,
-  4-Dimension Situational Radar, Zone VIII- Luminous Skin Pop, Universal Multi-Face Glow,
-  WB Kelvin Floor 5800K clamp, and Orange Luminance +22 boost.
+  Intelligent Portrait and Culinary Food Development and GPU Direct Export Engine for LightCraft and Lightroom workflows.
+  Features Korean Idol Glass Skin (ขาว ใส อมชมพู), DoctorBank 2026 Food Suite (Cafe Pop, Dark Michelin, Vivid Feast),
+  Mandatory develop.reset pure-canvas guarantee, 4-Dimension Situational Radar, Zone VIII- Luminous Skin Pop,
+  Universal Multi-Face Glow, WB Kelvin Floor 5800K clamp, and Orange Luminance +22 boost.
   Supports /lr (Smart Default), /lrlive (Live GUI Sync), /lrbatch (Batch Render JPEG), and /lrexport (One-Click GPU Fast Export 2048px).
 ---
 
@@ -74,6 +74,25 @@ description: >-
 | **`[DB] 02 - Ultra Airy Pop (Studio Japan)`** | สไตล์ High-Key ญี่ปุ่น สะอาดตา โปร่ง โล่ง สบายตา เสื้อขาววิ้ง (FEB_1600 Ground Truth) | Whites +22, High -48, Shadows +36, Green Sat -14, Texture +4 |
 | **`[DB] 03 - Warm Porcelain (Tungsten Neutralizer)`** | กู้ชีพภาพในร่ม/ร้านอาหาร/ไฟส้มทังสเตน ฆ่าคราบเหลืองเลี่ยน ดึงผิวเนียนผ่อง ไม่ติดฟ้าซีด | Yellow Sat -28, Orange Sat -14, Lum +20, Shadow +40, High -55 |
 | **`[DB Mod] Korean Pink Blush & Glow`** | เครื่องมือคลิกเสริม: สวมสีผิวอมชมพูและกลาสสกินให้รูป โดยไม่แตะ Exposure หรือ WB เดิม | Red/Orange HSL + Calibration Boost เพียวๆ ผิวเด้งทันที |
+
+---
+
+## 🍳 DoctorBank 2026 Food Preset Suite (.xmp)
+
+ชุดพรีเซ็ตภาพอาหารระดับพรีเมียม (Dopamine Palette & Ceramic Plate Shield) สำหรับ **LightCraft**, **Lightroom Classic**, และ **Camera Raw**:
+- โฟลเดอร์ Lightroom: `AppData\Roaming\Adobe\Lightroom\Develop Presets\DoctorBank 2026 Food Suite\`
+- โฟลเดอร์ Camera Raw: `AppData\Roaming\Adobe\CameraRaw\Settings\DoctorBank 2026 Food Suite\`
+
+| พรีเซ็ต | แนวภาพและประเภทอาหาร | พารามิเตอร์เด่น & วิศวกรรมสี |
+|---|---|---|
+| **`[DB Food] 01 - Golden Crisp & Cafe Pop`** | คาเฟ่ เบเกอรี่ กาแฟ และอาหารเช้า คลีน สดใส จานขาวไม่ระเบิด | Contrast +12, High -35, Shadow +24, Texture +10, Red Sat +16, Orange Lum +10, Yellow Hue +10 |
+| **`[DB Food] 02 - Dark Michelin & Omakase`** | Fine Dining, โอมากาเสะ, อิซากายะ, สเต็กเฮาส์ สปอตไลต์มู้ดดี้ ซอสฉ่ำเงา ลึก มีเสน่ห์ | Contrast +22, High -40, Shadow -12, Whites +20, Blacks -10, Texture +14, Clarity +10, Amber Split-Tone |
+| **`[DB Food] 03 - Vivid Feast & Street Sizzle`** | สตรีทฟู้ด อาหารไทยรสจัดจ้าน คอนทราสต์จัด สีจัดจ้าน ชวนน้ำลายสอ | Contrast +28, High -45, Shadow +18, Whites +28, Blacks -12, Vibrance +20, Red/Orange/Yellow Sat +22..+26, Texture +16 |
+
+> **กฎเหล็กวิศวกรรมสีอาหาร (Food Color Science):**
+> 1. **ยอมให้แตะ Tone & Contrast:** ขับความฉ่ำเด้งของอาหาร ด้วย Contrast (+12 ถึง +28) และเกราะกันจานขาวระเบิด Highlights (-35 ถึง -45)
+> 2. **ห้ามแตะ Exposure ในพรีเซ็ต:** ปล่อย Exposure = 0.0 เสมอ เพื่อให้ปรับหมุนแสงจริงตามสภาพร้านได้อย่างอิสระ
+> 3. **Dopamine Palette:** ดึง Red/Orange/Yellow เพื่อกระตุ้นต่อมรับรสและทำให้อาหารดูสดใหม่ กรอบ อร่อย น่ากินที่สุด
 
 ---
 
