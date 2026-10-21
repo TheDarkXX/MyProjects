@@ -1,11 +1,11 @@
 ---
 name: lr
-version: "1.5.0"
+version: "1.6.0"
 description: >-
   Intelligent Portrait and Culinary Food Development and GPU Direct Export Engine for LightCraft and Lightroom workflows.
-  Features Korean Idol Glass Skin (ขาว ใส อมชมพู), DoctorBank 2026 Food Suite (Cafe Pop, Dark Michelin, Vivid Feast),
-  Mandatory develop.reset pure-canvas guarantee, 4-Dimension Situational Radar, Zone VIII- Luminous Skin Pop,
-  Universal Multi-Face Glow, WB Kelvin Floor 5800K clamp, and Orange Luminance +22 boost.
+  Features Korean Idol Glass Skin (ขาว ใส อมชมพูพีชระเรื่อ), Salient Neutral White & Neutral Gray Saliency Detection (Retinex Eye Emulation),
+  Dynamic Face-Scale Aware Auto-Exposure (+0.45 to +1.55 EV), DoctorBank 2026 Food Suite (Cafe Pop, Dark Michelin, Vivid Feast),
+  Mandatory develop.reset pure-canvas guarantee, 4-Dimension Situational Radar, Universal Multi-Face Glow, and Orange Luminance +18 boost.
   Supports /lr (Smart Default), /lrlive (Live GUI Sync), /lrbatch (Batch Render JPEG), and /lrexport (One-Click GPU Fast Export 2048px).
 ---
 
@@ -48,29 +48,28 @@ description: >-
 1. **Mandatory Pure Clean Reset (`develop.reset` — กฎเหล็กล้างกระดานก่อนสวมพรีเซ็ต):**
    - **ปัญหาคอขาดบาดตาย:** ใน LightCraft / RAW Developer หากสวมพรีเซ็ตใหม่ทับพรีเซ็ตเดิมโดยไม่สั่ง Reset ค่าสไลเดอร์, Curve, และ Tone ย่อยจากพรีเซ็ตเก่าจะค้างและผสมทับซ้อน (Compounded Edits) จนทำให้สีเพี้ยน/สกินโทนเน่า
    - **กฎเหล็กเด็ดขาด (Iron Rule):** ทุกครั้งที่สั่งรัน Live Sync หรือสวมพรีเซ็ตใหม่ ไม่ว่าจะรันครั้งแรกหรือรันซ้ำ **ต้องสั่ง `develop.reset` ล้างค่าเดิมทิ้ง 100% จนเป็นกระดาษขาวสะอาด** ก่อนยิง `preset.apply` และ `develop.set` เสมอ!
-2. **Target Skin Zone VIII- (`0.82`):**
-   - คำนวณความสว่างผิวจริงด้วยมาตรฐาน Rec.709 Photometric ดันผิวขาวสว่างสดใส สไตล์ High-Key หมดปัญหาภาพแอบอันเดอร์ทึมๆ
-3. **Whites (+20 ถึง +24) & Highlights Shield (-48 ถึง -55):**
-   - เสื้อเชิ้ตขาว เค้ก ป้าย และประกายตาขาวสว่างวิ้งสะดุดตา โดยที่หน้าผาก จมูก และเทียนวันเกิดไม่หลุดขาว (Clipped)
-4. **Pop Contrast (+12 ถึง +13) & Airy Shadows (+36 ถึง +40):**
-   - ภาพคมชัดมีมิติ สีสูทและลายผ้าเด้งชัด ไร้เงาดำจมทึบตัน (`Blacks: -1 ถึง 0`)
-5. **WB Kelvin Floor Clamp (`5800K`):**
-   - ล็อกกันภาพติดฟ้าซีดถาวร ผิวคงความอุ่นละมุนและมีเลือดฝาดด้วย **Tint `+6 ถึง +10`**
-6. **Universal Multi-Face Glow Masking & Orange Lum (+22):**
-   - สแกนและสวม Face Glow Mask ให้กับ **"ทุกคนในภาพ"** (พ่อ, แม่, ลูกทุกคน) ไม่ทิ้งใครไว้ข้างหลัง
-   - เพิ่ม **Orange Luminance (+22)** เจาะจงความสว่างเฉพาะเม็ดสีผิวคนเอเชีย ผิวใสกระจ่างดุจดาราเกาหลี
+2. **Salient Neutral White & Neutral Gray Saliency Detection (Retinex Eye Emulation):**
+   - เลียนแบบสายตามนุษย์: กวาดหาวัตถุสีขาวบริสุทธิ์ (กระดาษรองขนม, แป้ง, จานชาม, ขอบเสื้อ) และเทากลาง กักกันผิวหนังด้วย MediaPipe/YuNet แล้วคำนวณปรับ `wb.temp` และ `wb.tint` แบบไดนามิก เพื่อให้สีขาวเป็น $R = G = B$ ปราศจากคราบเหลืองเลี่ยน
+3. **Face-Scale Aware Dynamic Exposure (+0.45 ถึง +1.55 EV):**
+   - ปลดล็อกเพดานแสงคงที่ โดยชดเชยแสงตามพื้นที่ใบหน้าหลัก (`max_face_area`) สัมพันธ์กับความสว่างผิวจริง ภาพมุมแคบไม่โอเวอร์ ภาพมุมกว้างไม่จมมืด
+4. **Adaptive Tone Controls Coupling (Highlights -48 ถึง -64 & Blacks -3 ถึง -6):**
+   - สเกลลึกตามค่า EV ล็อกผมดำไม่ให้เทาลอย และกางเกราะป้องกันไม่ให้หน้าผาก/ไฮไลท์ขาวหลุด Clipping
+5. **Universal Multi-Face Glow Masking (Dewy Skin Pop):**
+   - สแกนและสวม Face Glow Mask ให้กับ **"ทุกคนในภาพ"** ไม่ทิ้งใครไว้ข้างหลัง ปรับผิวนุ่มละมุน ลบรอยสิวด้วย `Clarity -8, Shadows +15, Whites +5`
+6. **Dopamine Palette & Peach Apricot Glow:**
+   - เพิ่ม **Orange Luminance (+18)**, **Red Saturation (+8)**, **Green Saturation (+4)** และ **Midtones Apricot Hue 22, Sat 10** เติมความสดใสฉ่ำวาว มีชีวิตชีวา ผิวขาวอมชมพูพีชระเรื่อ
 
 ---
 
 ## 🎨 DoctorBank 2026 Korean Idol & Studio Preset Suite (.xmp)
 
 ติดตั้งและพร้อมใช้งานทันทีใน **Adobe Lightroom Classic** และ **Camera Raw**:
-- โฟลเดอร์ Lightroom: `C:\Users\The Dark\AppData\Roaming\Adobe\Lightroom\Develop Presets\DR.Bank Preset\`
-- โฟลเดอร์ Camera Raw: `C:\Users\The Dark\AppData\Roaming\Adobe\CameraRaw\Settings\DoctorBank 2026 Korean Suite\`
+- โฟลเดอร์ Lightroom: `C:\Users\Admin\AppData\Roaming\Adobe\Lightroom\Develop Presets\DR.Bank Preset\`
+- โฟลเดอร์ Camera Raw: `C:\Users\Admin\AppData\Roaming\Adobe\CameraRaw\Settings\DoctorBank 2026 Korean Suite\`
 
 | พรีเซ็ต | บทบาทและแนวภาพ | พารามิเตอร์เด่น |
 |---|---|---|
-| **`[DB] 01 - Korean Idol Glass Skin (Master)`** | สไตล์ดารา-ไอดอลเกาหลี ผิวขาวใส อมชมพูระเรื่อ ดุจกระเบื้องเคลือบ (Porcelain Glass Skin) | Orange Lum +22, Sat -12, Hue +5, Whites +24, High -52, Blue Calib Sat +16, Clarity -8 |
+| **`[DB] 01 - Korean Idol Glass Skin (Master)`** | สไตล์ดารา-ไอดอลเกาหลี ผิวขาวใส อมชมพูพีชระเรื่อ ดุจกระเบื้องเคลือบ (Porcelain Glass Skin) | Orange Lum +18, Sat -2, Red Sat +8, Green Sat +4, Midtone Hue 22 Sat 10, Texture +6, Clarity +3 |
 | **`[DB] 02 - Ultra Airy Pop (Studio Japan)`** | สไตล์ High-Key ญี่ปุ่น สะอาดตา โปร่ง โล่ง สบายตา เสื้อขาววิ้ง (FEB_1600 Ground Truth) | Whites +22, High -48, Shadows +36, Green Sat -14, Texture +4 |
 | **`[DB] 03 - Warm Porcelain (Tungsten Neutralizer)`** | กู้ชีพภาพในร่ม/ร้านอาหาร/ไฟส้มทังสเตน ฆ่าคราบเหลืองเลี่ยน ดึงผิวเนียนผ่อง ไม่ติดฟ้าซีด | Yellow Sat -28, Orange Sat -14, Lum +20, Shadow +40, High -55 |
 | **`[DB Mod] Korean Pink Blush & Glow`** | เครื่องมือคลิกเสริม: สวมสีผิวอมชมพูและกลาสสกินให้รูป โดยไม่แตะ Exposure หรือ WB เดิม | Red/Orange HSL + Calibration Boost เพียวๆ ผิวเด้งทันที |
