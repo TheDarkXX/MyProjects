@@ -1,11 +1,11 @@
 ---
 name: lr
-version: "1.8.0"
+version: "1.9.0"
 description: >-
   Intelligent Portrait and Culinary Food Development and GPU Direct Export Engine for LightCraft and Lightroom workflows.
-  Features Korean Idol Glass Skin (ขาว นวล ป๊อป เด้ง อมชมพูพีชระเรื่อ), Salient Neutral White & Tungsten Neutralizer (5500K-5750K),
-  Histogram Dynamic Fill Metering (+0.75 to +1.26 EV), Automatic Pick-Flagging (photo.flag pick), DoctorBank 2026 Food Suite,
-  Mandatory develop.reset pure-canvas guarantee, 4-Dimension Situational Radar, Tone Curve (192, 212), and Orange Luminance +24 boost.
+  Features Korean Idol Glass Skin (ขาว นวล ป๊อป เด้ง อมชมพูพีชระเรื่อ), Zero-Edge Powdered Skin (Clarity -4, Texture 0, Orange Lum +32, Yellow Sat -16),
+  Salient Neutral White & Tungsten Neutralizer (5450K-5750K), Histogram Dynamic Fill Metering (+0.75 to +1.48 EV), Automatic Pick-Flagging (photo.flag pick),
+  DoctorBank 2026 Food Suite, Mandatory develop.reset pure-canvas guarantee, 4-Dimension Situational Radar, and Tone Curve (192, 212).
   Supports /lr (Smart Default), /lrlive (Live GUI Sync), /lrbatch (Batch Render JPEG), and /lrexport (One-Click GPU Fast Export 2048px).
 ---
 
@@ -43,20 +43,23 @@ description: >-
 
 ---
 
-## 🧬 6 เสาหลักสถาปัตยกรรม (Core Architectural Pillars)
+## 🧬 7 เสาหลักสถาปัตยกรรม (Core Architectural Pillars v1.9.0)
 
 1. **Mandatory Pure Clean Reset (`develop.reset` — กฎเหล็กล้างกระดานก่อนสวมพรีเซ็ต):**
    - ทุกครั้งที่สั่งรัน Live Sync หรือสวมพรีเซ็ตใหม่ ไม่ว่าจะรันครั้งแรกหรือรันซ้ำ **ต้องสั่ง `develop.reset` ล้างค่าเดิมทิ้ง 100% จนเป็นกระดาษขาวสะอาด** ก่อนยิง `preset.apply` และ `develop.set` เสมอ!
 2. **Automatic Pick-Flagging (`photo.flag: pick` — ปักธงรูปที่ปรับแล้วอัตโนมัติ):**
    - ทุกรูปที่ผ่านการปรับจูนระบบจะยิงคำสั่ง `photo.flag` ปักธงขาว (Pick Flag) ให้อัตโนมัติทันที เพื่อให้ผู้ใช้กดฟิลเตอร์กรองดูเฉพาะรูปที่ปรับแต่งแล้วได้ในคลิกเดียว
-3. **Indoor Tungsten Neutralizer (5500K - 5750K & Tint -2.5):**
-   - กำจัดคราบเหลืองเลี่ยนของหลอดไฟทังสเตนและแสงสะท้อนจากผนังไม้ในคาเฟ่ ด้วยการดรอป Kelvin ลงมาที่ช่วง 5500K-5750K เปลี่ยนผิวให้ขาวนวลอมชมพูพอร์ซเลนสะอาดตา
-4. **Histogram Dynamic Fill Metering (+0.75 ถึง +1.26 EV):**
-   - ปลดล็อกปัญหากราฟแสงดรอป ด้วยการคำนวณยืดกราฟแสงไปจรด Zone VIII ฝั่งขวา สว่างเต็มอิ่ม นวลตา โดยปรับตามสภาพแสงจริงของแต่ละรูป
-5. **Coupled Tone Protection (Highlights -52 ถึง -58, Whites +22 ถึง +28, & Blacks -6 ถึง -7):**
+3. **Indoor Tungsten Neutralizer (5450K - 5750K & Tint -2.5):**
+   - กำจัดคราบเหลืองเลี่ยนของหลอดไฟทังสเตนและแสงสะท้อนจากผนังไม้ในคาเฟ่ ด้วยการดรอป Kelvin ลงมาที่ช่วง 5450K-5750K เปลี่ยนผิวให้ขาวนวลอมชมพูพอร์ซเลนสะอาดตา (ช็อตแสงแดดริมหน้าต่างขยับขึ้น 6050K-6150K Tint -1.5)
+4. **Histogram Dynamic Fill Metering (+0.75 ถึง +1.48 EV):**
+   - ปลดล็อกปัญหากราฟแสงดรอป ด้วยการคำนวณยืดกราฟแสงไปจรด Zone VIII ฝั่งขวา สว่างเต็มอิ่ม นวลตา ช็อตย้อนแสงหน้าจมเงาดันได้ถึง +1.48 EV
+5. **Coupled Tone Protection (Highlights -52 ถึง -65, Whites +20 ถึง +24, & Blacks -6 ถึง -7):**
    - ไฮไลท์ไม่หลุดเบิร์น เสื้อขาวและจานชามมีดีเทลครบถ้วน พร้อมขึงฐานดำเพื่อขับมิติภาพ 3D ป๊อปเด้ง
-6. **Pure Translucent Glass Skin & Dopamine Palette:**
-   - Tone Curve กระจกเงา `(192, 212)` ร่วมกับ **Orange Luminance (+24)**, **Yellow Luminance (+12)**, **Red Saturation (+8)** และ **Midtones Apricot Hue 22, Sat 10** เกลี่ยผิวใสเรียบเนียนเป็นเนื้อเดียวกัน ไร้การฉาบแป้งด้วย Mask หลอกตา
+6. **Zero-Edge Powdered Finish (แป้งพัฟระดับพิกเซล ไร้ขอบลอย 100% — Masks = 0):**
+   - **กฎเหล็กห้ามใช้ Geometric Radial Mask บนหน้า:** มาสก์วงรีจะแผ่ล้นไปกินโต๊ะไม้สีเข้มและผมดำ ทำให้เกิดขอบดวงเรืองแสงลอยในอากาศ (Radial Bleed Artifact)
+   - **วิธีสร้างเนื้อแป้งที่ถูกต้อง:** ใช้ **HSL Orange Lum (+30 ถึง +32)** ดึงแสงเฉพาะเม็ดสีผิวคน 0% ลามไปโดนโต๊ะหรือผม ร่วมกับ **Yellow Sat (-16)** ล้างคราบเหลืองสะท้อน และ **Clarity (-4.0) + Texture (0.0)** ลบความสากหยาบของรูขุมขน กลายเป็นผิวขาวเนียนนุ่มเหมือนตบแป้งพัฟบางๆ โดยที่ดวงตายังคมกริบ ไร้ขอบลอย 100%
+7. **Pure Translucent Glass Skin & Dopamine Palette:**
+   - Tone Curve กระจกเงา `(192, 212)` ร่วมกับ **Yellow Luminance (+14)**, **Red Saturation (+8)** และ **Midtones Apricot Hue 22, Sat 10** เกลี่ยผิวใสเรียบเนียนเป็นเนื้อเดียวกัน ไร้การฉาบแป้งด้วย Mask หลอกตา
 
 ---
 
