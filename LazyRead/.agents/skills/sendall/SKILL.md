@@ -44,7 +44,7 @@ description: >-
    - กระจายลง 3 ระดับเสมอ:
      1. 13 โหนดโปรเจกต์ (ตาม `docs/project_index_spiderweb.json` รวมโฟลเดอร์ย่อยใน `MyProjects`)
      2. Global IDE Config (`C:\Users\Admin\.gemini\config\skills\<skill_name>`)
-     3. The Viral Master Backup (`P:\AI\The Viral\ag_skills_backup\<skill_name>`)
+     3. The Viral Master Backup (`C:\My Claw\The Viral\ag_skills_backup\<skill_name>`)
 
 ---
 

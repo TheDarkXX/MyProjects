@@ -7,7 +7,7 @@ description: FlowKit Storyboard-to-Video Automation Engine — ออโตเ�
 
 # 🎬 FlowKit Storyboard-to-Video Engine (`/flow` v2.0.0)
 
-คู่มือการใช้งานระบบ **FlowKit** ร่วมกับ Google Flow (Veo 3.1 / Omni Flash) บนเครื่องและไดรฟ์ `P:\AI\The Viral\FlowKit`
+คู่มือการใช้งานระบบ **FlowKit** ร่วมกับ Google Flow (Veo 3.1 / Omni Flash) บนเครื่องและไดรฟ์ `C:\My Claw\The Viral\FlowKit`
 ระบบนี้ส่งคำสั่งตรงเข้า Google Flow RPCs (`batchexecute`) ผ่าน WebSocket Extension และ FastAPI Backend โดย **ไม่ต้องพึ่งพาการคลิกปุ่มบนหน้าเว็บ (Zero DOM Clicks)** มั่นคง รวดเร็ว ล็อกหน้าตัวละคร และสร้างวิดีโอสตอรี่บอร์ดหลายฉากต่อกันแบบอัตโนมัติ
 
 ---
@@ -16,14 +16,14 @@ description: FlowKit Storyboard-to-Video Automation Engine — ออโตเ�
 
 | องค์ประกอบ | ค่า / Path | หมายเหตุ |
 |---|---|---|
-| **Engine Root** | `P:\AI\The Viral\FlowKit` | อยู่บน Drive P: ป้องกัน C: VPS Repo บวม |
-| **Python Virtualenv** | `P:\AI\The Viral\FlowKit\venv\Scripts\python.exe` | Python 3.10 + FastAPI + WebSockets |
-| **CLI Helper** | `P:\AI\The Viral\FlowKit\flow_cli.py` | สคริปต์กลางสำหรับ Agent สั่งงาน |
+| **Engine Root** | `C:\My Claw\The Viral\FlowKit` | อยู่บน Drive P: ป้องกัน C: VPS Repo บวม |
+| **Python Virtualenv** | `C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe` | Python 3.10 + FastAPI + WebSockets |
+| **CLI Helper** | `C:\My Claw\The Viral\FlowKit\flow_cli.py` | สคริปต์กลางสำหรับ Agent สั่งงาน |
 | **Extension Path** | `C:\My Claw\Openclaw-VPS\projects\extensions\flowkit` | โหลดแบบ Unpacked ใน Google Chrome (Canonical Git Sync) |
 | **FastAPI Backend** | `http://127.0.0.1:8100` | REST API สำหรับสั่งเจนภาพ/วิดีโอ/โปรเจกต์ |
 | **WebSocket Port** | `ws://127.0.0.1:9222` | ท่อคุยระหว่าง Backend กับ Chrome Extension |
 | **Dashboard Panel** | `http://127.0.0.1:8100/docs` หรือผ่าน Side Panel | เช็คสถานะคิวงาน |
-| **Output Video** | `P:\AI\The Viral\FlowKit\output\` | ไฟล์วิดีโอสุดท้ายที่ Concat แล้ว |
+| **Output Video** | `C:\My Claw\The Viral\FlowKit\output\` | ไฟล์วิดีโอสุดท้ายที่ Concat แล้ว |
 
 ---
 
@@ -39,8 +39,8 @@ description: FlowKit Storyboard-to-Video Automation Engine — ออโตเ�
    - เปิดเบราว์เซอร์ไปที่ `https://flow.google.com/`
    - ล็อกอินด้วยบัญชี Google ที่มีสิทธิ์ใช้งาน Flow / Veo (แท็บนี้ต้องเปิดค้างไว้เพื่อให้ Extension ส่ง RPCs ได้)
 3. **เปิด Backend Service:**
-   - รันผ่าน CLI: `& "P:\AI\The Viral\FlowKit\venv\Scripts\python.exe" "P:\AI\The Viral\FlowKit\flow_cli.py" start`
-   - หรือดับเบิลคลิกไฟล์: `P:\AI\The Viral\FlowKit\start.bat`
+   - รันผ่าน CLI: `& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" start`
+   - หรือดับเบิลคลิกไฟล์: `C:\My Claw\The Viral\FlowKit\start.bat`
 
 ---
 
@@ -48,41 +48,41 @@ description: FlowKit Storyboard-to-Video Automation Engine — ออโตเ�
 
 ### 1. ตรวจสอบสถานะระบบ (`/flow status`)
 ```powershell
-& "P:\AI\The Viral\FlowKit\venv\Scripts\python.exe" "P:\AI\The Viral\FlowKit\flow_cli.py" status
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" status
 ```
 - ถ้า Server ดับ ➔ จะแจ้งเตือนให้สั่ง start
 - ถ้า Extension ยังไม่ต่อ ➔ จะแจ้งเตือนให้เปิด Chrome ที่ `flow.google.com`
 
 ### 2. สตาร์ท Backend (`/flow start`)
 ```powershell
-& "P:\AI\The Viral\FlowKit\venv\Scripts\python.exe" "P:\AI\The Viral\FlowKit\flow_cli.py" start
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" start
 ```
 
 ### 3. เจนภาพนิ่งโดยตรง (`/flow img`)
 ```powershell
-& "P:\AI\The Viral\FlowKit\venv\Scripts\python.exe" "P:\AI\The Viral\FlowKit\flow_cli.py" img --prompt "A beautiful portrait of Thai woman in white dress" --ratio 9:16
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" img --prompt "A beautiful portrait of Thai woman in white dress" --ratio 9:16
 # กรณีต้องการล็อกหน้าด้วยรูป reference:
-& "P:\AI\The Viral\FlowKit\venv\Scripts\python.exe" "P:\AI\The Viral\FlowKit\flow_cli.py" img --prompt "Drinking coffee in cafe" --ratio 9:16 --refs "P:\path\to\face.png"
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" img --prompt "Drinking coffee in cafe" --ratio 9:16 --refs "P:\path\to\face.png"
 ```
 
 ### 4. เจนวิดีโอโดยตรง (`/flow vdo`)
 ```powershell
 # แบบ Text-to-Video ตรงๆ (ผ่าน Gemini Omni Flash):
-& "P:\AI\The Viral\FlowKit\venv\Scripts\python.exe" "P:\AI\The Viral\FlowKit\flow_cli.py" vdo --prompt "A drone shot flying over misty mountain peak at sunrise. Cinematic 4K." --ratio 16:9
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" vdo --prompt "A drone shot flying over misty mountain peak at sunrise. Cinematic 4K." --ratio 16:9
 
 # แบบ Image-to-Video ล็อกภาพตั้งต้น (ผ่าน Google Veo 3.1):
-& "P:\AI\The Viral\FlowKit\venv\Scripts\python.exe" "P:\AI\The Viral\FlowKit\flow_cli.py" vdo --prompt "She smiles gently. The camera slowly dollies in." --image "P:\path\to\character.png" --model veo --ratio 9:16
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" vdo --prompt "She smiles gently. The camera slowly dollies in." --image "P:\path\to\character.png" --model veo --ratio 9:16
 ```
 
 ### 5. อัปโหลดรูป Reference จากเครื่องขึ้น Flow (`/flow upload-ref`)
 ```powershell
-& "P:\AI\The Viral\FlowKit\venv\Scripts\python.exe" "P:\AI\The Viral\FlowKit\flow_cli.py" upload-ref --file "P:\path\to\character.png"
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" upload-ref --file "P:\path\to\character.png"
 ```
 - ส่งภาพ local ขึ้น Google Flow แล้วคืนค่า `media_id` สำหรับเอาไปล็อกหน้าตัวละครหรือฉาก
 
 ### 6. สร้างโปรเจกต์และกำหนดสตอรี่บอร์ด (`/flow create`)
 ```powershell
-& "P:\AI\The Viral\FlowKit\venv\Scripts\python.exe" "P:\AI\The Viral\FlowKit\flow_cli.py" create --name "Cyber Samurai" --story "A neon cyber samurai walks in rainy Neo-Tokyo" --characters "Samurai,Neo-Tokyo Street"
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" create --name "Cyber Samurai" --story "A neon cyber samurai walks in rainy Neo-Tokyo" --characters "Samurai,Neo-Tokyo Street"
 ```
 
 ---
@@ -116,7 +116,7 @@ description: FlowKit Storyboard-to-Video Automation Engine — ออโตเ�
 - ใช้เวลาประมาณ 1-3 นาทีต่อฉาก โดยมีคิว worker จัดการแบบ FIFO ปลอดภัยไม่โดน Rate limit
 
 ### Step 5: ดาวน์โหลดและรวมคลิป (`fk-concat`)
-- ดึงคลิปทุกฉากลงมาเก็บที่ `P:\AI\The Viral\FlowKit\output\<project_name>\`
+- ดึงคลิปทุกฉากลงมาเก็บที่ `C:\My Claw\The Viral\FlowKit\output\<project_name>\`
 - Normalize ความละเอียดและ fps
 - รัน FFmpeg ต่อคลิปเข้าด้วยกันเป็นไฟล์มาสเตอร์ `_final.mp4`
 
@@ -140,6 +140,6 @@ Base URL: `http://127.0.0.1:8100`
 ---
 
 ## 🚨 กฎเหล็กประจำสกิล (Iron Rules)
-1. **Drive P Isolation:** ไฟล์วิดีโอ output, ภาพแคช, และ python virtualenv ต้องอยู่ใน `P:\AI\The Viral\FlowKit` ห้ามนำไฟล์หนักๆ มาเก็บในไดรฟ์ C: เด็ดขาด
+1. **Local NVMe SSD Hub & Auto Cloud Backup:** ไฟล์วิดีโอ output, ภาพแคช, และ python virtualenv ประจำการอยู่ที่ `C:\My Claw\The Viral\FlowKit` บน Local NVMe SSD เพื่อความเร็วสูงสุดในการตัดต่อ และมีระบบ Automated Nightly Mirror สำรองข้อมูลวิดีโอขึ้น pCloud ทุกคืน
 2. **Never Freehand DOM:** ห้ามเขียน script ไปคลิกปุ่มบนหน้าเว็บ Flow เด็ดขาด ให้สั่งผ่าน REST API / Extension WebSocket เสมอ
 3. **One Generation at a Time:** Google Flow มี cooldown แนะนำให้รอแต่ละ Request เสร็จสิ้น (COMPLETED) ก่อนสั่งฉากถัดไป เพื่อป้องกัน Token throttled

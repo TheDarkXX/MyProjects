@@ -53,7 +53,7 @@ description: >-
 ### 1. โหมดจำลองความถูกต้อง (Safe Dry-Run)
 ใช้เมื่อต้องการตรวจความถูกต้องของสคริปต์, พิกัดภาพสินค้า 3Ref, และตารางเวลา โดยไม่ต้องเปิดเบราว์เซอร์จริง:
 ```powershell
-python "P:\AI\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --storyboard "P:\AI\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md" --dry-run
+python "C:\My Claw\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --storyboard "C:\My Claw\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md" --dry-run
 ```
 
 ### 2. โหมดรันจริงแบบสมบูรณ์ (Full Production Run)
@@ -61,25 +61,25 @@ python "P:\AI\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --st
 1. เรียก `browser_subagent` ไปยัง `https://www.meta.ai/`
 2. เมื่อหน้าเว็บพร้อม ให้ส่งคำสั่ง:
 ```powershell
-python "P:\AI\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --storyboard "P:\AI\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md"
+python "C:\My Claw\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --storyboard "C:\My Claw\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md"
 ```
 
 ### 3. โหมดเรนเดอร์ต่อจากจุดที่ค้าง (Scene Resume)
 หากซีน 1–2 เสร็จแล้ว และหลุดที่ซีน 3:
 ```powershell
-python "P:\AI\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --storyboard "P:\AI\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md" --from-scene 3
+python "C:\My Claw\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --storyboard "C:\My Claw\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md" --from-scene 3
 ```
 
 ### 4. โหมดข้ามไปรวมไฟล์ Master ทันที (Concat Only)
 หากได้ไฟล์ย่อย `s1.mp4` ถึง `s4.mp4` ครบแล้ว แต่ต้องการประกอบไฟล์ใหม่:
 ```powershell
-python "P:\AI\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --storyboard "P:\AI\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md" --from-step concatenate
+python "C:\My Claw\The Viral\Ads DRB\tools\meta_ugc_engine\run_full_pipeline.py" --storyboard "C:\My Claw\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md" --from-step concatenate
 ```
 
 ### 5. โหมดซิงก์คลังพรีวิวรวม (Preview Hub Sync)
 หากมีการเพิ่มหรือแก้ไขคลิปมาสเตอร์แบบ Manual หรือต้องการตรวจเช็คคลังพรีวิวรวม `00_MASTER_PREVIEWS`:
 ```powershell
-python "P:\AI\The Viral\Ads DRB\tools\sync_master_previews.py"
+python "C:\My Claw\The Viral\Ads DRB\tools\sync_master_previews.py"
 ```
 
 ---
@@ -99,7 +99,7 @@ python "P:\AI\The Viral\Ads DRB\tools\sync_master_previews.py"
 ## 🚀 ตัวอย่างคำสั่งใช้งาน
 
 ```text
-/metaugc P:\AI\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md
+/metaugc C:\My Claw\The Viral\Ads DRB\Campaigns\Magnesium\DRB_MAG_01_A_UGC\storyboard.md
 /metaugc --storyboard DRB_MAG_02_PONG_UGC --dry-run
 /ugcvdo รันเจนวิดีโอคลิป 3 ต่อจากซีนที่ 2 ให้หน่อย
 ```
