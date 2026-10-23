@@ -260,7 +260,7 @@ export const XChartTabBar: React.FC = () => {
                     <GitCompareArrows className="w-4 h-4 text-cyan-400" />
                     <div>
                       <div className="text-sm font-bold text-white">📈 Stock Compare (Normalized % Scale)</div>
-                      <div className="text-xs text-slate-300">เปรียบเทียบการเติบโตสัมพัทธ์ ปรับฐาน 0% (SCHG, GOOGL, NVDA, Gold, BTC)</div>
+                      <div className="text-xs text-slate-300">เปรียบเทียบการเติบโตสัมพัทธ์ ปรับฐาน 0% (Project 2X Targets, My Port, Benchmarks)</div>
                     </div>
                   </div>
                   <span className="text-xs text-cyan-400 font-semibold">+ เปิดแท็บ</span>

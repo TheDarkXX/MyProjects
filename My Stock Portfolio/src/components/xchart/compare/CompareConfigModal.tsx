@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X,
   Search,
@@ -13,6 +13,7 @@ import {
   Check,
   Layers,
   Loader2,
+  Briefcase,
 } from 'lucide-react';
 import {
   useXChartStore,
@@ -20,8 +21,11 @@ import {
   CompareLineStyleConfig,
   CompareRefSeries,
   DEFAULT_COMPARE_PRESETS,
+  PROJECT_2X_COMPARE_PRESETS,
   COMPARE_BUNDLES,
 } from '../../../stores/xchartStore';
+import { useHoldings } from '../../../hooks/useHoldings';
+import { usePortfolioStore } from '../../../stores/portfolioStore';
 import { api } from '../../../services/api';
 import clsx from 'clsx';
 
@@ -31,6 +35,7 @@ interface CompareConfigModalProps {
   tabId: string;
   targetSymbol: string;
   initialSection?: 'target' | 'refs' | 'display';
+  initialPresetMode?: 'targets' | 'myport' | 'custom';
 }
 
 const PRESET_COLORS = [
@@ -62,6 +67,7 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
   tabId,
   targetSymbol,
   initialSection = 'refs',
+  initialPresetMode = 'targets',
 }) => {
   const {
     tabs,
@@ -72,7 +78,18 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
     toggleCompareRefVisible,
     updateCompareRefStyle,
     applyCompareBundle,
+    applyCompareTickers,
   } = useXChartStore();
+
+  const { holdings = [] } = useHoldings();
+  const { portfolios, activePortfolioId } = usePortfolioStore();
+  const activePort = (portfolios || []).find((p) => p.id === activePortfolioId);
+
+  const validHoldings = useMemo(() => {
+    return (holdings || []).filter(
+      (h) => h && h.quantity > 0 && h.symbol && h.symbol !== 'CASH'
+    );
+  }, [holdings]);
 
   const currentTab = tabs.find((t) => t.id === tabId);
   const compareConfig = currentTab?.compareConfig;
@@ -94,6 +111,7 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
   const applyMarkersToRefs = compareConfig?.applyMarkersToRefs || false;
 
   const [activeTab, setActiveTab] = useState<'target' | 'refs' | 'display'>(initialSection);
+  const [presetMode, setPresetMode] = useState<'targets' | 'myport' | 'custom'>(initialPresetMode || 'targets');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -105,6 +123,12 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
   useEffect(() => {
     setActiveTab(initialSection);
   }, [initialSection, isOpen]);
+
+  useEffect(() => {
+    if (initialPresetMode) {
+      setPresetMode(initialPresetMode);
+    }
+  }, [initialPresetMode, isOpen]);
 
   // Yahoo search with debounce
   useEffect(() => {
@@ -244,72 +268,403 @@ export const CompareConfigModal: React.FC<CompareConfigModalProps> = ({
           {activeTab === 'refs' && (
             /* Reference Stocks Manager */
             <div className="space-y-6">
-              {/* 0. 1-Click Bundles Selector */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                    Quick Bundles (ชุดสำเร็จรูป 1-Click)
-                  </label>
-                  <span className="text-[11px] text-slate-400">แทนที่รายการเปรียบเทียบทั้งชุด</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {COMPARE_BUNDLES.map((bundle) => (
-                    <button
-                      key={bundle.id}
-                      onClick={() => applyCompareBundle(tabId, bundle.id)}
-                      className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 hover:bg-cyan-500/15 border border-white/5 hover:border-cyan-500/35 text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer group text-left"
-                    >
-                      <span className="flex items-center gap-1.5 truncate">
-                        <span>{bundle.icon}</span>
-                        <span className="group-hover:text-cyan-300 truncate">{bundle.name}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Presets Header & Mode Switcher */}
+              <div className="p-4 rounded-2xl bg-[#13192B] border border-[#242A42] space-y-3.5 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                        Stock Compare Presets
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        เลือกชุดหุ้นเปรียบเทียบด่วนแบบ 1-Click
+                      </div>
+                    </div>
+                  </div>
 
-              {/* 1. Quick Presets (Requested: SCHG, Google, Nvidia, Gold, BTC, SPY, QQQ) */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    Quick Presets (1-Click Add)
-                  </label>
-                  <span className="text-[11px] text-slate-400">กดเพื่อเพิ่มลงกราฟทันที</span>
+                  {/* 3 Quick Buttons: Stock Target (Default), My Port, Custom */}
+                  <div className="flex items-center bg-[#0B0F1D] p-1 rounded-xl border border-[#1F2538] gap-1 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setPresetMode('targets')}
+                      className={clsx(
+                        'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                        presetMode === 'targets'
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      )}
+                    >
+                      <span>🎯</span>
+                      <span>Stock Target (2X)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPresetMode('myport')}
+                      className={clsx(
+                        'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                        presetMode === 'myport'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      )}
+                    >
+                      <Briefcase className="w-3.5 h-3.5" />
+                      <span>My Port</span>
+                      {validHoldings.length > 0 && (
+                        <span className="text-[11px] opacity-80 font-mono">({validHoldings.length})</span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPresetMode('custom')}
+                      className={clsx(
+                        'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                        presetMode === 'custom'
+                          ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      )}
+                    >
+                      <span>⚡</span>
+                      <span>Custom</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {DEFAULT_COMPARE_PRESETS.map((preset) => {
-                    const isAdded = refs.some((r) => r.symbol && preset.symbol && r.symbol.toUpperCase() === preset.symbol.toUpperCase());
-                    const isTarget = Boolean(targetSymbol && preset.symbol && targetSymbol.toUpperCase() === preset.symbol.toUpperCase());
-                    return (
+
+                {/* Mode 1: Stock Target (Project 2X) */}
+                {presetMode === 'targets' && (
+                  <div className="space-y-3 pt-1 border-t border-[#1F2538]">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+                      <span className="text-slate-300">
+                        13 หุ้นเป้าหมายพอร์ต Project 2X (กดเพิ่มรายตัว หรือคลิกเพื่อสลับเทียบทั้งชุด)
+                      </span>
                       <button
-                        key={preset.symbol}
-                        onClick={() => handleAddRefFromSymbol(preset.symbol, preset.name, preset.color)}
-                        disabled={isAdded || isTarget}
-                        className={clsx(
-                          'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer',
-                          isAdded || isTarget
-                            ? 'bg-white/5 border-white/5 text-slate-500 cursor-not-allowed'
-                            : 'bg-white/5 hover:bg-cyan-500/20 border-white/10 hover:border-cyan-500/40 text-slate-200 hover:text-white'
-                        )}
+                        type="button"
+                        onClick={() => {
+                          applyCompareTickers(
+                            tabId,
+                            PROJECT_2X_COMPARE_PRESETS.map((p) => ({
+                              symbol: p.symbol,
+                              name: p.name,
+                              color: p.color,
+                            }))
+                          );
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                        title="สลับ Reference ทั้งหมดเป็น Project 2X ทั้ง 13 ตัว"
                       >
-                        <span
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: preset.color }}
-                        />
-                        <span>{preset.symbol}</span>
-                        {isTarget ? (
-                          <span className="text-[11px] text-amber-400 font-mono">(Target)</span>
-                        ) : isAdded ? (
-                          <span className="text-[11px] text-emerald-400">✓ Added</span>
-                        ) : (
-                          <Plus className="w-3 h-3 text-cyan-400" />
-                        )}
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        <span>เทียบ 2X ทั้งหมด (13 ตัว)</span>
                       </button>
-                    );
-                  })}
-                </div>
+                    </div>
+
+                    {/* Core Commanders */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                          🛡️ Core Commanders (83%)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const coreTargets = PROJECT_2X_COMPARE_PRESETS.filter((p) => p.category === 'Core');
+                            coreTargets.forEach((t) => handleAddRefFromSymbol(t.symbol, t.name, t.color));
+                          }}
+                          className="text-[11px] text-amber-400 hover:text-amber-300 cursor-pointer font-semibold underline"
+                        >
+                          + เพิ่ม Core ทั้ง 9 ตัว
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {PROJECT_2X_COMPARE_PRESETS.filter((p) => p.category === 'Core').map((preset) => {
+                          const isAdded = refs.some(
+                            (r) => r.symbol && preset.symbol && r.symbol.toUpperCase() === preset.symbol.toUpperCase()
+                          );
+                          const isTarget = Boolean(
+                            targetSymbol && preset.symbol && targetSymbol.toUpperCase() === preset.symbol.toUpperCase()
+                          );
+                          return (
+                            <button
+                              key={preset.symbol}
+                              type="button"
+                              onClick={() => handleAddRefFromSymbol(preset.symbol, preset.name, preset.color)}
+                              disabled={isAdded || isTarget}
+                              className={clsx(
+                                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer',
+                                isAdded || isTarget
+                                  ? 'bg-white/5 border-white/5 text-slate-500 cursor-not-allowed'
+                                  : 'bg-white/5 hover:bg-amber-500/20 border-white/10 hover:border-amber-500/40 text-slate-200 hover:text-white'
+                              )}
+                            >
+                              <span
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: preset.color }}
+                              />
+                              <span className="font-bold">{preset.symbol}</span>
+                              <span className="text-[11px] text-slate-400 font-mono">({preset.target_percent}%)</span>
+                              {isTarget ? (
+                                <span className="text-[11px] text-amber-400 font-mono">(Target)</span>
+                              ) : isAdded ? (
+                                <span className="text-[11px] text-emerald-400">✓ Added</span>
+                              ) : (
+                                <Plus className="w-3 h-3 text-amber-400" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Moonshot Strikes */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1">
+                          🚀 Moonshot Strikes (11%)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const moonTargets = PROJECT_2X_COMPARE_PRESETS.filter((p) => p.category === 'Moonshot');
+                            moonTargets.forEach((t) => handleAddRefFromSymbol(t.symbol, t.name, t.color));
+                          }}
+                          className="text-[11px] text-purple-400 hover:text-purple-300 cursor-pointer font-semibold underline"
+                        >
+                          + เพิ่ม Moonshot ทั้ง 4 ตัว
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {PROJECT_2X_COMPARE_PRESETS.filter((p) => p.category === 'Moonshot').map((preset) => {
+                          const isAdded = refs.some(
+                            (r) => r.symbol && preset.symbol && r.symbol.toUpperCase() === preset.symbol.toUpperCase()
+                          );
+                          const isTarget = Boolean(
+                            targetSymbol && preset.symbol && targetSymbol.toUpperCase() === preset.symbol.toUpperCase()
+                          );
+                          return (
+                            <button
+                              key={preset.symbol}
+                              type="button"
+                              onClick={() => handleAddRefFromSymbol(preset.symbol, preset.name, preset.color)}
+                              disabled={isAdded || isTarget}
+                              className={clsx(
+                                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer',
+                                isAdded || isTarget
+                                  ? 'bg-white/5 border-white/5 text-slate-500 cursor-not-allowed'
+                                  : 'bg-white/5 hover:bg-purple-500/20 border-white/10 hover:border-purple-500/40 text-slate-200 hover:text-white'
+                              )}
+                            >
+                              <span
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: preset.color }}
+                              />
+                              <span className="font-bold">{preset.symbol}</span>
+                              <span className="text-[11px] text-slate-400 font-mono">({preset.target_percent}%)</span>
+                              {isTarget ? (
+                                <span className="text-[11px] text-amber-400 font-mono">(Target)</span>
+                              ) : isAdded ? (
+                                <span className="text-[11px] text-emerald-400">✓ Added</span>
+                              ) : (
+                                <Plus className="w-3 h-3 text-purple-400" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode 2: My Port (Holdings) */}
+                {presetMode === 'myport' && (
+                  <div className="space-y-3 pt-1 border-t border-[#1F2538]">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+                      <div className="text-slate-300">
+                        พอร์ตปัจจุบัน: <strong className="text-white">{activePort?.name || 'My Portfolio'}</strong> ({validHoldings.length} ตัว)
+                      </div>
+                      {validHoldings.length > 0 && (
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              applyCompareTickers(
+                                tabId,
+                                validHoldings.map((h, i) => ({
+                                  symbol: h.symbol,
+                                  name: h.symbol,
+                                  color: PRESET_COLORS[i % PRESET_COLORS.length],
+                                }))
+                              );
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                            title="สลับ Reference ทั้งหมดเป็นหุ้นในพอร์ต"
+                          >
+                            <Sparkles className="w-3 h-3 text-emerald-400" />
+                            <span>เทียบทั้งพอร์ต ({validHoldings.length} ตัว)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              validHoldings.forEach((h, i) =>
+                                handleAddRefFromSymbol(h.symbol, h.symbol, PRESET_COLORS[i % PRESET_COLORS.length])
+                              );
+                            }}
+                            className="text-[11px] text-emerald-400 hover:text-emerald-300 cursor-pointer font-semibold underline"
+                          >
+                            + เพิ่มทั้งหมด
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {validHoldings.length === 0 ? (
+                      <div className="p-6 rounded-xl bg-white/5 border border-dashed border-[#2A2E45] text-center text-xs text-slate-400">
+                        ยังไม่มีหุ้นที่ถือครองในพอร์ตปัจจุบัน หรือกรุณาเลือกพอร์ตที่มีรายการทำรายการแล้ว
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {validHoldings.map((holding, idx) => {
+                          const isAdded = refs.some(
+                            (r) => r.symbol && holding.symbol && r.symbol.toUpperCase() === holding.symbol.toUpperCase()
+                          );
+                          const isTarget = Boolean(
+                            targetSymbol && holding.symbol && targetSymbol.toUpperCase() === holding.symbol.toUpperCase()
+                          );
+                          const assignedColor = PRESET_COLORS[idx % PRESET_COLORS.length];
+                          const retVal = holding.totalReturnPercent;
+                          const isProfit = retVal >= 0;
+
+                          return (
+                            <button
+                              key={holding.symbol}
+                              type="button"
+                              onClick={() => handleAddRefFromSymbol(holding.symbol, holding.symbol, assignedColor)}
+                              disabled={isAdded || isTarget}
+                              className={clsx(
+                                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer',
+                                isAdded || isTarget
+                                  ? 'bg-white/5 border-white/5 text-slate-500 cursor-not-allowed'
+                                  : 'bg-white/5 hover:bg-emerald-500/20 border-white/10 hover:border-emerald-500/40 text-slate-200 hover:text-white'
+                              )}
+                            >
+                              <span
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: assignedColor }}
+                              />
+                              <span className="font-bold">{holding.symbol}</span>
+                              {holding.weightPercent != null && (
+                                <span className="text-[11px] text-slate-400 font-mono">
+                                  ({holding.weightPercent.toFixed(1)}%)
+                                </span>
+                              )}
+                              {retVal != null && !isNaN(retVal) && (
+                                <span
+                                  className={clsx(
+                                    'text-[10px] font-mono px-1 py-0.2 rounded font-bold',
+                                    isProfit ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'
+                                  )}
+                                >
+                                  {isProfit ? '+' : ''}
+                                  {retVal.toFixed(1)}%
+                                </span>
+                              )}
+                              {isTarget ? (
+                                <span className="text-[11px] text-amber-400 font-mono">(Target)</span>
+                              ) : isAdded ? (
+                                <span className="text-[11px] text-emerald-400">✓ Added</span>
+                              ) : (
+                                <Plus className="w-3 h-3 text-emerald-400" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Mode 3: Custom (ดั้งเดิม) */}
+                {presetMode === 'custom' && (
+                  <div className="space-y-3.5 pt-1 border-t border-[#1F2538]">
+                    {/* Quick Presets */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-300">
+                          ดัชนีและสินทรัพย์อ้างอิงหลัก (Global Benchmarks)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => applyCompareBundle(tabId, 'macro')}
+                          className="text-[11px] text-cyan-400 hover:text-cyan-300 cursor-pointer font-semibold underline"
+                        >
+                          เทียบ Macro Indices
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {DEFAULT_COMPARE_PRESETS.map((preset) => {
+                          const isAdded = refs.some(
+                            (r) => r.symbol && preset.symbol && r.symbol.toUpperCase() === preset.symbol.toUpperCase()
+                          );
+                          const isTarget = Boolean(
+                            targetSymbol && preset.symbol && targetSymbol.toUpperCase() === preset.symbol.toUpperCase()
+                          );
+                          return (
+                            <button
+                              key={preset.symbol}
+                              type="button"
+                              onClick={() => handleAddRefFromSymbol(preset.symbol, preset.name, preset.color)}
+                              disabled={isAdded || isTarget}
+                              className={clsx(
+                                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer',
+                                isAdded || isTarget
+                                  ? 'bg-white/5 border-white/5 text-slate-500 cursor-not-allowed'
+                                  : 'bg-white/5 hover:bg-cyan-500/20 border-white/10 hover:border-cyan-500/40 text-slate-200 hover:text-white'
+                              )}
+                            >
+                              <span
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: preset.color }}
+                              />
+                              <span className="font-bold">{preset.symbol}</span>
+                              {isTarget ? (
+                                <span className="text-[11px] text-amber-400 font-mono">(Target)</span>
+                              ) : isAdded ? (
+                                <span className="text-[11px] text-emerald-400">✓ Added</span>
+                              ) : (
+                                <Plus className="w-3 h-3 text-cyan-400" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Quick Bundles */}
+                    <div className="space-y-1.5 pt-1 border-t border-[#1F2538]">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                          ชุดสำเร็จรูป 1-Click (Comparison Bundles)
+                        </span>
+                        <span className="text-[11px] text-slate-400">แทนที่รายการเปรียบเทียบทั้งชุด</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        {COMPARE_BUNDLES.map((bundle) => (
+                          <button
+                            key={bundle.id}
+                            type="button"
+                            onClick={() => applyCompareBundle(tabId, bundle.id)}
+                            className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-cyan-500/15 border border-white/5 hover:border-cyan-500/35 text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer group text-left"
+                          >
+                            <span className="flex items-center gap-1.5 truncate">
+                              <span>{bundle.icon}</span>
+                              <span className="group-hover:text-cyan-300 truncate text-[11px]">{bundle.name}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 2. Yahoo Finance Search Input */}

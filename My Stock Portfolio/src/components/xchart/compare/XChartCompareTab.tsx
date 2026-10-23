@@ -67,9 +67,14 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
   // Config Modal State
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [configInitialSection, setConfigInitialSection] = useState<'target' | 'refs' | 'display'>('refs');
+  const [configInitialPresetMode, setConfigInitialPresetMode] = useState<'targets' | 'myport' | 'custom'>('targets');
 
-  const handleOpenConfig = (section: 'target' | 'refs' | 'display' = 'refs') => {
+  const handleOpenConfig = (
+    section: 'target' | 'refs' | 'display' = 'refs',
+    presetMode: 'targets' | 'myport' | 'custom' = 'targets'
+  ) => {
     setConfigInitialSection(section);
+    setConfigInitialPresetMode(presetMode);
     setIsConfigOpen(true);
   };
 
@@ -141,6 +146,31 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
 
         {/* Right: Controls & Config Toggle */}
         <div className="flex items-center gap-2 shrink-0 pl-2">
+          {/* Quick Presets: 2X Targets (Default), My Port, Custom */}
+          <div className="hidden sm:flex items-center gap-1 bg-[#13192B] p-0.5 rounded-lg border border-[#242A40] shrink-0">
+            <button
+              onClick={() => handleOpenConfig('refs', 'targets')}
+              className="px-2 py-0.5 rounded text-xs font-bold text-amber-300 hover:text-white hover:bg-amber-500/20 transition-all flex items-center gap-1 cursor-pointer"
+              title="Project 2X Target Stocks (13 ตัว)"
+            >
+              <span>🎯 2X Targets</span>
+            </button>
+            <button
+              onClick={() => handleOpenConfig('refs', 'myport')}
+              className="px-2 py-0.5 rounded text-xs font-bold text-emerald-300 hover:text-white hover:bg-emerald-500/20 transition-all flex items-center gap-1 cursor-pointer"
+              title="My Port Holdings"
+            >
+              <span>💼 My Port</span>
+            </button>
+            <button
+              onClick={() => handleOpenConfig('refs', 'custom')}
+              className="px-2 py-0.5 rounded text-xs font-bold text-cyan-300 hover:text-white hover:bg-cyan-500/20 transition-all flex items-center gap-1 cursor-pointer"
+              title="Custom & Benchmarks"
+            >
+              <span>⚡ Custom</span>
+            </button>
+          </div>
+
           {/* Active Refs Pill */}
           <button
             onClick={() => handleOpenConfig('refs')}
@@ -324,14 +354,30 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
             <span>Dots</span>
           </button>
 
-          {/* Quick Bundles Trigger */}
-          <button
-            onClick={() => handleOpenConfig('refs')}
-            className="px-2 py-0.5 rounded text-xs font-semibold text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all cursor-pointer flex items-center gap-1"
-          >
-            <Sparkles className="w-3 h-3 text-cyan-400" />
-            <span className="hidden sm:inline">Bundles</span>
-          </button>
+          {/* Quick Presets Group (2X, My Port, Custom) */}
+          <div className="flex items-center gap-1 bg-[#13192B] px-1 py-0.5 rounded border border-[#242A40]">
+            <button
+              onClick={() => handleOpenConfig('refs', 'targets')}
+              className="px-1.5 py-0.2 rounded text-[11px] font-bold text-amber-300 hover:text-white hover:bg-amber-500/20 transition-all cursor-pointer flex items-center gap-0.5"
+              title="Stock Target (Project 2X Presets)"
+            >
+              <span>🎯 2X</span>
+            </button>
+            <button
+              onClick={() => handleOpenConfig('refs', 'myport')}
+              className="px-1.5 py-0.2 rounded text-[11px] font-bold text-emerald-300 hover:text-white hover:bg-emerald-500/20 transition-all cursor-pointer flex items-center gap-0.5"
+              title="My Port Holdings Presets"
+            >
+              <span>💼 Port</span>
+            </button>
+            <button
+              onClick={() => handleOpenConfig('refs', 'custom')}
+              className="px-1.5 py-0.2 rounded text-[11px] font-bold text-cyan-300 hover:text-white hover:bg-cyan-500/20 transition-all cursor-pointer flex items-center gap-0.5"
+              title="Custom & Benchmarks Presets"
+            >
+              <span>⚡ Custom</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -342,6 +388,7 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
         tabId={tabId}
         targetSymbol={symbol}
         initialSection={configInitialSection}
+        initialPresetMode={configInitialPresetMode}
       />
     </div>
   );
