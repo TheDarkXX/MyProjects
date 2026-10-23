@@ -39,6 +39,7 @@ export function calculateStartDate(timeframe: CompareTimeFrame, availableDates?:
   const formatDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
   switch (timeframe) {
+    case '1W':
     case '1Wk': {
       const d = new Date(now);
       d.setDate(d.getDate() - 7);

@@ -10,7 +10,7 @@ export type TimeFrame = '7D' | '1M' | '3M' | '6M' | '10M' | '1Y' | 'ALL';
 export type ChartStyle = 'CANDLE' | 'HEIKIN_ASHI' | 'AREA';
 export type Resolution = '1D' | '1W' | '4H';
 
-export type CompareTimeFrame = '1Wk' | '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX';
+export type CompareTimeFrame = '1W' | '1Wk' | '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX';
 
 export interface CompareLineStyleConfig {
   color: string;

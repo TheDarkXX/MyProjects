@@ -29,7 +29,7 @@ interface XChartCompareTabProps {
   symbol: string;
 }
 
-const TIMEFRAMES: CompareTimeFrame[] = ['1Wk', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y', 'MAX'];
+const TIMEFRAMES: CompareTimeFrame[] = ['1W', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y', 'MAX'];
 
 const QUICK_BENCHMARKS = [
   { symbol: 'SPY', label: 'SPY', name: 'S&P 500 ETF', color: '#3B82F6' },
@@ -174,7 +174,7 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
     setIsConfigOpen(true);
   };
 
-  const isOverSixMonths = (tf: CompareTimeFrame) => tf !== '1Wk' && tf !== '1M' && tf !== '3M' && tf !== '6M';
+  const isOverSixMonths = (tf: CompareTimeFrame) => tf !== '1W' && tf !== '1Wk' && tf !== '1M' && tf !== '3M' && tf !== '6M';
 
   const handleSelectTimeframe = (tf: CompareTimeFrame) => {
     // TradingView rule: <= 6M -> showPointMarkers = true, > 6M -> showPointMarkers = false (auto-off)
