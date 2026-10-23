@@ -62,7 +62,7 @@ description: FlowKit Storyboard-to-Video Automation Engine — ออโตเ�
 ```powershell
 & "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" img --prompt "A beautiful portrait of Thai woman in white dress" --ratio 9:16
 # กรณีต้องการล็อกหน้าด้วยรูป reference:
-& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" img --prompt "Drinking coffee in cafe" --ratio 9:16 --refs "P:\path\to\face.png"
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" img --prompt "Drinking coffee in cafe" --ratio 9:16 --refs "C:\path\to\face.png"
 ```
 
 ### 4. เจนวิดีโอโดยตรง (`/flow vdo`)
@@ -71,12 +71,12 @@ description: FlowKit Storyboard-to-Video Automation Engine — ออโตเ�
 & "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" vdo --prompt "A drone shot flying over misty mountain peak at sunrise. Cinematic 4K." --ratio 16:9
 
 # แบบ Image-to-Video ล็อกภาพตั้งต้น (ผ่าน Google Veo 3.1):
-& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" vdo --prompt "She smiles gently. The camera slowly dollies in." --image "P:\path\to\character.png" --model veo --ratio 9:16
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" vdo --prompt "She smiles gently. The camera slowly dollies in." --image "C:\path\to\character.png" --model veo --ratio 9:16
 ```
 
 ### 5. อัปโหลดรูป Reference จากเครื่องขึ้น Flow (`/flow upload-ref`)
 ```powershell
-& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" upload-ref --file "P:\path\to\character.png"
+& "C:\My Claw\The Viral\FlowKit\venv\Scripts\python.exe" "C:\My Claw\The Viral\FlowKit\flow_cli.py" upload-ref --file "C:\path\to\character.png"
 ```
 - ส่งภาพ local ขึ้น Google Flow แล้วคืนค่า `media_id` สำหรับเอาไปล็อกหน้าตัวละครหรือฉาก
 

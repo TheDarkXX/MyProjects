@@ -51,12 +51,12 @@ description: >-
 * คิดเป็นความเร็วพูด 11–12 ตัวอักษรต่อวินาที พอดีกับคลิปความยาว 10 วินาที ไม่ล้น ไม่เร่ง ไม่ขาด
 
 ### กฎเหล็กที่ 4: ล็อกภาพสินค้าแท้ (Brand Reference Anchoring)
-ใน `s3_solution` และ `s4_cta` ต้องระบุพิกัดรูปภาพจาก [`Brand_Refs/`](file:///P:/AI/The%20Viral/Ads%20DRB/Brand_Refs/):
+ใน `s3_solution` และ `s4_cta` ต้องระบุพิกัดรูปภาพจาก [`Brand_Refs/`](file:///C:/My%20Claw/The%20Viral/Ads%20DRB/Brand_Refs/):
 * `REF_BOTTLE`: หน้าตรงขวดแก้วพรีเมียมฉลากชัด
 * `REF_CAPSULES`: มุม 45° โชว์เม็ดแคปซูล/ซอฟต์เจล
 
 ### กฎเหล็กที่ 5: ประเมินคะแนน 8 เสาหลัก (Audit Scorecard S+)
-ต้องแนบตารางประเมินหมัดต่อหมัดเทียบกับต้นฉบับ โดยต้องได้คะแนนรวม **≥ 90 คะแนน (เกรด S+)** ตามเกณฑ์ใน [`Playbook/SOPs/UGC_SCRIPT_AUDIT_SCORECARD_MASTER.md`](file:///P:/AI/The%20Viral/Ads%20DRB/Playbook/SOPs/UGC_SCRIPT_AUDIT_SCORECARD_MASTER.md)
+ต้องแนบตารางประเมินหมัดต่อหมัดเทียบกับต้นฉบับ โดยต้องได้คะแนนรวม **≥ 90 คะแนน (เกรด S+)** ตามเกณฑ์ใน [`Playbook/SOPs/UGC_SCRIPT_AUDIT_SCORECARD_MASTER.md`](file:///C:/My%20Claw/The%20Viral/Ads%20DRB/Playbook/SOPs/UGC_SCRIPT_AUDIT_SCORECARD_MASTER.md)
 
 ---
 
@@ -73,11 +73,11 @@ description: >-
    - ตรวจนับตัวอักษรทุกซีนให้อยู่ในกรอบ 110–120 ตัวอักษร
    - สแกนคำต้องห้าม `ค่ะ / นะคะ` ซ้ำ
 4. **บันทึกลงไฟล์ปลายทาง:**
-   - โฟลเดอร์: `P:\AI\The Viral\Ads DRB\Campaigns\<Product>\<Campaign_ID>\`
+   - โฟลเดอร์: `C:\My Claw\The Viral\Ads DRB\Campaigns\<Product>\<Campaign_ID>\`
    - ไฟล์: `storyboard.md`
 5. **รัน Contract Verification:**
    ```powershell
-   python "P:\AI\The Viral\Ads DRB\tools\meta_ugc_engine\storyboard_contract.py" "P:\AI\The Viral\Ads DRB\Campaigns\<Product>\<Campaign_ID>\storyboard.md"
+   python "C:\My Claw\The Viral\Ads DRB\tools\meta_ugc_engine\storyboard_contract.py" "C:\My Claw\The Viral\Ads DRB\Campaigns\<Product>\<Campaign_ID>\storyboard.md"
    ```
 
 ---
@@ -95,8 +95,8 @@ description: >-
 ---
 
 ## 1. ข้อมูลอ้างอิงภาพสินค้า (Reference Anchors)
-- **REF_BOTTLE:** `P:\AI\The Viral\Ads DRB\Brand_Refs\Products\Magnesium\3Ref_Master_Pack\DRB_MAG_REF01_front_hero.png`
-- **REF_CAPSULES:** `P:\AI\The Viral\Ads DRB\Brand_Refs\Products\Magnesium\3Ref_Master_Pack\DRB_MAG_REF02_angle_and_capsules.jpeg`
+- **REF_BOTTLE:** `C:\My Claw\The Viral\Ads DRB\Brand_Refs\Products\Magnesium\3Ref_Master_Pack\DRB_MAG_REF01_front_hero.png`
+- **REF_CAPSULES:** `C:\My Claw\The Viral\Ads DRB\Brand_Refs\Products\Magnesium\3Ref_Master_Pack\DRB_MAG_REF02_angle_and_capsules.jpeg`
 
 ---
 
@@ -133,6 +133,6 @@ description: >-
 
 ```text
 /scriptclone ถอดคลิป Nectapharma ตัว 9 แสน แปลงเป็น DoctorBank Magnesium ตัวใหม่
-/scriptclone P:\AI\The Viral\Ads DRB\Competitor_Data\Transcripts\Nectapharma\clip_01_top_seller
+/scriptclone C:\My Claw\The Viral\Ads DRB\Competitor_Data\Transcripts\Nectapharma\clip_01_top_seller
 /adclone สร้างสคริปต์ธีมตื่นมาเพลีย ปวดหัวไมเกรน โฟกัสสาวออฟฟิศ ไม่ใช้คำสุภาพ
 ```
