@@ -1,18 +1,19 @@
 ---
 name: lr
-version: "1.9.0"
+version: "2.0.0"
 description: >-
   Intelligent Portrait and Culinary Food Development and GPU Direct Export Engine for LightCraft and Lightroom workflows.
-  Features Korean Idol Glass Skin (ขาว นวล ป๊อป เด้ง อมชมพูพีชระเรื่อ), Zero-Edge Powdered Skin (Clarity -4, Texture 0, Orange Lum +32, Yellow Sat -16),
-  Salient Neutral White & Tungsten Neutralizer (5450K-5750K), Histogram Dynamic Fill Metering (+0.75 to +1.48 EV), Automatic Pick-Flagging (photo.flag pick),
-  DoctorBank 2026 Food Suite, Mandatory develop.reset pure-canvas guarantee, 4-Dimension Situational Radar, and Tone Curve (192, 212).
+  Features Korean Idol Glass Skin and Universal Porcelain Master Suite with Zero-Clutter History Protection (history.clear single-step guarantee),
+  Zero-Edge Powdered Skin (Clarity -4, Texture 0, Orange Lum +26, Yellow Sat -16, Red Sat -20),
+  Salient Neutral White and Tungsten Neutralizer (5450K-5750K), Histogram Dynamic Fill Metering (+0.75 to +1.48 EV), Automatic Pick-Flagging (photo.flag pick),
+  DoctorBank 2026 Food Suite, 4-Dimension Situational Radar, Tone Curve (192, 212), and Clean 5-Tier Combo Presets.
   Supports /lr (Smart Default), /lrlive (Live GUI Sync), /lrbatch (Batch Render JPEG), and /lrexport (One-Click GPU Fast Export 2048px).
 ---
 
 # Skill: `/lr` (`/lrlive` / `/lrbatch` / `/lrexport`) — Intelligent Portrait Development Engine
 
 ## 📌 ภาพรวม (Overview)
-เครื่องยนต์แต่งภาพพอร์ตเทรตอัจฉริยะระบบครบวงจร (4-Tier Architecture) รองรับทั้งการเกรดสีสดๆ บนหน้าจอ **LightCraft GUI**, การประมวลผลเรนเดอร์เบื้องหลัง, คำสั่ง **Direct GPU Export** รวดเดียวทั้งอัลบั้ม และชุดพรีเซ็ต **"Korean Idol Glass Skin & Studio Airy Suite"** (.xmp สำหรับ Adobe Lightroom Classic / Camera Raw) ด้วยมาตรฐานผิวขาวกระจ่างใส อมชมพูระเรื่อ ดุจกระเบื้องเคลือบสไตล์ดารา-ไอดอลเกาหลี พร้อมระบบ **Auto Pick-Flagging** ปักธงรูปที่ปรับแล้วให้อัตโนมัติเพื่อง่ายต่อการฟิลเตอร์
+เครื่องยนต์แต่งภาพพอร์ตเทรตอัจฉริยะระบบครบวงจร (4-Tier Architecture) รองรับทั้งการเกรดสีสดๆ บนหน้าจอ **LightCraft GUI**, การประมวลผลเรนเดอร์เบื้องหลัง, คำสั่ง **Direct GPU Export** รวดเดียวทั้งอัลบั้ม และชุดพรีเซ็ต **"Universal Porcelain Master & Korean Idol Suite"** (พร้อมใช้งานบน LightCraft GUI และ .xmp สำหรับ Adobe Lightroom Classic / Camera Raw) ด้วยมาตรฐานผิวขาวกระจ่างใส อมชมพูระเรื่อ ดุจกระเบื้องเคลือบสไตล์ดารา-ไอดอลเกาหลี พร้อมระบบ **Auto Pick-Flagging** ปักธงรูปที่ปรับแล้วให้อัตโนมัติเพื่อง่ายต่อการฟิลเตอร์ และระบบ **Zero-Clutter History Protection** ยุบประวัติการแต่งภาพเหลือ Step เดียว คลีนตา 100%
 
 ---
 
@@ -21,7 +22,7 @@ description: >-
 | คำสั่ง | มู้ดการใช้งาน | พฤติกรรมของระบบ |
 |---|:---:|---|
 | **`/lr`** | **Smart Workhorse** | **ค่าตั้งต้นสุดฉลาด:** ถ้าเปิด LightCraft ค้างไว้ จะทำ Live Sync อัลบั้มปัจจุบันทันที หรือถ้าตามด้วยชื่ออัลบั้มจะ Auto-resolve ค้นหาโฟลเดอร์ให้ |
-| **`/lrlive`** | **Pure GUI Sync** | **ล็อกโหมดสด 100%:** สแกนและปรับสไลเดอร์สดๆ ในหน้าต่าง LightCraft พร้อมปักธง 🚩 Pick Flag ให้ทุกรูปที่ปรับ (เช่น `/lrlive` หรือ `/lrlive "HBD Tiger"`) |
+| **`/lrlive`** | **Pure GUI Sync** | **ล็อกโหมดสด 100%:** สแกนและปรับสไลเดอร์สดๆ ในหน้าต่าง LightCraft พร้อมปักธง 🚩 Pick Flag ให้ทุกรูปที่ปรับ และเคลียร์ History ให้เหลือ Step เดียว (เช่น `/lrlive` หรือ `/lrlive "HBD Tiger"`) |
 | **`/lrbatch`** | **Offline Render** | **ล็อกโหมดเรนเดอร์ไฟล์:** ประมวลผลทั้งโฟลเดอร์และ Export เซฟไฟล์เป็น JPEG คุณภาพสูง 95% ลงโฟลเดอร์ปลายทาง (เช่น `/lrbatch "HBD Tiger"`) |
 | **`/lrexport`** | **GPU Direct Export** | **One-Click ส่งงานทันที:** สั่ง LightCraft GPU Engine ส่งออกไฟล์รูปทั้งอัลบั้มลง `V:\Picture\Render\<Album>` ด้วยโปรไฟล์ทองคำ (JPEG, sRGB, Q90, Long Edge 2048px, Screen Sharpening, `{folder}-{seq:3}`) รวดเร็วระดับเสี้ยววินาทีต่อรูป |
 
@@ -43,35 +44,43 @@ description: >-
 
 ---
 
-## 🧬 7 เสาหลักสถาปัตยกรรม (Core Architectural Pillars v1.9.0)
+## 🧬 7 เสาหลักสถาปัตยกรรม (Core Architectural Pillars v2.0.0)
 
-1. **Mandatory Pure Clean Reset (`develop.reset` — กฎเหล็กล้างกระดานก่อนสวมพรีเซ็ต):**
-   - ทุกครั้งที่สั่งรัน Live Sync หรือสวมพรีเซ็ตใหม่ ไม่ว่าจะรันครั้งแรกหรือรันซ้ำ **ต้องสั่ง `develop.reset` ล้างค่าเดิมทิ้ง 100% จนเป็นกระดาษขาวสะอาด** ก่อนยิง `preset.apply` และ `develop.set` เสมอ!
+1. **Zero-Clutter History Protection (`history.clear` — กฎเหล็กล้างประวัติเหลือ Step เดียว สะอาดตา 100%):**
+   - ทุกครั้งที่รันประมวลผล สวมพรีเซ็ต หรือจูนค่าแสง **ห้ามปล่อยให้มี History ลากยาวเป็นพรืดเด็ดขาด!**
+   - ระบบจะส่งต่อค่าพรีเซ็ต + พารามิเตอร์ develop + หน้ากาก Multi-Face Glow แล้วจบด้วยคำสั่ง `history.clear` ทันที เพื่อยุบและล้างประวัติการปรับแต่งทั้งหมดให้เหลือเพียงสเต็ปเดียว (`Cleared History`) โดยคงค่าการเกรดสีและพรีเซ็ตไว้ครบถ้วน 100% หน้าต่าง History ของ LightCraft สะอาด คลีน ไร้ขยะรบกวนสายตา
 2. **Automatic Pick-Flagging (`photo.flag: pick` — ปักธงรูปที่ปรับแล้วอัตโนมัติ):**
    - ทุกรูปที่ผ่านการปรับจูนระบบจะยิงคำสั่ง `photo.flag` ปักธงขาว (Pick Flag) ให้อัตโนมัติทันที เพื่อให้ผู้ใช้กดฟิลเตอร์กรองดูเฉพาะรูปที่ปรับแต่งแล้วได้ในคลิกเดียว
-3. **Indoor Tungsten Neutralizer (5450K - 5750K & Tint -2.5):**
-   - กำจัดคราบเหลืองเลี่ยนของหลอดไฟทังสเตนและแสงสะท้อนจากผนังไม้ในคาเฟ่ ด้วยการดรอป Kelvin ลงมาที่ช่วง 5450K-5750K เปลี่ยนผิวให้ขาวนวลอมชมพูพอร์ซเลนสะอาดตา (ช็อตแสงแดดริมหน้าต่างขยับขึ้น 6050K-6150K Tint -1.5)
-4. **Histogram Dynamic Fill Metering (+0.75 ถึง +1.48 EV):**
-   - ปลดล็อกปัญหากราฟแสงดรอป ด้วยการคำนวณยืดกราฟแสงไปจรด Zone VIII ฝั่งขวา สว่างเต็มอิ่ม นวลตา ช็อตย้อนแสงหน้าจมเงาดันได้ถึง +1.48 EV
+3. **Indoor Tungsten Neutralizer & Neutral Floor Guard (5450K - 5750K vs 6150K):**
+   - กำจัดคราบเหลืองเลี่ยนของหลอดไฟทังสเตนและแสงสะท้อนจากผนังไม้ในคาเฟ่ ด้วยการดรอป Kelvin ลงมาที่ช่วง 5450K-5750K Tint -2.5
+   - **Neutral Floor Guard (กันหน้าฟ้า/เขียว):** หากภาพต้นฉบับไม่ได้เหลืองจัด หรือถ่ายริมหน้าต่าง/กึ่งเอาท์ดอร์ (R/B < 1.15) ระบบจะ **ล็อกไว้ที่ 6050K-6150K Tint -1.5** อัตโนมัติ เพื่อป้องกันไม่ให้ผิวติดฟ้า ซีด หรือเขียวหลอกตา
+4. **Histogram Dynamic Fill & Strict Headroom Ceiling (+0.75 ถึง +1.48 EV):**
+   - ปลดล็อกปัญหากราฟแสงดรอป ด้วยการคำนวณยืดกราฟแสงไปจรด Zone VIII ฝั่งขวา ช็อตย้อนแสงหน้าจมเงาดันได้ถึง +1.48 EV
+   - **Strict Headroom Ceiling (เพดานสกัดภาพขาวโอเวอร์):** หากส่วนสว่างของภาพ P98 สูงเกิน 215-225 อยู่แล้ว ระบบจะจำกัดเพดาน Exposure ไม่ให้เกิน +0.95 ถึง +1.08 EV ทันที แล้วหันไปใช้ **Shadows (+38 ถึง +42)** ในการงัดหน้าขึ้นมาแทน เพื่อไม่ให้ฉากหลังขาวโพลนหรือหลุดรายละเอียด
 5. **Coupled Tone Protection (Highlights -52 ถึง -65, Whites +20 ถึง +24, & Blacks -6 ถึง -7):**
    - ไฮไลท์ไม่หลุดเบิร์น เสื้อขาวและจานชามมีดีเทลครบถ้วน พร้อมขึงฐานดำเพื่อขับมิติภาพ 3D ป๊อปเด้ง
-6. **Zero-Edge Powdered Finish (แป้งพัฟระดับพิกเซล ไร้ขอบลอย 100% — Masks = 0):**
-   - **กฎเหล็กห้ามใช้ Geometric Radial Mask บนหน้า:** มาสก์วงรีจะแผ่ล้นไปกินโต๊ะไม้สีเข้มและผมดำ ทำให้เกิดขอบดวงเรืองแสงลอยในอากาศ (Radial Bleed Artifact)
-   - **วิธีสร้างเนื้อแป้งที่ถูกต้อง:** ใช้ **HSL Orange Lum (+30 ถึง +32)** ดึงแสงเฉพาะเม็ดสีผิวคน 0% ลามไปโดนโต๊ะหรือผม ร่วมกับ **Yellow Sat (-16)** ล้างคราบเหลืองสะท้อน และ **Clarity (-4.0) + Texture (0.0)** ลบความสากหยาบของรูขุมขน กลายเป็นผิวขาวเนียนนุ่มเหมือนตบแป้งพัฟบางๆ โดยที่ดวงตายังคมกริบ ไร้ขอบลอย 100%
-7. **Pure Translucent Glass Skin & Dopamine Palette:**
-   - Tone Curve กระจกเงา `(192, 212)` ร่วมกับ **Yellow Luminance (+14)**, **Red Saturation (+8)** และ **Midtones Apricot Hue 22, Sat 10** เกลี่ยผิวใสเรียบเนียนเป็นเนื้อเดียวกัน ไร้การฉาบแป้งด้วย Mask หลอกตา
+6. **Zero-Edge Powdered Finish (แป้งพัฟระดับพิกเซล ไร้ขอบลอย 100% — Anti-Spill Tuning):**
+   - **กฎเหล็กเรื่องสีผิวธรรมชาติ:** สกัดอาการหน้าแดงก่ำ/หน้าไหม้แดดด้วย **Red Sat (-20.0)** และ **Orange Sat (-6.0)**
+   - **วิธีสร้างเนื้อแป้งที่ถูกต้อง:** ใช้ **HSL Orange Lum (+26.0)** ดึงแสงเฉพาะเม็ดสีผิวคน 0% ลามไปโดนโต๊ะหรือผม ร่วมกับ **Yellow Sat (-16)** ล้างคราบเหลืองสะท้อน และ **Clarity (-4.0) + Texture (0.0)** ลบความสากหยาบของรูขุมขน กลายเป็นผิวขาวเนียนนุ่มเหมือนตบแป้งพัฟบางๆ โดยที่ดวงตายังคมกริบ ไร้ขอบลอย 100%
+7. **Pure Translucent Porcelain Skin & Dopamine Palette:**
+   - Tone Curve กระจกเงา `(192, 212)` ร่วมกับ **Blue Calibration Sat (+16.0)**, **Yellow Luminance (+14)**, **Temp -2, Tint +4** เกลี่ยผิวขาวใสอมชมพูเรียบเนียนเป็นเนื้อเดียวกัน ไร้การฉาบแป้งด้วย Mask หลอกตา
 
 ---
 
-## 🎨 DoctorBank 2026 Korean Idol & Studio Preset Suite (.xmp)
+## 🎨 DoctorBank 2026 Universal Porcelain & Mod Preset Suite
 
-ติดตั้งและพร้อมใช้งานทันทีใน **Adobe Lightroom Classic** และ **Camera Raw**:
+ติดตั้งและพร้อมใช้งานทันทีทั้งใน **LightCraft GUI** (ผ่าน Socket API / `presets.json`) และ **Adobe Lightroom Classic / Camera Raw**:
 - โฟลเดอร์ Lightroom: `C:\Users\Admin\AppData\Roaming\Adobe\Lightroom\Develop Presets\DR.Bank Preset\`
 - โฟลเดอร์ Camera Raw: `C:\Users\Admin\AppData\Roaming\Adobe\CameraRaw\Settings\DoctorBank 2026 Korean Suite\`
 
-| พรีเซ็ต | บทบาทและแนวภาพ | พารามิเตอร์เด่น |
+| พรีเซ็ต | บทบาทและแนวภาพ | พารามิเตอร์เด่น & วิศวกรรมสี |
 |---|---|---|
-| **`[DB] 01 - Korean Idol Glass Skin (Master)`** | สไตล์ดารา-ไอดอลเกาหลี ผิวขาวใส อมชมพูพีชระเรื่อ ดุจกระเบื้องเคลือบ (Porcelain Glass Skin) | Orange Lum +18, Sat -2, Red Sat +8, Green Sat +4, Midtone Hue 22 Sat 10, Texture +6, Clarity +3 |
+| **`[DB] 00 - Universal Porcelain Master`** | **Master Base พ่อทุกสถาบัน:** ผิวขาวกระจ่างใส อมชมพูระเรื่อ ไม่ติดเหลือง ไม่แดงก่ำ คลีนทุกสถานการณ์ | Orange Lum +26, Sat -6, Red Sat -20, Yellow Sat -16, Temp -2, Tint +4, Blue Calibration +16, Tone Curve (192, 212) |
+| **`[DB Mod] Scene - Garden & Lawn`** | **Combo เสริมฉากหญ้า/สวน:** ลดคราบเขียวสะท้อนเข้าหน้า ดรอป Saturation สีเขียว ดึงฉากหลังนุ่มตา | Green Sat -24, Green Lum +10, Yellow Sat -18 |
+| **`[DB Mod] Scene - Backlit Shadow Lift`** | **Combo ช็อตย้อนแสง:** ยกเงาใบหน้า ดึงรายละเอียดเสื้อผ้าโดยไม่ทำให้ไฮไลท์ระเบิด | Shadows +48, Exposure +0.40, Highlights -60 |
+| **`[DB Mod] Tool - Extra Rosy Blush`** | **Combo เติมแก้มอมชมพู:** เพิ่มเฉดสีผิวให้มีเลือดฝาด ดูสุขภาพดีสไตล์เกาหลี | Tint +4, Red Sat +12, Red Hue -4 |
+| **`[DB Mod] Tool - Kill Red Flush`** | **Combo ฆ่าหน้าแดง/สิวผื่น:** กู้ชีพคนผิวแดงจัด หน้าเบิร์นแดด ให้กลับมาขาวเนียนผ่อง | Red Sat -30, Red Lum +15, Orange Sat -8 |
+| **`[DB] 01 - Korean Idol Glass Skin (Master)`** | สไตล์ดารา-ไอดอลเกาหลี ผิวขาวใส อมชมพูพีชระเรื่อ ดุจกระเบื้องเคลือบ (Legacy Master) | Orange Lum +18, Sat -2, Red Sat +8, Green Sat +4, Midtone Hue 22 Sat 10, Texture +6, Clarity +3 |
 | **`[DB] 02 - Ultra Airy Pop (Studio Japan)`** | สไตล์ High-Key ญี่ปุ่น สะอาดตา โปร่ง โล่ง สบายตา เสื้อขาววิ้ง (FEB_1600 Ground Truth) | Whites +22, High -48, Shadows +36, Green Sat -14, Texture +4 |
 | **`[DB] 03 - Warm Porcelain (Tungsten Neutralizer)`** | กู้ชีพภาพในร่ม/ร้านอาหาร/ไฟส้มทังสเตน ฆ่าคราบเหลืองเลี่ยน ดึงผิวเนียนผ่อง ไม่ติดฟ้าซีด | Yellow Sat -28, Orange Sat -14, Lum +20, Shadow +40, High -55 |
 | **`[DB Mod] Korean Pink Blush & Glow`** | เครื่องมือคลิกเสริม: สวมสีผิวอมชมพูและกลาสสกินให้รูป โดยไม่แตะ Exposure หรือ WB เดิม | Red/Orange HSL + Calibration Boost เพียวๆ ผิวเด้งทันที |
