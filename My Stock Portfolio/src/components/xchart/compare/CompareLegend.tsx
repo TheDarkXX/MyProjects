@@ -31,7 +31,7 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
   activePresetMode,
 }) => {
   const { toggleCompareRefVisible, removeCompareRef } = useXChartStore();
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
 
   const formatPercent = (val: number | null | undefined) => {
     if (val == null || isNaN(val)) return '—';
