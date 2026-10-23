@@ -14,6 +14,8 @@ interface CompareLegendProps {
   dynamicTargetReturn?: number | null;
   dynamicRefReturns?: Record<string, number | null>;
   onOpenConfig: (activeSection?: 'target' | 'refs' | 'display', presetMode?: 'targets' | 'myport' | 'custom') => void;
+  onApplyPresetDirect?: (mode: 'targets' | 'myport' | 'custom') => void;
+  activePresetMode?: 'targets' | 'myport' | 'custom';
 }
 
 export const CompareLegend: React.FC<CompareLegendProps> = ({
@@ -25,6 +27,8 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
   dynamicTargetReturn,
   dynamicRefReturns,
   onOpenConfig,
+  onApplyPresetDirect,
+  activePresetMode,
 }) => {
   const { toggleCompareRefVisible, removeCompareRef } = useXChartStore();
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
@@ -267,25 +271,40 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
               <div className="grid grid-cols-3 gap-1">
                 <button
                   type="button"
-                  onClick={() => onOpenConfig('refs', 'targets')}
-                  className="px-1.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 hover:text-white text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
-                  title="เปิดเปรียบเทียบ Project 2X Targets (13 ตัว)"
+                  onClick={() => onApplyPresetDirect ? onApplyPresetDirect('targets') : onOpenConfig('refs', 'targets')}
+                  className={clsx(
+                    "px-1.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1",
+                    activePresetMode === 'targets'
+                      ? "bg-amber-500/25 border-amber-500/50 text-amber-300 shadow-xs"
+                      : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 text-slate-300 hover:text-white"
+                  )}
+                  title="สลับเปรียบเทียบ Project 2X Targets (13 ตัว) ทันที"
                 >
                   <span>🎯 2X</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => onOpenConfig('refs', 'myport')}
-                  className="px-1.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 hover:text-white text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
-                  title="เปิดเปรียบเทียบหุ้นในพอร์ต (My Port)"
+                  onClick={() => onApplyPresetDirect ? onApplyPresetDirect('myport') : onOpenConfig('refs', 'myport')}
+                  className={clsx(
+                    "px-1.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1",
+                    activePresetMode === 'myport'
+                      ? "bg-emerald-500/25 border-emerald-500/50 text-emerald-300 shadow-xs"
+                      : "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-slate-300 hover:text-white"
+                  )}
+                  title="สลับเปรียบเทียบหุ้นในพอร์ต (My Port) ทันที"
                 >
                   <span>💼 Port</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => onOpenConfig('refs', 'custom')}
-                  className="px-1.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 hover:text-white text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
-                  title="เปิดเปรียบเทียบ Custom & Benchmarks"
+                  onClick={() => onApplyPresetDirect ? onApplyPresetDirect('custom') : onOpenConfig('refs', 'custom')}
+                  className={clsx(
+                    "px-1.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1",
+                    activePresetMode === 'custom'
+                      ? "bg-cyan-500/25 border-cyan-500/50 text-cyan-300 shadow-xs"
+                      : "bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20 text-slate-300 hover:text-white"
+                  )}
+                  title="สลับเปรียบเทียบ Custom & Benchmarks ทันที"
                 >
                   <span>⚡ Custom</span>
                 </button>

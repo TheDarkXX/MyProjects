@@ -3,7 +3,10 @@ import {
   useXChartStore,
   CompareTimeFrame,
   createDefaultCompareConfig,
+  PROJECT_2X_COMPARE_PRESETS,
+  DEFAULT_COMPARE_PRESETS,
 } from '../../../stores/xchartStore';
+import { useHoldings } from '../../../hooks/useHoldings';
 import { useCompareData } from './useCompareData';
 import { CompareLWChart, CompareHoverData, DynamicBaseStats } from './CompareLWChart';
 import { CompareLegend } from './CompareLegend';
@@ -28,8 +31,28 @@ interface XChartCompareTabProps {
 
 const TIMEFRAMES: CompareTimeFrame[] = ['1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y', 'MAX'];
 
+const QUICK_BENCHMARKS = [
+  { symbol: 'SPY', label: 'SPY', name: 'S&P 500 ETF', color: '#3B82F6' },
+  { symbol: 'QQQ', label: 'QQQ', name: 'Nasdaq 100 ETF', color: '#A855F7' },
+  { symbol: 'GLD', label: 'Gold', name: 'Gold Trust (GLD)', color: '#EAB308' },
+  { symbol: 'BTC-USD', label: 'BTC', name: 'Bitcoin (BTC)', color: '#F97316' },
+];
+
+const PRESET_COLORS = [
+  '#38BDF8', '#22C55E', '#F59E0B', '#A855F7', '#EC4899',
+  '#06B6D4', '#EAB308', '#F97316', '#3B82F6', '#10B981',
+  '#8B5CF6', '#F43F5E', '#14B8A6', '#6366F1'
+];
+
 export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbol }) => {
-  const { tabs, updateCompareConfig } = useXChartStore();
+  const {
+    tabs,
+    updateCompareConfig,
+    applyCompareTickers,
+    applyCompareBundle,
+    addCompareRef,
+    removeCompareRef,
+  } = useXChartStore();
   const currentTab = tabs.find((t) => t.id === tabId);
 
   // Fallback to default compare config if not yet set
@@ -40,6 +63,79 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
   const activeTimeframe = compareConfig.timeframe || '1Y';
   const targetStyle = compareConfig.targetStyle;
   const refs = compareConfig.refs;
+
+  const { holdings = [] } = useHoldings();
+  const validHoldings = useMemo(() => {
+    return (holdings || []).filter(
+      (h) => h && h.quantity > 0 && h.symbol && h.symbol !== 'CASH'
+    );
+  }, [holdings]);
+
+  // Determine active preset mode based on current refs
+  const is2XActive = useMemo(() => {
+    const target2XSymbols = new Set(PROJECT_2X_COMPARE_PRESETS.map((p) => p.symbol.toUpperCase()));
+    const refSymbols = refs.map((r) => r.symbol?.toUpperCase()).filter(Boolean);
+    if (refSymbols.length === 0) return false;
+    const matchCount = refSymbols.filter((s) => target2XSymbols.has(s)).length;
+    return matchCount >= Math.min(refSymbols.length, 3);
+  }, [refs]);
+
+  const isPortActive = useMemo(() => {
+    const portSymbols = new Set(validHoldings.map((h) => h.symbol.toUpperCase()));
+    const refSymbols = refs.map((r) => r.symbol?.toUpperCase()).filter(Boolean);
+    if (refSymbols.length === 0 || portSymbols.size === 0) return false;
+    const matchCount = refSymbols.filter((s) => portSymbols.has(s)).length;
+    return matchCount >= Math.min(refSymbols.length, 2);
+  }, [refs, validHoldings]);
+
+  const isCustomActive = !is2XActive && !isPortActive;
+
+  const handleToggleBenchmark = (bm: typeof QUICK_BENCHMARKS[0]) => {
+    const existingRef = refs.find(
+      (r) => r.symbol && r.symbol.toUpperCase() === bm.symbol.toUpperCase()
+    );
+    if (existingRef) {
+      removeCompareRef(tabId, existingRef.id);
+    } else {
+      addCompareRef(tabId, {
+        symbol: bm.symbol,
+        name: bm.name,
+        color: bm.color,
+        lineWidth: 2,
+        lineStyle: 'DASHED',
+        opacity: 0.85,
+        visible: true,
+      });
+    }
+  };
+
+  const handleApplyPresetDirect = (mode: 'targets' | 'myport' | 'custom') => {
+    if (mode === 'targets') {
+      applyCompareTickers(
+        tabId,
+        PROJECT_2X_COMPARE_PRESETS.map((p) => ({
+          symbol: p.symbol,
+          name: p.name,
+          color: p.color,
+        }))
+      );
+    } else if (mode === 'myport') {
+      if (validHoldings.length === 0) {
+        alert('ไม่พบรายการหุ้นที่ถือครองในพอร์ตปัจจุบัน');
+        return;
+      }
+      applyCompareTickers(
+        tabId,
+        validHoldings.map((h, i) => ({
+          symbol: h.symbol,
+          name: h.symbol,
+          color: PRESET_COLORS[i % PRESET_COLORS.length],
+        }))
+      );
+    } else if (mode === 'custom') {
+      applyCompareBundle(tabId, 'macro');
+    }
+  };
 
   // Custom data hook with lifetime raw data ref & master calendar
   const { targetSeries, refSeriesList, loading, error, rawDataMapRef, masterDatesRef } = useCompareData(
@@ -142,6 +238,37 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
               );
             })}
           </div>
+
+          <div className="h-4 w-[1px] bg-[#2A314A] mx-1 shrink-0" />
+
+          {/* Quick Benchmarks Toggle Group (SPY, QQQ, Gold, BTC) */}
+          <div className="flex items-center gap-1 bg-[#13192B] p-0.5 rounded-lg border border-[#242A40] shrink-0">
+            {QUICK_BENCHMARKS.map((bm) => {
+              const isSelected = refs.some(
+                (r) => r.symbol && r.symbol.toUpperCase() === bm.symbol.toUpperCase()
+              );
+              return (
+                <button
+                  key={bm.symbol}
+                  onClick={() => handleToggleBenchmark(bm)}
+                  className={clsx(
+                    'px-2 py-0.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1',
+                    isSelected
+                      ? 'bg-white/15 text-white border border-white/20 shadow-xs'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  )}
+                  title={`Toggle ${bm.name} (${bm.symbol})`}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: bm.color }}
+                  />
+                  <span>{bm.label}</span>
+                  {isSelected && <span className="text-[10px] text-cyan-400 font-bold">✓</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Right: Controls & Config Toggle */}
@@ -149,22 +276,37 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
           {/* Quick Presets: 2X Targets (Default), My Port, Custom */}
           <div className="flex items-center gap-1 bg-[#13192B] p-0.5 rounded-lg border border-[#242A40] shrink-0">
             <button
-              onClick={() => handleOpenConfig('refs', 'targets')}
-              className="px-2 py-0.5 rounded text-xs font-bold text-amber-300 hover:text-white hover:bg-amber-500/20 transition-all flex items-center gap-1 cursor-pointer"
+              onClick={() => handleApplyPresetDirect('targets')}
+              className={clsx(
+                "px-2 py-0.5 rounded text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
+                is2XActive
+                  ? "bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs"
+                  : "text-slate-400 hover:text-amber-300 hover:bg-amber-500/10"
+              )}
               title="Project 2X Target Stocks (13 ตัว)"
             >
               <span>🎯 2X Targets</span>
             </button>
             <button
-              onClick={() => handleOpenConfig('refs', 'myport')}
-              className="px-2 py-0.5 rounded text-xs font-bold text-emerald-300 hover:text-white hover:bg-emerald-500/20 transition-all flex items-center gap-1 cursor-pointer"
+              onClick={() => handleApplyPresetDirect('myport')}
+              className={clsx(
+                "px-2 py-0.5 rounded text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
+                isPortActive
+                  ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-xs"
+                  : "text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+              )}
               title="My Port Holdings"
             >
               <span>💼 My Port</span>
             </button>
             <button
-              onClick={() => handleOpenConfig('refs', 'custom')}
-              className="px-2 py-0.5 rounded text-xs font-bold text-cyan-300 hover:text-white hover:bg-cyan-500/20 transition-all flex items-center gap-1 cursor-pointer"
+              onClick={() => handleApplyPresetDirect('custom')}
+              className={clsx(
+                "px-2 py-0.5 rounded text-xs font-bold transition-all flex items-center gap-1 cursor-pointer",
+                isCustomActive
+                  ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50 shadow-xs"
+                  : "text-slate-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+              )}
               title="Custom & Benchmarks"
             >
               <span>⚡ Custom</span>
@@ -215,6 +357,8 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
           dynamicTargetReturn={dynamicStats?.targetReturn}
           dynamicRefReturns={dynamicStats?.refReturns}
           onOpenConfig={handleOpenConfig}
+          onApplyPresetDirect={handleApplyPresetDirect}
+          activePresetMode={is2XActive ? 'targets' : isPortActive ? 'myport' : 'custom'}
         />
 
         {/* Loading Overlay */}
@@ -357,22 +501,37 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
           {/* Quick Presets Group (2X, My Port, Custom) */}
           <div className="flex items-center gap-1 bg-[#13192B] px-1 py-0.5 rounded border border-[#242A40]">
             <button
-              onClick={() => handleOpenConfig('refs', 'targets')}
-              className="px-1.5 py-0.2 rounded text-[11px] font-bold text-amber-300 hover:text-white hover:bg-amber-500/20 transition-all cursor-pointer flex items-center gap-0.5"
-              title="Stock Target (Project 2X Presets)"
+              onClick={() => handleApplyPresetDirect('targets')}
+              className={clsx(
+                "px-1.5 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer flex items-center gap-0.5",
+                is2XActive
+                  ? "bg-amber-500/25 text-amber-300 border border-amber-500/50"
+                  : "text-slate-400 hover:text-amber-300 hover:bg-amber-500/10"
+              )}
+              title="Stock Target (Project 2X Presets - 13 ตัว)"
             >
               <span>🎯 2X</span>
             </button>
             <button
-              onClick={() => handleOpenConfig('refs', 'myport')}
-              className="px-1.5 py-0.2 rounded text-[11px] font-bold text-emerald-300 hover:text-white hover:bg-emerald-500/20 transition-all cursor-pointer flex items-center gap-0.5"
+              onClick={() => handleApplyPresetDirect('myport')}
+              className={clsx(
+                "px-1.5 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer flex items-center gap-0.5",
+                isPortActive
+                  ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
+                  : "text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+              )}
               title="My Port Holdings Presets"
             >
               <span>💼 Port</span>
             </button>
             <button
-              onClick={() => handleOpenConfig('refs', 'custom')}
-              className="px-1.5 py-0.2 rounded text-[11px] font-bold text-cyan-300 hover:text-white hover:bg-cyan-500/20 transition-all cursor-pointer flex items-center gap-0.5"
+              onClick={() => handleApplyPresetDirect('custom')}
+              className={clsx(
+                "px-1.5 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer flex items-center gap-0.5",
+                isCustomActive
+                  ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50"
+                  : "text-slate-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+              )}
               title="Custom & Benchmarks Presets"
             >
               <span>⚡ Custom</span>
