@@ -147,7 +147,7 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
         {/* Right: Controls & Config Toggle */}
         <div className="flex items-center gap-2 shrink-0 pl-2">
           {/* Quick Presets: 2X Targets (Default), My Port, Custom */}
-          <div className="hidden sm:flex items-center gap-1 bg-[#13192B] p-0.5 rounded-lg border border-[#242A40] shrink-0">
+          <div className="flex items-center gap-1 bg-[#13192B] p-0.5 rounded-lg border border-[#242A40] shrink-0">
             <button
               onClick={() => handleOpenConfig('refs', 'targets')}
               className="px-2 py-0.5 rounded text-xs font-bold text-amber-300 hover:text-white hover:bg-amber-500/20 transition-all flex items-center gap-1 cursor-pointer"

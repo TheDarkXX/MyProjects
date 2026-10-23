@@ -13,7 +13,7 @@ interface CompareLegendProps {
   dynamicBaseDate?: string | null;
   dynamicTargetReturn?: number | null;
   dynamicRefReturns?: Record<string, number | null>;
-  onOpenConfig: (activeSection?: 'target' | 'refs' | 'display') => void;
+  onOpenConfig: (activeSection?: 'target' | 'refs' | 'display', presetMode?: 'targets' | 'myport' | 'custom') => void;
 }
 
 export const CompareLegend: React.FC<CompareLegendProps> = ({
@@ -258,14 +258,46 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
               )}
             </div>
 
-            {/* Quick Add Ref Action */}
-            <div className="pt-1.5 flex items-center justify-between">
+            {/* Quick Presets 3-Button Strip (2X Targets, My Port, Custom) */}
+            <div className="pt-2 border-t border-[#1F2538] space-y-1.5">
+              <div className="text-[11px] text-slate-400 font-semibold px-0.5 flex items-center justify-between">
+                <span>Presets ด่วน:</span>
+                <span className="text-[10px] text-amber-400 font-mono">1-Click</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  onClick={() => onOpenConfig('refs', 'targets')}
+                  className="px-1.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 hover:text-white text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
+                  title="เปิดเปรียบเทียบ Project 2X Targets (13 ตัว)"
+                >
+                  <span>🎯 2X</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenConfig('refs', 'myport')}
+                  className="px-1.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 hover:text-white text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
+                  title="เปิดเปรียบเทียบหุ้นในพอร์ต (My Port)"
+                >
+                  <span>💼 Port</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenConfig('refs', 'custom')}
+                  className="px-1.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 hover:text-white text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
+                  title="เปิดเปรียบเทียบ Custom & Benchmarks"
+                >
+                  <span>⚡ Custom</span>
+                </button>
+              </div>
+
+              {/* + เพิ่ม Ref Ticker / Search */}
               <button
-                onClick={() => onOpenConfig('refs')}
-                className="w-full flex items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white border border-cyan-500/20 hover:border-cyan-500/40 text-xs font-semibold transition-all cursor-pointer"
+                onClick={() => onOpenConfig('refs', 'targets')}
+                className="w-full flex items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 hover:border-cyan-500/40 text-xs font-semibold transition-all cursor-pointer mt-1"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ เพิ่ม Ref Ticker / Benchmark</span>
+                <Plus className="w-3.5 h-3.5 text-cyan-400" />
+                <span>+ ค้นหา / เพิ่ม Ticker อื่นๆ</span>
               </button>
             </div>
           </div>
