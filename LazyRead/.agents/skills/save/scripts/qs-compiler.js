@@ -232,18 +232,20 @@ try {
     });
   }
 
-  // Also check recent commit diffs
-  try {
-    const logDiff = execSync('git diff --name-only HEAD~3 HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
-    if (logDiff) {
-      logDiff.split(/\r?\n/).forEach(file => {
-        file = file.trim();
-        if (file && !file.includes('Quick Save/') && !changedFiles.includes(file)) {
-          changedFiles.push(file);
-        }
-      });
-    }
-  } catch {}
+  // If working tree is clean, fallback to files changed in HEAD only (current session commit)
+  if (changedFiles.length === 0) {
+    try {
+      const headDiff = execSync('git diff-tree --no-commit-id --name-only -r HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
+      if (headDiff) {
+        headDiff.split(/\r?\n/).forEach(file => {
+          file = file.trim();
+          if (file && !file.includes('Quick Save/') && !changedFiles.includes(file)) {
+            changedFiles.push(file);
+          }
+        });
+      }
+    } catch {}
+  }
 } catch {}
 
 function classifyScope(filePath) {
