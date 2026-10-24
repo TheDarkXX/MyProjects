@@ -10,9 +10,18 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { execSync, spawnSync, spawn } from 'child_process';
 
+function findRepoRoot(startDir) {
+  let curr = startDir;
+  while (curr && curr !== path.dirname(curr)) {
+    if (fs.existsSync(path.join(curr, '.git'))) return curr;
+    curr = path.dirname(curr);
+  }
+  return path.resolve(startDir, '..');
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = findRepoRoot(__dirname);
 
 // ─── Telemetry Stopwatch ───────────────────────────────────────────────────────
 const timings = {};
@@ -491,65 +500,68 @@ if (flags.dryRun) {
     let pushOriginSuccess = false;
     let lastError = '';
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      // Fetch latest canonical branch
-      const fetchRes = runGit(['fetch', '--no-tags', 'origin', currentBranch]);
-      if (fetchRes.status !== 0 && fetchRes.stderr) {
-        console.warn(`⚠️ [Fetch origin warning]: ${fetchRes.stderr.trim()}`);
-      }
+    // Fast Path: Optimistic direct push attempt (avoids 2-4s fetch overhead when already synced)
+    console.log(`🚀 [Optimistic Push] Pushing to origin (GitHub) [${currentBranch}]...`);
+    const initialPush = runGit(['push', 'origin', currentBranch]);
+    if (initialPush.status === 0) {
+      console.log(`✅ Canonical origin (GitHub) updated successfully to ${headSha.slice(0, 7)}.`);
+      pushOriginSuccess = true;
+    } else {
+      console.warn(`⚠️ Direct push required reconciliation. Falling back to fetch & reconcile...`);
+      lastError = initialPush.stderr.trim() || initialPush.stdout.trim();
 
-      // Check commit ancestry with origin
-      const originRef = `origin/${currentBranch}`;
-      const revCheck = runGit(['rev-parse', '--verify', originRef]);
-      if (revCheck.status === 0) {
-        const isOriginAncestor = runGit(['merge-base', '--is-ancestor', originRef, 'HEAD']).status === 0;
-        const isHeadAncestor = runGit(['merge-base', '--is-ancestor', 'HEAD', originRef]).status === 0;
-
-        if (isOriginAncestor && isHeadAncestor) {
-          // Identical state, proceed
-        } else if (isOriginAncestor) {
-          // Local is ahead of origin. Safe fast-forward push.
-        } else if (isHeadAncestor) {
-          // Local is behind origin. Fast-forward merge.
-          console.log(`ℹ️ Local is behind origin/${currentBranch}. Fast-forwarding...`);
-          const ffRes = runGit(['merge', '--ff-only', originRef]);
-          if (ffRes.status !== 0) {
-            console.error(`🚨 [FF Merge Failed] ${ffRes.stderr}`);
-            process.exit(1);
-          }
-        } else {
-          // Diverged! Safe rebase.
-          console.log(`🔄 Local and origin/${currentBranch} have diverged. Auto-rebasing...`);
-          const rebaseRes = runGit(['rebase', originRef]);
-          if (rebaseRes.status !== 0) {
-            console.error('\n🚨 [REBASE CONFLICT] Local commits diverged from origin and cannot rebase cleanly!');
-            console.error('   Aborting rebase automatically to protect your working state...');
-            runGit(['rebase', '--abort']);
-            console.error(`   Local commit preserved: ${headSha.slice(0, 7)}`);
-            console.error(`   Please run: git pull --rebase origin ${currentBranch} and resolve conflicts manually.\n`);
-            process.exit(1);
-          }
-          // Refresh headSha after successful rebase
-          headSha = runGit(['rev-parse', 'HEAD']).stdout.trim();
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        // Fetch latest canonical branch
+        const fetchRes = runGit(['fetch', '--no-tags', 'origin', currentBranch]);
+        if (fetchRes.status !== 0 && fetchRes.stderr) {
+          console.warn(`⚠️ [Fetch origin warning]: ${fetchRes.stderr.trim()}`);
         }
-      }
 
-      // Push to canonical origin
-      console.log(`🚀 [Attempt ${attempt}/2] Pushing to origin (GitHub) [${currentBranch}]...`);
-      const pushRes = runGit(['push', 'origin', currentBranch]);
-      if (pushRes.status === 0) {
-        console.log(`✅ Canonical origin (GitHub) updated successfully to ${headSha.slice(0, 7)}.`);
-        pushOriginSuccess = true;
-        break;
-      } else {
-        const errCombined = `${pushRes.stdout}\n${pushRes.stderr}`;
-        lastError = pushRes.stderr.trim() || pushRes.stdout.trim();
-        const isRace = /fetch first|non-fast-forward|stale info|rejected/i.test(errCombined);
-        if (isRace && attempt === 1) {
-          console.warn('⚠️ Origin push rejected (concurrent update detected). Retrying with re-fetch...');
-          continue;
-        } else {
+        // Check commit ancestry with origin
+        const originRef = `origin/${currentBranch}`;
+        const revCheck = runGit(['rev-parse', '--verify', originRef]);
+        if (revCheck.status === 0) {
+          const isOriginAncestor = runGit(['merge-base', '--is-ancestor', originRef, 'HEAD']).status === 0;
+          const isHeadAncestor = runGit(['merge-base', '--is-ancestor', 'HEAD', originRef]).status === 0;
+
+          if (isOriginAncestor && isHeadAncestor) {
+            // Identical state, proceed
+          } else if (isOriginAncestor) {
+            // Local is ahead of origin. Safe fast-forward push.
+          } else if (isHeadAncestor) {
+            // Local is behind origin. Fast-forward merge.
+            console.log(`ℹ️ Local is behind origin/${currentBranch}. Fast-forwarding...`);
+            const ffRes = runGit(['merge', '--ff-only', originRef]);
+            if (ffRes.status !== 0) {
+              console.error(`🚨 [FF Merge Failed] ${ffRes.stderr}`);
+              process.exit(1);
+            }
+          } else {
+            // Diverged! Safe rebase.
+            console.log(`🔄 Local and origin/${currentBranch} have diverged. Auto-rebasing...`);
+            const rebaseRes = runGit(['rebase', originRef]);
+            if (rebaseRes.status !== 0) {
+              console.error('\n🚨 [REBASE CONFLICT] Local commits diverged from origin and cannot rebase cleanly!');
+              console.error('   Aborting rebase automatically to protect your working state...');
+              runGit(['rebase', '--abort']);
+              console.error(`   Local commit preserved: ${headSha.slice(0, 7)}`);
+              console.error(`   Please run: git pull --rebase origin ${currentBranch} and resolve conflicts manually.\n`);
+              process.exit(1);
+            }
+            // Refresh headSha after successful rebase
+            headSha = runGit(['rev-parse', 'HEAD']).stdout.trim();
+          }
+        }
+
+        // Push to canonical origin
+        console.log(`🚀 [Attempt ${attempt}/2] Pushing to origin (GitHub) [${currentBranch}]...`);
+        const pushRes = runGit(['push', 'origin', currentBranch]);
+        if (pushRes.status === 0) {
+          console.log(`✅ Canonical origin (GitHub) updated successfully to ${headSha.slice(0, 7)}.`);
+          pushOriginSuccess = true;
           break;
+        } else {
+          lastError = pushRes.stderr.trim() || pushRes.stdout.trim();
         }
       }
     }

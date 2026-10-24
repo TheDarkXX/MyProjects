@@ -1,10 +1,12 @@
 ---
 name: save
-version: "4.0.0"
-updated_at: "2026-10-18"
-description: "Devil-Speed Auto-Save & Deploy Pipeline V4.0 (Canonical-First Zero-Desync Architecture + Self-Healing Compiler + Multi-PC Fail Guard)"
+version: "4.1.0"
+updated_at: "2026-10-24"
+description: >-
+  Devil-Speed Auto-Save & Deploy Pipeline V4.1 (Dynamic Root + Optimistic Push +
+  Zero-Artifact Loss Guard)
 ---
-# 💾 Skill: `/save` (v4.0.0 Canonical-First Zero-Desync Architecture)
+# 💾 Skill: `/save` (v4.1.0 Dynamic Root & Full-Fidelity Architecture)
 
 ## Objective
 The ultimate high-performance end-of-task pipeline. Target execution: **True Wall-Clock ≤ 10–15 Seconds** (Engine ≤ 5s + AI prep ≤ 5–10s). Unifies Quick Save context gathering, auto-relocation, **auto-roadmap sync**, reciprocal backlinks, auto-scaffolded quality gates, 5-7 SemVer file archiving, conditional cache-busting, single atomic git commit, **Canonical-First Zero-Desync Git Push (GitHub -> VPS)**, and satellite repo dirty guard into a frictionless flow with **ZERO ghost deploys** and **ZERO Multi-PC sync loss**.
@@ -15,20 +17,21 @@ The ultimate high-performance end-of-task pipeline. Target execution: **True Wal
 
 ---
 
-## 🛡️ Closed Loopholes (V3.5 + V3.6 + V3.6.1 + V4.0 Combined — 12 Total)
+## 🛡️ Closed Loopholes (V3.5 to V4.1 Combined — 13 Total)
 
 1. 🔒 **Active-to-Complete Auto-Relocation:** ไฟล์ `status: complete` ใน `Active/` ย้ายเข้า `Complete/<Component>/` อัตโนมัติ
 2. 🔒 **SemVer Floating Files Auto-Archive (กฎ 5-7 ไฟล์):** Natural SemVer Sort เก็บไฟล์เก่าเข้า Major Version folder
 3. 🔒 **Deploy Push Failure Guard:** หาก `git push` ล้มเหลวทั้งหมด ➔ `exit code 1` ทันที
-4. 🔒 **Self-Contained Skill Architecture:** สคริปต์ทั้ง 4 ตัวใน `.agents/skills/save/scripts/`
+4. 🔒 **Self-Contained Skill Architecture:** สคริปต์ทั้ง 4 ตัวใน `.agents/skills/save/scripts/` พร้อม `findRepoRoot()` แก้ปัญหาเรียกข้าม directory
 5. 🔒 **Auto-Detect Active Conversation ID:** แทนที่ Placeholder ID อัตโนมัติ
 6. 🔒 **Cross-Environment Brain Path Resolution:** รองรับทุก PC
 7. 🔒 **Universal Fallback Script Resolver:** 4-tier lookup
 8. 🔒 **Dynamic Complete/* Subdirectory Scanner (V3.6):** ไม่ฮาร์ดโค้ด `Core-VPS` อีกต่อไป สแกนทุกโฟลเดอร์ใน `Quick Save/Complete/` อัตโนมัติ ทำให้ Zero-Arg execution ใช้ได้ทุกโปรเจกต์
 9. 🔒 **Auto-Sync MASTER_ROADMAP.md (V3.6):** สกัด Frontmatter จาก Quick Save แล้วแทรกเข้า `## 🔵 3. Completed` ของ `docs/MASTER_ROADMAP.md` อัตโนมัติใน 10ms — **AI ไม่ต้องเปิด Roadmap มาแก้เองอีกต่อไป**
 10. 🔒 **Self-Healing Quality Gate (V3.6.1):** Auto-inject missing/empty `aliases` จาก `tags` หรือชื่อไฟล์อัตโนมัติ, normalize และ scaffold หัวข้อ `Context & Implementation (Compiled Truth)` ให้อัตโนมัติใน 50ms ป้องกันการตก Quality Gate และตัดปัญหา AI Loop สะดุด 100%
-11. 🔒 **Canonical-First Zero-Desync Git Protocol (V4.0):** Origin (GitHub) ถูกล็อกเป็น Canonical Source of Truth สำหรับ Multi-PC Sync บังคับ Fetch & Reconcile บันทึก commit ขึ้น GitHub ก่อนเสมอ แล้วจึง push commit SHA เดียวกันไปยัง VPS ป้องกันภาวะ split-brain และ `[rejected] (fetch first)` ข้ามเครื่อง 100%
+11. 🔒 **Canonical-First Zero-Desync Git Protocol (V4.0 + V4.1 Optimistic Push):** Origin (GitHub) ถูกล็อกเป็น Canonical Source of Truth ทำ Optimistic Direct Push ก่อน ประหยัดเวลา 2–4s และมี Fail-safe Reconcile สำรองป้องกัน split-brain 100%
 12. 🔒 **Satellite Repositories Dirty Guard (V4.0):** สแกน `Openclaw-VPS` และ `XBrain` แจ้งเตือนทันทีหากมีไฟล์ generated ตกค้างจากการ build ข้าม workspace
+13. 🔒 **Full-Fidelity Discussion Mandate (V4.1 Zero-Artifact Loss Guard):** หาก session เป็นการวิเคราะห์/ระดมสมองที่ไม่มี Brain Artifacts และไม่มีโค้ดเปลี่ยน ห้ามเขียน Lean Summary แบบตัดทอนตาราง/ตัวเลข/ตรรกะ บังคับถอดตาราง, Benchmark, และ Strategic Playbook ลงใน `Context & Implementation` ให้ครบถ้วนเสมอ (≥ 20 บรรทัด มิฉะนั้น Quality Gate จะบล็อก ยกเว้นใส่ `--allow-lean`)
 
 ---
 
