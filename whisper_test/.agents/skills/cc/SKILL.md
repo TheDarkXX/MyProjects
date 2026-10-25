@@ -42,7 +42,7 @@ User: /cc [โจทย์/คำสั่ง]
 - **`m`** = **Medium** (`medium`) — มาตรฐาน สมดุล
 - **`h`** = **High** (`high`) — คิดลึก สถาปัตยกรรม/แก้บั๊ก
 - **`e`** = **Extra High** (`xhigh`) — คิดเจาะลึกพิเศษ งานคำนวณไทม์มิ่ง/แอนิเมชัน
-- **`x`** = **Max** (`max`) — สุดขีดความสามารถสมอง ปปลดล็อกเพดาน Thinking สูงสุด
+- **`x`** = **Max** (`max`) — สุดขีดความสามารถสมอง ปลดล็อกเพดาน Thinking สูงสุด
 
 ### ตารางสูตรย่อ 2 ตัวอักษร:
 
@@ -132,13 +132,26 @@ User: /cc [โจทย์/คำสั่ง]
      `/cc <PATH_TO_QUICK_SAVE_FILE>`
    - User จะเห็นพรีวิว DrView ทางซ้าย และเห็น Claude ทำงานสดทางขวา
 
+#### 📜 ขั้นตอนปฏิบัติการสำหรับ Claude Code เมื่อได้รับงาน Handoff ใน VS Code:
+1. **อ่าน Brief:** ตรวจสอบหัวข้อ `## 🤝 Handoff Brief` (Objective, Why, Target Files, Steps, Rules, Verification) ให้เข้าใจแจ่มแจ้ง
+2. **ลงมือทำจริง (Do the work):** แก้ไขโค้ดใน Target Files โดยตรงด้วยเครื่องมือตนเอง (**ห้ามเรียก `tools/cc-bridge.js` ซ้อนตัวเองเด็ดขาด**)
+3. **ตรวจสอบความถูกต้อง (Verify):** รัน Verification Command ตามที่ระบุไว้ใน Brief ให้ผ่าน 100%
+4. **บันทึกผลงานกลับ (Write Result):** เพิ่ม Section `## 🔁 Handoff Result` ต่อท้ายไฟล์ Handoff เดิม บันทึก:
+   - สรุปสิ่งที่ทำเสร็จ
+   - ตารางรายการไฟล์ที่แก้ไข
+   - ข้อความผลลัพธ์จากการรัน Verification
+5. **อัปเดตสถานะ:** แก้ไข frontmatter ในไฟล์เดิม:
+   ```yaml
+   handoff_status: ready_for_review
+   ```
+
 ---
 
 ### โหมดที่ 3: Handoff RECEIVE Workflow (`/cc check`)
 
 ใช้เมื่อ Claude Code ทำงานใน VS Code เสร็จสิ้น หรือ User สั่ง "ดึงงานจาก Claude", "เช็คงาน Claude", หรือ `/cc check`:
-1. **สแกนหาไฟล์ Handoff ที่ยังค้างอยู่:**
-   - สแกน `Quick Save/Active/` หาไฟล์ที่มี `handoff_to: claude` และ `handoff_status: pending`
+1. **สแกนหาไฟล์ Handoff ที่พร้อมตรวจ:**
+   - สแกน `Quick Save/Active/` หาไฟล์ที่มี `handoff_to: claude` และ `handoff_status: ready_for_review` (หรือ `pending`)
 2. **ตรวจเช็คผลการทำงาน:**
    - ตรวจสอบว่าในไฟล์มีหัวข้อ `## 🔁 Handoff Result` ที่บันทึกสรุปการแก้ไขแล้วหรือไม่
    - รัน `git status` และ `git diff` เพื่อตรวจดูไฟล์ที่ Claude Code ทำการแก้ไขจริง
@@ -159,7 +172,7 @@ User: /cc [โจทย์/คำสั่ง]
 2. **One Session One Voice:** Antigravity (Gemini Flash) คือผู้บัญชาการหน้างาน (Muscle) — Claude Code (Opus 5.5) คือเสนาธิการมองขาด (Brain)
 3. **UTF-8 Pipe Integrity:** ส่งข้อความผ่าน Stdin UTF-8 พร้อม `StringDecoder` เสมอ เพื่อรักษาความถูกต้องของสระและวรรณยุกต์ภาษาไทย
 4. **ห้ามแก้ไฟล์ชนกัน:** ระหว่างที่ Claude Code กำลังแก้ไฟล์ใด ห้าม Antigravity เข้าไปแก้ไฟล์เดียวกันในเวลาเดียวกันเด็ดขาด
-5. **Anti-Recursion Iron Rule (ห้ามรันซ้อนตัวเอง):** หากผู้ที่ได้รับคำสั่ง `/cc` หรือกำลังรันคำสั่งอยู่คือ Claude Code CLI เอง ให้ลงมือปฏิบัติการอ่าน/แก้ไฟล์โดยตรง **ห้ามเรียก `tools/cc-bridge.js` ซ้อนตัวเองเด็ดขาด**
-6. **Quota Reality & Strategic Efficiency:** แพ็กเกจ Claude Pro ($20/เดือน) มีเพดาน Rate Limit ราย 5 ชั่วโมง ซึ่งไม่สามารถทะลวงด้วยโค้ดได้ ยุทธศาสตร์ที่ถูกต้องคือการบริหารโควตา:
-   - ใช้ **Sonnet (`sm` / `sh`)** เป็นค่าเริ่มต้นสำหรับงานเขียนโค้ดและ Refactor ประจำวัน
-   - เก็บ **Opus (`oh` / `ox`)** ไว้สำหรับงานวางสถาปัตยกรรมระดับสูง, คิดระบบใหม่ และการแก้บั๊กยากๆ เท่านั้น
+5. **Anti-Recursion Iron Rule (ห้ามรันซ้อนตัวเอง):** หากผู้ที่ได้รับคำสั่ง `/cc` หรือกำลังรันคำสั่งอยู่คือ Claude Code CLI เอง ให้ลงมือปฏิบัติการอ่าน/แก้ไฟล์โดยตรง **ห้ามเรียก `tools/cc-bridge.js` ซ้อนตัวเองเด็ดขาด** (หากฝ่าฝืน ระบบ bridge v2.4 จะตัดจบด้วย Exit Code 1 ทันที)
+6. **Default Model & Quota Strategy:**
+   - **ค่าเริ่มต้นมาตรฐานของระบบ `/cc`:** คือ **Opus 5.5 + Effort: MEDIUM (`om`)** เพื่อให้ได้มุมมองของ "มหาเทพ 👁️‍🗨️" เสมอเมื่อเรียกใช้งาน
+   - **ยุทธศาสตร์บริหารโควตา Claude Pro ($20/เดือน):** เนื่องจากมี Rate Limit ราย 5 ชั่วโมง แนะนำให้ใส่สูตรย่อ **`sm` (Sonnet Medium)** หรือ **`sh` (Sonnet High)** เมื่อทำงานโค้ดดิ้งทั่วไป เขียนฟังก์ชัน แปลงโค้ด หรือ Refactor ถี่ๆ และสงวนการใช้ **`oh` / `ox` (Opus High/Max)** ไว้สำหรับงานสถาปัตยกรรมระดับจักรวาลและแก้บั๊กยากๆ เท่านั้น
