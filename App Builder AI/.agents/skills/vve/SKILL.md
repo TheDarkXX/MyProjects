@@ -1,27 +1,29 @@
 ---
 name: vve
-version: "1.1.0"
+version: "1.2.0"
 updated_at: "2026-10-25"
 description: >-
-  Viral Video Editing Engine (VVE) — ผลิตวิดีโอสายสุขภาพและอาหารเสริมระดับลักชัวรีพรีเมียม สไตล์หมอเจษแท้ 100% (/vve jade) ด้วยระบบ 3 เสาหลัก A-Roll + B-Roll Footage + Hyperframes Overlays ผสานสูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (/vve necta)
+  Viral Video Editing Engine (VVE) — ผลิตวิดีโอสายสุขภาพและอาหารเสริมระดับลักชัวรีพรีเมียม สไตล์หมอเจษแท้ 100% (/vve jade) ด้วยระบบ 3 เสาหลัก A-Roll + B-Roll Footage + Hyperframes Overlays ผสานสูตรสคริปต์ 4 หมัด Nectapharma 71M GMV แนะนำรันด้วยโมเดล Claude Opus เพื่อคุมความหรูระดับ Master
 ---
 
-# 🎬 Viral Video Editing Engine (`/vve` v1.1.0)
+# 🎬 Viral Video Editing Engine (`/vve` v1.2.0)
 
 > **Core Identity:** เครื่องจักรผลิตวิดีโอคอนเทนต์สุขภาพ & อาหารเสริมระดับ **Luxury Clinical (พรีเมียม ดูแพง หมอจริง วิจัยจริง)**  
 > **สไตล์การตัดต่อหลัก:** **หมอเจษ (Dr. Jade / DoctorBank)** ➔ ระบบ 3 เสาหลัก: **A-Roll (หมอพูดล่าง) + B-Roll Footage (กราฟิกบน) + Hyperframes (โมชันกราฟิกลอยหรู)**  
-> **สมองการขายเสริม:** **Nectapharma 71M GMV** ➔ สูตรสคริปต์ 4 หมัดทองคำ (Sensory Hook ➔ ASMR Cap Twist ➔ Scientific Proof ➔ Duo Pack CTA)
+> **สมองการขายเสริม:** **Nectapharma 71M GMV** ➔ สูตรสคริปต์ 4 หมัดทองคำ (Sensory Hook ➔ ASMR Cap Twist ➔ Scientific Proof ➔ Duo Pack CTA)  
+> **🧠 Recommended Model:** **Claude Opus (มหาเทพ 👁️‍🗨️ / 3.7 / 4.6)** — บังคับใช้ Opus สำหรับงานวาง Macro Architecture, กำกับ Choreography 3 เสาหลัก, และคุม Aesthetic ความหรูระดับ Luxury Clinical ไม่ให้กลายเป็นการ์ตูนง่อย (ใช้ Flash 3.8 เป็น Runner รัน JSON/สคริปต์รายวัน)
 
 ---
 
 <a id="toc"></a>
 ## 📑 สารบัญ (Table of Contents)
 1. [รูปแบบคำสั่ง Slash Commands (`/vve jade` vs `/vve necta`)](#commands)
-2. [ถอดรหัสโครงสร้างตัดต่อหมอเจษ (Dr. Jade 3-Pillar Architecture)](#dr-jade-pillars)
-3. [สถาปัตยกรรมวิดีโอ 5 เลเยอร์ (5-Layer Machine Contract)](#5layers)
-4. [สูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (`/vve necta`)](#necta-formula)
-5. [Design System & Motion Physics (Anti-Cartoon Rules)](#design-motion)
-6. [คู่มือรันคำสั่ง Render & Workflows](#render-workflow)
+2. [โมเดลที่แนะนำ: ทำไมต้อง Opus? (Model Protocol)](#model-protocol)
+3. [ถอดรหัสโครงสร้างตัดต่อหมอเจษ (Dr. Jade 3-Pillar Architecture)](#dr-jade-pillars)
+4. [สถาปัตยกรรมวิดีโอ 5 เลเยอร์ (5-Layer Machine Contract)](#5layers)
+5. [สูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (`/vve necta`)](#necta-formula)
+6. [Design System & Motion Physics (Anti-Cartoon Rules)](#design-motion)
+7. [คู่มือรันคำสั่ง Render & Workflows](#render-workflow)
 
 ---
 
@@ -38,8 +40,22 @@ description: >-
 
 ---
 
+<a id="model-protocol"></a>
+## 2. 🧠 Model Protocol: ทำไมต้องรันด้วย Opus (มหาเทพ 👁️‍🗨️)?
+
+> [!IMPORTANT]
+> **Opus is the Designated Master Brain for /vve:**  
+> ระบบ `/vve` ถูกออกแบบมาเพื่อทำลายความ "เป็นการ์ตูนง่อยๆ" ของวิดีโอทั่วไป แล้วยกระดับสู่ **Luxury Clinical** ระดับเวิลด์คลาส ดังนั้นจึงมีข้อกำหนดบทบาทของโมเดลดังนี้:
+
+| โมเดล | บทบาทในระบบ `/vve` | หน้าที่ที่เหมาะสมที่สุด |
+|---|---|---|
+| **Claude Opus 👁️‍🗨️**<br/>*(มหาเทพ / 3.7 / 4.6)* | **🌟 Master Architect & Creative Director (แนะนำหลัก)** | • วาง Macro Choreography สลับจังหวะ A-Roll (45%) กับ B-Roll (55%) ละเอียดยิบระดับ 0.1 วินาที<br/>• คุม Aesthetic ความหรูหรา (Frosted Glass, Champagne Gold, Easing ลื่นไหลแบบ `power4.out`)<br/>• โคลนสไตล์วิดีโอตัวอย่างคู่แข่ง (`/vve clone`) ถอดโครงสร้าง 5 เลเยอร์โดยไม่ออกทะเล<br/>• ปรับแต่งสคริปต์ 4 หมัด Nectapharma ให้ลึกและเฉียบขาด |
+| **Gemini 3.8 Flash 🔥**<br/>*(มารบูรพา)* | **⚡ Fast Runner & Spec Generator** | • เจนไฟล์ `video_spec.json` รายวันตามเทมเพลตที่ Opus วางไว้<br/>• รันคำสั่ง CLI เรนเดอร์ Motion Overlays ด้วย Node.js ในเสี้ยววินาที<br/>• สลับคำคีย์เวิร์ดในสคริปต์แบบกึ่งอัตโนมัติ |
+
+---
+
 <a id="dr-jade-pillars"></a>
-## 2. 🧬 ถอดรหัสโครงสร้างตัดต่อหมอเจษ (Dr. Jade 3-Pillar Architecture)
+## 3. 🧬 ถอดรหัสโครงสร้างตัดต่อหมอเจษ (Dr. Jade 3-Pillar Architecture)
 
 ทุกคลิปของหมอเจษ (อ้างอิงคลิปต้นฉบับ SaveSnap 25, 26, 27, 28) ประกอบด้วย **3 เสาหลัก (3 Pillars)** ที่ต้องประสานกันอย่างไร้รอยต่อ:
 
@@ -72,7 +88,7 @@ description: >-
 ---
 
 <a id="5layers"></a>
-## 3. 📑 สถาปัตยกรรมวิดีโอ 5 เลเยอร์ (5-Layer Machine Contract)
+## 4. 📑 สถาปัตยกรรมวิดีโอ 5 เลเยอร์ (5-Layer Machine Contract)
 
 เมื่อระบบ AI ทำงาน จะแปลงโครงสร้างหมอเจษออกมาเป็น 5 เลเยอร์ใน `video_spec.json`:
 
@@ -96,7 +112,7 @@ description: >-
 ---
 
 <a id="necta-formula"></a>
-## 4. 🏆 สูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (`/vve necta`)
+## 5. 🏆 สูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (`/vve necta`)
 
 หากต้องการสคริปต์ที่เน้นจิตวิทยาการปิดการขายระดับ 71 ล้านบาท ให้เรียก `/vve necta [สินค้า]`:
 
@@ -113,7 +129,7 @@ description: >-
 ---
 
 <a id="design-motion"></a>
-## 5. 🎨 Design System & Motion Physics (Anti-Cartoon Rules)
+## 6. 🎨 Design System & Motion Physics (Anti-Cartoon Rules)
 
 > [!WARNING]
 > **กฎเหล็กต้านกราฟิกการ์ตูนง่อย (Anti-Cartoon Manifesto):**
@@ -130,7 +146,7 @@ description: >-
 ---
 
 <a id="render-workflow"></a>
-## 6. 🛠️ คู่มือรันคำสั่ง Render & Workflows
+## 7. 🛠️ คู่มือรันคำสั่ง Render & Workflows
 
 ### โฟลเดอร์โปรเจกต์:
 `C:\My Claw\Viral VDO Editing (VVE)\tools\hyperframes_opus`
