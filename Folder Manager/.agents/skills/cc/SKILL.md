@@ -2,17 +2,18 @@
 name: cc
 description: >-
   Claude Code Handoff (2 โหมดในสกิลเดียว) — ใน Antigravity ใช้แพ็กบริบทและแผนงานลงไฟล์ handoff
-  ใน Quick Save แล้วยื่นคำสั่งพร้อมวางให้ Claude Code หรือ Claude Desktop (Claude Pro 20 ดอลลาร์)
+  ใน Quick Save แล้วยื่นคำสั่งพร้อมวางให้ Claude Code ใน VS Code (หน้าต่างหลัก) หรือ Desktop/CLI (Claude Pro 20 ดอลลาร์)
   ส่วนใน Claude Code ใช้รับงาน หาไฟล์ handoff ที่ค้าง ลงมือทำ ตรวจผล แล้วเขียนผลกลับให้ AG อ่านต่อ
   ใช้เมื่อ /cc, ส่งต่อให้ Claude, ย้ายไปทำใน Claude, เตรียมงานให้ Claude, รับงานจาก AG
 ---
 
 # /cc — Claude Code Handoff
 
-สกิลเดียว ใช้ได้ 2 ฝั่ง ไฟล์ handoff ใน `Quick Save/Active/` คือสะพานเชื่อม (AG กับ Claude ไม่มีแชทร่วมกัน)
+สกิลเดียว ใช้ได้ 2 ฝั่ง ไฟล์ handoff ใน `Quick Save/Active/` คือสะพานเชื่อม (AG กับ Claude ทำงานบน File System เดียวกันแต่แยก Session แชท)
+- **Primary Setup:** ใช้ Antigravity (Gemini Flash สายลุย/หน้างาน) คู่กับ **VS Code (Claude Code Extension + DrView + Quota Status Bar) เป็นหน้าต่างหลัก**
 
 ```
-AG (Sender)  ──เขียน──►  Quick Save/Active/<file>.md  ◄──อ่าน/ทำ/เขียนผลกลับ──  Claude (Receiver)
+AG (Sender)  ──เขียน──►  Quick Save/Active/<file>.md  ◄──อ่าน/ทำ/เขียนผลกลับ──  Claude Code in VS Code (Receiver)
              handoff_status: pending → in-progress → done | blocked
 ```
 
@@ -56,15 +57,20 @@ handoff_created: 2026-10-25T16:30+07:00
 - ไฟล์ที่เป็นงานนี้ → commit: `chore(handoff): checkpoint before /cc → <file>`
 - ไฟล์ค้างที่ไม่เกี่ยว → ระบุลง **Do NOT Touch**
 
-### S6. ส่งมอบให้ user (ตอบในแชท ไม่เกิน 10 บรรทัด)
+### S6. ส่งมอบให้ user (ตอบในแชท ชัดเจน ตรงเป้า)
 ```text
 📦 Handoff: <absolute path ของไฟล์>
 
-▶ Claude Desktop (แท็บ Code): เลือกโฟลเดอร์ <PROJECT_ROOT> แล้ววาง:
-/cc <absolute path ของไฟล์>
+▶ ใน VS Code (หน้าต่างหลัก แนะนำสูงสุด):
+1. เปิด VS Code ที่โฟลเดอร์ <PROJECT_ROOT>
+2. ในแถบแชท Claude Code ฝั่งขวา (เปิดปุ่ม ⚡ Auto ไว้) แล้ววางคำสั่งนี้:
+   /cc <absolute path ของไฟล์>
+   (หรือพิมพ์: @<ชื่อไฟล์> รับงานตาม Handoff Brief นี้แล้วลุยได้เลย)
+3. ส่องโควต้าคงเหลือ Pro $20 ได้ที่ป้ายขวาล่างจอ (🟢 Claude Code: XX%)
 
-▶ Claude Code CLI (วางบรรทัดเดียว):
-cd "<PROJECT_ROOT>"; claude "รับงาน /cc: <absolute path ของไฟล์>"
+▶ ทางเลือกสำรอง (ถ้าใช้ Claude Desktop หรือ CLI Terminal):
+- Desktop (แท็บ Code): เลือกโฟลเดอร์แล้ววาง /cc <absolute path ของไฟล์>
+- CLI Terminal: cd "<PROJECT_ROOT>"; claude "รับงาน /cc: <absolute path ของไฟล์>"
 ```
 - เตือน: ปิดแท็บไฟล์ใน Target Files ใน AG ก่อน (กัน auto-save ชนกัน)
 - เตือน: ระหว่างที่ Claude ทำ อย่าสั่ง AG แก้ไฟล์ชุดเดียวกัน
