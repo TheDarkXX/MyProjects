@@ -1,10 +1,10 @@
 ---
 name: cc
 description: >-
-  Claude Code Direct Engine & Handoff — สั่งรันโมเดล Anthropic Claude (Opus 5.5 / Sonnet) ผ่าน Claude Code Engine ใน VS Code หรือ Antigravity ได้โดยตรงจากแชทหลักแบบเดียวกับ /gpt พร้อมท่อ UTF-8 Stream-JSON, ระบบ 5-Tier Reasoning Effort (l/m/h/e/x), Session Lifecycle (--continue/--resume <id>), แนบไฟล์บริบท (--file/--out), CLI Passthrough และโหมด Handoff SEND/RECEIVE ครบวงจร ใช้เมื่อ /cc [คำสั่ง], ส่งต่อให้ Claude, ให้ claude คิด, /cc /update, /cc check
+  Claude Code Direct Engine & Handoff — สั่งรันโมเดล Anthropic Claude (Opus 5.5 / Sonnet) ผ่าน Claude Code Engine ใน VS Code หรือ Antigravity ได้โดยตรงจากแชทหลักแบบเดียวกับ /gpt พร้อมท่อ UTF-8 Stream-JSON, ระบบ 5-Tier Reasoning Effort (l/m/h/e/x), Auto-Detect Plan/Update เป็น Opus High (oh), Session Lifecycle (--continue/--resume <id>), แนบไฟล์บริบท (--file/--out), CLI Passthrough และโหมด Handoff SEND/RECEIVE ครบวงจร ใช้เมื่อ /cc [คำสั่ง], /cc /plan, /cc /update, ส่งต่อให้ Claude, ให้ claude คิด, /cc check
 ---
 
-# 👁️‍🗨️ /cc — Claude Code Direct Engine & Unified Panel (v2.3)
+# 👁️‍🗨️ /cc — Claude Code Direct Engine & Unified Panel (v2.5)
 
 ดึงพลังสมองของ **Claude Code (Opus 5.5 & Sonnet — มหาเทพ 👁️‍🗨️)** ผ่านบัญชี **Claude Pro ($20/เดือน)** ที่ติดตั้งอยู่ใน **Antigravity IDE (และ VS Code)** มาร่วมคิด วางแผนสถาปัตยกรรม และรันงานโค้ดลึกๆ ได้จากใน **"แชทหลัก"** ของ Antigravity ได้โดยตรง เสมือนเป็น Native Engine เช่นเดียวกับ `/gpt`!
 
@@ -71,9 +71,10 @@ User: /cc [โจทย์/คำสั่ง]
 ## 🧠 ระดับการคิดอัตโนมัติ (Auto-Detect Fallback)
 
 ถ้าผู้ใช้ไม่ได้ระบุ Shorthand หรือไม่ได้ใส่ `--effort` ระบบจะตรวจจับจากเนื้อหาคำสั่งที่พิมพ์สด:
-- **เจองาน `/update`, `ตรวจแผน`, หรือ `อัปเดตแผน`:** ปรับเป็น **Opus 5.5 + HIGH** อัตโนมัติ
-- **เจองาน `vdo`, `video`, `remotion`, `hyperframe`, `ตัดต่อคลิป`, `sfx`:** ปรับเป็น **Opus 5.5 + HIGH** อัตโนมัติ
-- **งานทั่วไป:** ใช้ **Opus 5.5 + MEDIUM** เป็นค่าเริ่มต้น
+- **เจองาน `/plan`, `วางแผน`, `วางแพลน`, `เขียนแผน`, หรือ `implement plan`:** ปรับเป็น **Opus 5.5 + HIGH (`oh`)** อัตโนมัติ (เจาะลึกสถาปัตยกรรมระดับตาเทพ ไร้จุดบอด)
+- **เจองาน `/update`, `ตรวจแผน`, หรือ `อัปเดตแผน`:** ปรับเป็น **Opus 5.5 + HIGH (`oh`)** อัตโนมัติ
+- **เจองาน `vdo`, `video`, `remotion`, `hyperframe`, `ตัดต่อคลิป`, `sfx`:** ปรับเป็น **Opus 5.5 + HIGH (`oh`)** อัตโนมัติ
+- **งานทั่วไป:** ใช้ **Opus 5.5 + MEDIUM (`om`)** เป็นค่าเริ่มต้น
 
 > 🛡️ **Effort Priority Guard:** หากผู้ใช้ใส่สูตรย่อ (เช่น `sl`, `om`, `ox`) หรือระบุ `--effort` เอง ค่าที่ผู้ใช้สั่งจะ**ชนะเสมอ** ระบบจะไม่โดนคำในเอกสารหรือคำสั่งดึงกลับไปเป็น HIGH โดยไม่ตั้งใจ
 
