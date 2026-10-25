@@ -1,10 +1,10 @@
 ---
 name: cc
 description: >-
-  Claude Code Direct Engine & Handoff — สั่งรันโมเดล Anthropic Claude (Opus 5.5) ผ่าน Claude Code Engine ใน VS Code ได้โดยตรงจากแชทหลักแบบเดียวกับ /gpt พร้อมระบบ Auto Effort Switching (Default: Medium, /update หรือ VDO/HyperFrames/SFX: High) และโหมด Handoff สลับไปคุมงานสดใน VS Code ใช้เมื่อ /cc [คำสั่ง], ส่งต่อให้ Claude, ให้ claude คิด, /cc /update
+  Claude Code Direct Engine & Handoff — สั่งรันโมเดล Anthropic Claude (Opus 5.5) ผ่าน Claude Code Engine ใน VS Code ได้โดยตรงจากแชทหลักแบบเดียวกับ /gpt พร้อมท่อ UTF-8 แท้, ระบบ Auto Effort Switching (Default: Medium, /update หรือ VDO/HyperFrames/SFX: High), Session Continuity (--resume), รองรับไฟล์ขนาดใหญ่ (--file/--out) และโหมด Handoff สลับไปคุมงานสดใน VS Code ใช้เมื่อ /cc [คำสั่ง], ส่งต่อให้ Claude, ให้ claude คิด, /cc /update
 ---
 
-# 👁️‍🗨️ /cc — Claude Code Direct Engine & Handoff
+# 👁️‍🗨️ /cc — Claude Code Direct Engine & Handoff (v2.0)
 
 ดึงพลังสมองของ **Claude Code (Opus 5.5 — มหาเทพ 👁️‍🗨️)** ผ่านบัญชี **Claude Pro ($20/เดือน)** ที่ติดตั้งอยู่ใน VS Code มาร่วมคิด วางแผนสถาปัตยกรรม และรันงานโค้ดลึกๆ ได้จากใน **"แชทหลัก"** ของ Antigravity ได้โดยตรง เสมือนเป็น Native Engine เช่นเดียวกับ `/gpt`!
 
@@ -18,7 +18,9 @@ User: /cc [โจทย์/คำสั่ง]
   ├─► โหมด 1: DIRECT EXECUTION (จบในแชทหลัก เหมือน /gpt) ──► รัน node tools/cc-bridge.js
   │      ├─ ปกติ: Opus 5.5 + Effort: MEDIUM (Default)
   │      ├─ เจองาน /update หรือตรวจแผน: Opus 5.5 + Effort: HIGH
-  │      └─ เจองาน VDO / HyperFrames / Remotion / SFX: Opus 5.5 + Effort: HIGH
+  │      ├─ เจองาน VDO / HyperFrames / Remotion / SFX: Opus 5.5 + Effort: HIGH
+  │      ├─ ท่อส่ง UTF-8 Stdin: ไร้ปัญหาภาษาไทยเพี้ยน ไร้ข้อจำกัดความยาว Command Line
+  │      └─ รองรับ --file สำหรับใส่บริบทหนา และ --out บันทึกผลลง Quick Save ทันที
   │
   └─► โหมด 2: VS CODE HANDOFF (สำหรับงานนั่งเฝ้าหน้าจอสด) ──► เขียน Quick Save/Active/<file>.md
          └─ เปิด VS Code (มี DrView + Quota Status Bar) ทำงานร่วมกัน
@@ -44,14 +46,22 @@ Engine `tools/cc-bridge.js` จะตรวจจับประเภทงา�
 
 เมื่อ User พิมพ์ `/cc [ข้อความ]` หรือสั่ง "ให้ claude คิด...":
 1. **รวบรวมบริบท (Context Assembly):**
-   - รวบรวมคำถาม, ไฟล์ที่เปิดอยู่, หรือข้อมูลจากสนทนาปัจจุบัน
+   - รวบรวมคำถาม, ไฟล์ที่เปิดอยู่, หรือข้อมูลจากบทสนทนาปัจจุบัน
 2. **รันคำสั่งผ่าน `tools/cc-bridge.js`:**
    ```bash
    node tools/cc-bridge.js --cwd "<PROJECT_ROOT>" "<PROMPT>"
    ```
-   - ถ้าต้องการบังคับ effort แบบเจาะจง:
+   - **กรณีมีไฟล์เอกสารหรือบริบทขนาดยาว (>1,000 บรรทัด):**
      ```bash
-     node tools/cc-bridge.js --effort high --cwd "<PROJECT_ROOT>" "<PROMPT>"
+     node tools/cc-bridge.js --cwd "<PROJECT_ROOT>" --file "<PATH_TO_FILE>" "<PROMPT>"
+     ```
+   - **กรณีต้องการให้บันทึกผลลัพธ์ลง Quick Save ทันที:**
+     ```bash
+     node tools/cc-bridge.js --cwd "<PROJECT_ROOT>" --out "<OUTPUT_QUICK_SAVE_PATH>" "<PROMPT>"
+     ```
+   - **กรณีสั่งงานต่อเนื่องในหัวข้อเดิม (Session Continuity):**
+     ```bash
+     node tools/cc-bridge.js --resume "<PROMPT>"
      ```
 3. **ส่งมอบผลลัพธ์:**
    - นำคำตอบของ Claude Code (มหาเทพ 👁️‍🗨️) มาแสดงในแชทหลักทันที
@@ -81,7 +91,8 @@ Engine `tools/cc-bridge.js` จะตรวจจับประเภทงา�
 
 ---
 
-## 📋 กฎเหล็กความปลอดภัย (Iron Rules)
+## 📋 กฎเหล็กความปลอดภัย & ข้อควรระวัง (Iron Rules)
 1. **Zero Lockout & Bypass Permissions:** รันผ่านสิทธิ์ `bypassPermissions` เสมอ ห้ามปล่อยให้ติดค้าง Permission Prompt
 2. **One Session One Voice:** Antigravity (Gemini Flash) คือผู้บัญชาการหน้างาน (Muscle) — Claude Code (Opus 5.5) คือเสนาธิการมองขาด (Brain)
-3. **ห้ามแก้ไฟล์ชนกัน:** ระหว่างที่ Claude Code กำลังแก้ไฟล์ใด ห้าม Antigravity เข้าไปแก้ไฟล์เดียวกันในเวลาเดียวกันเด็ดขาด
+3. **UTF-8 Pipe Integrity:** ส่งข้อความผ่าน Stdin UTF-8 เสมอ เพื่อรักษาความถูกต้องของสระและวรรณยุกต์ภาษาไทย
+4. **ห้ามแก้ไฟล์ชนกัน:** ระหว่างที่ Claude Code กำลังแก้ไฟล์ใด ห้าม Antigravity เข้าไปแก้ไฟล์เดียวกันในเวลาเดียวกันเด็ดขาด
