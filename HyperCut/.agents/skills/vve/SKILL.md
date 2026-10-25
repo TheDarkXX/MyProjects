@@ -1,25 +1,27 @@
 ---
 name: vve
-version: "1.0.0"
+version: "1.1.0"
 updated_at: "2026-10-25"
 description: >-
-  Viral Video Editing Engine (VVE) — ผลิตวิดีโอสายสุขภาพและอาหารเสริมระดับลักชัวรีพรีเมียม โคลนเลย์เอาต์ 5 ชั้นสไตล์หมอเจษ ผสานสคริปต์ 4 หมัด Nectapharma 71M GMV (Hook, Twist, Proof, Duo Pack) และเรนเดอร์ Motion Overlays ด้วย Hyperframes GSAP Engine
+  Viral Video Editing Engine (VVE) — ผลิตวิดีโอสายสุขภาพและอาหารเสริมระดับลักชัวรีพรีเมียม สไตล์หมอเจษแท้ 100% (/vve jade) ด้วยระบบ 3 เสาหลัก A-Roll + B-Roll Footage + Hyperframes Overlays ผสานสูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (/vve necta)
 ---
 
-# 🎬 Viral Video Editing Engine (`/vve` v1.0.0)
+# 🎬 Viral Video Editing Engine (`/vve` v1.1.0)
 
 > **Core Identity:** เครื่องจักรผลิตวิดีโอคอนเทนต์สุขภาพ & อาหารเสริมระดับ **Luxury Clinical (พรีเมียม ดูแพง หมอจริง วิจัยจริง)**  
-> **สูตรผสมลับ:** **สมองการขายจาก Nectapharma (71M GMV Benchmark)** + **หน้าตาความหรูจาก Dr. Jade (5-Layer Split Layout)** + **เรนเดอร์กราฟิกลอยด้วย Hyperframes GSAP Engine**
+> **สไตล์การตัดต่อหลัก:** **หมอเจษ (Dr. Jade / DoctorBank)** ➔ ระบบ 3 เสาหลัก: **A-Roll (หมอพูดล่าง) + B-Roll Footage (กราฟิกบน) + Hyperframes (โมชันกราฟิกลอยหรู)**  
+> **สมองการขายเสริม:** **Nectapharma 71M GMV** ➔ สูตรสคริปต์ 4 หมัดทองคำ (Sensory Hook ➔ ASMR Cap Twist ➔ Scientific Proof ➔ Duo Pack CTA)
 
 ---
 
 <a id="toc"></a>
 ## 📑 สารบัญ (Table of Contents)
-1. [รูปแบบคำสั่ง Slash Commands](#commands)
-2. [สถาปัตยกรรมวิดีโอ 5 เลเยอร์ (5-Layer Architecture)](#5layers)
-3. [สูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (`/vve necta`)](#necta-formula)
-4. [Design System & Motion Physics (Anti-Cartoon Rules)](#design-motion)
-5. [คู่มือรันคำสั่ง Render & Workflows](#render-workflow)
+1. [รูปแบบคำสั่ง Slash Commands (`/vve jade` vs `/vve necta`)](#commands)
+2. [ถอดรหัสโครงสร้างตัดต่อหมอเจษ (Dr. Jade 3-Pillar Architecture)](#dr-jade-pillars)
+3. [สถาปัตยกรรมวิดีโอ 5 เลเยอร์ (5-Layer Machine Contract)](#5layers)
+4. [สูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (`/vve necta`)](#necta-formula)
+5. [Design System & Motion Physics (Anti-Cartoon Rules)](#design-motion)
+6. [คู่มือรันคำสั่ง Render & Workflows](#render-workflow)
 
 ---
 
@@ -28,17 +30,51 @@ description: >-
 
 | คำสั่ง | พารามิเตอร์ | การทำงาน |
 |---|---|---|
-| `/vve necta` | `[ชื่อสินค้า / ปัญหา / Pain Point]` | **โหมดสร้างยอดขายสูงสุด:** เจนสคริปต์ 4 หมัด Nectapharma + วางโครงสร้าง 5-Layer Layout หมอเจษ + สร้าง `video_spec.json` พร้อมเรนเดอร์ |
-| `/vve clone` | `[path วิดีโอ หรือ รายงานวิเคราะห์]` | โคลนเลย์เอาต์และสไตล์ของคลิปตัวอย่าง ถอดรหัสออกมาเป็น 5-Layer Spec |
-| `/vve spec` | `[ข้อความสคริปต์ / ไฟล์สคริปต์]` | แปลงสคริปต์ที่มีอยู่แล้วให้กลายเป็น Machine Timeline Contract ตาม `video_spec.schema.json` |
-| `/vve render` | `[ชื่อ component หรือ path spec.json]` | สั่งรันเรนเดอร์ Motion Overlays ผ่าน Node.js / Puppeteer Headless Chrome ออกมาเป็น WebM/ProRes |
+| **`/vve jade`** | `[ชื่อสินค้า / หัวข้อ / ปัญหา]` | **🌟 คำสั่งหลักสไตล์หมอเจษ:** ผลิตวิดีโอโครงสร้าง 3 เสาหลัก (A-Roll + B-Roll + Hyperframes) ตามแม่แบบ Dr. Jade 100% พร้อมสร้าง `video_spec.json` |
+| **`/vve necta`** | `[ชื่อสินค้า / Pain Point]` | **โหมดสคริปต์ 4 หมัดขายถล่ม:** เน้นบทพูดจิตวิทยาปิดการขาย Nectapharma 70.96M GMV (เน้น ASMR เปิดฝา + วางขวดคู่ 2 ขวด ดัน AOV) |
+| **`/vve clone`** | `[path วิดีโอ หรือ รายงาน]` | โคลนเลย์เอาต์ จังหวะตัดต่อ และ Motion Graphic ของคลิปตัวอย่าง ถอดเป็น 5-Layer Spec |
+| **`/vve spec`** | `[สคริปต์ / ไฟล์ข้อความ]` | แปลงสคริปต์ที่มีอยู่แล้วให้กลายเป็น Machine Timeline Contract ตาม `video_spec.schema.json` |
+| **`/vve render`** | `[ชื่อ component หรือ spec.json]` | สั่งรันเรนเดอร์ Motion Overlays ผ่าน Puppeteer Headless Chrome ออกมาเป็น WebM/ProRes โปร่งแสง |
+
+---
+
+<a id="dr-jade-pillars"></a>
+## 2. 🧬 ถอดรหัสโครงสร้างตัดต่อหมอเจษ (Dr. Jade 3-Pillar Architecture)
+
+ทุกคลิปของหมอเจษ (อ้างอิงคลิปต้นฉบับ SaveSnap 25, 26, 27, 28) ประกอบด้วย **3 เสาหลัก (3 Pillars)** ที่ต้องประสานกันอย่างไร้รอยต่อ:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ 1. A-Roll (Talking Head / หมอเจษ):                                     │
+│    - ภาพหมอเจษพูดตรง นั่งหน้าไมโครโฟน โค้ทขาว/สูท ล็อกสายตาจ้องกล้อง      │
+│    - วางตำแหน่ง: ครึ่งล่าง 45% (ในโหมด Split Screen) หรือเต็มจอจังหวะเน้น     │
+├────────────────────────────────────────────────────────────────────────┤
+│ 2. B-Roll Footage (Visual Cut-aways):                                  │
+│    - ภาพแทรกสลับเปลี่ยนทุก 2.5 - 3.0 วินาที เพื่อรักษาสมาธิคนดู (Retention)│
+│    - คลังภาพ: กราฟิก 3D อนาโตมี่ (กระดูก/เข่าเสื่อม/ลำไส้), เซลล์ชีววิทยา,   │
+│      คนนอนไม่หลับ/ปวดท้อง, ผู้สูงอายุวิ่งออกกำลังกาย, ไลฟ์สไตล์ผู้ใช้จริง       │
+│    - วางตำแหน่ง: ครึ่งบน 55% (ในโหมด Split Screen) หรือแทรกเต็มจอสลับจังหวะ  │
+├────────────────────────────────────────────────────────────────────────┤
+│ 3. Hyperframes Motion Overlays (กราฟิกลอยหรู):                          │
+│    - Frosted Glass Hook Badge: ป้ายหัวข้อแคปซูลกระจกฝ้า + แสงวิ่ง Sheen │
+│    - Big Number Shockwave: เลข 1, 2, 3, 4 ยักษ์ พร้อมคลื่นออร่าสีทอง    │
+│    - PubMed Paper Highlight: เปเปอร์งานวิจัยพร้อมปากกาไฮไลต์สีทองขีดข้อความ │
+│    - Hairline Laser Organ Pointer: เส้นเลเซอร์พุ่งชี้อวัยวะ + วงแหวน Ping │
+│    - Nutrient Tag: วงกลมสารอาหาร "Ca", "Mg", "D3" ค่อยๆ ป๊อปอัปข้างขวด   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### องค์ประกอบเสริมที่ห้ามตกหล่น:
+1. **Transitions & Pacing:** Fast Zoom Shake / Whip Pan (0.2s - 0.3s) สลับทุก 2.5 - 3 วินาที ห้ามแช่ภาพเดิมเด็ดขาด
+2. **Audio Master Standard:** เสียงพูด Voice `-3.0 dBFS`, BGM ดนตรีเบื้องหลัง Ducking ลงที่ `-22.0 dBFS`, ค่าความดังรวม Master Integrated Loudness `-14.0 LUFS`
+3. **Subtitles (คำบรรยาย):** ฟอนต์ Kanit หรือ Prompt Bold มี Stroke ขอบ 4-5px ตัดคำทีละ 3-5 คำ ปล่อยตามเสียงพูด พร้อมใส่อีโมจิที่ท้ายประโยคสำคัญ
 
 ---
 
 <a id="5layers"></a>
-## 2. 🧬 สถาปัตยกรรมวิดีโอ 5 เลเยอร์ (5-Layer Architecture)
+## 3. 📑 สถาปัตยกรรมวิดีโอ 5 เลเยอร์ (5-Layer Machine Contract)
 
-ทุกคลิปที่ผ่าน `/vve` ต้องถูกจัดวางอย่างเป็นระบบตาม 5 เลเยอร์นี้ เพื่อให้ AI และคนตัดต่อทำงานประสานกันได้ 100% โดยไม่งง:
+เมื่อระบบ AI ทำงาน จะแปลงโครงสร้างหมอเจษออกมาเป็น 5 เลเยอร์ใน `video_spec.json`:
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -60,9 +96,9 @@ description: >-
 ---
 
 <a id="necta-formula"></a>
-## 3. 🏆 สูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (`/vve necta`)
+## 4. 🏆 สูตรสคริปต์ 4 หมัด Nectapharma 71M GMV (`/vve necta`)
 
-เมื่อผู้ใช้พิมพ์ `/vve necta [สินค้า]` ให้ AI ดึงโครงสร้างจิตวิทยา 4 หมัดทองคำที่สร้างยอดขายจริง 70.96 ล้านบาทมาใช้งานทันที:
+หากต้องการสคริปต์ที่เน้นจิตวิทยาการปิดการขายระดับ 71 ล้านบาท ให้เรียก `/vve necta [สินค้า]`:
 
 ```
 [0.0s - 3.5s]  S01: SENSORY HOOK      ➔ เจาะลึกอาการเจ็บจริง (Physical Pain / Empathy) ห้ามโชว์สินค้าเด็ดขาด!
@@ -74,16 +110,10 @@ description: >-
 [11.5s - 15s]  S04: DUO PACK SETTLE   ➔ วาง 2 ขวดคู่ ชี้ตะกร้าซ้ายล่าง ดัน AOV พุ่ง 1,600+ บาท
 ```
 
-### จิตวิทยาเบื้องหลังแต่ละหมัด:
-1. **Sensory Hook (0–3.5s):** ใช้คำพูดที่ทำให้เกิดภาพสัมผัสทางกายภาพ เช่น *"หัวถึงหมอนแล้วในหัวยังคิดงานวนไม่หยุด"*, *"ออกแดดแป๊บเดียว ผิวก็แสบไหม้แดงไปหมด"*
-2. **Belief Twist (3.5–7.5s):** ทุบความเชื่อเดิมทิ้ง เช่น *"อย่าเพิ่งรีบกินยานอนหลับให้ตื่นมามึนหัว ร่างกายแค่ขาดตัวตัดสวิตช์สมอง"*
-3. **Clinical Proof (7.5–11.5s):** อ้างอิงสารสกัดมาตรฐานสากล เช่น *"Magnesium Glycinate ฟอร์มคีเลตดูดซึมตรง"* พร้อมโชว์เปเปอร์ PubMed ที่มีปากกาไฮไลต์สีทองขีดทับ
-4. **Duo Pack CTA (11.5–15s):** ปักตะกร้าคู่ 2 ขวดเสมอ ห้ามขายขวดเดี่ยว เพราะสถิติชี้ชัดว่าการวางขวดคู่ดันค่าเฉลี่ยตะกร้าพุ่ง 2 เท่า
-
 ---
 
 <a id="design-motion"></a>
-## 4. 🎨 Design System & Motion Physics (Anti-Cartoon Rules)
+## 5. 🎨 Design System & Motion Physics (Anti-Cartoon Rules)
 
 > [!WARNING]
 > **กฎเหล็กต้านกราฟิกการ์ตูนง่อย (Anti-Cartoon Manifesto):**
@@ -100,7 +130,7 @@ description: >-
 ---
 
 <a id="render-workflow"></a>
-## 5. 🛠️ คู่มือรันคำสั่ง Render & Workflows
+## 6. 🛠️ คู่มือรันคำสั่ง Render & Workflows
 
 ### โฟลเดอร์โปรเจกต์:
 `C:\My Claw\Viral VDO Editing (VVE)\tools\hyperframes_opus`
@@ -114,6 +144,5 @@ node "C:\My Claw\Viral VDO Editing (VVE)\tools\hyperframes_opus\scripts\render-k
 ```
 
 ### การกระจายสกิลและอัปเดตระบบ:
-เมื่อปรับแต่งสกิลนี้ ต้องปฏิบัติตามกฎเหล็กของ Workspace:
 1. ตรวจสอบ YAML ด้วย: `python tools/audit_skills_yaml.py`
 2. กระจายสกิลข้าม Spiderweb Mesh ด้วย: `node tools/spiderweb-sendall.js vve`
