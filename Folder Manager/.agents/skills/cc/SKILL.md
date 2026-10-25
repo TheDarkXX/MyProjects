@@ -4,26 +4,26 @@ description: >-
   Claude Code Direct Engine & Handoff — สั่งรันโมเดล Anthropic Claude (Opus 5.5) ผ่าน Claude Code Engine ใน VS Code ได้โดยตรงจากแชทหลักแบบเดียวกับ /gpt พร้อมท่อ UTF-8 แท้, ระบบ Auto Effort Switching (Default: Medium, /update หรือ VDO/HyperFrames/SFX: High), Session Continuity (--resume), รองรับไฟล์ขนาดใหญ่ (--file/--out) และโหมด Handoff สลับไปคุมงานสดใน VS Code ใช้เมื่อ /cc [คำสั่ง], ส่งต่อให้ Claude, ให้ claude คิด, /cc /update
 ---
 
-# 👁️‍🗨️ /cc — Claude Code Direct Engine & Handoff (v2.0)
+# 👁️‍🗨️ /cc — Claude Code Direct Engine & Unified Panel (v2.1)
 
-ดึงพลังสมองของ **Claude Code (Opus 5.5 — มหาเทพ 👁️‍🗨️)** ผ่านบัญชี **Claude Pro ($20/เดือน)** ที่ติดตั้งอยู่ใน VS Code มาร่วมคิด วางแผนสถาปัตยกรรม และรันงานโค้ดลึกๆ ได้จากใน **"แชทหลัก"** ของ Antigravity ได้โดยตรง เสมือนเป็น Native Engine เช่นเดียวกับ `/gpt`!
+ดึงพลังสมองของ **Claude Code (Opus 5.5 — มหาเทพ 👁️‍🗨️)** ผ่านบัญชี **Claude Pro ($20/เดือน)** ที่ติดตั้งอยู่ใน **Antigravity IDE (และ VS Code)** มาร่วมคิด วางแผนสถาปัตยกรรม และรันงานโค้ดลึกๆ ได้จากใน **"แชทหลัก"** ของ Antigravity ได้โดยตรง เสมือนเป็น Native Engine เช่นเดียวกับ `/gpt`!
 
 ---
 
-## ⚡ สถาปัตยกรรม 2 โหมดการใช้งาน
+## ⚡ สถาปัตยกรรม 2 โหมดการใช้งาน (All-in-One Antigravity)
 
 ```
 User: /cc [โจทย์/คำสั่ง]
   │
   ├─► โหมด 1: DIRECT EXECUTION (จบในแชทหลัก เหมือน /gpt) ──► รัน node tools/cc-bridge.js
+  │      ├─ ดึง Engine จาก .antigravity-ide/extensions โดยตรง (รวดเร็ว ไร้รอยต่อ)
   │      ├─ ปกติ: Opus 5.5 + Effort: MEDIUM (Default)
   │      ├─ เจองาน /update หรือตรวจแผน: Opus 5.5 + Effort: HIGH
   │      ├─ เจองาน VDO / HyperFrames / Remotion / SFX: Opus 5.5 + Effort: HIGH
-  │      ├─ ท่อส่ง UTF-8 Stdin: ไร้ปัญหาภาษาไทยเพี้ยน ไร้ข้อจำกัดความยาว Command Line
-  │      └─ รองรับ --file สำหรับใส่บริบทหนา และ --out บันทึกผลลง Quick Save ทันที
+  │      └─ ท่อส่ง UTF-8 Stdin: ไร้ปัญหาภาษาไทยเพี้ยน ไร้ข้อจำกัดความยาว Command Line
   │
-  └─► โหมด 2: VS CODE HANDOFF (สำหรับงานนั่งเฝ้าหน้าจอสด) ──► เขียน Quick Save/Active/<file>.md
-         └─ เปิด VS Code (มี DrView + Quota Status Bar) ทำงานร่วมกัน
+  └─► โหมด 2: UNIFIED INTERACTIVE PANEL (คลิกแถบ Claude Code ใน AG หรือ VS Code)
+         └─ เปิดแถบ Claude Code ทางขวาของ Antigravity ทำงานเคียงคู่กับ DrView ได้ในหน้าต่างเดียว ไม่ต้องสลับแอป
 ```
 
 ---
