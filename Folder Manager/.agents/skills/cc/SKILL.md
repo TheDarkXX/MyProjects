@@ -1,116 +1,87 @@
 ---
 name: cc
 description: >-
-  Claude Code Handoff (2 โหมดในสกิลเดียว) — ใน Antigravity ใช้แพ็กบริบทและแผนงานลงไฟล์ handoff
-  ใน Quick Save แล้วยื่นคำสั่งพร้อมวางให้ Claude Code ใน VS Code (หน้าต่างหลัก) หรือ Desktop/CLI (Claude Pro 20 ดอลลาร์)
-  ส่วนใน Claude Code ใช้รับงาน หาไฟล์ handoff ที่ค้าง ลงมือทำ ตรวจผล แล้วเขียนผลกลับให้ AG อ่านต่อ
-  ใช้เมื่อ /cc, ส่งต่อให้ Claude, ย้ายไปทำใน Claude, เตรียมงานให้ Claude, รับงานจาก AG
+  Claude Code Direct Engine & Handoff — สั่งรันโมเดล Anthropic Claude (Opus 5.5) ผ่าน Claude Code Engine ใน VS Code ได้โดยตรงจากแชทหลักแบบเดียวกับ /gpt พร้อมระบบ Auto Effort Switching (Default: Medium, /update หรือ VDO/HyperFrames/SFX: High) และโหมด Handoff สลับไปคุมงานสดใน VS Code ใช้เมื่อ /cc [คำสั่ง], ส่งต่อให้ Claude, ให้ claude คิด, /cc /update
 ---
 
-# /cc — Claude Code Handoff
+# 👁️‍🗨️ /cc — Claude Code Direct Engine & Handoff
 
-สกิลเดียว ใช้ได้ 2 ฝั่ง ไฟล์ handoff ใน `Quick Save/Active/` คือสะพานเชื่อม (AG กับ Claude ทำงานบน File System เดียวกันแต่แยก Session แชท)
-- **Primary Setup:** ใช้ Antigravity (Gemini Flash สายลุย/หน้างาน) คู่กับ **VS Code (Claude Code Extension + DrView + Quota Status Bar) เป็นหน้าต่างหลัก**
-
-```
-AG (Sender)  ──เขียน──►  Quick Save/Active/<file>.md  ◄──อ่าน/ทำ/เขียนผลกลับ──  Claude Code in VS Code (Receiver)
-             handoff_status: pending → in-progress → done | blocked
-```
-
-## เลือกโหมด (ตัดสินจาก tools ที่ตัวเองมี)
-- มี `view_file` / `write_to_file` / `run_command` → **คุณคือ Antigravity → โหมด SEND**
-- มี `Read` / `Edit` / `Bash` → **คุณคือ Claude Code → โหมด RECEIVE**
+ดึงพลังสมองของ **Claude Code (Opus 5.5 — มหาเทพ 👁️‍🗨️)** ผ่านบัญชี **Claude Pro ($20/เดือน)** ที่ติดตั้งอยู่ใน VS Code มาร่วมคิด วางแผนสถาปัตยกรรม และรันงานโค้ดลึกๆ ได้จากใน **"แชทหลัก"** ของ Antigravity ได้โดยตรง เสมือนเป็น Native Engine เช่นเดียวกับ `/gpt`!
 
 ---
 
-## โหมด SEND (Antigravity)
+## ⚡ สถาปัตยกรรม 2 โหมดการใช้งาน
 
-### S1. ระบุโปรเจกต์และ Quick Save ปลายทาง
-- หาโปรเจกต์จาก `C:\XBrain\docs\PROJECT_INDEX_SPIDERWEB.md` → ได้ `PROJECT_ROOT` (absolute)
-- โฟลเดอร์ปลายทาง: `<PROJECT_ROOT>\Quick Save\Active\` ถ้ามี / ถ้าไม่มี (เช่นแอปย่อยใน MyProjects) ใช้ `C:\My Claw\Openclaw-VPS\Quick Save\Active\<ชื่อโปรเจกต์>\`
-
-### S2. ไฟล์: สร้างใหม่ หรือ ต่อไฟล์เดิม
-- **ถ้าบทสนทนานี้มีไฟล์ Quick Save อยู่แล้ว** (Session Lock: 1 session = 1 version) → ห้ามสร้างใหม่ ให้เพิ่ม frontmatter `handoff_*` และ section `## 🤝 Handoff Brief` ลงไฟล์เดิม
-- **ถ้ายังไม่มี** → หาเวอร์ชันล่าสุดใน `Quick Save/Complete/<component>/` และ `Quick Save/Active/` ของโปรเจกต์นั้น (เรียงแบบ natural sort) แล้วตั้งชื่อ `V{x.y.z}_[type]_{component}_{desc}.md`
-  - `type` ใช้ค่าตามกฎเท่านั้น: `impl | hotfix | design | infra | study | spike` (**ห้ามใช้ `[plan]`**)
-
-### S3. Frontmatter (ใส่ฟิลด์ Quick Save ปกติตาม AGENTS.md + ฟิลด์ handoff)
-```yaml
-handoff_to: claude
-handoff_status: pending        # pending | in-progress | done | blocked
-handoff_project_root: "C:\\My Claw\\<Project>"
-handoff_created: 2026-10-25T16:30+07:00
 ```
-
-### S4. เนื้อหา `## 🤝 Handoff Brief` (ต้องครบทุกหัวข้อ ห้าม placeholder ห้ามย่อ)
-1. **Objective** — ทำอะไร ผลลัพธ์ที่ต้องได้ 1-3 บรรทัด
-2. **Why / Decisions** — เหตุผลและการตัดสินใจที่คุยกับ user แล้ว รวมทางเลือกที่ปฏิเสธไป (Claude ต้องไม่ถามซ้ำ)
-3. **Target Files** — absolute path ทุกไฟล์ที่ต้องอ่าน/แก้ พร้อมบรรทัดหรือ function ที่เกี่ยว
-4. **Steps** — ขั้นตอนเรียงลำดับ มี code snippet / ค่า parameter จริง
-5. **Rules That Apply (inline)** — copy เฉพาะกฎที่เกี่ยวกับงานนี้มาแปะ เช่น งาน UI → อ่าน DESIGN.md + `node bump-cache.js` + `git push vps master`; งานสกิล → `>-` + audit + sendall (เพื่อให้ Claude ไม่ต้องอ่าน AGENTS.md ทั้งไฟล์ ประหยัดโควต้า Pro)
-6. **Do NOT Touch** — ไฟล์ที่ AG แก้ค้างอยู่หรือนอก scope
-7. **Verification** — คำสั่งที่ต้องรัน + ผลที่ต้องเห็น (Definition of Done)
-8. **Deploy** — ต้อง push ไหม ไป remote ไหน (`vps` / `origin`) หรือ "ห้าม push"
-
-### S5. เคลียร์ git ก่อนส่ง
-- รัน `git status` ใน `PROJECT_ROOT`
-- ไฟล์ที่เป็นงานนี้ → commit: `chore(handoff): checkpoint before /cc → <file>`
-- ไฟล์ค้างที่ไม่เกี่ยว → ระบุลง **Do NOT Touch**
-
-### S6. ส่งมอบให้ user (ตอบในแชท ชัดเจน ตรงเป้า)
-```text
-📦 Handoff: <absolute path ของไฟล์>
-
-▶ ใน VS Code (หน้าต่างหลัก แนะนำสูงสุด):
-1. เปิด VS Code ที่โฟลเดอร์ <PROJECT_ROOT>
-2. ในแถบแชท Claude Code ฝั่งขวา (เปิดปุ่ม ⚡ Auto ไว้) แล้ววางคำสั่งนี้:
-   /cc <absolute path ของไฟล์>
-   (หรือพิมพ์: @<ชื่อไฟล์> รับงานตาม Handoff Brief นี้แล้วลุยได้เลย)
-3. ส่องโควต้าคงเหลือ Pro $20 ได้ที่ป้ายขวาล่างจอ (🟢 Claude Code: XX%)
-
-▶ ทางเลือกสำรอง (ถ้าใช้ Claude Desktop หรือ CLI Terminal):
-- Desktop (แท็บ Code): เลือกโฟลเดอร์แล้ววาง /cc <absolute path ของไฟล์>
-- CLI Terminal: cd "<PROJECT_ROOT>"; claude "รับงาน /cc: <absolute path ของไฟล์>"
+User: /cc [โจทย์/คำสั่ง]
+  │
+  ├─► โหมด 1: DIRECT EXECUTION (จบในแชทหลัก เหมือน /gpt) ──► รัน node tools/cc-bridge.js
+  │      ├─ ปกติ: Opus 5.5 + Effort: MEDIUM (Default)
+  │      ├─ เจองาน /update หรือตรวจแผน: Opus 5.5 + Effort: HIGH
+  │      └─ เจองาน VDO / HyperFrames / Remotion / SFX: Opus 5.5 + Effort: HIGH
+  │
+  └─► โหมด 2: VS CODE HANDOFF (สำหรับงานนั่งเฝ้าหน้าจอสด) ──► เขียน Quick Save/Active/<file>.md
+         └─ เปิด VS Code (มี DrView + Quota Status Bar) ทำงานร่วมกัน
 ```
-- เตือน: ปิดแท็บไฟล์ใน Target Files ใน AG ก่อน (กัน auto-save ชนกัน)
-- เตือน: ระหว่างที่ Claude ทำ อย่าสั่ง AG แก้ไฟล์ชุดเดียวกัน
 
 ---
 
-## โหมด RECEIVE (Claude Code / Claude Desktop แท็บ Code)
+## 🧠 ระดับการคิด (Dynamic Thinking / Effort Hierarchy)
 
-### R1. หาไฟล์งาน
-- ถ้า user ส่ง path มา → ใช้ path นั้น
-- ถ้าไม่ส่ง → ค้นหา `handoff_status: pending` ใน `Quick Save/Active/` ของโปรเจกต์ปัจจุบัน และ `C:\My Claw\Openclaw-VPS\Quick Save\Active\` (รวมโฟลเดอร์ย่อย)
-  - เจอ 1 ไฟล์ → ใช้เลย / เจอหลายไฟล์ → แสดงรายการให้ user เลือก / ไม่เจอ → บอก user แล้วหยุด
+Engine `tools/cc-bridge.js` จะตรวจจับประเภทงานและปรับระดับการคิด (Reasoning Effort) ให้อัตโนมัติ:
 
-### R2. เริ่มงาน
-- อ่าน Handoff Brief ให้จบ **อ่าน AGENTS.md เพิ่มเฉพาะเมื่อ Brief บอกให้อ่าน** (ประหยัดโควต้า)
-- ถ้า `handoff_project_root` ไม่ตรงกับ cwd → เตือน user ว่าควรเปิด Claude ที่โฟลเดอร์นั้น (CLAUDE.md/สกิลของโปรเจกต์จะได้โหลด)
-- แก้ frontmatter เป็น `handoff_status: in-progress`
-- รัน `git status` — ห้ามแตะไฟล์ใน **Do NOT Touch** และไฟล์ค้างที่ไม่ได้อยู่ใน Target Files
+| คำสั่ง / ประเภทงาน | โมเดล | Effort | เหตุผลและจุดประสงค์ |
+|---|:---:|:---:|---|
+| **`/cc [โจทย์ทั่วไป]`** | Opus 5.5 | **MEDIUM** | คำถามทั่วไป, วางโครงร่าง, คิดฟังก์ชันเดี่ยว, สรุปไอเดีย (คิดไว ไม่เปลืองเวลา) |
+| **`/cc /update`** หรือตรวจแผน | Opus 5.5 | **HIGH** | ตรวจสอบแผนงานเดิม, ทบทวน Architecture, หา Blind Spots และขอบเขตความเสี่ยง |
+| **VDO / HyperFrames / Remotion / SFX** | Opus 5.5 | **HIGH** | งานตัดต่อ, คำนวณไทม์มิ่งเฟรม, เรนเดอร์ GSAP, มิกซ์เสียง SFX (ต้องการความแม่นยำสูง ห้ามกระตุก) |
 
-### R3. ลงมือ + ตรวจ
-- ทำตาม Steps ตามลำดับ อยู่ใน scope ของ Objective เท่านั้น
-- รันทุกคำสั่งใน **Verification** แล้วอ่านผลจริง
-- ถ้าติดหรือ Brief ขัดกับโค้ดจริง → หยุด ตั้ง `handoff_status: blocked` แล้วเขียนเหตุผล (ห้ามเดา ห้ามแก้วนเกิน 3 รอบ)
+---
 
-### R4. เขียนผลกลับ (บังคับ — AG อ่านจากตรงนี้)
-ต่อท้ายไฟล์ handoff:
-```markdown
-## 🔁 Handoff Result (Claude) — <วันเวลา>
-- **Status:** done | blocked
-- **Done:** <สิ่งที่ทำ ทีละข้อ>
-- **Files Changed:** <absolute paths>
-- **Verification:** <คำสั่ง + ผลที่ได้จริง>
-- **Commit:** <hash> | **Pushed:** <remote หรือ "ไม่ได้ push">
-- **Open Issues / Next:** <สิ่งที่เหลือให้ AG หรือ user ทำต่อ>
-```
-- ตั้ง `handoff_status: done` (หรือ `blocked`)
-- commit ไฟล์ที่แก้ + ไฟล์ handoff: `feat|fix(<component>): <desc> [cc-handoff]` แล้ว push ตามหัวข้อ **Deploy** เท่านั้น
+## 🛠️ วิธีการทำงานของ Agent
 
-### R5. แจ้ง user
-สรุปสั้นๆ แล้วให้คำสั่งกลับไปวางใน AG:
-```text
-อ่านผลใน <absolute path> ส่วน Handoff Result แล้วทำต่อ
-```
+### โหมดที่ 1: Direct Execution ในแชทหลัก (Default)
+
+เมื่อ User พิมพ์ `/cc [ข้อความ]` หรือสั่ง "ให้ claude คิด...":
+1. **รวบรวมบริบท (Context Assembly):**
+   - รวบรวมคำถาม, ไฟล์ที่เปิดอยู่, หรือข้อมูลจากสนทนาปัจจุบัน
+2. **รันคำสั่งผ่าน `tools/cc-bridge.js`:**
+   ```bash
+   node tools/cc-bridge.js --cwd "<PROJECT_ROOT>" "<PROMPT>"
+   ```
+   - ถ้าต้องการบังคับ effort แบบเจาะจง:
+     ```bash
+     node tools/cc-bridge.js --effort high --cwd "<PROJECT_ROOT>" "<PROMPT>"
+     ```
+3. **ส่งมอบผลลัพธ์:**
+   - นำคำตอบของ Claude Code (มหาเทพ 👁️‍🗨️) มาแสดงในแชทหลักทันที
+   - หากมีการสร้าง/แก้ไฟล์แผน ให้รายงานพาธและลิงก์ให้ผู้ใช้ทราบ
+
+---
+
+### โหมดที่ 2: VS Code Handoff (เมื่อ User ต้องการย้ายไปทำใน VS Code)
+
+ใช้เมื่อ User สั่งชัดเจนว่า "ย้ายไปทำใน VS Code", "เปิดใน VS Code", หรือต้องการนั่งดู Terminal ทำงานสด:
+1. **เขียนไฟล์ Handoff ลง `Quick Save/Active/`:**
+   - บันทึก `V{x.y.z}_[type]_{component}_{desc}.md` พร้อมหัวข้อ `## 🤝 Handoff Brief` (Objective, Why, Target Files, Steps, Rules, Verification)
+   - ตั้งค่า frontmatter:
+     ```yaml
+     handoff_to: claude
+     handoff_status: pending
+     handoff_project_root: "C:\\My Claw\\<Project>"
+     ```
+2. **สั่งเปิดไฟล์ใน VS Code ด้วย DrView ทันที:**
+   ```bash
+   code "<PATH_TO_QUICK_SAVE_FILE>"
+   ```
+3. **แจ้ง User:**
+   - มอบคำสั่งสั้นๆ ให้ User นำไปเคาะในช่องแชท Claude Code ของ VS Code:
+     `/cc <PATH_TO_QUICK_SAVE_FILE>`
+   - User จะเห็นพรีวิว DrView ทางซ้าย และเห็น Claude ทำงานสดทางขวา
+
+---
+
+## 📋 กฎเหล็กความปลอดภัย (Iron Rules)
+1. **Zero Lockout & Bypass Permissions:** รันผ่านสิทธิ์ `bypassPermissions` เสมอ ห้ามปล่อยให้ติดค้าง Permission Prompt
+2. **One Session One Voice:** Antigravity (Gemini Flash) คือผู้บัญชาการหน้างาน (Muscle) — Claude Code (Opus 5.5) คือเสนาธิการมองขาด (Brain)
+3. **ห้ามแก้ไฟล์ชนกัน:** ระหว่างที่ Claude Code กำลังแก้ไฟล์ใด ห้าม Antigravity เข้าไปแก้ไฟล์เดียวกันในเวลาเดียวกันเด็ดขาด
