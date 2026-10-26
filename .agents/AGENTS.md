@@ -1,3 +1,5 @@
+- **3-Tier Rule Governance & Human Gate Protocol (Iron Rule):** แบ่งชั้นกฎเป็น 3 ระดับเสมอ: Tier 1 (Global System - สัจธรรมสากลใช้ได้ทุกโปรเจกต์ เช่น R30, UTF-8, Git Hygiene), Tier 2 (Domain Cluster - เฉพาะสายงาน เช่น Video Pacing สำหรับ VVE/TheViral), Tier 3 (Local Private - เฉพาะตัวแอป เช่น LightCraft GPU / สูตรอาหารเสริม ห้ามแชร์ออก). กฎสากล (Tier 1) ต้องเคาะที่ XBrain เท่านั้น และ **ก่อนยิง Spiderweb บรอดแคสต์กฎ เอเจนต์ต้องถามบอส 1 บรรทัดเสมอ** เมื่อบอสสั่ง "จัดไป" จึงรันบรอดแคสต์กระจายทั่วระบบ
+
 # General Behaviors
 
 - **Workspace Priority**: When executing commands (especially `git push`, `git pull`, or file searches), always prioritize the main workspace folder (Main Folder) opened in AG over the directory of the currently active document. The active document might be a file opened from outside the current workspace, so its path should not override the main workspace context unless explicitly requested by the user.
