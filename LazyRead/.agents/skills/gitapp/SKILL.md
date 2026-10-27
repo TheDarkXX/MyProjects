@@ -1,7 +1,7 @@
 ---
 name: gitapp
 description: >-
-  GitApp Radar and Upstream Ecosystem Sentinel — ตรวจสอบการอัปเดตเวอร์ชันและคอมมิตล่าสุดของ 9 เครื่องมือ Upstream สำคัญในระบบ (FlowKit, Concat, LightCraft, PhotoCraft, FilmCraft, Earshot, HyperFrames, HeyGen CLI, REA CLI) พร้อมระบบ Sentinel เฝ้าระวังความเสี่ยงบั๊กวิกฤตและสถานะบล็อกบัญชีของ FlowKit อัตโนมัติ ใช้เมื่อ: /gitapp หรือ /gitapp flowkit
+  GitApp Radar and Upstream Ecosystem Sentinel — ตรวจสอบการอัปเดตเวอร์ชันและคอมมิตล่าสุดของ 8 เครื่องมือ Upstream สำคัญในระบบ (FlowKit, Concat, LightCraft, PhotoCraft, FilmCraft, Earshot, HyperFrames, REA CLI) พร้อมระบบ Sentinel เฝ้าระวังความเสี่ยงบั๊กวิกฤตและสถานะบล็อกบัญชีของ FlowKit อัตโนมัติ ใช้เมื่อ: /gitapp หรือ /gitapp flowkit
 ---
 
 # 📡 Skill: `/gitapp` — GitApp Upstream Radar & FlowKit Sentinel
@@ -14,7 +14,7 @@ description: >-
 ## 🚀 วิธีการเรียกใช้งาน (Slash Commands)
 
 ```text
-/gitapp             # ตรวจสอบเครื่องมือภายนอกทั้งหมดในระบบ (9 เครื่องมือหลัก) พร้อม FlowKit Sentinel
+/gitapp             # ตรวจสอบเครื่องมือภายนอกทั้งหมดในระบบ (8 เครื่องมือหลัก) พร้อม FlowKit Sentinel
 /gitapp flowkit     # เจาะลึกเฉพาะ FlowKit (เช็คคอมมิตล่าสุด + สแกน Open Issues เฝ้าระวังความปลอดภัย)
 /gitapp concat      # เช็คเฉพาะ Concat Video Editor
 /gitapp lightcraft  # เช็คเฉพาะ LightCraft
@@ -22,13 +22,12 @@ description: >-
 /gitapp filmcraft   # เช็คเฉพาะ FilmCraft
 /gitapp earshot     # เช็คเฉพาะ Earshot Audio Engine
 /gitapp hyperframes # เช็คเฉพาะ HyperFrames HTML-to-Video Engine
-/gitapp heygen      # เช็คเฉพาะ HeyGen CLI (Avatar & Video Engine)
 /gitapp rea         # เช็คเฉพาะ REA CLI (Reverse Engineering Engine ของ /clone)
 ```
 
 ---
 
-## 🛠️ รายการเครื่องมือที่เฝ้าระวัง (Monitored Tools Matrix — 9 Tools)
+## 🛠️ รายการเครื่องมือที่เฝ้าระวัง (Monitored Tools Matrix — 8 Tools)
 
 | รหัสแอป | ชื่อเครื่องมือ | GitHub Repository / NPM | ประเภทการติดตั้งในเครื่อง | หน้าที่ใน Ecosystem |
 |---|---|---|---|---|
@@ -39,7 +38,6 @@ description: >-
 | `filmcraft` | **FilmCraft** | `storytold/filmcraft` | Desktop GUI / CLI | NLE Video Editor & Color Grading |
 | `earshot` | **Earshot** | `Leonxlnx/earshot` | Git Clone / Python venv (`tools\earshot`) | Audio SFX, LUFS Loudness & Audio Critique MCP |
 | `hyperframes` | **HyperFrames** | `heygen-com/hyperframes` | NPX Package (`npm:hyperframes`) | HTML-to-Video Engine & CLI (`/hyperframes`) |
-| `heygen` | **HeyGen CLI** | `heygen-com/heygen-cli` | CLI Executable (`heygen`) | Avatar Video, AI Voice, BGM & Lipsync Engine |
 | `rea` | **REA CLI** | `morluto/rea` | NPX Package (`npm:rea-agents`) | Reverse Engineer & App Cloner Engine (`/clone`) |
 
 ---
