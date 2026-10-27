@@ -2,10 +2,11 @@
 name: gitpull
 version: "2.0.0"
 updated_at: "2026-09-28"
-description: Safe Git Sync, Auto-Commit Pending Work, Executive Briefing, and Unfinished Task Hunter
+description: >-
+  Safe Git Sync, Auto-Commit Pending Work, Executive Briefing, Workstation Self-Healing, and Unfinished Task Hunter
 ---
 
-# 🔄 Skill: /gitpull (Safe Sync & Executive Resume Officer v2.0.0)
+# 🔄 Skill: /gitpull (Safe Sync & Executive Resume Officer v2.1.0)
 
 ## Objective
 ทำหน้าที่เป็น **Workspace Synchronizer** และ **Briefing Officer** เมื่อเริ่มงานหรือสลับเครื่องบน **Openclaw-VPS**:
@@ -69,6 +70,12 @@ description: Safe Git Sync, Auto-Commit Pending Work, Executive Briefing, and Un
        git rebase --abort
        ```
      - วิเคราะห์สาเหตุและเสนอทางเลือกให้ User ตัดสินใจ (จะ abort แล้วตรวจ diff หรือจะ resolve ทีละจุดแล้ว `git rebase --continue`)
+
+### Phase 2.5: Workstation Health Check & IDE Self-Healing (ซิงก์ความปลอดภัยเครื่อง)
+รันสคริปต์ตรวจความสมบูรณ์ของ IDE เพื่อป้องกัน Extension แย่งเปิดไฟล์ข้ามเครื่อง (เช่น ป้องกัน Office Viewer แย่งเปิด .md และกู้คืน AG Artifact View):
+```powershell
+node tools/neutralize-office-viewer.cjs
+```
 
 ### Phase 3: Change Analysis & Document Detection (จับทิศทางงานล่าสุด)
 1. **ตรวจสอบ Git Log ล่าสุด:**
