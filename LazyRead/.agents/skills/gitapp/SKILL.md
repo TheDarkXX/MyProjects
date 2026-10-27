@@ -1,7 +1,7 @@
 ---
 name: gitapp
 description: >-
-  GitApp Radar and Upstream Ecosystem Sentinel — ตรวจสอบการอัปเดตเวอร์ชันและคอมมิตล่าสุดของเครื่องมือ Upstream สำคัญในระบบ (FlowKit, Concat, LightCraft, PhotoCraft, FilmCraft, Earshot, pCloud MCP) พร้อมระบบ Sentinel เฝ้าระวังความเสี่ยงบั๊กวิกฤตและสถานะบล็อกบัญชีของ FlowKit อัตโนมัติ ใช้เมื่อ: /gitapp หรือ /gitapp flowkit
+  GitApp Radar and Upstream Ecosystem Sentinel — ตรวจสอบการอัปเดตเวอร์ชันและคอมมิตล่าสุดของเครื่องมือ Upstream สำคัญในระบบ (FlowKit, Concat, LightCraft, PhotoCraft, FilmCraft, Earshot) พร้อมระบบ Sentinel เฝ้าระวังความเสี่ยงบั๊กวิกฤตและสถานะบล็อกบัญชีของ FlowKit อัตโนมัติ ใช้เมื่อ: /gitapp หรือ /gitapp flowkit
 ---
 
 # 📡 Skill: `/gitapp` — GitApp Upstream Radar & FlowKit Sentinel
@@ -14,7 +14,7 @@ description: >-
 ## 🚀 วิธีการเรียกใช้งาน (Slash Commands)
 
 ```text
-/gitapp             # ตรวจสอบเครื่องมือภายนอกทั้งหมดในระบบ (7 เครื่องมือ) พร้อม FlowKit Sentinel
+/gitapp             # ตรวจสอบเครื่องมือภายนอกทั้งหมดในระบบ (6 เครื่องมือหลัก) พร้อม FlowKit Sentinel
 /gitapp flowkit     # เจาะลึกเฉพาะ FlowKit (เช็คคอมมิตล่าสุด + สแกน Open Issues เฝ้าระวังความปลอดภัย)
 /gitapp concat      # เช็คเฉพาะ Concat Video Editor
 /gitapp lightcraft  # เช็คเฉพาะ LightCraft
@@ -35,7 +35,6 @@ description: >-
 | `photocraft` | **PhotoCraft** | `storytold/photocraft` | Desktop GUI / MCP Server | Photoshop Alternative, Liquify, Layers |
 | `filmcraft` | **FilmCraft** | `storytold/filmcraft` | Desktop GUI / CLI | NLE Video Editor & Color Grading |
 | `earshot` | **Earshot** | `Leonxlnx/earshot` | Git Clone / Python venv (`tools\earshot`) | Audio SFX, LUFS Loudness & Audio Critique MCP |
-| `pcloud_mcp` | **pCloud MCP** | `denys/pcloud_mcp` | Git Clone (`MCPs\pcloud_mcp`) | Cloud Storage Media Sync Bridge |
 
 ---
 
