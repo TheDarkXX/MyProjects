@@ -176,4 +176,19 @@ User: /cc [โจทย์/คำสั่ง]
 5. **Anti-Recursion Iron Rule (ห้ามรันซ้อนตัวเอง):** หากผู้ที่ได้รับคำสั่ง `/cc` หรือกำลังรันคำสั่งอยู่คือ Claude Code CLI เอง ให้ลงมือปฏิบัติการอ่าน/แก้ไฟล์โดยตรง **ห้ามเรียก `tools/cc-bridge.js` ซ้อนตัวเองเด็ดขาด** (หากฝ่าฝืน ระบบ bridge v2.4 จะตัดจบด้วย Exit Code 1 ทันที)
 6. **Default Model & Quota Strategy:**
    - **ค่าเริ่มต้นมาตรฐานของระบบ `/cc`:** คือ **Opus 5.5 + Effort: MEDIUM (`om`)** เพื่อให้ได้มุมมองของ "มหาเทพ 👁️‍🗨️" เสมอเมื่อเรียกใช้งาน
-   - **ยุทธศาสตร์บริหารโควตา Claude Pro ($20/เดือน):** เนื่องจากมี Rate Limit ราย 5 ชั่วโมง แนะนำให้ใส่สูตรย่อ **`sm` (Sonnet Medium)** หรือ **`sh` (Sonnet High)** เมื่อทำงานโค้ดดิ้งทั่วไป เขียนฟังก์ชัน แปลงโค้ด หรือ Refactor ถี่ๆ และสงวนการใช้ **`oh` / `ox` (Opus High/Max)** ไว้สำหรับงานสถาปัตยกรรมระดับจักรวาลและแก้บั๊กยากๆ เท่านั้น
+   - **ยุทธศาสตร์บริหารโควตา Claude Pro ($20/เดือน):** มี Rate Limit ราย 5 ชั่วโมง แนะนำให้ใส่สูตรย่อ **`sm` (Sonnet Medium)** หรือ **`sh` (Sonnet High)** เมื่องานเป็นโค้ดดิ้งทั่วไป และสงวน **`oh` / `ox` (Opus High/Max)** ไว้สำหรับงานสถาปัตยกรรมระดับจักรวาลและแก้บั๊กยากๆ เท่านั้น
+7. **🤖 Sub-Agent Worker Delegation (Flash Worker CLI — ประหยัดโควตา Claude 90%):**
+   - **ปัญหา:** การให้ Claude Code (Opus High) นั่งเขียนไฟล์ยาวๆ รันสคริปต์แก้บั๊ก หรือ gen boilerplate ซ้ำๆ 30-50 turns จะเผาโควตา 5-hour rolling (หมดหลอดเหลือ 3%) อย่างรวดเร็ว
+   - **ทางแก้ (Director & Worker Pattern):** Claude Code ทำหน้าที่เป็น **Director / ผู้กำกับ** วาง Blueprint, Data Schema, Architecture และไทม์มิ่ง ส่วนงานกรรมกรถึกๆ (Mechanical coding, boilerplate, file writing) ให้ Claude Code สั่งรัน Sub-Agent ผ่าน Terminal CLI ด้วยคำสั่ง:
+     ```bash
+     # สั่งให้ Flash Worker เขียนโค้ดลงไฟล์ปลายทางโดยตรง (Pure Code Mode)
+     node tools/flash-worker.js --code -p "Implement function X with signature Y..." -o "path/to/target.js"
+
+     # สั่งให้ Flash Worker อ่านไฟล์ต้นฉบับแล้วแก้โค้ด/Refactor
+     node tools/flash-worker.js --code -f "src/old.js" -p "Refactor function X to use async/await" -o "src/old.js"
+
+     # สั่งให้ Flash Worker ประมวลผลข้อมูลหรือถอดสคริปต์
+     node tools/flash-worker.js -p "Summarize these 5 papers into 3 bullet points" --prompt-file "data.txt" -o "summary.md"
+     ```
+   - **Cascade อัตโนมัติ:** `flash-worker.js` มีระบบ Fallback อัจฉริยะ (`gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-3.7-flash` ➔ `gemini-flash-latest`) พร้อม 6s Fast Timeout หากเซิร์ฟเวอร์ Google มีโหลดสูง จะสลับโมเดลอัตโนมัติใน 6 วินาที โดยงานไม่ล่มและไม่กินโควตา Claude Pro แม้แต่ token เดียว!
+
