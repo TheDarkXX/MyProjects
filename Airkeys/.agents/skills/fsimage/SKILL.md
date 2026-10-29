@@ -32,7 +32,8 @@ description: >-
 
 ## CLI Parameters
 - `-p`, `--prompt`: คำอธิบายภาพภาษาอังกฤษ (Prompt คมชัด)
-- `-o`, `--out`: พิกัดบันทึกไฟล์ (ค่าเริ่มต้น: `scratch/fsimg_<timestamp>.jpg`)
+- `-o`, `--out`: พิกัดบันทึกไฟล์ (ค่าเริ่มต้น: `scratch/fsimage/fsimg_<timestamp>.jpg`)
+- `-s`, `--session`: ชื่อ Session เพื่อแยกโฟลเดอร์เป็นสัดส่วน (เช่น `-s gameboy` จะเซฟลง `scratch/sessions/gameboy/`)
 - `--ar`, `--aspect-ratio`: สัดส่วนภาพ (ค่าเริ่มต้น: `9:16`, รองรับ `1:1`, `16:9`, `3:4`, `4:3`, `2:3`, `3:2`)
 - `-r`, `--ref`: ไฟล์ภาพอ้างอิงสำหรับ Image-to-Image (ใส่ได้สูงสุด 3 ภาพ)
 - `-e`, `--engine`: `ag` (Antigravity Nano Banana, ค่าเริ่มต้น) หรือ `gpt` (Codex DALL-E 3) หรือ `auto`
