@@ -7,9 +7,12 @@ When the user types a shorthand slash command (e.g., `/tsc`), AG will consult th
 
 | Command | Target File / KI | Description (TH) |
 |---|---|---|
+| `/cc` | `.agents/skills/cc/SKILL.md` | Claude Code Direct Engine — สั่งรันโมเดล Anthropic Claude (Opus 5.5 / Sonnet) ผ่าน Claude Code Engine ในแชทหลักได้โดยตรง พร้อมระบบ 5-Tier Reasoning Effort และเชื่อมต่อกับ Sub-Agent Flash Worker |
+| `/cchandoff` | `.agents/skills/cchandoff/SKILL.md` | Claude Code Dedicated Handoff — ส่งต่อและรับช่วงงานระหว่าง AG กับ Claude Code ใน VS Code / CLI แยกหน้าต่างแบบ Zero Context Tax พร้อมฟังก์ชันแพ็ก Brief ลง Quick Save/Active และดึงผลงานกลับมา Verify |
+| `/fs` | `.agents/skills/fs/SKILL.md` | Flash Sub-Agent Worker — เรียกใช้งาน Gemini Flash 3.8 High (และ 3.6 Cascade) ช่วยปั่นโค้ด งานกรรมกร แปลงไฟล์ วิเคราะห์ข้อมูล หรือสเกลงานหนักๆ โดยไม่เปลืองโควต้าและฟรี 100% |
 | `/brain` | `.agents/skills/brain/SKILL.md` | Executive Second Brain Engine (Karpathy LLM-Wiki) — คลังความรู้ 6 เลน (inbox, boss, sources, wiki, output, archive), กฎ [AI เพิ่ม], คำสั่งธรรมชาติ (จดไว้หน่อย, เคลียร์ inbox, ถามโน้ต, สรุปเข้า wiki) |
 | `/ceopost` | `.agents/skills/ceopost/SKILL.md` | The CEO Unfiltered Content Engine — สกัดคำถามดิบ แปลงเป็นบทความแชทหลุด CEO x Savage AI ตบกะโหลก ฉีกหน้ากาก 80% นิทานหลอกเด็ก vs 20% ฟิสิกส์โลกความจริง พร้อมคิวลง Facebook / Viral Planner ทันที |
-| `/lp` | `.agents/skills/lp/SKILL.md` | Markdown-to-Mobile Landing Page Engine (GuideCraft / LP) — แปลงเอกสาร Markdown (.md) งานวิจัย คู่มือฟื้นฟูสุขภาพ หรือเซลส์เพจ ให้กลายเป็น High-Converting Mobile Landing Page สไตล์ Dr. Jade บน Nested Subdomain (*.guide.doctorbankofficial.com) พร้อมระบบ Vancouver Zero-Leakage Citations, Mobile Font Zoom Controller (-3 ถึง +5), ภาพปก Social OG 1200x630, และ Nginx SSL Deployment |
+| `/webpost` (`/lp`) | `.agents/skills/webpost/SKILL.md` | Web Publishing & Landing Page Engine (/webpost, alias: /lp) — โพสต์เนื้อหาขึ้นเว็บอัตโนมัติ แปลงเอกสาร Markdown (.md) งานวิจัย คู่มือสุขภาพ หรือเซลส์เพจ ให้เป็น Mobile Web & Funnel สไตล์ Dr. Jade บน *.guide.doctorbankofficial.com รองรับ 2 โหมด: โพสต์คู่มือวิชาการพร้อมหลักฐาน (Evidence Web Guide) และหน้าเซลส์เพจปิดการขาย (Consultation Funnel) พร้อมระบบ Sync, Bump Cache, และ Deploy ขึ้น VPS ทันที |
 | `/clone` | `.agents/skills/clone/SKILL.md` | Reverse Engineer and Clone Engine — แงะไส้ในแอป โคลนฟีเจอร์ แกะ Chrome Extension, Web App, Electron (.asar) และส่อง API คู่แข่ง ด้วย REA CLI แบบ Zero Context Tax โดยไม่ต้องลงทะเบียน MCP ถาวร |
 | `/codex` | `.agents/skills/codex/SKILL.md` | Execute `codex login --device-auth` เพื่อล็อกอิน Hermes Codex อัตโนมัติ ปลอดภัย ไม่ต้องใช้ callback |
 | `/cons` | `.agents/skills/cons/SKILL.md` | ค้นหางานวิจัยวิชาการ 200 ล้านฉบับผ่าน Consensus พร้อม Inline Citations และ URL อ้างอิง |
@@ -23,10 +26,12 @@ When the user types a shorthand slash command (e.g., `/tsc`), AG will consult th
 | `/dev` | `.agents/skills/dev/SKILL.md` | สแกน ตรวจสอบ และให้คะแนน dev-agent proposals ในระบบ Quick Save |
 | `/evo` | `.agents/skills/evo/SKILL.md` | ตรวจสอบ ประเมิน High-Risk proposals จาก Hydra และสร้างแผน Active สำหรับอันที่ผ่าน |
 | `/fail` | `.agents/skills/fail/SKILL.md` | รับเรื่องข้อผิดพลาด แปลงเป็น skill-fail JSON objects บันทึกลงระบบฐานข้อมูล |
+| `/fb` | `.agents/skills/fb/SKILL.md` | Facebook Posts Trend Intelligence Engine — ดึงข้อมูลสดจาก VPS API ถอดรหัส Engagement DNA, จัดเกรด Authority Level (L1-L6), สรุป Share Rate % ไวรัลแชมเปี้ยน, วิเคราะห์ Heatmap เวลาทองคำ และสรุป War Brief ลุยงานทันที |
 | `/flow` | `.agents/skills/flow/SKILL.md` | FlowKit Storyboard-to-Video Engine — สั่ง Google Flow (Veo 3.1 & Omni Flash) ผ่าน RPCs ล็อกหน้าตัวละคร สร้างวิดีโอต่อเนื่อง |
 | `/gitpull` | `.agents/skills/gitpull/SKILL.md` | Auto-commit งานค้าง, Safe pull ซิงก์โค้ดล่าสุด, สรุปงานล่าสุดพร้อม link และสแกนหางานค้าง |
 | `/gmvmax` | `.agents/skills/gmvmax/SKILL.md` | TikTok GMV Max Full-Cycle Analysis Pipeline — วิเคราะห์แอด TikTok ลึกสุดขั้ว พร้อม Dashboard และ PDF Report |
 | `/gpt` | `.agents/skills/gpt/SKILL.md` | OpenAI GPT-5.6 / GPT-6 Engine + **Native Context Mirroring V2** — สั่งรัน GPT ในแชทหลักฟรีผ่าน ChatGPT Plus/Pro พร้อม 4-Layer Context Pipeline, ชอร์ตคัท `/gpt sol` (high ⚡ Sweet Spot สถาปัตยกรรม เทียบเท่า Opus 4.6), `/gpt sol-ultra` (ultra 🔥 คิดลึกสุดยอด), `/gpt terra` (high), `/gpt luna` (high) |
+| `/gptimage` | `.agents/skills/gptimage/SKILL.md` | OpenAI GPT Image 2 Engine (Codex) — สร้างภาพ Infographic การแพทย์ ภาพปกไวรัล และอาร์ตเวิร์กคุณภาพสูง เรนเดอร์ภาษาไทยคมชัด 100% สระไม่เพี้ยน ไม่จม รองรับสัดส่วน 1:1 9:16 16:9 และ Image-to-Image |
 | `/junk` | `.agents/skills/junk/SKILL.md` | สแกนลบไฟล์ขยะและไฟล์ชั่วคราว (`tmp_*`, `scratch_*`) พร้อมให้ user คอนเฟิร์มก่อนลบจริง |
 | `/kbg` | `.agents/skills/kbg/SKILL.md` | Kill Background Tasks: สอย Background Tasks ที่ค้างใน Antigravity IDE และกวาดล้าง Zombie Processes |
 | `/lr` | `.agents/skills/lr/SKILL.md` | Intelligent Portrait & Export Engine (LightCraft/Lightroom) — รองรับ 4 โหมด: `/lr` (Smart Default สด), `/lrlive` (ซิงก์สดหน้าจอ GUI ทันที), `/lrbatch` (Offline Render), และ `/lrexport` (One-Click Direct GPU Fast Export 2048px โปรไฟล์ทองคำ) พร้อม 5 ไม้ตาย: Multi-Face Universal Glow, 5800K Kelvin Floor Clamp, Whites +24, Shadows +40, Orange Lum +15 |
@@ -53,6 +58,7 @@ When the user types a shorthand slash command (e.g., `/tsc`), AG will consult th
 | `/update` | `.agents/skills/update/SKILL.md` | Supreme Plan Upgrade & Rechecker — ยกระดับ implementation_plan.md เดิมให้สมบูรณ์แบบระดับพระกาฬ ด้วย Opus 4.6 หรือ GPT-5.6-Sol ผ่าน 6-Pillar Audit Matrix |
 | `/vdobatch` | `.agents/skills/vdobatch/SKILL.md` | ระบบวิเคราะห์สื่ออัตโนมัติ: ดึงเฟรมแรก วิเคราะห์ เช็ค Story IDs เปลี่ยนชื่อ และย้ายโฟลเดอร์ |
 | `/viralscore`| `.agents/skills/viralscore/SKILL.md` | วิเคราะห์คลิปวิดีโอ ประเมิน Viral Score ตามหลักจิตวิทยา Dopamine Hit และ TikTok retention |
+| `/vve` | `.agents/skills/vve/SKILL.md` | Viral Video Editing Engine — ผลิตวิดีโอสายสุขภาพและอาหารเสริมระดับลักชัวรีพรีเมียม โคลนเลย์เอาต์ 5 ชั้นหมอเจษ ผสานสคริปต์ 4 หมัด Nectapharma 71M GMV (`/vve necta`), โคลนคลิป (`/vve clone`), วาง timeline spec (`/vve spec`), และเรนเดอร์ Hyperframes GSAP overlays (`/vve render`) |
 | `/web` | `.agents/skills/web/SKILL.md` | General web research — ค้นหาข้อมูลทั่วไปบนเว็บ พร้อม Inline Citations |
 | `/webtest` | `.agents/skills/webtest/SKILL.md` | จำลองเบราว์เซอร์ ล็อกอิน และรัน Interactive smoke tests |
 | `/higgsfield-generate` | `.agents/skills/higgsfield-generate/SKILL.md` | สร้างรูป/วิดีโอด้วย Higgsfield (เช่นโฆษณา, UGC, เปลี่ยนสไตล์, ใช้ Nano Banana 2/Seedance) |
@@ -66,8 +72,11 @@ When the user types a shorthand slash command (e.g., `/tsc`), AG will consult th
 | `/fixing-metadata` | `.agents/skills/fixing-metadata/SKILL.md` | SEO & Metadata Specialist — ตรวจแก้ Open Graph, Twitter cards, JSON-LD, canonical tags |
 | `/web-quality-audit` | `.agents/skills/web-quality-audit/SKILL.md` | Addy Osmani Web Quality Audit — ตรวจ Core Web Vitals, Performance, Accessibility, SEO |
 | `/frontend-ui-engineering` | `.agents/skills/frontend-ui-engineering/SKILL.md` | Component Architecture & Standards — สถาปัตยกรรม UI คอมโพเนนต์, responsive design, state patterns |
+| `/humanizer` | `.agents/skills/humanizer/SKILL.md` | AI Writing De-Cloaker & Humanizer — ล้างกลิ่น AI, ตัดสูตรคำเชื่อมลิเก, ตบสำนวนให้เป็นคนจริง (รองรับทั้งไทย-อังกฤษ พร้อมกฎเหล็กห้ามแตะ Hook TikTok) |
 | `/agy-customizations` | `builtin/skills/agy-customizations/SKILL.md` | คู่มือระบบ Customization สำหรับสร้าง Rules, Skills, Plugins ของระบบ Antigravity |
 | `/antigravity-guide` | `builtin/skills/antigravity_guide/SKILL.md` | คู่มือการใช้งานโปรแกรม Antigravity IDE (AGY) ฉบับสมบูรณ์ สำหรับอ้างอิงวิธีใช้งานทั้งหมด |
+| `/clonescript` | `.agents/skills/clonescript/SKILL.md` | DoctorBank Competitor Script Clone & Storyboard Contract Generator — แปลงสคริปต์คลิปคู่แข่งหรือวิดีโอท็อปเซลส์เป็น Storyboard Contract 4 ซีน (40 วินาที) เกรด S+ สำหรับ DoctorBank บน TikTok Shop พร้อมล็อกภาพสินค้า 3Ref, สกัด 8 ท่า Hook ไม้ตาย, และบังคับกฎเหล็กตัดคำว่า ค่ะ/นะคะ (Zero Politeness Particles) 100% (รองรับ alias `/scriptclone`) |
+| `/metaugc` | `.agents/skills/metaugc/SKILL.md` | Meta AI UGC Video Rendering & Assembly Pipeline — ควบคุมสายพานผลิตวิดีโอ UGC 4 ซีน (40 วินาที) ผ่าน Meta AI (Session Bootstrap ➔ Playwright CDP 9222 ➔ Concatenation เป็น Master MP4) |
 
 *(หมายเหตุ: เครื่องมือในระบบ SecureCoder จะถูกรันใน pipeline ของความปลอดภัยโดยเฉพาะ เช่น `scan_dependencies`, `generate-security-audit-report` เป็นต้น)*
 
@@ -102,7 +111,7 @@ When the user types a shorthand slash command (e.g., `/tsc`), AG will consult th
 2. **Cost Saving:** บังคับโหมดดึงเฉพาะซับไตเติ้ลที่มีอยู่แล้ว (1 เครดิต/ครั้ง) จะไม่ใช้ AI Generate ทับ (ซึ่งกินเครดิต 2 ต่อนาที) เพื่อรักษาโควตาให้ใช้ได้นานที่สุด
 
 ### `/flow` — FlowKit Storyboard-to-Video Engine
-สกิลสำหรับคุมเครื่องยนต์ **FlowKit** บนไดรฟ์ `P:\AI\The Viral\FlowKit` ร่วมกับ Google Flow (Veo 3.1 และ Omni Flash) ยิงคำสั่งตรงระดับ RPCs (`batchexecute`) ผ่าน Chrome Extension และ FastAPI Backend บนพอร์ต `8100` โดย **ไม่ต้องคลิกปุ่มหน้าเว็บ (Zero DOM Clicks)** เหมาะสำหรับงานสร้างวิดีโอสตอรี่บอร์ดที่ต้องการล็อกหน้าตัวละคร (Character Consistency) และเชื่อมฉากต่อเนื่องหลาย Scene
+สกิลสำหรับคุมเครื่องยนต์ **FlowKit** บนไดรฟ์ `C:\My Claw\The Viral\FlowKit` ร่วมกับ Google Flow (Veo 3.1 และ Omni Flash) ยิงคำสั่งตรงระดับ RPCs (`batchexecute`) ผ่าน Chrome Extension และ FastAPI Backend บนพอร์ต `8100` โดย **ไม่ต้องคลิกปุ่มหน้าเว็บ (Zero DOM Clicks)** เหมาะสำหรับงานสร้างวิดีโอสตอรี่บอร์ดที่ต้องการล็อกหน้าตัวละคร (Character Consistency) และเชื่อมฉากต่อเนื่องหลาย Scene
 
 **วิธีเรียกใช้งาน:**
 - `/flow status` ➔ เช็คสุขภาพของ Backend Port 8100 และการเชื่อมต่อ Chrome Extension
@@ -171,20 +180,25 @@ When the user types a shorthand slash command (e.g., `/tsc`), AG will consult th
 
 ---
 
-### /lp — Markdown-to-Mobile Landing Page & Funnel Engine (GuideCraft)
-สุดยอดเครื่องมือแปลงเอกสาร Markdown (`.md`) จากผลงานวิจัยเชิงลึก (`/gdeep`), บทความวิเคราะห์ (`/greview`), สรุปคู่มือสุขภาพ หรือเซลส์เพจ ให้กลายเป็น **Mobile-First Landing Page & Consultation Funnel ระดับพรีเมียม** ที่รันบน Nested Subdomain สไตล์ Dr. Jade (`https://<slug>.guide.doctorbankofficial.com/`) จบในลูปเดียว
+### /webpost (alias: /lp) — Web Publishing & Mobile Funnel Engine (GuideCraft)
+สุดยอดเครื่องมือแปลงเอกสาร Markdown (`.md`) จากผลงานวิจัยเชิงลึก (`/gdeep`), บทความวิเคราะห์ (`/greview`), สรุปคู่มือสุขภาพ หรือเซลส์เพจ ให้กลายเป็น **Mobile-First Web Application & Consultation Funnel ระดับพรีเมียม** ที่รันบน Nested Subdomain สไตล์ Dr. Jade (`https://<slug>.guide.doctorbankofficial.com/` หรือ `cancer.guide.doctorbankofficial.com`) จบในลูปเดียว
+
+**ระบบ 2 โหมดการทำงาน:**
+1. **Mode 1: Funnel & Sales Page (`/webpost funnel [slug]`)** — สำหรับหน้าเซลส์เพจและกรวยปรึกษา เน้น CRO สูงสุด บังคับใช้ Zero-Leakage In-Page Citations (ห้ามมี Outbound Link) พร้อม Sticky LINE CTA
+2. **Mode 2: Evidence-Based Web Guide (`/webpost guide [slug]` หรือ `/webpost food [slug]`)** — สำหรับคู่มือสุขภาพผู้สูงอายุและพอร์ทัลโรคเฉพาะทาง (เช่น `cancer.guide.doctorbankofficial.com`) เปิดเผยตาราง PMIDs พร้อมการ์ดไฟจราจร 3 สี และกล่องสคริปต์ก็อปปี้ส่ง LINE ครอบครัว
 
 **6 ขุมพลังหลักในตัวเดียว:**
 1. **MD-to-Mobile UI Parser:** จัดการ Layout มือถือเต็มรูปแบบ คอนเทนเนอร์ 680px, Royal Sapphire Navy, Gold Accent, Cream Card, Sticker Chibi Mascot, Sticky LINE Consultation CTA (`@doctorbank`)
-2. **Zero-Leakage Vancouver Citation Engine (สืบทอดจาก `/citejump`):** ระบบอ้างอิงยกกำลัง `[1]` เด้งไป Reference Card พร้อมปุ่มย้อนกลับ `↩` โดย **บล็อกห้ามมี Outbound Link แม้แต่ตัวเดียว** เพื่อป้องกัน Funnel Leakage
+2. **Dual Citation Engine:** สลับระหว่าง Zero-Leakage Vancouver In-Page Jump `[1]` (Funnel) หรือ Open PubMed Direct Links + Summary Table (Evidence Guide)
 3. **Mobile Font Zoom Control:** แคปซูลปรับฟอนต์ 9 ระดับ (-3 ถึง +5 / 80%-150%) โชว์เฉพาะมือถือ พร้อมจำค่าใน `localStorage`
 4. **1200x630 Social OG Banner & SEO:** เจนภาพปกอัตโนมัติ พร้อม Open Graph, Twitter Cards, Schema.org `MedicalWebPage`
 5. **Nested Subdomain Router:** ออกแบบ Nginx และ Let's Encrypt SSL รองรับ `https://<slug>.guide.doctorbankofficial.com/`
 6. **Auto Cache-Busting & Deploy:** รัน `bump-cache.js` และ `git push vps master` สดทันที
 
 **วิธีเรียกใช้งาน:**
-- `/lp [path/to/file.md] --slug [slug_name]` ➔ แปลงไฟล์ MD และเตรียมขึ้น Sub-subdomain
-- `/lp [คำสั่งหรือโรค] [slug]` ➔ เช่น `/lp docs/cancer-guide.md cancer`
+- `/webpost funnel [path/to/file.md] --slug [name]` ➔ แปลงไฟล์ MD ขึ้น Sales Funnel
+- `/webpost guide [slug]` หรือ `/webpost food [ชื่ออาหาร]` ➔ ขึ้นคู่มือวิชาการผู้สูงอายุ
+- `/lp [คำสั่งหรือโรค] [slug]` ➔ ใช้งานได้เหมือนกัน 100% เป็น Alias ทางลัด
 
 ---
 
