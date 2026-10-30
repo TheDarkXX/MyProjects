@@ -75,12 +75,16 @@ description: >-
 
 ## 🛠️ CLI Execution Reference
 
-เมื่อผู้ใช้พิมพ์คำสั่ง เอเจนต์ต้องรันสคริปต์ประจำโปรเจกต์:
+เมื่อผู้ใช้พิมพ์คำสั่ง เอเจนต์สามารถรันสคริปต์ประจำตัวของสกิลได้โดยตรง (Self-Contained ใช้งานได้ทุกโปรเจกต์ใน Spiderweb):
 
 ```powershell
 # โหมด Auto-Fix (Default)
-node tools/drview-doctor.cjs
+node .agents/skills/drview/scripts/drview-doctor.cjs
 
 # โหมด Check Only
-node tools/drview-doctor.cjs --check
+node .agents/skills/drview/scripts/drview-doctor.cjs --check
+
+# (ทางเลือกสำหรับ XBrain)
+node tools/drview-doctor.cjs
 ```
+
