@@ -48,12 +48,19 @@ node scripts/qc-audit.js
 
 ### Step 2: สะสางตามผลตรวจ (Fix & Reality Reconciliation)
 
-#### Option A: รัน Auto-Fix ด้วย Engine
-หากพบ Ghost Files, Loose Files หรือไฟล์ Floating เกินโควตา ให้รัน:
+#### Option A: รัน Auto-Fix & Auto-Promote ด้วย Engine (แนะนำ)
+หากพบ Ghost Files, Loose Files, ไฟล์ Floating เกินโควตา หรือเจอ **🔴 False Active (งานที่เสร็จแล้วแต่ยังคาใน Active)** ให้รันคำสั่งเดียวจบ:
 ```bash
 node scripts/qc-audit.js --fix
+# หรือ
+node scripts/qc-audit.js --promote
 ```
-สคริปต์จะ Quarantine Ghost Files, จัดระเบียบ Loose Files, Archive ไฟล์เก่าตาม SemVer, และสั่งรัน `node scripts/qs-indexer.js` ให้เสร็จสรรพ
+สคริปต์จะทำการ:
+1. **Quarantine Ghost Files:** แบ็กอัปเข้า `.system_quarantine/` ก่อนลบอย่างปลอดภัย
+2. **Auto-Promote False Active:** ปรับสถานะ frontmatter เป็น `status: complete` + `outcome: shipped` และ Move เข้าโฟลเดอร์ `Complete/<Component>/` (หรือโฟลเดอร์เวอร์ชัน `Vxx/`) ให้อัตโนมัติทันที
+3. **Route Loose Files:** จัดระเบียบไฟล์ลอยเข้าโฟลเดอร์ Component หรือโยกเข้า Icebox หากค้างเกิน 30 วัน
+4. **SemVer Archive:** โยกไฟล์เก่าลง `_Legacy/` หรือ `Vxx/` หากไฟล์ลอยที่ root ใน Complete เกิน 5-7 ไฟล์
+5. **Re-index Manifest:** สั่งรัน `node scripts/qs-indexer.js` ให้เสร็จสรรพในคำสั่งเดียว ป้องกัน Dead Link
 
 #### Option B: จัดการ False Active และ Stale Tasks จาก Phase 1b
 1. **หากเจอ 🔴 False Active (งานเสร็จ 100% แล้วแต่ยังอยู่ใน Active):**
