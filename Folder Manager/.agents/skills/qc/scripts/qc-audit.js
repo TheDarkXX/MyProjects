@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * ═══════════════════════════════════════════════════════════════
- *  QC Radar & Workspace Hygiene Engine (V13.85.0 - Hardened V2)
+ *  QC Radar & Workspace Hygiene Engine (V3.1.0 - Active Reality Radar + Safe Auto-Promote)
  * ═══════════════════════════════════════════════════════════════
  *
  *  Usage:
  *    node scripts/qc-audit.js          # Audit mode (Read-only scan & report)
  *    node scripts/qc-audit.js --fix    # Safe auto-fix (Quarantine ghosts, route loose files, re-index)
- *    node scripts/qc-audit.js --test   # Self-test suite (Verify SemVer, Hash & Quarantine armor)
+ *    node scripts/qc-audit.js --test   # Self-test suite (Verify SemVer, Hash, Quarantine & Active Reality)
  */
 
 import fs from 'fs';
@@ -20,7 +20,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
-const isFixMode = process.argv.includes('--fix');
+const isFixMode = process.argv.includes('--fix') || process.argv.includes('--promote');
 const isTestMode = process.argv.includes('--test');
 
 // ANSI Terminal Colors
@@ -45,7 +45,8 @@ const LOCKED_ROOT_SCRIPTS = new Set([
   'start.sh',
   'Open AG.bat',
   'start-voice.bat',
-  'ecosystem.config.js'
+  'ecosystem.config.js',
+  'ecosystem.config.cjs'
 ]);
 
 // ─────────────────────────────────────────────────────────────
@@ -188,14 +189,236 @@ export function determineLooseFileDestination(filePath) {
   };
 }
 
-function getAllFiles(dir, filterExt = null, fileList = []) {
+// ─────────────────────────────────────────────────────────────
+// Frontmatter & Plan-Text Helpers (shared by ARMOR 5 + 6)
+// ─────────────────────────────────────────────────────────────
+export function splitFrontmatter(content) {
+  const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(\r?\n|$)/);
+  if (!m) return { hasFm: false, fm: '', body: content };
+  return { hasFm: true, fm: m[1], body: content.slice(m[0].length) };
+}
+
+// Remove text that is NOT the live plan: fenced code, <details> dumps, and the RAW ARTIFACT BACKUP tail.
+// Prevents pasted YAML/old task lists from faking "complete" or "all ticked".
+export function stripNonPlanText(body) {
+  return body
+    .replace(/^##\s*\S*\s*RAW ARTIFACT BACKUP[\s\S]*$/mi, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/~~~[\s\S]*?~~~/g, '')
+    .replace(/<details>[\s\S]*?<\/details>/gi, '');
+}
+
+const CHECKBOX_RE = /^\s*(?:[-*+]|\d+\.)\s+\[([ xX])\]/gm;
+
+// ─────────────────────────────────────────────────────────────
+// 🛡️ ARMOR 5: Active Reality Radar (ตรวจสอบงานค้างจริง vs ค้างหลอก)
+// ─────────────────────────────────────────────────────────────
+export function evaluateActiveReality(filePath) {
+  let content = '';
+  try { content = fs.readFileSync(filePath, 'utf8'); } catch (e) { return null; }
+
+  const { fm, body } = splitFrontmatter(content);
+  const planText = stripNonPlanText(body);
+
+  const boxes = [...planText.matchAll(CHECKBOX_RE)];
+  const totalTasks = boxes.length;
+  const doneTasks = boxes.filter(b => b[1] !== ' ').length;
+  const pendingTasks = totalTasks - doneTasks;
+
+  const dateMatch = fm.match(/^date:\s*["']?([\d-]+)/m);
+  const fileDate = dateMatch ? new Date(dateMatch[1]) : null;
+  const now = new Date();
+  const ageDays = fileDate && !isNaN(fileDate) ? Math.round((now - fileDate) / (1000 * 60 * 60 * 24)) : 0;
+
+  // Status is read from YAML frontmatter ONLY (never from body/code samples)
+  const isStatusComplete = /^status:\s*["']?complete/im.test(fm) || /^outcome:\s*["']?shipped/im.test(fm);
+  const isExplicitComplete = /COMPLETED\s*&\s*DEPLOYED/i.test(planText) ||
+                             /\bStatus\b[*_:\s]*(COMPLETED|SHIPPED|DONE)\b/.test(planText) ||
+                             (/##\s*สิ่งที่ทำเสร็จแล้ว/i.test(planText) && pendingTasks === 0);
+
+  const typeMatch = fm.match(/^type:\s*(\w+)/m);
+  const docType = typeMatch ? typeMatch[1].toLowerCase() : 'impl';
+
+  // 1. ตรวจพบว่าเสร็จสมบูรณ์แล้วแน่นอน (แต่ค้างใน Active)
+  if (isStatusComplete) {
+    return {
+      category: 'UNMOVED_COMPLETE',
+      statusText: 'สถานะเป็น Complete/Shipped แล้ว แต่ยังไม่ย้ายโฟลเดอร์',
+      totalTasks, doneTasks, pendingTasks, ageDays, docType
+    };
+  }
+
+  if (totalTasks > 0 && pendingTasks === 0) {
+    return {
+      category: 'ALL_TASKS_DONE',
+      statusText: `งานเสร็จ 100% (ติ๊กครบทุกข้อ ${doneTasks}/${totalTasks}) แต่ลืมแก้ frontmatter`,
+      totalTasks, doneTasks, pendingTasks, ageDays, docType
+    };
+  }
+
+  if (isExplicitComplete && pendingTasks === 0) {
+    return {
+      category: 'EXPLICIT_COMPLETION',
+      statusText: 'มีข้อความระบุว่าเสร็จสิ้น/ชิปแล้ว แต่ยังไม่ได้อัปเดตสถานะ',
+      totalTasks, doneTasks, pendingTasks, ageDays, docType
+    };
+  }
+
+  // 2. งานค้างจริง (In Progress)
+  if (pendingTasks > 0) {
+    if (ageDays > 30) {
+      return {
+        category: 'STALE_ACTIVE',
+        statusText: `ดองนานเกิน 30 วัน (${ageDays} วัน) เหลือค้างอีก ${pendingTasks}/${totalTasks} ข้อ`,
+        totalTasks, doneTasks, pendingTasks, ageDays, docType
+      };
+    }
+    return {
+      category: 'GENUINE_ACTIVE',
+      statusText: `กำลังทำอยู่จริง (${doneTasks}/${totalTasks} tasks เสร็จ, ค้าง ${pendingTasks} ข้อ)`,
+      totalTasks, doneTasks, pendingTasks, ageDays, docType
+    };
+  }
+
+  // 3. ไม่มี Task List (เช่น Study / Docs / Architecture)
+  if (totalTasks === 0) {
+    if (['study', 'docs', 'architecture', 'spike'].includes(docType)) {
+      if (ageDays > 14) {
+        return {
+          category: 'UNTASKED_STUDY',
+          statusText: `เอกสารประเภท ${docType} เก่าเกิน 14 วัน (${ageDays} วัน) ไม่มี Task ค้าง ตรวจสอบว่าศึกษาจบแล้วหรือไม่`,
+          totalTasks, doneTasks, pendingTasks, ageDays, docType
+        };
+      }
+      return {
+        category: 'ACTIVE_STUDY',
+        statusText: `งานศึกษา/ค้นคว้า (${docType}) กำลังดำเนินอยู่`,
+        totalTasks, doneTasks, pendingTasks, ageDays, docType
+      };
+    }
+    if (ageDays > 14) {
+      return {
+        category: 'STALE_NO_TASKS',
+        statusText: `ไม่มี Checklist และนิ่งมา ${ageDays} วัน ควรทบทวนหรือย้ายเข้า Icebox`,
+        totalTasks, doneTasks, pendingTasks, ageDays, docType
+      };
+    }
+  }
+
+  return {
+    category: 'GENUINE_ACTIVE',
+    statusText: 'แผนงานกำลังดำเนินการ',
+    totalTasks, doneTasks, pendingTasks, ageDays, docType
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// 🛡️ ARMOR 6: Auto-Promotion Engine (ย้ายงานเสร็จเข้า Complete อัตโนมัติ)
+// ─────────────────────────────────────────────────────────────
+// Rewrite status/outcome INSIDE the frontmatter block only. Body is never touched.
+export function stampCompleteFrontmatter(content, filename) {
+  const eol = content.includes('\r\n') ? '\r\n' : '\n';
+  const { hasFm, fm, body } = splitFrontmatter(content);
+  if (!hasFm) {
+    const ver = parseSemVer(filename);
+    const today = new Date().toISOString().substring(0, 10);
+    return [
+      '---',
+      `version: "${ver ? ver.raw.substring(1) : '0.0.0'}"`,
+      'status: complete',
+      'outcome: shipped',
+      `date: ${today}`,
+      'source: qc-auto-promote',
+      '---',
+      ''
+    ].join(eol) + content;
+  }
+  let newFm = /^status:.*$/m.test(fm)
+    ? fm.replace(/^status:.*$/m, 'status: complete')
+    : `${fm}${eol}status: complete`;
+  newFm = /^outcome:.*$/m.test(newFm)
+    ? newFm.replace(/^outcome:.*$/m, 'outcome: shipped')
+    : newFm.replace(/^status: complete$/m, `status: complete${eol}outcome: shipped`);
+  return `---${eol}${newFm}${eol}---${eol}${body}`;
+}
+
+// Where a promoted plan should land. Never escapes Quick Save/Complete/<Component>/.
+export function resolveCompleteTarget(filePath) {
+  const activeRoot = path.join(ROOT, 'Quick Save', 'Active');
+  const rel = path.relative(activeRoot, filePath);
+  const parts = rel.split(path.sep);
+  let component = null;
+  if (!rel.startsWith('..') && !path.isAbsolute(rel) && parts.length > 1) component = parts[0];
+  if (!component) {
+    const loose = determineLooseFileDestination(filePath);
+    component = loose && loose.action === 'COMPONENT' ? path.basename(loose.targetDir) : 'Core-VPS';
+  }
+
+  const compDir = path.join(ROOT, 'Quick Save', 'Complete', component);
+  const filename = path.basename(filePath);
+  const ver = parseSemVer(filename);
+  let targetDir = compDir;
+
+  // Current major floats at root; older majors go to V{n}/ or _Legacy/V{n}/
+  if (ver && fs.existsSync(compDir)) {
+    const floatingMajors = fs.readdirSync(compDir, { withFileTypes: true })
+      .filter(e => e.isFile() && e.name.endsWith('.md'))
+      .map(e => parseSemVer(e.name))
+      .filter(Boolean)
+      .map(v => v.major);
+    const currentMajor = floatingMajors.length ? Math.max(...floatingMajors) : ver.major;
+    if (ver.major < currentMajor) {
+      const vMajorDir = path.join(compDir, `V${ver.major}`);
+      targetDir = fs.existsSync(vMajorDir) ? vMajorDir : path.join(compDir, '_Legacy', `V${ver.major}`);
+    }
+  }
+  return { component, targetDir, destPath: path.join(targetDir, filename) };
+}
+
+export function promotePlanToComplete(filePath) {
+  const { targetDir, destPath } = resolveCompleteTarget(filePath);
+  if (fs.existsSync(destPath)) {
+    throw new Error(`DEST_EXISTS: ${path.relative(ROOT, destPath)} (refusing to overwrite)`);
+  }
+  const content = fs.readFileSync(filePath, 'utf8');
+  const updated = stampCompleteFrontmatter(content, path.basename(filePath));
+  fs.mkdirSync(targetDir, { recursive: true });
+  // Write destination first ('wx' = fail if exists), then remove source. Source survives any write failure.
+  fs.writeFileSync(destPath, updated, { encoding: 'utf8', flag: 'wx' });
+  fs.unlinkSync(filePath);
+  return destPath;
+}
+
+function getAllFiles(dir, filterExt = null, fileList = [], visited = new Set()) {
   if (!fs.existsSync(dir)) return fileList;
+  try {
+    const real = fs.realpathSync(dir);
+    if (visited.has(real)) return fileList;
+    visited.add(real);
+  } catch (e) {
+    return fileList;
+  }
+
   const items = fs.readdirSync(dir, { withFileTypes: true });
   for (const item of items) {
     const fullPath = path.join(dir, item.name);
-    if (item.isDirectory()) {
-      getAllFiles(fullPath, filterExt, fileList);
-    } else if (item.isFile()) {
+    let isDir = item.isDirectory();
+    if (item.isSymbolicLink()) {
+      try {
+        const target = fs.realpathSync(fullPath);
+        if (!target.toLowerCase().startsWith(ROOT.toLowerCase())) {
+          // External mesh link (e.g. DoctorBank-Brand), skip scanning into it as local files
+          continue;
+        }
+        isDir = fs.statSync(fullPath).isDirectory();
+      } catch (e) {
+        continue;
+      }
+    }
+
+    if (isDir) {
+      getAllFiles(fullPath, filterExt, fileList, visited);
+    } else if (item.isFile() || (item.isSymbolicLink() && !isDir)) {
       if (!filterExt || item.name.endsWith(filterExt)) {
         fileList.push(fullPath);
       }
@@ -255,9 +478,57 @@ if (isTestMode) {
   const qDest = quarantineFile(tempFileA, 'TEST_QUARANTINE');
   assert('Quarantine File Successfully Moved', fs.existsSync(qDest) && !fs.existsSync(tempFileA));
 
+  // Test 4: Active Reality Radar
+  const testActiveReal = path.join(ROOT, 'scratch', '_test_active_real.md');
+  const testActiveDone = path.join(ROOT, 'scratch', '_test_active_done.md');
+  fs.writeFileSync(testActiveReal, '---\nversion: "1.0.0"\ntype: impl\nstatus: active\n---\n- [x] Task 1\n- [ ] Task 2\n', 'utf8');
+  fs.writeFileSync(testActiveDone, '---\nversion: "1.0.0"\ntype: impl\nstatus: active\n---\n- [x] Task 1\n- [x] Task 2\n', 'utf8');
+
+  const evalReal = evaluateActiveReality(testActiveReal);
+  const evalDone = evaluateActiveReality(testActiveDone);
+
+  assert('Reality Evaluator flags pending tasks as GENUINE_ACTIVE', evalReal.category === 'GENUINE_ACTIVE' && evalReal.pendingTasks === 1);
+  assert('Reality Evaluator flags 100% checked tasks as ALL_TASKS_DONE', evalDone.category === 'ALL_TASKS_DONE' && evalDone.pendingTasks === 0);
+
+  // Test 5: Radar immunity — pasted YAML / old ticked lists inside code blocks must NOT count
+  const testTrap = path.join(ROOT, 'scratch', '_test_active_trap.md');
+  fs.writeFileSync(testTrap, '---\nstatus: active\ntype: impl\n---\n- [ ] Real pending\n\n```yaml\nstatus: complete\n- [x] old artifact\n```\n', 'utf8');
+  const evalTrap = evaluateActiveReality(testTrap);
+  assert('Radar ignores code-block YAML and checkboxes (stays GENUINE_ACTIVE 0/1)', evalTrap.category === 'GENUINE_ACTIVE' && evalTrap.totalTasks === 1 && evalTrap.pendingTasks === 1);
+
+  // Test 6-9: Auto-Promotion Engine in a sandbox component (always cleaned up)
+  const sbComp = '__qc_selftest__';
+  const sbActive = path.join(ROOT, 'Quick Save', 'Active', sbComp);
+  const sbComplete = path.join(ROOT, 'Quick Save', 'Complete', sbComp);
+  try {
+    fs.mkdirSync(sbActive, { recursive: true });
+    const sbFile = path.join(sbActive, 'V0.0.1_[impl]_selftest.md');
+    fs.writeFileSync(sbFile, '---\nversion: "0.0.1"\ntype: impl\nstatus: active\noutcome: pending\n---\n- [x] Done\n\n```yaml\nstatus: active\n```\n', 'utf8');
+    const dest = promotePlanToComplete(sbFile);
+    const out = fs.readFileSync(dest, 'utf8');
+    const outFm = splitFrontmatter(out).fm;
+    assert('Promote routes to Complete/<same component> and removes source', path.dirname(dest) === sbComplete && !fs.existsSync(sbFile));
+    assert('Promote stamps frontmatter only (body YAML untouched)', /^status: complete$/m.test(outFm) && /^outcome: shipped$/m.test(outFm) && out.includes('```yaml\nstatus: active\n```'));
+
+    fs.writeFileSync(sbFile, '---\nstatus: active\n---\n- [x] Again\n', 'utf8');
+    let blocked = false;
+    try { promotePlanToComplete(sbFile); } catch (e) { blocked = /DEST_EXISTS/.test(e.message); }
+    assert('Promote refuses to overwrite an existing Complete file (source kept)', blocked && fs.existsSync(sbFile));
+
+    const outside = path.join(ROOT, 'scratch', 'V0.0.2_selftest_outside.md');
+    const target = resolveCompleteTarget(outside);
+    assert('Promote never escapes Quick Save/Complete (no ".." component)', !target.component.startsWith('..') && target.targetDir.startsWith(path.join(ROOT, 'Quick Save', 'Complete')));
+  } finally {
+    fs.rmSync(sbActive, { recursive: true, force: true });
+    fs.rmSync(sbComplete, { recursive: true, force: true });
+  }
+
   // Cleanup
   if (fs.existsSync(tempFileB)) fs.unlinkSync(tempFileB);
   if (fs.existsSync(qDest)) fs.unlinkSync(qDest);
+  if (fs.existsSync(testActiveReal)) fs.unlinkSync(testActiveReal);
+  if (fs.existsSync(testActiveDone)) fs.unlinkSync(testActiveDone);
+  if (fs.existsSync(testTrap)) fs.unlinkSync(testTrap);
 
   console.log(`\n${c.bold}Test Summary: ${c.green}${passed} passed${c.reset}, ${failed > 0 ? c.red + failed + ' failed' : c.gray + '0 failed'}${c.reset}`);
   process.exit(failed > 0 ? 1 : 0);
@@ -267,7 +538,7 @@ if (isTestMode) {
 // MAIN EXECUTION (Audit & Auto-Fix)
 // ─────────────────────────────────────────────────────────────
 console.log(`${c.bold}${c.cyan}═══════════════════════════════════════════════════════════════${c.reset}`);
-console.log(`${c.bold}${c.cyan}  QC Radar & Workspace Hygiene Engine (V2 Hardened)${c.reset} ${c.gray}(Mode: ${isFixMode ? c.yellow + 'AUTO-FIX (ARMORED)' : c.green + 'AUDIT ONLY'}${c.gray})${c.reset}`);
+console.log(`${c.bold}${c.cyan}  QC Radar & Workspace Hygiene Engine (V3.1.0 - Active Reality Radar + Safe Auto-Promote)${c.reset} ${c.gray}(Mode: ${isFixMode ? c.yellow + 'AUTO-FIX (ARMORED)' : c.green + 'AUDIT ONLY'}${c.gray})${c.reset}`);
 console.log(`${c.bold}${c.cyan}═══════════════════════════════════════════════════════════════${c.reset}\n`);
 
 // ─────────────────────────────────────────────────────────────
@@ -319,6 +590,10 @@ const safeGhosts = [];
 const conflictedGhosts = [];
 const unmovedComplete = [];
 const looseActiveFiles = [];
+const genuineActive = [];
+const falseActive = [];
+const staleActive = [];
+const untaskedStudies = [];
 
 // Check loose files at root of Active
 if (fs.existsSync(activeDir)) {
@@ -344,12 +619,64 @@ for (const af of activeFiles) {
     }
   }
 
-  try {
-    const content = fs.readFileSync(af, 'utf8');
-    if (/^status:\s*complete/m.test(content) || /^outcome:\s*shipped/m.test(content)) {
-      unmovedComplete.push(af);
+  // Evaluate Active Reality
+  const reality = evaluateActiveReality(af);
+  if (reality) {
+    if (reality.category === 'ALL_TASKS_DONE' || reality.category === 'EXPLICIT_COMPLETION' || reality.category === 'UNMOVED_COMPLETE') {
+      falseActive.push({ path: af, reality });
+    } else if (reality.category === 'STALE_ACTIVE' || reality.category === 'STALE_NO_TASKS') {
+      staleActive.push({ path: af, reality });
+    } else if (reality.category === 'UNTASKED_STUDY') {
+      untaskedStudies.push({ path: af, reality });
+    } else {
+      genuineActive.push({ path: af, reality });
     }
-  } catch (e) {}
+  }
+
+  if (reality && reality.category === 'UNMOVED_COMPLETE') {
+    unmovedComplete.push(af);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// PHASE 1b: Active Reality Radar (ตรวจเช็คงานค้างจริง vs ค้างหลอก)
+// ─────────────────────────────────────────────────────────────
+console.log(`\n${c.bold}[Phase 1b] Active Reality Radar (ตรวจสอบงานค้างจริง vs ค้างหลอก)...${c.reset}`);
+console.log(`  • 🟢 Genuine Active (ค้างจริง กำลังทำอยู่): ${genuineActive.length > 0 ? c.green + c.bold + genuineActive.length : c.gray + '0'}${c.reset}`);
+console.log(`  • 🔴 False Active (เสร็จแล้วแต่ค้างหลอก/ลืมย้าย): ${falseActive.length > 0 ? c.red + c.bold + falseActive.length : c.green + '0'}${c.reset}`);
+console.log(`  • ❄️ Stale / Dormant (ดองเกิน 30 วัน): ${staleActive.length > 0 ? c.yellow + staleActive.length : c.green + '0'}${c.reset}`);
+console.log(`  • 🟡 Untasked Deliverables (Study/Docs เก่าเกิน 14 วัน): ${untaskedStudies.length > 0 ? c.cyan + untaskedStudies.length : c.green + '0'}${c.reset}`);
+
+if (genuineActive.length > 0) {
+  console.log(`\n  ${c.bold}${c.green}🟢 รายการที่ค้างจริง (Genuine Active - Work In Progress):${c.reset}`);
+  genuineActive.forEach(item => {
+    console.log(`    - ${c.bold}${path.relative(ROOT, item.path)}${c.reset}`);
+    console.log(`      ↳ ${c.gray}${item.reality.statusText}${c.reset}`);
+  });
+}
+
+if (falseActive.length > 0) {
+  console.log(`\n  ${c.bold}${c.red}🔴 รายการที่เสร็จแล้วแต่ลืมเปลี่ยน/ลืมย้าย (False Active - Ready for Complete):${c.reset}`);
+  falseActive.forEach(item => {
+    console.log(`    - ${c.bold}${path.relative(ROOT, item.path)}${c.reset}`);
+    console.log(`      ↳ ${c.red}${item.reality.statusText}${c.reset}`);
+  });
+}
+
+if (staleActive.length > 0) {
+  console.log(`\n  ${c.bold}${c.yellow}❄️ รายการที่ดองนาน (Stale Active > 30 วัน - แนะนำ Icebox หรือรีวิว):${c.reset}`);
+  staleActive.forEach(item => {
+    console.log(`    - ${c.bold}${path.relative(ROOT, item.path)}${c.reset}`);
+    console.log(`      ↳ ${c.yellow}${item.reality.statusText}${c.reset}`);
+  });
+}
+
+if (untaskedStudies.length > 0) {
+  console.log(`\n  ${c.bold}${c.cyan}🟡 งานวิจัย/เอกสารไม่มี Task (Untasked Review - ตรวจสอบว่าสรุปจบหรือยัง):${c.reset}`);
+  untaskedStudies.forEach(item => {
+    console.log(`    - ${c.bold}${path.relative(ROOT, item.path)}${c.reset}`);
+    console.log(`      ↳ ${c.cyan}${item.reality.statusText}${c.reset}`);
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -386,6 +713,7 @@ console.log(`\n${c.bold}[Summary Findings]${c.reset}`);
 console.log(`  • Verified Safe Ghosts (Ready to Quarantine): ${safeGhosts.length > 0 ? c.red + safeGhosts.length : c.green + '0'}${c.reset}`);
 console.log(`  • Conflicted Ghosts (BLOCKED - Content Diverged): ${conflictedGhosts.length > 0 ? c.red + c.bold + conflictedGhosts.length : c.green + '0'}${c.reset}`);
 console.log(`  • Unmoved Complete Files in Active: ${unmovedComplete.length > 0 ? c.yellow + unmovedComplete.length : c.green + '0'}${c.reset}`);
+console.log(`  • False Active Plans (Finished but Unmoved): ${falseActive.length > 0 ? c.red + c.bold + falseActive.length : c.green + '0'}${c.reset}`);
 console.log(`  • Loose Files at Active/ root: ${looseActiveFiles.length > 0 ? c.yellow + looseActiveFiles.length : c.green + '0'}${c.reset}`);
 console.log(`  • Core-VPS Older Files to Archive: ${filesToArchive.length > 0 ? c.yellow + filesToArchive.length : c.green + '0'}${c.reset}`);
 
@@ -415,34 +743,70 @@ if (isFixMode) {
 
   let actionsTaken = 0;
 
+  const handled = new Set();
+  const falseActiveSet = new Set(falseActive.map(fa => fa.path));
+  const conflictedSet = new Set(conflictedGhosts.map(g => g.activePath));
+
   // 1. Quarantine verified safe ghosts (Zero Hard Unlink)
   for (const g of safeGhosts) {
     const qPath = quarantineFile(g.activePath, g.reason);
+    handled.add(g.activePath);
     console.log(`  ${c.green}✔ Quarantined ghost:${c.reset} ${path.basename(g.activePath)} ➔ ${path.relative(ROOT, qPath)}`);
     actionsTaken++;
   }
 
-  // 2. Route loose files
+  // 2. Route loose files (finished loose plans are left for step 3 to promote directly)
   for (const lf of looseActiveFiles) {
+    if (handled.has(lf) || falseActiveSet.has(lf) || !fs.existsSync(lf)) continue;
     const route = determineLooseFileDestination(lf);
-    if (route) {
-      if (!fs.existsSync(route.targetDir)) fs.mkdirSync(route.targetDir, { recursive: true });
-      const dest = path.join(route.targetDir, path.basename(lf));
-      fs.renameSync(lf, dest);
-      console.log(`  ${c.green}✔ Routed loose file:${c.reset} ${path.basename(lf)} ➔ ${path.relative(ROOT, dest)} (${route.reason || route.action})`);
+    if (!route) continue;
+    const dest = path.join(route.targetDir, path.basename(lf));
+    if (fs.existsSync(dest)) {
+      console.log(`  ${c.red}✖ Skipped loose file (destination exists):${c.reset} ${path.basename(lf)}`);
+      continue;
+    }
+    fs.mkdirSync(route.targetDir, { recursive: true });
+    fs.renameSync(lf, dest);
+    handled.add(lf);
+    console.log(`  ${c.green}✔ Routed loose file:${c.reset} ${path.basename(lf)} ➔ ${path.relative(ROOT, dest)} (${route.reason || route.action})`);
+    actionsTaken++;
+  }
+
+  // 3. Auto-promote False Active plans (crash-safe, never overwrites, skips conflicts)
+  for (const fa of falseActive) {
+    if (handled.has(fa.path) || !fs.existsSync(fa.path)) continue;
+    if (conflictedSet.has(fa.path)) {
+      console.log(`  ${c.red}✖ Blocked promotion (Complete copy has different content — resolve manually):${c.reset} ${path.basename(fa.path)}`);
+      continue;
+    }
+    try {
+      const dest = promotePlanToComplete(fa.path);
+      handled.add(fa.path);
+      console.log(`  ${c.green}✔ Auto-promoted false active plan:${c.reset} ${path.basename(fa.path)} ➔ ${path.relative(ROOT, dest)}`);
       actionsTaken++;
+    } catch (e) {
+      console.log(`  ${c.red}✖ Promotion failed:${c.reset} ${path.basename(fa.path)} — ${e.message}`);
     }
   }
 
-  // 3. Archive Core-VPS floating files if exceeding limit
-  if (filesToArchive.length > 0) {
-    const v13Dir = path.join(coreVpsCompleteDir, 'V13');
-    if (!fs.existsSync(v13Dir)) fs.mkdirSync(v13Dir, { recursive: true });
-    for (const f of filesToArchive) {
-      const src = path.join(coreVpsCompleteDir, f);
-      const dest = path.join(v13Dir, f);
-      fs.renameSync(src, dest);
-      console.log(`  ${c.green}✔ Archived SemVer floating file:${c.reset} ${f} ➔ Complete/Core-VPS/V13/`);
+  // 4. Archive Core-VPS floating files (recomputed AFTER promotion, archived by real major version)
+  if (fs.existsSync(coreVpsCompleteDir)) {
+    const floatingNow = fs.readdirSync(coreVpsCompleteDir, { withFileTypes: true })
+      .filter(i => i.isFile() && i.name.endsWith('.md'))
+      .map(i => i.name)
+      .sort(compareSemVer);
+    const toArchive = floatingNow.length > 7 ? floatingNow.slice(0, floatingNow.length - 6) : [];
+    for (const f of toArchive) {
+      const v = parseSemVer(f);
+      const archiveDir = path.join(coreVpsCompleteDir, v ? `V${v.major}` : '_Legacy');
+      const dest = path.join(archiveDir, f);
+      if (fs.existsSync(dest)) {
+        console.log(`  ${c.red}✖ Skipped archive (destination exists):${c.reset} ${f}`);
+        continue;
+      }
+      fs.mkdirSync(archiveDir, { recursive: true });
+      fs.renameSync(path.join(coreVpsCompleteDir, f), dest);
+      console.log(`  ${c.green}✔ Archived SemVer floating file:${c.reset} ${f} ➔ ${path.relative(ROOT, archiveDir)}/`);
       actionsTaken++;
     }
   }
@@ -460,7 +824,7 @@ if (isFixMode) {
     console.log(`  ${c.green}No auto-fix actions needed.${c.reset}`);
   }
 } else {
-  console.log(`\n${c.gray}Tip: Run ${c.bold}node scripts/qc-audit.js --fix${c.reset}${c.gray} to safely quarantine ghosts, auto-route loose files, and re-index manifest.${c.reset}`);
+  console.log(`\n${c.gray}Tip: Run ${c.bold}node scripts/qc-audit.js --fix${c.reset}${c.gray} to quarantine ghosts, route loose files, auto-promote finished plans, and re-index manifest.${c.reset}`);
 }
 
 console.log(`\n${c.bold}${c.green}═══════════════════════════════════════════════════════════════${c.reset}`);
