@@ -1,6 +1,6 @@
 ---
 name: qc
-version: "3.0.0"
+version: "3.1.0"
 updated_at: "2026-10-30"
 description: >-
   Quick Clear & Workspace Hygiene Engine V3 — สแกนตรวจสอบความสะอาด Quick Save,
@@ -62,14 +62,17 @@ node scripts/qc-audit.js --promote
 4. **SemVer Archive:** โยกไฟล์เก่าลง `_Legacy/` หรือ `Vxx/` หากไฟล์ลอยที่ root ใน Complete เกิน 5-7 ไฟล์
 5. **Re-index Manifest:** สั่งรัน `node scripts/qs-indexer.js` ให้เสร็จสรรพในคำสั่งเดียว ป้องกัน Dead Link
 
-#### Option B: จัดการ False Active และ Stale Tasks จาก Phase 1b
-1. **หากเจอ 🔴 False Active (งานเสร็จ 100% แล้วแต่ยังอยู่ใน Active):**
-   - อัปเดต frontmatter เป็น `status: complete` และ `outcome: shipped`
-   - ย้ายเข้าไปยัง `Quick Save/Complete/<Component>/Vxx/`
-2. **หากเจอ ❄️ Stale Tasks (ดองนานเกิน 30 วัน):**
-   - สอบถาม User หรือประเมินเพื่อย้ายไปยัง `Quick Save/Icebox/<Component>/`
-3. **หากเจอ 🟡 Untasked Deliverables (Study ที่วิจัยจบแล้ว):**
-   - อัปเดต frontmatter เป็น `status: complete` และย้ายเข้า `Complete/<Component>/`
+> 🛡️ **Promote Safety Guarantees (V3.1.0):**
+> - อ่าน `status`/`outcome` จาก **YAML frontmatter เท่านั้น** — YAML/checkbox ที่อยู่ใน code block, `<details>` หรือ `## 📦 RAW ARTIFACT BACKUP` จะไม่ถูกนับ (กัน artifact เก่าหลอกว่างานเสร็จ)
+> - แก้เฉพาะบล็อก frontmatter ไม่แตะ body เด็ดขาด
+> - **ไม่เขียนทับ** ไฟล์ชื่อซ้ำใน `Complete/` (เจอซ้ำ = บล็อก + คงต้นฉบับไว้ใน Active), ไฟล์ Conflicted Ghost จะไม่ถูก promote
+> - ไม่มีทางหลุดออกนอก `Quick Save/Complete/<Component>/`; เวอร์ชัน major ปัจจุบันลอยที่ root, major เก่าลง `V{n}/` หรือ `_Legacy/V{n}/`
+> - เขียนปลายทางก่อนแล้วค่อยลบต้นทาง — พังกลางทางต้นฉบับไม่หาย; ไฟล์เดียวพังไม่ลากทั้ง run ล้ม
+
+#### Option B: Manual Fallback (เมื่อ Auto-Promote บล็อก หรือเป็นเคสที่ต้องใช้ดุลยพินิจ)
+1. **`✖ Blocked promotion` / `DEST_EXISTS`:** เทียบเนื้อหา Active vs Complete ด้วยตา แล้วเลือกฉบับที่ถูก (อีกฉบับเข้า quarantine) — ห้ามเขียนทับมั่ว
+2. **❄️ Stale Tasks (ดองนานเกิน 30 วัน):** สอบถาม User ก่อนย้ายไป `Quick Save/Icebox/<Component>/` (ไม่ auto)
+3. **🟡 Untasked Deliverables (Study ไม่มี checklist):** เปิดอ่านว่าสรุปจบจริง แล้วค่อยตั้ง `status: complete` + `outcome: shipped` ใน frontmatter → รัน `--fix` ให้เอนจินย้ายให้ (ไม่ auto เพราะไม่มีหลักฐานชี้วัดพอ)
 
 ---
 
@@ -89,10 +92,11 @@ node scripts/qc-audit.js --promote
 ## 📋 Standard Locked Root Scripts
 ไฟล์ Script ที่ได้รับอนุญาตให้อยู่ที่ Root:
 - `server.js`, `ai-gateway.js`, `generate_cloud_images.cjs`, `higgsfield-auth-watchdog-vps.cjs`
-- `bump-cache.js`, `deploy.js`, `start.sh`, `Open AG.bat`, `start-voice.bat`, `ecosystem.config.js`
+- `bump-cache.js`, `deploy.js`, `start.sh`, `Open AG.bat`, `start-voice.bat`, `ecosystem.config.cjs`
 
 ---
 
 ## 🔗 GBRAIN Backlinks
-- **2026-09-29 08:45** | [V13.85.0 QC Skill Overhaul & Recursive Workspace Hygiene Engine](file:///c:/My%20Claw/Openclaw-VPS/Quick%20Save/Active/Core-VPS/V13.85.0_%5Bimpl%5D_skills_qc-radar-and-recursive-workspace-hygiene.md)
-- **2026-06-14 12:55** | [Root Folder Hygiene & Systemic Rules](file:///c:/My%20Claw/Openclaw-VPS/Quick%20Save/Complete/Core-VPS/V12.20.0_[infra]_ag-skills_root-folder-hygiene-and-reviewchat.md)
+- **2026-10-30 10:05** | V3.1.0 Recheck Hardening — frontmatter-scoped radar, no-overwrite promote, path-traversal guard, sandboxed self-tests (13/13)
+- **2026-09-29 08:45** | [V13.85.0 QC Skill Overhaul & Recursive Workspace Hygiene Engine](file:///c:/My%20Claw/Openclaw-VPS/Quick%20Save/Complete/Core-VPS/V13/V13.85.0_%5Bimpl%5D_skills_qc-radar-and-recursive-workspace-hygiene.md)
+- **2026-06-14 12:55** | [Root Folder Hygiene & Systemic Rules](file:///c:/My%20Claw/Openclaw-VPS/Quick%20Save/Complete/Core-VPS/_Legacy/V12/V12.20.0_%5Binfra%5D_ag-skills_root-folder-hygiene-and-reviewchat.md)
