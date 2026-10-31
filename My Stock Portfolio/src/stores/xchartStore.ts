@@ -292,6 +292,7 @@ interface XChartState {
   closeTab: (id: string) => void;
   updateTab: (id: string, updates: Partial<XChartTab>) => void;
   changeSymbolOnActiveTab: (symbol: string, title?: string) => void;
+  openStockInPrimaryTab: (symbol: string, title?: string) => void;
   toggleWatchlist: () => void;
 
   // Watchlist actions
@@ -787,6 +788,76 @@ export const useXChartStore = create<XChartState>((set, get) => ({
 
     set({ tabs: nextTabs, watchlistDetailSymbol: cleanSym });
     persistTabs(nextTabs, activeTabId);
+  },
+
+  openStockInPrimaryTab: (symbol, title) => {
+    const { tabs, activeTabId } = get();
+    const cleanSym = symbol.trim().toUpperCase();
+    if (!cleanSym) return;
+
+    const isCurrency = cleanSym.includes('=X') || cleanSym.endsWith('=X');
+    const targetType: XChartTabType = isCurrency ? 'CURRENCY' : 'STOCK';
+    const displayTitle = title || (isCurrency && cleanSym === 'THB=X' ? 'USD/THB' : cleanSym);
+
+    const active = tabs.find((t) => t.id === activeTabId);
+
+    // 1. ถ้าแท็บปัจจุบันเป็น STOCK อยู่แล้ว และตัวที่คลิกเป็นหุ้นเดี่ยว (Option A)
+    // เปลี่ยนหุ้นที่แท็บปัจจุบันทันที
+    if (active && active.type === 'STOCK' && targetType === 'STOCK') {
+      const otherStockTab = tabs.find((t) => t.id !== activeTabId && t.type === 'STOCK' && t.symbol === cleanSym);
+      if (otherStockTab) {
+        set({ activeTabId: otherStockTab.id, watchlistDetailSymbol: cleanSym });
+        persistTabs(tabs, otherStockTab.id);
+        if (otherStockTab.settings?.indicatorSettings) {
+          useIndicatorStore.getState().loadTabConfig(otherStockTab.id, otherStockTab.settings.indicatorSettings);
+        }
+        return;
+      }
+
+      get().changeSymbolOnActiveTab(cleanSym, displayTitle);
+      return;
+    }
+
+    // 2. ถ้าตัวที่คลิกเปิดอยู่ในแท็บใดแท็บหนึ่งแล้ว (เช่น THB=X อยู่ใน tab-thb) ให้สลับไปแท็บนั้นเลย
+    const existingTab = tabs.find((t) => t.symbol === cleanSym && (t.type === targetType || (t.type === 'STOCK' && targetType === 'STOCK')));
+    if (existingTab) {
+      set({ activeTabId: existingTab.id, watchlistDetailSymbol: cleanSym });
+      persistTabs(tabs, existingTab.id);
+      if (existingTab.settings?.indicatorSettings) {
+        useIndicatorStore.getState().loadTabConfig(existingTab.id, existingTab.settings.indicatorSettings);
+      }
+      return;
+    }
+
+    // 3. ทุกกรณีอื่น (เช่น อยู่หน้า HEATMAP, MYPORT, COMPARE, CURRENCY ฯลฯ)
+    // ส่งไปเปิดที่ "แท็บแรก" (Primary Tab / tabs[0] หรือ First STOCK tab)
+    const primaryTab = tabs[0]?.type === 'STOCK' ? tabs[0] : (tabs.find((t) => t.type === 'STOCK') || tabs[0]);
+    if (!primaryTab) {
+      get().addTab({ type: targetType, symbol: cleanSym, title: displayTitle });
+      return;
+    }
+
+    const currentSettings = primaryTab.settings || createDefaultTabSettings(targetType, cleanSym);
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== primaryTab.id) return t;
+      return {
+        ...t,
+        symbol: cleanSym,
+        title: displayTitle,
+        type: targetType,
+        settings: {
+          ...currentSettings,
+          indicatorSettings: currentSettings.indicatorSettings,
+        }
+      };
+    });
+
+    set({ tabs: nextTabs, activeTabId: primaryTab.id, watchlistDetailSymbol: cleanSym });
+    persistTabs(nextTabs, primaryTab.id);
+
+    if (currentSettings.indicatorSettings) {
+      useIndicatorStore.getState().loadTabConfig(primaryTab.id, currentSettings.indicatorSettings);
+    }
   },
 
   toggleWatchlist: () => set((s) => ({ watchlistCollapsed: !s.watchlistCollapsed })),

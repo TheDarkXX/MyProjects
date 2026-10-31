@@ -29,7 +29,7 @@ import { StockLogo } from './StockLogo';
 import { HeatmapTooltip } from './HeatmapTooltip';
 
 export const MarketHeatmap: React.FC = () => {
-  const { addTab } = useXChartStore();
+  const { addTab, openStockInPrimaryTab } = useXChartStore();
   const { holdings } = useHoldings();
 
   // Configuration State
@@ -203,7 +203,7 @@ export const MarketHeatmap: React.FC = () => {
   };
 
   const handleTileClick = (symbol: string) => {
-    addTab({ type: 'STOCK', symbol, title: symbol });
+    openStockInPrimaryTab(symbol);
   };
 
   // Market state color and label
