@@ -28,6 +28,14 @@ import { computeTreemapLayout, formatPercent, formatPrice } from './heatmapEngin
 import { StockLogo } from './StockLogo';
 import { HeatmapTooltip } from './HeatmapTooltip';
 
+const SCOPE_OPTIONS: { id: HeatmapScope; label: string; icon: string }[] = [
+  { id: 'watchlist', label: 'Watchlist', icon: '📋' },
+  { id: 'sp100', label: 'S&P 100', icon: '🏆' },
+  { id: 'sp500', label: 'S&P 500', icon: '🌐' },
+  { id: 'nasdaq100', label: 'Nasdaq 100', icon: '⚡' },
+  { id: 'portfolio', label: 'My Port', icon: '💼' },
+];
+
 export const MarketHeatmap: React.FC = () => {
   const { addTab, openStockInPrimaryTab } = useXChartStore();
   const { holdings } = useHoldings();
@@ -229,20 +237,26 @@ export const MarketHeatmap: React.FC = () => {
       <div className="h-12 px-3 border-b border-[#1E1E1E] bg-[#0A0A0A] flex items-center justify-between gap-3 flex-shrink-0 z-30">
         {/* Left: Dropdowns & Controls */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {/* Scope Selector */}
-          <div className="flex items-center gap-1.5 bg-[#141414] px-2.5 py-1.5 rounded-lg border border-[#222222]">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={scope}
-              onChange={(e) => setScope(e.target.value as HeatmapScope)}
-              className="bg-transparent text-[13px] font-semibold text-white focus:outline-none cursor-pointer pr-1"
-            >
-              <option value="watchlist" className="bg-[#141414] text-white">Watchlist</option>
-              <option value="sp100" className="bg-[#141414] text-white">S&P 500 (Top 100)</option>
-              <option value="sp500" className="bg-[#141414] text-white">S&P 500 (All 503)</option>
-              <option value="nasdaq100" className="bg-[#141414] text-white">Nasdaq 100</option>
-              <option value="portfolio" className="bg-[#141414] text-white">My Portfolio</option>
-            </select>
+          {/* Scope Easy Buttons Strip */}
+          <div className="flex items-center gap-1 bg-[#141414] p-1 rounded-xl border border-[#222222] shrink-0">
+            {SCOPE_OPTIONS.map((opt) => {
+              const isActive = scope === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setScope(opt.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/30'
+                      : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
+                  }`}
+                  title={`Switch view to ${opt.label}`}
+                >
+                  <span className="text-xs leading-none">{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Size By Metric */}
