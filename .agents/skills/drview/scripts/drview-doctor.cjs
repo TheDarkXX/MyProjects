@@ -190,20 +190,161 @@ for (const item of SETTINGS_PATHS) {
   }
 }
 
-// Step 3: Check DrView extension installation & Artifact Bridge
-console.log("\n🔍 [3/3] Checking DrView Extension Installation...");
+// Step 3: Check and sync DrView extension installation & version
+console.log("\n🔍 [3/3] Checking DrView Extension Installation & Version Sync...");
+
+// Locate DrView source directory
+const candidateSourceDirs = [
+  path.resolve(__dirname, '..', 'projects', 'extensions', 'DrView-Extension'),
+  path.resolve(__dirname, '..', '..', '..', 'projects', 'extensions', 'DrView-Extension'),
+  'C:\\My Claw\\Openclaw-VPS\\projects\\extensions\\DrView-Extension',
+  'C:\\XBrain\\projects\\extensions\\DrView-Extension'
+];
+
+let sourceExtDir = candidateSourceDirs.find(d => fs.existsSync(path.join(d, 'package.json')));
+let targetVersion = '1.11.2';
+if (sourceExtDir) {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(sourceExtDir, 'package.json'), 'utf8'));
+    if (pkg.version) targetVersion = pkg.version;
+  } catch (e) {}
+}
+const targetFolder = `doctorbank.drview-${targetVersion}`;
+
+console.log(`  Source Repository: ${sourceExtDir || 'Not found'}`);
+console.log(`  Target Version: ${targetVersion} (${targetFolder})`);
+
 let drViewFound = false;
+
 for (const extDir of EXTENSION_DIRS) {
   if (!fs.existsSync(extDir)) continue;
+
   const entries = fs.readdirSync(extDir, { withFileTypes: true });
-  for (const entry of entries) {
-    const isDirOrLink = entry.isDirectory() || entry.isSymbolicLink();
-    if (isDirOrLink && entry.name.toLowerCase().startsWith('doctorbank.drview')) {
+  const existingDrView = entries.filter(e => {
+    const isDirOrLink = e.isDirectory() || e.isSymbolicLink();
+    return isDirOrLink && e.name.toLowerCase().startsWith('doctorbank.drview');
+  });
+
+  const extensionsJsonPath = path.join(extDir, 'extensions.json');
+  let extJsonData = null;
+  if (fs.existsSync(extensionsJsonPath)) {
+    try {
+      extJsonData = JSON.parse(fs.readFileSync(extensionsJsonPath, 'utf8'));
+    } catch (e) {}
+  }
+
+  if (existingDrView.length === 0) {
+    issuesFound++;
+    console.log(`  ⚠️ DrView not installed in ${extDir}`);
+    if (forceFix && sourceExtDir) {
+      try {
+        const destLink = path.join(extDir, targetFolder);
+        fs.symlinkSync(sourceExtDir, destLink, 'junction');
+        console.log(`  ✅ Created junction: ${targetFolder} -> ${sourceExtDir}`);
+
+        if (Array.isArray(extJsonData)) {
+          const formattedPath = '/' + destLink.replace(/\\/g, '/');
+          extJsonData.push({
+            identifier: { id: "doctorbank.drview" },
+            version: targetVersion,
+            location: { "$mid": 1, path: formattedPath, scheme: "file" },
+            relativeLocation: targetFolder,
+            metadata: {
+              isApplicationScoped: false,
+              isMachineScoped: false,
+              isBuiltin: false,
+              installedTimestamp: Date.now(),
+              pinned: true,
+              source: "vsix"
+            }
+          });
+          fs.writeFileSync(extensionsJsonPath, JSON.stringify(extJsonData, null, 2), 'utf8');
+          console.log(`  ✅ Registered ${targetFolder} in extensions.json`);
+        }
+        issuesFixed++;
+        drViewFound = true;
+      } catch (err) {
+        console.error(`  ❌ Failed to install DrView in ${extDir}:`, err.message);
+      }
+    }
+  } else {
+    for (const entry of existingDrView) {
       drViewFound = true;
-      console.log(`  ✅ Found DrView: ${entry.name} in ${extDir}`);
-      
-      // Check artifact bridge in mdViewerProvider.js
-      const mdProviderPath = path.join(extDir, entry.name, 'src', 'mdViewerProvider.js');
+      const currentPath = path.join(extDir, entry.name);
+
+      if (entry.name !== targetFolder) {
+        issuesFound++;
+        console.log(`  ⚠️ Outdated DrView detected in ${extDir}: ${entry.name} (target: ${targetFolder})`);
+        if (forceFix && sourceExtDir) {
+          try {
+            try {
+              fs.unlinkSync(currentPath);
+            } catch (errUnlink) {
+              try {
+                fs.rmdirSync(currentPath);
+              } catch (errRmdir) {
+                const { execSync } = require('child_process');
+                execSync(`cmd /c rmdir "${currentPath}"`);
+              }
+            }
+
+            const newLinkPath = path.join(extDir, targetFolder);
+            fs.symlinkSync(sourceExtDir, newLinkPath, 'junction');
+            console.log(`  ✅ Upgraded junction in ${path.basename(extDir)}: ${targetFolder}`);
+
+            if (Array.isArray(extJsonData)) {
+              let updatedJson = false;
+              for (const item of extJsonData) {
+                if (item.identifier && item.identifier.id === 'doctorbank.drview') {
+                  item.version = targetVersion;
+                  item.relativeLocation = targetFolder;
+                  if (item.location && typeof item.location.path === 'string') {
+                    item.location.path = item.location.path.replace(/doctorbank\.drview-[^/]+$/, targetFolder);
+                  } else {
+                    item.location = { "$mid": 1, path: '/' + newLinkPath.replace(/\\/g, '/'), scheme: "file" };
+                  }
+                  updatedJson = true;
+                }
+              }
+              if (updatedJson) {
+                fs.writeFileSync(extensionsJsonPath, JSON.stringify(extJsonData, null, 2), 'utf8');
+                console.log(`  ✅ Updated extensions.json metadata to ${targetVersion}`);
+              }
+            }
+            issuesFixed++;
+          } catch (err) {
+            console.error(`  ❌ Failed to upgrade ${entry.name}:`, err.message);
+          }
+        }
+      } else {
+        console.log(`  ✅ DrView is at latest version: ${entry.name} in ${path.basename(extDir)}`);
+
+        if (Array.isArray(extJsonData)) {
+          let needsJsonFix = false;
+          for (const item of extJsonData) {
+            if (item.identifier && item.identifier.id === 'doctorbank.drview') {
+              if (item.version !== targetVersion || item.relativeLocation !== targetFolder) {
+                issuesFound++;
+                needsJsonFix = true;
+                if (forceFix) {
+                  item.version = targetVersion;
+                  item.relativeLocation = targetFolder;
+                  if (item.location && typeof item.location.path === 'string') {
+                    item.location.path = item.location.path.replace(/doctorbank\.drview-[^/]+$/, targetFolder);
+                  }
+                  issuesFixed++;
+                }
+              }
+            }
+          }
+          if (needsJsonFix && forceFix) {
+            fs.writeFileSync(extensionsJsonPath, JSON.stringify(extJsonData, null, 2), 'utf8');
+            console.log(`  ✅ Aligned extensions.json metadata to ${targetVersion}`);
+          }
+        }
+      }
+
+      const mdProviderPath = path.join(extDir, targetFolder, 'src', 'mdViewerProvider.js');
       if (fs.existsSync(mdProviderPath)) {
         const src = fs.readFileSync(mdProviderPath, 'utf8');
         if (src.includes('openArtifactView')) {
