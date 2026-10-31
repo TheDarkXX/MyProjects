@@ -1,0 +1,487 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { usePortfolioStore } from '../../stores/portfolioStore';
+import { useTransactionStore } from '../../stores/transactionStore';
+import { usePriceStore } from '../../stores/priceStore';
+import { useUiStore } from '../../stores/uiStore';
+import { useHoldings } from '../../hooks/useHoldings';
+import { useXChartStore } from '../../stores/xchartStore';
+import { useProject2xStore } from '../../stores/project2xStore';
+import { DashboardTimeRange } from '../../components/dashboard/MultiPeriodReturnStrip';
+import { PortfolioHero } from './components/PortfolioHero';
+import { QuickStatsStrip } from './components/QuickStatsStrip';
+import { StockDetailDrawer } from '../../components/portfolio/StockDetailDrawer';
+import { TierBadgeIndicator } from '../../components/xchart/TierBadgeIndicator';
+import { Wallet, Briefcase } from 'lucide-react';
+import clsx from 'clsx';
+
+const getStartDateForRange = (range: DashboardTimeRange, earliestDate: string): string => {
+  const today = new Date();
+  switch (range) {
+    case '1D':
+      today.setDate(today.getDate() - 1);
+      break;
+    case '1W':
+      today.setDate(today.getDate() - 7);
+      break;
+    case '1M':
+      today.setDate(today.getDate() - 30);
+      break;
+    case '3M':
+      today.setDate(today.getDate() - 90);
+      break;
+    case 'YTD':
+      return `${today.getFullYear()}-01-01`;
+    case '1Y':
+      today.setFullYear(today.getFullYear() - 1);
+      break;
+    case 'ALL':
+    default:
+      return earliestDate || '2024-01-01';
+  }
+  return today.toISOString().split('T')[0];
+};
+
+export const MobileMyPortPage: React.FC = () => {
+  const { portfolios, activePortfolioId } = usePortfolioStore();
+  const { transactions, fetchTransactions } = useTransactionStore();
+  const { prices, historical, exchangeRate, fetchPrices, fetchHistorical, fetchExchangeRate } = usePriceStore();
+  const { currency, setActiveTab } = useUiStore();
+  const { changeSymbolOnActiveTab, watchlistPrices } = useXChartStore();
+  const { compactTiers, radar } = useProject2xStore();
+
+  const [timeRange, setTimeRange] = useState<DashboardTimeRange>('1W');
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+
+  const activePortfolio = (portfolios || []).find((p) => p.id === activePortfolioId);
+
+  useEffect(() => {
+    if (activePortfolioId) {
+      fetchTransactions(activePortfolioId);
+    }
+    fetchExchangeRate('USD', 'THB');
+  }, [activePortfolioId, fetchTransactions, fetchExchangeRate]);
+
+  const {
+    holdings,
+    cashBalance,
+    totalNetWorth,
+    totalPnl,
+    totalPnlPercent,
+    todaysProfit,
+    todaysProfitPercent,
+    netInvested,
+    totalDividends,
+    dividendYieldOnCost,
+  } = useHoldings();
+
+  const activeSymbols = holdings.map((h) => h.symbol);
+
+  const earliestTxDate = useMemo(() => {
+    const validTxs = transactions.filter((t) => t.status === 'CONFIRMED' && t.date);
+    if (validTxs.length === 0) return '2024-01-01';
+    return validTxs.reduce((min, t) => (t.date < min ? t.date : min), validTxs[0].date).split('T')[0];
+  }, [transactions]);
+
+  const symbolsToFetch = useMemo(() => {
+    return Array.from(new Set([...activeSymbols, 'SPY']));
+  }, [activeSymbols]);
+
+  const historyFromDate = useMemo(() => {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+    if (!earliestTxDate) return oneYearAgoStr;
+    const d = new Date(earliestTxDate);
+    d.setDate(d.getDate() - 14);
+    const safeEarliest = d.toISOString().split('T')[0];
+    return safeEarliest < oneYearAgoStr ? safeEarliest : oneYearAgoStr;
+  }, [earliestTxDate]);
+
+  useEffect(() => {
+    if (symbolsToFetch.length > 0) {
+      fetchPrices(symbolsToFetch);
+      const to = new Date().toISOString().split('T')[0];
+      fetchHistorical(symbolsToFetch, historyFromDate, to);
+    }
+  }, [JSON.stringify(symbolsToFetch), historyFromDate, fetchPrices, fetchHistorical]);
+
+  // Currency Formatter
+  const formatPrimary = (val: number, isChange?: boolean) => {
+    const num = typeof val === 'number' && !isNaN(val) ? val : 0;
+    const prefix = isChange && num > 0 ? '+' : '';
+    if (currency === 'USD') {
+      return `${prefix}${new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: activePortfolio?.base_currency || 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(num)}`;
+    }
+    return `${prefix}${new Intl.NumberFormat('th-TH', {
+      style: 'currency',
+      currency: 'THB',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(num * exchangeRate))}`;
+  };
+
+  // 1. Calculate All Daily Points for Equity Curve
+  const allDailyPoints = useMemo(() => {
+    if (activeSymbols.length === 0) return [];
+
+    const stockSymbols = activeSymbols.filter(s => s !== 'SPY');
+    const hasStockHistorical = stockSymbols.length === 0 || stockSymbols.some(s => historical[s] && historical[s].length > 0);
+    if (!hasStockHistorical) return [];
+
+    const dateSet = new Set<string>();
+    activeSymbols.forEach((s) => {
+      if (historical[s]) historical[s].forEach((d) => dateSet.add(d.date));
+    });
+
+    const sortedDates = Array.from(dateSet).sort();
+    const validDates = sortedDates.filter((d) => !earliestTxDate || d >= earliestTxDate);
+
+    const chronologicalTxs = [...transactions]
+      .filter((t) => t.status !== 'CANCELLED')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const defaultSymbolPrices: Record<string, number> = {};
+    chronologicalTxs.forEach((tx) => {
+      if (tx.symbol && tx.price && tx.price > 0 && tx.asset !== 'Cash') {
+        defaultSymbolPrices[tx.symbol] = tx.price;
+      }
+    });
+
+    let lastKnownPrices: Record<string, number> = {};
+
+    return validDates.map((date) => {
+      let dailyCash = activePortfolio?.initial_cash || 0;
+      let dailyHolds: Record<string, number> = {};
+
+      for (const tx of chronologicalTxs) {
+        const eodTarget = new Date(date);
+        eodTarget.setHours(23, 59, 59, 999);
+        if (new Date(tx.date) <= eodTarget) {
+          const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
+          const qty = Number(tx.amount || 0);
+          const price = Number(tx.price || 0);
+          const fee = Number(tx.fee || 0);
+
+          if (tx.type === 'BUY') {
+            if (isCash) {
+              dailyCash += qty;
+            } else {
+              dailyCash -= (qty * price) + fee;
+              dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) + qty;
+            }
+          } else if (tx.type === 'SELL') {
+            if (isCash) {
+              dailyCash -= qty;
+            } else {
+              dailyCash += (qty * price) - fee;
+              dailyHolds[tx.symbol] = (dailyHolds[tx.symbol] || 0) - qty;
+            }
+          } else if (tx.type === 'DEPOSIT') {
+            dailyCash += qty;
+          } else if (tx.type === 'WITHDRAW' || (tx.type as string) === 'WITHDRAWAL') {
+            dailyCash -= qty;
+          } else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST') {
+            dailyCash += (qty - fee);
+          }
+        }
+      }
+
+      activeSymbols.forEach((s) => {
+        if (Array.isArray(historical[s])) {
+          const dayMatch = historical[s].find((d) => d.date === date);
+          if (dayMatch) {
+            const p = typeof dayMatch.price === 'number' ? dayMatch.price : dayMatch.close;
+            if (typeof p === 'number' && !isNaN(p)) {
+              lastKnownPrices[s] = p;
+            }
+          }
+        }
+        if (!lastKnownPrices[s]) {
+          if (prices[s]) {
+            lastKnownPrices[s] = prices[s].price;
+          } else if (defaultSymbolPrices[s]) {
+            lastKnownPrices[s] = defaultSymbolPrices[s];
+          }
+        }
+      });
+
+      let dailyStockValue = 0;
+      Object.entries(dailyHolds).forEach(([sym, qty]) => {
+        if (qty > 0) {
+          dailyStockValue += qty * (lastKnownPrices[sym] || 0);
+        }
+      });
+
+      return {
+        date,
+        name: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        value: dailyCash + dailyStockValue,
+      };
+    });
+  }, [historical, transactions, activePortfolio, activeSymbols, earliestTxDate, prices]);
+
+  // 2. Filtered Chart Data for selected timeRange
+  const chartData = useMemo(() => {
+    if (allDailyPoints.length === 0) return [];
+    const startDate = getStartDateForRange(timeRange, earliestTxDate);
+    const endDate = new Date().toISOString().split('T')[0];
+    return allDailyPoints.filter((p) => p.date >= startDate && p.date <= endDate);
+  }, [allDailyPoints, timeRange, earliestTxDate]);
+
+  // Display PnL for active timeRange
+  const { displayPnl, displayPnlPercent } = useMemo(() => {
+    if (timeRange === '1D') {
+      return {
+        displayPnl: typeof todaysProfit === 'number' && !isNaN(todaysProfit) ? todaysProfit : 0,
+        displayPnlPercent: typeof todaysProfitPercent === 'number' && !isNaN(todaysProfitPercent) ? todaysProfitPercent : 0,
+      };
+    }
+    if (timeRange === 'ALL') {
+      const stockSymbols = activeSymbols.filter(s => s !== 'SPY');
+      const hasStockHistorical = stockSymbols.length === 0 || stockSymbols.some(s => historical[s] && historical[s].length > 0);
+
+      const cachedTwr = activePortfolioId && typeof window !== 'undefined'
+        ? (() => {
+            try {
+              const raw = localStorage.getItem(`stock_portfolio_twr_${activePortfolioId}`);
+              const num = raw ? parseFloat(raw) : null;
+              return num !== null && !isNaN(num) ? num : null;
+            } catch {
+              return null;
+            }
+          })()
+        : null;
+
+      if (allDailyPoints.length >= 2 && hasStockHistorical) {
+        let cumTwr = 1.0;
+        let validDays = 0;
+        for (let i = 1; i < allDailyPoints.length; i++) {
+          const prevVal = allDailyPoints[i - 1].value;
+          const currVal = allDailyPoints[i].value;
+          const currDate = allDailyPoints[i].date;
+
+          let dayCf = 0;
+          for (const tx of transactions) {
+            if (tx.status !== 'CANCELLED' && tx.date && tx.date.split('T')[0] === currDate) {
+              const isCash = tx.asset === 'Cash' || tx.symbol === 'CASH';
+              const type = (tx.type || '').toUpperCase();
+              if (type === 'DEPOSIT' || (type === 'BUY' && isCash)) {
+                dayCf += tx.amount;
+              } else if (type === 'WITHDRAW' || (type === 'SELL' && isCash)) {
+                dayCf -= tx.amount;
+              }
+            }
+          }
+
+          if (prevVal >= 10.0) {
+            const dayReturn = (currVal - dayCf - prevVal) / prevVal;
+            if (isFinite(dayReturn) && dayReturn > -0.99 && dayReturn < 3.0) {
+              cumTwr *= (1 + dayReturn);
+              validDays++;
+            }
+          }
+        }
+
+        const rawPct = validDays > 0 ? (cumTwr - 1) * 100 : (cachedTwr ?? totalPnlPercent);
+        const finalPct = isFinite(rawPct) && Math.abs(rawPct) < 10000 ? rawPct : (cachedTwr ?? totalPnlPercent);
+
+        return {
+          displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0,
+          displayPnlPercent: finalPct,
+        };
+      }
+      return {
+        displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0,
+        displayPnlPercent: cachedTwr ?? (typeof totalPnlPercent === 'number' && !isNaN(totalPnlPercent) ? totalPnlPercent : 0),
+      };
+    }
+    if (chartData.length > 0) {
+      const startVal = chartData[0].value;
+      const endVal = chartData[chartData.length - 1].value;
+      const diff = endVal - startVal;
+      const pct = startVal > 0 ? (diff / startVal) * 100 : 0;
+      return { 
+        displayPnl: !isNaN(diff) ? diff : 0, 
+        displayPnlPercent: !isNaN(pct) ? pct : 0 
+      };
+    }
+    return { 
+      displayPnl: typeof totalPnl === 'number' && !isNaN(totalPnl) ? totalPnl : 0, 
+      displayPnlPercent: typeof totalPnlPercent === 'number' && !isNaN(totalPnlPercent) ? totalPnlPercent : 0 
+    };
+  }, [timeRange, todaysProfit, todaysProfitPercent, chartData, totalPnl, totalPnlPercent, allDailyPoints, transactions, activePortfolioId]);
+
+  // Sort holdings by weight descending
+  const sortedHoldings = useMemo(() => {
+    return [...holdings].filter(h => h.quantity > 0 && h.symbol !== 'CASH').sort((a, b) => b.weightPercent - a.weightPercent);
+  }, [holdings]);
+
+  // Radar map
+  const radarMap = useMemo(() => {
+    const map: Record<string, any> = { ...compactTiers };
+    if (radar?.rows) {
+      for (const row of radar.rows) {
+        if (row && row.symbol) {
+          map[row.symbol.toUpperCase()] = row;
+        }
+      }
+    }
+    return map;
+  }, [radar?.rows, compactTiers]);
+
+  // Calculate return of individual stock based on selected timeRange
+  const getStockTimeframeReturn = (symbol: string, defaultDayChange: number, totalReturnPct: number) => {
+    if (timeRange === '1D') return defaultDayChange;
+    if (timeRange === 'ALL') return totalReturnPct;
+    const hist = historical[symbol];
+    if (!hist || hist.length < 2) return defaultDayChange;
+    const startDate = getStartDateForRange(timeRange, earliestTxDate);
+    const relevant = hist.filter((p: any) => (p.date || '').split('T')[0] >= startDate);
+    if (relevant.length >= 2) {
+      const startPrice = relevant[0].close ?? relevant[0].price;
+      const endPrice = relevant[relevant.length - 1].close ?? relevant[relevant.length - 1].price;
+      if (startPrice > 0) {
+        return ((endPrice - startPrice) / startPrice) * 100;
+      }
+    }
+    return defaultDayChange;
+  };
+
+  return (
+    <div className="space-y-4 animate-fade-in-up pb-8 max-w-2xl mx-auto select-none">
+      {/* 1. Hero Net Worth & Chart */}
+      <PortfolioHero
+        totalNetWorth={totalNetWorth}
+        displayPnl={displayPnl}
+        displayPnlPercent={displayPnlPercent}
+        chartData={chartData}
+        timeRange={timeRange}
+        onRangeChange={(r) => setTimeRange(r)}
+        formatPrimary={formatPrimary}
+      />
+
+      {/* 2. Quick Stats Strip (Dynamically linked to timeRange) */}
+      <QuickStatsStrip
+        netInvested={netInvested}
+        totalPnl={totalPnl}
+        totalPnlPercent={totalPnlPercent}
+        todaysProfit={todaysProfit}
+        todaysProfitPercent={todaysProfitPercent}
+        totalDividends={totalDividends}
+        dividendYieldOnCost={dividendYieldOnCost}
+        cashBalance={cashBalance}
+        formatPrimary={formatPrimary}
+        timeRange={timeRange}
+        periodPnl={displayPnl}
+        periodPnlPercent={displayPnlPercent}
+      />
+
+      {/* 3. Holdings Positions Breakdown */}
+      <div className="bg-[#0B0F17]/95 border border-white/[0.08] rounded-2xl shadow-xl overflow-hidden">
+        {/* Section Header */}
+        <div className="px-4 py-3 bg-[#111726]/60 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-purple-400" />
+            <span className="text-white font-bold text-sm font-heading">
+              Portfolio Holdings
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono font-semibold">
+              {sortedHoldings.length} ตัว
+            </span>
+          </div>
+          <span className="text-xs text-slate-400 font-mono">
+            เรียงตามสัดส่วน
+          </span>
+        </div>
+
+        {/* Holdings Rows (Spacious 2-Column Golden Ratio) */}
+        <div className="divide-y divide-white/[0.04]">
+          {sortedHoldings.map((h) => {
+            const quote = watchlistPrices[h.symbol] || { price: h.lastPrice, change: 0, percentChange: h.dayChangePercent };
+            const radarData = h.symbol ? radarMap[h.symbol.toUpperCase()] : null;
+            const tierCode = radarData?.tier_code || radarData?.tier;
+
+            const price = quote?.price ?? h.lastPrice ?? 0;
+            const change = quote?.change ?? 0;
+            const percentChange = quote?.percentChange ?? h.dayChangePercent ?? 0;
+
+            const displayStockPercent = getStockTimeframeReturn(h.symbol, percentChange, h.totalReturnPercent);
+            const isDisplayStockPos = displayStockPercent >= 0;
+
+            let formattedPrice = price.toFixed(2);
+            if (price > 1000) {
+              formattedPrice = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            return (
+              <div
+                key={h.symbol}
+                onClick={() => setSelectedSymbol(h.symbol)}
+                className="px-4 py-3 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.06] transition-all cursor-pointer group"
+              >
+                {/* Left: 7 Matrix Symbol + Ticker + Weight & Shares/Value */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <TierBadgeIndicator symbol={h.symbol} radarData={radarData} />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-base font-bold text-white tracking-tight font-mono">{h.symbol}</span>
+                      <span className="text-xs px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold font-mono">
+                        {h.weightPercent.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 font-mono">
+                      <span>{Number(h.quantity).toLocaleString('en-US', { maximumFractionDigits: 3 })} หุ้น</span>
+                      <span>•</span>
+                      <span>มูลค่า {formatPrimary(h.currentValue)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Price + Period Return Pill */}
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <div className="text-right font-mono">
+                    <div className="text-sm font-bold text-slate-100 tracking-tight">
+                      ${formattedPrice}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      {change !== 0 ? `${change > 0 ? '+' : ''}$${change.toFixed(2)}` : '--'}
+                    </div>
+                  </div>
+                  <span className={clsx(
+                    "inline-flex items-center text-xs font-bold px-2 py-1 rounded-md min-w-[66px] justify-center font-mono",
+                    isDisplayStockPos ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                  )}>
+                    {isDisplayStockPos ? '+' : ''}{displayStockPercent.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Cash Balance Row */}
+          <div className="px-4 py-2.5 bg-[#0D121F]/80 flex items-center justify-between text-xs border-t border-white/[0.04]">
+            <div className="flex items-center gap-2 text-slate-400 font-medium">
+              <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>เงินสดพร้อมลงทุน (Cash Balance)</span>
+            </div>
+            <div className="font-bold text-slate-200 font-mono">
+              {formatPrimary(cashBalance)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Stock Detail Drawer */}
+      <StockDetailDrawer
+        symbol={selectedSymbol}
+        isOpen={!!selectedSymbol}
+        onClose={() => setSelectedSymbol(null)}
+      />
+    </div>
+  );
+};

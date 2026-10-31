@@ -1,9 +1,9 @@
 ---
 name: plan
-version: "2.0.0"
-updated_at: "2026-09-28"
+version: "2.1.0"
+updated_at: "2026-10-21"
 description: >-
-  Masterpiece Implementation Plan Engine — สกิลวางแผนงานสถาปัตยกรรมระดับ Production Grade พร้อม Fact-Based Quality Gate รองรับ 3 โหมด: (1) Flash Plan (Rapid Surveyor กวาดไฟล์จริงใน 15 วิ), (2) Opus Masterplan (มหาเทพ 👁️‍🗨️ ไม้เดียวจบด้วย Evidence Ledger & Decision Matrix), และ (3) GPT Sol Plan (/plan sol ดึงพลัง Senior Architect ผ่าน MCP ฟรี 100%) บังคับ Evidence Ledger, Non-Goals, Data Contract, Rollback Plan และ Verification Gate ที่มีอยู่จริงก่อนลงมือโค้ด ใช้เมื่อ: /plan [โจทย์] หรือ /plan sol [โจทย์] หรือ /plan opus [โจทย์]
+  Masterpiece Implementation Plan Engine — สกิลวางแผนงานสถาปัตยกรรมระดับ Production Grade พร้อม Fact-Based Quality Gate รองรับ 3 โหมด: (1) Flash Plan (Rapid Surveyor กวาดไฟล์จริงใน 15 วิ), (2) Opus Masterplan (มหาเทพ 👁️‍🗨️ ไม้เดียวจบด้วย Evidence Ledger & Decision Matrix), และ (3) GPT Sol Plan (/plan sol ดึงพลัง Senior Architect ผ่าน MCP ฟรี 100%) บังคับชูโรง Open Questions เป็นข้อๆ หัวเอกสารคู่กับ Evidence Ledger, Non-Goals, Data Contract, Rollback Plan และ Verification Gate ที่มีอยู่จริงก่อนลงมือโค้ด ใช้เมื่อ: /plan [โจทย์] หรือ /plan sol [โจทย์] หรือ /plan opus [โจทย์]
 ---
 
 # 🧠 Skill: `/plan` (Masterpiece Implementation Plan Engine v2.0.0)
@@ -84,11 +84,20 @@ description: >-
 ```markdown
 # [ชื่อเป้าหมายงาน / Goal Description]
 
-สรุปภาพรวม 1-2 ย่อหน้า: ทำอะไร เพื่ออะไร และสถาปัตยกรรมภาพรวมเป็นแบบไหน
+> **Executive TL;DR:** สรุปภาพรวม 1-2 ย่อหน้า: ทำอะไร เพื่ออะไร และสถาปัตยกรรมภาพรวมเป็นแบบไหน
 
 ---
 
-## 🔍 1. Verified Facts, Assumptions & Open Questions (Evidence Ledger)
+## ❓ 1. Open Questions & Decisions Needed (รอ User ตัดสินใจ / ให้ความเห็น)
+*จุดสำคัญที่ต้องการคำตอบหรือการตัดสินใจจาก User ก่อนเริ่มลงมือโค้ด (จัดรูปแบบเป็นข้อๆ พร้อมระบุทางเลือก A vs B เพื่อให้ User ชี้เมาส์กดไอคอน 💬 คอมเมนต์เจาะจงแต่ละข้อได้ทันที)*:
+1. **[คำถามข้อที่ 1]:** 
+   - **ทางเลือก A (แนะนำ):** รายละเอียดและเหตุผลเชิงเทคนิค...
+   - **ทางเลือก B:** ทางเลือกสำรอง...
+2. **[คำถามข้อที่ 2]:** ...
+
+---
+
+## 🔍 2. Verified Facts & Assumptions (Evidence Ledger)
 แยกแยะความจริงที่ตรวจพบออกจากสมมติฐานอย่างเด็ดขาด:
 
 | ประเภท | รายละเอียด | หลักฐานอ้างอิง (ไฟล์ / บรรทัด / คำสั่ง) |
@@ -96,11 +105,10 @@ description: >-
 | **Verified Fact** | โค้ดเดิมใช้ Express Route แบบ mount ใน server.js | [server.js](file:///c:/My%20Claw/Openclaw-VPS/server.js#L25) |
 | **Verified Fact** | ไม่มีคำสั่ง npm test ใน package.json แต่มี test.js ใน tools/ | [package.json](file:///c:/My%20Claw/Openclaw-VPS/package.json) |
 | **Assumption** | ผู้ใช้ต้องการให้บันทึกข้อมูลแบบ Append-only ไม่ลบของเก่า | อนุมานจากพฤติกรรมของระบบ Quick Save |
-| **Open Question** | ถ้า Network Timeout ควร Retry กี่รอบก่อนแจ้ง Error? | [รอ User ตัดสินใจ] |
 
 ---
 
-## 🎯 2. Acceptance Criteria & Non-Goals (ขอบเขตงาน)
+## 🎯 3. Acceptance Criteria & Non-Goals (ขอบเขตงาน)
 ### ✅ Acceptance Criteria (เกณฑ์ชี้ขาดว่างานเสร็จจริง)
 1. API `/api/xxx` ตอบกลับ HTTP 200 พร้อม Schema ที่ถูกต้องภายใน 500ms
 2. หน้า UI แสดงผลถูกต้องทั้ง Desktop (1440px) และ Mobile (390px)
@@ -112,7 +120,7 @@ description: >-
 
 ---
 
-## ⚖️ 3. Decision Matrix (สิ่งที่ต้อง REUSE vs BUILD NEW)
+## ⚖️ 4. Decision Matrix (สิ่งที่ต้อง REUSE vs BUILD NEW)
 | Component / Logic | การตัดสินใจ (Action) | เหตุผลเชิงสถาปัตยกรรม |
 |---|---|---|
 | เช่น Existing Auth Middleware | **REUSE** (ห้ามสร้างใหม่) | ป้องกันช่องโหว่ความปลอดภัย และลดโค้ดซ้ำซ้อน |
@@ -120,7 +128,7 @@ description: >-
 
 ---
 
-## 📐 4. Proposed Changes (รายการไฟล์และพิกัดจริง)
+## 📐 5. Proposed Changes (รายการไฟล์และพิกัดจริง)
 แยกหมวดหมู่ตาม Component อย่างเป็นระเบียบ:
 
 ### [Component / Layer Name]
@@ -134,21 +142,21 @@ description: >-
 
 ---
 
-## 📦 5. Data Contracts, Migration & Rollback
+## 📦 6. Data Contracts, Migration & Rollback
 - **Data Schema:** Input / Output Payload ตัวอย่าง
 - **Idempotency & Dedup Key:** คีย์ป้องกันข้อมูลซ้ำซ้อน
 - **Rollback Strategy:** หากระบบล่ม จะย้อนกลับอย่างไร (เช่น กู้ไฟล์จาก Git, รันคำสั่ง Revert)
 
 ---
 
-## 🛡️ 6. Failure Modes, Security & Edge Cases Armor
+## 🛡️ 7. Failure Modes, Security & Edge Cases Armor
 - **Timeout Defense:** การรับมือขีดจำกัดเวลา (180s ของ IDE หรือ Network Drop)
 - **Input Edge Cases:** การจัดการค่า Null / Empty / ข้อมูลผิดรูปแบบ
 - **Lifecycle & Memory:** การเคลียร์ Timer, Event Listener หรือ Process ตกค้าง
 
 ---
 
-## 🧪 7. Concrete Verification Plan (คำสั่งที่มีอยู่จริง)
+## 🧪 8. Concrete Verification Plan (คำสั่งที่มีอยู่จริง)
 *(ต้องตรวจสอบ package.json หรือ tools/ ก่อน ห้ามมโนคำสั่งเทส)*
 
 ### Automated Verification Commands
@@ -163,7 +171,7 @@ node "tools/test_feature.js"
 
 ---
 
-## 🚦 8. Plan Quality Gate (เช็คลิสต์ตรวจความแน่นหนา)
+## 🚦 9. Plan Quality Gate (เช็คลิสต์ตรวจความแน่นหนา)
 ก่อนเริ่มเขียนโค้ด ต้องผ่านเกณฑ์ทั้ง 5 ข้อ:
 - [ ] ไฟล์ที่ [MODIFY] ทุกไฟล์มีพิกัดจริงและเปิดตรวจแล้ว
 - [ ] ไฟล์ที่ [PROPOSED NEW] ระบุ Parent Directory ที่มีอยู่จริง

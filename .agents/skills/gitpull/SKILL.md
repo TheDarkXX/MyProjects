@@ -2,7 +2,8 @@
 name: gitpull
 version: "2.0.0"
 updated_at: "2026-09-28"
-description: Safe Git Sync, Auto-Commit Pending Work, Executive Briefing, and Unfinished Task Hunter
+description: >-
+  Safe Git Sync, Auto-Commit Pending Work, Executive Briefing, and Unfinished Task Hunter
 ---
 
 # 🔄 Skill: /gitpull (Safe Sync & Executive Resume Officer v2.0.0)

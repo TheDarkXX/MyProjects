@@ -1,6 +1,7 @@
 import React from 'react';
 import { Landmark, TrendingUp, TrendingDown, Activity, Coins, Wallet } from 'lucide-react';
 import clsx from 'clsx';
+import { DashboardTimeRange } from '../../../components/dashboard/MultiPeriodReturnStrip';
 
 interface QuickStatsStripProps {
   netInvested: number;
@@ -12,6 +13,9 @@ interface QuickStatsStripProps {
   dividendYieldOnCost: number;
   cashBalance: number;
   formatPrimary: (val: number, isChange?: boolean) => string;
+  timeRange?: DashboardTimeRange;
+  periodPnl?: number;
+  periodPnlPercent?: number;
 }
 
 export const QuickStatsStrip: React.FC<QuickStatsStripProps> = ({
@@ -24,81 +28,85 @@ export const QuickStatsStrip: React.FC<QuickStatsStripProps> = ({
   dividendYieldOnCost,
   cashBalance,
   formatPrimary,
+  timeRange = '1W',
+  periodPnl,
+  periodPnlPercent,
 }) => {
   const isTotalPos = totalPnl >= 0;
   const isTodayPos = todaysProfit >= 0;
 
-  const STATS = [
-    {
-      title: 'Net Invested',
-      value: formatPrimary(netInvested),
-      subtext: 'Principal Capital',
-      icon: Landmark,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-500/10',
-      borderColor: 'border-blue-500/20',
-    },
-    {
-      title: 'Total P&L',
-      value: `${isTotalPos ? '+' : ''}${formatPrimary(totalPnl, true)}`,
-      subtext: `${isTotalPos ? '+' : ''}${totalPnlPercent.toFixed(2)}% Return`,
-      icon: isTotalPos ? TrendingUp : TrendingDown,
-      color: isTotalPos ? 'text-emerald-400' : 'text-rose-400',
-      bgColor: isTotalPos ? 'bg-emerald-500/10' : 'bg-rose-500/10',
-      borderColor: isTotalPos ? 'border-emerald-500/20' : 'border-rose-500/20',
-    },
-    {
-      title: "Today's P&L",
-      value: `${isTodayPos ? '+' : ''}${formatPrimary(todaysProfit, true)}`,
-      subtext: `${isTodayPos ? '+' : ''}${todaysProfitPercent.toFixed(2)}% Today`,
-      icon: Activity,
-      color: isTodayPos ? 'text-emerald-400' : 'text-rose-400',
-      bgColor: isTodayPos ? 'bg-emerald-500/10' : 'bg-rose-500/10',
-      borderColor: isTodayPos ? 'border-emerald-500/20' : 'border-rose-500/20',
-    },
-    {
-      title: 'Dividends',
-      value: formatPrimary(totalDividends),
-      subtext: `${dividendYieldOnCost.toFixed(2)}% Yield on Cost`,
-      icon: Coins,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-500/10',
-      borderColor: 'border-amber-500/20',
-    },
-  ];
+  const activePeriodPnl = periodPnl !== undefined ? periodPnl : (timeRange === '1D' ? todaysProfit : totalPnl);
+  const activePeriodPct = periodPnlPercent !== undefined ? periodPnlPercent : (timeRange === '1D' ? todaysProfitPercent : totalPnlPercent);
+  const isPeriodPos = activePeriodPnl >= 0;
 
   return (
-    <div className="w-full space-y-2 select-none">
-      <div className="text-xs font-bold text-slate-400 px-1 font-heading">
-        📊 Portfolio Highlights
-      </div>
-      <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 snap-x snap-mandatory">
-        {STATS.map((s, idx) => {
-          const Icon = s.icon;
-          return (
-            <div
-              key={idx}
-              className="min-w-[145px] sm:min-w-[160px] flex-1 bg-[#111418] border border-[#2A2E45]/80 rounded-2xl p-3.5 shadow-sm snap-start shrink-0 flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-medium text-slate-400 truncate">
-                  {s.title}
-                </span>
-                <div className={clsx("w-6 h-6 rounded-lg flex items-center justify-center border", s.bgColor, s.borderColor, s.color)}>
-                  <Icon className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div>
-                <div className={clsx("text-sm sm:text-base font-black font-mono tracking-tight", s.color)}>
-                  {s.value}
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5 truncate font-mono">
-                  {s.subtext}
-                </div>
-              </div>
+    <div className="w-full select-none">
+      <div className="bg-[#0B0F17]/95 border border-white/[0.08] rounded-2xl p-3 shadow-xl">
+        <div className="grid grid-cols-3 divide-x divide-white/[0.06]">
+          {/* Pillar 1: Net Invested */}
+          <div className="px-2 text-center flex flex-col justify-between">
+            <span className="text-xs text-slate-400 font-medium">Net Invested</span>
+            <div className="text-sm sm:text-base font-bold text-slate-100 font-mono tracking-tight my-1">
+              {formatPrimary(netInvested)}
             </div>
-          );
-        })}
+            <span className="text-xs text-slate-400 truncate">เงินต้นสุทธิ</span>
+          </div>
+
+          {/* Pillar 2: Period Return (Dynamic to selected timeRange) */}
+          <div className="px-2 text-center flex flex-col justify-between">
+            <span className="text-xs text-slate-400 font-medium truncate">
+              {timeRange === 'ALL' ? 'Total P&L' : `${timeRange} Return`}
+            </span>
+            <div className={clsx(
+              "text-sm sm:text-base font-bold font-mono tracking-tight my-1",
+              isPeriodPos ? "text-emerald-400" : "text-rose-400"
+            )}>
+              {isPeriodPos ? '+' : ''}{formatPrimary(activePeriodPnl, true)}
+            </div>
+            <span className={clsx(
+              "text-xs font-semibold truncate",
+              isPeriodPos ? "text-emerald-400/90" : "text-rose-400/90"
+            )}>
+              {isPeriodPos ? '+' : ''}{activePeriodPct.toFixed(2)}%
+            </span>
+          </div>
+
+          {/* Pillar 3: Today's P&L (or Lifetime if timeRange is 1D) */}
+          <div className="px-2 text-center flex flex-col justify-between">
+            <span className="text-xs text-slate-400 font-medium truncate">
+              {timeRange === '1D' ? 'Lifetime P&L' : "Today's P&L"}
+            </span>
+            <div className={clsx(
+              "text-sm sm:text-base font-bold font-mono tracking-tight my-1",
+              (timeRange === '1D' ? isTotalPos : isTodayPos) ? "text-emerald-400" : "text-rose-400"
+            )}>
+              {timeRange === '1D'
+                ? `${isTotalPos ? '+' : ''}${formatPrimary(totalPnl, true)}`
+                : `${isTodayPos ? '+' : ''}${formatPrimary(todaysProfit, true)}`}
+            </div>
+            <span className={clsx(
+              "text-xs font-semibold truncate",
+              (timeRange === '1D' ? isTotalPos : isTodayPos) ? "text-emerald-400/90" : "text-rose-400/90"
+            )}>
+              {timeRange === '1D'
+                ? `${isTotalPos ? '+' : ''}${totalPnlPercent.toFixed(2)}%`
+                : `${isTodayPos ? '+' : ''}${todaysProfitPercent.toFixed(2)}%`}
+            </span>
+          </div>
+        </div>
+
+        {/* Optional Dividends Sub-Bar */}
+        {totalDividends > 0 && (
+          <div className="mt-2.5 pt-2 border-t border-white/[0.04] flex items-center justify-between px-2 text-xs">
+            <span className="text-slate-400 font-medium flex items-center gap-1.5">
+              <span>🪙 ปันผลสะสม:</span>
+              <span className="text-amber-400 font-mono font-bold">{formatPrimary(totalDividends)}</span>
+            </span>
+            <span className="text-slate-400 font-mono">
+              Yield: <span className="text-slate-200 font-bold">{dividendYieldOnCost.toFixed(2)}%</span>
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

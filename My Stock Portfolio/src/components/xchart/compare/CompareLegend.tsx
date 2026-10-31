@@ -13,7 +13,9 @@ interface CompareLegendProps {
   dynamicBaseDate?: string | null;
   dynamicTargetReturn?: number | null;
   dynamicRefReturns?: Record<string, number | null>;
-  onOpenConfig: (activeSection?: 'target' | 'refs' | 'display') => void;
+  onOpenConfig: (activeSection?: 'target' | 'refs' | 'display', presetMode?: 'targets' | 'myport' | 'custom') => void;
+  onApplyPresetDirect?: (mode: 'targets' | 'myport' | 'custom') => void;
+  activePresetMode?: 'targets' | 'myport' | 'custom';
 }
 
 export const CompareLegend: React.FC<CompareLegendProps> = ({
@@ -25,9 +27,11 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
   dynamicTargetReturn,
   dynamicRefReturns,
   onOpenConfig,
+  onApplyPresetDirect,
+  activePresetMode,
 }) => {
   const { toggleCompareRefVisible, removeCompareRef } = useXChartStore();
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
 
   const formatPercent = (val: number | null | undefined) => {
     if (val == null || isNaN(val)) return '—';
@@ -258,14 +262,61 @@ export const CompareLegend: React.FC<CompareLegendProps> = ({
               )}
             </div>
 
-            {/* Quick Add Ref Action */}
-            <div className="pt-1.5 flex items-center justify-between">
+            {/* Quick Presets 3-Button Strip (2X Targets, My Port, Custom) */}
+            <div className="pt-2 border-t border-[#1F2538] space-y-1.5">
+              <div className="text-[11px] text-slate-400 font-semibold px-0.5 flex items-center justify-between">
+                <span>Presets ด่วน:</span>
+                <span className="text-[10px] text-amber-400 font-mono">1-Click</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  onClick={() => onApplyPresetDirect ? onApplyPresetDirect('targets') : onOpenConfig('refs', 'targets')}
+                  className={clsx(
+                    "px-1.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1",
+                    activePresetMode === 'targets'
+                      ? "bg-amber-500/25 border-amber-500/50 text-amber-300 shadow-xs"
+                      : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 text-slate-300 hover:text-white"
+                  )}
+                  title="สลับเปรียบเทียบ Project 2X Targets (13 ตัว) ทันที"
+                >
+                  <span>🎯 2X</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onApplyPresetDirect ? onApplyPresetDirect('myport') : onOpenConfig('refs', 'myport')}
+                  className={clsx(
+                    "px-1.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1",
+                    activePresetMode === 'myport'
+                      ? "bg-emerald-500/25 border-emerald-500/50 text-emerald-300 shadow-xs"
+                      : "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-slate-300 hover:text-white"
+                  )}
+                  title="สลับเปรียบเทียบหุ้นในพอร์ต (My Port) ทันที"
+                >
+                  <span>💼 Port</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onApplyPresetDirect ? onApplyPresetDirect('custom') : onOpenConfig('refs', 'custom')}
+                  className={clsx(
+                    "px-1.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1",
+                    activePresetMode === 'custom'
+                      ? "bg-cyan-500/25 border-cyan-500/50 text-cyan-300 shadow-xs"
+                      : "bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20 text-slate-300 hover:text-white"
+                  )}
+                  title="สลับเปรียบเทียบ Custom & Benchmarks ทันที"
+                >
+                  <span>⚡ Custom</span>
+                </button>
+              </div>
+
+              {/* + เพิ่ม Ref Ticker / Search */}
               <button
-                onClick={() => onOpenConfig('refs')}
-                className="w-full flex items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white border border-cyan-500/20 hover:border-cyan-500/40 text-xs font-semibold transition-all cursor-pointer"
+                onClick={() => onOpenConfig('refs', 'targets')}
+                className="w-full flex items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 hover:border-cyan-500/40 text-xs font-semibold transition-all cursor-pointer mt-1"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ เพิ่ม Ref Ticker / Benchmark</span>
+                <Plus className="w-3.5 h-3.5 text-cyan-400" />
+                <span>+ ค้นหา / เพิ่ม Ticker อื่นๆ</span>
               </button>
             </div>
           </div>

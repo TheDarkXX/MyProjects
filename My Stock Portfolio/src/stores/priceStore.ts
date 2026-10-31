@@ -15,13 +15,25 @@ interface PriceState {
   fetchExchangeRate: (from?: string, to?: string) => Promise<void>;
 }
 
-const PRICES_CACHE_KEY = 'stock_prices_cache_v1';
+const PRICES_CACHE_KEY = 'stock_prices_cache_v2';
+const PRICES_TIME_KEY = 'stock_prices_cache_time_v2';
 const HISTORICAL_CACHE_KEY = 'stock_historical_cache_v1';
 const EXCHANGERATE_CACHE_KEY = 'stock_exchange_rate_cache_v1';
 
 const getInitialPrices = (): Record<string, { price: number; change: number; percent_change: number }> => {
   try {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem(PRICES_CACHE_KEY) : null;
+    if (typeof window === 'undefined') return {};
+    // Clean up old v1 stale cache
+    try {
+      localStorage.removeItem('stock_prices_cache_v1');
+    } catch {}
+    
+    const timeStr = localStorage.getItem(PRICES_TIME_KEY);
+    // If cache is older than 10 minutes or absent, start fresh
+    if (!timeStr || Date.now() - Number(timeStr) > 10 * 60 * 1000) {
+      return {};
+    }
+    const raw = localStorage.getItem(PRICES_CACHE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -86,6 +98,7 @@ export const usePriceStore = create<PriceState>((set, get) => ({
         const nextPrices = { ...state.prices, ...data };
         try {
           localStorage.setItem(PRICES_CACHE_KEY, JSON.stringify(nextPrices));
+          localStorage.setItem(PRICES_TIME_KEY, String(Date.now()));
         } catch {}
         return { 
           prices: nextPrices,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useUiStore } from '../../stores/uiStore';
-import { LayoutDashboard, Rocket, CandlestickChart, Scale, Menu } from 'lucide-react';
+import { Sparkles, Briefcase, CandlestickChart, Menu } from 'lucide-react';
 import { MobileMoreSheet } from './MobileMoreSheet';
 import clsx from 'clsx';
 
@@ -9,7 +9,8 @@ export const MobileNavBar: React.FC = () => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const TABS = [
-    { id: 'dashboard', label: 'Portfolio', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Watchlist', icon: Sparkles },
+    { id: 'myport', label: 'My Port', icon: Briefcase },
     { id: 'xchart', label: 'Charts', icon: CandlestickChart },
     { id: 'more', label: 'More', icon: Menu, isMore: true },
   ];
@@ -23,7 +24,7 @@ export const MobileNavBar: React.FC = () => {
   };
 
   // Check if current active tab is one of the secondary tabs handled by More
-  const isMoreActive = !['dashboard', 'xchart'].includes(activeTab);
+  const isMoreActive = !['dashboard', 'myport', 'xchart'].includes(activeTab);
 
   return (
     <>
@@ -55,8 +56,8 @@ export const MobileNavBar: React.FC = () => {
                 </div>
 
                 <span className={clsx(
-                  "text-[10px] sm:text-[11px] tracking-tight font-medium font-heading transition-all",
-                  isActive ? "font-bold text-white" : "text-slate-400"
+                  "text-xs tracking-tight font-medium font-heading transition-all",
+                  isActive ? "font-bold text-white" : "text-slate-300"
                 )}>
                   {tab.label}
                 </span>

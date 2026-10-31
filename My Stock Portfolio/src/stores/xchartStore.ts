@@ -10,7 +10,7 @@ export type TimeFrame = '7D' | '1M' | '3M' | '6M' | '10M' | '1Y' | 'ALL';
 export type ChartStyle = 'CANDLE' | 'HEIKIN_ASHI' | 'AREA';
 export type Resolution = '1D' | '1W' | '4H';
 
-export type CompareTimeFrame = '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX';
+export type CompareTimeFrame = '1W' | '1Wk' | '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX';
 
 export interface CompareLineStyleConfig {
   color: string;
@@ -138,6 +138,32 @@ export const DEFAULT_COMPARE_TARGET_STYLE: CompareLineStyleConfig = {
   pointMarkersRadius: 4,
 };
 
+export interface Project2XComparePreset {
+  symbol: string;
+  name: string;
+  color: string;
+  category: 'Core' | 'Moonshot';
+  target_percent: number;
+}
+
+export const PROJECT_2X_COMPARE_PRESETS: Project2XComparePreset[] = [
+  // Core Commanders (83%)
+  { symbol: 'NVDA', name: 'NVIDIA Corp', color: '#22C55E', category: 'Core', target_percent: 15.0 },
+  { symbol: 'TSM', name: 'TSMC ADR', color: '#38BDF8', category: 'Core', target_percent: 10.0 },
+  { symbol: 'AVGO', name: 'Broadcom Inc', color: '#EC4899', category: 'Core', target_percent: 10.0 },
+  { symbol: 'VRT', name: 'Vertiv Holdings', color: '#F59E0B', category: 'Core', target_percent: 10.0 },
+  { symbol: 'MELI', name: 'MercadoLibre', color: '#EAB308', category: 'Core', target_percent: 10.0 },
+  { symbol: 'APH', name: 'Amphenol Corp', color: '#06B6D4', category: 'Core', target_percent: 10.0 },
+  { symbol: 'KLAC', name: 'KLA Corp', color: '#8B5CF6', category: 'Core', target_percent: 7.0 },
+  { symbol: 'ANET', name: 'Arista Networks', color: '#10B981', category: 'Core', target_percent: 7.0 },
+  { symbol: 'CRWD', name: 'CrowdStrike', color: '#F43F5E', category: 'Core', target_percent: 4.0 },
+  // Moonshot Strikes (11%)
+  { symbol: 'STRL', name: 'Sterling Infra', color: '#3B82F6', category: 'Moonshot', target_percent: 3.0 },
+  { symbol: 'ALAB', name: 'Astera Labs', color: '#A855F7', category: 'Moonshot', target_percent: 3.0 },
+  { symbol: 'PLTR', name: 'Palantir Tech', color: '#F97316', category: 'Moonshot', target_percent: 3.0 },
+  { symbol: 'RKLB', name: 'Rocket Lab USA', color: '#14B8A6', category: 'Moonshot', target_percent: 2.0 },
+];
+
 export const DEFAULT_COMPARE_PRESETS = [
   { symbol: 'SCHG', name: 'Schwab Growth ETF', color: '#38BDF8' },
   { symbol: 'GOOGL', name: 'Alphabet / Google', color: '#4285F4' },
@@ -157,6 +183,17 @@ export interface CompareBundleItem {
 }
 
 export const COMPARE_BUNDLES: CompareBundleItem[] = [
+  {
+    id: 'project2x',
+    name: 'Project 2X Targets (13)',
+    icon: '🎯',
+    description: '13 หุ้นเป้าหมาย: NVDA, TSM, AVGO, VRT, MELI, APH, KLAC, ANET, CRWD, STRL, ALAB, PLTR, RKLB',
+    tickers: PROJECT_2X_COMPARE_PRESETS.map((p) => ({
+      symbol: p.symbol,
+      name: p.name,
+      color: p.color,
+    })),
+  },
   {
     id: 'mag7',
     name: 'Mag 7 Titans',
@@ -215,8 +252,9 @@ export const COMPARE_BUNDLES: CompareBundleItem[] = [
 export function createDefaultCompareConfig(symbol: string): CompareTabConfig {
   const cleanTarget = (symbol || 'NVDA').trim().toUpperCase();
   // Filter out target symbol so it does not duplicate as a reference
-  const candidatePresets = DEFAULT_COMPARE_PRESETS.filter((p) => p.symbol !== cleanTarget);
-  // Default refs requested by user: SCHG, GOOGL, NVDA, GLD, BTC-USD (or SPY/QQQ if target matches one)
+  // Default to Project 2X Target Stocks as requested by user
+  const candidatePresets = PROJECT_2X_COMPARE_PRESETS.filter((p) => p.symbol !== cleanTarget);
+  // Default to top 5 Project 2X peer targets
   const selectedPresets = candidatePresets.slice(0, 5);
 
   const refs: CompareRefSeries[] = selectedPresets.map((p, idx) => ({
@@ -309,7 +347,7 @@ interface XChartState {
   moveSection: (fromIndex: number, toIndex: number) => void;
   setWatchlistSections: (nextSections: WatchlistSection[]) => void;
   toggleWatchlistDetail: () => void;
-  fetchWatchlistQuotes: () => Promise<void>;
+  fetchWatchlistQuotes: (extraSymbols?: string[]) => Promise<void>;
   resetToTVWatchlist: () => void;
   // Compare tab actions
   updateCompareConfig: (tabId: string, config: Partial<CompareTabConfig>) => void;
@@ -319,6 +357,7 @@ interface XChartState {
   updateCompareRefStyle: (tabId: string, refId: string, style: Partial<CompareLineStyleConfig>) => void;
   updateCompareTargetStyle: (tabId: string, style: Partial<CompareLineStyleConfig>) => void;
   applyCompareBundle: (tabId: string, bundleId: string) => void;
+  applyCompareTickers: (tabId: string, tickers: { symbol: string; name?: string; color?: string }[]) => void;
 
   applyCloudTabs: (data: { tabs: XChartTab[]; activeTabId?: string }) => void;
   applyCloudWatchlist: (sections: WatchlistSection[]) => void;
@@ -1029,11 +1068,12 @@ export const useXChartStore = create<XChartState>((set, get) => ({
     }
   },
 
-  fetchWatchlistQuotes: async () => {
+  fetchWatchlistQuotes: async (extraSymbols: string[] = []) => {
     const { watchlistSections, watchlistPrices } = get();
     const sectionSymbols = watchlistSections.flatMap((s) => s.symbols);
     const INDEX_SYMBOLS = ['SPY', 'QQQ', 'SCHG', 'BTC-USD', 'GLD', 'USO', 'UUP', 'SMH', 'TLT'];
-    const allSymbols = [...new Set([...sectionSymbols, ...INDEX_SYMBOLS])];
+    const TARGET_SYMBOLS = ['NVDA', 'TSM', 'AVGO', 'VRT', 'MELI', 'APH', 'KLAC', 'ANET', 'CRWD', 'STRL', 'ALAB', 'PLTR', 'RKLB'];
+    const allSymbols = [...new Set([...sectionSymbols, ...INDEX_SYMBOLS, ...TARGET_SYMBOLS, ...extraSymbols])].filter(Boolean);
     if (allSymbols.length === 0) return;
 
     set({ watchlistLoading: true });
@@ -1236,6 +1276,44 @@ export const useXChartStore = create<XChartState>((set, get) => ({
         pointMarkersVisible: false,
         pointMarkersRadius: 3,
       }));
+
+    get().updateCompareConfig(tabId, { refs: newRefs });
+  },
+
+  applyCompareTickers: (tabId, tickers) => {
+    const currentTab = get().tabs.find((t) => t.id === tabId);
+    const targetSymbol = (currentTab?.symbol || 'NVDA').trim().toUpperCase();
+
+    const usedColors = new Set<string>();
+    const palette = [
+      '#38BDF8', '#22C55E', '#F59E0B', '#A855F7', '#EC4899',
+      '#06B6D4', '#EAB308', '#F97316', '#3B82F6', '#10B981',
+      '#8B5CF6', '#F43F5E', '#14B8A6', '#6366F1'
+    ];
+
+    const newRefs: CompareRefSeries[] = tickers
+      .filter((t) => t.symbol && t.symbol.trim().toUpperCase() !== targetSymbol)
+      .map((t, idx) => {
+        const cleanSym = t.symbol.trim().toUpperCase();
+        let color = t.color;
+        if (!color || usedColors.has(color)) {
+          color = palette.find((c) => !usedColors.has(c)) || palette[idx % palette.length];
+        }
+        usedColors.add(color);
+
+        return {
+          id: `ref-${cleanSym.toLowerCase()}-${Date.now()}-${idx}`,
+          symbol: cleanSym,
+          name: t.name || cleanSym,
+          color,
+          lineWidth: 2,
+          lineStyle: 'SOLID',
+          opacity: 0.85,
+          visible: true,
+          pointMarkersVisible: false,
+          pointMarkersRadius: 3,
+        };
+      });
 
     get().updateCompareConfig(tabId, { refs: newRefs });
   },

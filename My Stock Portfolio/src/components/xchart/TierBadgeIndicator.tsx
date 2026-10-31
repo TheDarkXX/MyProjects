@@ -68,12 +68,20 @@ export function getTierVisualInfo(
     };
   }
 
-  const traffic_light = (radarData as any).traffic_light || (radarData as any).trafficLight;
-  const { badge, scenario, reason_th, reason } = radarData;
+  let rData = radarData as any;
+  if (typeof rData === 'string') {
+    rData = { traffic_light: rData, badge: rData };
+  }
+
+  const traffic_light = rData?.traffic_light || rData?.trafficLight || rData?.tier_code || rData?.tier || rData?.status;
+  const badge = rData?.badge || '';
+  const scenario = rData?.scenario;
+  const reason_th = rData?.reason_th;
+  const reason = rData?.reason;
   const upperBadge = (badge || '').toUpperCase();
 
   // Tier 1: BUY NOW!! 🔥 (The Solar Fire Orb)
-  if (traffic_light === 'BUY_NOW') {
+  if (traffic_light === 'BUY_NOW' || upperBadge.includes('BUY NOW')) {
     return {
       tierId: 'BUY_NOW',
       icon: '🔥',
@@ -90,9 +98,27 @@ export function getTierVisualInfo(
     };
   }
 
+  // Tier 1.5: BUY ZONE 💰
+  if (traffic_light === 'BUY_ZONE' || upperBadge.includes('BUY ZONE')) {
+    return {
+      tierId: 'BUY_ZONE',
+      icon: '💰',
+      label: 'BUY ZONE',
+      subLabel: 'โซนสะสมไม้แรก ทยอย DCA',
+      scenarioNum: scenario,
+      scenarioTitle: badge,
+      reasonTh: reason_th || reason,
+      spineClass: 'bg-[#14B8A6] shadow-[0_0_8px_rgba(20,184,166,0.85)]',
+      badgeClass: 'text-teal-300',
+      textGlowClass: 'text-teal-300 font-semibold',
+      isRecognized: true
+    };
+  }
+
   // Tier 2: TO THE MOON 🚀 / MOON (No Chase) ⛔
-  const isNoChaseBadge = upperBadge.includes('NO CHASE') || upperBadge.includes('⛔') || (upperBadge.includes('MOON') && !upperBadge.includes('MOONSHOT'));
-  if (traffic_light === 'TO_THE_MOON' || isNoChaseBadge) {
+  const isNoChaseBadge = upperBadge.includes('NO CHASE') || upperBadge.includes('⛔');
+  const isRunnerBadge = upperBadge.includes('RUNNER');
+  if (!isRunnerBadge && (traffic_light === 'TO_THE_MOON' || isNoChaseBadge)) {
     const isNoChase = isNoChaseBadge;
     return {
       tierId: 'TO_THE_MOON',
@@ -204,6 +230,23 @@ export function getTierVisualInfo(
     };
   }
 
+  // Tier 8: WAIT ⏳
+  if (traffic_light === 'WAIT' || upperBadge.includes('WAIT')) {
+    return {
+      tierId: 'WAIT',
+      icon: '⏳',
+      label: 'WAIT',
+      subLabel: 'รอสัญญาณคอนเฟิร์ม',
+      scenarioNum: scenario,
+      scenarioTitle: badge,
+      reasonTh: reason_th || reason,
+      spineClass: 'bg-slate-500 shadow-[0_0_8px_rgba(100,116,139,0.5)]',
+      badgeClass: 'text-slate-300',
+      textGlowClass: 'text-slate-300',
+      isRecognized: true
+    };
+  }
+
   // Default fallback
   return {
     tierId: 'WATCHLIST',
@@ -215,9 +258,12 @@ export function getTierVisualInfo(
   };
 }
 
-interface TierBadgeIndicatorProps {
-  symbol: string;
-  radarData?: RadarRow | null;
+export interface TierBadgeIndicatorProps {
+  symbol?: string;
+  radarData?: any;
+  tier?: string;
+  size?: 'xs' | 'sm' | 'md';
+  showLabel?: boolean;
   isCurrency?: boolean;
   onHover?: (rect: DOMRect, info: TierVisualInfo, radarData?: RadarRow | null) => void;
   onLeave?: () => void;
@@ -227,13 +273,15 @@ interface TierBadgeIndicatorProps {
  * Micro-Badge Indicator Component (Clean Frameless Icon)
  */
 export const TierBadgeIndicator: React.FC<TierBadgeIndicatorProps> = ({
-  symbol,
+  symbol = '',
   radarData,
+  tier,
   isCurrency = false,
   onHover,
   onLeave,
 }) => {
-  const info = getTierVisualInfo(radarData, symbol, isCurrency);
+  const effectiveRadarData = radarData || (tier ? { traffic_light: tier, badge: tier } : null);
+  const info = getTierVisualInfo(effectiveRadarData, symbol, isCurrency);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLSpanElement>) => {
     if (onHover && info.isRecognized) {

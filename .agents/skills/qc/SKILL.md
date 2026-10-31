@@ -1,18 +1,26 @@
 ---
 name: qc
-version: "2.0.0"
-updated_at: "2026-09-29"
-description: "Quick Clear & Workspace Hygiene Engine — สแกนทำความสะอาด Quick Save, จัดระเบียบ Component Folders, กำจัด Ghost Files และ Re-index Search Manifest อัตโนมัติ"
+version: "3.1.0"
+updated_at: "2026-10-30"
+description: >-
+  Quick Clear & Workspace Hygiene Engine V3 — สแกนตรวจสอบความสะอาด Quick Save,
+  ตรวจสอบงานค้างจริง vs ค้างหลอก (Active Reality Radar), กำจัด Ghost Files,
+  คุม Floating Files ใน Complete และ Re-index Search Manifest อัตโนมัติ
 ---
-# 🧹 Skill: `/qc` (Quick Clear & Workspace Hygiene Engine V2)
+# 🧹 Skill: `/qc` (Quick Clear & Workspace Hygiene Engine V3 — Active Reality Radar)
 
 ## Objective
 สแกนตรวจสอบความสะอาดของทั้ง Workspace อย่างเป็นระบบด้วย **Automated QC Engine (`scripts/qc-audit.js`)** ครอบคลุม:
 1. **Root Folder Hygiene:** ตรวจสอบไฟล์ Script ที่หน้าบ้าน (Root) ต้องไม่เกิน 20 ไฟล์และต้องอยู่ใน LOCKED list
-2. **Recursive Ghost Scan:** สแกนเจาะลึกทุก Component Folder ใน `Quick Save/Active/` เพื่อตรวจหา Ghost Files (ไฟล์ที่เสร็จและอยู่ใน `Complete/` แล้ว) แล้วลบทิ้ง
-3. **Loose Files Enforcer:** ตรวจจับไฟล์ที่วางทิ้งลอยๆ ที่หน้าบ้าน `Quick Save/Active/` นอกโฟลเดอร์ Component
-4. **Complete Organization:** ตรวจสอบโฟลเดอร์ `Complete/<Component>/` ให้คงไฟล์ Floating ที่ Root ไม่เกิน 5-7 ไฟล์ตามกฎ
-5. **Mandatory Manifest Sync:** รัน Re-index `search-manifest.md` ทันทีหลังมีการย้ายหรือลบไฟล์ เพื่อป้องกัน Dead Link
+2. **Active Reality Radar (เช็คงานค้างจริง vs ค้างหลอก):** สแกนเจาะลึกไส้ในไฟล์ `Quick Save/Active/` ทุกอันเพื่อพิสูจน์สถานะจริง:
+   - 🟢 **Genuine Active:** มี Task ค้าง `[ ]` และกำลังทำอยู่จริง (Work in progress)
+   - 🔴 **False Active:** ติ๊ก `[x]` ครบ 100% แล้ว หรือมีข้อความจบงาน (COMPLETED/DEPLOYED) แต่ลืมแก้ frontmatter และยังไม่ได้ย้ายไป `Complete/`
+   - ❄️ **Stale / Dormant:** งานค้างที่ไม่มีความคืบหน้านานเกิน 30 วัน (แนะนำให้รีวิวหรือย้ายเข้า `Icebox/`)
+   - 🟡 **Untasked Deliverables:** เอกสารประเภท Study / Docs ที่ไม่มี Checklist และเก่าเกิน 14 วัน (ตรวจสอบว่าศึกษาเสร็จแล้วหรือยัง)
+3. **Recursive Ghost Scan:** สแกนเจาะลึกทุก Component Folder ใน `Quick Save/Active/` เพื่อตรวจหา Ghost Files (ไฟล์ที่เสร็จและอยู่ใน `Complete/` แล้ว) แล้วลบทิ้งอย่างปลอดภัยผ่าน Safe Quarantine
+4. **Loose Files Enforcer:** ตรวจจับไฟล์ที่วางทิ้งลอยๆ ที่หน้าบ้าน `Quick Save/Active/` นอกโฟลเดอร์ Component
+5. **Complete Organization:** ตรวจสอบโฟลเดอร์ `Complete/<Component>/` ให้คงไฟล์ Floating ที่ Root ไม่เกิน 5-7 ไฟล์ตามกฎ SemVer
+6. **Mandatory Manifest Sync:** รัน Re-index `search-manifest.md` ทันทีหลังมีการย้ายหรือลบไฟล์ เพื่อป้องกัน Dead Link
 
 > ⚠️ **CRITICAL WARNING FOR AI AGENTS:**
 > 1. **PowerShell `[]` Wildcard:** ชื่อไฟล์ Quick Save มีเครื่องหมายก้ามปู `[impl]`, `[hotfix]` ซึ่ง PowerShell จะมองเป็น Wildcard หากใช้ `Move-Item` หรือ `Remove-Item` แบบปกติจะล้มเหลวเงียบๆ **ต้องใช้ `-LiteralPath` หรือใช้ Node.js / `scripts/qc-audit.js` เท่านั้น**
@@ -31,30 +39,40 @@ node scripts/qc-audit.js
 สคริปต์จะทำการ:
 - ตรวจ Root Folder Scripts เทียบกับ LOCKED list
 - สแกน `Quick Save/Active/` แบบ Recursive ลึกทุกโฟลเดอร์ Component
-- ค้นหา Ghost Files ที่ซ้ำกับ `Quick Save/Complete/`
+- **[Phase 1b] รัน Active Reality Radar:** วิเคราะห์ Task Checkboxes (`[ ]` vs `[x]`), วันที่, และคีย์เวิร์ดจบงานของทุกไฟล์ใน Active
+- ค้นหา Ghost Files ที่ซ้ำกับ `Quick Save/Complete/` (ตรวจ SHA-256 Hash)
 - ตรวจสอบไฟล์ลอย (Loose Files) ที่ Root ของ `Active/`
 - ตรวจสอบจำนวน Floating Files ใน `Complete/Core-VPS/` (ต้องไม่เกิน 7 ไฟล์)
 
 ---
 
-### Step 2: Auto-Fix หรือสั่งสะสางตามหมวดหมู่
+### Step 2: สะสางตามผลตรวจ (Fix & Reality Reconciliation)
 
-#### Option A: รัน Auto-Fix ด้วย Engine (แนะนำ)
-หากพบ Ghost Files หรือไฟล์ที่ไม่ใช่ markdown (เช่น `.html`) ลอยอยู่ใน Active ให้รัน:
+#### Option A: รัน Auto-Fix & Auto-Promote ด้วย Engine (แนะนำ)
+หากพบ Ghost Files, Loose Files, ไฟล์ Floating เกินโควตา หรือเจอ **🔴 False Active (งานที่เสร็จแล้วแต่ยังคาใน Active)** ให้รันคำสั่งเดียวจบ:
 ```bash
 node scripts/qc-audit.js --fix
+# หรือ
+node scripts/qc-audit.js --promote
 ```
-สคริปต์จะลบ Ghost Files ทันที, ย้ายไฟล์ขยะไป `scratch/`, และสั่งรัน `node scripts/qs-indexer.js` ให้เสร็จสรรพในคำสั่งเดียว
+สคริปต์จะทำการ:
+1. **Quarantine Ghost Files:** แบ็กอัปเข้า `.system_quarantine/` ก่อนลบอย่างปลอดภัย
+2. **Auto-Promote False Active:** ปรับสถานะ frontmatter เป็น `status: complete` + `outcome: shipped` และ Move เข้าโฟลเดอร์ `Complete/<Component>/` (หรือโฟลเดอร์เวอร์ชัน `Vxx/`) ให้อัตโนมัติทันที
+3. **Route Loose Files:** จัดระเบียบไฟล์ลอยเข้าโฟลเดอร์ Component หรือโยกเข้า Icebox หากค้างเกิน 30 วัน
+4. **SemVer Archive:** โยกไฟล์เก่าลง `_Legacy/` หรือ `Vxx/` หากไฟล์ลอยที่ root ใน Complete เกิน 5-7 ไฟล์
+5. **Re-index Manifest:** สั่งรัน `node scripts/qs-indexer.js` ให้เสร็จสรรพในคำสั่งเดียว ป้องกัน Dead Link
 
-#### Option B: จัดการ Loose Files และ Unmoved Completed Plans
-หากมี Loose Files ที่หน้าบ้าน `Active/` หรือไฟล์ที่ทำเสร็จแล้วแต่ลืมย้าย:
-1. **ไฟล์ที่เสร็จแล้ว (Completed):** 
-   - อัปเดต frontmatter เป็น `status: complete` และ `outcome: shipped`
-   - ย้ายเข้าไปยัง `Quick Save/Complete/<Component>/Vxx/` (ใช้ Node.js หรือ PowerShell `-LiteralPath`)
-2. **ไฟล์ข้อเสนอเก่า / ไม่ได้ทำต่อ (Old Proposals / Inactive Studies):**
-   - ย้ายไปยัง `Quick Save/Icebox/<Component>/`
-3. **ไฟล์งาน Active จริง:**
-   - ย้ายเข้าไปยัง Subfolder ของ Component นั้นๆ (เช่น `Quick Save/Active/Core-VPS/`)
+> 🛡️ **Promote Safety Guarantees (V3.1.0):**
+> - อ่าน `status`/`outcome` จาก **YAML frontmatter เท่านั้น** — YAML/checkbox ที่อยู่ใน code block, `<details>` หรือ `## 📦 RAW ARTIFACT BACKUP` จะไม่ถูกนับ (กัน artifact เก่าหลอกว่างานเสร็จ)
+> - แก้เฉพาะบล็อก frontmatter ไม่แตะ body เด็ดขาด
+> - **ไม่เขียนทับ** ไฟล์ชื่อซ้ำใน `Complete/` (เจอซ้ำ = บล็อก + คงต้นฉบับไว้ใน Active), ไฟล์ Conflicted Ghost จะไม่ถูก promote
+> - ไม่มีทางหลุดออกนอก `Quick Save/Complete/<Component>/`; เวอร์ชัน major ปัจจุบันลอยที่ root, major เก่าลง `V{n}/` หรือ `_Legacy/V{n}/`
+> - เขียนปลายทางก่อนแล้วค่อยลบต้นทาง — พังกลางทางต้นฉบับไม่หาย; ไฟล์เดียวพังไม่ลากทั้ง run ล้ม
+
+#### Option B: Manual Fallback (เมื่อ Auto-Promote บล็อก หรือเป็นเคสที่ต้องใช้ดุลยพินิจ)
+1. **`✖ Blocked promotion` / `DEST_EXISTS`:** เทียบเนื้อหา Active vs Complete ด้วยตา แล้วเลือกฉบับที่ถูก (อีกฉบับเข้า quarantine) — ห้ามเขียนทับมั่ว
+2. **❄️ Stale Tasks (ดองนานเกิน 30 วัน):** สอบถาม User ก่อนย้ายไป `Quick Save/Icebox/<Component>/` (ไม่ auto)
+3. **🟡 Untasked Deliverables (Study ไม่มี checklist):** เปิดอ่านว่าสรุปจบจริง แล้วค่อยตั้ง `status: complete` + `outcome: shipped` ใน frontmatter → รัน `--fix` ให้เอนจินย้ายให้ (ไม่ auto เพราะไม่มีหลักฐานชี้วัดพอ)
 
 ---
 
@@ -74,10 +92,11 @@ node scripts/qc-audit.js --fix
 ## 📋 Standard Locked Root Scripts
 ไฟล์ Script ที่ได้รับอนุญาตให้อยู่ที่ Root:
 - `server.js`, `ai-gateway.js`, `generate_cloud_images.cjs`, `higgsfield-auth-watchdog-vps.cjs`
-- `bump-cache.js`, `deploy.js`, `start.sh`, `Open AG.bat`, `start-voice.bat`, `ecosystem.config.js`
+- `bump-cache.js`, `deploy.js`, `start.sh`, `Open AG.bat`, `start-voice.bat`, `ecosystem.config.cjs`
 
 ---
 
 ## 🔗 GBRAIN Backlinks
-- **2026-09-29 08:45** | [V13.85.0 QC Skill Overhaul & Recursive Workspace Hygiene Engine](file:///c:/My%20Claw/Openclaw-VPS/Quick%20Save/Active/Core-VPS/V13.85.0_%5Bimpl%5D_skills_qc-radar-and-recursive-workspace-hygiene.md)
-- **2026-06-14 12:55** | [Root Folder Hygiene & Systemic Rules](file:///c:/My%20Claw/Openclaw-VPS/Quick%20Save/Complete/Core-VPS/V12.20.0_[infra]_ag-skills_root-folder-hygiene-and-reviewchat.md)
+- **2026-10-30 10:05** | V3.1.0 Recheck Hardening — frontmatter-scoped radar, no-overwrite promote, path-traversal guard, sandboxed self-tests (13/13)
+- **2026-09-29 08:45** | [V13.85.0 QC Skill Overhaul & Recursive Workspace Hygiene Engine](file:///c:/My%20Claw/Openclaw-VPS/Quick%20Save/Complete/Core-VPS/V13/V13.85.0_%5Bimpl%5D_skills_qc-radar-and-recursive-workspace-hygiene.md)
+- **2026-06-14 12:55** | [Root Folder Hygiene & Systemic Rules](file:///c:/My%20Claw/Openclaw-VPS/Quick%20Save/Complete/Core-VPS/_Legacy/V12/V12.20.0_%5Binfra%5D_ag-skills_root-folder-hygiene-and-reviewchat.md)

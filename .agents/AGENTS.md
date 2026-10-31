@@ -1,3 +1,5 @@
+- **3-Tier Rule Governance & Human Gate Protocol (Iron Rule):** แบ่งชั้นกฎเป็น 3 ระดับเสมอ: Tier 1 (Global System - สัจธรรมสากลใช้ได้ทุกโปรเจกต์ เช่น R30, UTF-8, Git Hygiene), Tier 2 (Domain Cluster - เฉพาะสายงาน เช่น Video Pacing สำหรับ VVE/TheViral), Tier 3 (Local Private - เฉพาะตัวแอป เช่น LightCraft GPU / สูตรอาหารเสริม ห้ามแชร์ออก). กฎสากล (Tier 1) ต้องเคาะที่ XBrain เท่านั้น และ **ก่อนยิง Spiderweb บรอดแคสต์กฎ เอเจนต์ต้องถามบอส 1 บรรทัดเสมอ** เมื่อบอสสั่ง "จัดไป" จึงรันบรอดแคสต์กระจายทั่วระบบ
+
 # General Behaviors
 
 - **Workspace Priority**: When executing commands (especially `git push`, `git pull`, or file searches), always prioritize the main workspace folder (Main Folder) opened in AG over the directory of the currently active document. The active document might be a file opened from outside the current workspace, so its path should not override the main workspace context unless explicitly requested by the user.
@@ -92,3 +94,10 @@ This workspace uses **two personas** that activate based on the active model. Al
 6. **Scope Enforcement:**
    - **Strict 100%:** เอกสารเชิงยุทธศาสตร์, Playbooks, คู่มือระบบ, แผนสถาปัตยกรรม, คลังความรู้, สารานุกรม (`docs/`, `vault/`, `Products/`, `Brand/`)
    - **Highly Recommended:** เอกสารบันทึกงานโค้ด (`Quick Save/`) ที่มีความยาวหลายร้อยบรรทัด แนะนำให้ใส่ In-File TOC เพื่ออำนวยความสะดวกในการกระโดดข้ามบล็อกโค้ดไปยัง Timeline หรือ GBRAIN Backlinks
+
+# Clickable Image & Asset Reference Links Protocol (Rule R36)
+
+ทุกครั้งที่มีการอ้างอิงไฟล์รูปภาพ ภาพปก สไลด์ อาร์ตเวิร์ก หรือ Asset ใดๆ ในข้อความสนทนา (แชท) หรือในเอกสาร Markdown ต้องทำเป็น **Clickable Markdown Link** รูปแบบ `[ชื่อไฟล์หรือคำอธิบาย](file:///C:/path/to/image.png)` เสมอ:
+1. **Zero Naked Filenames (ห้ามพิมพ์ชื่อไฟล์เปล่าๆ):** ห้ามเขียนแค่ `w1_01_cover.png` หรือครอบเฉพาะบล็อกโค้ดเด็ดขาด เพื่อไม่ให้ผู้ใช้ต้องเสียเวลาควานหาว่าไฟล์อยู่ที่ไหน
+2. **Absolute Forward-Slash Links:** ลิงก์ต้องเป็น Absolute URL เสมอ เริ่มต้นด้วย `file:///C:/...` โดยแปลง Backslash (`\`) เป็น Forward Slash (`/`) และแปลงช่องว่างเป็น `%20`
+3. **One-Click Inspection:** ผู้ใช้และ Agent ต้องสามารถคลิกเปิดดูภาพตัวจริงได้ทันทีใน 1 วินาที

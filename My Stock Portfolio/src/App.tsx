@@ -12,6 +12,7 @@ import { MobileNavBar } from './components/layout/MobileNavBar';
 import { useDeviceLayout } from './hooks/useDeviceLayout';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { MobileDashboard } from './views/mobile/MobileDashboard';
+import { MobileMyPortPage } from './views/mobile/MobileMyPortPage';
 import { TabletDashboard } from './views/tablet/TabletDashboard';
 import { MobileChartPage } from './views/mobile/MobileChartPage';
 import { AppModal } from './components/common/AppModal';
@@ -177,6 +178,11 @@ const MainLayout = () => {
                 isTablet ? <TabletDashboard /> :
                 <Dashboard />
               )}
+              {activeTab === 'myport' && (
+                isMobile ? <MobileMyPortPage /> :
+                isTablet ? <TabletDashboard /> :
+                <Dashboard />
+              )}
               {activeTab === 'analysis' && <AnalysisPage />}
               {activeTab === 'performance' && <AnalysisPage defaultTab="performance" />}
               {activeTab === 'health' && <HealthRiskPage />}
@@ -192,7 +198,7 @@ const MainLayout = () => {
               {activeTab === 'transactions' && <TransactionTable />}
               {activeTab === 'portfolios' && <PortfolioList />}
               {activeTab === 'settings' && <SettingPage />}
-              {activeTab !== 'dashboard' && activeTab !== 'news' && activeTab !== 'scorecard' && activeTab !== 'risk' && activeTab !== 'health' && activeTab !== 'rebalance' && activeTab !== 'project2x' && activeTab !== 'xray' && activeTab !== 'xchart' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
+              {activeTab !== 'dashboard' && activeTab !== 'myport' && activeTab !== 'news' && activeTab !== 'scorecard' && activeTab !== 'risk' && activeTab !== 'health' && activeTab !== 'rebalance' && activeTab !== 'project2x' && activeTab !== 'xray' && activeTab !== 'xchart' && activeTab !== 'analysis' && activeTab !== 'performance' && activeTab !== 'transactions' && activeTab !== 'portfolios' && activeTab !== 'settings' && (
                 <div className="bg-[#111418] border border-[#2A2E45] rounded-3xl p-8 min-h-[500px] flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
                   <p className="text-[#9898C8] text-lg font-medium">
                     {activeTab} module is under construction.
