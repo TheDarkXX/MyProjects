@@ -749,11 +749,12 @@
         return;
       }
 
-      const res = await fetch(`/api/fasting/sessions/${editingSessionId}`, {
+      const res = await fetch(BASE_API_URL + `/api/fasting/sessions/${editingSessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          started_at_utc: newDate.toISOString()
+          started_at_utc: newDate.toISOString(),
+          auto_cascade: true
         })
       });
 
@@ -761,6 +762,7 @@
       if (data.success) {
         closeTimeModal();
         await loadStatus();
+        await loadHistory();
       } else {
         sheetErrorMsg.textContent = data.error || 'Failed to update start time';
         sheetErrorMsg.style.display = 'block';
@@ -792,7 +794,7 @@
       targetHours = parseFloat(opt.getAttribute('data-target'));
 
       if (activeSession) {
-        await fetch(`/api/fasting/sessions/${activeSession.id}`, {
+        await fetch(BASE_API_URL + `/api/fasting/sessions/${activeSession.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -819,7 +821,7 @@
       } else if (choice === 'cap_target') {
         const startMs = new Date(activeSession.started_at_utc).getTime();
         const endMs = startMs + (16 * 3600 * 1000);
-        await fetch(`/api/fasting/sessions/${activeSession.id}/end`, {
+        await fetch(BASE_API_URL + `/api/fasting/sessions/${activeSession.id}/end`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -830,7 +832,7 @@
         modalZombieReview.classList.remove('open');
         await loadStatus();
       } else if (choice === 'discard') {
-        await fetch(`/api/fasting/sessions/${activeSession.id}`, {
+        await fetch(BASE_API_URL + `/api/fasting/sessions/${activeSession.id}`, {
           method: 'DELETE'
         });
         modalZombieReview.classList.remove('open');
@@ -912,7 +914,12 @@
         const startStr = formatTimeHHMM(s.started_at_utc);
         const endStr = s.ended_at_utc ? formatTimeHHMM(s.ended_at_utc) : 'In Progress';
         const dateStr = new Date(s.started_at_utc).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-        const durationFormatted = formatDuration(s.duration_seconds || 0);
+        
+        let durSec = s.duration_seconds || 0;
+        if (s.status === 'active' && s.started_at_utc) {
+          durSec = Math.max(0, Math.floor((Date.now() - new Date(s.started_at_utc).getTime()) / 1000));
+        }
+        const durationFormatted = formatDuration(durSec);
 
         const card = document.createElement('div');
         card.className = 'history-item-card';
@@ -955,7 +962,7 @@
   document.getElementById('btnConfirmDeleteSession')?.addEventListener('click', async () => {
     if (!deletingSessionId) return;
     try {
-      const res = await fetch(`/api/fasting/sessions/${deletingSessionId}`, {
+      const res = await fetch(BASE_API_URL + `/api/fasting/sessions/${deletingSessionId}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -968,6 +975,39 @@
       console.error('[fasting-ui] deleteSession error:', err);
     }
   });
+
+  // ─── Realign Timeline Controller ───
+  window.realignTimeline = async function () {
+    const btn = document.getElementById('btnRealignTimeline');
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spin-anim">🔄</span> Aligning...';
+      }
+      const res = await fetch(BASE_API_URL + '/api/fasting/realign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: 'owner' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadStatus();
+        await loadHistory();
+        await loadAnalytics();
+      } else {
+        alert(data.error || 'Failed to realign timeline');
+      }
+    } catch (err) {
+      console.error('[fasting-ui] realignTimeline error:', err);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        btn.innerHTML = '<span class="realign-icon">⚡</span> Realign';
+      }
+    }
+  };
 
   // ─── Pixar 3D Stage Visuals & Bio-Scan Data ───
   const PIXAR_STAGES = [

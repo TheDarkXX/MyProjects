@@ -227,7 +227,12 @@
             <div class="card-heading">Session History</div>
             <div class="card-sub-muted">Comprehensive log of Fast & Eat sessions</div>
           </div>
-          <span class="ledger-count-pill" id="lblLedgerCount">0 Sessions</span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="btnRealignTimeline" class="btn-realign" onclick="window.realignTimeline()" title="Recalculate & Realign Continuous Timeline (ขจัดช่องว่างเวลา)">
+              <span class="realign-icon">⚡</span> Realign
+            </button>
+            <span class="ledger-count-pill" id="lblLedgerCount">0 Sessions</span>
+          </div>
         </div>
       </div>
 
