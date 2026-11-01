@@ -58,6 +58,7 @@ export const XChartWatchlistDock: React.FC = () => {
     watchlistCollapsed,
     toggleWatchlist,
     changeSymbolOnActiveTab,
+    openStockInPrimaryTab,
     addTab,
     watchlistSections,
     watchlistPrices,
@@ -576,19 +577,9 @@ export const XChartWatchlistDock: React.FC = () => {
     }
   }, [showAddSection]);
 
-  // Handle symbol row click
+  // Handle symbol row click (Option A: Primary Tab First / Clean View)
   const handleStockClick = (symbol: string) => {
-    const isCurrency = symbol.includes('=X');
-    if (activeTab?.type === 'HEATMAP') {
-      addTab({
-        type: isCurrency ? 'CURRENCY' : 'STOCK',
-        symbol,
-        title: isCurrency && symbol === 'THB=X' ? 'USD/THB' : symbol
-      });
-    } else {
-      changeSymbolOnActiveTab(symbol, isCurrency && symbol === 'THB=X' ? 'USD/THB' : symbol);
-    }
-    setWatchlistDetailSymbol(symbol);
+    openStockInPrimaryTab(symbol);
   };
 
   // Add symbol submit

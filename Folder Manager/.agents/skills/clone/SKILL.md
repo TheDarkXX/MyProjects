@@ -72,44 +72,20 @@ npx.cmd -y rea-agents@latest trace "<PATH>" "<FEATURE_KEYWORD>" --json
 
 ---
 
-### Step 3: Analysis, Evidence & Clone Radar Scorecard
-เมื่อได้ข้อมูลจากการ Inspect ให้สรุปรายงานพร้อมตัดเกรดผ่าน **Clone Radar Scorecard (5 มิติ 100 คะแนน)** และบังคับคำนวณ **Clone Fidelity Index (% ความสมบูรณ์ในการโคลน)** ทุกครั้ง เพื่อให้ผู้ใช้รู้ทันทีว่าแกะออกมาได้กี่เปอร์เซ็นต์:
-
-#### 🎯 Clone Fidelity Index (% ความสมบูรณ์ในการโคลน)
-ต้องแจกแจงตัวเลข % จริงหน้างานเสมอ:
-- 📐 **Layout & DOM Structure (%):** โครงสร้างบล็อกและการจัดวางเนื้อหา
-- ⚙️ **Interactive Logic & State (%):** ตรรกะเบื้องหลัง ควิซ แบบฟอร์ม หรือการจำลอง State
-- 📡 **Tracking & API Contracts (%):** ความครบถ้วนของ Payload และเส้นทางส่งข้อมูล CAPI
-- 🎨 **CSS Tokens & Typography (%):** สี สัดส่วนฟอนต์ และความลื่นไหลของแอนิเมชัน
-- 🖼️ **Assets & Media Parity (%):** ปริมาณรูปภาพที่กู้คืนได้ (หักลบภาพลิขสิทธิ์ที่ต้องคลีนออก)
-👉 **Overall Clone Fidelity: XX%** (สรุป % ความสมบูรณ์รวมที่พร้อมใช้งาน)
-
-#### 📊 Radar Matrix (5 มิติ 100 คะแนน)
-| มิติการประเมิน (Radar Dimensions) | คะแนนเต็ม | เกณฑ์การให้คะแนน |
-|---|:---:|---|
-| **1. UX & Performance** | 20 | ความเร็วโหลด (<1.5s), Mobile Ergonomics, การใช้ Typography/CSS Tokens |
-| **2. Conversion & Persuasion** | 25 | ความคมของ Hook, Gamification (Quiz/Checklist), CTA Hierarchy, Social Proof |
-| **3. Attribution & CAPI Resilience** | 20 | First-Party Cookie, Server-Side CAPI Deduplication (`eventID`), ทน Ad-blocker |
-| **4. Code Modularity & Cleanliness** | 15 | แยก Layer ชัดเจน, ปลอด Bloatware Frameworks, โค้ดอ่านเข้าใจง่าย |
-| **5. Clone Feasibility & Speed** | 20 | ความง่ายและเร็วในการทำ Clean-Room (1=แกะเป็นเดือน, 20=เสร็จใน 5 นาที) |
-
-**Composite Tier & Verdict:**
-- 🏆 **90–100 (S-Tier):** Lethal Masterpiece — คู่แข่งระดับเทพ ต้องสกัดทั้ง Logic, UI และ Tracking ไปใช้ทันที
-- ⭐ **75–89 (A-Tier):** High-Converting Asset — งานคุณภาพสูง มีจุดแข็งด้านคอนเวอร์ชั่นชัดเจน คุ้มค่าแก่การโคลน
-- ⚖️ **60–74 (B-Tier):** Standard Play — ทั่วไป ลอกได้เฉพาะบางส่วนที่น่าสนใจ
-- ⚠️ **< 60 (C-Tier):** Bloated / Inefficient — โค้ดรกรุงรัง หรือคอนเวอร์ชั่นอ่อน ไม่คุ้มที่จะโคลนทั้งยวง
-
-**Action Matrix บังคับสรุป 3 ข้อ:**
-1. 🔥 **Steal This (จุดที่ต้องลอก):** ทริกหรือระบบที่คู่แข่งทำได้เด็ดขาด
-2. ⚠️ **Drop This (จุดขยะที่ต้องทิ้ง):** โค้ดขยะ ตราสินค้า หรือ Dependency เกินจำเป็น
-3. 🚀 **Next Steps:** ลำดับการเอาไปประยุกต์ใช้ในโปรเจกต์เรา
+### Step 3: Analysis & Evidence Report
+เมื่อได้ผลลัพธ์ JSON ออกมา ให้สรุปให้ผู้ใช้ฟังแบบกระชับ (Business & Logic First):
+1. **Core Architecture:** แอปนี้ประกอบด้วยกี่โมดูล ใช้เฟรมเวิร์กอะไร (React, Vue, Vanilla, IPC)
+2. **Hidden APIs & Endpoints:** รายการ URL ปลายทางที่แอปแอบยิงไปคุย พร้อม Method และ Payload ตัวอย่าง
+3. **Key Logic / Algorithm:** อธิบายตรรกะเบื้องหลังปุ่มหรือฟีเจอร์สำคัญ
+4. **Feasibility to Clone:** ประเมินความยากง่ายในการทำเลียนแบบ (เช่น 1-10)
 
 ---
 
-### Step 4: Clean-Room Code Synthesis & Output Artifacts
-ลงมือสร้างไฟล์ Clean-Room ในโฟลเดอร์ `scratch/clone_<name>/` ทันที พร้อมส่งมอบ 2 ส่วน:
-1. **Clean Code Package:** แยกเป็นไฟล์พร้อมรัน (เช่น `index.html`, `brand.css`, `tracker.js`, `component.js`) โดยตัดเครื่องหมายการค้าเดิมออกทั้งหมด
-2. **Autonomous Scorecard Report (`CLONE_SCORECARD.md`):** บันทึกตารางคะแนน, Radar Breakdown, Hidden APIs, และ Evidence ลงในโฟลเดอร์ scratch นั้นเสมอ เพื่อให้ย้อนกลับมาดูผลการประเมินได้ตลอดเวลา
+### Step 4: Clean-Room Code Synthesis
+ถามผู้ใช้สั้นๆ หรือลงมือเขียนโค้ดฟีเจอร์นั้นทันทีตามบริบท:
+- เขียนโค้ดโมดูลใหม่ลงในโปรเจกต์ปัจจุบัน
+- ดึงเฉพาะ Logic และ API Contract มาใช้งาน
+- จัดโครงสร้างให้เข้ากับ Design System และ Coding Standard ของ Workspace
 
 ---
 

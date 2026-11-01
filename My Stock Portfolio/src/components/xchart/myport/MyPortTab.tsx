@@ -36,7 +36,7 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
   const { blueprints, fetchBlueprints } = useBlueprintStore();
   const { portfolios, activePortfolioId, setActivePortfolio, fetchPortfolios } = usePortfolioStore();
   const { fetchPrices, fetchExchangeRate, exchangeRate } = usePriceStore();
-  const { addTab } = useXChartStore();
+  const { addTab, openStockInPrimaryTab } = useXChartStore();
   const { currency, setCurrency } = useUiStore();
 
   // Active timeframe for Mini Timeframe Strip (Hybrid A & B)
@@ -205,7 +205,7 @@ export const MyPortTab: React.FC<MyPortTabProps> = () => {
   // Quick action: Open candlestick chart tab for a symbol
   const handleOpenChart = (symbol: string) => {
     if (!symbol || symbol === 'CASH') return;
-    addTab({ type: 'STOCK', symbol: symbol.toUpperCase(), title: symbol.toUpperCase() });
+    openStockInPrimaryTab(symbol.toUpperCase());
   };
 
   const winnersCount = useMemo(() => slices.filter((s) => !s.isCash && s.totalReturnPercent > 0).length, [slices]);

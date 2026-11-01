@@ -2,9 +2,7 @@
 name: save
 version: "4.1.0"
 updated_at: "2026-10-24"
-description: >-
-  Devil-Speed Auto-Save & Deploy Pipeline V4.1 (Dynamic Root + Optimistic Push +
-  Zero-Artifact Loss Guard)
+description: "Devil-Speed Auto-Save & Deploy Pipeline V4.1 (Dynamic Root + Optimistic Push + Zero-Artifact Loss Guard)"
 ---
 # 💾 Skill: `/save` (v4.1.0 Dynamic Root & Full-Fidelity Architecture)
 

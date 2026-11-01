@@ -18,10 +18,10 @@ description: >-
 
 ### 🍾 2 ภาพ Master Product Reference ที่ล็อกพิกัดถาวร (Rule R34):
 - **Ref 1 (ขวดจริงหน้าตรง):**  
-  `C:\My Claw\The Viral\Ads DRB\03_Production_Assets\3Ref_Master_Pack\DRB_MAG_REF01_front_hero.png`  
+  `P:\AI\The Viral\Ads DRB\03_Production_Assets\3Ref_Master_Pack\DRB_MAG_REF01_front_hero.png`  
   *(ขวดแก้วสีชาเข้มทรงกระบอก ฝาเกลียวขาว ribbed ฉลากขาวแถบน้ำเงินเข้ม โลโก้พระจันทร์เสี้ยว DOCTORBANK)*
 - **Ref 2 (แคปซูลจริงขาวด้าน 2 ท่อน):**  
-  `C:\My Claw\The Viral\Ads DRB\03_Production_Assets\3Ref_Master_Pack\DRB_MAG_REF02_angle_and_capsules.jpeg`  
+  `P:\AI\The Viral\Ads DRB\03_Production_Assets\3Ref_Master_Pack\DRB_MAG_REF02_angle_and_capsules.jpeg`  
   *(กองแคปซูลขาวนวลผิวซาติน 2-Piece Hard Shell แท้ ขนาดสมส่วน ไม่กลายพันธุ์)*
 
 ---
@@ -130,8 +130,8 @@ ffmpeg -f concat -safe 0 -i filelist.txt -c copy final_master_40s.mp4
 
 ### 2. ขั้นตอนการรัน Compiler:
 ```powershell
-python "C:\My Claw\The Viral\Ads DRB\tools\drb_compiler.py" --product <product> --style <style> --gender <gender> --location <location> --id <CAMPAIGN_ID> --script "<SCRIPT_TEXT>"
+python "P:\AI\The Viral\Ads DRB\tools\drb_compiler.py" --product <product> --style <style> --gender <gender> --location <location> --id <CAMPAIGN_ID> --script "<SCRIPT_TEXT>"
 ```
 
 ### 3. ผลลัพธ์:
-- คายไฟล์ Master Markdown ใน `C:\My Claw\The Viral\Ads DRB\02_Creative_Blueprint\Storyboards\<CAMPAIGN_ID>_production_table.md` พร้อมตาราง 7 คอลัมน์สำหรับ DrView และ Prompt มาตรฐาน Thanwa & Squid Game
+- คายไฟล์ Master Markdown ใน `P:\AI\The Viral\Ads DRB\02_Creative_Blueprint\Storyboards\<CAMPAIGN_ID>_production_table.md` พร้อมตาราง 7 คอลัมน์สำหรับ DrView และ Prompt มาตรฐาน Thanwa & Squid Game

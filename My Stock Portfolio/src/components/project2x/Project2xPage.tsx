@@ -55,7 +55,7 @@ export const Project2xPage: React.FC = () => {
   const { activePortfolioId, portfolios } = usePortfolioStore();
   const activePortfolio = (portfolios || []).find(p => p.id === activePortfolioId);
   const { currency, setActiveTab } = useUiStore();
-  const { changeSymbolOnActiveTab } = useXChartStore();
+  const { changeSymbolOnActiveTab, openStockInPrimaryTab } = useXChartStore();
   const openDossier = useDossierStore((s) => s.openDossier);
   const selectSymbol = useDossierStore((s) => s.selectSymbol);
   const {
@@ -1103,7 +1103,7 @@ export const Project2xPage: React.FC = () => {
                           <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => {
-                                changeSymbolOnActiveTab(row.symbol);
+                                openStockInPrimaryTab(row.symbol);
                                 setActiveTab('xchart');
                               }}
                               className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-cyan-300 text-xs font-bold border border-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer"
@@ -1375,7 +1375,7 @@ export const Project2xPage: React.FC = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            changeSymbolOnActiveTab(q.symbol);
+                            openStockInPrimaryTab(q.symbol);
                             setActiveTab('xchart');
                           }}
                           className="px-2 py-0.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-cyan-300 text-[11px] font-bold border border-cyan-500/30 cursor-pointer transition-all"
@@ -1510,7 +1510,7 @@ export const Project2xPage: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              changeSymbolOnActiveTab(q.symbol);
+                              openStockInPrimaryTab(q.symbol);
                               setActiveTab('xchart');
                             }}
                             className="px-2 py-0.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-cyan-300 text-[11px] font-bold border border-cyan-500/30 cursor-pointer transition-all"
@@ -2136,7 +2136,7 @@ export const Project2xPage: React.FC = () => {
                   onClick={() => {
                     const sym = detailModalStock.symbol;
                     setDetailModalStock(null);
-                    changeSymbolOnActiveTab(sym);
+                    openStockInPrimaryTab(sym);
                     setActiveTab('xchart');
                   }}
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-[13px] font-black shadow-lg shadow-cyan-500/25 flex items-center gap-2 cursor-pointer transition-all"
