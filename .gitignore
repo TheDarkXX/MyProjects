@@ -25,3 +25,6 @@ __pycache__/
 **/__pycache__/  
 Viral VDO Editing (VVE)/All Raw Clips/
 Viral VDO Editing (VVE)/
+
+# Claude Code
+.claude/

@@ -37,3 +37,7 @@ server/.env
 server/data/cards/
 
 
+
+# Claude Code junction + local settings
+.claude/skills/
+.claude/settings.local.json

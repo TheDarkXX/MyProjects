@@ -91,3 +91,14 @@ All styling is Tailwind utility classes written inline in template-literal marku
 - `src/onboarding.css` — onboarding's own `@theme` tokens (`--color-ink`, `--color-ink-raised`, `--color-paper`, `--color-coral`, `--font-display` = Fraunces, `--font-mono` = JetBrains Mono, fonts loaded via Google Fonts `@import`) plus the handful of things Tailwind utilities can't express directly: the grain/glow pseudo-elements on `.ob-root`, the panel slide-in (`.ob-panel` / `@keyframes ob-in`), and the hero waveform bar animation (`@keyframes ob-wave`, referenced from markup via arbitrary `[animation:ob-wave_...]`).
 
 Repeated class combinations that would otherwise be duplicated string-for-string across pages are factored into small exported constants in `src/uiClasses.ts` (`BTN`, `BTN_PRIMARY`, `PAGE_TITLE`, `EMPTY_STATE`, `FIELD_LABEL`, `FIELD_INPUT`) — reach for those before inlining a new multi-utility class string that already has a near-duplicate elsewhere. `tsc` does not validate Tailwind class syntax; run `npm run build` (not just `tsc --noEmit`) after touching class strings to catch arbitrary-value typos, since a malformed `[...]` value fails silently at the CSS layer rather than as a type error.
+
+## 🤖 Sub-Agent Worker Pattern & /fs (Quota Preservation)
+- When tasked with writing boilerplate, large file creation, batch copy generation, or mechanical code:
+  **DO NOT waste expensive Claude Pro tokens typing out hundreds of repetitive lines.**
+  Delegate directly to Gemini Flash Worker via terminal:
+  `node tools/flash-worker.js --code -p "<prompt>" -o "<destination_file>"`
+  Or with file context:
+  `node tools/flash-worker.js --code -f "<source_file>" -p "<instructions>" -o "<destination_file>"`
+  Or use the short CLI: `tools\fs --code -p "<prompt>" -o "<destination_file>"`
+- When the user triggers `/fs [task]`, run the worker command above directly instead of generating code yourself.
+- You remain the **Director / Architect 👁️‍🗨️**: verify the worker's output (Gate Function), run tests, and refine.

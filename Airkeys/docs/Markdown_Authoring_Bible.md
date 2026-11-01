@@ -14,6 +14,7 @@
 - [🔗 5. การทำลิงก์ภายในและข้ามเอกสาร (Internal Links & Backlinks)](#internal-links)
 - [❌ 6. สิ่งที่ห้ามทำเด็ดขาด (Anti-Patterns)](#anti-patterns)
 - [📋 7. กล่องโครงสร้างต้นแบบพร้อมใช้ (Master Skeleton Template)](#skeleton-template)
+- [📊 8. ระบบตารางอินเทอร์แอคทีฟสไตล์ Excel (DrView TSV Engine - Rule R31)](#tsv-spreadsheet-r31)
 
 ---
 
@@ -188,5 +189,35 @@
 
 [⬆️ กลับสู่สารบัญ](#toc)
 ```
+
+[⬆️ กลับสู่สารบัญ](#toc)
+
+---
+
+<a id="tsv-spreadsheet-r31"></a>
+## 📊 8. ระบบตารางอินเทอร์แอคทีฟสไตล์ Excel (DrView TSV Engine - Rule R31)
+
+> **💡 DrView Built-in Feature:**  
+> ระบบ DrView Extension (`media/viewer.js`) มีเอนจินตรวจจับโค้ดบล็อก ` ```tsv ` ในตัว และแปลงเป็น **Excel-Grade Interactive TSV Spreadsheet** ทันทีโดยไม่ต้องเขียน HTML หรือติดตั้งโปรแกรมเพิ่ม
+
+### วัตถุประสงค์
+เพื่อแก้ปัญหาตาราง Markdown Pipe ปกติที่ลากเมาส์คลุมข้อความยาวๆ เพื่อก๊อปปี้ได้ยาก และตัดความจำเป็นในการทำไฟล์ `.html` แยกนอกโฟลเดอร์ ให้ทุกอย่างจบในไฟล์ Markdown เดียว
+
+### คุณสมบัติของ DrView TSV Spreadsheet
+1. **Single Cell Click:** คลิกที่เซลล์ใดก็ได้เพื่อเลือกโฟกัสทันที
+2. **Multi-Cell Drag Range:** คลิกแล้วลากเมาส์คลุมหลายเซลล์พร้อมกันได้เหมือน Microsoft Excel / Google Sheets
+3. **Hardware-level Hotkeys:** กด `Ctrl+C` เพื่อคัดลอกข้อความในเซลล์ที่เลือกทันที (รองรับทั้ง Keyboard layout ภาษาไทยและอังกฤษ)
+4. **Action Buttons:** มีปุ่ม `📋 Copy TSV` สำหรับคัดลอกข้อมูลทั้งตาราง และปุ่ม `➕ Add Row` ในตัว
+5. **Prompt-Ready:** เหมาะอย่างยิ่งกับตาราง Production, Storyboard, Image Prompts, Motion Prompts, ข้อมูลสินค้า, หรือสคริปต์รายช็อต
+
+### ตัวอย่างไวยากรณ์ (TSV Syntax)
+```markdown
+​```tsv
+ID	Type	References	Scene Story (TH)	Image Prompt	Motion Prompt
+POV-01-S01	Hook	Ref1, Ref2	เปิดขวดเสียงกริ๊ก	[POV-01-S01] A high-end macro shot...	[POV-01-S01] Macro lens gently pulls back...
+POV-01-S02	Action	Ref1, Ref2	เทแคปซูล 2 เม็ดลงฝ่ามือ	[POV-01-S02] Extreme close-up shot...	[POV-01-S02] Hand gently tilts forward...
+​```
+```
+*(หมายเหตุ: คอลัมน์ต้องคั่นด้วยตัวอักษร Tab จริง `\t` และ 1 แถวต่อ 1 บรรทัด ห้ามกด Enter ขึ้นบรรทัดใหม่ภายในเซลล์เด็ดขาด)*
 
 [⬆️ กลับสู่สารบัญ](#toc)

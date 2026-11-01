@@ -24,3 +24,7 @@ release
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code junction + local settings
+.claude/skills/
+.claude/settings.local.json
