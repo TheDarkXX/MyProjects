@@ -390,6 +390,28 @@
         ระบบตรวจพบว่าคุณไม่ได้บันทึกมาแล้ว <strong id="gapModalDurationText" style="color: #38bdf8;">--</strong> ต้องการให้เริ่มนับเวลาอย่างไร?
       </div>
 
+      <!-- 🪄 Adaptive Personal Baseline Auto-Backfill Card (Shown when gap > 24h) -->
+      <div class="gap-backfill-card" id="gapBackfillCard" style="display: none;">
+        <div class="gap-opt-header">
+          <span class="gap-opt-title" style="color: #38bdf8;">🪄 ซ่อมประวัติอัตโนมัติ (Auto-Backfill)</span>
+          <span class="gap-opt-tag tag-recommend">สถิติจริง</span>
+        </div>
+        <div class="gap-backfill-meta" id="gapBackfillMeta">
+          📊 อิงจากสถิติของมึง: ฟาสต์เฉลี่ย <strong id="lblAvgFastText">-- ชม.</strong> • กิน <strong id="lblAvgEatText">-- ชม.</strong>
+        </div>
+        <div class="gap-stepper-row">
+          <span class="gap-stepper-label">ชั่วโมงฟาสต์ต่อรอบ:</span>
+          <div class="gap-stepper-ctrl">
+            <button class="btn-stepper" onclick="window.stepBackfillHours(-1)">−</button>
+            <span class="stepper-val" id="lblBackfillHours">19h</span>
+            <button class="btn-stepper" onclick="window.stepBackfillHours(1)">+</button>
+          </div>
+        </div>
+        <button class="btn-execute-backfill" id="btnExecuteBackfill" onclick="window.executeAdaptiveBackfill()">
+          🚀 ซ่อมประวัติ <span id="lblBackfillDaysText">-- วัน</span> ทันที (1 คลิกจบ)
+        </button>
+      </div>
+
       <div class="gap-options-grid">
         <!-- Option 1: Continue Previous (ลืมกด แต่นับต่อ) -->
         <button class="gap-option-btn continue-opt" id="btnGapContinue" onclick="window.chooseGapOption('continue')">

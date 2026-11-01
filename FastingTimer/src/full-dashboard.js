@@ -463,7 +463,10 @@
     }
   }
 
-  // ─── Smart Gap & Recovery Decision Gate Controller ───
+  // ─── Smart Gap & Adaptive Recovery Controller ───
+  let currentBackfillFastHours = 18;
+  let currentBackfillGapDays = 1;
+
   function formatFriendlyDuration(totalSec) {
     const totalMin = Math.round(totalSec / 60);
     const hrs = Math.floor(totalMin / 60);
@@ -477,18 +480,27 @@
     return `${mins} นาที`;
   }
 
-  function openGapDecisionModal(gapSec, isFromEating) {
+  async function openGapDecisionModal(gapSec, isFromEating) {
     const modal = document.getElementById('modalGapDecision');
     const badge = document.getElementById('gapModalBadge');
     const title = document.getElementById('gapModalTitle');
     const desc = document.getElementById('gapModalDesc');
     const durationText = document.getElementById('gapModalDurationText');
     const continueSub = document.getElementById('gapOptContinueSub');
+    const backfillCard = document.getElementById('gapBackfillCard');
+    const lblDays = document.getElementById('lblBackfillDaysText');
+    const lblAvgFast = document.getElementById('lblAvgFastText');
+    const lblAvgEat = document.getElementById('lblAvgEatText');
+    const lblHours = document.getElementById('lblBackfillHours');
 
     if (!modal) return;
 
     const formattedDur = formatFriendlyDuration(gapSec);
     if (durationText) durationText.textContent = formattedDur;
+
+    const isMultiDay = gapSec >= 24 * 3600;
+    const gapDays = Math.max(1, Math.round(gapSec / 86400));
+    currentBackfillGapDays = gapDays;
 
     if (isFromEating) {
       if (badge) badge.textContent = '🍽️ EATING WINDOW EXCEEDED';
@@ -496,14 +508,84 @@
       if (desc) desc.innerHTML = `ตรวจพบว่ามื้ออาหารนี้เปิดค้างมาแล้ว <strong style="color: #38bdf8;">${formattedDur}</strong> ต้องการให้เริ่มนับฟาสต์อย่างไร?`;
       if (continueSub) continueSub.textContent = `ไม่ได้กินอะไรเพิ่ม — เริ่มนับฟาสต์ต่อเนื่องทันที (สะสมแล้ว ${formattedDur})`;
     } else {
-      if (badge) badge.textContent = '⏳ UNTRACKED GAP DETECTED';
-      if (title) title.textContent = 'เว้นช่วงไปนานกว่าปกติ';
+      if (badge) badge.textContent = isMultiDay ? '⏳ MULTI-DAY GAP DETECTED' : '⏳ UNTRACKED GAP DETECTED';
+      if (title) title.textContent = isMultiDay ? `เว้นช่วงไปนาน ${gapDays} วัน` : 'เว้นช่วงไปนานกว่าปกติ';
       if (desc) desc.innerHTML = `ตรวจพบว่าเว้นช่วงจากรอบก่อนมาแล้ว <strong style="color: #38bdf8;">${formattedDur}</strong> ต้องการให้เริ่มนับเวลาอย่างไร?`;
       if (continueSub) continueSub.textContent = `ไม่ได้กินอะไรเพิ่มตั้งแต่รอบก่อน — นับเวลาฟาสต์ต่อเนื่องทันที (สะสมแล้ว ${formattedDur})`;
     }
 
+    // Adaptive Auto-Backfill Presentation
+    if (backfillCard) {
+      if (isMultiDay) {
+        backfillCard.style.display = 'block';
+        if (lblDays) lblDays.textContent = `${gapDays} วัน`;
+
+        // Fetch user's real personal baseline asynchronously
+        fetch(BASE_API_URL + '/api/fasting/baseline?user_id=owner')
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.baseline) {
+              const recFast = data.baseline.recommended_fast_hours || 18;
+              const recEat = data.baseline.recommended_eat_hours || (24 - recFast);
+              currentBackfillFastHours = recFast;
+              if (lblAvgFast) lblAvgFast.textContent = `${data.baseline.avg_fasting_hours} ชม.`;
+              if (lblAvgEat) lblAvgEat.textContent = `${data.baseline.avg_eating_hours} ชม.`;
+              if (lblHours) lblHours.textContent = `${currentBackfillFastHours}h`;
+            }
+          })
+          .catch(e => console.warn('[fasting-ui] Failed to fetch baseline:', e));
+      } else {
+        backfillCard.style.display = 'none';
+      }
+    }
+
     modal.classList.add('open');
   }
+
+  window.stepBackfillHours = function(delta) {
+    currentBackfillFastHours = Math.max(12, Math.min(23, currentBackfillFastHours + delta));
+    const lbl = document.getElementById('lblBackfillHours');
+    if (lbl) lbl.textContent = `${currentBackfillFastHours}h`;
+  };
+
+  window.executeAdaptiveBackfill = async function() {
+    const btn = document.getElementById('btnExecuteBackfill');
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.innerHTML = '<span class="spin-anim">🔄</span> กำลังซ่อมประวัติ...';
+      }
+
+      const eatHours = Math.max(1, 24 - currentBackfillFastHours);
+      const res = await fetch(BASE_API_URL + '/api/fasting/backfill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: 'owner',
+          fast_hours: currentBackfillFastHours,
+          eat_hours: eatHours
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        window.closeGapDecisionModal();
+        await loadStatus();
+        await loadHistory();
+      } else {
+        alert(data.error || 'Failed to auto-backfill history');
+      }
+    } catch (err) {
+      console.error('[fasting-ui] executeAdaptiveBackfill error:', err);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.innerHTML = '🚀 ซ่อมประวัติทันที (1 คลิกจบ)';
+      }
+    }
+  };
 
   window.closeGapDecisionModal = function () {
     const modal = document.getElementById('modalGapDecision');
