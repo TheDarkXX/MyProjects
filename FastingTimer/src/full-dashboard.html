@@ -381,6 +381,59 @@
     </div>
   </div>
 
+  <!-- ════════════ MODAL: SMART GAP & RECOVERY DECISION GATE ════════════ -->
+  <div class="modal-backdrop" id="modalGapDecision">
+    <div class="alert-dialog-card gap-decision-card">
+      <div class="gap-modal-badge" id="gapModalBadge">⏳ SMART GAP DETECTED</div>
+      <div class="alert-title" id="gapModalTitle">เว้นช่วงไปนานกว่าปกติ</div>
+      <div class="alert-desc" id="gapModalDesc">
+        ระบบตรวจพบว่าคุณไม่ได้บันทึกมาแล้ว <strong id="gapModalDurationText" style="color: #38bdf8;">--</strong> ต้องการให้เริ่มนับเวลาอย่างไร?
+      </div>
+
+      <div class="gap-options-grid">
+        <!-- Option 1: Continue Previous (ลืมกด แต่นับต่อ) -->
+        <button class="gap-option-btn continue-opt" id="btnGapContinue" onclick="window.chooseGapOption('continue')">
+          <div class="gap-opt-icon">⚡</div>
+          <div class="gap-opt-content">
+            <div class="gap-opt-header">
+              <span class="gap-opt-title">นับเวลาต่อเนื่อง (ลืมกด)</span>
+              <span class="gap-opt-tag tag-recommend">แนะนำ</span>
+            </div>
+            <div class="gap-opt-sub" id="gapOptContinueSub">ไม่ได้กินอะไรเพิ่มตั้งแต่รอบก่อน — นับต่อทันที (สะสมเวลาเต็ม)</div>
+          </div>
+        </button>
+
+        <!-- Option 2: Fresh Start (นับ 1 ใหม่) -->
+        <button class="gap-option-btn fresh-opt" id="btnGapFresh" onclick="window.chooseGapOption('fresh')">
+          <div class="gap-opt-icon">🔄</div>
+          <div class="gap-opt-content">
+            <div class="gap-opt-header">
+              <span class="gap-opt-title">เริ่มนับ 1 ใหม่ตอนนี้</span>
+              <span class="gap-opt-tag tag-fresh">เริ่มรอบใหม่</span>
+            </div>
+            <div class="gap-opt-sub">มีกินอาหารนอกแอป / พักฟาสต์ — เริ่มนับ 0 ชั่วโมง ณ ตอนนี้ ไม่หลอกตัวเอง</div>
+          </div>
+        </button>
+
+        <!-- Option 3: Custom Backdated Time (ระบุเวลาเอง) -->
+        <button class="gap-option-btn custom-opt" id="btnGapCustom" onclick="window.chooseGapOption('custom')">
+          <div class="gap-opt-icon">🕒</div>
+          <div class="gap-opt-content">
+            <div class="gap-opt-header">
+              <span class="gap-opt-title">ระบุเวลาที่กินเสร็จจริง</span>
+              <span class="gap-opt-tag tag-custom">เลือกเวลาย้อนหลัง</span>
+            </div>
+            <div class="gap-opt-sub">กินเสร็จเมื่อไม่กี่ชั่วโมงก่อน — หมุนตัวเลือกเวลา (Drum Roller) เอง</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="alert-actions-row" style="margin-top: 14px;">
+        <button class="btn-cancel" onclick="window.closeGapDecisionModal()" style="width: 100%;">ยกเลิก (ยังไม่เริ่ม)</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ════════════ MODAL 5: BIOLOGICAL STAGE BIO-SCAN (PIXAR 3D) ════════════ -->
   <div class="modal-backdrop bio-scan-backdrop" id="modalBioScan" onclick="if(event.target === this) window.closeBioScanModal()">
     <div class="bio-scan-sheet">

@@ -13,6 +13,10 @@
   let serverNowDiffMs = 0; // Local clock vs server clock skew
   let editingSessionId = null;
   let deletingSessionId = null;
+  let currentGapSeconds = 0;
+  let currentEatingElapsedSeconds = 0;
+  let latestCompletedSession = null;
+  let pendingGapAction = null; // { nextType, nextTarget }
   const BASE_API_URL = 'https://brain.doctorbankonline.com';
 
   // DOM Elements
@@ -301,6 +305,9 @@
       currentStatus = data.current_status || (activeSession ? activeSession.session_type : 'fasting');
       targetHours = activeSession ? (activeSession.target_hours || 16.0) : (currentStatus === 'fasting' ? 16.0 : 8.0);
       protocol = activeSession ? (activeSession.protocol || '16:8') : '16:8';
+      currentGapSeconds = data.gap_seconds || 0;
+      currentEatingElapsedSeconds = data.eating_elapsed_seconds || 0;
+      latestCompletedSession = data.latest_completed_session || null;
 
       // Measure server time drift
       if (data.server_now_utc) {
@@ -456,17 +463,81 @@
     }
   }
 
-  // ─── Main Action Button (Toggle / Start Next Session) ───
-  async function handleMainAction() {
+  // ─── Smart Gap & Recovery Decision Gate Controller ───
+  function formatFriendlyDuration(totalSec) {
+    const totalMin = Math.round(totalSec / 60);
+    const hrs = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    if (hrs >= 24) {
+      const days = Math.floor(hrs / 24);
+      const remHrs = hrs % 24;
+      return `${days} วัน ${remHrs} ชม.`;
+    }
+    if (hrs > 0) return `${hrs} ชม. ${mins} นาที`;
+    return `${mins} นาที`;
+  }
+
+  function openGapDecisionModal(gapSec, isFromEating) {
+    const modal = document.getElementById('modalGapDecision');
+    const badge = document.getElementById('gapModalBadge');
+    const title = document.getElementById('gapModalTitle');
+    const desc = document.getElementById('gapModalDesc');
+    const durationText = document.getElementById('gapModalDurationText');
+    const continueSub = document.getElementById('gapOptContinueSub');
+
+    if (!modal) return;
+
+    const formattedDur = formatFriendlyDuration(gapSec);
+    if (durationText) durationText.textContent = formattedDur;
+
+    if (isFromEating) {
+      if (badge) badge.textContent = '🍽️ EATING WINDOW EXCEEDED';
+      if (title) title.textContent = 'มื้ออาหารเปิดค้างมานานกว่าปกติ';
+      if (desc) desc.innerHTML = `ตรวจพบว่ามื้ออาหารนี้เปิดค้างมาแล้ว <strong style="color: #38bdf8;">${formattedDur}</strong> ต้องการให้เริ่มนับฟาสต์อย่างไร?`;
+      if (continueSub) continueSub.textContent = `ไม่ได้กินอะไรเพิ่ม — เริ่มนับฟาสต์ต่อเนื่องทันที (สะสมแล้ว ${formattedDur})`;
+    } else {
+      if (badge) badge.textContent = '⏳ UNTRACKED GAP DETECTED';
+      if (title) title.textContent = 'เว้นช่วงไปนานกว่าปกติ';
+      if (desc) desc.innerHTML = `ตรวจพบว่าเว้นช่วงจากรอบก่อนมาแล้ว <strong style="color: #38bdf8;">${formattedDur}</strong> ต้องการให้เริ่มนับเวลาอย่างไร?`;
+      if (continueSub) continueSub.textContent = `ไม่ได้กินอะไรเพิ่มตั้งแต่รอบก่อน — นับเวลาฟาสต์ต่อเนื่องทันที (สะสมแล้ว ${formattedDur})`;
+    }
+
+    modal.classList.add('open');
+  }
+
+  window.closeGapDecisionModal = function () {
+    const modal = document.getElementById('modalGapDecision');
+    if (modal) modal.classList.remove('open');
+    pendingGapAction = null;
+  };
+
+  window.chooseGapOption = async function (option) {
+    if (!pendingGapAction) {
+      window.closeGapDecisionModal();
+      return;
+    }
+
+    const { nextType, nextTarget } = pendingGapAction;
+    window.closeGapDecisionModal();
+
+    if (option === 'continue') {
+      await executeStartSession(nextType, nextTarget, 'continue_previous');
+    } else if (option === 'fresh') {
+      await executeStartSession(nextType, nextTarget, 'fresh_start');
+    } else if (option === 'custom') {
+      await executeStartSession(nextType, nextTarget, 'fresh_start');
+      if (activeSession) {
+        window.openTimeAdjustModal(activeSession.id, activeSession.started_at_utc);
+      }
+    }
+  };
+
+  async function executeStartSession(nextType, nextTarget, gapMode = 'auto') {
     try {
-      const nextType = currentStatus === 'fasting' ? 'eating' : 'fasting';
-      const nextTarget = nextType === 'fasting' ? 16.0 : 8.0;
-
-      // Haptic feedback
-      if (navigator.vibrate) navigator.vibrate(25);
-
-      btnMainAction.disabled = true;
-      btnMainAction.style.opacity = '0.6';
+      if (btnMainAction) {
+        btnMainAction.disabled = true;
+        btnMainAction.style.opacity = '0.6';
+      }
 
       const effectiveNowIso = new Date(Date.now() + (serverNowDiffMs || 0)).toISOString();
       const res = await fetch(BASE_API_URL + '/api/fasting/sessions/start', {
@@ -476,21 +547,62 @@
           session_type: nextType,
           protocol: protocol,
           target_hours: nextTarget,
-          started_at_utc: effectiveNowIso
+          started_at_utc: effectiveNowIso,
+          gap_mode: gapMode
         })
       });
 
       const data = await res.json();
       if (data.success) {
         await loadStatus();
+        await loadHistory();
       } else {
         alert(data.error || 'Failed to switch session status');
       }
     } catch (err) {
-      console.error('[fasting-ui] handleMainAction error:', err);
+      console.error('[fasting-ui] executeStartSession error:', err);
     } finally {
-      btnMainAction.disabled = false;
-      btnMainAction.style.opacity = '1';
+      if (btnMainAction) {
+        btnMainAction.disabled = false;
+        btnMainAction.style.opacity = '1';
+      }
+    }
+  }
+
+  // ─── Main Action Button (Toggle / Start Next Session) ───
+  async function handleMainAction() {
+    try {
+      const nextType = currentStatus === 'fasting' ? 'eating' : 'fasting';
+      const nextTarget = nextType === 'fasting' ? 16.0 : 8.0;
+
+      // Haptic feedback
+      if (navigator.vibrate) navigator.vibrate(25);
+
+      // Check for Smart Gap Gate when switching to Fasting
+      if (nextType === 'fasting') {
+        let gapSeconds = 0;
+        let isFromEating = false;
+
+        if (activeSession && activeSession.session_type === 'eating') {
+          const startMs = new Date(activeSession.started_at_utc).getTime();
+          gapSeconds = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+          isFromEating = true;
+        } else if (!activeSession && currentGapSeconds > 0) {
+          gapSeconds = currentGapSeconds;
+          isFromEating = false;
+        }
+
+        // Trigger Gap Decision Gate if gap > 4 hours
+        if (gapSeconds > 4 * 3600) {
+          pendingGapAction = { nextType, nextTarget };
+          openGapDecisionModal(gapSeconds, isFromEating);
+          return;
+        }
+      }
+
+      await executeStartSession(nextType, nextTarget, 'auto');
+    } catch (err) {
+      console.error('[fasting-ui] handleMainAction error:', err);
     }
   }
 
@@ -913,7 +1025,7 @@
       }
 
       listContainer.innerHTML = '';
-      data.sessions.forEach(s => {
+      data.sessions.forEach((s, idx) => {
         const isFast = s.session_type === 'fasting';
         const startStr = formatTimeHHMM(s.started_at_utc);
         const endStr = s.ended_at_utc ? formatTimeHHMM(s.ended_at_utc) : 'In Progress';
@@ -943,6 +1055,24 @@
           </div>
         `;
         listContainer.appendChild(card);
+
+        // Check for Untracked Gap between this session and the older session immediately following it
+        if (idx < data.sessions.length - 1) {
+          const nextS = data.sessions[idx + 1];
+          const currStartMs = new Date(s.started_at_utc).getTime();
+          const prevEndMs = nextS.ended_at_utc ? new Date(nextS.ended_at_utc).getTime() : new Date(nextS.started_at_utc).getTime();
+          const gapMs = currStartMs - prevEndMs;
+          if (gapMs > 4 * 3600 * 1000) {
+            const gapDivider = document.createElement('div');
+            gapDivider.className = 'untracked-gap-divider';
+            gapDivider.innerHTML = `
+              <span class="gap-icon">⏸️</span>
+              <span>Untracked Break</span>
+              <span class="gap-duration">• ${formatFriendlyDuration(Math.round(gapMs / 1000))}</span>
+            `;
+            listContainer.appendChild(gapDivider);
+          }
+        }
       });
     } catch (err) {
       console.error('[fasting-ui] loadHistory error:', err);
