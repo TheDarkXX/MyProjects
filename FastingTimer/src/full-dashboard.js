@@ -468,6 +468,7 @@
       btnMainAction.disabled = true;
       btnMainAction.style.opacity = '0.6';
 
+      const effectiveNowIso = new Date(Date.now() + (serverNowDiffMs || 0)).toISOString();
       const res = await fetch(BASE_API_URL + '/api/fasting/sessions/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -475,7 +476,7 @@
           session_type: nextType,
           protocol: protocol,
           target_hours: nextTarget,
-          started_at_utc: new Date().toISOString()
+          started_at_utc: effectiveNowIso
         })
       });
 
@@ -743,7 +744,10 @@
       if (!selectedStr) return;
 
       const newDate = new Date(selectedStr);
-      if (newDate.getTime() > Date.now() + 60000) {
+      const effectiveNowMs = Date.now() + (serverNowDiffMs || 0);
+      const MAX_FUTURE_TOLERANCE_MS = 15 * 60 * 1000;
+
+      if (newDate.getTime() > effectiveNowMs + MAX_FUTURE_TOLERANCE_MS) {
         sheetErrorMsg.textContent = 'Cannot select future date or time';
         sheetErrorMsg.style.display = 'block';
         return;
