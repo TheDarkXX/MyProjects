@@ -75,10 +75,12 @@ retention_analysis:
 <Audio 1>: Vocal timbre and speech cadence reference for <Subject 1>.
 
 detailed_description:
-[Shot 1]: Eye-level steady vertical 9:16 medium close-up shot. The camera is completely invisible, NO phone visible in frame, NO tripod, NO desk mount shown. <Subject 1> gently holds <Subject 2> with one hand at chest level, looks directly into the lens and speaks with natural articulation: <d>[Thai] ใครที่มีปัญหานอนหลับยาก ตื่นมาเพลีย ลองตัวนี้คืนเดียวรู้เรื่อง</d>. Her delivery is soft, reassuring, authoritative, and speaks with clear Thai cadence.
+[Shot 1]: (0-5s) Cinematic macro slow glide shot of <Subject 2> DoctorBank Magnesium Night Plus standing gracefully on a sleek dark walnut bedside table. Soft warm ambient glow and golden highlights caress the glass bottle with aesthetic reflections.
+[Shot 2]: (5-10s) Smooth cut to a serene medium shot of <Subject 1> resting peacefully on luxury silk pillows in a modern minimalist bedroom, eyes gently closed, in deep, tranquil, undisturbed sleep. Atmosphere is calm, serene, and deeply restorative.
+[Shot 3]: (10-15s) Smooth transition to an eye-level vertical 9:16 medium close-up shot. r34l1sm, The camera is completely invisible, NO phone visible in frame, NO tripod, NO desk mount shown. <Subject 1> looks well-rested and glowing, gently holds <Subject 2> with one hand at chest level, looks directly into the lens with a warm confident smile, and speaks with natural crisp articulation: <d>[Thai] ด็อกเตอร์แบงค์ แมกนีเซียม ไนท์ พลัส จบทุกปัญหาการนอน</d>. Her delivery is confident, reassuring, clear spoken Thai cadence.
 
 overall_soundscape:
-clean quiet bedroom acoustic atmosphere, crisp studio-grade female vocal delivery, zero background hiss or ambient noise.
+gentle ambient bedroom acoustics, subtle soft cinematic room tone transitioning to crisp studio-grade female vocal delivery in the final shot, zero background hiss or ambient noise.
 
 non_diegetic_music:
 N/A
@@ -135,7 +137,7 @@ node "C:\My Claw\Openclaw-VPS\tools\colab-ai-video\h3_tvc_runner.cjs" `
   --hunt 3 `
   --master "C:\My Claw\The Viral\output\netidol_master_matte_v2.jpg" `
   --product "C:\My Claw\The Viral\Ads DRB\Brand_Refs\Products\Magnesium\3Ref_Master_Pack\DRB_MAG_REF01_front_hero.png" `
-  --dialogue "ใครที่มีปัญหานอนหลับยาก ตื่นมาเพลีย ลองตัวนี้คืนเดียวรู้เรื่อง" `
+  --dialogue "ด็อกเตอร์แบงค์ แมกนีเซียม ไนท์ พลัส จบทุกปัญหาการนอน" `
   --endpoint "http://colab-doctorbank:8188"
 ```
 *ระบบจะบันทึกพรีวิว `preview_seed1.mp4`, `preview_seed2.mp4`, `preview_seed3.mp4` เข้าโฟลเดอร์ `The Viral\output\previews\` ทันทีใน ~30 วินาที*
