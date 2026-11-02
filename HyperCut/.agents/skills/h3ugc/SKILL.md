@@ -42,10 +42,13 @@ description: >-
 * **Structural Anchor:** ป้อน `s{N-1}_endframe.jpg` เพื่อคุมมุมกล้อง ท่าทาง และความต่อเนื่อง
 * **Identity & Quality Anchor:** ป้อน `identity_ref` (ภาพ Master ความละเอียดสูงที่ผ่านการ QC จาก IDE) เข้าโมเดลคู่กันเสมอ เพื่อล็อกเบ้าหน้า ตา จมูก ปาก ให้คมชัด 4K เท่าเดิม 100%
 
-### 2. Tabletop Static Camera Only (ห้ามใช้ Handheld Shake)
-* **มุมกล้อง:** ตั้งกล้องหน้านิ่งๆ บนโต๊ะ (Tabletop Propped Phone / Desk Stand) ระดับสายตา/อก แนวตั้ง 9:16
+### 2. Tabletop Static Camera Only & Anti-Stand Leakage Guard
+* **ปัญหา Semantic Leakage (กัน AI วาดขาตั้งกล้องโผล่ในภาพ):** หากใส่คำว่า `phone on a stand` หรือ `tripod` ใน Prompt ตรงๆ AI มักจะวาดขาตั้งกล้อง โทรศัพท์มือถือ หรือตัวจับยึดโผล่ขึ้นมาเกะกะบนโต๊ะหน้าตัวละคร!
+* **สูตรกำกับมุมกล้องที่ถูกต้อง (Observer POV Optics):**
+  * บังคับใช้คีย์เวิร์ดมุมมองกล้องล่องหน:  
+    `Direct front-facing vertical 9:16 smartphone camera point-of-view framing at eye level. The camera is completely off-screen and invisible. NO phone visible in frame, NO camera stand, NO tripod, NO phone holder or desk mount shown in shot. Her hands are completely empty and resting naturally on her lap or gesturing freely.`
 * **ความลึกภาพ:** Deep depth of field เห็นฉากห้องนอน/คอนโดเป็นธรรมชาติ ห้ามทำฉากหลังเบลอแบบ DSLR หลอกตา
-* สองมือตัวละครเป็นอิสระ ไม่ต้องถือโทรศัพท์มือถือ
+* **นิ่งสนิท ไร้ Handheld Shake:** ล็อกมุมกล้องนิ่งสนิท ไม่มีความสั่นไหว สองมือตัวละครเป็นอิสระสำหรับถือสินค้าในซีน 3-4
 
 ### 3. Anti-Morphing & Bottle Scale Guard (คุมขวดสินค้าจริง 100%)
 * **สเกลขวด:** ขวดแก้วสีชาขนาดมาตรฐาน 250ml (สูงประมาณ 12–14 ซม.) สมส่วนกับมือมนุษย์ ไม่ใช่ถังยักษ์และไม่ใช่ขวดยาหยอดตา
