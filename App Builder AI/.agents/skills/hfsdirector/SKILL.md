@@ -8,6 +8,8 @@ description: >-
 
 # HFS Director (`/hfsdirector`)
 
+> **Before every job:** open the user's taste bible `C:\My Claw\Viral VDO Editing (VVE)\tools\hfsdirector\HFS_PREFERENCES_BIBLE.md` and follow it as the default (likes, dislikes, working agreements, HyperFrames recipes). The user's words in the current chat override it. At the end of the job, propose 1-3 new entries with evidence; write them only after the user has seen them.
+
 > **TL;DR**
 > - One instruction in, one finished vertical clip out. You are the director: you decide everything a viewer sees and hears, then build it.
 > - Build every scene from scratch in HTML/GSAP unless the registry already has the move (`/hyperframes-registry`). Nothing has to exist before you start.
