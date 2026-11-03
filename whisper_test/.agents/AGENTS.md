@@ -88,10 +88,16 @@ This workspace uses **two personas** that activate based on the active model. Al
 6. **Scope Enforcement:**
    - **Strict 100%:** เอกสารเชิงยุทธศาสตร์, Playbooks, คู่มือระบบ, แผนสถาปัตยกรรม, คลังความรู้, สารานุกรม (`docs/`, `vault/`, `Products/`, `Brand/`)
    - **Highly Recommended:** เอกสารบันทึกงานโค้ด (`Quick Save/`) ที่มีความยาวหลายร้อยบรรทัด แนะนำให้ใส่ In-File TOC เพื่ออำนวยความสะดวกในการกระโดดข้ามบล็อกโค้ดไปยัง Timeline หรือ GBRAIN Backlinks
-
 # Clickable Image & Asset Reference Links Protocol (Rule R36)
 
 ทุกครั้งที่มีการอ้างอิงไฟล์รูปภาพ ภาพปก สไลด์ อาร์ตเวิร์ก หรือ Asset ใดๆ ในข้อความสนทนา (แชท) หรือในเอกสาร Markdown ต้องทำเป็น **Clickable Markdown Link** รูปแบบ `[ชื่อไฟล์หรือคำอธิบาย](file:///C:/path/to/image.png)` เสมอ:
 1. **Zero Naked Filenames (ห้ามพิมพ์ชื่อไฟล์เปล่าๆ):** ห้ามเขียนแค่ `w1_01_cover.png` หรือครอบเฉพาะบล็อกโค้ดเด็ดขาด เพื่อไม่ให้ผู้ใช้ต้องเสียเวลาควานหาว่าไฟล์อยู่ที่ไหน
 2. **Absolute Forward-Slash Links:** ลิงก์ต้องเป็น Absolute URL เสมอ เริ่มต้นด้วย `file:///C:/...` โดยแปลง Backslash (`\`) เป็น Forward Slash (`/`) และแปลงช่องว่างเป็น `%20`
 3. **One-Click Inspection:** ผู้ใช้และ Agent ต้องสามารถคลิกเปิดดูภาพตัวจริงได้ทันทีใน 1 วินาที
+
+# Zero-Chat-Image & One-Click DrView Protocol (Rule R37)
+
+เมื่อสร้างหรือคัดเลือกภาพปก, สตอรี่บอร์ด, หรืออาร์ตเวิร์กในระบบ:
+1. **No Inline Chat Images (ห้ามส่งรูปเข้ามาเรนเดอร์ในแชท 100%):** เลิกแปะรูปภาพเข้ามาในกล่องแชทโดยเด็ดขาด เพื่อตัดปัญหาภาพล้นจอ แชทกระตุก หรือขนาดเพี้ยน
+2. **One-Click DrView / Main Viewport Links (คลิกเดียวเปิดตรงกลางจอ):** ให้ส่งเฉพาะ **Clickable Markdown Links** ที่มี Absolute URL ชัดเจน ผู้ใช้คลิกปุ๊บ ภาพจะเด้งเปิดขึ้นมาในหน้าต่าง Editor หลักตรงกลางจอ (DrView / Main Viewport) ทันที คมชัดระดับ 8K ซูมและแพนได้เต็มตา 100%
+3. **Studio Inspector Companion:** แนบลิงก์ไปยัง Studio Inspector (`http://127.0.0.1:4777/`) ควบคู่กันเสมอ สำหรับการตรวจเทียบภาพหลายใบและกด Hotkeys (1-6, A/D, Z, S, Space)

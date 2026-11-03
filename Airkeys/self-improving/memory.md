@@ -33,12 +33,20 @@
    - เมื่อบอสเคาะ *"จัดไป"* หรือ *"โอเค"* จึงรันสคริปต์บรอดแคสต์
 
 
-
----
-
 ## RULE: Clickable Image & Asset Reference Links Protocol (Rule R36)
 **Context:** การระบุชื่อไฟล์รูปภาพ, ปก, สไลด์, สตอรี่บอร์ด หรือ Assets ในแชทหรือเอกสารสรุปงานเป็นแค่ข้อความตัวเปล่าๆ หรือใส่ในโค้ดบล็อก ทำให้ผู้ใช้ต้องเสียเวลาไปเปิดโฟลเดอร์ ค้นหา path เองทีละไฟล์ ก่อให้เกิด Friction และ Cognitive Overhead
 **Core Rule:**
 1. **Mandatory Clickable Links:** ทุกครั้งที่มีการอ้างอิงภาพในข้อความสนทนา หรือในรายงาน Markdown ต้องทำเป็น Markdown Link ที่คลิกได้เสมอ: `[ชื่อไฟล์หรือคำอธิบาย](file:///C:/path/to/image.png)`
 2. **Path Standard:** ใช้ Absolute Path เสมอ เริ่มต้นด้วย `file:///C:/...` เปลี่ยน Backslash (`\`) เป็น Forward Slash (`/`) และแทนช่องว่างด้วย `%20`
 3. **No Plain Filenames:** ห้ามเขียนแค่ชื่อไฟล์ตัวเปล่าๆ หรือในบล็อกโค้ดโดยไม่มีลิงก์เด็ดขาด
+
+
+
+---
+
+## RULE: Zero-Chat-Image & One-Click DrView Protocol (Rule R37)
+**Context:** การเรนเดอร์รูปภาพในแชท IDE มีปัญหาจุกจิกเรื้อรัง (ภาพล้นจอ, ขยายเต็ม 100% Width, พิกเซลแตกเมื่อย่อขนาด, แชทกระตุก) ในขณะที่หน้าต่างตรงกลาง (DrView / Main Editor / Studio Inspector) มีฟังก์ชันซูม แพน เทียบภาพ และคีย์ลัดที่สมบูรณ์แบบกว่า
+**Core Rules:**
+1. **No Inline Chat Images (ห้ามส่งรูปเข้ามาในแชท 100%):** เลิกแปะรูปภาพเข้ามาเรนเดอร์ในกล่องแชทโดยเด็ดขาด เพื่อรักษาความคลีน เบาสบายตา และไม่กินพื้นที่แชท
+2. **One-Click DrView / Main Viewport Links:** เมื่อมีรูปภาพใหม่ให้ผู้ใช้ตรวจ ให้ส่งเฉพาะ **Clickable Links** ที่ชัดเจน เช่น `👉 [🔍 เปิดตรวจ Candidate ใน DrView / Main Editor (Full 8K)](file:///path/to/image.png)` ผู้ใช้คลิกปุ๊บ ภาพจะเด้งเปิดขึ้นมาในหน้าต่าง Editor หลักตรงกลาง (Main Viewport) ทันที คมกริบ 100% ซูมดูได้เต็มตา
+3. **Studio Inspector Companion:** แนบลิงก์ `[🖥️ เปิดตรวจใน Studio Inspector (Port 4777)](http://127.0.0.1:4777/)` ควบคู่กันเสมอ สำหรับการตรวจเทียบหลายภาพและกด Hotkey (1-6, A/D, Z, S, Space)
