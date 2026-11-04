@@ -10,7 +10,7 @@ description: >-
 
 > **Slash Command:** `/table [script_or_file] [--campaign CAMPAIGN_ID]`  
 > **Target Output:** ไฟล์ `.md` ที่มี **TSV Code Block แถวเดียวจบ** สำหรับคัดลอกลง Google Sheets / Excel / FlowKit  
-> **Source of Truth:** [`BROLL_TABLE_SAMPLE.md`](file:///C:/My%20Claw/Viral%20VDO%20Editing%20(VVE)/references/BROLL_TABLE_SAMPLE.md)
+> **Source of Truth:** [`references/BROLL_TABLE_SAMPLE.md`](references/BROLL_TABLE_SAMPLE.md) *(หรือ [`C:\My Claw\Viral VDO Editing (VVE)\references\BROLL_TABLE_SAMPLE.md`](file:///C:/My%20Claw/Viral%20VDO%20Editing%20(VVE)/references/BROLL_TABLE_SAMPLE.md))*
 
 ---
 
@@ -84,3 +84,4 @@ description: >-
 - Ref: Person N ช็อต · Product N ช็อต · เจนสด (-) N ช็อต
 - คัดลอก TSV Block จากในไฟล์ไปวางลง Excel / Google Sheets ได้ทันที!
 ```
+
