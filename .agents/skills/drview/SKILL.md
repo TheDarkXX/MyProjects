@@ -37,7 +37,6 @@ description: >-
     "*implementation_plan*.md": "antigravity.artifactEditor",
     "**/implementation_plan*.md": "antigravity.artifactEditor",
     "**/Implementation_Plan*.md": "antigravity.artifactEditor",
-    "*plan*.md": "antigravity.artifactEditor",
     "antigravity:/**/*.md": "antigravity.artifactEditor",
     "jetski-artifact:/**/*.md": "antigravity.artifactEditor",
     "*.md": "drview.mdViewer",

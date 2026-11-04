@@ -47,7 +47,6 @@ const DESIRED_ASSOCIATIONS = {
   "*implementation_plan*.md": "antigravity.artifactEditor",
   "**/implementation_plan*.md": "antigravity.artifactEditor",
   "**/Implementation_Plan*.md": "antigravity.artifactEditor",
-  "*plan*.md": "antigravity.artifactEditor",
   "antigravity:/**/*.md": "antigravity.artifactEditor",
   "jetski-artifact:/**/*.md": "antigravity.artifactEditor",
 
@@ -163,6 +162,17 @@ for (const item of SETTINGS_PATHS) {
           changed = true;
           issuesFixed++;
         }
+      }
+    }
+
+    // Remove overly broad *plan*.md if present (it hijacks normal markdown files)
+    if (assoc['*plan*.md']) {
+      issuesFound++;
+      console.log(`  ⚠️ Obsolete broad '*plan*.md' association found (hijacks normal files)`);
+      if (forceFix) {
+        delete assoc['*plan*.md'];
+        changed = true;
+        issuesFixed++;
       }
     }
 
@@ -359,6 +369,26 @@ for (const extDir of EXTENSION_DIRS) {
 
 if (!drViewFound) {
   console.log(`  ⚠️ DrView extension not found in extension directories!`);
+}
+
+// Step 4: Flush state.vscdb cache (Conflicting defaults & stale history entries)
+console.log("\n🧹 [4/4] Checking and clearing state.vscdb editor cache...");
+try {
+  const pyScriptCandidates = [
+    path.join(__dirname, 'clean-editor-cache.py'),
+    path.join(__dirname, 'scripts', 'clean-editor-cache.py'),
+    'C:\\My Claw\\Openclaw-VPS\\tools\\clean-editor-cache.py'
+  ];
+  const pyScript = pyScriptCandidates.find(p => fs.existsSync(p));
+  if (pyScript) {
+    const { execSync } = require('child_process');
+    execSync(`python "${pyScript}"`, { stdio: 'ignore' });
+    console.log("  ✅ Flushed conflicting defaults and redirected stale history entries to drview.mdViewer!");
+  } else {
+    console.log("  ℹ️ clean-editor-cache.py not found, skipping cache flush.");
+  }
+} catch (e) {
+  console.log("  ℹ️ Cache flush skipped or python error:", e.message);
 }
 
 console.log("\n==========================================================");
