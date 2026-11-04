@@ -8,8 +8,12 @@ description: >-
 เมื่อ User พิมพ์คำสั่ง `/ping` ให้คุณ (Agent) ดำเนินการวิเคราะห์สุขภาพระบบ 3 ระดับทันที โดยไม่ต้องขออนุญาตล่วงหน้า:
 
 1. **รันตัววัดประสิทธิภาพ Full Lifecycle**:
-   - ใช้ `run_command` รันสคริปต์ตัววัดประสิทธิภาพส่วนกลาง:
-     `python tools/ping_profiler.py`
+   - ใช้ `run_command` รันสคริปต์ตัววัดประสิทธิภาพ (รองรับ 3 ชั้น: Script ในตัวสกิล ➔ โฟลเดอร์ `tools/` ในโปรเจกต์ ➔ Central Fallback ที่ `C:\XBrain`):
+     ```powershell
+     python .agents/skills/ping/scripts/ping_profiler.py 2>$null; if (-not $?) { python tools/ping_profiler.py 2>$null; if (-not $?) { python "C:\XBrain\tools\ping_profiler.py" } }
+     ```
+     หรือคำสั่งสั้นตามความเหมาะสม:
+     `python .agents/skills/ping/scripts/ping_profiler.py` (หรือ `python tools/ping_profiler.py`)
    - สคริปต์จะวัดค่าจริงระดับมิลลิวินาที:
      - **Network Layer**: DNS Resolve, ICMP Ping RTT, TCP 443 Handshake (ทั้ง API และ Channel)
      - **Cloud Queue Layer**: วัดเวลาคิวระหว่าง User Input Timestamp กับเวลาที่ AI Model เริ่มรันเทิร์นแรก
