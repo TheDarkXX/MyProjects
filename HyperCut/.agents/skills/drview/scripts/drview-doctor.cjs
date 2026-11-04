@@ -189,6 +189,31 @@ for (const item of SETTINGS_PATHS) {
       }
     }
 
+    // Check core anti-conflict, agent & layout settings
+    const REQUIRED_SETTINGS = {
+      "files.autoSave": "onFocusChange",
+      "files.saveConflictResolution": "overwriteFileOnDisk",
+      "markdown.preview.autoShowPreviewToSide": false
+    };
+
+    if (item.name === 'Antigravity IDE') {
+      REQUIRED_SETTINGS["antigravity.enableInlineDiff"] = true;
+      REQUIRED_SETTINGS["antigravity.autoOpenFiles"] = false;
+      REQUIRED_SETTINGS["antigravity.autoAcceptOnChat"] = true;
+    }
+
+    for (const [key, expectedVal] of Object.entries(REQUIRED_SETTINGS)) {
+      if (settings[key] !== expectedVal) {
+        issuesFound++;
+        console.log(`  ⚠️ Setting mismatch: '${key}' (current: '${settings[key]}', expected: '${expectedVal}')`);
+        if (forceFix) {
+          settings[key] = expectedVal;
+          changed = true;
+          issuesFixed++;
+        }
+      }
+    }
+
     if (changed && forceFix) {
       fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4), 'utf8');
       console.log(`  ✅ Updated ${item.name} settings successfully!`);

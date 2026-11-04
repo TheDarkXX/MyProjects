@@ -7,7 +7,7 @@ appdata = os.environ.get('APPDATA', '')
 if not appdata:
     exit(0)
 
-# 1. Clean globalStorage conflictingDefaults
+# 1. Clean globalStorage conflictingDefaults & dismiss side-by-side prompt
 global_db = os.path.join(appdata, 'Antigravity IDE', 'User', 'globalStorage', 'state.vscdb')
 if os.path.exists(global_db):
     try:
@@ -19,7 +19,10 @@ if os.path.exists(global_db):
             val = json.loads(row[0].decode('utf-8') if isinstance(row[0], bytes) else row[0])
             val['*.md'] = ['drview.mdViewer']
             cur.execute("UPDATE ItemTable SET value = ? WHERE key = 'editorOverrideService.conflictingDefaults'", (json.dumps(val),))
-            conn.commit()
+        
+        # Permanently dismiss the AutoSave notice that suggests switching to side-by-side diffs
+        cur.execute("INSERT OR REPLACE INTO ItemTable (key, value) VALUES ('antigravity.autoSaveInlineNotice.dismissed', 'true')")
+        conn.commit()
         conn.close()
     except Exception:
         pass
