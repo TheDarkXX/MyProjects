@@ -1,9 +1,9 @@
 ---
 name: hfsdirector
-version: "0.2.0"
-updated_at: "2026-10-29"
+version: "0.3.0"
+updated_at: "2026-11-05"
 description: >-
-  One-command viral video director for any genre (product ad, app demo, AI/tech showcase, news, explainer, finance, health, story, lead-magnet). Turns a single instruction into a finished 9:16 HyperFrames clip: brief, beat sheet, look, shot list, build from scratch or the registry, check, snapshot review, preview. Works with no footage (pure motion graphics), over a talking head (captions, text and objects behind the speaker, punch-ins), or both with an embedded mini-ad. Use when: /hfsdirector [what you want], /director, "ทำคลิปไวรัล", "กำกับคลิป", "ทำโฆษณา X วิ", or any request for a finished short-form clip from one prompt.
+  One-command viral video director for any genre (product ad, app demo, AI/tech showcase, news, explainer, finance, health, story, lead-magnet). Supports 3 execution modes — Argon Pure (100% direct coding, zero Flash worker contamination), CC Surgical Polish (/hfsdirector polish), and Golden Seed 2-Step (/hfsdirector seed and /hfsdirector continue). Turns a single instruction into a finished 9:16 HyperFrames clip: brief, beat sheet, look, shot list, build from scratch or the registry, check, snapshot review, preview. Use when: /hfsdirector [what you want], /director, "ทำคลิปไวรัล", "กำกับคลิป", "ทำโฆษณา X วิ", or any request for a finished short-form clip from one prompt.
 ---
 
 # HFS Director (`/hfsdirector`)
@@ -14,7 +14,10 @@ description: >-
 > - One instruction in, one finished vertical clip out. You are the director: you decide everything a viewer sees and hears, then build it.
 > - Build every scene from scratch in HTML/GSAP unless the registry already has the move (`/hyperframes-registry`). Nothing has to exist before you start.
 > - The render contract, CLI and work loop live in `/hyperframes`. This file adds the director's layer: story, pacing, look, shots and the quality bar.
-> - Models: Opus 5.5 high directs and owns every gate; mechanical work goes to the Flash worker; Sonnet 5.5 high is the quota fallback. Never below high (see Roles).
+> - **Models & 3 Execution Modes:** Opus 5.5 high or **Gemini 4 Argon (High/Medium)** directs and owns every gate:
+>   1. **Argon Pure Mode (`/hfsdirector [prompt]` on Argon):** Writes 100% of scenes directly in Argon — **NEVER** delegates scene HTML/GSAP coding to `flash-worker.js` (zero Flash stiffness contamination).
+>   2. **CC Surgical Polish (`/hfsdirector polish <project>` on CC Opus):** 1-turn aesthetic upgrade after Argon finishes — upgrades only CSS color/glow/depth tokens, typography contrast, and GSAP easing curves without demolishing DOM or beat timing.
+>   3. **Golden Seed 2-Step (`/hfsdirector seed [prompt]` on CC ➔ `/hfsdirector continue <project>` on Argon):** CC builds `BRIEF`, `BEATS`, `LOOK`, and `scene-01.html` as the master template (1 turn), then Argon clones the exact aesthetic soul across scenes 2..N and runs all gates.
 > - Ask at most one question, and only for a fact the viewer will read (a brand name, price, handle). Decide everything else and list it at the end.
 > - Stop at the Studio preview. Render only when the person approves or the host project's rules allow it.
 > - Pitch three different films before building one (`PITCH.md`), and log every phase with real timestamps (`LOG.jsonl` → `TIMING.md`). A gate you did not run is written down as not run, never as passed.
@@ -62,13 +65,13 @@ Do these in order. Each one leaves a file or a log line, so a skipped step is vi
 
 Three roles. The person picks the model with `/model`; you cannot switch yourself, so work at the level you are given and follow the rule for it.
 
-### Director: Opus 5.5 high (default)
+### Director: Opus 5.5 high or Gemini 4 Argon (High/Medium)
 Runs the whole line and owns every decision: brief, beats, look, shot list, the quality gates (§8) and the final verdict. Never delegate anything that needs taste or a pass/fail call: `BEATS.md`, snapshot review, Thai-rule checks, `REVIEW.md`.
 
-### Worker: Flash (`tools/flash-worker.js`), called by the director
-Mechanical, repeatable work goes to the Flash worker so the director's tokens go to decisions. Call it yourself; do not ask the person first.
+### Worker: Flash (`tools/flash-worker.js`), called by the director (ONLY when Director is Claude Opus/Sonnet)
+Mechanical, repeatable work goes to the Flash worker so Claude's quota goes to decisions. **Exception:** When the Director is **Gemini 4 Argon**, do **NOT** call `flash-worker.js` for scene HTML/GSAP (see Mode 1 below).
 
-| Delegate | Keep |
+| Delegate (Claude Director only) | Keep |
 | --- | --- |
 | Scaffold scene HTML from a fully written spec (all copy, tokens, timings decided) | Deciding what the scene is |
 | Variants of one finished scene (copy, language, product swaps) | Choosing which variant ships |
@@ -92,11 +95,42 @@ Rules for using it:
 3. **Output is a draft, not a result.** Read every line against `worker-brief.md`, then run `check`, the lint and a snapshot. `check` can pass a file that still breaks the brief, so the read is not optional. The worker never signs off its own work.
 4. **Failure handling.** The worker cascades through four Flash models and often hits HTTP 503 at busy times. If it exits non-zero, no file is written: retry once. If it fails again, or its file fails `check` twice, write the scene yourself.
 5. **Only where the host provides it.** VVE ships `tools/flash-worker.js`. A host without it: do the work yourself and say so.
-6. **Default jobs.** In a new clip these go to the worker unless the reason below applies: the root's SFX `<audio>` set, per-word or per-letter span markup, and every variant. Log each call with `event worker "<file>: ok|retry|fallback"`.
-7. **When to skip it.** A job under about 30 lines, or an edit pass on files you already wrote, is faster by hand. Skipping is allowed, but log it (`event worker "skipped: <reason>"`) and give the reason in `REVIEW.md`.
+6. **Default jobs.** In a new clip under Claude Director these go to the worker unless the reason below applies: the root's SFX `<audio>` set, per-word or per-letter span markup, and every variant. Log each call with `event worker "<file>: ok|retry|fallback"`.
+7. **When to skip it.** When running on **Gemini 4 Argon** (always skip scene coding), or for a job under about 30 lines, or an edit pass on files you already wrote. Log it (`event worker "skipped: <reason>"`) and give the reason in `REVIEW.md`.
 
 ### Quota fallback: Sonnet 5.5 high
 When Opus quota is tight the person drops the director to Sonnet 5.5 high. Nothing else changes: the snapshot review stays full and every gate in §8 still runs. Never run the director below high effort: a medium-effort pass skips frames and signs off clips that should fail.
+
+---
+
+### ⚡ Director Mode 1: Gemini 4 Argon Pure Mode (Default when active model is Argon)
+When the active model is **Gemini 4 Argon (Medium or High)**, you have zero Claude quota pressure and fast native generation. Follow these mandatory overrides:
+1. **ZERO Flash-Worker Scene Contamination (Iron Rule):** Do **NOT** delegate scene HTML/GSAP creation to `tools/flash-worker.js`. Write 100% of `compositions/*.html` directly yourself so the layout, SVG layering, and GSAP choreography reflect Argon's full reasoning instead of Flash's rigid output. Log `event worker "skipped: argon-direct-coding"`.
+2. **Mandatory Aesthetic & Physics Bar (Anti-Stiffness Guard):**
+   - **Never build flat PowerPoint slides:** Every scene must have at least 3 depth layers (background atmosphere/glow/grid + midground subject/card + foreground kinetic typography/accents).
+   - **Never use linear or plain opacity fades:** Every motion must use weighted GSAP physics (`power4.out`, `expo.out`, `back.out(1.4)`, or custom cubic-bezier) with label-relative staggered choreography (`"+=0.08"`, `"<0.12"`).
+   - **Strict Taste Bible Compliance:** Pull tokens, fonts, and layout rules strictly from `HFS_PREFERENCES_BIBLE.md` and `references/looks.md`.
+
+### 👁️‍🗨️ Director Mode 2: CC Surgical Aesthetic Polish (`/hfsdirector polish <project>`)
+Triggered when Argon has already built a project and passed mechanical gates, and the user brings in **Claude Opus (CC)** for a 1-turn aesthetic upgrade:
+1. **Read First:** Inspect `<project>/LOOK.md`, `<project>/BEATS.md`, `<project>/snapshots/*.png`, and all `<project>/compositions/*.html`.
+2. **Zero DOM Demolition (Iron Rule):** Do **NOT** rewrite the project from scratch, do **NOT** break composition IDs, and do **NOT** alter beat durations or audio sync that already passed gates.
+3. **3-Point Surgical Strike Only:**
+   - **Color, Glow & Depth Tokens:** Upgrade CSS variables, gradients, `backdrop-filter`, `box-shadow`, ambient lighting, and contrast so the frame reads like a luxury studio piece.
+   - **Typography Hierarchy:** Refine font weights, scale ratios, `letter-spacing`, and hero-word emphasis while keeping Thai line-breaks intact and inside the 952px safe zone.
+   - **GSAP Motion Curves:** Upgrade stiff easing curves to expressive physics (`power4.out`, `back.out`, overshoot/settle, micro-staggers).
+4. **Verify & Deliver in 1 Turn:** Re-run `hyperframes check` and capture updated snapshots for the polished scenes, log phase `fix-pass`, and present the before/after improvements immediately.
+
+### 🌱 Director Mode 3: Golden Seed 2-Step (`/hfsdirector seed` ➔ `/hfsdirector continue`)
+Saves 85% of Claude Opus quota while locking in S+ aesthetic taste from frame 0:
+1. **Step A — On Claude Opus (`/hfsdirector seed [prompt]`):**
+   - Run phases `brief`, `pitch`, `beats`, `look`, `shots`.
+   - Build **ONLY `scene-01.html` (Frame-0 Hook)** in full HTML/CSS/GSAP and verify its snapshot so it serves as the Golden Master Template.
+   - Stop immediately after `scene-01.html` passes its snapshot check and output the handoff command: `/hfsdirector continue <project>`.
+2. **Step B — On Gemini 4 Argon (`/hfsdirector continue <project>`):**
+   - Read `BRIEF.md`, `BEATS.md`, `LOOK.md`, and study `compositions/scene-01.html` line-by-line as the visual and motion law.
+   - Directly code `scene-02.html` through the final scene matching `scene-01.html`'s exact token system, depth layering, and GSAP easing personality (without calling `flash-worker.js` for scenes).
+   - Run all §8 quality gates, audio sourcing, and `TIMING.md` report to finish the clip.
 
 ---
 
