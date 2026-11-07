@@ -170,7 +170,18 @@ function resolveScript(scriptName) {
 }
 
 // ─── Armor 1: Auto-Relocate Completed Plan (Active ➔ Complete) ────────────────
-let targetComponent = 'Core-VPS';
+function detectDefaultComponent(repoRoot) {
+  const repoName = path.basename(repoRoot);
+  if (repoName.includes('Viral VDO Editing') || repoName === 'VVE') return 'VVE';
+  if (repoName === 'The Viral' || repoName === 'The-Viral') return 'The-Viral';
+  if (repoName.includes('DoctorBank')) return 'Brand';
+  if (repoName.includes('HyperCut')) return 'HyperCut';
+  if (repoName.includes('Alpha-B')) return 'Alpha-B';
+  if (repoName.includes('MyProjects')) return 'Core';
+  return 'Core-VPS';
+}
+
+let targetComponent = detectDefaultComponent(ROOT);
 if (targetQuickSave) {
   const fullTarget = path.resolve(ROOT, targetQuickSave);
   if (fs.existsSync(fullTarget)) {
@@ -185,10 +196,22 @@ if (targetQuickSave) {
         targetComponent = subParts[2];
       } else {
         const compMatch = content.match(/^component:\s*["']?([^"'\r\n]+)/m);
-        if (compMatch && compMatch[1].trim()) targetComponent = compMatch[1].trim();
+        if (compMatch && compMatch[1].trim()) {
+          targetComponent = compMatch[1].trim();
+        } else {
+          const fn = path.basename(fullTarget).toLowerCase();
+          if (fn.includes('_content_')) targetComponent = 'Content';
+          else if (fn.includes('_products_')) targetComponent = 'Products';
+          else if (fn.includes('_brand_')) targetComponent = 'Brand';
+          else if (fn.includes('_marketing_')) targetComponent = 'Marketing';
+          else if (fn.includes('_system_')) targetComponent = 'System';
+          else if (fn.includes('_vve_')) targetComponent = 'VVE';
+          else if (fn.includes('fasting')) targetComponent = 'FastingTimer';
+        }
       }
 
-      if (isComplete && normRel.startsWith('Quick Save/Active/')) {
+      const isFloatingInQsRoot = /^Quick Save\/[^\/]+\.md$/i.test(normRel);
+      if (isComplete && (normRel.startsWith('Quick Save/Active/') || isFloatingInQsRoot)) {
         console.log(`\n📦 [Auto-Relocate] Completed plan detected in Active directory.`);
         const destDir = path.join(ROOT, 'Quick Save', 'Complete', targetComponent);
         if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
@@ -313,32 +336,61 @@ if (flags.skipCacheBust) {
 // ─── Step 3.5: SemVer Floating Files Auto-Archive (5-7 Rule Enforcement) ─────
 const step35Start = Date.now();
 if (!flags.skipCleanup) {
-  const targetCompDir = path.join(ROOT, 'Quick Save', 'Complete', targetComponent);
-  if (fs.existsSync(targetCompDir)) {
+  const completeRoot = path.join(ROOT, 'Quick Save', 'Complete');
+  const compDirs = [];
+  if (fs.existsSync(completeRoot)) {
+    for (const ent of fs.readdirSync(completeRoot, { withFileTypes: true })) {
+      if (ent.isDirectory()) compDirs.push(path.join(completeRoot, ent.name));
+    }
+  }
+  if (compDirs.length === 0) compDirs.push(path.join(completeRoot, targetComponent));
+
+  for (const targetCompDir of compDirs) {
+    if (!fs.existsSync(targetCompDir)) continue;
+    const compName = path.basename(targetCompDir);
     const entries = fs.readdirSync(targetCompDir, { withFileTypes: true });
     const floating = entries.filter(e => e.isFile() && e.name.endsWith('.md')).map(e => e.name);
     if (floating.length > 7) {
       floating.sort(compareSemVer);
       const toArchive = floating.slice(0, floating.length - 6);
-      console.log(`\n[3.5/7] Auto-Archive: ${floating.length} files floating in Complete/${targetComponent} (Limit: 7). ${flags.dryRun ? 'Would archive' : 'Archiving'} ${toArchive.length} file(s)...`);
+      console.log(`\n[3.5/7] Auto-Archive: ${floating.length} files floating in Complete/${compName} (Limit: 7). ${flags.dryRun ? 'Would archive' : 'Archiving'} ${toArchive.length} file(s)...`);
       for (const f of toArchive) {
         const sem = parseSemVer(f);
-        const folderName = sem ? `V${sem.major}` : 'V13';
+        const folderName = sem ? `V${sem.major}` : 'V14';
         const archiveDir = path.join(targetCompDir, folderName);
         if (!flags.dryRun) {
           if (!fs.existsSync(archiveDir)) fs.mkdirSync(archiveDir, { recursive: true });
           fs.renameSync(path.join(targetCompDir, f), path.join(archiveDir, f));
-          console.log(`  ✔ Archived: ${f} ➔ Complete/${targetComponent}/${folderName}/`);
+          console.log(`  ✔ Archived: ${f} ➔ Complete/${compName}/${folderName}/`);
         } else {
-          console.log(`  ✔ [Dry-Run] Would archive: ${f} ➔ Complete/${targetComponent}/${folderName}/`);
+          console.log(`  ✔ [Dry-Run] Would archive: ${f} ➔ Complete/${compName}/${folderName}/`);
         }
       }
-      recordTime('SemVer Auto-Archive', Date.now() - step35Start);
-    } else {
-      recordTime('SemVer Auto-Archive', 0);
     }
-  } else {
-    recordTime('SemVer Auto-Archive', 0);
+  }
+  recordTime('SemVer Auto-Archive', Date.now() - step35Start);
+
+  // Sweep any accidental loose .md files floating directly in Quick Save/ root into Complete/<targetComponent>
+  const qsRootDir = path.join(ROOT, 'Quick Save');
+  if (fs.existsSync(qsRootDir)) {
+    const looseQs = fs.readdirSync(qsRootDir, { withFileTypes: true })
+      .filter(e => e.isFile() && e.name.endsWith('.md'))
+      .map(e => e.name);
+    if (looseQs.length > 0) {
+      console.log(`\n[3.5b/7] Auto-Relocate: ${looseQs.length} loose file(s) found at Quick Save/ root. Moving to Complete/${targetComponent}...`);
+      const destCompDir = path.join(ROOT, 'Quick Save', 'Complete', targetComponent);
+      if (!fs.existsSync(destCompDir)) fs.mkdirSync(destCompDir, { recursive: true });
+      for (const f of looseQs) {
+        const src = path.join(qsRootDir, f);
+        const dest = path.join(destCompDir, f);
+        if (!flags.dryRun) {
+          fs.renameSync(src, dest);
+          console.log(`  ✔ Relocated loose root file: ${f} ➔ Complete/${targetComponent}/`);
+        } else {
+          console.log(`  ✔ [Dry-Run] Would relocate: ${f} ➔ Complete/${targetComponent}/`);
+        }
+      }
+    }
   }
 } else {
   recordTime('SemVer Auto-Archive', 0);
@@ -561,7 +613,15 @@ if (flags.dryRun) {
           pushOriginSuccess = true;
           break;
         } else {
+          const errCombined = `${pushRes.stdout}\n${pushRes.stderr}`;
           lastError = pushRes.stderr.trim() || pushRes.stdout.trim();
+          const isRace = /fetch first|non-fast-forward|stale info|rejected/i.test(errCombined);
+          if (isRace && attempt === 1) {
+            console.warn('⚠️ Origin push rejected (concurrent update detected). Retrying with re-fetch...');
+            continue;
+          } else {
+            break;
+          }
         }
       }
     }

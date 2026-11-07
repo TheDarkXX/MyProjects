@@ -49,6 +49,17 @@ const LOCKED_ROOT_SCRIPTS = new Set([
   'ecosystem.config.cjs'
 ]);
 
+export function detectDefaultComponent(repoRoot) {
+  const repoName = path.basename(repoRoot);
+  if (repoName.includes('Viral VDO Editing') || repoName === 'VVE') return 'VVE';
+  if (repoName === 'The Viral' || repoName === 'The-Viral') return 'The-Viral';
+  if (repoName.includes('DoctorBank')) return 'DoctorBank-Brand';
+  if (repoName.includes('HyperCut')) return 'HyperCut';
+  if (repoName.includes('Alpha-B')) return 'Alpha-B';
+  return 'Core-VPS';
+}
+const DEFAULT_COMPONENT = detectDefaultComponent(ROOT);
+
 // ─────────────────────────────────────────────────────────────
 // 🛡️ ARMOR 1: Natural Semantic Version Parser & Sorter
 // ─────────────────────────────────────────────────────────────
@@ -160,14 +171,14 @@ export function determineLooseFileDestination(filePath) {
 
   // Detect component from tags / filename
   const lower = (filename + ' ' + content.substring(0, 1000)).toLowerCase();
-  let component = 'Core-VPS';
+  let component = DEFAULT_COMPONENT;
 
   if (lower.includes('doctorbank') || lower.includes('drbpost')) {
     component = 'DoctorBank-Brand';
   } else if (lower.includes('hypercut')) {
     component = 'HyperCut';
   } else if (lower.includes('vve') || lower.includes('capcut') || lower.includes('kallaway')) {
-    component = 'Viral VDO Editing (VVE)';
+    component = 'VVE';
   } else if (lower.includes('system-skill') || lower.includes('ag-skill')) {
     component = 'System-Skills';
   }
@@ -351,7 +362,7 @@ export function resolveCompleteTarget(filePath) {
   if (!rel.startsWith('..') && !path.isAbsolute(rel) && parts.length > 1) component = parts[0];
   if (!component) {
     const loose = determineLooseFileDestination(filePath);
-    component = loose && loose.action === 'COMPONENT' ? path.basename(loose.targetDir) : 'Core-VPS';
+    component = loose && loose.action === 'COMPONENT' ? path.basename(loose.targetDir) : DEFAULT_COMPONENT;
   }
 
   const compDir = path.join(ROOT, 'Quick Save', 'Complete', component);
@@ -590,10 +601,22 @@ const safeGhosts = [];
 const conflictedGhosts = [];
 const unmovedComplete = [];
 const looseActiveFiles = [];
+const looseQsRootFiles = [];
 const genuineActive = [];
 const falseActive = [];
 const staleActive = [];
 const untaskedStudies = [];
+
+// Check loose files at root of Quick Save
+const qsRootDir = path.join(ROOT, 'Quick Save');
+if (fs.existsSync(qsRootDir)) {
+  const qsEntries = fs.readdirSync(qsRootDir, { withFileTypes: true });
+  for (const ent of qsEntries) {
+    if (ent.isFile() && ent.name.endsWith('.md')) {
+      looseQsRootFiles.push(path.join(qsRootDir, ent.name));
+    }
+  }
+}
 
 // Check loose files at root of Active
 if (fs.existsSync(activeDir)) {
@@ -683,26 +706,35 @@ if (untaskedStudies.length > 0) {
 // PHASE 2: Complete Directory Organization (Floating Files & SemVer)
 // ─────────────────────────────────────────────────────────────
 console.log(`\n${c.bold}[Phase 2] Checking Complete/ Folder Organization (SemVer Floating Engine)...${c.reset}`);
-const coreVpsCompleteDir = path.join(completeDir, 'Core-VPS');
-let coreVpsFloatingCount = 0;
+const componentDirs = [];
+if (fs.existsSync(completeDir)) {
+  for (const ent of fs.readdirSync(completeDir, { withFileTypes: true })) {
+    if (ent.isDirectory()) componentDirs.push(path.join(completeDir, ent.name));
+  }
+}
+if (componentDirs.length === 0) {
+  componentDirs.push(path.join(completeDir, DEFAULT_COMPONENT));
+}
+
+let totalFloatingCount = 0;
 let filesToArchive = [];
 
-if (fs.existsSync(coreVpsCompleteDir)) {
-  const items = fs.readdirSync(coreVpsCompleteDir, { withFileTypes: true });
+for (const compPath of componentDirs) {
+  const compName = path.basename(compPath);
+  if (!fs.existsSync(compPath)) continue;
+  const items = fs.readdirSync(compPath, { withFileTypes: true });
   const floatingFiles = items.filter(i => i.isFile() && i.name.endsWith('.md')).map(i => i.name);
-  coreVpsFloatingCount = floatingFiles.length;
-
-  // Natural SemVer sorting
   floatingFiles.sort(compareSemVer);
+  totalFloatingCount += floatingFiles.length;
 
-  console.log(`  Core-VPS Floating Files at root: ${c.bold}${coreVpsFloatingCount}${c.reset} (Allowed: 5-7)`);
-  if (coreVpsFloatingCount > 7) {
-    // Keep top 6 newest, archive the older ones
-    filesToArchive = floatingFiles.slice(0, coreVpsFloatingCount - 6);
-    console.log(`  ${c.yellow}⚠️ Auto-Cleanup Triggered: ${filesToArchive.length} older files queued for SemVer archive.${c.reset}`);
-    filesToArchive.forEach(f => console.log(`    ↳ to archive: ${f}`));
+  console.log(`  [${compName}] Floating Files at root: ${c.bold}${floatingFiles.length}${c.reset} (Allowed: 5-7)`);
+  if (floatingFiles.length > 7) {
+    const toArch = floatingFiles.slice(0, floatingFiles.length - 6);
+    filesToArchive.push(...toArch.map(f => path.join(compName, f)));
+    console.log(`  ${c.yellow}⚠️ Auto-Cleanup Triggered: ${toArch.length} older files queued for SemVer archive in ${compName}.${c.reset}`);
+    toArch.forEach(f => console.log(`    ↳ to archive: ${f}`));
   } else {
-    console.log(`  ${c.green}✅ Core-VPS root file count within optimal range.${c.reset}`);
+    console.log(`  ${c.green}✅ [${compName}] root file count within optimal range.${c.reset}`);
   }
 }
 
@@ -714,14 +746,27 @@ console.log(`  • Verified Safe Ghosts (Ready to Quarantine): ${safeGhosts.leng
 console.log(`  • Conflicted Ghosts (BLOCKED - Content Diverged): ${conflictedGhosts.length > 0 ? c.red + c.bold + conflictedGhosts.length : c.green + '0'}${c.reset}`);
 console.log(`  • Unmoved Complete Files in Active: ${unmovedComplete.length > 0 ? c.yellow + unmovedComplete.length : c.green + '0'}${c.reset}`);
 console.log(`  • False Active Plans (Finished but Unmoved): ${falseActive.length > 0 ? c.red + c.bold + falseActive.length : c.green + '0'}${c.reset}`);
+console.log(`  • Loose Files at Quick Save/ root: ${looseQsRootFiles.length > 0 ? c.red + c.bold + looseQsRootFiles.length : c.green + '0'}${c.reset}`);
 console.log(`  • Loose Files at Active/ root: ${looseActiveFiles.length > 0 ? c.yellow + looseActiveFiles.length : c.green + '0'}${c.reset}`);
-console.log(`  • Core-VPS Older Files to Archive: ${filesToArchive.length > 0 ? c.yellow + filesToArchive.length : c.green + '0'}${c.reset}`);
+console.log(`  • Complete Older Files to Archive: ${filesToArchive.length > 0 ? c.yellow + filesToArchive.length : c.green + '0'}${c.reset}`);
 
 if (conflictedGhosts.length > 0) {
   console.log(`\n${c.bold}${c.red}🚨 BLOCKED: Conflicted Ghosts Detected (Different Content - Protected by Armor):${c.reset}`);
   conflictedGhosts.forEach(cg => {
     console.log(`  - ${path.relative(ROOT, cg.activePath)}`);
     console.log(`    ↳ Reason: ${cg.details}`);
+  });
+}
+
+console.log(`  • Quick Save/ Root Floating Files: ${looseQsRootFiles.length} (Allowed: 5-7)`);
+if (looseQsRootFiles.length > 7) {
+  looseQsRootFiles.sort((a, b) => compareSemVer(path.basename(a), path.basename(b)));
+  const toArchive = looseQsRootFiles.slice(0, looseQsRootFiles.length - 6);
+  console.log(`\n${c.bold}${c.yellow}⚠️ Quick Save/ Root File Count Exceeds 7 (${looseQsRootFiles.length} files - ${toArchive.length} to archive):${c.reset}`);
+  toArchive.forEach(qf => {
+    const ver = parseSemVer(path.basename(qf));
+    const target = ver ? `Quick Save/V${ver.major}/` : `Quick Save/V14/`;
+    console.log(`  - ${path.relative(ROOT, qf)} ➔ Suggested Archive: ${target}`);
   });
 }
 
@@ -753,6 +798,24 @@ if (isFixMode) {
     handled.add(g.activePath);
     console.log(`  ${c.green}✔ Quarantined ghost:${c.reset} ${path.basename(g.activePath)} ➔ ${path.relative(ROOT, qPath)}`);
     actionsTaken++;
+  }
+
+  // 1.5 Relocate loose files floating at Quick Save/ root into Complete/<targetComponent>
+  if (looseQsRootFiles.length > 0) {
+    for (const qf of looseQsRootFiles) {
+      if (!fs.existsSync(qf)) continue;
+      const base = path.basename(qf);
+      const targetDir = path.join(completeDir, DEFAULT_COMPONENT);
+      const dest = path.join(targetDir, base);
+      if (fs.existsSync(dest)) {
+        console.log(`  ${c.red}✖ Skipped loose QS root file (destination exists):${c.reset} ${base}`);
+        continue;
+      }
+      fs.mkdirSync(targetDir, { recursive: true });
+      fs.renameSync(qf, dest);
+      console.log(`  ${c.green}✔ Relocated loose QS root file:${c.reset} ${base} ➔ ${path.relative(ROOT, dest)}`);
+      actionsTaken++;
+    }
   }
 
   // 2. Route loose files (finished loose plans are left for step 3 to promote directly)
@@ -789,23 +852,24 @@ if (isFixMode) {
     }
   }
 
-  // 4. Archive Core-VPS floating files (recomputed AFTER promotion, archived by real major version)
-  if (fs.existsSync(coreVpsCompleteDir)) {
-    const floatingNow = fs.readdirSync(coreVpsCompleteDir, { withFileTypes: true })
+  // 4. Archive Complete floating files (recomputed AFTER promotion, archived by real major version)
+  for (const compPath of componentDirs) {
+    if (!fs.existsSync(compPath)) continue;
+    const floatingNow = fs.readdirSync(compPath, { withFileTypes: true })
       .filter(i => i.isFile() && i.name.endsWith('.md'))
       .map(i => i.name)
       .sort(compareSemVer);
     const toArchive = floatingNow.length > 7 ? floatingNow.slice(0, floatingNow.length - 6) : [];
     for (const f of toArchive) {
       const v = parseSemVer(f);
-      const archiveDir = path.join(coreVpsCompleteDir, v ? `V${v.major}` : '_Legacy');
+      const archiveDir = path.join(compPath, v ? `V${v.major}` : '_Legacy');
       const dest = path.join(archiveDir, f);
       if (fs.existsSync(dest)) {
         console.log(`  ${c.red}✖ Skipped archive (destination exists):${c.reset} ${f}`);
         continue;
       }
       fs.mkdirSync(archiveDir, { recursive: true });
-      fs.renameSync(path.join(coreVpsCompleteDir, f), dest);
+      fs.renameSync(path.join(compPath, f), dest);
       console.log(`  ${c.green}✔ Archived SemVer floating file:${c.reset} ${f} ➔ ${path.relative(ROOT, archiveDir)}/`);
       actionsTaken++;
     }

@@ -42,3 +42,4 @@ MAG10-S05 (O1)	Person	ให้สมองได้พักจริงจร�
    - `Product` = ต้องเป็น Image-to-Video ที่แนบรูปขวด/แคปซูลจริง ห้ามให้ AI จินตนาการขวดเอง
    - `Person` = ต้องมี Identity Anchor กำกับหน้าคน
    - `-` = เจนสดสไตล์ 3D Medical Aesthetic / Ambient
+
