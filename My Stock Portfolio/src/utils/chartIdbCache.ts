@@ -45,6 +45,45 @@ export interface CachedChartData<T = any> {
   cachedAt: number;
 }
 
+export interface CachedRecord<T = any> {
+  data: T;
+  cachedAt: number;
+}
+
+export async function getCachedCandlesWithMeta<T = any>(
+  symbol: string,
+  resolution: string
+): Promise<CachedRecord<T> | null> {
+  try {
+    const db = await getDB();
+    const key = `${(symbol || '').toUpperCase().trim()}_${(resolution || '').toUpperCase().trim()}`;
+
+    return new Promise((resolve) => {
+      const transaction = db.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(key);
+
+      request.onsuccess = () => {
+        const record = request.result as CachedChartData<T> | undefined;
+        if (!record || !record.data) {
+          resolve(null);
+          return;
+        }
+        resolve({
+          data: record.data,
+          cachedAt: record.cachedAt || 0,
+        });
+      };
+
+      request.onerror = () => {
+        resolve(null);
+      };
+    });
+  } catch (err) {
+    return null;
+  }
+}
+
 export async function getCachedCandles<T = any>(symbol: string, resolution: string): Promise<T | null> {
   try {
     const db = await getDB();

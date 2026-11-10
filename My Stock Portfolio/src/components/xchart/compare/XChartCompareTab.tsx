@@ -138,7 +138,16 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
   };
 
   // Custom data hook with lifetime raw data ref & master calendar
-  const { targetSeries, refSeriesList, loading, error, rawDataMapRef, masterDatesRef } = useCompareData(
+  const {
+    targetSeries,
+    refSeriesList,
+    loading,
+    isRefreshing,
+    refetch,
+    error,
+    rawDataMapRef,
+    masterDatesRef,
+  } = useCompareData(
     symbol,
     refs,
     activeTimeframe,
@@ -332,6 +341,21 @@ export const XChartCompareTab: React.FC<XChartCompareTabProps> = ({ tabId, symbo
           >
             <Sliders className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Config & Refs</span>
+          </button>
+
+          {/* Refresh Prices Button */}
+          <button
+            onClick={() => refetch(true)}
+            disabled={isRefreshing}
+            className={clsx(
+              "p-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1",
+              isRefreshing
+                ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300"
+                : "bg-white/5 hover:bg-white/10 border-white/5 hover:border-cyan-500/30 text-slate-400 hover:text-white"
+            )}
+            title={isRefreshing ? "กำลังอัปเดตราคาวันล่าสุด..." : "รีเฟรชราคาวันล่าสุดทุกตัว (Refresh Latest Prices)"}
+          >
+            <RefreshCw className={clsx("w-3.5 h-3.5", isRefreshing && "animate-spin text-cyan-400")} />
           </button>
 
           {/* Fullscreen Button */}

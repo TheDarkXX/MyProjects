@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../../services/api';
-import { getCachedCandles, setCachedCandles } from '../../../utils/chartIdbCache';
+import { getCachedCandlesWithMeta, setCachedCandles } from '../../../utils/chartIdbCache';
 import { CompareTimeFrame, CompareRefSeries, CompareLineStyleConfig } from '../../../stores/xchartStore';
 
 export interface CompareDataPoint {
@@ -202,6 +202,124 @@ export function normalizeTickerData(
   };
 }
 
+/**
+ * Pure function: Compute normalized comparison series for target and all reference tickers.
+ */
+export function computeNormalizedSeries(
+  rawMap: Record<string, RawChartData>,
+  cleanTarget: string,
+  refs: CompareRefSeries[],
+  timeframe: CompareTimeFrame,
+  targetStyle: CompareLineStyleConfig
+): {
+  normTargetSeries: NormalizedTickerSeries;
+  normRefSeries: NormalizedTickerSeries[];
+  masterDates: string[];
+} | null {
+  const targetRaw = rawMap[cleanTarget];
+  if (!targetRaw || !targetRaw.dates || targetRaw.dates.length === 0) {
+    return null;
+  }
+
+  // 1. Build unified master trading dates across all available symbols
+  const dateSet = new Set<string>();
+  for (const raw of Object.values(rawMap)) {
+    if (raw && raw.dates) {
+      for (let i = 0; i < raw.dates.length; i++) {
+        dateSet.add(raw.dates[i]);
+      }
+    }
+  }
+
+  const allDates = Array.from(dateSet).sort();
+  if (allDates.length === 0) {
+    return null;
+  }
+
+  // 2. Compute initial startDate cutoff for active timeframe
+  const startDate = calculateStartDate(timeframe, targetRaw.dates);
+
+  let masterDates = allDates.filter((d) => d >= startDate);
+  if (masterDates.length === 0) {
+    masterDates = allDates.slice(-30);
+  }
+
+  // 3. Normalize Target
+  const targetNorm = normalizeTickerData(targetRaw, masterDates, startDate, startDate);
+  const normTargetSeries: NormalizedTickerSeries = {
+    id: `target-${cleanTarget.toLowerCase()}`,
+    symbol: cleanTarget,
+    name: cleanTarget,
+    color: targetStyle.color,
+    lineWidth: targetStyle.lineWidth,
+    lineStyle: targetStyle.lineStyle,
+    opacity: targetStyle.opacity,
+    pointMarkersVisible: targetStyle.pointMarkersVisible,
+    pointMarkersRadius: targetStyle.pointMarkersRadius,
+    visible: true,
+    isTarget: true,
+    data: targetNorm.points,
+    latestReturn: targetNorm.latestReturn,
+    basePrice: targetNorm.basePrice,
+    currentPrice: targetRaw.currentPrice || targetRaw.closes[targetRaw.closes.length - 1],
+    startDate: targetNorm.actualBaseDate || startDate,
+  };
+
+  // 4. Normalize all Refs (both visible and hidden so toggle is instantaneous)
+  const normRefSeries: NormalizedTickerSeries[] = refs.map((ref) => {
+    const raw = rawMap[ref.symbol.toUpperCase()];
+    if (!raw) {
+      return {
+        ...ref,
+        isTarget: false,
+        data: [],
+        latestReturn: null,
+        basePrice: null,
+        currentPrice: null,
+        startDate,
+      };
+    }
+
+    const norm = normalizeTickerData(raw, masterDates, startDate, startDate);
+    return {
+      ...ref,
+      isTarget: false,
+      data: norm.points,
+      latestReturn: norm.latestReturn,
+      basePrice: norm.basePrice,
+      currentPrice: raw.currentPrice || raw.closes[raw.closes.length - 1],
+      startDate: norm.actualBaseDate || startDate,
+    };
+  });
+
+  return {
+    normTargetSeries,
+    normRefSeries,
+    masterDates,
+  };
+}
+
+/**
+ * Concurrency helper to avoid overwhelming server or rate limits
+ */
+async function fetchWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  if (items.length === 0) return;
+  const queue = [...items];
+  const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift();
+      if (item !== undefined) {
+        await fn(item);
+      }
+    }
+  });
+  await Promise.allSettled(workers);
+}
+
 export function useCompareData(
   targetSymbol: string,
   refs: CompareRefSeries[],
@@ -211,6 +329,7 @@ export function useCompareData(
   const [targetSeries, setTargetSeries] = useState<NormalizedTickerSeries | null>(null);
   const [refSeriesList, setRefSeriesList] = useState<NormalizedTickerSeries[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // In-memory cache for fast snappy switching
@@ -218,170 +337,177 @@ export function useCompareData(
   const rawDataMapRef = useRef<Record<string, RawChartData>>({});
   const masterDatesRef = useRef<string[]>([]);
 
+  // Track session-level fetch timestamps (symbol -> ms timestamp)
+  const lastFetchedRef = useRef<Record<string, number>>({});
+
+  // Manual trigger mechanism
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const forceRefreshRef = useRef<boolean>(false);
+
+  const refetch = useCallback((force = true) => {
+    forceRefreshRef.current = force;
+    setRefreshTrigger((prev) => prev + 1);
+  }, []);
+
   useEffect(() => {
     let isCancelled = false;
-    setLoading(true);
-    setError(null);
+    const forceRefresh = forceRefreshRef.current;
+    forceRefreshRef.current = false;
 
     const cleanTarget = targetSymbol.trim().toUpperCase();
     const symbolsToFetch = Array.from(new Set([cleanTarget, ...refs.map((r) => r.symbol.trim().toUpperCase())]));
 
-    async function fetchAllData() {
+    async function execute() {
       try {
-        const rawMap: Record<string, RawChartData> = {};
+        setError(null);
 
-        // 1. Resolve from memory or IndexedDB cache for instant display
-        const missingSymbols: string[] = [];
+        // 1. FAST INITIAL RESOLVE (0ms UX via Memory or IndexedDB cache)
+        const rawMap: Record<string, RawChartData> = { ...memCacheRef.current };
+        const cachedAtMap: Record<string, number> = {};
+
         for (const sym of symbolsToFetch) {
-          if (memCacheRef.current[sym]) {
-            rawMap[sym] = memCacheRef.current[sym];
-          } else {
+          if (!rawMap[sym]) {
             try {
-              const idbData = await getCachedCandles<any>(sym, '1D');
-              if (idbData && idbData.dates && idbData.dates.length > 0 && idbData.closes) {
+              const meta = await getCachedCandlesWithMeta<any>(sym, '1D');
+              if (meta && meta.data && meta.data.dates && meta.data.dates.length > 0 && meta.data.closes) {
                 rawMap[sym] = {
-                  dates: idbData.dates,
-                  closes: idbData.closes,
-                  currentPrice: idbData.currentPrice || idbData.closes[idbData.closes.length - 1],
+                  dates: meta.data.dates,
+                  closes: meta.data.closes,
+                  currentPrice: meta.data.currentPrice || meta.data.closes[meta.data.closes.length - 1],
                 };
                 memCacheRef.current[sym] = rawMap[sym];
-              } else {
-                missingSymbols.push(sym);
+                cachedAtMap[sym] = meta.cachedAt;
               }
-            } catch (_) {
-              missingSymbols.push(sym);
-            }
+            } catch (_) {}
           }
         }
-
-        // 2. Fetch missing symbols in parallel
-        const fetchPromises = missingSymbols.map(async (sym) => {
-          try {
-            const apiRes = await api.chart.get(sym, 36500, '1D');
-            if (apiRes && apiRes.dates && apiRes.closes) {
-              const rawData: RawChartData = {
-                dates: apiRes.dates,
-                closes: apiRes.closes,
-                currentPrice: apiRes.currentPrice || apiRes.closes[apiRes.closes.length - 1],
-              };
-              rawMap[sym] = rawData;
-              memCacheRef.current[sym] = rawData;
-              setCachedCandles(sym, '1D', apiRes);
-            }
-          } catch (e: any) {
-            console.warn(`[useCompareData] Failed to fetch ${sym}:`, e);
-          }
-        });
-
-        await Promise.allSettled(fetchPromises);
 
         if (isCancelled) return;
 
-        // Check if target has data
-        const targetRaw = rawMap[cleanTarget];
-        if (!targetRaw || !targetRaw.dates || targetRaw.dates.length === 0) {
-          setError(`No historical price data found for target ${cleanTarget}`);
+        // If target exists in initial cache, render immediately so user sees instant chart!
+        const initialNormalized = computeNormalizedSeries(rawMap, cleanTarget, refs, timeframe, targetStyle);
+        if (initialNormalized) {
+          setTargetSeries(initialNormalized.normTargetSeries);
+          setRefSeriesList(initialNormalized.normRefSeries);
+          masterDatesRef.current = initialNormalized.masterDates;
+          rawDataMapRef.current = rawMap;
           setLoading(false);
-          return;
+        } else {
+          setLoading(true);
         }
 
-        // 3. Build unified master trading dates across all fetched symbols
-        const dateSet = new Set<string>();
+        // 2. STALE & MISSING DETECTION (Stale-While-Revalidate Engine)
+        // Find latest known trading date among cached symbols
+        let maxKnownDate = '';
         for (const sym of symbolsToFetch) {
-          const raw = rawMap[sym];
-          if (raw && raw.dates) {
-            for (let i = 0; i < raw.dates.length; i++) {
-              dateSet.add(raw.dates[i]);
+          const d = rawMap[sym]?.dates;
+          if (d && d.length > 0) {
+            const lastDate = d[d.length - 1];
+            if (lastDate > maxKnownDate) {
+              maxKnownDate = lastDate;
             }
           }
         }
 
-        const allDates = Array.from(dateSet).sort();
+        const now = Date.now();
+        const symbolsToFetchFromNetwork: string[] = [];
 
-        if (allDates.length === 0) {
-          setError(`No trading dates available for comparison`);
-          setLoading(false);
-          return;
-        }
-
-        // 4. Compute initial startDate cutoff for active timeframe
-        const startDate = calculateStartDate(timeframe, targetRaw.dates);
-
-        // Filter masterDates to active timeframe so the chart timeline starts at startDate (flush left)!
-        const masterDates = allDates.filter((d) => d >= startDate);
-        if (masterDates.length === 0) {
-          masterDates.push(...allDates.slice(-30));
-        }
-
-        rawDataMapRef.current = rawMap;
-        masterDatesRef.current = masterDates;
-
-        // 5. Normalize Target
-        const targetNorm = normalizeTickerData(targetRaw, masterDates, startDate, startDate);
-        const normTargetSeries: NormalizedTickerSeries = {
-          id: `target-${cleanTarget.toLowerCase()}`,
-          symbol: cleanTarget,
-          name: cleanTarget,
-          color: targetStyle.color,
-          lineWidth: targetStyle.lineWidth,
-          lineStyle: targetStyle.lineStyle,
-          opacity: targetStyle.opacity,
-          pointMarkersVisible: targetStyle.pointMarkersVisible,
-          pointMarkersRadius: targetStyle.pointMarkersRadius,
-          visible: true,
-          isTarget: true,
-          data: targetNorm.points,
-          latestReturn: targetNorm.latestReturn,
-          basePrice: targetNorm.basePrice,
-          currentPrice: targetRaw.currentPrice || targetRaw.closes[targetRaw.closes.length - 1],
-          startDate: targetNorm.actualBaseDate || startDate,
-        };
-
-        // 6. Normalize all Refs (both visible and hidden so toggle is instantaneous)
-        const normRefSeries: NormalizedTickerSeries[] = refs.map((ref) => {
-          const raw = rawMap[ref.symbol.toUpperCase()];
-          if (!raw) {
-            return {
-              ...ref,
-              isTarget: false,
-              data: [],
-              latestReturn: null,
-              basePrice: null,
-              currentPrice: null,
-              startDate,
-            };
+        for (const sym of symbolsToFetch) {
+          if (forceRefresh) {
+            symbolsToFetchFromNetwork.push(sym);
+            continue;
           }
 
-          const norm = normalizeTickerData(raw, masterDates, startDate, startDate);
-          return {
-            ...ref,
-            isTarget: false,
-            data: norm.points,
-            latestReturn: norm.latestReturn,
-            basePrice: norm.basePrice,
-            currentPrice: raw.currentPrice || raw.closes[raw.closes.length - 1],
-            startDate: norm.actualBaseDate || startDate,
-          };
-        });
+          const existingRaw = rawMap[sym];
+          if (!existingRaw || !existingRaw.dates || existingRaw.dates.length === 0) {
+            // Missing entirely -> MUST fetch
+            symbolsToFetchFromNetwork.push(sym);
+            continue;
+          }
 
-        if (!isCancelled) {
-          setTargetSeries(normTargetSeries);
-          setRefSeriesList(normRefSeries);
-          setLoading(false);
+          // Check if fetched from network recently in this session (TTL: 60s)
+          const lastFetched = lastFetchedRef.current[sym] || 0;
+          if (now - lastFetched < 60000) {
+            continue; // Already fresh in this session
+          }
+
+          // Check IndexedDB write age
+          const idbCachedAt = cachedAtMap[sym] || 0;
+          if (now - idbCachedAt < 60000) {
+            continue; // Written to IDB recently by single chart or other tab
+          }
+
+          // If symbol's latest candle is behind maxKnownDate, it's missing the newest day(s)
+          const symDates = existingRaw.dates;
+          const symLastDate = symDates[symDates.length - 1];
+          if (maxKnownDate && symLastDate < maxKnownDate) {
+            symbolsToFetchFromNetwork.push(sym);
+            continue;
+          }
+
+          // Stale cache (> 60s old) -> background revalidate
+          symbolsToFetchFromNetwork.push(sym);
+        }
+
+        // 3. BACKGROUND CONCURRENT NETWORK FETCH
+        if (symbolsToFetchFromNetwork.length > 0) {
+          setIsRefreshing(true);
+
+          await fetchWithConcurrency(symbolsToFetchFromNetwork, 4, async (sym) => {
+            try {
+              const apiRes = await api.chart.get(sym, 36500, '1D');
+              if (apiRes && apiRes.dates && apiRes.closes && apiRes.dates.length > 0) {
+                const rawData: RawChartData = {
+                  dates: apiRes.dates,
+                  closes: apiRes.closes,
+                  currentPrice: apiRes.currentPrice || apiRes.closes[apiRes.closes.length - 1],
+                };
+                rawMap[sym] = rawData;
+                memCacheRef.current[sym] = rawData;
+                lastFetchedRef.current[sym] = Date.now();
+                setCachedCandles(sym, '1D', apiRes);
+              }
+            } catch (fetchErr: any) {
+              console.warn(`[useCompareData] Failed to fetch fresh data for ${sym}:`, fetchErr?.message || fetchErr);
+            }
+          });
+
+          if (isCancelled) return;
+
+          // 4. RE-NORMALIZE WITH FRESH CANDLES
+          const freshNormalized = computeNormalizedSeries(rawMap, cleanTarget, refs, timeframe, targetStyle);
+          if (freshNormalized) {
+            setTargetSeries(freshNormalized.normTargetSeries);
+            setRefSeriesList(freshNormalized.normRefSeries);
+            masterDatesRef.current = freshNormalized.masterDates;
+            rawDataMapRef.current = rawMap;
+          } else {
+            setError(`No historical price data found for target ${cleanTarget}`);
+          }
         }
       } catch (err: any) {
         if (!isCancelled) {
-          console.error('[useCompareData] Error calculating normalized compare data:', err);
+          console.error('[useCompareData] Error in execute:', err);
           setError(err?.message || 'Error processing comparison data');
+        }
+      } finally {
+        if (!isCancelled) {
           setLoading(false);
+          setIsRefreshing(false);
         }
       }
     }
 
-    fetchAllData();
+    execute();
+
+    // 5. PERIODIC 60S REVALIDATION TO KEEP LATEST DAY / LIVE CANDLES FRESH
+    const interval = setInterval(() => {
+      execute();
+    }, 60000);
 
     return () => {
       isCancelled = true;
+      clearInterval(interval);
     };
   }, [
     targetSymbol,
@@ -393,12 +519,15 @@ export function useCompareData(
     targetStyle.opacity,
     targetStyle.pointMarkersVisible,
     targetStyle.pointMarkersRadius,
+    refreshTrigger,
   ]);
 
   return {
     targetSeries,
     refSeriesList,
     loading,
+    isRefreshing,
+    refetch,
     error,
     rawDataMapRef,
     masterDatesRef,
