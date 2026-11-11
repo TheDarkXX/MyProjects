@@ -1,0 +1,104 @@
+{
+  "manifest_version": 3,
+  "name": "DrBank AFF Studio — Shopee, Lazada & FB Ads P&L Toolkit",
+  "version": "1.0.0",
+  "description": "Clean-Room Affiliate Toolkit: คำนวณค่าคอม Shopee/Lazada แยก SKU, สร้างลิงก์ Sub-ID ด่วน, คลังสินค้าทำเงิน และดึงงบแอด FB คำนวณกำไร-ขาดทุน (P&L) ในเครื่อง 100%",
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  },
+  "action": {
+    "default_title": "DrBank AFF Studio — เปิดแดชบอร์ด P&L & เครื่องมือ Affiliate",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "alarms",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://shopee.co.th/*",
+    "https://affiliate.shopee.co.th/*",
+    "https://seller.shopee.co.th/*",
+    "https://www.lazada.co.th/*",
+    "https://lazada.co.th/*",
+    "https://pages.lazada.co.th/*",
+    "https://adsense.lazada.co.th/*",
+    "https://adsmanager.facebook.com/*",
+    "https://business.facebook.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://shopee.co.th/*",
+        "https://affiliate.shopee.co.th/*",
+        "https://seller.shopee.co.th/*",
+        "https://www.lazada.co.th/*",
+        "https://lazada.co.th/*",
+        "https://pages.lazada.co.th/*",
+        "https://adsense.lazada.co.th/*",
+        "https://adsmanager.facebook.com/*",
+        "https://business.facebook.com/*"
+      ],
+      "css": [
+        "src/styles/hud.css"
+      ],
+      "js": [
+        "src/common/utils.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://shopee.co.th/*"
+      ],
+      "js": [
+        "src/shopee-hud.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://affiliate.shopee.co.th/*",
+        "https://seller.shopee.co.th/*"
+      ],
+      "js": [
+        "src/shopee-affiliate.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.lazada.co.th/*",
+        "https://lazada.co.th/*",
+        "https://pages.lazada.co.th/*",
+        "https://adsense.lazada.co.th/*"
+      ],
+      "js": [
+        "src/lazada-hud.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://adsmanager.facebook.com/*",
+        "https://business.facebook.com/*"
+      ],
+      "js": [
+        "src/fb-billing-sync.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
+

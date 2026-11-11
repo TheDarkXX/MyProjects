@@ -1,0 +1,363 @@
+/* ==========================================================================
+   DrBank AFF Studio — Neon Dark Glassmorphism HUD (Clean-Room CSS)
+   Scoped with .drb-aff-* prefix to guarantee zero conflict with host pages
+   ========================================================================== */
+
+#drb-aff-hud-root {
+  position: fixed;
+  top: 76px;
+  right: 20px;
+  width: 356px;
+  z-index: 2147483640;
+  font-family: 'Inter', 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #f1f5f9;
+  background: linear-gradient(155deg, rgba(15, 23, 42, 0.96) 0%, rgba(9, 13, 24, 0.98) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65), 0 0 22px rgba(14, 165, 233, 0.18);
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+  transition: width 0.2s ease, opacity 0.2s ease;
+  font-size: 13px;
+  line-height: 1.45;
+  box-sizing: border-box;
+}
+
+#drb-aff-hud-root *,
+#drb-aff-hud-root *::before,
+#drb-aff-hud-root *::after {
+  box-sizing: border-box;
+}
+
+#drb-aff-hud-root.drb-aff-hud--minimized {
+  width: 220px;
+}
+
+#drb-aff-hud-root.drb-aff-hud--minimized .drb-aff-body {
+  display: none;
+}
+
+/* Header */
+.drb-aff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.22) 0%, rgba(99, 102, 241, 0.18) 100%);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+  user-select: none;
+}
+
+.drb-aff-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  color: #38bdf8;
+}
+
+.drb-aff-badge-platform {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(249, 115, 22, 0.22);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.45);
+}
+
+.drb-aff-badge-platform--lazada {
+  background: rgba(59, 130, 246, 0.22);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+.drb-aff-badge-platform--fb {
+  background: rgba(16, 185, 129, 0.22);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.drb-aff-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drb-aff-icon-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.drb-aff-icon-btn:hover {
+  background: rgba(56, 189, 248, 0.22);
+  color: #fff;
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+/* Body */
+.drb-aff-body {
+  padding: 12px 14px 14px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.drb-aff-product-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.35;
+}
+
+/* KPI Grid */
+.drb-aff-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.drb-aff-kpi-card {
+  background: rgba(30, 41, 59, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.drb-aff-kpi-card--highlight {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(6, 182, 212, 0.16) 100%);
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.drb-aff-kpi-label {
+  font-size: 10px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+.drb-aff-kpi-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.drb-aff-kpi-val--green {
+  color: #34d399;
+}
+
+.drb-aff-kpi-sub {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Form Controls */
+.drb-aff-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.drb-aff-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.drb-aff-field label {
+  display: block;
+  font-size: 10px;
+  color: #94a3b8;
+  margin-bottom: 3px;
+}
+
+.drb-aff-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 7px;
+  padding: 5px 8px;
+  color: #f8fafc;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.drb-aff-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+/* Variant Pills */
+.drb-aff-variants-wrap {
+  margin-bottom: 10px;
+}
+
+.drb-aff-variants-label {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.drb-aff-variants-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 76px;
+  overflow-y: auto;
+}
+
+.drb-aff-variant-pill {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.drb-aff-variant-pill:hover,
+.drb-aff-variant-pill.active {
+  background: rgba(14, 165, 233, 0.25);
+  border-color: #38bdf8;
+  color: #fff;
+}
+
+/* Buttons */
+.drb-aff-btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.drb-aff-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.drb-aff-btn--primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+.drb-aff-btn--primary:hover {
+  filter: brightness(1.1);
+}
+
+.drb-aff-btn--emerald {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+}
+
+.drb-aff-btn--emerald:hover {
+  filter: brightness(1.1);
+}
+
+.drb-aff-btn--ghost {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #e2e8f0;
+}
+
+.drb-aff-btn--ghost:hover {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.drb-aff-btn--full {
+  grid-column: 1 / -1;
+}
+
+/* Divider & Info Table */
+.drb-aff-divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.16);
+  margin: 10px 0;
+}
+
+.drb-aff-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.drb-aff-mini-table td {
+  padding: 3px 0;
+  color: #cbd5e1;
+}
+
+.drb-aff-mini-table td:last-child {
+  text-align: right;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+/* Toast Notifications */
+#drb-aff-toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483646;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drb-aff-toast {
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid #34d399;
+  color: #ecfdf5;
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-family: 'Inter', 'Prompt', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.drb-aff-toast--hide {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
