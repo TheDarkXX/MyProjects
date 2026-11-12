@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <title>DrBank AFF Scout v2.4 — Dual-Tab Side Panel</title>
+  <link rel="stylesheet" href="src/styles/hud.css">
+  <style>
+    /* Side Panel Container Adaptation */
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--drb-bg-root);
+      color: var(--drb-text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Thai", "Leelawadee UI", sans-serif;
+      overflow-x: hidden;
+      width: 100%;
+      min-height: 100vh;
+    }
+
+    #drb-sidepanel-root {
+      width: 100% !important;
+      max-width: 100% !important;
+      position: static !important;
+      box-shadow: none !important;
+      border: none !important;
+      border-radius: 0 !important;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .drb-aff-header {
+      border-radius: 0 !important;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    /* Dual-Tab Switcher Bar (Auto-Detect by URL + Manual Click) */
+    .drb-sp-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--drb-bg-surface);
+      border-bottom: 1px solid var(--drb-border);
+      position: sticky;
+      top: 49px;
+      z-index: 99;
+    }
+
+    .drb-sp-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 8px;
+      border-radius: 7px;
+      border: 1.5px solid var(--drb-border-strong);
+      background: var(--drb-bg-card);
+      color: var(--drb-text-label);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .drb-sp-tab-btn:hover {
+      border-color: var(--drb-accent);
+      color: var(--drb-accent);
+    }
+
+    .drb-sp-tab-btn.active {
+      background: var(--drb-accent);
+      border-color: var(--drb-accent);
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(238, 77, 45, 0.25);
+    }
+
+    .drb-sp-tab-btn.active[data-tab="aff"] {
+      background: #0284c7;
+      border-color: #0284c7;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.28);
+    }
+
+    .drb-sp-pane {
+      display: none;
+    }
+
+    .drb-sp-pane.active {
+      display: block;
+    }
+
+    .drb-aff-body {
+      max-height: none !important;
+      flex: 1;
+      padding-bottom: 30px;
+    }
+
+    /* Real Affiliate Offer Table Card */
+    .drb-aff-real-offer-card {
+      background: var(--drb-bg-surface);
+      border: 1.5px solid #0284c7;
+      border-radius: 8px;
+      padding: 9px 12px;
+      margin-bottom: 11px;
+    }
+
+    .drb-aff-real-offer-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0284c7;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    body[data-theme="dark"] .drb-aff-real-offer-title {
+      color: #38bdf8;
+    }
+
+    body[data-theme="dark"] .drb-aff-real-offer-card {
+      border-color: #0369a1;
+    }
+  </style>
+</head>
+
+<body data-theme="light">
+  <div class="drb-aff-hud" id="drb-sidepanel-root">
+    <!-- Top Header -->
+    <div class="drb-aff-header" id="drb-sidepanel-header">
+      <div class="drb-aff-brand">
+        <img src="images/icon48.png"
+          style="width:20px;height:20px;border-radius:4px;display:inline-block;vertical-align:middle;box-shadow:0 1px 3px rgba(0,0,0,0.2);"
+          alt="Logo">
+        <span>DrBank AFF</span>
+        <span class="drb-aff-version" id="drb-sp-ver">v2.4.0</span>
+        <span class="drb-aff-badge-platform" id="drb-sp-mode-badge"
+          style="background:rgba(22,163,74,0.15);color:#16a34a;border:1px solid rgba(22,163,74,0.3);">Shopee</span>
+      </div>
+      <div class="drb-aff-header-actions">
+        <button class="drb-aff-icon-btn" id="drb-sp-btn-switch-hud"
+          title="สลับไปใช้กล่องลอย (Floating HUD) บนหน้าเว็บ">↗</button>
+        <button class="drb-aff-icon-btn" id="drb-sp-theme-btn" title="สลับโหมด สว่าง/มืด">🌙</button>
+        <button class="drb-aff-icon-btn" id="drb-sp-rescan-btn" title="รีเฟรชข้อมูลจากแท็บปัจจุบัน">↻</button>
+      </div>
+    </div>
+
+    <!-- Dual-Tab Switcher (Auto-switches based on URL: shopee.co.th vs affiliate.shopee.co.th) -->
+    <div class="drb-sp-tabs">
+      <button type="button" class="drb-sp-tab-btn active" id="drb-tab-btn-shopee" data-tab="shopee">
+        🛒 หน้าสินค้า Shopee
+      </button>
+      <button type="button" class="drb-sp-tab-btn" id="drb-tab-btn-aff" data-tab="aff">
+        📊 หน้าข้อเสนอ AFF
+      </button>
+    </div>
+
+    <!-- ======================================================================
+         TAB 1: 🛒 หน้าสินค้า Shopee ปกติ (shopee.co.th) — แยกขาด 100% ไม่กระทบของเดิม
+         ====================================================================== -->
+    <div class="drb-aff-body drb-sp-pane active" id="drb-pane-shopee">
+      <!-- 1. แถบป้ายไฟจราจรคุ้มทุนแอด 107฿ บนสุด -->
+      <div class="drb-aff-breakeven-box" id="drb-sp-breakeven-box" data-tier="warning">
+        <span id="drb-sp-breakeven-text">⚠️ [ไฟเหลือง] แอด 107฿ ต้องขายตรงปก: 0.0 ชิ้น ถึงคุ้มทุน</span>
+      </div>
+
+      <!-- 2. ชื่อสินค้า -->
+      <div class="drb-aff-product-title" id="drb-sp-title">กำลังรอแท็บสินค้า Shopee (shopee.co.th)...</div>
+
+      <!-- 3. แถบ 3 ตัวกรองคุณเบล -->
+      <div class="drb-aff-checklist-bar" id="drb-sp-checklist-bar">
+        <span class="drb-aff-check-pill drb-aff-check-pill--green" id="drb-sp-badge-sold">🔥 ขายดี -</span>
+        <span class="drb-aff-check-pill drb-aff-check-pill--green" id="drb-sp-badge-extra">✅ Extra 10%</span>
+        <span class="drb-aff-check-pill drb-aff-check-pill--green" id="drb-sp-badge-rating">⭐ 4.9 (ส่งไทย)</span>
+      </div>
+
+      <!-- 4. การ์ดราคาและค่าคอมมิชชั่นสุทธิ -->
+      <div class="drb-aff-kpi-grid">
+        <div class="drb-aff-kpi-card">
+          <div class="drb-aff-kpi-label">ราคาขายจริง (THB)</div>
+          <div class="drb-aff-kpi-val" id="drb-sp-price">฿0.00</div>
+          <div class="drb-aff-kpi-sub" id="drb-sp-ids">Shop: - | Item: -</div>
+        </div>
+        <div class="drb-aff-kpi-card" id="drb-sp-comm-card" data-tier="warning">
+          <div class="drb-aff-kpi-label">ค่าคอมสุทธิ / ชิ้น</div>
+          <div class="drb-aff-kpi-val" id="drb-sp-net-comm">⚠️ ฿0.00</div>
+          <div class="drb-aff-tier-badge" id="drb-sp-tier-badge">⚠️ คำนวณความคุ้มแอด...</div>
+          <div class="drb-aff-kpi-sub" id="drb-sp-eff-rate">รวมเรท 0.0% (หักภาษี 3%)</div>
+        </div>
+      </div>
+
+      <!-- 5. กล่องสเปกสินค้า (Default: Collapsed พับไว้แต่แรก) -->
+      <div class="drb-aff-spec-box is-collapsed" id="drb-sp-spec-box">
+        <div class="drb-aff-spec-header" id="drb-sp-spec-header">
+          <span>📋 สเปก & รายละเอียดสินค้า</span>
+          <div class="drb-aff-spec-actions">
+            <button type="button" class="drb-aff-spec-toggle-btn" id="drb-sp-btn-spec-expand"
+              title="กางดูสเปกยาวขึ้น">▼ ยืด</button>
+            <button type="button" class="drb-aff-spec-toggle-btn" id="drb-sp-btn-spec-fold"
+              title="พับเก็บ/เปิดกล่องสเปก">▼ เปิดสเปก</button>
+          </div>
+        </div>
+        <div class="drb-aff-spec-body" id="drb-sp-spec-body">กำลังดึงรายละเอียดสเปกสินค้า...</div>
+      </div>
+
+      <!-- ตัวเลือก SKU -->
+      <div class="drb-aff-variants-wrap" id="drb-sp-variants-section">
+        <div class="drb-aff-variants-label">
+          <span>ตัวเลือก SKU (คลิกเพื่อซิงก์ราคาหน้าเว็บ)</span>
+          <span id="drb-sp-variants-count">0 รายการ</span>
+        </div>
+        <div class="drb-aff-variants-list" id="drb-sp-variants-list"></div>
+      </div>
+
+      <!-- ช่องจำลองราคาและเรทค่าคอม -->
+      <div class="drb-aff-row">
+        <div class="drb-aff-field">
+          <label>ราคาคำนวณ (฿)</label>
+          <input type="number" step="1" class="drb-aff-input" id="drb-sp-inp-price" value="299">
+        </div>
+        <div class="drb-aff-field">
+          <label>เพดาน Base Cap (฿)</label>
+          <input type="number" step="10" class="drb-aff-input" id="drb-sp-inp-cap" value="250">
+        </div>
+      </div>
+
+      <div class="drb-aff-row">
+        <div class="drb-aff-field">
+          <label>ค่าคอมพื้นฐาน (%)</label>
+          <input type="number" step="0.1" class="drb-aff-input" id="drb-sp-inp-base-rate" value="3.5">
+        </div>
+        <div class="drb-aff-field">
+          <label>ค่าคอม Extra / ร้าน (%)</label>
+          <input type="number" step="0.5" class="drb-aff-input" id="drb-sp-inp-extra-rate" value="10.0">
+        </div>
+      </div>
+
+      <table class="drb-aff-mini-table">
+        <tbody>
+          <tr>
+            <td>ค่าคอมพื้นฐาน (Base) + พิเศษ (Extra):</td>
+            <td id="drb-sp-tbl-breakdown">฿0.00 + ฿0.00</td>
+          </tr>
+          <tr>
+            <td>จุดคุ้มทุนแอด 107฿ (ต้องขายตรงปก):</td>
+            <td id="drb-sp-tbl-100" style="color:var(--drb-accent);font-weight:700;">0 ชิ้น/วัน</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ปุ่ม Action หลัก -->
+      <div class="drb-aff-btn-group">
+        <button class="drb-aff-btn drb-aff-btn--primary drb-aff-btn--full" id="drb-sp-btn-push-webui"
+          style="padding:10px 12px;font-size:15px;">
+          ⚡ ส่งเข้าคลัง Web UI & เตรียมปั้นโพสต์
+        </button>
+        <button class="drb-aff-btn drb-aff-btn--ghost drb-aff-btn--full" id="drb-sp-btn-check-aff"
+          style="border-color:#0284c7;color:#0284c7;font-weight:600;">
+          🔍 เช็คเรทจริงหน้า AFF (1-Click เปิดตาราง EXTRACOMM)
+        </button>
+        <button class="drb-aff-btn drb-aff-btn--ghost" id="drb-sp-btn-clean-url">✂️ ก๊อปลิงก์คลีน</button>
+        <button class="drb-aff-btn drb-aff-btn--ghost" id="drb-sp-btn-open-webui">🖥️ เปิดหน้า Web UI</button>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         TAB 2: 📊 หน้าข้อเสนอ Affiliate (affiliate.shopee.co.th) — ดึงเรทจริงจากตาราง
+         ====================================================================== -->
+    <div class="drb-aff-body drb-sp-pane" id="drb-pane-aff">
+      <!-- 1. แถบป้ายไฟจราจรคุ้มทุนแอด 107฿ (คำนวณจากเรทจริงหลังบ้าน) -->
+      <div class="drb-aff-breakeven-box" id="drb-aff-breakeven-box" data-tier="warning">
+        <span id="drb-aff-breakeven-text">⏳ เปิดหน้า affiliate.shopee.co.th/offer/product_offer/... เพื่อดึงเรทจริง</span>
+      </div>
+
+      <!-- 2. ชื่อสินค้าจากหน้าข้อเสนอ -->
+      <div class="drb-aff-product-title" id="drb-aff-title">กำลังรอหน้าข้อเสนอสินค้า Shopee Affiliate...</div>
+
+      <!-- 3. แถบ 3 ตัวกรองคุณเบล (จากข้อมูลจริงหลังบ้าน) -->
+      <div class="drb-aff-checklist-bar">
+        <span class="drb-aff-check-pill drb-aff-check-pill--green" id="drb-aff-badge-sold">🔥 ขายได้ -</span>
+        <span class="drb-aff-check-pill drb-aff-check-pill--green" id="drb-aff-badge-extra">✅ EXTRACOMM -%</span>
+        <span class="drb-aff-check-pill drb-aff-check-pill--green" id="drb-aff-badge-rating">⭐ 4.9</span>
+      </div>
+
+      <!-- 4. การ์ดราคาขายจริง & ค่าคอมสุทธิจริงต่อชิ้น -->
+      <div class="drb-aff-kpi-grid">
+        <div class="drb-aff-kpi-card">
+          <div class="drb-aff-kpi-label">ราคาสินค้าจริง (THB)</div>
+          <div class="drb-aff-kpi-val" id="drb-aff-price">฿0.00</div>
+          <div class="drb-aff-kpi-sub" id="drb-aff-ids">Item ID: -</div>
+        </div>
+        <div class="drb-aff-kpi-card" id="drb-aff-comm-card" data-tier="warning">
+          <div class="drb-aff-kpi-label">ค่าคอมสุทธิจริง / ชิ้น</div>
+          <div class="drb-aff-kpi-val" id="drb-aff-net-comm">⚠️ ฿0.00</div>
+          <div class="drb-aff-tier-badge" id="drb-aff-tier-badge">⏳ รอดึงตารางข้อเสนอ</div>
+          <div class="drb-aff-kpi-sub" id="drb-aff-eff-rate">เรทรวมจริง 0.0% (หักภาษี 3%)</div>
+        </div>
+      </div>
+
+      <!-- 5. กล่องสรุปตารางเรทจริงจาก Shopee Affiliate (โซเชียลมีเดีย) -->
+      <div class="drb-aff-real-offer-card">
+        <div class="drb-aff-real-offer-title">
+          <span>📊 เรทจริงจากตารางข้อเสนอ (ช่องทางโซเชียลมีเดีย)</span>
+        </div>
+        <table class="drb-aff-mini-table" style="margin-bottom:0;">
+          <tbody>
+            <tr>
+              <td>โบนัสพิเศษ (EXTRACOMM):</td>
+              <td id="drb-aff-real-extra" style="color:#16a34a;font-weight:600;">0% (฿0.00)</td>
+            </tr>
+            <tr>
+              <td>ค่าคอมช้อปปี้ (Base):</td>
+              <td id="drb-aff-real-base">0% (฿0.00)</td>
+            </tr>
+            <tr>
+              <td>รวมก่อนหักภาษี 3% (ตามตาราง):</td>
+              <td id="drb-aff-real-gross" style="font-weight:700;">฿0.00</td>
+            </tr>
+            <tr>
+              <td>จุดคุ้มทุนแอด 107฿ (ต้องขายตรงปก):</td>
+              <td id="drb-aff-real-breakeven" style="color:var(--drb-accent);font-weight:700;">0 ชิ้น/วัน</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 6. ช่องปรับจำลองตัวเลขในแท็บ Affiliate -->
+      <div class="drb-aff-row">
+        <div class="drb-aff-field">
+          <label>ราคาสินค้า (฿)</label>
+          <input type="number" step="1" class="drb-aff-input" id="drb-aff-inp-price" value="0">
+        </div>
+        <div class="drb-aff-field">
+          <label>เพดาน Base Cap (฿)</label>
+          <input type="number" step="10" class="drb-aff-input" id="drb-aff-inp-cap" value="250">
+        </div>
+      </div>
+
+      <div class="drb-aff-row">
+        <div class="drb-aff-field">
+          <label>ค่าคอมช้อปปี้จริง (%)</label>
+          <input type="number" step="0.1" class="drb-aff-input" id="drb-aff-inp-base-rate" value="2.0">
+        </div>
+        <div class="drb-aff-field">
+          <label>EXTRACOMM จริง (%)</label>
+          <input type="number" step="0.5" class="drb-aff-input" id="drb-aff-inp-extra-rate" value="0.0">
+        </div>
+      </div>
+
+      <!-- 7. ปุ่มส่งข้อมูลเข้าคลัง Web UI & ดูด Conversion Report -->
+      <div class="drb-aff-btn-group">
+        <button class="drb-aff-btn drb-aff-btn--primary drb-aff-btn--full" id="drb-aff-btn-push-webui"
+          style="padding:10px 12px;font-size:15px;">
+          ⚡ ส่งสินค้าเรทจริงเข้าคลัง Web UI
+        </button>
+        <button class="drb-aff-btn drb-aff-btn--ghost" id="drb-aff-btn-sync-report">📥 ดูดตาราง Report</button>
+        <button class="drb-aff-btn drb-aff-btn--ghost" id="drb-aff-btn-open-webui">🖥️ เปิดหน้า Web UI</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/common/utils.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+
+</html>

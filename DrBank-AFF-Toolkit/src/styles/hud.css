@@ -1,36 +1,140 @@
 /* ==========================================================================
-   DrBank AFF Studio — Neon Dark Glassmorphism HUD (Clean-Room CSS)
-   Scoped with .drb-aff-* prefix to guarantee zero conflict with host pages
+   DrBank AFF Scout v2.1.0 — High-Contrast Traffic Light & 5-Line Spec Box
+   Clean-Room Stylesheet: Thin/Clean Typography (Noto Sans Thai / Inter)
+   Font Sizes: Standard Shopee Hierarchy (13px / 12px / 11px / 18px KPI)
    ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&display=swap');
+
+#drb-aff-hud-root,
+#drb-sidepanel-root,
+body[data-theme="light"],
+body[data-theme="dark"] {
+  /* ☀️ Default Theme: Shopee Native Clean Light */
+  --drb-bg-root: #ffffff;
+  --drb-bg-card: #ffffff;
+  --drb-bg-header: #fff6f3;
+  --drb-border-header: #ffe0d6;
+  --drb-bg-surface: #f7f7f7;
+  --drb-bg-input: #fafafa;
+  --drb-border: #e2e2e2;
+  --drb-border-strong: #c4c4c4;
+
+  --drb-text-main: #1c1c1c;
+  --drb-text-label: #2d2d2d;
+  --drb-text-muted: #525252;
+
+  --drb-accent: #ee4d2d;
+  --drb-accent-hover: #d73211;
+  --drb-accent-soft: #fff2ee;
+  --drb-accent-border: #f8b4a6;
+
+  /* High-Contrast 4-Tier Viability Tokens (Light Mode) */
+  --tier-god-solid: #7c3aed;
+  --tier-god-bg: #f3e8ff;
+  --tier-god-border: #9333ea;
+  --tier-god-text: #5b21b6;
+
+  --tier-pass-solid: #16a34a;
+  --tier-pass-bg: #dcfce7;
+  --tier-pass-border: #16a34a;
+  --tier-pass-text: #14532d;
+
+  --tier-warn-solid: #ea580c;
+  --tier-warn-bg: #ffedd5;
+  --tier-warn-border: #ea580c;
+  --tier-warn-text: #9a3412;
+
+  --tier-danger-solid: #dc2626;
+  --tier-danger-bg: #fee2e2;
+  --tier-danger-border: #dc2626;
+  --tier-danger-text: #991b1b;
+
+  --drb-shadow: 0 8px 28px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
+}
 
 #drb-aff-hud-root {
   position: fixed;
-  top: 76px;
+  top: 72px;
   right: 20px;
-  width: 356px;
+  width: 384px;
   z-index: 2147483640;
-  font-family: 'Inter', 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #f1f5f9;
-  background: linear-gradient(155deg, rgba(15, 23, 42, 0.96) 0%, rgba(9, 13, 24, 0.98) 100%);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  border-radius: 14px;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65), 0 0 22px rgba(14, 165, 233, 0.18);
-  backdrop-filter: blur(14px);
+  font-family: 'Inter', 'Noto Sans Thai', 'Leelawadee UI', 'Thonburi', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--drb-text-main);
+  background: var(--drb-bg-card);
+  border: 1px solid var(--drb-border);
+  border-radius: 12px;
+  box-shadow: var(--drb-shadow);
   overflow: hidden;
-  transition: width 0.2s ease, opacity 0.2s ease;
-  font-size: 13px;
+  transition: width 0.2s ease, background-color 0.18s ease, border-color 0.18s ease;
+  font-size: 14px;
+  font-weight: 400;
   line-height: 1.45;
+  letter-spacing: 0.1px;
+  -webkit-font-smoothing: antialiased;
   box-sizing: border-box;
+}
+
+#drb-sidepanel-root {
+  font-size: 16px;
+}
+
+/* 🌙 Optional Dark Mode (Soft Zinc Dark + Vivid Traffic Lights) */
+#drb-aff-hud-root[data-theme="dark"],
+#drb-sidepanel-root[data-theme="dark"],
+body[data-theme="dark"],
+body[data-theme="dark"] #drb-sidepanel-root {
+  --drb-bg-root: #141416;
+  --drb-bg-card: #18181b;
+  --drb-bg-header: #221c1a;
+  --drb-border-header: #3a2a25;
+  --drb-bg-surface: #232329;
+  --drb-bg-input: #121215;
+  --drb-border: #2e2e36;
+  --drb-border-strong: #52525b;
+
+  --drb-text-main: #ffffff;
+  --drb-text-label: #e4e4e7;
+  --drb-text-muted: #a1a1aa;
+
+  --drb-accent: #ff5733;
+  --drb-accent-hover: #ff6b4a;
+  --drb-accent-soft: rgba(238, 77, 45, 0.15);
+  --drb-accent-border: rgba(238, 77, 45, 0.45);
+
+  /* High-Contrast 4-Tier Viability Tokens (Dark Mode) */
+  --tier-god-solid: #7c3aed;
+  --tier-god-bg: rgba(124, 58, 237, 0.24);
+  --tier-god-border: #a855f7;
+  --tier-god-text: #e9d5ff;
+
+  --tier-pass-solid: #16a34a;
+  --tier-pass-bg: rgba(22, 163, 74, 0.22);
+  --tier-pass-border: #22c55e;
+  --tier-pass-text: #bbf7d0;
+
+  --tier-warn-solid: #d97706;
+  --tier-warn-bg: rgba(234, 88, 12, 0.24);
+  --tier-warn-border: #f97316;
+  --tier-warn-text: #fed7aa;
+
+  --tier-danger-solid: #dc2626;
+  --tier-danger-bg: rgba(220, 38, 38, 0.25);
+  --tier-danger-border: #ef4444;
+  --tier-danger-text: #fecaca;
+
+  --drb-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
 }
 
 #drb-aff-hud-root *,
 #drb-aff-hud-root *::before,
 #drb-aff-hud-root *::after {
   box-sizing: border-box;
+  font-family: inherit;
 }
 
 #drb-aff-hud-root.drb-aff-hud--minimized {
-  width: 220px;
+  width: 248px;
 }
 
 #drb-aff-hud-root.drb-aff-hud--minimized .drb-aff-body {
@@ -42,9 +146,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: linear-gradient(90deg, rgba(14, 165, 233, 0.22) 0%, rgba(99, 102, 241, 0.18) 100%);
-  border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 11px 15px;
+  background: var(--drb-bg-header);
+  border-bottom: 1px solid var(--drb-border-header);
   user-select: none;
 }
 
@@ -52,124 +156,359 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.2px;
-  color: #38bdf8;
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--drb-accent);
+}
+
+.drb-aff-version {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--drb-text-muted);
+  background: var(--drb-bg-card);
+  border: 1px solid var(--drb-border);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
 }
 
 .drb-aff-badge-platform {
-  padding: 2px 7px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 15px;
+  font-weight: 500;
   text-transform: uppercase;
-  background: rgba(249, 115, 22, 0.22);
-  color: #fb923c;
-  border: 1px solid rgba(249, 115, 22, 0.45);
-}
-
-.drb-aff-badge-platform--lazada {
-  background: rgba(59, 130, 246, 0.22);
-  color: #60a5fa;
-  border-color: rgba(59, 130, 246, 0.45);
-}
-
-.drb-aff-badge-platform--fb {
-  background: rgba(16, 185, 129, 0.22);
-  color: #34d399;
-  border-color: rgba(16, 185, 129, 0.45);
+  background: var(--drb-accent-soft);
+  color: var(--drb-accent);
+  border: 1px solid var(--drb-accent-border);
 }
 
 .drb-aff-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .drb-aff-icon-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #cbd5e1;
-  width: 24px;
-  height: 24px;
+  background: var(--drb-bg-card);
+  border: 1px solid var(--drb-border-strong);
+  color: var(--drb-text-label);
+  width: 30px;
+  height: 30px;
   border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 16px;
+  font-weight: 400;
   padding: 0;
   transition: all 0.15s ease;
 }
 
 .drb-aff-icon-btn:hover {
-  background: rgba(56, 189, 248, 0.22);
-  color: #fff;
-  border-color: rgba(56, 189, 248, 0.5);
+  border-color: var(--drb-accent);
+  color: var(--drb-accent);
+  background: var(--drb-accent-soft);
 }
 
 /* Body */
 .drb-aff-body {
-  padding: 12px 14px 14px;
-  max-height: 80vh;
+  padding: 14px 16px 16px;
+  max-height: 85vh;
   overflow-y: auto;
 }
 
 .drb-aff-product-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #e2e8f0;
-  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--drb-text-main);
+  margin-bottom: 11px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.35;
+  line-height: 1.45;
 }
 
-/* KPI Grid */
+/* ==========================================================================
+   1. High-Contrast 3-Badge Checklist Bar (Single-Line Locked!)
+   ========================================================================= */
+.drb-aff-checklist-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 11px;
+}
+
+.drb-aff-check-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  border: 1.5px solid transparent;
+  line-height: 1.25;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drb-aff-check-pill--green {
+  background: var(--tier-pass-bg);
+  border-color: var(--tier-pass-border);
+  color: var(--tier-pass-text);
+}
+
+.drb-aff-check-pill--yellow {
+  background: var(--tier-warn-bg);
+  border-color: var(--tier-warn-border);
+  color: var(--tier-warn-text);
+}
+
+.drb-aff-check-pill--red {
+  background: var(--tier-danger-bg);
+  border-color: var(--tier-danger-border);
+  color: var(--tier-danger-text);
+}
+
+/* ==========================================================================
+   2. Collapsible 5-Line Product Spec & Description Box
+   ========================================================================== */
+.drb-aff-spec-box {
+  background: var(--drb-bg-surface);
+  border: 1px solid var(--drb-border-strong);
+  border-radius: 8px;
+  margin-top: 8px;
+  margin-bottom: 9px;
+  overflow: hidden;
+}
+
+.drb-aff-spec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  background: var(--drb-bg-card);
+  border-bottom: 1px solid var(--drb-border);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--drb-text-label);
+  cursor: pointer;
+  user-select: none;
+}
+
+.drb-aff-spec-header:hover {
+  color: var(--drb-accent);
+}
+
+.drb-aff-spec-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.drb-aff-spec-toggle-btn {
+  background: var(--drb-bg-surface);
+  border: 1px solid var(--drb-border-strong);
+  color: var(--drb-text-label);
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.drb-aff-spec-toggle-btn:hover {
+  border-color: var(--drb-accent);
+  color: var(--drb-accent);
+  background: var(--drb-accent-soft);
+}
+
+/* Default: 5 Lines (~106px) with Scrollbar */
+.drb-aff-spec-body {
+  padding: 9px 12px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--drb-text-label);
+  max-height: 106px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  transition: max-height 0.2s ease, padding 0.2s ease;
+}
+
+.drb-aff-spec-box.is-expanded .drb-aff-spec-body {
+  max-height: 280px;
+}
+
+.drb-aff-spec-box.is-collapsed .drb-aff-spec-body {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.drb-aff-spec-box.is-collapsed .drb-aff-spec-header {
+  border-bottom: none;
+}
+
+/* ==========================================================================
+   3. High-Contrast KPI Cards & 4-Tier Traffic Light Signal
+   ========================================================================== */
 .drb-aff-kpi-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 0.92fr 1.18fr;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .drb-aff-kpi-card {
-  background: rgba(30, 41, 59, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 10px;
+  background: var(--drb-bg-surface);
+  border: 1.5px solid var(--drb-border);
+  border-radius: 9px;
   padding: 8px 10px;
+  transition: all 0.18s ease;
 }
 
-.drb-aff-kpi-card--highlight {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(6, 182, 212, 0.16) 100%);
-  border-color: rgba(16, 185, 129, 0.45);
+.drb-aff-kpi-card--highlight,
+.drb-aff-kpi-card[data-tier="pass"] {
+  background: var(--tier-pass-bg);
+  border-color: var(--tier-pass-border);
+  border-left: 5px solid var(--tier-pass-solid);
+}
+
+.drb-aff-kpi-card[data-tier="god"] {
+  background: var(--tier-god-bg);
+  border-color: var(--tier-god-border);
+  border-left: 5px solid var(--tier-god-solid);
+}
+
+.drb-aff-kpi-card[data-tier="warning"] {
+  background: var(--tier-warn-bg);
+  border-color: var(--tier-warn-border);
+  border-left: 5px solid var(--tier-warn-solid);
+}
+
+.drb-aff-kpi-card[data-tier="danger"] {
+  background: var(--tier-danger-bg);
+  border-color: var(--tier-danger-border);
+  border-left: 5px solid var(--tier-danger-solid);
 }
 
 .drb-aff-kpi-label {
-  font-size: 10px;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 2px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--drb-text-label);
+  margin-bottom: 4px;
 }
 
 .drb-aff-kpi-val {
-  font-size: 16px;
-  font-weight: 800;
-  color: #f8fafc;
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--drb-text-main);
+  line-height: 1.25;
 }
 
+.drb-aff-kpi-card[data-tier="god"] .drb-aff-kpi-val {
+  color: var(--tier-god-text);
+}
+
+.drb-aff-kpi-card[data-tier="pass"] .drb-aff-kpi-val,
 .drb-aff-kpi-val--green {
-  color: #34d399;
+  color: var(--tier-pass-text);
+}
+
+.drb-aff-kpi-card[data-tier="warning"] .drb-aff-kpi-val {
+  color: var(--tier-warn-text);
+}
+
+.drb-aff-kpi-card[data-tier="danger"] .drb-aff-kpi-val {
+  color: var(--tier-danger-text);
+}
+
+/* Solid Pill Tag inside the Commission Card */
+.drb-aff-tier-badge {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 5px;
+  font-size: 15px;
+  font-weight: 500;
+  margin-top: 5px;
+  line-height: 1.3;
+  color: #ffffff;
+  background: var(--tier-pass-solid);
+}
+
+.drb-aff-kpi-card[data-tier="god"] .drb-aff-tier-badge {
+  background: var(--tier-god-solid);
+}
+
+.drb-aff-kpi-card[data-tier="pass"] .drb-aff-tier-badge {
+  background: var(--tier-pass-solid);
+}
+
+.drb-aff-kpi-card[data-tier="warning"] .drb-aff-tier-badge {
+  background: var(--tier-warn-solid);
+}
+
+.drb-aff-kpi-card[data-tier="danger"] .drb-aff-tier-badge {
+  background: var(--tier-danger-solid);
 }
 
 .drb-aff-kpi-sub {
-  font-size: 10px;
-  color: #64748b;
-  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--drb-text-label);
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   4. Solid High-Contrast Traffic-Light Break-Even Banner (107฿/Day)
+   ========================================================================== */
+.drb-aff-breakeven-box {
+  border-radius: 8px;
+  padding: 10px 13px;
+  margin-bottom: 12px;
+  font-size: 16.5px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--tier-pass-solid);
+  box-shadow: 0 3px 10px rgba(22, 163, 74, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.18s ease;
+  line-height: 1.35;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.drb-aff-breakeven-box span {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.drb-aff-breakeven-box[data-tier="god"] {
+  background: linear-gradient(90deg, #7c3aed 0%, #6d28d9 100%);
+  box-shadow: 0 3px 12px rgba(124, 58, 237, 0.32);
+}
+
+.drb-aff-breakeven-box[data-tier="pass"] {
+  background: linear-gradient(90deg, #16a34a 0%, #15803d 100%);
+  box-shadow: 0 3px 12px rgba(22, 163, 74, 0.28);
+}
+
+.drb-aff-breakeven-box[data-tier="warning"] {
+  background: linear-gradient(90deg, #ea580c 0%, #d97706 100%);
+  box-shadow: 0 3px 12px rgba(234, 88, 12, 0.28);
+}
+
+.drb-aff-breakeven-box[data-tier="danger"] {
+  background: linear-gradient(90deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 3px 12px rgba(220, 38, 38, 0.32);
 }
 
 /* Form Controls */
@@ -180,46 +519,46 @@
   margin-bottom: 8px;
 }
 
-.drb-aff-row-3 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
 .drb-aff-field label {
-  display: block;
-  font-size: 10px;
-  color: #94a3b8;
-  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15.5px;
+  font-weight: 500;
+  color: var(--drb-text-label);
+  margin-bottom: 5px;
 }
 
 .drb-aff-input {
   width: 100%;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 7px;
-  padding: 5px 8px;
-  color: #f8fafc;
-  font-size: 12px;
+  background: var(--drb-bg-input);
+  border: 1px solid var(--drb-border-strong);
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: var(--drb-text-main);
+  font-size: 17px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 .drb-aff-input:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  background: var(--drb-bg-card);
+  border-color: var(--drb-accent);
+  box-shadow: 0 0 0 2px rgba(238, 77, 45, 0.14);
 }
 
 /* Variant Pills */
 .drb-aff-variants-wrap {
-  margin-bottom: 10px;
+  margin-bottom: 11px;
 }
 
 .drb-aff-variants-label {
-  font-size: 10px;
-  color: #94a3b8;
-  margin-bottom: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--drb-text-label);
+  margin-bottom: 6px;
   display: flex;
   justify-content: space-between;
 }
@@ -227,46 +566,47 @@
 .drb-aff-variants-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  max-height: 76px;
+  gap: 7px;
+  max-height: 85px;
   overflow-y: auto;
 }
 
 .drb-aff-variant-pill {
-  background: rgba(30, 41, 59, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  color: #cbd5e1;
-  border-radius: 6px;
-  padding: 3px 8px;
-  font-size: 11px;
+  background: var(--drb-bg-card);
+  border: 1px solid var(--drb-border-strong);
+  color: var(--drb-text-main);
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: 16px;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.14s ease;
 }
 
 .drb-aff-variant-pill:hover,
 .drb-aff-variant-pill.active {
-  background: rgba(14, 165, 233, 0.25);
-  border-color: #38bdf8;
-  color: #fff;
+  background: var(--drb-accent-soft);
+  border-color: var(--drb-accent);
+  color: var(--drb-accent);
 }
 
 /* Buttons */
 .drb-aff-btn-group {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 7px;
-  margin-top: 8px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .drb-aff-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: 7px;
+  padding: 9px 13px;
+  border-radius: 6px;
+  font-size: 17px;
+  font-weight: 500;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.15s ease;
@@ -274,62 +614,52 @@
 }
 
 .drb-aff-btn--primary {
-  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+  background: var(--drb-accent);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+  border-color: var(--drb-accent);
 }
 
 .drb-aff-btn--primary:hover {
-  filter: brightness(1.1);
-}
-
-.drb-aff-btn--emerald {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
-}
-
-.drb-aff-btn--emerald:hover {
-  filter: brightness(1.1);
+  background: var(--drb-accent-hover);
+  border-color: var(--drb-accent-hover);
 }
 
 .drb-aff-btn--ghost {
-  background: rgba(30, 41, 59, 0.85);
-  border-color: rgba(148, 163, 184, 0.3);
-  color: #e2e8f0;
+  background: var(--drb-bg-card);
+  border-color: var(--drb-border-strong);
+  color: var(--drb-text-main);
+  font-weight: 500;
 }
 
 .drb-aff-btn--ghost:hover {
-  border-color: #38bdf8;
-  color: #38bdf8;
+  border-color: var(--drb-accent);
+  color: var(--drb-accent);
+  background: var(--drb-bg-surface);
 }
 
 .drb-aff-btn--full {
   grid-column: 1 / -1;
 }
 
-/* Divider & Info Table */
-.drb-aff-divider {
-  height: 1px;
-  background: rgba(148, 163, 184, 0.16);
-  margin: 10px 0;
-}
-
+/* Info Table */
 .drb-aff-mini-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 16.5px;
   margin-bottom: 8px;
 }
 
 .drb-aff-mini-table td {
-  padding: 3px 0;
-  color: #cbd5e1;
+  padding: 2.5px 0;
+  color: var(--drb-text-label);
+  font-weight: 400;
 }
 
 .drb-aff-mini-table td:last-child {
   text-align: right;
-  font-weight: 600;
-  color: #f8fafc;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--drb-text-main);
 }
 
 /* Toast Notifications */
@@ -344,15 +674,16 @@
 }
 
 .drb-aff-toast {
-  background: rgba(15, 23, 42, 0.96);
-  border: 1px solid #34d399;
-  color: #ecfdf5;
+  background: #ffffff;
+  border: 1px solid #ee4d2d;
+  border-left: 4px solid #ee4d2d;
+  color: #222222;
   padding: 9px 14px;
-  border-radius: 10px;
-  font-family: 'Inter', 'Prompt', sans-serif;
+  border-radius: 8px;
+  font-family: 'Inter', 'Noto Sans Thai', 'Leelawadee UI', sans-serif;
   font-size: 12px;
-  font-weight: 600;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  font-weight: 400;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
@@ -361,3 +692,304 @@
   transform: translateY(8px);
 }
 
+/* ==========================================================================
+   5. Shopee Affiliate Offer Grid — Signal Radar Toolbar & Card Overlays
+   ========================================================================== */
+#drb-aff-grid-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  margin: 10px 0 14px;
+  background: linear-gradient(90deg, #18181b 0%, #27272a 100%);
+  border: 1.5px solid #3f3f46;
+  border-left: 5px solid #ee4d2d;
+  border-radius: 10px;
+  color: #ffffff;
+  font-family: 'Inter', 'Noto Sans Thai', 'Leelawadee UI', sans-serif;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  z-index: 50;
+}
+
+.drb-grid-tb-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.drb-grid-tb-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #ff6b4a;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drb-grid-tb-summary {
+  font-size: 13px;
+  color: #e4e4e7;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.drb-grid-tb-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.drb-grid-filter-btn {
+  background: #27272a;
+  border: 1px solid #52525b;
+  color: #e4e4e7;
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.drb-grid-filter-btn:hover {
+  border-color: #ff6b4a;
+  color: #ffffff;
+}
+
+.drb-grid-filter-btn.active {
+  background: #ee4d2d;
+  border-color: #ee4d2d;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.drb-grid-filter-btn--green.active {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.drb-grid-power-btn {
+  background: #16a34a;
+  border: 1px solid #22c55e;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.drb-grid-power-btn.is-off {
+  background: #3f3f46;
+  border-color: #71717a;
+  color: #d4d4d8;
+}
+
+/* Grid Card Signal Borders & Dimming (Default: Clean original card, show only corner Signal Pill) */
+.drb-aff-grid-card {
+  position: relative !important;
+  overflow: visible !important;
+  transition: opacity 0.2s ease, transform 0.18s ease, box-shadow 0.2s ease !important;
+}
+
+.drb-aff-grid-card[data-drb-tier="god"]:hover {
+  outline: 2px solid #7c3aed !important;
+}
+
+.drb-aff-grid-card[data-drb-tier="pass"]:hover {
+  outline: 2px solid #16a34a !important;
+}
+
+.drb-aff-grid-card.drb-aff-grid-card--dim {
+  opacity: 0.42 !important;
+  filter: grayscale(40%);
+}
+
+.drb-aff-grid-card.drb-aff-grid-card--dim:hover {
+  opacity: 1 !important;
+  filter: none;
+}
+
+.drb-aff-grid-card.drb-aff-grid-card--hidden {
+  display: none !important;
+}
+
+body.drb-aff-radar-off .drb-aff-card-overlay {
+  display: none !important;
+}
+
+body.drb-aff-radar-off .drb-aff-grid-card {
+  opacity: 1 !important;
+  filter: none !important;
+  outline: none !important;
+}
+
+/* Compact Top-Right Corner Signal Pill + Hover Popover inside each Product Card */
+.drb-aff-card-overlay {
+  position: absolute !important;
+  top: 6px !important;
+  right: 6px !important;
+  z-index: 40 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  display: inline-block !important;
+  width: auto !important;
+  height: auto !important;
+  font-family: 'Inter', 'Noto Sans Thai', 'Leelawadee UI', sans-serif;
+}
+
+.drb-aff-card-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.32) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+}
+
+.drb-aff-card-pill:hover {
+  transform: scale(1.06) !important;
+}
+
+.drb-aff-card-overlay[data-tier="god"] .drb-aff-card-pill {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%) !important;
+}
+
+.drb-aff-card-overlay[data-tier="pass"] .drb-aff-card-pill {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+}
+
+.drb-aff-card-overlay[data-tier="warning"] .drb-aff-card-pill {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%) !important;
+}
+
+.drb-aff-card-overlay[data-tier="danger"] .drb-aff-card-pill {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
+}
+
+/* Hover Tooltip Popover */
+.drb-aff-card-tooltip {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  padding-top: 6px; /* hover bridge so cursor can move into button smoothly */
+  width: 235px;
+  z-index: 80;
+}
+
+.drb-aff-card-overlay:hover .drb-aff-card-tooltip {
+  display: block;
+}
+
+.drb-aff-card-tooltip-inner {
+  background: rgba(24, 24, 27, 0.96);
+  color: #f4f4f5;
+  border: 1px solid #52525b;
+  border-radius: 8px;
+  padding: 9px 10px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.48);
+  font-size: 12px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+
+.drb-aff-tt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.drb-aff-tt-title {
+  font-weight: 700;
+  font-size: 12.5px;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+}
+
+.drb-aff-card-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.drb-aff-card-pick-btn {
+  width: 100%;
+  background: linear-gradient(90deg, #ee4d2d 0%, #ff6b4a 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+
+.drb-aff-card-pick-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.drb-aff-card-aff-btn {
+  width: 100%;
+  background: #27272a;
+  color: #e4e4e7;
+  border: 1px solid #52525b;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.drb-aff-card-aff-btn:hover {
+  background: #3f3f46;
+  border-color: #a1a1aa;
+  color: #ffffff;
+}
+
+.drb-grid-rate-select {
+  background: #18181b;
+  color: #fbbf24;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+}
+
+.drb-grid-rate-select:hover {
+  border-color: #fbbf24;
+}
