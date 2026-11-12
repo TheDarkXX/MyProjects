@@ -147,6 +147,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     await pushProductToWebUI(affProduct, 'Affiliate Offer');
   });
 
+  const openV1Btn = document.getElementById('drb-aff-btn-open-v1');
+  if (openV1Btn) {
+    openV1Btn.addEventListener('click', async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url && tab.url.includes('affiliate.shopee.co.th')) {
+        chrome.tabs.sendMessage(tab.id, { action: 'OPEN_V1_SCANNER' }).catch(() => {
+          chrome.tabs.update(tab.id, { url: 'https://affiliate.shopee.co.th/offer/product_offer#drb-action=v1_scanner' });
+        });
+      } else {
+        chrome.tabs.create({ url: 'https://affiliate.shopee.co.th/offer/product_offer#drb-action=v1_scanner' });
+      }
+    });
+  }
+
   document.getElementById('drb-aff-btn-sync-report').addEventListener('click', async () => {
     if (!currentTabId) return;
     try {

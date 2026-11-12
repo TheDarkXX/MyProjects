@@ -342,6 +342,9 @@
 
     tb.innerHTML = `
       <div class="drb-grid-tb-left">
+        <button type="button" class="drb-grid-v1-launch-btn" id="drb-btn-open-v1-scanner" title="เปิดตารางค้นหาสินค้า V1 Realtime (ดูดรวดเดียว 500 ชิ้น + คำนวณ Signal จุดคุ้มทุนแอด 107฿)">
+          🚀 เปิดตารางค้นหา V1 Realtime (500 ชิ้น + Signal 107฿)
+        </button>
         <button type="button" class="drb-grid-power-btn ${isOn ? '' : 'is-off'}" id="drb-btn-toggle-radar" title="เปิด/ปิด การแสดงป้าย Signal บนการ์ดทั้งหมด">
           ${isOn ? '🟢 เรดาร์: เปิด' : '⚪ เรดาร์: ปิด'}
         </button>
@@ -371,6 +374,13 @@
         </button>
       </div>
     `;
+
+    const v1Btn = tb.querySelector('#drb-btn-open-v1-scanner');
+    if (v1Btn) {
+      v1Btn.addEventListener('click', () => {
+        openV1ScannerModal();
+      });
+    }
 
     const powerBtn = tb.querySelector('#drb-btn-toggle-radar');
     if (powerBtn) {
@@ -675,8 +685,1424 @@
         sendResponse({ ok: true, report: rep });
         return true;
       }
+      if (req.action === 'OPEN_V1_SCANNER') {
+        openV1ScannerModal();
+        sendResponse({ ok: true });
+        return true;
+      }
     });
   }
+
+  // ==========================================================================
+  // 4. V1 REALTIME 500-ITEM SCANNER & DRBANK 107฿ SIGNAL RADAR WRAPPER
+  //    Direct Shopee Internal API: GET /api/v3/offer/product/list
+  //    + GraphQL Shortlink Generator: POST /api/v3/gql?q=batchCustomLink
+  // ==========================================================================
+  const V1_STORAGE_KEY = 'drbV1ScannerLastResult';
+  let v1State = {
+    isOpen: false,
+    isLoading: false,
+    cancelRequested: false,
+    rows: [],
+    signalFilter: 'all',      // 'all' | 'win' | 'god' | 'pass' | 'warning' | 'danger'
+    minSoldFilter: 0,         // 0 | 50 | 100 | 300 | 1000
+    textFilter: '',
+    sortCol: 'signalScore',   // 'signalScore' | 'netComm' | 'breakEvenNum' | 'name' | 'price' | 'sold' | 'historical_sold' | 'extraRate' | 'extraComm' | 'stock'
+    sortDir: 'desc'           // 'asc' | 'desc'
+  };
+
+  function ensurePageMainBridge() {
+    if (document.getElementById('drb-main-world-bridge-script')) return;
+    try {
+      const s = document.createElement('script');
+      s.id = 'drb-main-world-bridge-script';
+      s.src = chrome.runtime.getURL('src/page-main-bridge.js');
+      s.onload = function () {
+        this.remove();
+      };
+      (document.head || document.documentElement).appendChild(s);
+    } catch (_e) {}
+  }
+  ensurePageMainBridge();
+
+  function pageMainRequest({ url, method = 'GET', headers = {}, body = null, useFetch = false, attachCsrf = false }) {
+    ensurePageMainBridge();
+    return new Promise((resolve) => {
+      const reqId = `drb_req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      const timer = setTimeout(() => {
+        window.removeEventListener('message', onMsg);
+        resolve({ ok: false, status: 408, error: 'Request Timeout (12s)', data: null });
+      }, 12000);
+
+      function onMsg(event) {
+        if (event.source !== window) return;
+        const msg = event.data;
+        if (!msg || msg.type !== 'DRB_MAIN_WORLD_RES' || msg.reqId !== reqId) return;
+        clearTimeout(timer);
+        window.removeEventListener('message', onMsg);
+        resolve(msg);
+      }
+
+      window.addEventListener('message', onMsg);
+      window.postMessage(
+        {
+          type: 'DRB_MAIN_WORLD_REQ',
+          reqId,
+          url,
+          method,
+          headers,
+          body,
+          useFetch,
+          attachCsrf
+        },
+        '*'
+      );
+    });
+  }
+
+  async function generateShopeeShortLink(originalLink, subIds = []) {
+    const body = {
+      operationName: 'batchGetCustomLink',
+      query: `
+        query batchGetCustomLink($linkParams: [CustomLinkParam!], $sourceCaller: SourceCaller){
+          batchCustomLink(linkParams: $linkParams, sourceCaller: $sourceCaller){
+            shortLink
+            longLink
+            failCode
+          }
+        }
+      `,
+      variables: {
+        linkParams: [
+          {
+            originalLink,
+            advancedLinkParams: {
+              subId1: subIds[0] || '',
+              subId2: subIds[1] || '',
+              subId3: subIds[2] || '',
+              subId4: subIds[3] || '',
+              subId5: subIds[4] || ''
+            }
+          }
+        ],
+        sourceCaller: 'CUSTOM_LINK_CALLER'
+      }
+    };
+
+    const res = await pageMainRequest({
+      url: 'https://affiliate.shopee.co.th/api/v3/gql?q=batchCustomLink',
+      method: 'POST',
+      useFetch: true,
+      attachCsrf: true,
+      headers: {
+        'content-type': 'application/json; charset=UTF-8',
+        'affiliate-program-type': '1'
+      },
+      body
+    });
+    const first = res?.data?.data?.batchCustomLink?.[0];
+    return first?.shortLink || first?.longLink || '';
+  }
+
+  function mapRawOfferItemToRow(raw) {
+    const a = raw?.batch_item_for_item_card_full || {};
+    const itemid = String(a.itemid || raw?.item_id || '');
+    const shopid = String(a.shopid || '');
+    const name = a.name || 'สินค้า Shopee Affiliate';
+    const price = (Number(a.price) || 0) / 1e5;
+    const priceMax = (Number(a.price_max) || Number(a.price) || 0) / 1e5;
+    const stock = Number(a.stock) || 0;
+    const sold = Number(a.sold) || 0; // ขาย/เดือน (ชิ้น) จริงจาก API!
+    const historical_sold = Number(a.historical_sold) || 0; // ขายทั้งหมด (ชิ้น) จริง!
+    const isMall = Boolean(a.is_official_shop);
+    const isFreeSample = Boolean(raw?.is_free_sample);
+    const imageHash = a.image || (Array.isArray(a.images) && a.images[0]) || '';
+    const imageUrl = imageHash ? `https://down-th.img.susercontent.com/file/${imageHash}` : '';
+    const imagesHD = Array.isArray(a.images)
+      ? a.images.slice(0, 8).map((h) => `https://down-th.img.susercontent.com/file/${h}`)
+      : imageUrl
+      ? [imageUrl]
+      : [];
+
+    const extraRate = parseFloat(raw?.seller_commission_rate) || 0;
+    // Check if Shopee provides default_commission_rate (e.g. "2.0%" or number), else fallback to smart category baseRate
+    const rawDefaultRate = parseFloat(raw?.default_commission_rate);
+    const catEst = ns.estimateCategoryCommission(name, isMall, 'auto', '');
+    const baseRate = Number.isFinite(rawDefaultRate) && rawDefaultRate > 0 ? rawDefaultRate : catEst.baseRate || 2.0;
+
+    const extraComm = +((price * extraRate) / 100).toFixed(2);
+    const extraCommMax = +((priceMax * extraRate) / 100).toFixed(2);
+
+    // คำนวณ DrBank Signal (งบแอดจริง 100฿ + VAT 7% = 107฿/วัน, หักภาษี ณ ที่จ่าย 3%, เพดาน Base 250฿)
+    const commMin = ns.calculateCommission({
+      price,
+      baseRate,
+      extraRate,
+      capTHB: 250,
+      whtRate: 3.0,
+      realDailyAdCostTHB: 107
+    });
+    const commMax = ns.calculateCommission({
+      price: priceMax,
+      baseRate,
+      extraRate,
+      capTHB: 250,
+      whtRate: 3.0,
+      realDailyAdCostTHB: 107
+    });
+
+    const productLink = raw?.product_link || (shopid && itemid ? `https://shopee.co.th/product/${shopid}/${itemid}` : '');
+    const affUrl = itemid ? `https://affiliate.shopee.co.th/offer/product_offer/${itemid}` : '';
+    const breakEvenNum = commMin.netComm > 0 ? +(107 / commMin.netComm).toFixed(1) : 999;
+
+    const tierRankMap = { god: 4, pass: 3, warning: 2, danger: 1 };
+    const tierRank = tierRankMap[commMin.tier] || 1;
+    const signalScore = +(tierRank * 100000 + commMin.netComm).toFixed(2);
+
+    return {
+      itemid,
+      shopid,
+      name,
+      imageUrl,
+      imagesHD,
+      price,
+      priceMax,
+      stock,
+      sold,
+      historical_sold,
+      isMall,
+      isFreeSample,
+      baseRate,
+      extraRate,
+      extraComm,
+      extraCommMax,
+      netComm: +commMin.netComm.toFixed(2),
+      netCommMax: +commMax.netComm.toFixed(2),
+      grossComm: +commMin.grossComm.toFixed(2),
+      effectiveRate: +commMin.effectiveRate.toFixed(1),
+      tier: commMin.tier, // 'god' | 'pass' | 'warning' | 'danger'
+      tierRank,
+      signalScore,
+      tierEmoji: commMin.tierEmoji,
+      tierLabel: commMin.tierLabel,
+      breakEvenUnits: commMin.breakEvenUnits,
+      breakEvenOrders: commMin.breakEvenOrders,
+      breakEvenNum,
+      productLink,
+      affUrl
+    };
+  }
+
+  function buildV1ScannerDOM() {
+    let wrap = document.getElementById('drb-v1-scanner-overlay');
+    if (wrap) return wrap;
+
+    wrap = document.createElement('div');
+    wrap.id = 'drb-v1-scanner-overlay';
+    wrap.innerHTML = `
+      <!-- Row 1: Unified Single-Line Command Cockpit (Ultra-Compact 40px) -->
+      <div class="drb-v1-controls">
+        <span class="drb-v1-badge-live" title="Shopee Affiliate V1 Realtime API + DrBank 107฿/Day Signal Radar">⚡ V1 RADAR</span>
+
+        <div class="drb-v1-control-group drb-v1-control-group--search">
+          <input type="text" id="drb-v1-inp-keyword" class="drb-v1-input" placeholder="พิมพ์ชื่อสินค้า เช่น กล่องถนอมอาหาร, โปรตีน, เซรั่ม...">
+          <button type="button" class="drb-v1-btn drb-v1-btn--primary" id="drb-v1-btn-search">
+            🔍 ค้นหา
+          </button>
+        </div>
+
+        <div class="drb-v1-control-group">
+          <select id="drb-v1-sel-sort" class="drb-v1-select" title="ลำดับการดึงจาก Shopee API">
+            <option value="2" selected>🔥 ขายดี</option>
+            <option value="5">🎁 คอม % สูง</option>
+            <option value="1">🎯 เกี่ยวข้อง</option>
+            <option value="3">💵 ราคาสูง➔ต่ำ</option>
+          </select>
+        </div>
+
+        <div class="drb-v1-control-group">
+          <label class="drb-v1-chk-label" title="กรองเฉพาะสินค้าที่มีค่าคอมพิเศษ Extra">
+            <input type="checkbox" id="drb-v1-chk-extra" value="2" checked>
+            <span>🎁 Extra</span>
+          </label>
+          <label class="drb-v1-chk-label" title="กรองเฉพาะสินค้ารีวิวฟรี">
+            <input type="checkbox" id="drb-v1-chk-free" value="5">
+            <span>🆓 รีวิวฟรี</span>
+          </label>
+        </div>
+
+        <div class="drb-v1-control-group">
+          <select id="drb-v1-sel-extra-cat" class="drb-v1-select drb-v1-select--cat" title="เลือกดึงตามหมวดหมู่สินค้า">
+            <option value="0">💯 ข้อเสนอพิเศษทั้งหมด</option>
+            <option value="7">🔥 ค่าคอมพิเศษ (Extra Comm)</option>
+            <option value="9">😍 รับสินค้ารีวิวฟรี</option>
+            <option value="2">❤️ สินค้าขายดี</option>
+            <option disabled>👇 --- แบ่งตามหมวดหมู่ --- 👇</option>
+            <option value="100630">ความงามและของใช้ส่วนตัว</option>
+            <option value="100001">กลุ่มผลิตภัณฑ์เพื่อสุขภาพ</option>
+            <option value="100636">เครื่องใช้ในบ้าน</option>
+            <option value="100010">เครื่องใช้ไฟฟ้าในบ้าน</option>
+            <option value="100629">อาหารและเครื่องดื่ม</option>
+            <option value="100632">ของเล่น แม่และเด็ก</option>
+            <option value="100011">เสื้อผ้าแฟชั่นผู้ชาย</option>
+            <option value="100017">เสื้อผ้าแฟชั่นผู้หญิง</option>
+            <option value="100016">กระเป๋า</option>
+            <option value="100012">รองเท้าผู้ชาย</option>
+            <option value="100532">รองเท้าผู้หญิง</option>
+            <option value="100009">เครื่องประดับ</option>
+            <option value="100534">นาฬิกาและแว่นตา</option>
+            <option value="100013">มือถือและอิเล็กทรอนิกส์</option>
+            <option value="100535">คอมพิวเตอร์และแล็ปท็อป</option>
+            <option value="100635">กล้องและอุปกรณ์ถ่ายภาพ</option>
+            <option value="100637">กีฬาและกิจกรรมกลางแจ้ง</option>
+            <option value="100631">สัตว์เลี้ยง</option>
+            <option value="100634">เกมและอุปกรณ์เสริม</option>
+            <option value="100640">ยานยนต์</option>
+            <option value="100639">เครื่องเขียนและหนังสือ</option>
+            <option value="100642">ตั๋วและบัตรกำนัล</option>
+          </select>
+          <button type="button" class="drb-v1-btn drb-v1-btn--blue" id="drb-v1-btn-fetch-cat">
+            👁️ ดูหมวดนี้
+          </button>
+        </div>
+
+        <div class="drb-v1-control-group">
+          <select id="drb-v1-sel-limit" class="drb-v1-select" title="จำนวนสินค้าสูงสุดที่จะดึง">
+            <option value="60">ดึง 60 ชิ้น (3 หน้า)</option>
+            <option value="100" selected>ดึง 100 ชิ้น (5 หน้า)</option>
+            <option value="200">ดึง 200 ชิ้น (10 หน้า)</option>
+            <option value="300">ดึง 300 ชิ้น (15 หน้า)</option>
+            <option value="500">ดึง 500 ชิ้น (25 หน้า)</option>
+          </select>
+          <select id="drb-v1-sel-delay" class="drb-v1-select" title="หน่วงเวลาต่อหน้า (20 ชิ้น) เพื่อป้องกัน Shopee เตะออก">
+            <option value="5000" selected>🛡️ หน่วง 5วิ+Jitter</option>
+            <option value="3500">⚖️ หน่วง 3.5วิ+Jitter</option>
+            <option value="2000">⚡ หน่วง 2วิ+Jitter</option>
+          </select>
+        </div>
+
+        <div class="drb-v1-header-right">
+          <button type="button" class="drb-v1-btn drb-v1-btn--ghost" id="drb-v1-btn-restore" style="display:none;" title="กู้คืนรายการที่ดึงไว้ล่าสุด">
+            🕒 ล่าสุด
+          </button>
+          <button type="button" class="drb-v1-btn drb-v1-btn--green" id="drb-v1-btn-export-xlsx" disabled title="ส่งออกไฟล์ Excel .xlsx แท้ (แยกสีตาม Signal + ตัวเลขคำนวณต่อได้ทันที)">
+            📗 Excel (.xlsx)
+          </button>
+          <button type="button" class="drb-v1-btn drb-v1-btn--ghost" id="drb-v1-btn-export-csv" disabled title="ส่งออกไฟล์ .csv มาตรฐาน">
+            📥 CSV
+          </button>
+          <button type="button" class="drb-v1-btn drb-v1-btn--close" id="drb-v1-btn-close" title="ปิดตารางกลับหน้าปกติ">
+            ✕ ปิด
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress Bar Banner (Shown while fetching pages) -->
+      <div class="drb-v1-progress-wrap" id="drb-v1-progress-wrap" style="display:none;">
+        <div class="drb-v1-progress-info">
+          <span id="drb-v1-progress-text">⏳ กำลังดึงข้อมูลจาก Shopee API...</span>
+          <button type="button" class="drb-v1-btn drb-v1-btn--danger-sm" id="drb-v1-btn-cancel">
+            ⏹ หยุดและแสดงข้อมูลที่โหลดแล้ว
+          </button>
+        </div>
+        <div class="drb-v1-progress-track">
+          <div class="drb-v1-progress-bar" id="drb-v1-progress-bar" style="width:0%;"></div>
+        </div>
+      </div>
+
+      <!-- Row 2: Ultra-Compact Signal Radar Filter Bar (34px) -->
+      <div class="drb-v1-signal-bar">
+        <div class="drb-v1-signal-pills" id="drb-v1-signal-pills">
+          <button type="button" class="drb-v1-pill active" data-sig="all">
+            ทั้งหมด (<span id="drb-v1-cnt-all">0</span>)
+          </button>
+          <button type="button" class="drb-v1-pill drb-v1-pill--win" data-sig="win">
+            🔥✅ น่าลุยแอด ≥฿45 (<span id="drb-v1-cnt-win">0</span>)
+          </button>
+          <button type="button" class="drb-v1-pill drb-v1-pill--god" data-sig="god">
+            🔥 GOD ≥฿80 (<span id="drb-v1-cnt-god">0</span>)
+          </button>
+          <button type="button" class="drb-v1-pill drb-v1-pill--pass" data-sig="pass">
+            ✅ เขียว ฿45–79 (<span id="drb-v1-cnt-pass">0</span>)
+          </button>
+          <button type="button" class="drb-v1-pill drb-v1-pill--warn" data-sig="warning">
+            ⚠️ เหลือง ฿20–44 (<span id="drb-v1-cnt-warn">0</span>)
+          </button>
+          <button type="button" class="drb-v1-pill drb-v1-pill--danger" data-sig="danger">
+            ⛔ แดง &lt;฿20/ไร้Extra (<span id="drb-v1-cnt-danger">0</span>)
+          </button>
+        </div>
+
+        <div class="drb-v1-subfilters">
+          <span class="drb-v1-ctrl-label">ขาย/ด.:</span>
+          <select id="drb-v1-sel-minsold" class="drb-v1-select">
+            <option value="0" selected>ทุกยอดขาย</option>
+            <option value="50">≥ 50/ด.</option>
+            <option value="100">≥ 100/ด.</option>
+            <option value="300">🔥 ≥ 300/ด.</option>
+            <option value="1000">🚀 ≥ 1,000/ด.</option>
+          </select>
+
+          <input type="text" id="drb-v1-inp-table-filter" class="drb-v1-input drb-v1-input--sm" placeholder="🔎 กรองชื่อ/ID ในตาราง...">
+          <span class="drb-v1-showing-label" id="drb-v1-showing-label">แสดง 0 รายการ</span>
+        </div>
+      </div>
+
+      <!-- Row 3: High-Density Sortable Signal Table (15-18 rows visible per screen) -->
+      <div class="drb-v1-table-container">
+        <table class="drb-v1-table">
+          <thead>
+            <tr>
+              <th style="width:34px; text-align:center;">#</th>
+              <th style="width:36px; text-align:center;">รูป</th>
+              <th class="drb-v1-sortable is-sorted" data-sort="signalScore" data-label="🚦 SIGNAL (107฿)" style="width:142px;" title="คลิกเพื่อเรียงตามเกรดความน่าลุยแอด (GOD ➔ เขียว ➔ เหลือง ➔ แดง)">🚦 SIGNAL (107฿) ▼</th>
+              <th class="drb-v1-sortable" data-sort="netComm" data-label="💰 คอมสุทธิ/ชิ้น" style="width:138px; text-align:right;" title="คลิกเพื่อเรียงตามค่าคอมสุทธิหลังหักภาษี ณ ที่จ่าย 3%">💰 คอมสุทธิ/ชิ้น ⇅</th>
+              <th class="drb-v1-sortable" data-sort="breakEvenNum" data-label="🎯 คุ้มแอด 107฿" style="width:120px; text-align:center;" title="คลิกเพื่อเรียงตามจำนวนชิ้นที่ต้องขายให้คุ้มค่าแอด 107฿/วัน">🎯 คุ้มแอด 107฿ ⇅</th>
+              <th class="drb-v1-sortable" data-sort="name" data-label="สินค้า (คลิกเปิด Shopee / เรท AFF)" title="คลิกเพื่อเรียงตามชื่อสินค้า ก-ฮ / A-Z">สินค้า (คลิกเปิด Shopee / เรท AFF) ⇅</th>
+              <th class="drb-v1-sortable" data-sort="price" data-label="💵 ราคาจริง" style="width:110px; text-align:right;" title="คลิกเพื่อเรียงตามราคาขายจริง">💵 ราคาจริง ⇅</th>
+              <th class="drb-v1-sortable" data-sort="sold" data-label="📈 ขาย/เดือน" style="width:92px; text-align:right;" title="คลิกเพื่อเรียงตามยอดขายต่อเดือน (ชิ้น)">📈 ขาย/เดือน ⇅</th>
+              <th class="drb-v1-sortable" data-sort="historical_sold" data-label="📦 ขายรวม" style="width:88px; text-align:right;" title="คลิกเพื่อเรียงตามยอดขายสะสมทั้งหมด">📦 ขายรวม ⇅</th>
+              <th class="drb-v1-sortable" data-sort="extraRate" data-label="🎁 Extra %" style="width:78px; text-align:right;" title="คลิกเพื่อเรียงตามเปอร์เซ็นต์ค่าคอมพิเศษ Extra %">🎁 Extra % ⇅</th>
+              <th class="drb-v1-sortable" data-sort="extraComm" data-label="🎁 คอม Extra" style="width:105px; text-align:right;" title="คลิกเพื่อเรียงตามจำนวนเงินค่าคอมพิเศษ Extra (฿)">🎁 คอม Extra ⇅</th>
+              <th class="drb-v1-sortable" data-sort="stock" data-label="สต๊อก" style="width:72px; text-align:right;" title="คลิกเพื่อเรียงตามจำนวนสต๊อกคงเหลือ">สต๊อก ⇅</th>
+              <th style="width:128px; text-align:center;">⚡ ACTION</th>
+            </tr>
+          </thead>
+          <tbody id="drb-v1-tbody">
+            <tr>
+              <td colspan="13" class="drb-v1-empty">
+                💡 พิมพ์คำค้นหาด้านบน หรือเลือกหมวดหมู่แล้วกด <strong>[👁️ ดูหมวดนี้]</strong> เพื่อดึงข้อมูล Realtime จาก Shopee API พร้อมคำนวณจุดคุ้มทุนแอด 107฿ ทันที!
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    document.body.appendChild(wrap);
+    bindV1ScannerEvents(wrap);
+    checkAndOfferLastResultRestore(wrap);
+    return wrap;
+  }
+
+  function bindV1ScannerEvents(wrap) {
+    wrap.querySelector('#drb-v1-btn-close').addEventListener('click', () => {
+      closeV1ScannerModal();
+    });
+
+    const kwInput = wrap.querySelector('#drb-v1-inp-keyword');
+    kwInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runV1Search('keyword');
+      }
+    });
+
+    wrap.querySelector('#drb-v1-btn-search').addEventListener('click', () => {
+      runV1Search('keyword');
+    });
+
+    wrap.querySelector('#drb-v1-btn-fetch-cat').addEventListener('click', () => {
+      runV1Search('extra');
+    });
+
+    wrap.querySelector('#drb-v1-btn-cancel').addEventListener('click', () => {
+      v1State.cancelRequested = true;
+    });
+
+    wrap.querySelector('#drb-v1-btn-export-xlsx').addEventListener('click', () => {
+      exportV1TableToXlsx();
+    });
+
+    wrap.querySelector('#drb-v1-btn-export-csv').addEventListener('click', () => {
+      exportV1TableToCsv();
+    });
+
+    wrap.querySelector('#drb-v1-btn-restore').addEventListener('click', async () => {
+      try {
+        const res = await chrome.storage.local.get([V1_STORAGE_KEY]);
+        const saved = res?.[V1_STORAGE_KEY];
+        if (saved && Array.isArray(saved.rows) && saved.rows.length > 0) {
+          v1State.rows = saved.rows;
+          renderV1TableRows();
+          ns.showToast(`🕒 กู้คืนรายการล่าสุด ${saved.rows.length} ชิ้นเรียบร้อย!`);
+        }
+      } catch (_e) {}
+    });
+
+    // Signal filter pills
+    wrap.querySelectorAll('#drb-v1-signal-pills .drb-v1-pill').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        wrap.querySelectorAll('#drb-v1-signal-pills .drb-v1-pill').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        v1State.signalFilter = btn.getAttribute('data-sig') || 'all';
+        renderV1TableRows();
+      });
+    });
+
+    // Min monthly sold filter
+    wrap.querySelector('#drb-v1-sel-minsold').addEventListener('change', (e) => {
+      v1State.minSoldFilter = parseInt(e.target.value, 10) || 0;
+      renderV1TableRows();
+    });
+
+    // Instant text filter inside loaded rows
+    wrap.querySelector('#drb-v1-inp-table-filter').addEventListener('input', (e) => {
+      v1State.textFilter = (e.target.value || '').trim().toLowerCase();
+      renderV1TableRows();
+    });
+
+    // Column sorting (supports all 10 sortable columns, asc & desc)
+    wrap.querySelectorAll('.drb-v1-sortable').forEach((th) => {
+      th.addEventListener('click', () => {
+        const col = th.getAttribute('data-sort');
+        if (!col) return;
+        if (v1State.sortCol === col) {
+          v1State.sortDir = v1State.sortDir === 'desc' ? 'asc' : 'desc';
+        } else {
+          v1State.sortCol = col;
+          v1State.sortDir = col === 'breakEvenNum' || col === 'name' ? 'asc' : 'desc';
+        }
+        wrap.querySelectorAll('.drb-v1-sortable').forEach((el) => {
+          el.classList.remove('is-sorted');
+          const baseLbl = el.getAttribute('data-label') || el.textContent.replace(/\s*[▲▼⇅]$/, '');
+          el.textContent = `${baseLbl} ⇅`;
+        });
+        th.classList.add('is-sorted');
+        const activeLbl = th.getAttribute('data-label') || th.textContent.replace(/\s*[▲▼⇅]$/, '');
+        th.textContent = `${activeLbl} ${v1State.sortDir === 'desc' ? '▼' : '▲'}`;
+        renderV1TableRows();
+      });
+    });
+  }
+
+  async function checkAndOfferLastResultRestore(wrap) {
+    try {
+      const res = await chrome.storage.local.get([V1_STORAGE_KEY]);
+      const saved = res?.[V1_STORAGE_KEY];
+      const restoreBtn = wrap.querySelector('#drb-v1-btn-restore');
+      if (saved && Array.isArray(saved.rows) && saved.rows.length > 0 && restoreBtn) {
+        const timeStr = new Date(saved.savedAt || Date.now()).toLocaleTimeString('th-TH', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        restoreBtn.style.display = 'inline-flex';
+        restoreBtn.textContent = `🕒 ล่าสุด (${saved.rows.length} ชิ้น · ${timeStr})`;
+      }
+    } catch (_e) {}
+  }
+
+  function openV1ScannerModal() {
+    const wrap = buildV1ScannerDOM();
+    wrap.classList.add('is-open');
+    document.body.classList.add('drb-v1-body-locked');
+    v1State.isOpen = true;
+  }
+
+  function closeV1ScannerModal() {
+    const wrap = document.getElementById('drb-v1-scanner-overlay');
+    if (wrap) wrap.classList.remove('is-open');
+    document.body.classList.remove('drb-v1-body-locked');
+    v1State.isOpen = false;
+    if (location.hash.includes('v1_scanner') || location.hash.includes('get_items')) {
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
+
+  async function runV1Search(mode = 'keyword') {
+    if (v1State.isLoading) return;
+    const wrap = buildV1ScannerDOM();
+
+    const keyword = (wrap.querySelector('#drb-v1-inp-keyword').value || '').trim();
+    const sortType = wrap.querySelector('#drb-v1-sel-sort').value || '2';
+    const extraCat = wrap.querySelector('#drb-v1-sel-extra-cat').value || '0';
+    const maxItems = parseInt(wrap.querySelector('#drb-v1-sel-limit').value, 10) || 100;
+    const baseDelayMs = parseInt(wrap.querySelector('#drb-v1-sel-delay')?.value, 10) || 5000;
+
+    const filterTypes = [];
+    if (wrap.querySelector('#drb-v1-chk-extra').checked) filterTypes.push('2');
+    if (wrap.querySelector('#drb-v1-chk-free').checked) filterTypes.push('5');
+
+    // Build exact Shopee Affiliate V1 query parameters
+    const baseParams = {
+      client_type: '1',
+      list_type: '0',
+      sort_type: sortType
+    };
+
+    if (mode === 'extra') {
+      const catNum = parseInt(extraCat, 10);
+      if (catNum < 100) {
+        baseParams.list_type = String(catNum);
+      } else {
+        baseParams.list_type = '3';
+        baseParams.match_type = '2';
+        baseParams.match_id = String(catNum);
+      }
+      baseParams.sort_type = '1';
+    } else {
+      baseParams.keyword = keyword;
+      if (filterTypes.length > 0) {
+        baseParams.filter_types = filterTypes.join(',');
+      }
+    }
+
+    v1State.isLoading = true;
+    v1State.cancelRequested = false;
+    v1State.rows = [];
+    renderV1TableRows();
+
+    const progWrap = wrap.querySelector('#drb-v1-progress-wrap');
+    const progText = wrap.querySelector('#drb-v1-progress-text');
+    const progBar = wrap.querySelector('#drb-v1-progress-bar');
+    const btnSearch = wrap.querySelector('#drb-v1-btn-search');
+    const btnCat = wrap.querySelector('#drb-v1-btn-fetch-cat');
+
+    progWrap.style.display = 'block';
+    progBar.style.width = '5%';
+    progText.textContent = '⏳ กำลังเริ่มดึงข้อมูล Realtime จาก Shopee Affiliate API...';
+    btnSearch.disabled = true;
+    btnCat.disabled = true;
+
+    const seenIds = new Set();
+    let page = 0;
+    let totalAvailable = maxItems;
+    let partialStoppedReason = '';
+
+    // Helper: sleep with 250ms ticks so user Cancel button reacts immediately
+    const cancellableJitterSleep = async (ms, currentLoaded, targetCount, nextPage) => {
+      const start = Date.now();
+      while (Date.now() - start < ms) {
+        if (v1State.cancelRequested) return;
+        const remainSec = Math.max(0.1, ((ms - (Date.now() - start)) / 1000)).toFixed(1);
+        progText.textContent = `🛡️ โหลดแล้ว ${currentLoaded.toLocaleString()}/${targetCount.toLocaleString()} ชิ้น — พักหน่วงเวลาเนียนเป็นคนจริง ${remainSec}s ก่อนดึงหน้า ${nextPage}...`;
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    };
+
+    try {
+      while (!v1State.cancelRequested) {
+        // Security / Anti-Bot URL guard (identical to Shop Tool captcha/login watcher)
+        const href = window.location.href;
+        if (href.includes('verify/captcha') || href.includes('verify/traffic') || href.includes('buyer/login')) {
+          partialStoppedReason = 'ตรวจพบหน้าตรวจสอบความปลอดภัย/ล็อกอินของ Shopee ระบบจึงหยุดดึงอัตโนมัติเพื่อเซฟบัญชี';
+          break;
+        }
+
+        const q = new URLSearchParams({
+          ...baseParams,
+          page_offset: String(page * 20),
+          page_limit: '20'
+        });
+
+        const url = `https://affiliate.shopee.co.th/api/v3/offer/product/list?${q.toString()}`;
+        const resp = await pageMainRequest({
+          url,
+          method: 'GET',
+          useFetch: false // Uses page MAIN world window.XMLHttpRequest (identical to Shop Tool stRequest)
+        });
+
+        if (!resp.ok || !resp.data) {
+          if (v1State.rows.length > 0) {
+            partialStoppedReason = `Shopee จำกัดความถี่ที่หน้า ${page + 1} (HTTP ${resp.status || 'Rate Limit'}) — ระบบล็อกข้อมูล ${v1State.rows.length} ชิ้นที่ดึงมาแล้วไว้ให้ครบ!`;
+            break;
+          }
+          throw new Error(`HTTP ${resp.status || 'Error'} — กรุณารีเฟรชหน้าเว็บ Shopee Affiliate (F5) 1 ครั้งแล้วลองใหม่`);
+        }
+
+        const json = resp.data;
+        if (typeof json?.error === 'number' && json.error !== 0) {
+          if (v1State.rows.length > 0) {
+            partialStoppedReason = `Shopee แจ้งเตือน Rate Limit ที่หน้า ${page + 1} (code ${json.error}) — ระบบเซฟข้อมูล ${v1State.rows.length} ชิ้นที่ดูดมาแล้วไว้ให้เรียบร้อย`;
+            break;
+          }
+          throw new Error(`Shopee API Error (${json.error}): ${json.msg || 'กรุณาเว้นระยะสักครู่แล้วลองใหม่'}`);
+        }
+
+        const list = json?.data?.list;
+        if (!Array.isArray(list) || list.length === 0) {
+          break;
+        }
+
+        if (typeof json?.data?.total_count === 'number' && json.data.total_count > 0) {
+          totalAvailable = json.data.total_count;
+        }
+
+        for (const rawItem of list) {
+          const row = mapRawOfferItemToRow(rawItem);
+          if (row.itemid && !seenIds.has(row.itemid)) {
+            seenIds.add(row.itemid);
+            v1State.rows.push(row);
+          }
+        }
+
+        page++;
+        const targetCount = Math.min(totalAvailable, maxItems);
+        const pct = targetCount > 0 ? Math.min(100, Math.round((v1State.rows.length / targetCount) * 100)) : 100;
+        progBar.style.width = `${pct}%`;
+        progText.textContent = `⚡ ดึงข้อมูลแล้ว ${v1State.rows.length.toLocaleString()} / ${targetCount.toLocaleString()} รายการ (หน้า ${page}) — เซฟลงแคชอัตโนมัติ...`;
+
+        renderV1TableRows();
+
+        // Save partial result on EVERY page (Shop Tool onProgress pattern) so zero data is ever lost
+        if (v1State.rows.length > 0) {
+          chrome.storage.local
+            .set({
+              [V1_STORAGE_KEY]: {
+                savedAt: Date.now(),
+                rows: v1State.rows
+              }
+            })
+            .catch(() => {});
+        }
+
+        if (v1State.rows.length >= maxItems || v1State.rows.length >= totalAvailable || list.length < 20) {
+          break;
+        }
+
+        // Human Jittered Delay (Shop Tool default = 5,000ms + random 350..1450ms jitter)
+        const jitterMs = Math.floor(Math.random() * 1100) + 350;
+        await cancellableJitterSleep(baseDelayMs + jitterMs, v1State.rows.length, targetCount, page + 1);
+      }
+
+      if (v1State.rows.length > 0) {
+        await checkAndOfferLastResultRestore(wrap);
+      }
+
+      if (partialStoppedReason) {
+        ns.showToast(`⚠️ ${partialStoppedReason}`);
+      } else {
+        ns.showToast(
+          v1State.cancelRequested
+            ? `⏹ หยุดดึงข้อมูล — แสดงผลและเซฟไว้ ${v1State.rows.length} รายการ`
+            : `✅ ดึงข้อมูล Realtime สำเร็จ ${v1State.rows.length} รายการ!`
+        );
+      }
+    } catch (err) {
+      ns.showToast(`❌ ดึงข้อมูลไม่สำเร็จ: ${err.message || err}`);
+    } finally {
+      v1State.isLoading = false;
+      progWrap.style.display = 'none';
+      btnSearch.disabled = false;
+      btnCat.disabled = false;
+      renderV1TableRows();
+    }
+  }
+
+  function getFilteredAndSortedV1Rows() {
+    const all = v1State.rows || [];
+    const tierRankMap = { god: 4, pass: 3, warning: 2, danger: 1 };
+
+    // Update top Signal counters & ensure tierRank/signalScore exist even on restored rows
+    let cntGod = 0;
+    let cntPass = 0;
+    let cntWarn = 0;
+    let cntDanger = 0;
+    for (const r of all) {
+      if (r.tier === 'god') cntGod++;
+      else if (r.tier === 'pass') cntPass++;
+      else if (r.tier === 'warning') cntWarn++;
+      else cntDanger++;
+
+      if (typeof r.signalScore !== 'number') {
+        const tr = tierRankMap[r.tier] || 1;
+        r.tierRank = tr;
+        r.signalScore = +(tr * 100000 + (Number(r.netComm) || 0)).toFixed(2);
+      }
+    }
+
+    const setTxt = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val.toLocaleString();
+    };
+    setTxt('drb-v1-cnt-all', all.length);
+    setTxt('drb-v1-cnt-win', cntGod + cntPass);
+    setTxt('drb-v1-cnt-god', cntGod);
+    setTxt('drb-v1-cnt-pass', cntPass);
+    setTxt('drb-v1-cnt-warn', cntWarn);
+    setTxt('drb-v1-cnt-danger', cntDanger);
+
+    const exportCsvBtn = document.getElementById('drb-v1-btn-export-csv');
+    if (exportCsvBtn) exportCsvBtn.disabled = all.length === 0;
+    const exportXlsxBtn = document.getElementById('drb-v1-btn-export-xlsx');
+    if (exportXlsxBtn) exportXlsxBtn.disabled = all.length === 0;
+
+    // Filter rows
+    const filtered = all.filter((r) => {
+      if (v1State.signalFilter === 'win' && r.tier !== 'god' && r.tier !== 'pass') return false;
+      if (v1State.signalFilter === 'god' && r.tier !== 'god') return false;
+      if (v1State.signalFilter === 'pass' && r.tier !== 'pass') return false;
+      if (v1State.signalFilter === 'warning' && r.tier !== 'warning') return false;
+      if (v1State.signalFilter === 'danger' && r.tier !== 'danger') return false;
+      if (v1State.minSoldFilter > 0 && r.sold < v1State.minSoldFilter) return false;
+      if (v1State.textFilter && !r.name.toLowerCase().includes(v1State.textFilter) && !r.itemid.includes(v1State.textFilter)) {
+        return false;
+      }
+      return true;
+    });
+
+    // Sort rows (supports all 10 columns: signalScore, netComm, breakEvenNum, name, price, sold, historical_sold, extraRate, extraComm, stock)
+    const col = v1State.sortCol || 'signalScore';
+    const dir = v1State.sortDir === 'asc' ? 1 : -1;
+    filtered.sort((a, b) => {
+      if (col === 'name') {
+        const cmp = String(a.name || '').localeCompare(String(b.name || ''), 'th');
+        return cmp !== 0 ? cmp * dir : (b.sold || 0) - (a.sold || 0);
+      }
+      if (col === 'breakEvenNum') {
+        // Put items without Extra (tier === 'danger') behind viable items when sorting ascending by break-even
+        const aDangerPenalty = a.extraRate <= 0 ? 10000 : 0;
+        const bDangerPenalty = b.extraRate <= 0 ? 10000 : 0;
+        const va = (Number(a.breakEvenNum) || 999) + (dir === 1 ? aDangerPenalty : 0);
+        const vb = (Number(b.breakEvenNum) || 999) + (dir === 1 ? bDangerPenalty : 0);
+        if (va === vb) return (b.sold || 0) - (a.sold || 0);
+        return (va - vb) * dir;
+      }
+      const va = Number(a[col]) || 0;
+      const vb = Number(b[col]) || 0;
+      if (va === vb) return (b.sold || 0) - (a.sold || 0);
+      return (va - vb) * dir;
+    });
+
+    const showingEl = document.getElementById('drb-v1-showing-label');
+    if (showingEl) {
+      showingEl.textContent = `แสดง ${filtered.length.toLocaleString()} / ${all.length.toLocaleString()} รายการ`;
+    }
+
+    return filtered;
+  }
+
+  function getCompactSignalBadgeText(r) {
+    if (r.tier === 'god') return '🔥 GOD (1 ชิ้นคุ้ม!)';
+    if (r.tier === 'pass') return '✅ ไฟเขียว (1.5-2 ชิ้น)';
+    if (r.tier === 'warning') return '⚠️ ไฟเหลือง (3-5 ชิ้น)';
+    return r.extraRate <= 0 ? '⛔ ห้ามยิง (ไร้ Extra)' : '⛔ ไฟแดง (คอมต่ำ)';
+  }
+
+  function renderV1TableRows() {
+    const tbody = document.getElementById('drb-v1-tbody');
+    if (!tbody) return;
+
+    const rows = getFilteredAndSortedV1Rows();
+    if (rows.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="13" class="drb-v1-empty">
+            ${
+              v1State.isLoading
+                ? '⏳ กำลังดึงข้อมูลจาก Shopee API...'
+                : v1State.rows.length > 0
+                ? 'ไม่พบสินค้าที่ตรงกับตัวกรอง Signal / ยอดขายขั้นต่ำที่เลือก (ลองปรับตัวกรองด้านบน)'
+                : '💡 พิมพ์คำค้นหาด้านบน หรือเลือกหมวดหมู่แล้วกด <strong>[👁️ ดูหมวดนี้]</strong> เพื่อดึงข้อมูล Realtime พร้อมคำนวณจุดคุ้มทุนแอด 107฿'
+            }
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = rows
+      .map((r, idx) => {
+        const priceLabel =
+          r.priceMax > r.price
+            ? `฿${r.price.toLocaleString()}–${r.priceMax.toLocaleString()}`
+            : `฿${r.price.toLocaleString()}`;
+
+        const netCommLabel =
+          r.netCommMax > r.netComm
+            ? `฿${r.netComm.toFixed(2)}<span class="drb-v1-inline-range">~${r.netCommMax.toFixed(0)}</span>`
+            : `฿${r.netComm.toFixed(2)}`;
+
+        const extraCommLabel =
+          r.extraCommMax > r.extraComm
+            ? `฿${r.extraComm.toFixed(1)}–${r.extraCommMax.toFixed(0)}`
+            : `฿${r.extraComm.toFixed(2)}`;
+
+        const soldBadgeClass =
+          r.sold >= 1000
+            ? 'drb-v1-sold--hot'
+            : r.sold >= 300
+            ? 'drb-v1-sold--good'
+            : r.sold > 0
+            ? 'drb-v1-sold--low'
+            : '';
+
+        const compactSig = getCompactSignalBadgeText(r);
+
+        return `
+          <tr class="drb-v1-row" data-tier="${r.tier}" data-itemid="${r.itemid}">
+            <td class="drb-v1-td-center drb-v1-muted">${idx + 1}</td>
+            <td class="drb-v1-td-center">
+              ${
+                r.imageUrl
+                  ? `<img src="${r.imageUrl}_tn" class="drb-v1-thumb" loading="lazy" alt="">`
+                  : '<span class="drb-v1-muted">-</span>'
+              }
+            </td>
+            <td class="drb-v1-nowrap">
+              <span class="drb-v1-sig-badge" data-tier="${r.tier}" title="${r.tierLabel}">
+                ${compactSig}
+              </span>
+            </td>
+            <td class="drb-v1-td-right drb-v1-nowrap" title="รวม ${r.effectiveRate}% (Base ${r.baseRate}% + Extra ${r.extraRate}%) หักภาษี ณ ที่จ่าย 3% แล้ว">
+              <span class="drb-v1-netcomm" data-tier="${r.tier}">${r.tierEmoji} ${netCommLabel}</span>
+              <span class="drb-v1-rate-chip">${r.effectiveRate}%</span>
+            </td>
+            <td class="drb-v1-td-center drb-v1-nowrap" title="ต้องขาย ${r.breakEvenUnits} ชิ้น (${r.breakEvenOrders} ออเดอร์) เพื่อคืนทุนค่าแอด 107฿/วัน">
+              <span class="drb-v1-breakeven" data-tier="${r.tier}">${r.breakEvenUnits} ชิ้น</span>
+              <span class="drb-v1-inline-sub">(${r.breakEvenOrders} ออเดอร์)</span>
+            </td>
+            <td class="drb-v1-td-product">
+              <div class="drb-v1-title-wrap">
+                ${r.isMall ? '<span class="drb-v1-tag drb-v1-tag--mall">Mall</span>' : ''}
+                ${r.isFreeSample ? '<span class="drb-v1-tag drb-v1-tag--free">🆓ฟรี</span>' : ''}
+                <a href="${r.productLink}" target="_blank" rel="noopener" class="drb-v1-prod-link" title="${String(r.name || '').replace(/"/g, '&quot;')} (ID: ${r.itemid})">${r.name}</a>
+                <a href="${r.affUrl}" target="_blank" rel="noopener" class="drb-v1-mini-link" title="เปิดหน้าข้อเสนอ Shopee Affiliate (ID: ${r.itemid})">📊AFF</a>
+              </div>
+            </td>
+            <td class="drb-v1-td-right drb-v1-bold drb-v1-nowrap">${priceLabel}</td>
+            <td class="drb-v1-td-right drb-v1-nowrap">
+              <span class="drb-v1-sold ${soldBadgeClass}">${r.sold.toLocaleString()}</span>
+            </td>
+            <td class="drb-v1-td-right drb-v1-muted drb-v1-nowrap">${r.historical_sold.toLocaleString()}</td>
+            <td class="drb-v1-td-right drb-v1-nowrap">
+              <span class="${r.extraRate > 0 ? 'drb-v1-extra-pct' : 'drb-v1-muted'}">${r.extraRate > 0 ? `+${r.extraRate}%` : '0%'}</span>
+            </td>
+            <td class="drb-v1-td-right drb-v1-nowrap">${extraCommLabel}</td>
+            <td class="drb-v1-td-right drb-v1-nowrap ${r.stock < 20 ? 'drb-v1-low-stock' : 'drb-v1-muted'}">${r.stock.toLocaleString()}</td>
+            <td class="drb-v1-td-actions">
+              <button type="button" class="drb-v1-act-btn drb-v1-act-btn--pick" data-idx="${idx}" title="ดึงเข้า Side Panel & ส่งไปเว็บ aff.doctorbankonline.com">
+                ⚡ เลือก
+              </button>
+              <button type="button" class="drb-v1-act-btn drb-v1-act-btn--link" data-idx="${idx}" title="เจนลิงก์ s.shopee.co.th อัตโนมัติผ่าน GraphQL พร้อมก๊อปลง Clipboard">
+                🔗 ลิงก์
+              </button>
+            </td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    // Bind row action buttons
+    tbody.querySelectorAll('.drb-v1-act-btn--pick').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        const r = rows[idx];
+        if (!r) return;
+        await pickV1RowToSidePanelAndWebUI(r, btn);
+      });
+    });
+
+    tbody.querySelectorAll('.drb-v1-act-btn--link').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        const r = rows[idx];
+        if (!r) return;
+        const origTxt = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳..';
+        try {
+          const shortLink = await generateShopeeShortLink(r.productLink, ['v1scanner', r.itemid]);
+          if (shortLink) {
+            await navigator.clipboard.writeText(shortLink);
+            btn.textContent = '✅ก๊อป!';
+            ns.showToast(`🔗 ก๊อปลิงก์สั้น ${shortLink} เรียบร้อย!`);
+          } else {
+            throw new Error('ไม่ได้รับ shortLink');
+          }
+        } catch (_e) {
+          await navigator.clipboard.writeText(r.productLink).catch(() => {});
+          btn.textContent = '📋ปกติ';
+          ns.showToast('📋 ก๊อปลิงก์สินค้าปกติแล้ว');
+        } finally {
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = origTxt;
+          }, 1800);
+        }
+      });
+    });
+  }
+
+  async function pickV1RowToSidePanelAndWebUI(r, btnEl) {
+    const specText =
+      `[ดึงจากตาราง V1 Realtime API]\n` +
+      `• สินค้า: ${r.name}\n` +
+      `• ราคาขายจริง: ฿${r.price.toLocaleString()}${r.priceMax > r.price ? ` - ฿${r.priceMax.toLocaleString()}` : ''}\n` +
+      `• ยอดขาย/เดือนจริง: ${r.sold.toLocaleString()} ชิ้น/เดือน (สะสม ${r.historical_sold.toLocaleString()} ชิ้น)\n` +
+      `• สต๊อกคงเหลือจริง: ${r.stock.toLocaleString()} ชิ้น\n` +
+      `• เรทค่าคอม: Extra ${r.extraRate}% + Base ${r.baseRate}% = สุทธิ ฿${r.netComm.toFixed(2)}/ชิ้น\n` +
+      `• จุดคุ้มทุนแอด 107฿/วัน: ขาย ${r.breakEvenUnits} ชิ้น (${r.breakEvenOrders} ออเดอร์) [${r.tierLabel}]`;
+
+    const payload = {
+      sourceType: 'v1_realtime_api',
+      title: r.name,
+      price: r.price,
+      priceMax: r.priceMax,
+      originalPrice: r.price,
+      baseRate: r.baseRate,
+      extraRate: r.extraRate,
+      baseCommTHB: +(r.grossComm - r.extraComm).toFixed(2),
+      extraCommTHB: r.extraComm,
+      grossCommTHB: r.grossComm,
+      capTHB: 250,
+      whtRate: 3.0,
+      shopId: r.shopid,
+      itemId: r.itemid,
+      cleanUrl: r.productLink,
+      imagesHD: r.imagesHD,
+      variants: [],
+      soldCount: r.sold,
+      soldText: `${r.sold.toLocaleString()}/เดือน`,
+      rating: 4.9,
+      shipFrom: r.isMall ? 'Shopee Mall' : 'ส่งในไทย',
+      isOverseas: false,
+      specText
+    };
+
+    offerProduct = payload;
+    try {
+      await chrome.storage.local.set({ activeAffOfferProduct: payload });
+      await ns.sendMessage('PUSH_SKU_TO_WEBUI', {
+        id: `shopee_v1_${r.itemid}`,
+        platform: 'shopee',
+        sourceTab: 'V1 Realtime Scanner',
+        title: r.name,
+        specText,
+        price: r.price,
+        priceMax: r.priceMax,
+        baseRate: r.baseRate,
+        extraRate: r.extraRate,
+        estimatedCommission: r.netComm,
+        realDailyAdCostTHB: 107,
+        breakEvenUnits: r.breakEvenUnits,
+        breakEvenOrders: r.breakEvenOrders,
+        adViabilityTier: r.tier,
+        soldCount: r.sold,
+        historicalSold: r.historical_sold,
+        stock: r.stock,
+        cleanUrl: r.productLink,
+        imagesHD: r.imagesHD,
+        scrapedAt: new Date().toISOString()
+      });
+      if (btnEl) {
+        const orig = btnEl.textContent;
+        btnEl.textContent = '✅ส่งแล้ว';
+        setTimeout(() => {
+          btnEl.textContent = orig;
+        }, 1500);
+      }
+      ns.showToast(`⚡ ส่ง "${r.name.slice(0, 28)}..." (สุทธิ ฿${r.netComm.toFixed(2)} | ขาย ${r.sold}/ด.) เข้า Side Panel & Web UI แล้ว!`);
+    } catch (_e) {
+      ns.showToast('⚡ บันทึกลง Side Panel เรียบร้อย!');
+    }
+  }
+
+  // ==========================================================================
+  // Native OpenXML (.xlsx) Binary Builder (Zero External Dependencies)
+  // Generates a real ZIP-packaged .xlsx workbook with:
+  // - Frozen top header row + AutoFilter on all columns
+  // - Row color-coding by Signal Tier (GOD / PASS / WARNING / DANGER)
+  // - True numeric cells for currency, percentages, sold counts, and stock
+  // ==========================================================================
+  function createZipArchive(files) {
+    const encoder = new TextEncoder();
+    const crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) {
+        c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      }
+      crcTable[n] = c >>> 0;
+    }
+    const crc32 = (bytes) => {
+      let crc = 0xffffffff;
+      for (let i = 0; i < bytes.length; i++) {
+        crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    };
+
+    const localParts = [];
+    const centralParts = [];
+    let offset = 0;
+
+    for (const file of files) {
+      const nameBytes = encoder.encode(file.name);
+      const dataBytes = typeof file.content === 'string' ? encoder.encode(file.content) : file.content;
+      const crc = crc32(dataBytes);
+      const size = dataBytes.length;
+
+      // Local file header (30 bytes + name)
+      const localHeader = new Uint8Array(30 + nameBytes.length);
+      const lView = new DataView(localHeader.buffer);
+      lView.setUint32(0, 0x04034b50, true);
+      lView.setUint16(4, 20, true); // version needed
+      lView.setUint16(6, 0x0800, true); // UTF-8 flag
+      lView.setUint16(8, 0, true); // store (no compression)
+      lView.setUint16(10, 0, true);
+      lView.setUint16(12, 0, true);
+      lView.setUint32(14, crc, true);
+      lView.setUint32(18, size, true);
+      lView.setUint32(22, size, true);
+      lView.setUint16(26, nameBytes.length, true);
+      lView.setUint16(28, 0, true);
+      localHeader.set(nameBytes, 30);
+
+      localParts.push(localHeader, dataBytes);
+
+      // Central directory header (46 bytes + name)
+      const centralHeader = new Uint8Array(46 + nameBytes.length);
+      const cView = new DataView(centralHeader.buffer);
+      cView.setUint32(0, 0x02014b50, true);
+      cView.setUint16(4, 20, true);
+      cView.setUint16(6, 20, true);
+      cView.setUint16(8, 0x0800, true);
+      cView.setUint16(10, 0, true);
+      cView.setUint16(12, 0, true);
+      cView.setUint16(14, 0, true);
+      cView.setUint32(16, crc, true);
+      cView.setUint32(20, size, true);
+      cView.setUint32(24, size, true);
+      cView.setUint16(28, nameBytes.length, true);
+      cView.setUint16(30, 0, true);
+      cView.setUint16(32, 0, true);
+      cView.setUint16(34, 0, true);
+      cView.setUint16(36, 0, true);
+      cView.setUint32(38, 0, true);
+      cView.setUint32(42, offset, true);
+      centralHeader.set(nameBytes, 46);
+
+      centralParts.push(centralHeader);
+      offset += localHeader.length + size;
+    }
+
+    let centralSize = 0;
+    for (const p of centralParts) centralSize += p.length;
+
+    const eocd = new Uint8Array(22);
+    const eView = new DataView(eocd.buffer);
+    eView.setUint32(0, 0x06054b50, true);
+    eView.setUint16(4, 0, true);
+    eView.setUint16(6, 0, true);
+    eView.setUint16(8, files.length, true);
+    eView.setUint16(10, files.length, true);
+    eView.setUint32(12, centralSize, true);
+    eView.setUint32(16, offset, true);
+    eView.setUint16(20, 0, true);
+
+    return new Blob([...localParts, ...centralParts, eocd], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+  }
+
+  function exportV1TableToXlsx() {
+    const rows = getFilteredAndSortedV1Rows();
+    if (!rows.length) return;
+
+    const xmlEsc = (val) =>
+      String(val ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+
+    const colLetter = (idx) => {
+      let s = '';
+      let n = idx + 1;
+      while (n > 0) {
+        const m = (n - 1) % 26;
+        s = String.fromCharCode(65 + m) + s;
+        n = Math.floor((n - 1) / 26);
+      }
+      return s;
+    };
+
+    const headers = [
+      'ลำดับ',
+      'Signal (แอด 107฿)',
+      'คอมสุทธิ/ชิ้น (฿)',
+      'จุดคุ้มทุนแอด 107฿ (ชิ้น)',
+      'สินค้า',
+      'ราคาเริ่มต้น (฿)',
+      'ราคาสูงสุด (฿)',
+      'ขาย/เดือน (ชิ้น)',
+      'ขายทั้งหมด (ชิ้น)',
+      'Extra (%)',
+      'คอม Extra เริ่มต้น (฿)',
+      'คอม Extra สูงสุด (฿)',
+      'เรทคอมรวม (%)',
+      'สต๊อก',
+      'ร้าน Mall',
+      'รีวิวฟรี',
+      'ลิงก์สินค้า Shopee',
+      'ลิงก์หน้า Affiliate',
+      'Item ID'
+    ];
+
+    const colWidths = [7, 22, 16, 18, 48, 14, 14, 15, 15, 11, 16, 16, 13, 11, 10, 10, 42, 45, 16];
+
+    // Style index mapping in styles.xml:
+    // 0: default
+    // 1: Header (Dark Navy #181B26, White Bold Text)
+    // 2: GOD TIER text/general (#F3E8FF)
+    // 3: GOD TIER number (#F3E8FF)
+    // 4: PASS text/general (#DCFCE7)
+    // 5: PASS number (#DCFCE7)
+    // 6: WARNING text/general (#FFEDD5)
+    // 7: WARNING number (#FFEDD5)
+    // 8: DANGER text/general (#FEE2E2)
+    // 9: DANGER number (#FEE2E2)
+    const getStylePair = (tier) => {
+      if (tier === 'god') return [2, 3];
+      if (tier === 'pass') return [4, 5];
+      if (tier === 'warning') return [6, 7];
+      return [8, 9];
+    };
+
+    const xmlRows = [];
+    // Row 1: Header
+    const headerCells = headers
+      .map((h, cIdx) => `<c r="${colLetter(cIdx)}1" t="inlineStr" s="1"><is><t>${xmlEsc(h)}</t></is></c>`)
+      .join('');
+    xmlRows.push(`<row r="1" ht="24" customHeight="1">${headerCells}</row>`);
+
+    // Data Rows
+    rows.forEach((r, rIdx) => {
+      const rowNum = rIdx + 2;
+      const [sTxt, sNum] = getStylePair(r.tier);
+      const rowValues = [
+        { t: 'n', v: rIdx + 1, s: sTxt },
+        { t: 's', v: r.tierLabel, s: sTxt },
+        { t: 'n', v: r.netComm, s: sNum },
+        { t: 'n', v: r.breakEvenNum, s: sNum },
+        { t: 's', v: r.name, s: sTxt },
+        { t: 'n', v: r.price, s: sNum },
+        { t: 'n', v: r.priceMax, s: sNum },
+        { t: 'n', v: r.sold, s: sTxt },
+        { t: 'n', v: r.historical_sold, s: sTxt },
+        { t: 'n', v: r.extraRate, s: sNum },
+        { t: 'n', v: r.extraComm, s: sNum },
+        { t: 'n', v: r.extraCommMax, s: sNum },
+        { t: 'n', v: r.effectiveRate, s: sNum },
+        { t: 'n', v: r.stock, s: sTxt },
+        { t: 's', v: r.isMall ? 'Mall' : 'ทั่วไป', s: sTxt },
+        { t: 's', v: r.isFreeSample ? 'ฟรี' : '-', s: sTxt },
+        { t: 's', v: r.productLink, s: sTxt },
+        { t: 's', v: r.affUrl, s: sTxt },
+        { t: 's', v: r.itemid, s: sTxt }
+      ];
+
+      const cellsXml = rowValues
+        .map((cell, cIdx) => {
+          const ref = `${colLetter(cIdx)}${rowNum}`;
+          if (cell.t === 'n' && Number.isFinite(Number(cell.v))) {
+            return `<c r="${ref}" t="n" s="${cell.s}"><v>${Number(cell.v)}</v></c>`;
+          }
+          return `<c r="${ref}" t="inlineStr" s="${cell.s}"><is><t>${xmlEsc(cell.v)}</t></is></c>`;
+        })
+        .join('');
+
+      xmlRows.push(`<row r="${rowNum}" ht="19" customHeight="1">${cellsXml}</row>`);
+    });
+
+    const lastColLetter = colLetter(headers.length - 1);
+    const lastRowNum = rows.length + 1;
+    const colsXml = colWidths
+      .map((w, idx) => `<col min="${idx + 1}" max="${idx + 1}" width="${w}" customWidth="1"/>`)
+      .join('');
+
+    const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetViews>
+    <sheetView tabSelected="1" workbookViewId="0">
+      <pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>
+    </sheetView>
+  </sheetViews>
+  <cols>${colsXml}</cols>
+  <sheetData>${xmlRows.join('')}</sheetData>
+  <autoFilter ref="A1:${lastColLetter}${lastRowNum}"/>
+</worksheet>`;
+
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <numFmts count="1">
+    <numFmt numFmtId="164" formatCode="#,##0.00"/>
+  </numFmts>
+  <fonts count="3">
+    <font><sz val="10"/><color rgb="FF111827"/><name val="Tahoma"/></font>
+    <font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Tahoma"/></font>
+    <font><b/><sz val="10"/><color rgb="FF111827"/><name val="Tahoma"/></font>
+  </fonts>
+  <fills count="7">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF181B26"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF3E8FF"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFDCFCE7"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFFEDD5"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFEE2E2"/></patternFill></fill>
+  </fills>
+  <borders count="2">
+    <border><left/><right/><top/><bottom/><diagonal/></border>
+    <border>
+      <left style="thin"><color rgb="FFD1D5DB"/></left>
+      <right style="thin"><color rgb="FFD1D5DB"/></right>
+      <top style="thin"><color rgb="FFD1D5DB"/></top>
+      <bottom style="thin"><color rgb="FFD1D5DB"/></bottom>
+      <diagonal/>
+    </border>
+  </borders>
+  <cellStyleXfs count="1">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+  </cellStyleXfs>
+  <cellXfs count="10">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="164" fontId="2" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="164" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="164" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="164" fontId="0" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+  </cellXfs>
+</styleSheet>`;
+
+    const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="DrBank V1 Signal" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>`;
+
+    const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+    const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+    const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+
+    const blob = createZipArchive([
+      { name: '[Content_Types].xml', content: contentTypesXml },
+      { name: '_rels/.rels', content: rootRelsXml },
+      { name: 'xl/workbook.xml', content: workbookXml },
+      { name: 'xl/_rels/workbook.xml.rels', content: workbookRelsXml },
+      { name: 'xl/styles.xml', content: stylesXml },
+      { name: 'xl/worksheets/sheet1.xml', content: sheetXml }
+    ]);
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+    a.href = url;
+    a.download = `${dateStr}_DrBank_V1_Signal_${rows.length}items.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    ns.showToast(`📗 ส่งออกไฟล์ Excel แท้ (.xlsx) ${rows.length} รายการ (แยกสีตาม Signal + Freeze Header) เรียบร้อย!`);
+  }
+
+  function exportV1TableToCsv() {
+    const rows = getFilteredAndSortedV1Rows();
+    if (!rows.length) return;
+
+    const headers = [
+      'ลำดับ',
+      'Signal (แอด 107฿)',
+      'คอมสุทธิ/ชิ้น (฿)',
+      'จุดคุ้มทุนแอด 107฿ (ชิ้น)',
+      'สินค้า',
+      'ราคาเริ่มต้น (฿)',
+      'ราคาสูงสุด (฿)',
+      'ขาย/เดือน (ชิ้น)',
+      'ขายทั้งหมด (ชิ้น)',
+      'ค่าคอม Extra (%)',
+      'ค่าคอม Extra เริ่มต้น (฿)',
+      'ค่าคอม Extra สูงสุด (฿)',
+      'สต๊อก',
+      'ร้าน Mall',
+      'รีวิวฟรี',
+      'ลิงก์สินค้า',
+      'ลิงก์หน้า Affiliate',
+      'Shop ID',
+      'Item ID'
+    ];
+
+    const esc = (val) => {
+      const s = val === null || val === undefined ? '' : String(val);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const csvLines = [
+      headers.map(esc).join(','),
+      ...rows.map((r, i) =>
+        [
+          i + 1,
+          r.tierLabel,
+          r.netComm.toFixed(2),
+          r.breakEvenUnits,
+          r.name,
+          r.price,
+          r.priceMax,
+          r.sold,
+          r.historical_sold,
+          r.extraRate,
+          r.extraComm.toFixed(2),
+          r.extraCommMax.toFixed(2),
+          r.stock,
+          r.isMall ? 'ใช่' : 'ไม่ใช่',
+          r.isFreeSample ? 'ใช่' : 'ไม่ใช่',
+          r.productLink,
+          r.affUrl,
+          r.shopid,
+          r.itemid
+        ]
+          .map(esc)
+          .join(',')
+      )
+    ];
+
+    // Prepend UTF-8 BOM (\uFEFF) so Microsoft Excel opens Thai characters cleanly
+    const blob = new Blob(['\uFEFF' + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+    a.href = url;
+    a.download = `${dateStr}_DrBank_V1_Signal_${rows.length}items.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    ns.showToast(`📥 ดาวน์โหลด CSV (${rows.length} รายการ) เรียบร้อย!`);
+  }
+
+  function checkHashForV1Scanner() {
+    if (location.hash.includes('v1_scanner') || location.hash.includes('st-action=get_items')) {
+      setTimeout(() => openV1ScannerModal(), 350);
+    }
+  }
+  window.addEventListener('hashchange', checkHashForV1Scanner);
+  checkHashForV1Scanner();
 
   // Debounced Auto-Scanner for Offer Grid & Offer Detail
   let scanTimer = null;

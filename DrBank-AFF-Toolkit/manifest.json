@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "DrBank AFF Scout v2.6 — Shopee Category & Affiliate Signal Radar",
-  "version": "2.6.0",
-  "description": "Dual-Mode Lean Scout (สูตร 238 ล้าน): แถบข้าง Chrome Side Panel + กล่องลอย HUD, คำนวณจุดคุ้มทุนแอด 107฿/วัน, และยิงสินค้าเข้า Web UI Command Center",
+  "name": "DrBank AFF Scout v2.7 — Shopee V1 Realtime Scanner & Signal Radar",
+  "version": "2.7.0",
+  "description": "Dual-Mode Lean Scout + V1 Realtime 500-Item Scanner: ดึงยอดขาย/เดือนจริง, คำนวณ Signal จุดคุ้มทุนแอด 107฿/วัน, เจนลิงก์ s.shopee และส่งเข้า Web UI",
   "icons": {
     "16": "images/icon16.png",
     "48": "images/icon48.png",
@@ -30,7 +30,8 @@
     "https://affiliate.shopee.co.th/*",
     "http://localhost:*/*",
     "http://127.0.0.1:*/*",
-    "https://*.doctorbankofficial.com/*"
+    "https://*.doctorbankofficial.com/*",
+    "https://*.doctorbankonline.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -63,9 +64,30 @@
         "https://affiliate.shopee.co.th/*"
       ],
       "js": [
+        "src/page-main-bridge.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://affiliate.shopee.co.th/*"
+      ],
+      "js": [
         "src/shopee-affiliate.js"
       ],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/page-main-bridge.js"
+      ],
+      "matches": [
+        "https://affiliate.shopee.co.th/*",
+        "https://shopee.co.th/*"
+      ]
     }
   ]
 }
