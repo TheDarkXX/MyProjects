@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>DrBank AFF Studio v1.2.0 — Command Center</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-wrap">
+      <div class="brand-logo">⚡</div>
+      <div>
+        <div class="brand-title">DrBank AFF Studio <span id="popup-version-badge" class="ver-badge">v1.2.0</span></div>
+        <div class="brand-sub">Clean-Room Affiliate & FB P&L Suite (สูตร 238 ล้าน Unlocked 100%)</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button id="popup-theme-btn" class="btn btn--ghost" style="padding:5px 10px;" title="สลับโหมด สว่าง/มืด">🌙</button>
+      <span class="status-pill">LOCAL READY</span>
+    </div>
+  </header>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="tab-pnl">📊 กำไร-ขาดทุน (P&L)</button>
+    <button class="tab-btn" data-tab="tab-links">🔗 สร้างลิงก์ชุด (4 Sub_ID)</button>
+    <button class="tab-btn" data-tab="tab-products">⭐ คลังสินค้า (<span id="count-products">0</span>)</button>
+    <button class="tab-btn" data-tab="tab-settings">⚙️ ตั้งค่าระบบ</button>
+  </nav>
+
+  <main class="tab-container">
+    <!-- TAB 1: P&L DASHBOARD -->
+    <section id="tab-pnl" class="tab-pane active">
+      <div class="kpi-grid-4">
+        <div class="kpi-box">
+          <div class="kpi-label">ค่าคอมสุทธิ (Income)</div>
+          <div class="kpi-val text-cyan" id="pnl-total-income">฿0.00</div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-label">ค่าแอดรวม (+VAT)</div>
+          <div class="kpi-val text-red" id="pnl-total-expense">฿0.00</div>
+        </div>
+        <div class="kpi-box kpi-box--profit">
+          <div class="kpi-label">กำไรสุทธิ (Net Profit)</div>
+          <div class="kpi-val text-green" id="pnl-net-profit">฿0.00</div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-label">ROI / ROAS</div>
+          <div class="kpi-val" id="pnl-roi">0.0%</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">➕ บันทึกรายการค่าคอม / งบแอดเพิ่มด่วน</div>
+        <div class="form-grid-4">
+          <div>
+            <label>วันที่</label>
+            <input type="date" id="add-pnl-date" class="inp">
+          </div>
+          <div>
+            <label>ประเภท</label>
+            <select id="add-pnl-source" class="inp">
+              <option value="shopee_comm">🟢 ค่าคอม Shopee (-3%)</option>
+              <option value="lazada_comm">🔵 ค่าคอม Lazada (-3%)</option>
+              <option value="fb_ads">🔴 ค่าแอด Facebook (+7%)</option>
+              <option value="shopee_ads">🟠 ค่าแอด Shopee (+7%)</option>
+            </select>
+          </div>
+          <div>
+            <label>ยอดเงินตั้งต้น (฿)</label>
+            <input type="number" step="0.01" id="add-pnl-amount" class="inp" placeholder="0.00">
+          </div>
+          <div>
+            <label>Sub_ID / แคมเปญ</label>
+            <input type="text" id="add-pnl-subid" class="inp" placeholder="P01POST01">
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn--primary" id="btn-add-pnl">💾 บันทึกรายการเข้า P&L</button>
+          <button class="btn btn--ghost" id="btn-export-csv">📥 ส่งออก CSV</button>
+          <button class="btn btn--danger" id="btn-clear-pnl">🗑️ ล้างประวัติ</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🧾 รายการเคลื่อนไหวล่าสุด (P&L Ledger)</div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>วันที่</th>
+                <th>แหล่งที่มา</th>
+                <th>Sub_ID / แคมเปญ</th>
+                <th class="text-right">ยอดสุทธิ</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="pnl-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: BATCH LINK BUILDER -->
+    <section id="tab-links" class="tab-pane">
+      <div class="card">
+        <div class="card-title">🔗 แปลงลิงก์ Shopee / Lazada แบบชุด (4 ช่อง Alphanumeric ไร้ขีด _)</div>
+        <div class="form-grid-4">
+          <div>
+            <label>Sub_ID 1 (AdBoost)</label>
+            <input type="text" id="batch-sub1" class="inp" placeholder="16NOV26FBSPCAD">
+          </div>
+          <div>
+            <label>Sub_ID 2 (เพจ+โพสต์)</label>
+            <input type="text" id="batch-sub2" class="inp" placeholder="P01POST01">
+          </div>
+          <div>
+            <label>Sub_ID 3 (วันที่)</label>
+            <input type="text" id="batch-sub3" class="inp" placeholder="20261112">
+          </div>
+          <div>
+            <label>Sub_ID 4 (รหัส/เว้นเพื่อดึง ItemID)</label>
+            <input type="text" id="batch-sub4" class="inp" placeholder="AUTOItemID">
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <label>วางลิงก์สินค้าต้นฉบับ (บรรทัดละ 1 ลิงก์)</label>
+          <textarea id="batch-input-urls" class="inp" rows="4" placeholder="https://shopee.co.th/product/12345/67890&#10;https://www.lazada.co.th/products/item-i123456.html"></textarea>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn--primary" id="btn-batch-convert">⚡ แปลงเป็นลิงก์ Affiliate ทั้งหมด</button>
+          <button class="btn btn--emerald" id="btn-batch-copy">📋 คัดลอกผลลัพธ์</button>
+        </div>
+        <div style="margin-top:8px;">
+          <label>ผลลัพธ์ลิงก์ Affiliate (พร้อมใช้งาน)</label>
+          <textarea id="batch-output-urls" class="inp" rows="4" readonly placeholder="ลิงก์ที่แปลงแล้วจะแสดงที่นี่..."></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⚡ ทางลัดด่วน (Affiliate Quick Shortcuts)</div>
+        <div class="shortcut-grid">
+          <a href="https://affiliate.shopee.co.th/dashboard" target="_blank" class="btn btn--ghost">📊 Shopee Dashboard</a>
+          <a href="https://affiliate.shopee.co.th/offer/custom_link" target="_blank" class="btn btn--ghost">🔗 Shopee Custom Link</a>
+          <a href="https://affiliate.shopee.co.th/report/conversion_report" target="_blank" class="btn btn--ghost">🧾 Conversion Report</a>
+          <a href="https://affiliate.shopee.co.th/payment/billing" target="_blank" class="btn btn--ghost">💰 Shopee Payout</a>
+          <a href="https://adsense.lazada.co.th/" target="_blank" class="btn btn--ghost">🔵 Lazada Adsense</a>
+          <a href="https://adsmanager.facebook.com/" target="_blank" class="btn btn--ghost">📈 FB Ads Manager</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: SAVED PRODUCTS -->
+    <section id="tab-products" class="tab-pane">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="card-title" style="margin-bottom:0;">⭐ คลังสินค้าทำเงิน (พร้อมส่งต่อระบบเจนภาพ 4 รูป & คุมแอด)</div>
+          <button class="btn btn--emerald" id="btn-export-products-json" style="padding:4px 10px;font-size:11px;">📤 คัดลอก JSON ทั้งคลัง</button>
+        </div>
+        <div class="table-scroll" style="max-height:330px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ชื่อสินค้า</th>
+                <th class="text-right">ราคาขาย</th>
+                <th class="text-right">คอมสุทธิ</th>
+                <th class="text-right">คุ้มทุนแอด 100฿</th>
+                <th class="text-right">จัดการ / JSON</th>
+              </tr>
+            </thead>
+            <tbody id="saved-products-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SETTINGS -->
+    <section id="tab-settings" class="tab-pane">
+      <div class="card">
+        <div class="card-title">⚙️ ตั้งค่าพารามิเตอร์ Affiliate, Sub_ID (ไร้ขีด _) & Webhook</div>
+        <div class="form-grid-2">
+          <div>
+            <label>Shopee Affiliate ID</label>
+            <input type="text" id="set-shopee-id" class="inp" placeholder="เช่น 15300012345">
+          </div>
+          <div>
+            <label>Lazada Affiliate ID</label>
+            <input type="text" id="set-lazada-id" class="inp" placeholder="เช่น 99001234">
+          </div>
+          <div>
+            <label>ค่าคอมพื้นฐาน Shopee (%)</label>
+            <input type="number" step="0.1" id="set-shopee-base" class="inp">
+          </div>
+          <div>
+            <label>ค่าคอม Extra เริ่มต้น (%)</label>
+            <input type="number" step="0.5" id="set-shopee-extra" class="inp">
+          </div>
+          <div>
+            <label>เพดาน Cap ต่อชิ้น Shopee (฿)</label>
+            <input type="number" step="10" id="set-shopee-cap" class="inp">
+          </div>
+          <div>
+            <label>หักภาษี ณ ที่จ่าย WHT (%)</label>
+            <input type="number" step="0.5" id="set-wht-rate" class="inp">
+          </div>
+          <div>
+            <label>Sub_ID 1 เริ่มต้น (AdBoost — A-Z0-9)</label>
+            <input type="text" id="set-sub1" class="inp" placeholder="16NOV26FBSPCAD">
+          </div>
+          <div>
+            <label>Sub_ID 2 เริ่มต้น (เพจ+โพสต์ — A-Z0-9)</label>
+            <input type="text" id="set-sub2" class="inp" placeholder="P01POST01">
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label>Webhook URL (ตัวเลือกเสริม: ยิง JSON อัตโนมัติเมื่อกด ⭐ เก็บเข้าคลัง)</label>
+            <input type="url" id="set-webhook-url" class="inp" placeholder="https://your-dashboard.example.com/api/webhook/shopee-product">
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="btn btn--primary" id="btn-save-settings">💾 บันทึกการตั้งค่าทั้งหมด</button>
+          <span id="settings-saved-msg" style="font-size:12px;color:#15803d;display:none;">✔ บันทึกเรียบร้อย!</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="src/common/utils.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

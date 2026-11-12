@@ -32,3 +32,4 @@ summary: >
 - 16:32 — Fixed camera/YOOSEE regex collision with beauty category ("เฝ้าดู" vs "ฝ้า") and locked discounted selling price (`v2.6.2`).
 - 16:45 — Resolved Chromium `display:none` string concatenation bug via separate leaf-node DOM extractor and per-card price locking (`v2.6.3`).
 - 18:25 — User verified and confirmed rock-solid stability ("รอบนี้นิ่งสนิทละ").
+

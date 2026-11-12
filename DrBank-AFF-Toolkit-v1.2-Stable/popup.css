@@ -1,0 +1,378 @@
+/* ==========================================================================
+   DrBank AFF Studio — Popup Command Center Stylesheet (Shopee Seamless Edition)
+   Light Mode Default + Dark Mode Switchable | Standard Shopee Font Scale
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  /* ☀️ Default Light Theme (Shopee Native Clean) */
+  --p-bg-page: #f5f5f5;
+  --p-bg-card: #ffffff;
+  --p-bg-header: #fff6f3;
+  --p-border-header: #ffe0d6;
+  --p-bg-input: #fafafa;
+  --p-border: #e6e6e6;
+  --p-border-strong: #d9d9d9;
+
+  --p-text-main: #222222;
+  --p-text-label: #666666;
+  --p-text-muted: #8c8c8c;
+
+  --p-accent: #ee4d2d;
+  --p-accent-hover: #d73211;
+  --p-accent-soft: #fff2ee;
+
+  --p-profit-bg: #f0fdf4;
+  --p-profit-border: #bbf7d0;
+  --p-green: #15803d;
+  --p-red: #dc2626;
+  --p-cyan: #ee4d2d;
+
+  width: 680px;
+  min-height: 510px;
+  background: var(--p-bg-page);
+  color: var(--p-text-main);
+  font-family: 'Inter', 'Noto Sans Thai', 'Leelawadee UI', 'Thonburi', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+body[data-theme="dark"] {
+  --p-bg-page: #121215;
+  --p-bg-card: #18181b;
+  --p-bg-header: #221c1a;
+  --p-border-header: #3a2a25;
+  --p-bg-input: #232329;
+  --p-border: #2e2e36;
+  --p-border-strong: #3f3f46;
+
+  --p-text-main: #f4f4f5;
+  --p-text-label: #a1a1aa;
+  --p-text-muted: #71717a;
+
+  --p-accent: #ff5733;
+  --p-accent-hover: #ff6b4a;
+  --p-accent-soft: rgba(238, 77, 45, 0.14);
+
+  --p-profit-bg: rgba(22, 163, 74, 0.12);
+  --p-profit-border: rgba(34, 197, 94, 0.35);
+  --p-green: #4ade80;
+  --p-red: #f87171;
+  --p-cyan: #ff6b4a;
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--p-bg-header);
+  border-bottom: 1px solid var(--p-border-header);
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: var(--p-accent);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--p-accent);
+}
+
+.ver-badge {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--p-text-muted);
+  background: var(--p-bg-card);
+  border: 1px solid var(--p-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--p-text-label);
+}
+
+.status-pill {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--p-profit-bg);
+  border: 1px solid var(--p-profit-border);
+  color: var(--p-green);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Tabs */
+.tab-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--p-bg-card);
+  border-bottom: 1px solid var(--p-border);
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--p-text-label);
+  padding: 9px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+  color: var(--p-accent);
+  background: var(--p-accent-soft);
+}
+
+.tab-btn.active {
+  color: var(--p-accent);
+  border-bottom-color: var(--p-accent);
+  background: var(--p-accent-soft);
+}
+
+/* Main Content */
+.tab-container {
+  padding: 12px 14px;
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+/* KPI Grid */
+.kpi-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.kpi-box {
+  background: var(--p-bg-card);
+  border: 1px solid var(--p-border);
+  border-radius: 9px;
+  padding: 9px 11px;
+}
+
+.kpi-box--profit {
+  background: var(--p-profit-bg);
+  border-color: var(--p-profit-border);
+}
+
+.kpi-label {
+  font-size: 11px;
+  color: var(--p-text-label);
+  margin-bottom: 3px;
+}
+
+.kpi-val {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-text-main);
+}
+
+.text-cyan { color: var(--p-cyan); }
+.text-red { color: var(--p-red); }
+.text-green { color: var(--p-green); }
+.text-right { text-align: right; }
+
+/* Cards & Forms */
+.card {
+  background: var(--p-bg-card);
+  border: 1px solid var(--p-border);
+  border-radius: 9px;
+  padding: 11px 13px;
+  margin-bottom: 10px;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--p-text-main);
+  margin-bottom: 8px;
+}
+
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: 1.1fr 1.3fr 1fr 1fr;
+  gap: 8px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+label {
+  display: block;
+  font-size: 11px;
+  color: var(--p-text-label);
+  margin-bottom: 3px;
+}
+
+.inp {
+  width: 100%;
+  background: var(--p-bg-input);
+  border: 1px solid var(--p-border-strong);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: var(--p-text-main);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.inp:focus {
+  background: var(--p-bg-card);
+  border-color: var(--p-accent);
+}
+
+.btn-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.btn--primary {
+  background: var(--p-accent);
+  color: #ffffff;
+}
+
+.btn--primary:hover {
+  background: var(--p-accent-hover);
+}
+
+.btn--emerald {
+  background: var(--p-accent-soft);
+  border-color: var(--p-accent);
+  color: var(--p-accent);
+}
+
+.btn--ghost {
+  background: var(--p-bg-card);
+  border-color: var(--p-border-strong);
+  color: var(--p-text-main);
+  font-weight: 400;
+}
+
+.btn--ghost:hover {
+  border-color: var(--p-accent);
+  color: var(--p-accent);
+}
+
+.btn--danger {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.35);
+  color: var(--p-red);
+  margin-left: auto;
+}
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+/* Tables */
+.table-scroll {
+  max-height: 195px;
+  overflow-y: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 6px 7px;
+  color: var(--p-text-label);
+  font-weight: 500;
+  border-bottom: 1px solid var(--p-border);
+  position: sticky;
+  top: 0;
+  background: var(--p-bg-card);
+}
+
+.data-table td {
+  padding: 6px 7px;
+  border-bottom: 1px solid var(--p-border);
+  color: var(--p-text-main);
+}
+
+.mini-del-btn {
+  background: transparent;
+  border: none;
+  color: var(--p-text-label);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.mini-del-btn:hover {
+  color: var(--p-red);
+}

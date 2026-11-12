@@ -1,0 +1,649 @@
+/* ==========================================================================
+   DrBank AFF Studio v1.2.0 — Shopee Seamless Edition (Bell 238M Strategy)
+   Clean-Room Stylesheet: Thin/Clean Typography (Noto Sans Thai / Inter)
+   Font Sizes: Standard Shopee Hierarchy (13px / 12px / 11px / 18px KPI)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&display=swap');
+
+#drb-aff-hud-root {
+  /* ☀️ Default Theme: Shopee Native Clean Light */
+  --drb-bg-card: #ffffff;
+  --drb-bg-header: #fff6f3;
+  --drb-border-header: #ffe0d6;
+  --drb-bg-surface: #f7f7f7;
+  --drb-bg-input: #fafafa;
+  --drb-border: #e6e6e6;
+  --drb-border-strong: #d9d9d9;
+
+  --drb-text-main: #222222;
+  --drb-text-label: #666666;
+  --drb-text-muted: #8c8c8c;
+
+  --drb-accent: #ee4d2d;
+  --drb-accent-hover: #d73211;
+  --drb-accent-soft: #fff2ee;
+  --drb-accent-border: #f8b4a6;
+
+  /* 4-Tier Viability Tokens (Light Mode) */
+  --tier-god-bg: #f5f3ff;
+  --tier-god-border: #c4b5fd;
+  --tier-god-text: #6d28d9;
+
+  --tier-pass-bg: #f0fdf4;
+  --tier-pass-border: #bbf7d0;
+  --tier-pass-text: #15803d;
+
+  --tier-warn-bg: #fffbeb;
+  --tier-warn-border: #fde68a;
+  --tier-warn-text: #b45309;
+
+  --tier-danger-bg: #fef2f2;
+  --tier-danger-border: #fecaca;
+  --tier-danger-text: #dc2626;
+
+  --drb-shadow: 0 8px 28px rgba(0, 0, 0, 0.09), 0 1px 4px rgba(0, 0, 0, 0.05);
+
+  position: fixed;
+  top: 76px;
+  right: 20px;
+  width: 356px;
+  z-index: 2147483640;
+  font-family: 'Inter', 'Noto Sans Thai', 'Leelawadee UI', 'Thonburi', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--drb-text-main);
+  background: var(--drb-bg-card);
+  border: 1px solid var(--drb-border);
+  border-radius: 12px;
+  box-shadow: var(--drb-shadow);
+  overflow: hidden;
+  transition: width 0.2s ease, background-color 0.18s ease, border-color 0.18s ease;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0.1px;
+  -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
+}
+
+/* 🌙 Optional Dark Mode (Soft Zinc Dark — No Eye-Straining Neon) */
+#drb-aff-hud-root[data-theme="dark"] {
+  --drb-bg-card: #18181b;
+  --drb-bg-header: #221c1a;
+  --drb-border-header: #3a2a25;
+  --drb-bg-surface: #232329;
+  --drb-bg-input: #121215;
+  --drb-border: #2e2e36;
+  --drb-border-strong: #3f3f46;
+
+  --drb-text-main: #f4f4f5;
+  --drb-text-label: #a1a1aa;
+  --drb-text-muted: #71717a;
+
+  --drb-accent: #ff5733;
+  --drb-accent-hover: #ff6b4a;
+  --drb-accent-soft: rgba(238, 77, 45, 0.14);
+  --drb-accent-border: rgba(238, 77, 45, 0.45);
+
+  /* 4-Tier Viability Tokens (Dark Mode) */
+  --tier-god-bg: rgba(124, 58, 237, 0.16);
+  --tier-god-border: rgba(167, 139, 250, 0.45);
+  --tier-god-text: #c4b5fd;
+
+  --tier-pass-bg: rgba(22, 163, 74, 0.14);
+  --tier-pass-border: rgba(74, 222, 128, 0.4);
+  --tier-pass-text: #4ade80;
+
+  --tier-warn-bg: rgba(217, 119, 6, 0.16);
+  --tier-warn-border: rgba(251, 191, 36, 0.45);
+  --tier-warn-text: #fbbf24;
+
+  --tier-danger-bg: rgba(220, 38, 38, 0.16);
+  --tier-danger-border: rgba(248, 113, 113, 0.45);
+  --tier-danger-text: #f87171;
+
+  --drb-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
+}
+
+#drb-aff-hud-root *,
+#drb-aff-hud-root *::before,
+#drb-aff-hud-root *::after {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+#drb-aff-hud-root.drb-aff-hud--minimized {
+  width: 248px;
+}
+
+#drb-aff-hud-root.drb-aff-hud--minimized .drb-aff-body {
+  display: none;
+}
+
+/* Header */
+.drb-aff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 13px;
+  background: var(--drb-bg-header);
+  border-bottom: 1px solid var(--drb-border-header);
+  user-select: none;
+}
+
+.drb-aff-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--drb-accent);
+}
+
+.drb-aff-version {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--drb-text-muted);
+  background: var(--drb-bg-card);
+  border: 1px solid var(--drb-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.drb-aff-badge-platform {
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  background: var(--drb-accent-soft);
+  color: var(--drb-accent);
+  border: 1px solid var(--drb-accent-border);
+}
+
+.drb-aff-badge-platform--lazada {
+  background: rgba(15, 98, 254, 0.09);
+  color: #0f62fe;
+  border-color: rgba(15, 98, 254, 0.3);
+}
+
+.drb-aff-badge-platform--fb {
+  background: rgba(24, 119, 242, 0.1);
+  color: #1877f2;
+  border-color: rgba(24, 119, 242, 0.3);
+}
+
+.drb-aff-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.drb-aff-icon-btn {
+  background: var(--drb-bg-card);
+  border: 1px solid var(--drb-border-strong);
+  color: var(--drb-text-label);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 400;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.drb-aff-icon-btn:hover {
+  border-color: var(--drb-accent);
+  color: var(--drb-accent);
+  background: var(--drb-accent-soft);
+}
+
+/* Body */
+.drb-aff-body {
+  padding: 11px 13px 13px;
+  max-height: 84vh;
+  overflow-y: auto;
+}
+
+.drb-aff-product-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--drb-text-main);
+  margin-bottom: 7px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+/* Spec 4: 3-Badge Product Checklist Bar (ตัวกรองคุณเบล) */
+.drb-aff-checklist-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.drb-aff-check-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  line-height: 1.3;
+}
+
+.drb-aff-check-pill--green {
+  background: var(--tier-pass-bg);
+  border-color: var(--tier-pass-border);
+  color: var(--tier-pass-text);
+}
+
+.drb-aff-check-pill--yellow {
+  background: var(--tier-warn-bg);
+  border-color: var(--tier-warn-border);
+  color: var(--tier-warn-text);
+}
+
+.drb-aff-check-pill--red {
+  background: var(--tier-danger-bg);
+  border-color: var(--tier-danger-border);
+  color: var(--tier-danger-text);
+}
+
+/* KPI Grid & Spec 2: 4-Tier Dynamic Highlight */
+.drb-aff-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.12fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.drb-aff-kpi-card {
+  background: var(--drb-bg-surface);
+  border: 1px solid var(--drb-border);
+  border-radius: 9px;
+  padding: 8px 10px;
+  transition: all 0.18s ease;
+}
+
+.drb-aff-kpi-card--highlight,
+.drb-aff-kpi-card[data-tier="pass"] {
+  background: var(--tier-pass-bg);
+  border-color: var(--tier-pass-border);
+}
+
+.drb-aff-kpi-card[data-tier="god"] {
+  background: var(--tier-god-bg);
+  border-color: var(--tier-god-border);
+}
+
+.drb-aff-kpi-card[data-tier="warning"] {
+  background: var(--tier-warn-bg);
+  border-color: var(--tier-warn-border);
+}
+
+.drb-aff-kpi-card[data-tier="danger"] {
+  background: var(--tier-danger-bg);
+  border-color: var(--tier-danger-border);
+}
+
+.drb-aff-kpi-label {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--drb-text-label);
+  margin-bottom: 2px;
+}
+
+.drb-aff-kpi-val {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--drb-text-main);
+  line-height: 1.25;
+}
+
+.drb-aff-kpi-card[data-tier="god"] .drb-aff-kpi-val,
+.drb-aff-kpi-card[data-tier="god"] .drb-aff-tier-badge {
+  color: var(--tier-god-text);
+}
+
+.drb-aff-kpi-card[data-tier="pass"] .drb-aff-kpi-val,
+.drb-aff-kpi-card[data-tier="pass"] .drb-aff-tier-badge,
+.drb-aff-kpi-val--green {
+  color: var(--tier-pass-text);
+}
+
+.drb-aff-kpi-card[data-tier="warning"] .drb-aff-kpi-val,
+.drb-aff-kpi-card[data-tier="warning"] .drb-aff-tier-badge {
+  color: var(--tier-warn-text);
+}
+
+.drb-aff-kpi-card[data-tier="danger"] .drb-aff-kpi-val,
+.drb-aff-kpi-card[data-tier="danger"] .drb-aff-tier-badge {
+  color: var(--tier-danger-text);
+}
+
+.drb-aff-tier-badge {
+  font-size: 10.5px;
+  font-weight: 500;
+  margin-top: 3px;
+  line-height: 1.3;
+}
+
+.drb-aff-kpi-sub {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--drb-text-muted);
+  margin-top: 2px;
+}
+
+/* Spec 3: Break-Even 100฿/Day Banner */
+.drb-aff-breakeven-box {
+  border-radius: 8px;
+  padding: 7px 10px;
+  margin-bottom: 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border: 1px solid var(--tier-pass-border);
+  background: var(--tier-pass-bg);
+  color: var(--tier-pass-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.18s ease;
+}
+
+.drb-aff-breakeven-box[data-tier="god"] {
+  background: var(--tier-god-bg);
+  border-color: var(--tier-god-border);
+  color: var(--tier-god-text);
+}
+
+.drb-aff-breakeven-box[data-tier="warning"] {
+  background: var(--tier-warn-bg);
+  border-color: var(--tier-warn-border);
+  color: var(--tier-warn-text);
+}
+
+.drb-aff-breakeven-box[data-tier="danger"] {
+  background: var(--tier-danger-bg);
+  border-color: var(--tier-danger-border);
+  color: var(--tier-danger-text);
+}
+
+/* Form Controls */
+.drb-aff-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.drb-aff-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.drb-aff-subid-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.drb-aff-field label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--drb-text-label);
+  margin-bottom: 3px;
+}
+
+.drb-aff-input-group {
+  display: flex;
+  gap: 4px;
+}
+
+.drb-aff-pin-btn {
+  background: var(--drb-bg-surface);
+  border: 1px solid var(--drb-border-strong);
+  border-radius: 5px;
+  padding: 0 7px;
+  font-size: 11px;
+  color: var(--drb-text-label);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.14s ease;
+}
+
+.drb-aff-pin-btn:hover {
+  border-color: var(--drb-accent);
+  color: var(--drb-accent);
+  background: var(--drb-accent-soft);
+}
+
+.drb-aff-page-chips {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.drb-aff-page-chip {
+  background: var(--drb-bg-surface);
+  border: 1px solid var(--drb-border-strong);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--drb-text-label);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.drb-aff-page-chip:hover {
+  border-color: var(--drb-accent);
+  color: var(--drb-accent);
+  background: var(--drb-accent-soft);
+}
+
+.drb-aff-input {
+  width: 100%;
+  background: var(--drb-bg-input);
+  border: 1px solid var(--drb-border-strong);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: var(--drb-text-main);
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.drb-aff-input:focus {
+  background: var(--drb-bg-card);
+  border-color: var(--drb-accent);
+  box-shadow: 0 0 0 2px rgba(238, 77, 45, 0.14);
+}
+
+.drb-aff-input--invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25) !important;
+  background: var(--tier-danger-bg) !important;
+}
+
+/* Variant Pills */
+.drb-aff-variants-wrap {
+  margin-bottom: 9px;
+}
+
+.drb-aff-variants-label {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--drb-text-label);
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.drb-aff-variants-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 72px;
+  overflow-y: auto;
+}
+
+.drb-aff-variant-pill {
+  background: var(--drb-bg-card);
+  border: 1px solid var(--drb-border-strong);
+  color: var(--drb-text-main);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.drb-aff-variant-pill:hover,
+.drb-aff-variant-pill.active {
+  background: var(--drb-accent-soft);
+  border-color: var(--drb-accent);
+  color: var(--drb-accent);
+}
+
+/* Buttons (Shopee Native Button Anatomy) */
+.drb-aff-btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.drb-aff-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.drb-aff-btn--primary {
+  background: var(--drb-accent);
+  color: #ffffff;
+  border-color: var(--drb-accent);
+}
+
+.drb-aff-btn--primary:hover {
+  background: var(--drb-accent-hover);
+  border-color: var(--drb-accent-hover);
+}
+
+.drb-aff-btn--emerald {
+  background: var(--drb-accent-soft);
+  color: var(--drb-accent);
+  border-color: var(--drb-accent);
+}
+
+.drb-aff-btn--emerald:hover {
+  background: rgba(238, 77, 45, 0.18);
+}
+
+.drb-aff-btn--ghost {
+  background: var(--drb-bg-card);
+  border-color: var(--drb-border-strong);
+  color: var(--drb-text-main);
+  font-weight: 400;
+}
+
+.drb-aff-btn--ghost:hover {
+  border-color: var(--drb-accent);
+  color: var(--drb-accent);
+  background: var(--drb-bg-surface);
+}
+
+.drb-aff-btn--full {
+  grid-column: 1 / -1;
+}
+
+/* Divider & Info Table */
+.drb-aff-divider {
+  height: 1px;
+  background: var(--drb-border);
+  margin: 9px 0;
+}
+
+.drb-aff-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  margin-bottom: 6px;
+}
+
+.drb-aff-mini-table td {
+  padding: 2.5px 0;
+  color: var(--drb-text-label);
+  font-weight: 400;
+}
+
+.drb-aff-mini-table td:last-child {
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--drb-text-main);
+}
+
+/* Toast Notifications */
+#drb-aff-toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483646;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drb-aff-toast {
+  background: #ffffff;
+  border: 1px solid #ee4d2d;
+  border-left: 4px solid #ee4d2d;
+  color: #222222;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-family: 'Inter', 'Noto Sans Thai', 'Leelawadee UI', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.drb-aff-toast--warn {
+  border-color: #dc2626;
+  border-left-color: #dc2626;
+}
+
+.drb-aff-toast--hide {
+  opacity: 0;
+  transform: translateY(8px);
+}
