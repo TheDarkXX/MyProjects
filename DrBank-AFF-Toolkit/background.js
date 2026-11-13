@@ -6,15 +6,15 @@
  */
 
 const DEFAULT_SETTINGS = {
-  webUiBaseUrl: 'http://localhost:3000', // URL ของหน้าเว็บ Shopee × Meta Command Center
-  shopeeBaseRate: 3.5,                   // % ค่าคอมพื้นฐาน Shopee
-  shopeeExtraRate: 10.0,                 // % ค่าคอม Extra เริ่มต้น
-  shopeeCapTHB: 250,                     // เพดานค่าคอมพื้นฐานต่อชิ้น (บาท)
-  withholdingTaxRate: 3.0,               // หัก ณ ที่จ่าย 3% จากยอดคอมมิชชั่น
-  dailyAdBudgetTHB: 100,                 // งบแอดต่อโพสต์ (100 บาท/วัน)
-  fbVatRate: 7.0,                        // VAT 7% ของค่าแอด FB (รวมเป็น 107 บาท/วัน)
+  webUiBaseUrl: 'https://aff.doctorbankonline.com', // URL ของหน้าเว็บ Shopee × Meta Command Center (XBrain Live)
+  shopeeBaseRate: 0.6,                              // % ค่าคอมพื้นฐาน Shopee จริงตาม Ground Truth 11.11
+  shopeeExtraRate: 10.0,                            // % ค่าคอม Extra เริ่มต้น (เกณฑ์ อ.เอสเธอร์ >= 7%)
+  shopeeCapTHB: 250,                                // เพดานค่าคอมพื้นฐานต่อชิ้น (บาท)
+  withholdingTaxRate: 3.0,                          // หัก ณ ที่จ่าย 3% จากยอดคอมมิชชั่น
+  dailyAdBudgetTHB: 100,                            // งบแอดต่อโพสต์ (100 บาท/วัน)
+  fbVatRate: 7.0,                                   // VAT 7% ของค่าแอด FB (รวมเป็น 107 บาท/วัน)
   theme: 'light',
-  displayMode: 'sidepanel',              // 'sidepanel' (Default) | 'float'
+  displayMode: 'sidepanel',                         // 'sidepanel' (Default) | 'float'
   hudMinimized: false
 };
 
@@ -25,7 +25,10 @@ chrome.sidePanel
 
 chrome.runtime.onInstalled.addListener(async () => {
   const data = await chrome.storage.local.get(['settings', 'savedProducts', 'syncedReports']);
-  const merged = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+  const prev = data.settings || {};
+  if (prev.webUiBaseUrl === 'http://localhost:3000') delete prev.webUiBaseUrl;
+  if (prev.shopeeBaseRate === 3.5) delete prev.shopeeBaseRate;
+  const merged = { ...DEFAULT_SETTINGS, ...prev };
   await chrome.storage.local.set({ settings: merged });
 
   if (!Array.isArray(data.savedProducts)) {
@@ -65,14 +68,15 @@ async function handleMessage(msg, _sender) {
 
     case 'PING_WEBUI': {
       const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
-      const baseUrl = String(payload?.webUiBaseUrl || settings.webUiBaseUrl || 'http://localhost:3000').replace(/\/+$/, '');
+      const baseUrl = String(payload?.webUiBaseUrl || settings.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
       try {
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 1800);
+        const timer = setTimeout(() => ctrl.abort(), 2500);
         const res = await fetch(`${baseUrl}/api/health`, {
           method: 'GET',
+          credentials: 'include',
           signal: ctrl.signal
-        }).catch(() => fetch(baseUrl, { method: 'HEAD', signal: ctrl.signal }));
+        }).catch(() => fetch(baseUrl, { method: 'HEAD', credentials: 'include', signal: ctrl.signal }));
         clearTimeout(timer);
         return { online: Boolean(res && (res.ok || res.status < 500)), baseUrl };
       } catch (_e) {
@@ -120,13 +124,14 @@ async function handleMessage(msg, _sender) {
 
       // Attempt HTTP POST to Web UI Command Center
       let syncedToServer = false;
-      const baseUrl = String(settings?.webUiBaseUrl || 'http://localhost:3000').replace(/\/+$/, '');
+      const baseUrl = String(settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
       if (baseUrl && /^https?:\/\//i.test(baseUrl)) {
         try {
           const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), 2500);
+          const timer = setTimeout(() => ctrl.abort(), 4000);
           const resp = await fetch(`${baseUrl}/api/shopee-aff/sku-ingest`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(item),
             signal: ctrl.signal
@@ -161,13 +166,14 @@ async function handleMessage(msg, _sender) {
       await chrome.storage.local.set({ syncedReports: updatedReports });
 
       let syncedToServer = false;
-      const baseUrl = String(settings?.webUiBaseUrl || 'http://localhost:3000').replace(/\/+$/, '');
+      const baseUrl = String(settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
       if (baseUrl && /^https?:\/\//i.test(baseUrl)) {
         try {
           const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), 2500);
+          const timer = setTimeout(() => ctrl.abort(), 5000);
           const resp = await fetch(`${baseUrl}/api/shopee-aff/report-ingest`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(reportBatch),
             signal: ctrl.signal
