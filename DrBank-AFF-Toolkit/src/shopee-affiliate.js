@@ -342,35 +342,30 @@
 
     tb.innerHTML = `
       <div class="drb-grid-tb-left">
+        <button type="button" class="drb-grid-power-btn ${isOn ? 'is-on' : 'is-off'}" id="drb-btn-toggle-radar" title="คลิกเพื่อเปิด/ปิด การแสดงป้าย Signal บนการ์ดสินค้าทั้งหมด">
+          <span class="drb-grid-power-dot"></span>
+          <span>${isOn ? 'RADAR ON' : 'RADAR OFF'}</span>
+        </button>
         <button type="button" class="drb-grid-v1-launch-btn" id="drb-btn-open-v1-scanner" title="เปิดตารางค้นหาสินค้า V1 Realtime (ดูดรวดเดียว 500 ชิ้น + คำนวณ Signal จุดคุ้มทุนแอด 107฿)">
-          🚀 เปิดตารางค้นหา V1 Realtime (500 ชิ้น + Signal 107฿)
+          เปิดตาราง V1 Scanner ↗
         </button>
-        <button type="button" class="drb-grid-power-btn ${isOn ? '' : 'is-off'}" id="drb-btn-toggle-radar" title="เปิด/ปิด การแสดงป้าย Signal บนการ์ดทั้งหมด">
-          ${isOn ? '🟢 เรดาร์: เปิด' : '⚪ เรดาร์: ปิด'}
-        </button>
-        <span class="drb-grid-tb-title">⚡ DrBank Signal Radar (แอด 107฿/วัน)</span>
-        <span class="drb-grid-tb-summary" style="${isOn ? '' : 'opacity:0.5;'}">
-          สแกนพบ <strong>${c.total}</strong> ชิ้น:
-          🔥✅ น่าลุย <strong>${c.win}</strong> |
-          ⚠️ พอไหว <strong>${c.warn}</strong> |
-          ⛔ ไม่คุ้มแอด <strong>${c.danger}</strong>
-        </span>
       </div>
       <div class="drb-grid-tb-actions" style="${isOn ? '' : 'display:none;'}">
-        <button type="button" class="drb-grid-filter-btn ${gridFilterState.mode === 'all' && !gridFilterState.dimDanger && !gridFilterState.hideDanger ? 'active' : ''}" id="drb-btn-reset-default" title="ค่าเริ่มต้น: โชว์เฉพาะป้าย Signal มุมขวา ไม่ดรอปแสง ไม่ซ่อนการ์ด">
-          🔄 ค่าเริ่มต้น: โชว์เฉพาะป้าย (${c.total})
+        <button type="button" class="drb-grid-filter-btn ${gridFilterState.mode === 'all' && !gridFilterState.dimDanger && !gridFilterState.hideDanger ? 'active' : ''}" id="drb-btn-reset-default" title="ค่าเริ่มต้น: แสดงการ์ดทั้งหมดตามปกติ">
+          ทั้งหมด <span class="drb-grid-cnt">${c.total}</span>
         </button>
-        <button type="button" class="drb-grid-filter-btn drb-grid-filter-btn--green ${gridFilterState.mode === 'win' ? 'active' : ''}" data-mode="win">
-          🔥✅ เฉพาะตัวน่าลุย (${c.win})
+        <button type="button" class="drb-grid-filter-btn drb-grid-filter-btn--win ${gridFilterState.mode === 'win' ? 'active' : ''}" data-mode="win" title="แสดงเฉพาะสินค้าที่น่าลุยแอด (คอมสุทธิ ≥฿45/ชิ้น)">
+          <span class="drb-v1-dot drb-v1-dot--pass"></span>น่าลุย ≥฿45 <span class="drb-grid-cnt">${c.win}</span>
         </button>
-        <button type="button" class="drb-grid-filter-btn ${gridFilterState.mode === 'warn' ? 'active' : ''}" data-mode="warn">
-          ⚠️ พอไหว >=฿20 (${c.win + c.warn})
+        <button type="button" class="drb-grid-filter-btn drb-grid-filter-btn--warn ${gridFilterState.mode === 'warn' ? 'active' : ''}" data-mode="warn" title="แสดงสินค้าที่ได้คอมสุทธิ ≥฿20/ชิ้น ขึ้นไป">
+          <span class="drb-v1-dot drb-v1-dot--warn"></span>พอไหว ≥฿20 <span class="drb-grid-cnt">${c.win + c.warn}</span>
         </button>
-        <button type="button" class="drb-grid-filter-btn ${gridFilterState.dimDanger ? 'active' : ''}" id="drb-btn-toggle-dim">
-          💡 ดรอปแสงไฟแดง: ${gridFilterState.dimDanger ? 'เปิด' : 'ปิด'}
+        <span class="drb-grid-tb-sep"></span>
+        <button type="button" class="drb-grid-filter-btn drb-grid-filter-btn--sub ${gridFilterState.dimDanger ? 'active' : ''}" id="drb-btn-toggle-dim" title="ดรอปแสงการ์ดที่ได้คอม <฿20 ให้จางลง">
+          ดรอปแสง &lt;฿20
         </button>
-        <button type="button" class="drb-grid-filter-btn ${gridFilterState.hideDanger ? 'active' : ''}" id="drb-btn-toggle-hide">
-          ⛔ ซ่อนไฟแดง (${c.danger})
+        <button type="button" class="drb-grid-filter-btn drb-grid-filter-btn--danger ${gridFilterState.hideDanger ? 'active' : ''}" id="drb-btn-toggle-hide" title="ซ่อนการ์ดที่ได้คอม <฿20 ออกจากหน้าจอ">
+          <span class="drb-v1-dot drb-v1-dot--danger"></span>ซ่อน &lt;฿20 <span class="drb-grid-cnt">${c.danger}</span>
         </button>
       </div>
     `;
@@ -699,14 +694,36 @@
   //    + GraphQL Shortlink Generator: POST /api/v3/gql?q=batchCustomLink
   // ==========================================================================
   const V1_STORAGE_KEY = 'drbV1ScannerLastResult';
+  const V1_CUSTOM_PRESETS_KEY = 'drbV1CustomPresets';
+  let v1CustomPresets = [];
   let v1State = {
     isOpen: false,
     isLoading: false,
     cancelRequested: false,
     rows: [],
+    showAdvFilters: false,    // ซ่อนเมนู Advanced Filter เป็นค่าเริ่มต้น (กดเปิดเมื่อต้องการตั้งค่า)
+    activePreset: '',         // '' | 'ad107' | 'impulse' | 'mallhot' | 'bigcomm'
     signalFilter: 'all',      // 'all' | 'win' | 'god' | 'pass' | 'warning' | 'danger'
-    minSoldFilter: 0,         // 0 | 50 | 100 | 300 | 1000
-    textFilter: '',
+    minNetComm: 0,            // คอมสุทธิ/ชิ้น ต่ำสุด (฿)
+    maxNetComm: 0,            // คอมสุทธิ/ชิ้น สูงสุด (฿)
+    minBreakEven: 0,          // คุ้มแอด 107฿ ต่ำสุด (ชิ้น)
+    maxBreakEven: 0,          // คุ้มแอด 107฿ สูงสุด (ชิ้น)
+    textFilter: '',           // ค้นชื่อสินค้า / ID (รองรับ -คำ เพื่อตัดคำออก)
+    onlyMall: false,          // เฉพาะร้าน Shopee Mall
+    onlyExtra: false,         // เฉพาะที่มี Extra (>0%)
+    onlyFreeSample: false,    // เฉพาะแจกตัวอย่างฟรี
+    minPrice: 0,              // ราคาจริง ต่ำสุด (฿)
+    maxPrice: 0,              // ราคาจริง สูงสุด (฿)
+    minSoldFilter: 0,         // ขาย/เดือน ต่ำสุด (ชิ้น)
+    maxSoldFilter: 0,         // ขาย/เดือน สูงสุด (ชิ้น)
+    minHistSold: 0,           // ขายรวมสะสม ต่ำสุด (ชิ้น)
+    maxHistSold: 0,           // ขายรวมสะสม สูงสุด (ชิ้น)
+    minExtraRate: 0,          // Extra % ต่ำสุด
+    maxExtraRate: 0,          // Extra % สูงสุด
+    minExtraComm: 0,          // คอม Extra ต่ำสุด (฿)
+    maxExtraComm: 0,          // คอม Extra สูงสุด (฿)
+    minStock: 0,              // สต๊อก ต่ำสุด (ชิ้น)
+    maxStock: 0,              // สต๊อก สูงสุด (ชิ้น)
     sortCol: 'signalScore',   // 'signalScore' | 'netComm' | 'breakEvenNum' | 'name' | 'price' | 'sold' | 'historical_sold' | 'extraRate' | 'extraComm' | 'stock'
     sortDir: 'desc'           // 'asc' | 'desc'
   };
@@ -900,44 +917,48 @@
     wrap = document.createElement('div');
     wrap.id = 'drb-v1-scanner-overlay';
     wrap.innerHTML = `
-      <!-- Row 1: Unified Single-Line Command Cockpit (Ultra-Compact 40px) -->
+      <!-- Row 1: Unified Single-Line Command Cockpit (Clean Minimal 40px) -->
       <div class="drb-v1-controls">
-        <span class="drb-v1-badge-live" title="Shopee Affiliate V1 Realtime API + DrBank 107฿/Day Signal Radar">⚡ V1 RADAR</span>
+        <span class="drb-v1-badge-live" title="Shopee Affiliate V1 Realtime API + DrBank 107฿/Day Signal Radar">
+          <span class="drb-v1-live-dot"></span>V1 RADAR
+        </span>
 
         <div class="drb-v1-control-group drb-v1-control-group--search">
-          <input type="text" id="drb-v1-inp-keyword" class="drb-v1-input" placeholder="พิมพ์ชื่อสินค้า เช่น กล่องถนอมอาหาร, โปรตีน, เซรั่ม...">
-          <button type="button" class="drb-v1-btn drb-v1-btn--primary" id="drb-v1-btn-search">
-            🔍 ค้นหา
+          <input type="text" id="drb-v1-inp-keyword" class="drb-v1-input" placeholder="ค้นหาสินค้า เช่น กล่องถนอมอาหาร, โปรตีน, เซรั่ม...">
+          <button type="button" class="drb-v1-btn drb-v1-btn--primary" id="drb-v1-btn-search" disabled title="พิมพ์คำค้นหาในช่องด้านซ้ายก่อนกดค้นหา">
+            ค้นหา
           </button>
         </div>
 
         <div class="drb-v1-control-group">
-          <select id="drb-v1-sel-sort" class="drb-v1-select" title="ลำดับการดึงจาก Shopee API">
-            <option value="2" selected>🔥 ขายดี</option>
-            <option value="5">🎁 คอม % สูง</option>
-            <option value="1">🎯 เกี่ยวข้อง</option>
-            <option value="3">💵 ราคาสูง➔ต่ำ</option>
+          <select id="drb-v1-sel-sort" class="drb-v1-select" title="ลำดับการดึงเมื่อค้นหาด้วยคำค้น">
+            <option value="2" selected>เรียง: ขายดีสุด</option>
+            <option value="5">เรียง: คอม % สูง</option>
+            <option value="1">เรียง: เกี่ยวข้อง</option>
+            <option value="3">เรียง: ราคาสูง➔ต่ำ</option>
           </select>
         </div>
 
         <div class="drb-v1-control-group">
           <label class="drb-v1-chk-label" title="กรองเฉพาะสินค้าที่มีค่าคอมพิเศษ Extra">
             <input type="checkbox" id="drb-v1-chk-extra" value="2" checked>
-            <span>🎁 Extra</span>
+            <span>Extra</span>
           </label>
           <label class="drb-v1-chk-label" title="กรองเฉพาะสินค้ารีวิวฟรี">
             <input type="checkbox" id="drb-v1-chk-free" value="5">
-            <span>🆓 รีวิวฟรี</span>
+            <span>รีวิวฟรี</span>
           </label>
         </div>
 
+        <span class="drb-v1-ctrl-divider" aria-hidden="true"></span>
+
         <div class="drb-v1-control-group">
           <select id="drb-v1-sel-extra-cat" class="drb-v1-select drb-v1-select--cat" title="เลือกดึงตามหมวดหมู่สินค้า">
-            <option value="0">💯 ข้อเสนอพิเศษทั้งหมด</option>
-            <option value="7">🔥 ค่าคอมพิเศษ (Extra Comm)</option>
-            <option value="9">😍 รับสินค้ารีวิวฟรี</option>
-            <option value="2">❤️ สินค้าขายดี</option>
-            <option disabled>👇 --- แบ่งตามหมวดหมู่ --- 👇</option>
+            <option value="0">หมวด: ข้อเสนอพิเศษทั้งหมด</option>
+            <option value="7">หมวด: ค่าคอมพิเศษ (Extra)</option>
+            <option value="9">หมวด: สินค้ารีวิวฟรี</option>
+            <option value="2">หมวด: สินค้าขายดี</option>
+            <option disabled>── แบ่งตามหมวดหมู่ ──</option>
             <option value="100630">ความงามและของใช้ส่วนตัว</option>
             <option value="100001">กลุ่มผลิตภัณฑ์เพื่อสุขภาพ</option>
             <option value="100636">เครื่องใช้ในบ้าน</option>
@@ -961,38 +982,38 @@
             <option value="100639">เครื่องเขียนและหนังสือ</option>
             <option value="100642">ตั๋วและบัตรกำนัล</option>
           </select>
-          <button type="button" class="drb-v1-btn drb-v1-btn--blue" id="drb-v1-btn-fetch-cat">
-            👁️ ดูหมวดนี้
+          <button type="button" class="drb-v1-btn drb-v1-btn--deep-blue" id="drb-v1-btn-fetch-cat" title="ดึงสินค้าตามหมวดหมู่ที่เลือกทันที (ไม่ต้องพิมพ์คำค้นหา)">
+            ⚡ ดึงหมวดนี้
           </button>
         </div>
 
         <div class="drb-v1-control-group">
           <select id="drb-v1-sel-limit" class="drb-v1-select" title="จำนวนสินค้าสูงสุดที่จะดึง">
-            <option value="60">ดึง 60 ชิ้น (3 หน้า)</option>
-            <option value="100" selected>ดึง 100 ชิ้น (5 หน้า)</option>
-            <option value="200">ดึง 200 ชิ้น (10 หน้า)</option>
-            <option value="300">ดึง 300 ชิ้น (15 หน้า)</option>
-            <option value="500">ดึง 500 ชิ้น (25 หน้า)</option>
+            <option value="60">60 ชิ้น (3 หน้า)</option>
+            <option value="100" selected>100 ชิ้น (5 หน้า)</option>
+            <option value="200">200 ชิ้น (10 หน้า)</option>
+            <option value="300">300 ชิ้น (15 หน้า)</option>
+            <option value="500">500 ชิ้น (25 หน้า)</option>
           </select>
           <select id="drb-v1-sel-delay" class="drb-v1-select" title="หน่วงเวลาต่อหน้า (20 ชิ้น) เพื่อป้องกัน Shopee เตะออก">
-            <option value="5000" selected>🛡️ หน่วง 5วิ+Jitter</option>
-            <option value="3500">⚖️ หน่วง 3.5วิ+Jitter</option>
-            <option value="2000">⚡ หน่วง 2วิ+Jitter</option>
+            <option value="5000" selected>หน่วง 5s+Jitter</option>
+            <option value="3500">หน่วง 3.5s+Jitter</option>
+            <option value="2000">หน่วง 2s+Jitter</option>
           </select>
         </div>
 
         <div class="drb-v1-header-right">
           <button type="button" class="drb-v1-btn drb-v1-btn--ghost" id="drb-v1-btn-restore" style="display:none;" title="กู้คืนรายการที่ดึงไว้ล่าสุด">
-            🕒 ล่าสุด
+            ล่าสุด
           </button>
-          <button type="button" class="drb-v1-btn drb-v1-btn--green" id="drb-v1-btn-export-xlsx" disabled title="ส่งออกไฟล์ Excel .xlsx แท้ (แยกสีตาม Signal + ตัวเลขคำนวณต่อได้ทันที)">
-            📗 Excel (.xlsx)
+          <button type="button" class="drb-v1-btn drb-v1-btn--ghost-emerald" id="drb-v1-btn-export-xlsx" disabled title="ส่งออกไฟล์ Excel .xlsx แท้ (แยกสีตาม Signal + ตัวเลขคำนวณต่อได้ทันที)">
+            Excel (.xlsx)
           </button>
           <button type="button" class="drb-v1-btn drb-v1-btn--ghost" id="drb-v1-btn-export-csv" disabled title="ส่งออกไฟล์ .csv มาตรฐาน">
-            📥 CSV
+            CSV
           </button>
-          <button type="button" class="drb-v1-btn drb-v1-btn--close" id="drb-v1-btn-close" title="ปิดตารางกลับหน้าปกติ">
-            ✕ ปิด
+          <button type="button" class="drb-v1-btn drb-v1-btn--close" id="drb-v1-btn-close" aria-label="ปิดตาราง" title="ปิดตารางกลับหน้าปกติ">
+            ✕
           </button>
         </div>
       </div>
@@ -1000,9 +1021,9 @@
       <!-- Progress Bar Banner (Shown while fetching pages) -->
       <div class="drb-v1-progress-wrap" id="drb-v1-progress-wrap" style="display:none;">
         <div class="drb-v1-progress-info">
-          <span id="drb-v1-progress-text">⏳ กำลังดึงข้อมูลจาก Shopee API...</span>
+          <span id="drb-v1-progress-text">กำลังดึงข้อมูลจาก Shopee API...</span>
           <button type="button" class="drb-v1-btn drb-v1-btn--danger-sm" id="drb-v1-btn-cancel">
-            ⏹ หยุดและแสดงข้อมูลที่โหลดแล้ว
+            หยุดและแสดงข้อมูลที่โหลดแล้ว
           </button>
         </div>
         <div class="drb-v1-progress-track">
@@ -1010,68 +1031,186 @@
         </div>
       </div>
 
-      <!-- Row 2: Ultra-Compact Signal Radar Filter Bar (34px) -->
+      <!-- Row 2: Clean Signal Radar Bar (Advanced Filter Drawer Hidden by Default) -->
       <div class="drb-v1-signal-bar">
         <div class="drb-v1-signal-pills" id="drb-v1-signal-pills">
           <button type="button" class="drb-v1-pill active" data-sig="all">
-            ทั้งหมด (<span id="drb-v1-cnt-all">0</span>)
+            ทั้งหมด <span class="drb-v1-pill-cnt" id="drb-v1-cnt-all">0</span>
           </button>
           <button type="button" class="drb-v1-pill drb-v1-pill--win" data-sig="win">
-            🔥✅ น่าลุยแอด ≥฿45 (<span id="drb-v1-cnt-win">0</span>)
+            <span class="drb-v1-dot drb-v1-dot--pass"></span>น่าลุย ≥฿45 <span class="drb-v1-pill-cnt" id="drb-v1-cnt-win">0</span>
           </button>
           <button type="button" class="drb-v1-pill drb-v1-pill--god" data-sig="god">
-            🔥 GOD ≥฿80 (<span id="drb-v1-cnt-god">0</span>)
+            <span class="drb-v1-dot drb-v1-dot--god"></span>GOD ≥฿80 <span class="drb-v1-pill-cnt" id="drb-v1-cnt-god">0</span>
           </button>
           <button type="button" class="drb-v1-pill drb-v1-pill--pass" data-sig="pass">
-            ✅ เขียว ฿45–79 (<span id="drb-v1-cnt-pass">0</span>)
+            <span class="drb-v1-dot drb-v1-dot--pass"></span>คุ้ม ฿45–79 <span class="drb-v1-pill-cnt" id="drb-v1-cnt-pass">0</span>
           </button>
           <button type="button" class="drb-v1-pill drb-v1-pill--warn" data-sig="warning">
-            ⚠️ เหลือง ฿20–44 (<span id="drb-v1-cnt-warn">0</span>)
+            <span class="drb-v1-dot drb-v1-dot--warn"></span>พอไหว ฿20–44 <span class="drb-v1-pill-cnt" id="drb-v1-cnt-warn">0</span>
           </button>
           <button type="button" class="drb-v1-pill drb-v1-pill--danger" data-sig="danger">
-            ⛔ แดง &lt;฿20/ไร้Extra (<span id="drb-v1-cnt-danger">0</span>)
+            <span class="drb-v1-dot drb-v1-dot--danger"></span>ห้ามยิง &lt;฿20 <span class="drb-v1-pill-cnt" id="drb-v1-cnt-danger">0</span>
           </button>
         </div>
 
         <div class="drb-v1-subfilters">
-          <span class="drb-v1-ctrl-label">ขาย/ด.:</span>
-          <select id="drb-v1-sel-minsold" class="drb-v1-select">
-            <option value="0" selected>ทุกยอดขาย</option>
-            <option value="50">≥ 50/ด.</option>
-            <option value="100">≥ 100/ด.</option>
-            <option value="300">🔥 ≥ 300/ด.</option>
-            <option value="1000">🚀 ≥ 1,000/ด.</option>
-          </select>
-
-          <input type="text" id="drb-v1-inp-table-filter" class="drb-v1-input drb-v1-input--sm" placeholder="🔎 กรองชื่อ/ID ในตาราง...">
-          <span class="drb-v1-showing-label" id="drb-v1-showing-label">แสดง 0 รายการ</span>
+          <button type="button" class="drb-v1-btn drb-v1-btn--colfilter" id="drb-v1-btn-toggle-adv" title="เปิด/ซ่อนเมนู Advanced Filter (Min–Max ทุกคอลัมน์ + สูตรลัด)">
+            ⚙️ Advanced Filter <span class="drb-v1-filter-count-badge" id="drb-v1-filter-count" style="display:none;">0</span>
+          </button>
+          <button type="button" class="drb-v1-btn drb-v1-btn--ghost" id="drb-v1-btn-reset-filters" style="display:none;" title="ล้างตัวกรองทั้งหมดกลับเป็นค่าเริ่มต้น">
+            ↺ ล้างกรอง
+          </button>
+          <span class="drb-v1-showing-label drb-v1-mono" id="drb-v1-showing-label">0 / 0 รายการ</span>
         </div>
       </div>
 
-      <!-- Row 3: High-Density Sortable Signal Table (15-18 rows visible per screen) -->
+      <!-- Collapsible Advanced Filter Menu Drawer (Hidden by Default) -->
+      <div class="drb-v1-adv-panel" id="drb-v1-adv-panel">
+        <div class="drb-adv-top-row">
+          <div class="drb-v1-preset-group" id="drb-v1-preset-group">
+            <span class="drb-v1-ctrl-label">Presets</span>
+            <button type="button" class="drb-v1-preset-btn" data-preset="ad107" title="คอม ≥฿45 + คืนทุน 1–2 ชิ้น + มี Extra + ขาย ≥100/ด. + สต๊อก ≥50">
+              สูตรเทพ 107฿
+            </button>
+            <button type="button" class="drb-v1-preset-btn" data-preset="impulse" title="ราคา ฿150–500 + Extra ≥8% + ขาย ≥50/ด. + สต๊อก ≥30">
+              Impulse 150–500฿
+            </button>
+            <button type="button" class="drb-v1-preset-btn" data-preset="mallhot" title="เฉพาะร้านทางการ Shopee Mall + มี Extra + ขาย ≥100/ด. + สต๊อก ≥50">
+              Mall ขายดี
+            </button>
+            <button type="button" class="drb-v1-preset-btn" data-preset="bigcomm" title="คอมสุทธิ ≥฿100/ชิ้น + ขาย ≥20/ด. + สต๊อก ≥20">
+              คอมโหด ≥฿100
+            </button>
+            <span class="drb-v1-custom-presets" id="drb-v1-custom-presets"></span>
+            <button type="button" class="drb-v1-preset-btn drb-v1-preset-btn--save" id="drb-v1-btn-save-preset" title="บันทึกค่า Filter ปัจจุบันเก็บไว้เป็นปุ่ม Preset ส่วนตัว">
+              + Save Preset
+            </button>
+            <span class="drb-v1-save-preset-form" id="drb-v1-save-preset-form" style="display:none;">
+              <input type="text" id="drb-v1-inp-preset-name" class="drb-v1-preset-name-inp" placeholder="Preset name..." maxlength="24">
+              <button type="button" class="drb-v1-preset-confirm-btn" id="drb-v1-btn-confirm-preset">Save</button>
+            </span>
+          </div>
+
+          <div class="drb-adv-kw-toggles">
+            <input type="text" id="drb-af-keyword" class="drb-adv-kw-input" placeholder="Search product / Item ID (type -word to exclude)...">
+            <label class="drb-cf-tag-chk" title="กรองเฉพาะร้านค้าทางการ Shopee Mall">
+              <input type="checkbox" id="drb-af-mall">
+              <span>Shopee Mall Only</span>
+            </label>
+          </div>
+
+          <div class="drb-adv-actions">
+            <button type="button" class="drb-v1-btn drb-v1-btn--ghost" id="drb-af-btn-clear" title="ล้างค่าตัวกรองทั้งหมด">
+              ↺ Reset
+            </button>
+            <button type="button" class="drb-v1-btn drb-v1-btn--primary" id="drb-af-btn-hide" title="พับเก็บหน้าต่าง Advanced Filter (ตัวกรองยังทำงานต่อเนื่อง)">
+              ✓ Hide
+            </button>
+          </div>
+        </div>
+
+        <div class="drb-adv-grid">
+          <div class="drb-adv-field">
+            <label class="drb-adv-label" title="ค่าคอมมิชชั่นสุทธิต่อชิ้น (บาท) หลังหักภาษี ณ ที่จ่าย 3% แล้ว">Net Comm (฿)</label>
+            <div class="drb-adv-minmax">
+              <input type="number" id="drb-af-min-netcomm" class="drb-adv-num drb-v1-mono" placeholder="Min" min="0" step="5">
+              <span class="drb-adv-sep">–</span>
+              <input type="number" id="drb-af-max-netcomm" class="drb-adv-num drb-v1-mono" placeholder="Max" min="0" step="5">
+            </div>
+          </div>
+
+          <div class="drb-adv-field">
+            <label class="drb-adv-label drb-adv-label--tip" data-tip="Break-Even Point (จุดคุ้มทุนแอด 107฿/วัน) = ต้องขายกี่ชิ้นต่อวันถึงคืนทุนค่าแอด 100฿ + VAT 7% (คำนวณจาก 107 ÷ Net Comm) • ยิ่งตัวเลขน้อย ยิ่งคืนทุนไว (แนะนำ 1–2 ชิ้น)" title="Break-Even Point (จุดคุ้มทุนแอด 107฿/วัน) = ต้องขายกี่ชิ้นต่อวันถึงคืนทุนค่าแอด 100฿ + VAT 7% (คำนวณจาก 107 ÷ Net Comm) • ยิ่งตัวเลขน้อย ยิ่งคืนทุนไว">
+              BE Point (Units) <span class="drb-v1-help-icon">?</span>
+            </label>
+            <div class="drb-adv-minmax">
+              <input type="number" id="drb-af-min-breakeven" class="drb-adv-num drb-v1-mono" placeholder="Min" min="0" step="0.5">
+              <span class="drb-adv-sep">–</span>
+              <input type="number" id="drb-af-max-breakeven" class="drb-adv-num drb-v1-mono" placeholder="Max" min="0" step="0.5">
+            </div>
+          </div>
+
+          <div class="drb-adv-field">
+            <label class="drb-adv-label" title="ราคาขายจริงหน้าเว็บ Shopee (บาท)">Price (฿)</label>
+            <div class="drb-adv-minmax">
+              <input type="number" id="drb-af-min-price" class="drb-adv-num drb-v1-mono" placeholder="Min" min="0" step="10">
+              <span class="drb-adv-sep">–</span>
+              <input type="number" id="drb-af-max-price" class="drb-adv-num drb-v1-mono" placeholder="Max" min="0" step="50">
+            </div>
+          </div>
+
+          <div class="drb-adv-field">
+            <label class="drb-adv-label" title="ยอดขายต่อเดือน (ชิ้น/เดือน)">Monthly Sold</label>
+            <div class="drb-adv-minmax">
+              <input type="number" id="drb-af-min-sold" class="drb-adv-num drb-v1-mono" placeholder="Min" min="0" step="50">
+              <span class="drb-adv-sep">–</span>
+              <input type="number" id="drb-af-max-sold" class="drb-adv-num drb-v1-mono" placeholder="Max" min="0" step="100">
+            </div>
+          </div>
+
+          <div class="drb-adv-field">
+            <label class="drb-adv-label" title="ยอดขายรวมสะสมทั้งหมด (ชิ้น)">Total Sold</label>
+            <div class="drb-adv-minmax">
+              <input type="number" id="drb-af-min-histsold" class="drb-adv-num drb-v1-mono" placeholder="Min" min="0" step="100">
+              <span class="drb-adv-sep">–</span>
+              <input type="number" id="drb-af-max-histsold" class="drb-adv-num drb-v1-mono" placeholder="Max" min="0" step="500">
+            </div>
+          </div>
+
+          <div class="drb-adv-field">
+            <label class="drb-adv-label" title="เปอร์เซ็นต์ค่าคอมพิเศษ Extra จากร้านค้า (%)">Extra Rate (%)</label>
+            <div class="drb-adv-minmax">
+              <input type="number" id="drb-af-min-extrarate" class="drb-adv-num drb-v1-mono" placeholder="Min" min="0" step="1">
+              <span class="drb-adv-sep">–</span>
+              <input type="number" id="drb-af-max-extrarate" class="drb-adv-num drb-v1-mono" placeholder="Max" min="0" step="1">
+            </div>
+          </div>
+
+          <div class="drb-adv-field">
+            <label class="drb-adv-label" title="จำนวนเงินค่าคอมพิเศษ Extra ต่อชิ้น (บาท)">Extra Comm (฿)</label>
+            <div class="drb-adv-minmax">
+              <input type="number" id="drb-af-min-extracomm" class="drb-adv-num drb-v1-mono" placeholder="Min" min="0" step="10">
+              <span class="drb-adv-sep">–</span>
+              <input type="number" id="drb-af-max-extracomm" class="drb-adv-num drb-v1-mono" placeholder="Max" min="0" step="10">
+            </div>
+          </div>
+
+          <div class="drb-adv-field">
+            <label class="drb-adv-label" title="จำนวนสต๊อกคงเหลือในคลัง (ชิ้น)">Stock</label>
+            <div class="drb-adv-minmax">
+              <input type="number" id="drb-af-min-stock" class="drb-adv-num drb-v1-mono" placeholder="Min" min="0" step="20">
+              <span class="drb-adv-sep">–</span>
+              <input type="number" id="drb-af-max-stock" class="drb-adv-num drb-v1-mono" placeholder="Max" min="0" step="50">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Clean Single-Header High-Density Sortable Signal Table -->
       <div class="drb-v1-table-container">
         <table class="drb-v1-table">
           <thead>
-            <tr>
+            <tr class="drb-v1-header-row">
               <th style="width:34px; text-align:center;">#</th>
-              <th style="width:36px; text-align:center;">รูป</th>
-              <th class="drb-v1-sortable is-sorted" data-sort="signalScore" data-label="🚦 SIGNAL (107฿)" style="width:142px;" title="คลิกเพื่อเรียงตามเกรดความน่าลุยแอด (GOD ➔ เขียว ➔ เหลือง ➔ แดง)">🚦 SIGNAL (107฿) ▼</th>
-              <th class="drb-v1-sortable" data-sort="netComm" data-label="💰 คอมสุทธิ/ชิ้น" style="width:138px; text-align:right;" title="คลิกเพื่อเรียงตามค่าคอมสุทธิหลังหักภาษี ณ ที่จ่าย 3%">💰 คอมสุทธิ/ชิ้น ⇅</th>
-              <th class="drb-v1-sortable" data-sort="breakEvenNum" data-label="🎯 คุ้มแอด 107฿" style="width:120px; text-align:center;" title="คลิกเพื่อเรียงตามจำนวนชิ้นที่ต้องขายให้คุ้มค่าแอด 107฿/วัน">🎯 คุ้มแอด 107฿ ⇅</th>
-              <th class="drb-v1-sortable" data-sort="name" data-label="สินค้า (คลิกเปิด Shopee / เรท AFF)" title="คลิกเพื่อเรียงตามชื่อสินค้า ก-ฮ / A-Z">สินค้า (คลิกเปิด Shopee / เรท AFF) ⇅</th>
-              <th class="drb-v1-sortable" data-sort="price" data-label="💵 ราคาจริง" style="width:110px; text-align:right;" title="คลิกเพื่อเรียงตามราคาขายจริง">💵 ราคาจริง ⇅</th>
-              <th class="drb-v1-sortable" data-sort="sold" data-label="📈 ขาย/เดือน" style="width:92px; text-align:right;" title="คลิกเพื่อเรียงตามยอดขายต่อเดือน (ชิ้น)">📈 ขาย/เดือน ⇅</th>
-              <th class="drb-v1-sortable" data-sort="historical_sold" data-label="📦 ขายรวม" style="width:88px; text-align:right;" title="คลิกเพื่อเรียงตามยอดขายสะสมทั้งหมด">📦 ขายรวม ⇅</th>
-              <th class="drb-v1-sortable" data-sort="extraRate" data-label="🎁 Extra %" style="width:78px; text-align:right;" title="คลิกเพื่อเรียงตามเปอร์เซ็นต์ค่าคอมพิเศษ Extra %">🎁 Extra % ⇅</th>
-              <th class="drb-v1-sortable" data-sort="extraComm" data-label="🎁 คอม Extra" style="width:105px; text-align:right;" title="คลิกเพื่อเรียงตามจำนวนเงินค่าคอมพิเศษ Extra (฿)">🎁 คอม Extra ⇅</th>
-              <th class="drb-v1-sortable" data-sort="stock" data-label="สต๊อก" style="width:72px; text-align:right;" title="คลิกเพื่อเรียงตามจำนวนสต๊อกคงเหลือ">สต๊อก ⇅</th>
-              <th style="width:128px; text-align:center;">⚡ ACTION</th>
+              <th style="width:38px; text-align:center;">IMG</th>
+              <th class="drb-v1-sortable is-sorted" data-sort="signalScore" data-label="SIGNAL" style="width:132px;" title="คลิกเพื่อเรียงตามเกรดความน่าลุยแอด (GOD ➔ คุ้ม ➔ พอไหว ➔ ห้ามยิง)">SIGNAL ▼</th>
+              <th class="drb-v1-sortable" data-sort="netComm" data-label="NET COMM" style="width:130px; text-align:right;" title="คลิกเพื่อเรียงตามค่าคอมสุทธิต่อชิ้น หลังหักภาษี ณ ที่จ่าย 3%">NET COMM ⇅</th>
+              <th class="drb-v1-sortable drb-v1-th-tip" data-sort="breakEvenNum" data-label="BE POINT" style="width:112px; text-align:center;" data-tip="Break-Even Point = ต้องขายกี่ชิ้น/วัน ถึงจะคุ้มค่าแอด 107฿ (100฿ + VAT 7%) • ยิ่งน้อยยิ่งคืนทุนไว" title="Break-Even Point (จุดคุ้มทุนแอด 107฿/วัน) = ต้องขายกี่ชิ้นต่อวันถึงจะคุ้มค่าแอด 107฿ (คำนวณจาก 107 ÷ Net Comm)">BE POINT ⇅</th>
+              <th class="drb-v1-sortable" data-sort="name" data-label="PRODUCT / SHOP" title="คลิกเพื่อเรียงตามชื่อสินค้า ก-ฮ / A-Z">PRODUCT / SHOP ⇅</th>
+              <th class="drb-v1-sortable" data-sort="price" data-label="PRICE" style="width:112px; text-align:right;" title="คลิกเพื่อเรียงตามราคาขายจริง">PRICE ⇅</th>
+              <th class="drb-v1-sortable" data-sort="sold" data-label="SOLD / MO" style="width:94px; text-align:right;" title="คลิกเพื่อเรียงตามยอดขายต่อเดือน (ชิ้น)">SOLD / MO ⇅</th>
+              <th class="drb-v1-sortable" data-sort="historical_sold" data-label="TOTAL SOLD" style="width:96px; text-align:right;" title="คลิกเพื่อเรียงตามยอดขายสะสมทั้งหมด">TOTAL SOLD ⇅</th>
+              <th class="drb-v1-sortable" data-sort="extraRate" data-label="EXTRA %" style="width:82px; text-align:right;" title="คลิกเพื่อเรียงตามเปอร์เซ็นต์ค่าคอมพิเศษ Extra %">EXTRA % ⇅</th>
+              <th class="drb-v1-sortable" data-sort="extraComm" data-label="EXTRA ฿" style="width:96px; text-align:right;" title="คลิกเพื่อเรียงตามจำนวนเงินค่าคอมพิเศษ Extra (฿)">EXTRA ฿ ⇅</th>
+              <th class="drb-v1-sortable" data-sort="stock" data-label="STOCK" style="width:78px; text-align:right;" title="คลิกเพื่อเรียงตามจำนวนสต๊อกคงเหลือ">STOCK ⇅</th>
+              <th style="width:118px; text-align:center;">ACTION</th>
             </tr>
           </thead>
           <tbody id="drb-v1-tbody">
             <tr>
               <td colspan="13" class="drb-v1-empty">
-                💡 พิมพ์คำค้นหาด้านบน หรือเลือกหมวดหมู่แล้วกด <strong>[👁️ ดูหมวดนี้]</strong> เพื่อดึงข้อมูล Realtime จาก Shopee API พร้อมคำนวณจุดคุ้มทุนแอด 107฿ ทันที!
+                พิมพ์คำค้นหาด้านบนแล้วกด <strong>[ค้นหา]</strong> หรือเลือกหมวดหมู่แล้วกดปุ่มสีน้ำเงิน <strong class="drb-v1-empty-cta-blue">[⚡ ดึงหมวดนี้]</strong> เพื่อสแกนข้อมูล Realtime พร้อมคำนวณจุดคุ้มทุนแอด 107฿
               </td>
             </tr>
           </tbody>
@@ -1081,8 +1220,202 @@
 
     document.body.appendChild(wrap);
     bindV1ScannerEvents(wrap);
+    loadAndRenderCustomPresets(wrap);
     checkAndOfferLastResultRestore(wrap);
     return wrap;
+  }
+
+  function hasAnyActiveV1Filter() {
+    if (v1State.signalFilter !== 'all') return true;
+    if (v1State.textFilter) return true;
+    if (v1State.onlyMall) return true;
+    for (const f of V1_NUMERIC_FILTER_FIELDS) {
+      if ((Number(v1State[f.key]) || 0) > 0) return true;
+    }
+    return false;
+  }
+
+  async function loadAndRenderCustomPresets(wrap) {
+    try {
+      const res = await chrome.storage.local.get([V1_CUSTOM_PRESETS_KEY]);
+      if (Array.isArray(res?.[V1_CUSTOM_PRESETS_KEY])) {
+        v1CustomPresets = res[V1_CUSTOM_PRESETS_KEY];
+      }
+    } catch (_e) {}
+    renderCustomPresetButtons(wrap);
+  }
+
+  function renderCustomPresetButtons(wrap) {
+    if (!wrap) wrap = document.getElementById('drb-v1-scanner-overlay');
+    if (!wrap) return;
+    const holder = wrap.querySelector('#drb-v1-custom-presets');
+    if (!holder) return;
+
+    holder.innerHTML = v1CustomPresets
+      .map(
+        (p) => `
+          <button type="button" class="drb-v1-preset-btn drb-v1-preset-btn--custom ${v1State.activePreset === p.id ? 'active' : ''}" data-preset="${ns.escapeHtml(p.id)}" title="Custom Preset: ${ns.escapeHtml(p.name)}">
+            <span>${ns.escapeHtml(p.name)}</span>
+            <span class="drb-v1-preset-del" data-del-preset="${ns.escapeHtml(p.id)}" title="ลบ Preset นี้">×</span>
+          </button>
+        `
+      )
+      .join('');
+  }
+
+  const V1_NUMERIC_FILTER_FIELDS = [
+    { id: '#drb-af-min-netcomm', key: 'minNetComm', isInt: false },
+    { id: '#drb-af-max-netcomm', key: 'maxNetComm', isInt: false },
+    { id: '#drb-af-min-breakeven', key: 'minBreakEven', isInt: false },
+    { id: '#drb-af-max-breakeven', key: 'maxBreakEven', isInt: false },
+    { id: '#drb-af-min-price', key: 'minPrice', isInt: false },
+    { id: '#drb-af-max-price', key: 'maxPrice', isInt: false },
+    { id: '#drb-af-min-sold', key: 'minSoldFilter', isInt: true },
+    { id: '#drb-af-max-sold', key: 'maxSoldFilter', isInt: true },
+    { id: '#drb-af-min-histsold', key: 'minHistSold', isInt: true },
+    { id: '#drb-af-max-histsold', key: 'maxHistSold', isInt: true },
+    { id: '#drb-af-min-extrarate', key: 'minExtraRate', isInt: false },
+    { id: '#drb-af-max-extrarate', key: 'maxExtraRate', isInt: false },
+    { id: '#drb-af-min-extracomm', key: 'minExtraComm', isInt: false },
+    { id: '#drb-af-max-extracomm', key: 'maxExtraComm', isInt: false },
+    { id: '#drb-af-min-stock', key: 'minStock', isInt: true },
+    { id: '#drb-af-max-stock', key: 'maxStock', isInt: true }
+  ];
+
+  function clearNumericAndTagFilters() {
+    for (const f of V1_NUMERIC_FILTER_FIELDS) {
+      v1State[f.key] = 0;
+    }
+    v1State.onlyMall = false;
+    v1State.onlyExtra = false;
+    v1State.onlyFreeSample = false;
+  }
+
+  function resetAllV1ColumnFilters(wrap) {
+    v1State.activePreset = '';
+    v1State.signalFilter = 'all';
+    v1State.textFilter = '';
+    clearNumericAndTagFilters();
+    syncV1FilterUIFromState(wrap);
+    renderV1TableRows();
+  }
+
+  function applyV1FormulaPreset(presetKey, wrap) {
+    if (v1State.activePreset === presetKey) {
+      resetAllV1ColumnFilters(wrap);
+      return;
+    }
+
+    v1State.signalFilter = 'all';
+    clearNumericAndTagFilters();
+    v1State.activePreset = presetKey;
+
+    if (presetKey === 'ad107') {
+      v1State.signalFilter = 'win';
+      v1State.minNetComm = 45;
+      v1State.maxBreakEven = 2;
+      v1State.minSoldFilter = 100;
+      v1State.minExtraRate = 1;
+      v1State.minStock = 50;
+    } else if (presetKey === 'impulse') {
+      v1State.minPrice = 150;
+      v1State.maxPrice = 500;
+      v1State.minExtraRate = 8;
+      v1State.minSoldFilter = 50;
+      v1State.minStock = 30;
+    } else if (presetKey === 'mallhot') {
+      v1State.onlyMall = true;
+      v1State.minExtraRate = 1;
+      v1State.minSoldFilter = 100;
+      v1State.minStock = 50;
+    } else if (presetKey === 'bigcomm') {
+      v1State.signalFilter = 'god';
+      v1State.minNetComm = 100;
+      v1State.minSoldFilter = 20;
+      v1State.minStock = 20;
+    } else {
+      const custom = v1CustomPresets.find((p) => p.id === presetKey);
+      if (custom && custom.filters) {
+        v1State.signalFilter = custom.filters.signalFilter || 'all';
+        v1State.textFilter = custom.filters.textFilter || '';
+        v1State.onlyMall = Boolean(custom.filters.onlyMall);
+        for (const f of V1_NUMERIC_FILTER_FIELDS) {
+          v1State[f.key] = Number(custom.filters[f.key]) || 0;
+        }
+      }
+    }
+
+    syncV1FilterUIFromState(wrap);
+    renderV1TableRows();
+  }
+
+  function syncV1FilterUIFromState(wrap) {
+    if (!wrap) wrap = document.getElementById('drb-v1-scanner-overlay');
+    if (!wrap) return;
+
+    // 1. Signal pills
+    wrap.querySelectorAll('#drb-v1-signal-pills .drb-v1-pill').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-sig') === v1State.signalFilter);
+    });
+
+    // 2. Preset buttons
+    wrap.querySelectorAll('#drb-v1-preset-group .drb-v1-preset-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-preset') === v1State.activePreset);
+    });
+
+    // 3. Numeric Min-Max inputs
+    for (const f of V1_NUMERIC_FILTER_FIELDS) {
+      const el = wrap.querySelector(f.id);
+      if (!el) continue;
+      const val = Number(v1State[f.key]) || 0;
+      el.value = val > 0 ? String(val) : '';
+      el.classList.toggle('is-active', val > 0);
+    }
+
+    // 4. Keyword & Tag checkboxes
+    const kwEl = wrap.querySelector('#drb-af-keyword');
+    if (kwEl) {
+      kwEl.value = v1State.textFilter || '';
+      kwEl.classList.toggle('is-active', Boolean(v1State.textFilter));
+    }
+
+    const bindTagState = (sel, val) => {
+      const chk = wrap.querySelector(sel);
+      if (!chk) return;
+      chk.checked = Boolean(val);
+      chk.parentElement?.classList.toggle('is-active', Boolean(val));
+    };
+    bindTagState('#drb-af-mall', v1State.onlyMall);
+
+    // 5. Count active filters (each dimension counts once)
+    let activeCount = 0;
+    if (v1State.signalFilter !== 'all') activeCount++;
+    if (v1State.minNetComm > 0 || v1State.maxNetComm > 0) activeCount++;
+    if (v1State.minBreakEven > 0 || v1State.maxBreakEven > 0) activeCount++;
+    if (v1State.textFilter) activeCount++;
+    if (v1State.onlyMall) activeCount++;
+    if (v1State.minPrice > 0 || v1State.maxPrice > 0) activeCount++;
+    if (v1State.minSoldFilter > 0 || v1State.maxSoldFilter > 0) activeCount++;
+    if (v1State.minHistSold > 0 || v1State.maxHistSold > 0) activeCount++;
+    if (v1State.minExtraRate > 0 || v1State.maxExtraRate > 0) activeCount++;
+    if (v1State.minExtraComm > 0 || v1State.maxExtraComm > 0) activeCount++;
+    if (v1State.minStock > 0 || v1State.maxStock > 0) activeCount++;
+
+    const badgeEl = wrap.querySelector('#drb-v1-filter-count');
+    if (badgeEl) {
+      badgeEl.style.display = activeCount > 0 ? 'inline-flex' : 'none';
+      badgeEl.textContent = String(activeCount);
+    }
+
+    const toggleAdvBtn = wrap.querySelector('#drb-v1-btn-toggle-adv');
+    if (toggleAdvBtn) {
+      toggleAdvBtn.classList.toggle('has-filters', activeCount > 0);
+    }
+
+    const resetBtn = wrap.querySelector('#drb-v1-btn-reset-filters');
+    if (resetBtn) {
+      resetBtn.style.display = activeCount > 0 ? 'inline-flex' : 'none';
+    }
   }
 
   function bindV1ScannerEvents(wrap) {
@@ -1091,15 +1424,31 @@
     });
 
     const kwInput = wrap.querySelector('#drb-v1-inp-keyword');
+    const searchBtn = wrap.querySelector('#drb-v1-btn-search');
+    const syncKeywordSearchBtnState = () => {
+      const hasKw = Boolean((kwInput.value || '').trim());
+      searchBtn.disabled = v1State.isLoading || !hasKw;
+      searchBtn.classList.toggle('is-ready', hasKw);
+      searchBtn.title = hasKw
+        ? 'ค้นหาสินค้าตามคำค้นหาที่พิมพ์'
+        : 'พิมพ์คำค้นหาในช่องด้านซ้ายก่อนกดค้นหา (หรือกดปุ่มสีน้ำเงิน "⚡ ดึงหมวดนี้" เพื่อดึงทั้งหมวด)';
+    };
+    syncKeywordSearchBtnState();
+    kwInput.addEventListener('input', syncKeywordSearchBtnState);
+
     kwInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        runV1Search('keyword');
+        if ((kwInput.value || '').trim()) {
+          runV1Search('keyword');
+        }
       }
     });
 
-    wrap.querySelector('#drb-v1-btn-search').addEventListener('click', () => {
-      runV1Search('keyword');
+    searchBtn.addEventListener('click', () => {
+      if ((kwInput.value || '').trim()) {
+        runV1Search('keyword');
+      }
     });
 
     wrap.querySelector('#drb-v1-btn-fetch-cat').addEventListener('click', () => {
@@ -1133,23 +1482,145 @@
     // Signal filter pills
     wrap.querySelectorAll('#drb-v1-signal-pills .drb-v1-pill').forEach((btn) => {
       btn.addEventListener('click', () => {
-        wrap.querySelectorAll('#drb-v1-signal-pills .drb-v1-pill').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
+        v1State.activePreset = '';
         v1State.signalFilter = btn.getAttribute('data-sig') || 'all';
+        syncV1FilterUIFromState(wrap);
         renderV1TableRows();
       });
     });
 
-    // Min monthly sold filter
-    wrap.querySelector('#drb-v1-sel-minsold').addEventListener('change', (e) => {
-      v1State.minSoldFilter = parseInt(e.target.value, 10) || 0;
-      renderV1TableRows();
+    // Toggle Advanced Filter Drawer (Hidden by default)
+    const toggleAdvBtn = wrap.querySelector('#drb-v1-btn-toggle-adv');
+    const advPanel = wrap.querySelector('#drb-v1-adv-panel');
+    const setAdvOpen = (open) => {
+      v1State.showAdvFilters = Boolean(open);
+      advPanel.classList.toggle('is-open', v1State.showAdvFilters);
+      toggleAdvBtn.classList.toggle('is-open', v1State.showAdvFilters);
+    };
+    toggleAdvBtn.addEventListener('click', () => setAdvOpen(!v1State.showAdvFilters));
+    wrap.querySelector('#drb-af-btn-hide').addEventListener('click', () => setAdvOpen(false));
+
+    // Quick Formula Preset buttons + Custom Presets (delegated inside #drb-v1-preset-group)
+    const presetGroup = wrap.querySelector('#drb-v1-preset-group');
+    presetGroup.addEventListener('click', async (e) => {
+      const delBtn = e.target.closest('[data-del-preset]');
+      if (delBtn) {
+        e.stopPropagation();
+        const delId = delBtn.getAttribute('data-del-preset');
+        v1CustomPresets = v1CustomPresets.filter((p) => p.id !== delId);
+        if (v1State.activePreset === delId) v1State.activePreset = '';
+        try {
+          await chrome.storage.local.set({ [V1_CUSTOM_PRESETS_KEY]: v1CustomPresets });
+        } catch (_err) {}
+        renderCustomPresetButtons(wrap);
+        syncV1FilterUIFromState(wrap);
+        ns.showToast('🗑 ลบ Preset เรียบร้อย');
+        return;
+      }
+
+      const btn = e.target.closest('.drb-v1-preset-btn[data-preset]');
+      if (!btn) return;
+      const presetKey = btn.getAttribute('data-preset') || '';
+      applyV1FormulaPreset(presetKey, wrap);
     });
 
-    // Instant text filter inside loaded rows
-    wrap.querySelector('#drb-v1-inp-table-filter').addEventListener('input', (e) => {
-      v1State.textFilter = (e.target.value || '').trim().toLowerCase();
+    // Save Custom Preset UI
+    const savePresetBtn = wrap.querySelector('#drb-v1-btn-save-preset');
+    const savePresetForm = wrap.querySelector('#drb-v1-save-preset-form');
+    const presetNameInp = wrap.querySelector('#drb-v1-inp-preset-name');
+    const confirmPresetBtn = wrap.querySelector('#drb-v1-btn-confirm-preset');
+
+    const commitSavePreset = async () => {
+      const name = (presetNameInp.value || '').trim();
+      if (!name) {
+        ns.showToast('⚠️ กรุณาตั้งชื่อ Preset ก่อนบันทึก');
+        presetNameInp.focus();
+        return;
+      }
+      if (!hasAnyActiveV1Filter()) {
+        ns.showToast('⚠️ ตั้งค่าตัวกรองอย่างน้อย 1 ช่องก่อนกด Save Preset');
+        return;
+      }
+      const snapshot = {
+        signalFilter: v1State.signalFilter,
+        textFilter: v1State.textFilter,
+        onlyMall: v1State.onlyMall
+      };
+      for (const f of V1_NUMERIC_FILTER_FIELDS) {
+        snapshot[f.key] = Number(v1State[f.key]) || 0;
+      }
+      const newPreset = {
+        id: `custom_${Date.now()}`,
+        name,
+        filters: snapshot
+      };
+      v1CustomPresets.push(newPreset);
+      v1State.activePreset = newPreset.id;
+      try {
+        await chrome.storage.local.set({ [V1_CUSTOM_PRESETS_KEY]: v1CustomPresets });
+      } catch (_err) {}
+      presetNameInp.value = '';
+      savePresetForm.style.display = 'none';
+      savePresetBtn.style.display = 'inline-flex';
+      renderCustomPresetButtons(wrap);
+      syncV1FilterUIFromState(wrap);
+      ns.showToast(`💾 บันทึก Preset "${name}" เรียบร้อย!`);
+    };
+
+    savePresetBtn.addEventListener('click', () => {
+      if (!hasAnyActiveV1Filter()) {
+        ns.showToast('⚠️ กรอกตัวเลข Min–Max หรือเลือกตัวกรองอย่างน้อย 1 ช่องก่อนกด Save Preset');
+        return;
+      }
+      savePresetBtn.style.display = 'none';
+      savePresetForm.style.display = 'inline-flex';
+      presetNameInp.focus();
+    });
+
+    confirmPresetBtn.addEventListener('click', commitSavePreset);
+    presetNameInp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitSavePreset();
+      } else if (e.key === 'Escape') {
+        savePresetForm.style.display = 'none';
+        savePresetBtn.style.display = 'inline-flex';
+      }
+    });
+
+    // Reset All Filters buttons
+    wrap.querySelector('#drb-v1-btn-reset-filters').addEventListener('click', () => {
+      resetAllV1ColumnFilters(wrap);
+    });
+    wrap.querySelector('#drb-af-btn-clear').addEventListener('click', () => {
+      resetAllV1ColumnFilters(wrap);
+    });
+
+    const onManualFilterChange = () => {
+      v1State.activePreset = '';
+      syncV1FilterUIFromState(wrap);
       renderV1TableRows();
+    };
+
+    // Bind all 16 Min-Max numeric inputs uniformly
+    for (const f of V1_NUMERIC_FILTER_FIELDS) {
+      const el = wrap.querySelector(f.id);
+      if (!el) continue;
+      el.addEventListener('input', (e) => {
+        const raw = f.isInt ? parseInt(e.target.value, 10) : parseFloat(e.target.value);
+        v1State[f.key] = Number.isFinite(raw) && raw > 0 ? raw : 0;
+        onManualFilterChange();
+      });
+    }
+
+    // Bind Keyword & Shopee Mall toggle
+    wrap.querySelector('#drb-af-keyword').addEventListener('input', (e) => {
+      v1State.textFilter = e.target.value || '';
+      onManualFilterChange();
+    });
+    wrap.querySelector('#drb-af-mall').addEventListener('change', (e) => {
+      v1State.onlyMall = Boolean(e.target.checked);
+      onManualFilterChange();
     });
 
     // Column sorting (supports all 10 sortable columns, asc & desc)
@@ -1187,7 +1658,7 @@
           minute: '2-digit'
         });
         restoreBtn.style.display = 'inline-flex';
-        restoreBtn.textContent = `🕒 ล่าสุด (${saved.rows.length} ชิ้น · ${timeStr})`;
+        restoreBtn.textContent = `ล่าสุด (${saved.rows.length} · ${timeStr})`;
       }
     } catch (_e) {}
   }
@@ -1223,6 +1694,10 @@
     if (wrap.querySelector('#drb-v1-chk-extra').checked) filterTypes.push('2');
     if (wrap.querySelector('#drb-v1-chk-free').checked) filterTypes.push('5');
 
+    // If user clicks "ค้นหา" without typing a keyword, automatically use Category/Offer Feed mode
+    // (Shopee API caps empty keyword="" + filter_types at 1 page / 20 items, whereas feed mode paginates 500+ items)
+    const effectiveMode = mode === 'keyword' && !keyword ? 'extra' : mode;
+
     // Build exact Shopee Affiliate V1 query parameters
     const baseParams = {
       client_type: '1',
@@ -1230,7 +1705,7 @@
       sort_type: sortType
     };
 
-    if (mode === 'extra') {
+    if (effectiveMode === 'extra') {
       const catNum = parseInt(extraCat, 10);
       if (catNum < 100) {
         baseParams.list_type = String(catNum);
@@ -1266,16 +1741,20 @@
 
     const seenIds = new Set();
     let page = 0;
-    let totalAvailable = maxItems;
+    let emptyNewPages = 0;
+    const isFilterHunting = hasAnyActiveV1Filter();
+    const maxRawCeiling = isFilterHunting ? Math.min(600, maxItems * 3) : maxItems;
+    let totalAvailable = maxRawCeiling;
     let partialStoppedReason = '';
 
     // Helper: sleep with 250ms ticks so user Cancel button reacts immediately
-    const cancellableJitterSleep = async (ms, currentLoaded, targetCount, nextPage) => {
+    const cancellableJitterSleep = async (ms, currentLoaded, matchedCount, targetCount, nextPage) => {
       const start = Date.now();
       while (Date.now() - start < ms) {
         if (v1State.cancelRequested) return;
         const remainSec = Math.max(0.1, ((ms - (Date.now() - start)) / 1000)).toFixed(1);
-        progText.textContent = `🛡️ โหลดแล้ว ${currentLoaded.toLocaleString()}/${targetCount.toLocaleString()} ชิ้น — พักหน่วงเวลาเนียนเป็นคนจริง ${remainSec}s ก่อนดึงหน้า ${nextPage}...`;
+        const matchTxt = isFilterHunting ? ` (ตรง Filter ${matchedCount} ชิ้น)` : '';
+        progText.textContent = `🛡️ โหลดแล้ว ${currentLoaded.toLocaleString()}${matchTxt} — พักหน่วงเวลาเนียนเป็นคนจริง ${remainSec}s ก่อนดึงหน้า ${nextPage}...`;
         await new Promise((r) => setTimeout(r, 250));
       }
     };
@@ -1324,25 +1803,36 @@
           break;
         }
 
-        if (typeof json?.data?.total_count === 'number' && json.data.total_count > 0) {
-          totalAvailable = json.data.total_count;
+        const apiTotal = Number(json?.data?.total_count) || 0;
+        if (apiTotal > 20) {
+          totalAvailable = apiTotal;
         }
 
+        let addedThisPage = 0;
         for (const rawItem of list) {
           const row = mapRawOfferItemToRow(rawItem);
           if (row.itemid && !seenIds.has(row.itemid)) {
             seenIds.add(row.itemid);
             v1State.rows.push(row);
+            addedThisPage++;
           }
         }
+        emptyNewPages = addedThisPage === 0 ? emptyNewPages + 1 : 0;
 
         page++;
-        const targetCount = Math.min(totalAvailable, maxItems);
-        const pct = targetCount > 0 ? Math.min(100, Math.round((v1State.rows.length / targetCount) * 100)) : 100;
-        progBar.style.width = `${pct}%`;
-        progText.textContent = `⚡ ดึงข้อมูลแล้ว ${v1State.rows.length.toLocaleString()} / ${targetCount.toLocaleString()} รายการ (หน้า ${page}) — เซฟลงแคชอัตโนมัติ...`;
-
         renderV1TableRows();
+
+        const matchedNow = getFilteredAndSortedV1Rows().length;
+        const targetCount = Math.min(totalAvailable, maxRawCeiling);
+        const pct = isFilterHunting
+          ? Math.min(100, Math.round((Math.max(matchedNow / maxItems, v1State.rows.length / targetCount)) * 100))
+          : targetCount > 0
+          ? Math.min(100, Math.round((v1State.rows.length / targetCount) * 100))
+          : 100;
+        progBar.style.width = `${pct}%`;
+        progText.textContent = isFilterHunting
+          ? `⚡ สแกนสะสม ${v1State.rows.length.toLocaleString()} ชิ้น ➔ ตรงเงื่อนไข Filter ${matchedNow.toLocaleString()} ชิ้น (หน้า ${page})...`
+          : `⚡ ดึงข้อมูลแล้ว ${v1State.rows.length.toLocaleString()} / ${targetCount.toLocaleString()} รายการ (หน้า ${page}) — เซฟลงแคชอัตโนมัติ...`;
 
         // Save partial result on EVERY page (Shop Tool onProgress pattern) so zero data is ever lost
         if (v1State.rows.length > 0) {
@@ -1356,13 +1846,17 @@
             .catch(() => {});
         }
 
-        if (v1State.rows.length >= maxItems || v1State.rows.length >= totalAvailable || list.length < 20) {
+        const reachedTarget = isFilterHunting
+          ? matchedNow >= maxItems || v1State.rows.length >= maxRawCeiling
+          : v1State.rows.length >= maxItems;
+
+        if (reachedTarget || emptyNewPages >= 2 || page >= 50) {
           break;
         }
 
         // Human Jittered Delay (Shop Tool default = 5,000ms + random 350..1450ms jitter)
         const jitterMs = Math.floor(Math.random() * 1100) + 350;
-        await cancellableJitterSleep(baseDelayMs + jitterMs, v1State.rows.length, targetCount, page + 1);
+        await cancellableJitterSleep(baseDelayMs + jitterMs, v1State.rows.length, matchedNow, targetCount, page + 1);
       }
 
       if (v1State.rows.length > 0) {
@@ -1383,7 +1877,9 @@
     } finally {
       v1State.isLoading = false;
       progWrap.style.display = 'none';
-      btnSearch.disabled = false;
+      const hasKwNow = Boolean((wrap.querySelector('#drb-v1-inp-keyword')?.value || '').trim());
+      btnSearch.disabled = !hasKwNow;
+      btnSearch.classList.toggle('is-ready', hasKwNow);
       btnCat.disabled = false;
       renderV1TableRows();
     }
@@ -1427,17 +1923,56 @@
     const exportXlsxBtn = document.getElementById('drb-v1-btn-export-xlsx');
     if (exportXlsxBtn) exportXlsxBtn.disabled = all.length === 0;
 
-    // Filter rows
+    // Parse positive and negative tokens from v1State.textFilter (e.g. "เซรั่ม -ซอง -เคส")
+    const rawKw = (v1State.textFilter || '').trim().toLowerCase();
+    const kwTokens = rawKw ? rawKw.split(/\s+/).filter(Boolean) : [];
+    const posTokens = kwTokens.filter((t) => !t.startsWith('-') || t.length === 1);
+    const negTokens = kwTokens.filter((t) => t.startsWith('-') && t.length > 1).map((t) => t.slice(1));
+
+    // Shared range checker for all 8 Min-Max numeric filters
+    const inRange = (val, minVal, maxVal) => {
+      const n = Number(val) || 0;
+      if (minVal > 0 && n < minVal) return false;
+      if (maxVal > 0 && n > maxVal) return false;
+      return true;
+    };
+
+    // Filter rows across all Signal, Tag, Keyword, and 8 Min-Max numeric criteria
     const filtered = all.filter((r) => {
+      // 1. Signal Tier Filter
       if (v1State.signalFilter === 'win' && r.tier !== 'god' && r.tier !== 'pass') return false;
       if (v1State.signalFilter === 'god' && r.tier !== 'god') return false;
       if (v1State.signalFilter === 'pass' && r.tier !== 'pass') return false;
       if (v1State.signalFilter === 'warning' && r.tier !== 'warning') return false;
       if (v1State.signalFilter === 'danger' && r.tier !== 'danger') return false;
-      if (v1State.minSoldFilter > 0 && r.sold < v1State.minSoldFilter) return false;
-      if (v1State.textFilter && !r.name.toLowerCase().includes(v1State.textFilter) && !r.itemid.includes(v1State.textFilter)) {
-        return false;
+
+      // 2. Store & Program Toggles + Keyword / Negative Keywords
+      if (v1State.onlyMall && !r.isMall) return false;
+      if (v1State.onlyExtra && (Number(r.extraRate) || 0) <= 0) return false;
+      if (v1State.onlyFreeSample && !r.isFreeSample) return false;
+      if (posTokens.length > 0 || negTokens.length > 0) {
+        const hay = `${String(r.name || '').toLowerCase()} ${String(r.itemid || '').toLowerCase()}`;
+        for (const pt of posTokens) {
+          if (!hay.includes(pt)) return false;
+        }
+        for (const nt of negTokens) {
+          if (hay.includes(nt)) return false;
+        }
       }
+
+      // 3. All 8 Numeric Min-Max Ranges
+      if (!inRange(r.netComm, v1State.minNetComm, v1State.maxNetComm)) return false;
+      if (v1State.minBreakEven > 0 || v1State.maxBreakEven > 0) {
+        if ((Number(r.extraRate) || 0) <= 0) return false;
+        if (!inRange(r.breakEvenNum, v1State.minBreakEven, v1State.maxBreakEven)) return false;
+      }
+      if (!inRange(r.price, v1State.minPrice, v1State.maxPrice)) return false;
+      if (!inRange(r.sold, v1State.minSoldFilter, v1State.maxSoldFilter)) return false;
+      if (!inRange(r.historical_sold, v1State.minHistSold, v1State.maxHistSold)) return false;
+      if (!inRange(r.extraRate, v1State.minExtraRate, v1State.maxExtraRate)) return false;
+      if (!inRange(r.extraComm, v1State.minExtraComm, v1State.maxExtraComm)) return false;
+      if (!inRange(r.stock, v1State.minStock, v1State.maxStock)) return false;
+
       return true;
     });
 
@@ -1466,17 +2001,19 @@
 
     const showingEl = document.getElementById('drb-v1-showing-label');
     if (showingEl) {
-      showingEl.textContent = `แสดง ${filtered.length.toLocaleString()} / ${all.length.toLocaleString()} รายการ`;
+      showingEl.textContent = `${filtered.length.toLocaleString()} / ${all.length.toLocaleString()} รายการ`;
     }
 
     return filtered;
   }
 
   function getCompactSignalBadgeText(r) {
-    if (r.tier === 'god') return '🔥 GOD (1 ชิ้นคุ้ม!)';
-    if (r.tier === 'pass') return '✅ ไฟเขียว (1.5-2 ชิ้น)';
-    if (r.tier === 'warning') return '⚠️ ไฟเหลือง (3-5 ชิ้น)';
-    return r.extraRate <= 0 ? '⛔ ห้ามยิง (ไร้ Extra)' : '⛔ ไฟแดง (คอมต่ำ)';
+    if (r.tier === 'god') return '<span class="drb-v1-sig-dot"></span>GOD · 1 ชิ้น';
+    if (r.tier === 'pass') return '<span class="drb-v1-sig-dot"></span>คุ้ม · 1.5–2 ชิ้น';
+    if (r.tier === 'warning') return '<span class="drb-v1-sig-dot"></span>พอไหว · 3–5 ชิ้น';
+    return r.extraRate <= 0
+      ? '<span class="drb-v1-sig-dot"></span>ไร้ Extra'
+      : '<span class="drb-v1-sig-dot"></span>คอมต่ำ';
   }
 
   function renderV1TableRows() {
@@ -1490,10 +2027,10 @@
           <td colspan="13" class="drb-v1-empty">
             ${
               v1State.isLoading
-                ? '⏳ กำลังดึงข้อมูลจาก Shopee API...'
+                ? 'กำลังดึงข้อมูลจาก Shopee API...'
                 : v1State.rows.length > 0
-                ? 'ไม่พบสินค้าที่ตรงกับตัวกรอง Signal / ยอดขายขั้นต่ำที่เลือก (ลองปรับตัวกรองด้านบน)'
-                : '💡 พิมพ์คำค้นหาด้านบน หรือเลือกหมวดหมู่แล้วกด <strong>[👁️ ดูหมวดนี้]</strong> เพื่อดึงข้อมูล Realtime พร้อมคำนวณจุดคุ้มทุนแอด 107฿'
+                ? 'ไม่พบสินค้าที่ตรงกับตัวกรองที่เลือก — กด [↺ ล้างกรอง] เพื่อดูรายการทั้งหมด'
+                : 'พิมพ์คำค้นหาด้านบนแล้วกด <strong>[ค้นหา]</strong> หรือเลือกหมวดหมู่แล้วกดปุ่มสีน้ำเงิน <strong class="drb-v1-empty-cta-blue">[⚡ ดึงหมวดนี้]</strong> เพื่อสแกนข้อมูล Realtime พร้อมคำนวณจุดคุ้มทุนแอด 107฿'
             }
           </td>
         </tr>
@@ -1531,8 +2068,8 @@
 
         return `
           <tr class="drb-v1-row" data-tier="${r.tier}" data-itemid="${r.itemid}">
-            <td class="drb-v1-td-center drb-v1-muted">${idx + 1}</td>
-            <td class="drb-v1-td-center">
+            <td class="drb-v1-td-center drb-v1-muted drb-v1-mono">${idx + 1}</td>
+            <td class="drb-v1-td-center drb-v1-td-thumb">
               ${
                 r.imageUrl
                   ? `<img src="${r.imageUrl}_tn" class="drb-v1-thumb" loading="lazy" alt="">`
@@ -1545,37 +2082,37 @@
               </span>
             </td>
             <td class="drb-v1-td-right drb-v1-nowrap" title="รวม ${r.effectiveRate}% (Base ${r.baseRate}% + Extra ${r.extraRate}%) หักภาษี ณ ที่จ่าย 3% แล้ว">
-              <span class="drb-v1-netcomm" data-tier="${r.tier}">${r.tierEmoji} ${netCommLabel}</span>
-              <span class="drb-v1-rate-chip">${r.effectiveRate}%</span>
+              <span class="drb-v1-netcomm drb-v1-mono" data-tier="${r.tier}">${netCommLabel}</span>
+              <span class="drb-v1-rate-chip drb-v1-mono">${r.effectiveRate}%</span>
             </td>
             <td class="drb-v1-td-center drb-v1-nowrap" title="ต้องขาย ${r.breakEvenUnits} ชิ้น (${r.breakEvenOrders} ออเดอร์) เพื่อคืนทุนค่าแอด 107฿/วัน">
-              <span class="drb-v1-breakeven" data-tier="${r.tier}">${r.breakEvenUnits} ชิ้น</span>
-              <span class="drb-v1-inline-sub">(${r.breakEvenOrders} ออเดอร์)</span>
+              <span class="drb-v1-breakeven drb-v1-mono" data-tier="${r.tier}">${r.breakEvenUnits} ชิ้น</span>
+              <span class="drb-v1-inline-sub drb-v1-mono">(${r.breakEvenOrders} ออเดอร์)</span>
             </td>
             <td class="drb-v1-td-product">
               <div class="drb-v1-title-wrap">
                 ${r.isMall ? '<span class="drb-v1-tag drb-v1-tag--mall">Mall</span>' : ''}
-                ${r.isFreeSample ? '<span class="drb-v1-tag drb-v1-tag--free">🆓ฟรี</span>' : ''}
+                ${r.isFreeSample ? '<span class="drb-v1-tag drb-v1-tag--free">ฟรี</span>' : ''}
                 <a href="${r.productLink}" target="_blank" rel="noopener" class="drb-v1-prod-link" title="${String(r.name || '').replace(/"/g, '&quot;')} (ID: ${r.itemid})">${r.name}</a>
-                <a href="${r.affUrl}" target="_blank" rel="noopener" class="drb-v1-mini-link" title="เปิดหน้าข้อเสนอ Shopee Affiliate (ID: ${r.itemid})">📊AFF</a>
+                <a href="${r.affUrl}" target="_blank" rel="noopener" class="drb-v1-mini-link" title="เปิดหน้าข้อเสนอ Shopee Affiliate (ID: ${r.itemid})">AFF ↗</a>
               </div>
             </td>
-            <td class="drb-v1-td-right drb-v1-bold drb-v1-nowrap">${priceLabel}</td>
-            <td class="drb-v1-td-right drb-v1-nowrap">
+            <td class="drb-v1-td-right drb-v1-bold drb-v1-nowrap drb-v1-mono">${priceLabel}</td>
+            <td class="drb-v1-td-right drb-v1-nowrap drb-v1-mono">
               <span class="drb-v1-sold ${soldBadgeClass}">${r.sold.toLocaleString()}</span>
             </td>
-            <td class="drb-v1-td-right drb-v1-muted drb-v1-nowrap">${r.historical_sold.toLocaleString()}</td>
-            <td class="drb-v1-td-right drb-v1-nowrap">
+            <td class="drb-v1-td-right drb-v1-muted drb-v1-nowrap drb-v1-mono">${r.historical_sold.toLocaleString()}</td>
+            <td class="drb-v1-td-right drb-v1-nowrap drb-v1-mono">
               <span class="${r.extraRate > 0 ? 'drb-v1-extra-pct' : 'drb-v1-muted'}">${r.extraRate > 0 ? `+${r.extraRate}%` : '0%'}</span>
             </td>
-            <td class="drb-v1-td-right drb-v1-nowrap">${extraCommLabel}</td>
-            <td class="drb-v1-td-right drb-v1-nowrap ${r.stock < 20 ? 'drb-v1-low-stock' : 'drb-v1-muted'}">${r.stock.toLocaleString()}</td>
+            <td class="drb-v1-td-right drb-v1-nowrap drb-v1-mono">${extraCommLabel}</td>
+            <td class="drb-v1-td-right drb-v1-nowrap drb-v1-mono ${r.stock < 20 ? 'drb-v1-low-stock' : 'drb-v1-muted'}">${r.stock.toLocaleString()}</td>
             <td class="drb-v1-td-actions">
               <button type="button" class="drb-v1-act-btn drb-v1-act-btn--pick" data-idx="${idx}" title="ดึงเข้า Side Panel & ส่งไปเว็บ aff.doctorbankonline.com">
-                ⚡ เลือก
+                เลือก
               </button>
               <button type="button" class="drb-v1-act-btn drb-v1-act-btn--link" data-idx="${idx}" title="เจนลิงก์ s.shopee.co.th อัตโนมัติผ่าน GraphQL พร้อมก๊อปลง Clipboard">
-                🔗 ลิงก์
+                ลิงก์
               </button>
             </td>
           </tr>
