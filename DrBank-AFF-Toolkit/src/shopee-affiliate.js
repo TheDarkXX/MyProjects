@@ -1150,6 +1150,13 @@
       body
     });
 
+    if (res?.data?.error === 90309999) {
+      const secErr = new Error(
+        'Shopee ขอตรวจสอบความปลอดภัย (90309999) — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+      );
+      secErr.securityCheck = true;
+      throw secErr;
+    }
     const list = res?.data?.data?.batchCustomLink;
     if (!Array.isArray(list)) return [];
     return batchItems.map((it, idx) => {
@@ -3122,19 +3129,19 @@
           <span style="background:#1e3a8a;color:#dbeafe;border:1px solid #2563eb;font-weight:800;padding:4px 9px;border-radius:8px;font-size:12px;">🌉 POOL BRIDGE</span>
           <div>
             <div style="font-weight:700;font-size:14px;color:#fff;">
-              คลังสินค้าคัดเกรดแคมเปญ <code style="color:#93c5fd;background:#172554;border:1px solid #1e3a8a;padding:2px 6px;border-radius:4px;">16NOV26FBRAD</code> (<code id="drb-pool-range-txt" style="color:#fca5a5;">aidrb1611a001..a373</code>)
+              คลังสินค้าคัดเกรดแคมเปญ <code style="color:#93c5fd;background:#172554;border:1px solid #1e3a8a;padding:2px 6px;border-radius:4px;">16NOV26FBRAD</code> (<code id="drb-pool-range-txt" style="color:#fca5a5;">Master + Spy Pool</code>)
             </div>
             <div id="drb-pool-status-txt" style="font-size:12px;color:#94a3b8;margin-top:2px;">
-              กำลังเช็กจำนวนคิวรอแปลงลิงก์จาก aff.doctorbankonline.com...
+              กำลังเช็กจำนวนคิวรอแปลงลิงก์ + ดึงค่าคอมจาก aff.doctorbankonline.com...
             </div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <button type="button" id="drb-pool-btn-run" style="background:linear-gradient(180deg,#1d4ed8 0%,#1e3a8a 100%);color:#fff;font-weight:700;border:1px solid #2563eb;border-radius:9px;padding:9px 15px;cursor:pointer;font-size:13px;box-shadow:0 4px 12px rgba(29,78,216,0.35);">
-            🚀 แปลงลิงก์ที่รอใน Pool + ส่งเข้า Web UI
+            🚀 ดึงค่าคอม + แปลงลิงก์ที่รอ ➔ Web UI
           </button>
-          <button type="button" id="drb-pool-btn-force" title="บังคับแปลงใหม่ครบทั้ง Pool" style="background:linear-gradient(180deg,#991b1b 0%,#7f1d1d 100%);color:#fef2f2;font-weight:700;border:1px solid #b91c1c;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;box-shadow:0 4px 12px rgba(153,27,27,0.35);">
-            🔄 แปลงซ้ำทั้ง Pool
+          <button type="button" id="drb-pool-btn-force" title="บังคับดึงเรทจริง + แปลงลิงก์ใหม่ครบทั้ง Pool" style="background:linear-gradient(180deg,#991b1b 0%,#7f1d1d 100%);color:#fef2f2;font-weight:700;border:1px solid #b91c1c;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;box-shadow:0 4px 12px rgba(153,27,27,0.35);">
+            🔄 รีเฟรชทั้ง Pool
           </button>
           <button type="button" id="drb-pool-btn-csv" style="display:none;background:#172554;color:#dbeafe;font-weight:700;border:1px solid #1d4ed8;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;">
             📥 โหลด CSV สำรอง
@@ -3156,7 +3163,7 @@
       bar.style.display = 'none';
     });
 
-    // Check status on load
+    // Check status on load (Master Pool + Spy Pool breakdown)
     ns.sendMessage('FETCH_POOL_PENDING', { force: false })
       .then((res) => {
         const stEl = bar.querySelector('#drb-pool-status-txt');
@@ -3165,20 +3172,30 @@
         const rangeEl = bar.querySelector('#drb-pool-range-txt');
         if (!stEl || !res) return;
         const total = res.totalPool || 0;
+        const masterCount = res.masterCount ?? total;
+        const spyCount = res.spyCount ?? 0;
         const done = res.completedCount || 0;
         const pend = res.pendingCount || 0;
+        const pendingItems = Array.isArray(res.items) ? res.items : [];
+        const pendSpy = pendingItems.filter((x) => x.pool_source === 'spy').length;
+        const pendMaster = Math.max(0, pend - pendSpy);
+        const pendParts = [];
+        if (pendMaster > 0) pendParts.push(`Master ${pendMaster}`);
+        if (pendSpy > 0) pendParts.push(`Spy ${pendSpy}`);
+        const pendBreakdown = pendParts.length ? ` (${pendParts.join(' + ')})` : '';
+
         if (rangeEl && total > 0) {
-          rangeEl.textContent = `aidrb1611a001..a${String(total).padStart(3, '0')}`;
+          rangeEl.textContent = spyCount > 0 ? `Master ${masterCount} + Spy ${spyCount}` : `aidrb1611a001..a${String(total).padStart(3, '0')}`;
         }
         if (forceBtn && total > 0) {
-          forceBtn.textContent = `🔄 แปลงซ้ำทั้ง ${total}`;
+          forceBtn.textContent = `🔄 รีเฟรชทั้ง ${total}`;
         }
         if (pend === 0 && total > 0) {
-          stEl.innerHTML = `<span style="color:#93c5fd;font-weight:700;">✅ แปลงลิงก์ s.shopee.co.th ครบทั้ง ${total}/${total} รายการแล้ว!</span>`;
-          if (runBtn) runBtn.textContent = `✅ แปลงครบ ${total}/${total} แล้ว`;
+          stEl.innerHTML = `<span style="color:#93c5fd;font-weight:700;">✅ ครบทั้ง ${total}/${total} รายการแล้ว (Master ${masterCount} · Spy ${spyCount}) — มีลิงก์ s.shopee.co.th + ค่าคอมครบ!</span>`;
+          if (runBtn) runBtn.textContent = `✅ ครบ ${total}/${total} แล้ว`;
         } else {
-          stEl.innerHTML = `พบคิวทั้งหมด <b style="color:#fff;">${total} รายการ</b> · แปลงเสร็จแล้ว <b style="color:#93c5fd;">${done}</b> · รอแปลงใหม่ <b style="color:#fca5a5;">${pend} รายการ</b>`;
-          if (runBtn) runBtn.textContent = `🚀 แปลงลิงก์ที่รอ (${pend} ตัว) + ส่งเข้า Web UI`;
+          stEl.innerHTML = `คิวรวม <b style="color:#fff;">${total}</b> (Master ${masterCount} · Spy ${spyCount}) · เสร็จแล้ว <b style="color:#93c5fd;">${done}</b> · รอแปลง/ดึงคอม <b style="color:#fca5a5;">${pend} ตัว${pendBreakdown}</b>`;
+          if (runBtn) runBtn.textContent = `🚀 ดึงค่าคอม+แปลงลิงก์ที่รอ (${pend} ตัว) ➔ Web UI`;
         }
       })
       .catch((err) => {
@@ -3187,6 +3204,80 @@
       });
 
     return bar;
+  }
+
+  async function enrichPoolChunkWithOffers(chunk, forceAll, stEl) {
+    const enriched = [];
+    for (let idx = 0; idx < chunk.length; idx++) {
+      const it = chunk[idx];
+      const cleanItemId = String(it.item_id || it.itemId || '').replace(/[^0-9]/g, '');
+      const needsCommission =
+        Boolean(cleanItemId) &&
+        (forceAll || Number(it.net_comm_baht || 0) <= 0 || it.pool_source === 'spy' || Number(it.price || 0) <= 0);
+
+      let merged = {
+        ...it,
+        item_id: cleanItemId || String(it.item_id || ''),
+        shopee_url:
+          it.shopee_url ||
+          it.tagged_url ||
+          (it.shop_id && cleanItemId ? `https://shopee.co.th/product/${it.shop_id}/${cleanItemId}` : '')
+      };
+
+      if (needsCommission) {
+        if (stEl) {
+          stEl.innerHTML = `⏳ กำลังดึงเรท Social Media จริง <code style="color:#93c5fd;">/api/v3/offer/product</code> (${it.sku_code || cleanItemId}) [${idx + 1}/${chunk.length}]...`;
+        }
+        const offer = await fetchSingleOfferDetailViaMainBridge(cleanItemId).catch(() => null);
+        if (offer?.securityCheck) {
+          const secErr = new Error(
+            offer.error || 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+          );
+          secErr.securityCheck = true;
+          throw secErr;
+        }
+        if (offer) {
+          const baseRate = Number(offer.baseRate) || 0;
+          const extraRate = Number(offer.extraRate) || 0;
+          const resolvedPrice = Number(offer.price) > 0 ? Number(offer.price) : Number(it.price) || 0;
+          const comm = ns.calculateCommission({
+            price: resolvedPrice,
+            baseRate,
+            extraRate,
+            capTHB: 250,
+            whtRate: 3.0,
+            realDailyAdCostTHB: 107
+          });
+          const netComm = +comm.netComm.toFixed(2);
+          const soldCount = Number(offer.soldCount) || Number(it.sold_monthly) || 0;
+
+          merged = {
+            ...merged,
+            title: offer.title || merged.title || '',
+            shopee_url:
+              merged.shopee_url ||
+              offer.cleanUrl ||
+              (offer.shopId && cleanItemId ? `https://shopee.co.th/product/${offer.shopId}/${cleanItemId}` : ''),
+            price: resolvedPrice,
+            baseRate,
+            extraRate,
+            base_comm_pct: baseRate,
+            extra_comm_pct: extraRate,
+            estimatedCommission: netComm,
+            net_comm_baht: netComm,
+            soldCount,
+            sold_monthly: soldCount
+          };
+        }
+
+        if (idx + 1 < chunk.length) {
+          await new Promise((r) => setTimeout(r, 180));
+        }
+      }
+
+      enriched.push(merged);
+    }
+    return enriched;
   }
 
   async function runCampaignPoolBridge(forceAll = false) {
@@ -3209,6 +3300,7 @@
     if (progWrap) progWrap.style.display = 'block';
     if (progBar) progBar.style.width = '3%';
 
+    let pendingSaveBuffer = [];
     try {
       const poolRes = await ns.sendMessage('FETCH_POOL_PENDING', { force: forceAll });
       const items = Array.isArray(poolRes?.items) ? poolRes.items : [];
@@ -3216,7 +3308,7 @@
       if (!items.length) {
         const msg =
           poolRes?.totalPool > 0 && !forceAll
-            ? `✅ แปลงลิงก์ s.shopee.co.th ครบทั้ง ${poolRes.totalPool}/${poolRes.totalPool} รายการแล้ว (หากต้องการแปลงซ้ำกดปุ่มสีแดง)`
+            ? `✅ ครบทั้ง ${poolRes.totalPool}/${poolRes.totalPool} รายการแล้ว (Master ${poolRes.masterCount ?? 0} + Spy ${poolRes.spyCount ?? 0})`
             : '⚠️ ไม่พบรายการสินค้าที่รอแปลงลิงก์ใน Pool บนเซิร์ฟเวอร์';
         if (stEl) stEl.textContent = msg;
         ns.showToast(msg);
@@ -3227,8 +3319,8 @@
       const total = items.length;
       const batchSize = 5;
       const convertedAll = [];
-      let pendingSaveBuffer = [];
       let successCount = 0;
+      let rateSyncedCount = 0;
 
       for (let i = 0; i < total; i += batchSize) {
         const chunk = items.slice(i, i + batchSize);
@@ -3236,27 +3328,80 @@
         const totalBatches = Math.ceil(total / batchSize);
         const pct = Math.min(98, Math.round(((i + chunk.length) / total) * 100));
 
-        if (stEl) {
-          stEl.innerHTML = `⏳ กำลังยิง GraphQL <code style="color:#93c5fd;">batchCustomLink</code> ชุดที่ <b>${batchNum}/${totalBatches}</b> (${Math.min(i + batchSize, total)}/${total})...`;
-        }
         if (runBtn) runBtn.textContent = `⏳ ${Math.min(i + batchSize, total)}/${total} (${pct}%)`;
         if (progBar) progBar.style.width = `${pct}%`;
 
-        const batchResults = await batchGenerateShopeeShortLinks(chunk);
-        const validResults = batchResults.filter((r) => r.short_link && r.short_link.startsWith('http'));
-        successCount += validResults.length;
+        // Step 1: Fetch Social Media Commission + Price + Sold Count from /api/v3/offer/product
+        const enrichedChunk = await enrichPoolChunkWithOffers(chunk, forceAll, stEl);
+
+        if (stEl) {
+          stEl.innerHTML = `⏳ กำลังยิง GraphQL <code style="color:#93c5fd;">batchCustomLink</code> ชุดที่ <b>${batchNum}/${totalBatches}</b> (${Math.min(i + batchSize, total)}/${total})...`;
+        }
+
+        // Step 2: Generate s.shopee.co.th shortlinks for items needing one
+        const needShortlinkItems = enrichedChunk.filter(
+          (it) => it.shopee_url && (forceAll || !it.short_link || !String(it.short_link).startsWith('https://s.shopee.co.th'))
+        );
+        const generatedList = needShortlinkItems.length > 0 ? await batchGenerateShopeeShortLinks(needShortlinkItems) : [];
+        const genByKey = new Map();
+        generatedList.forEach((g) => {
+          const key = `${g.sub_id2 || ''}|${g.item_id || ''}`;
+          genByKey.set(key, g);
+        });
+
+        // Step 3: Merge Shortlink + Real Social Media Commission Metrics
+        const validResults = [];
+        for (const it of enrichedChunk) {
+          const key = `${it.sub_id2 || ''}|${it.item_id || ''}`;
+          const gen = genByKey.get(key);
+          const finalShortLink =
+            gen?.short_link && gen.short_link.startsWith('http')
+              ? gen.short_link
+              : it.short_link && String(it.short_link).startsWith('http')
+              ? it.short_link
+              : '';
+          const finalLongLink = gen?.long_link || it.tagged_url || '';
+          const hasValidLink = Boolean(finalShortLink);
+          const hasValidComm = Number(it.net_comm_baht || 0) > 0 || Number(it.price || 0) > 0;
+          if (!hasValidLink && !hasValidComm) continue;
+
+          if (hasValidLink) successCount++;
+          if (Number(it.net_comm_baht || 0) > 0) rateSyncedCount++;
+
+          validResults.push({
+            sub_id1: it.sub_id1 || '16NOV26FBRAD',
+            sub_id2: it.sub_id2 || '',
+            sku_code: it.sku_code || '',
+            item_id: it.item_id || '',
+            title: it.title || '',
+            shopee_url: it.shopee_url || '',
+            short_link: finalShortLink,
+            long_link: finalLongLink,
+            pool_source: it.pool_source || 'master',
+            price: Number(it.price) || 0,
+            baseRate: Number(it.baseRate ?? it.base_comm_pct) || 0,
+            extraRate: Number(it.extraRate ?? it.extra_comm_pct) || 0,
+            base_comm_pct: Number(it.base_comm_pct ?? it.baseRate) || 0,
+            extra_comm_pct: Number(it.extra_comm_pct ?? it.extraRate) || 0,
+            estimatedCommission: Number(it.estimatedCommission ?? it.net_comm_baht) || 0,
+            net_comm_baht: Number(it.net_comm_baht ?? it.estimatedCommission) || 0,
+            soldCount: Number(it.soldCount ?? it.sold_monthly) || 0,
+            sold_monthly: Number(it.sold_monthly ?? it.soldCount) || 0
+          });
+        }
+
         convertedAll.push(...validResults);
         pendingSaveBuffer.push(...validResults);
 
         // Flush to Web UI every 15 items or at the end
         if (pendingSaveBuffer.length >= 15 || i + batchSize >= total) {
           if (pendingSaveBuffer.length > 0) {
-            await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: pendingSaveBuffer }).catch(() => {});
+            await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: pendingSaveBuffer });
             pendingSaveBuffer = [];
           }
         }
 
-        // Polite 260ms pause between GraphQL calls
+        // Polite 260ms pause between batches to avoid Shopee Security Check (90309999)
         if (i + batchSize < total) {
           await new Promise((r) => setTimeout(r, 260));
         }
@@ -3265,22 +3410,27 @@
       lastPoolConvertedList = convertedAll;
       if (progBar) progBar.style.width = '100%';
       if (stEl) {
-        stEl.innerHTML = `<span style="color:#93c5fd;font-weight:800;">🎉 สำเร็จ! แปลงลิงก์ s.shopee.co.th ครบ ${successCount}/${total} รายการ และบันทึกเข้า aff.doctorbankonline.com เรียบร้อยแล้ว!</span>`;
+        stEl.innerHTML = `<span style="color:#93c5fd;font-weight:800;">🎉 สำเร็จ! แปลงลิงก์ ${successCount}/${total} รายการ · อัปเดตค่าคอมจริง ${rateSyncedCount} ตัว ➔ aff.doctorbankonline.com แล้ว!</span>`;
       }
       if (csvBtn && convertedAll.length > 0) {
         csvBtn.style.display = 'inline-block';
       }
-      ns.showToast(`🎉 แปลงลิงก์ทั้ง Pool สำเร็จ ${successCount}/${total} รายการ! ส่งเข้า Web UI เรียบร้อย!`);
+      ns.showToast(`🎉 ซิงก์ Pool สำเร็จ ${convertedAll.length}/${total} รายการ (ลิงก์ ${successCount} · ค่าคอม ${rateSyncedCount})!`);
     } catch (err) {
-      if (stEl) {
-        stEl.innerHTML = `<span style="color:#f87171;">❌ เกิดข้อผิดพลาด: ${err?.message || String(err)}</span>`;
+      if (pendingSaveBuffer.length > 0) {
+        await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: pendingSaveBuffer }).catch(() => {});
+        pendingSaveBuffer = [];
       }
-      ns.showToast(`❌ แปลงลิงก์ไม่สำเร็จ: ${err?.message || String(err)}`);
+      if (stEl) {
+        const icon = err?.securityCheck ? '🛑' : '❌';
+        stEl.innerHTML = `<span style="color:#f87171;">${icon} ${err?.message || String(err)}</span>`;
+      }
+      ns.showToast(`${err?.securityCheck ? '🛑' : '❌'} ${err?.message || String(err)}`);
     } finally {
       poolBridgeRunning = false;
       if (runBtn) {
         runBtn.disabled = false;
-        runBtn.textContent = '✅ แปลงลิงก์ใน Pool เรียบร้อยแล้ว';
+        runBtn.textContent = '✅ ซิงก์ลิงก์ + ค่าคอมใน Pool เรียบร้อย';
       }
     }
   }
