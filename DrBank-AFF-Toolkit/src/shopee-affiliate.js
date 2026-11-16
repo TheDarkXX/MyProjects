@@ -864,7 +864,7 @@
             // Fast Path 1: If this tab is ALREADY on product_offer/<targetItemId>, scrape DOM/state immediately (<5ms)
             if (isOfferDetailUrl() && (!targetItemId || location.href.includes(targetItemId))) {
               const scraped = scrapeOfferDetailPage();
-              if (scraped && (scraped.baseRate > 0 || scraped.extraRate > 0)) {
+              if (scraped && (scraped.realRateVerified || scraped.baseRate > 0 || scraped.extraRate > 0)) {
                 sendResponse({ ok: true, data: scraped });
                 return;
               }
@@ -876,10 +876,15 @@
                 new Promise((r) => setTimeout(() => r(null), 3500))
               ]);
               if (apiOffer && apiOffer.securityCheck) {
-                sendResponse({ ok: false, securityCheck: true, error: apiOffer.error });
+                sendResponse({
+                  ok: false,
+                  securityCheck: true,
+                  errorCode: apiOffer.errorCode || 0,
+                  error: apiOffer.error
+                });
                 return;
               }
-              if (apiOffer && apiOffer.itemId && (apiOffer.baseRate > 0 || apiOffer.extraRate > 0)) {
+              if (apiOffer && apiOffer.itemId && (apiOffer.realRateVerified || apiOffer.baseRate > 0 || apiOffer.extraRate > 0)) {
                 sendResponse({ ok: true, data: apiOffer });
                 return;
               }
@@ -964,8 +969,24 @@
         error: 'Shopee ขอตรวจสอบความปลอดภัย (90309999) — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
       };
     }
-    if (!res?.ok || !res?.data?.data?.commission_rate_detail) {
+    if (!res?.ok || !res?.data?.data) {
       return null;
+    }
+    if (!res.data.data.commission_rate_detail) {
+      // Valid product on Shopee that is not enrolled in Shopee Affiliate (0% commission)
+      const fallbackOffer = {
+        itemId: cleanId,
+        shopId: String(res.data.data?.batch_item_for_item_card_full?.shopid || res.data.data?.shop_id || ''),
+        title: res.data.data?.batch_item_for_item_card_full?.name || res.data.data?.product_name || '',
+        price: 0,
+        offerPrice: 0,
+        baseRate: 0,
+        extraRate: 0,
+        realRateVerified: true,
+        rateSource: 'social_media_detail'
+      };
+      ns.sendMessage('CACHE_REAL_AFF_OFFER', fallbackOffer).catch(() => {});
+      return fallbackOffer;
     }
     const parsedOffer = applyApiOfferToOfferProduct(res.data);
     if (parsedOffer && !parsedOffer.securityCheck) {

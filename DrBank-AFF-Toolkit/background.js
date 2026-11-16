@@ -39,12 +39,67 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 });
 
-const REAL_OFFER_TTL_MS = 30 * 60 * 1000;
+const REAL_OFFER_TTL_MS = 24 * 60 * 60 * 1000;
+const REAL_OFFER_STORAGE_KEY = 'drbRealOfferCacheV1';
+const REAL_OFFER_MAX_ENTRIES = 1000;
 const AFF_RATE_LIMIT_GAP_MS = 650;
+const HOURLY_AUTO_LIMIT = 120;
 const realOfferCache = new Map();
 const pendingOfferWaiters = new Map();
 const inFlightOfferFetches = new Map();
+const autoFetchTimestamps = [];
 let lastAffApiCallAt = 0;
+let circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+let cacheHydrated = false;
+let cachePersistTimer = null;
+
+async function hydrateRealOfferCache() {
+  if (cacheHydrated) return;
+  cacheHydrated = true;
+  try {
+    const store = await chrome.storage.local.get([REAL_OFFER_STORAGE_KEY]);
+    const saved = store?.[REAL_OFFER_STORAGE_KEY];
+    if (saved && typeof saved === 'object') {
+      const now = Date.now();
+      Object.entries(saved).forEach(([k, entry]) => {
+        if (entry && entry.data && now - Number(entry.cachedAt || 0) < REAL_OFFER_TTL_MS) {
+          realOfferCache.set(String(k), {
+            data: entry.data,
+            cachedAt: Number(entry.cachedAt || now)
+          });
+        }
+      });
+    }
+  } catch (_e) {}
+}
+
+hydrateRealOfferCache();
+
+function schedulePersistRealOfferCache() {
+  if (cachePersistTimer) clearTimeout(cachePersistTimer);
+  cachePersistTimer = setTimeout(async () => {
+    try {
+      const now = Date.now();
+      const entries = Array.from(realOfferCache.entries())
+        .filter(([, v]) => v && v.data && now - Number(v.cachedAt || 0) < REAL_OFFER_TTL_MS)
+        .sort((a, b) => Number(b[1].cachedAt || 0) - Number(a[1].cachedAt || 0))
+        .slice(0, REAL_OFFER_MAX_ENTRIES);
+      const obj = {};
+      entries.forEach(([k, v]) => {
+        obj[k] = { data: v.data, cachedAt: v.cachedAt };
+      });
+      await chrome.storage.local.set({ [REAL_OFFER_STORAGE_KEY]: obj });
+    } catch (_e) {}
+  }, 450);
+}
+
+function persistRealOfferCacheEntry(itemId, data) {
+  const cleanId = String(itemId || '').replace(/[^0-9]/g, '');
+  if (!cleanId || !data) return;
+  const cachedAt = Date.now();
+  realOfferCache.set(cleanId, { data, cachedAt });
+  schedulePersistRealOfferCache();
+}
 
 function isSecurityOrLoginUrl(url = '') {
   return /verify\/captcha|verify\/traffic|buyer\/login/i.test(String(url || ''));
@@ -121,16 +176,18 @@ function waitForTabComplete(tabId, timeoutMs = 7000) {
   });
 }
 
-async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false) {
+async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = {}) {
+  await hydrateRealOfferCache();
   const itemId = String(rawItemId || '').replace(/[^0-9]/g, '');
   if (!itemId) {
     return { ok: false, error: 'ไม่พบ itemId ของสินค้า' };
   }
+  const mode = options?.mode || 'single'; // 'single' | 'grid_auto' | 'grid_hover'
 
   if (!forceRefresh) {
     const hit = realOfferCache.get(itemId);
     if (hit && Date.now() - hit.cachedAt < REAL_OFFER_TTL_MS) {
-      return { ok: true, cached: true, data: hit.data };
+      return { ok: true, cached: true, cachedAt: hit.cachedAt, data: hit.data };
     }
     try {
       const store = await chrome.storage.local.get(['activeAffOfferProduct']);
@@ -138,12 +195,34 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false) {
       if (
         storedAff &&
         String(storedAff.itemId || '') === itemId &&
-        (Number(storedAff.baseRate) > 0 || Number(storedAff.extraRate) > 0)
+        (storedAff.realRateVerified || Number(storedAff.baseRate) > 0 || Number(storedAff.extraRate) > 0)
       ) {
-        realOfferCache.set(itemId, { data: storedAff, cachedAt: Date.now() });
-        return { ok: true, cached: true, data: storedAff };
+        persistRealOfferCacheEntry(itemId, storedAff);
+        return { ok: true, cached: true, cachedAt: Date.now(), data: storedAff };
       }
     } catch (_e) {}
+  }
+
+  if (mode === 'grid_auto') {
+    if (circuitBreaker.tripped) {
+      return {
+        ok: false,
+        securityCheck: true,
+        circuitTripped: true,
+        error: circuitBreaker.error || 'Shopee ขอตรวจสอบความปลอดภัย — ระบบเบรกอัตโนมัติชั่วคราว'
+      };
+    }
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    while (autoFetchTimestamps.length > 0 && autoFetchTimestamps[0] < oneHourAgo) {
+      autoFetchTimestamps.shift();
+    }
+    if (autoFetchTimestamps.length >= HOURLY_AUTO_LIMIT) {
+      return {
+        ok: false,
+        quotaExceeded: true,
+        error: `ถึงเพดานเช็กอัตโนมัติ ${HOURLY_AUTO_LIMIT} ชิ้น/ชม. (ชี้หรือคลิกที่ป้ายเพื่อเช็กรายตัวได้)`
+      };
+    }
   }
 
   if (inFlightOfferFetches.has(itemId)) {
@@ -151,20 +230,31 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false) {
   }
 
   const runPromise = (async () => {
+    if (mode === 'grid_auto') {
+      const jitterMs = 1200 + Math.floor(Math.random() * 1100);
+      await new Promise((r) => setTimeout(r, jitterMs));
+      autoFetchTimestamps.push(Date.now());
+    }
     await waitAffRateLimit();
 
-    // Tier 1: Check if any already-open affiliate.shopee.co.th tab is ALREADY on product_offer/<itemId>
+    // Tier 1: Query any open affiliate.shopee.co.th tab (prioritizing tab already on itemId)
     const openTabs = await findOpenAffTabs();
-    for (const tab of openTabs) {
+    const sortedTabs = [...openTabs].sort((a, b) => {
+      const aMatch = String(a.url || '').includes(itemId) ? 0 : 1;
+      const bMatch = String(b.url || '').includes(itemId) ? 0 : 1;
+      return aMatch - bMatch;
+    });
+
+    for (const tab of sortedTabs) {
       if (isSecurityOrLoginUrl(tab.url)) {
+        const msg = 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน';
+        circuitBreaker = { tripped: true, trippedAt: Date.now(), error: msg };
         return {
           ok: false,
           securityCheck: true,
-          error: 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+          circuitTripped: true,
+          error: msg
         };
-      }
-      if (!String(tab.url || '').includes(itemId)) {
-        continue;
       }
       try {
         const resp = await chrome.tabs.sendMessage(tab.id, {
@@ -172,16 +262,29 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false) {
           itemId
         });
         if (resp?.securityCheck) {
-          return { ok: false, securityCheck: true, error: resp.error };
+          circuitBreaker = { tripped: true, trippedAt: Date.now(), error: resp.error };
+          return { ok: false, securityCheck: true, circuitTripped: true, error: resp.error };
         }
-        if (resp?.ok && resp.data && (resp.data.baseRate > 0 || resp.data.extraRate > 0)) {
-          realOfferCache.set(itemId, { data: resp.data, cachedAt: Date.now() });
-          return { ok: true, cached: false, data: resp.data };
+        if (resp?.ok && resp.data && (resp.data.realRateVerified || resp.data.baseRate > 0 || resp.data.extraRate > 0)) {
+          circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+          persistRealOfferCacheEntry(itemId, resp.data);
+          return { ok: true, cached: false, cachedAt: Date.now(), data: resp.data };
         }
       } catch (_err) {}
     }
 
-    // Tier 2: Open inactive background tab to /offer/product_offer/<itemId> & poll until React table renders
+    // Rule #4: Never open background tabs repeatedly in grid_auto mode
+    if (mode === 'grid_auto') {
+      return {
+        ok: false,
+        needAffTab: openTabs.length === 0,
+        error: openTabs.length === 0
+          ? 'เปิดแท็บ affiliate.shopee.co.th ทิ้งไว้ 1 แท็บเพื่อดึงเรทจริงอัตโนมัติ'
+          : 'ดึงเรทจริงจากแท็บ AFF ไม่สำเร็จชั่วคราว'
+      };
+    }
+
+    // Tier 2 (single product / manual grid hover & click): Open inactive background tab to /offer/product_offer/<itemId>
     let bgTab = null;
     try {
       const waiterPromise = waitForCachedOffer(itemId, 9500);
@@ -209,7 +312,11 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false) {
               };
             }
             const scrapedResp = await chrome.tabs.sendMessage(bgTab.id, { action: 'GET_AFFILIATE_OFFER' });
-            if (scrapedResp?.ok && scrapedResp.data && (scrapedResp.data.baseRate > 0 || scrapedResp.data.extraRate > 0)) {
+            if (
+              scrapedResp?.ok &&
+              scrapedResp.data &&
+              (scrapedResp.data.realRateVerified || scrapedResp.data.baseRate > 0 || scrapedResp.data.extraRate > 0)
+            ) {
               resolvePendingOfferWaiter(itemId, scrapedResp.data);
               return scrapedResp.data;
             }
@@ -230,11 +337,13 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false) {
       }
 
       if (finalPayload?.securityCheck) {
-        return { ok: false, securityCheck: true, error: finalPayload.error };
+        circuitBreaker = { tripped: true, trippedAt: Date.now(), error: finalPayload.error };
+        return { ok: false, securityCheck: true, circuitTripped: true, error: finalPayload.error };
       }
-      if (finalPayload && (finalPayload.baseRate > 0 || finalPayload.extraRate > 0)) {
-        realOfferCache.set(itemId, { data: finalPayload, cachedAt: Date.now() });
-        return { ok: true, cached: false, data: finalPayload };
+      if (finalPayload && (finalPayload.realRateVerified || finalPayload.baseRate > 0 || finalPayload.extraRate > 0)) {
+        circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+        persistRealOfferCacheEntry(itemId, finalPayload);
+        return { ok: true, cached: false, cachedAt: Date.now(), data: finalPayload };
       }
       return {
         ok: false,
@@ -769,16 +878,66 @@ async function handleMessage(msg, _sender) {
     }
 
     case 'CACHE_REAL_AFF_OFFER': {
+      await hydrateRealOfferCache();
       const itemId = String(payload?.itemId || '').replace(/[^0-9]/g, '');
-      if (itemId && (Number(payload?.baseRate) > 0 || Number(payload?.extraRate) > 0)) {
-        realOfferCache.set(itemId, { data: payload, cachedAt: Date.now() });
+      if (itemId && (payload?.realRateVerified || Number(payload?.baseRate) > 0 || Number(payload?.extraRate) > 0)) {
+        circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+        persistRealOfferCacheEntry(itemId, payload);
         resolvePendingOfferWaiter(itemId, payload);
       }
       return { cached: Boolean(itemId) };
     }
 
+    case 'GET_CACHED_REAL_OFFERS': {
+      await hydrateRealOfferCache();
+      const ids = Array.isArray(payload?.itemIds) ? payload.itemIds : [];
+      const now = Date.now();
+      const cached = {};
+      ids.forEach((raw) => {
+        const id = String(raw || '').replace(/[^0-9]/g, '');
+        if (!id) return;
+        const hit = realOfferCache.get(id);
+        if (hit && hit.data && now - hit.cachedAt < REAL_OFFER_TTL_MS) {
+          cached[id] = { ...hit.data, cachedAt: hit.cachedAt };
+        }
+      });
+      const openAffTabs = await findOpenAffTabs();
+      return {
+        cached,
+        circuitBreaker,
+        openAffTabCount: openAffTabs.length
+      };
+    }
+
+    case 'RESET_CIRCUIT_BREAKER': {
+      circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+      return { ok: true };
+    }
+
+    case 'OPEN_BACKGROUND_AFF_BRIDGE_TAB': {
+      const existing = await findOpenAffTabs();
+      if (existing.length > 0) {
+        return { ok: true, alreadyOpen: true, openAffTabCount: existing.length };
+      }
+      const tab = await chrome.tabs.create({
+        url: 'https://affiliate.shopee.co.th/offer/custom_link',
+        active: false
+      });
+      const loadRes = await waitForTabComplete(tab.id, 8500);
+      if (loadRes?.securityCheck) {
+        circuitBreaker = { tripped: true, trippedAt: Date.now(), error: 'กรุณาผ่านด่านตรวจหรือล็อกอิน affiliate.shopee.co.th' };
+        return { ok: false, securityCheck: true, error: circuitBreaker.error };
+      }
+      await new Promise((r) => setTimeout(r, 700));
+      return { ok: true, openedTabId: tab.id, openAffTabCount: 1 };
+    }
+
     case 'GET_REAL_AFF_OFFER': {
-      return await fetchRealAffOfferImpl(payload?.itemId, Boolean(payload?.forceRefresh));
+      return await fetchRealAffOfferImpl(
+        payload?.itemId,
+        Boolean(payload?.forceRefresh),
+        payload?.options || { mode: payload?.mode || 'single' }
+      );
     }
 
     case 'GENERATE_AFF_SHORTLINK': {
