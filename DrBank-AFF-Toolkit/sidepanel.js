@@ -713,8 +713,8 @@ function renderHero(prefix, prod, comm, animateFlash = false) {
   const totalPct = +(baseR + extraR).toFixed(1);
   setText(`drb-${prefix}-total-rate`, `${totalPct}%`);
 
-  // Render High-Contrast Action Signal Badge in the center-top slot
-  let sigTitle = '⚠️ ลงเพจ / ลุ้นพ่วง';
+  // Render Full-Width High-Contrast Action Signal Banner at the top of the Hero Card
+  let sigTitle = '⚠️ ลงเพจได้ อย่ายิงแอด';
   let sigSub = `แอดต้อง ${comm.breakEvenOrders} ออเดอร์`;
   if (comm.tier === 'god') {
     sigTitle = '🔥 ลุยแอดด่วน!';
@@ -723,7 +723,7 @@ function renderHero(prefix, prod, comm, animateFlash = false) {
     sigTitle = '✅ ยิงแอดคุ้ม!';
     sigSub = `ขาย ${comm.breakEvenOrders} ออเดอร์คืนทุน`;
   } else if (comm.tier === 'warning') {
-    sigTitle = '⚠️ ลงเพจ / ลุ้นพ่วง';
+    sigTitle = '⚠️ ลงเพจได้ อย่ายิงแอด';
     sigSub = `แอดต้อง ${comm.breakEvenOrders} ออเดอร์`;
   } else {
     sigTitle = '⛔ ข้าม! ไม่คุ้ม';

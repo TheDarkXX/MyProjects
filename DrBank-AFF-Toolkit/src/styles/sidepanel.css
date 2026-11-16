@@ -213,34 +213,85 @@ body[data-theme="dark"] #drb-sidepanel-root {
   font-weight: 700;
 }
 
-/* Zone 1: Hero Profit Card (Full-Board High-Impact) */
+/* Zone 1: Hero Profit Card (Full-Board High-Impact A+B) */
 .sp-hero {
   background: var(--sp-card);
-  border: 2px solid var(--sp-border);
+  border: 3px solid var(--sp-border);
   border-radius: var(--sp-radius);
   overflow: hidden;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .sp-hero[data-tier="god"] {
-  border-color: var(--tier-god-border, #9333ea);
+  border-color: #7c3aed;
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.11) 0%, var(--sp-card) 70%);
 }
 
 .sp-hero[data-tier="pass"] {
-  border-color: var(--tier-pass-border, #16a34a);
+  border-color: #16a34a;
+  background: linear-gradient(180deg, rgba(22, 163, 74, 0.11) 0%, var(--sp-card) 70%);
 }
 
 .sp-hero[data-tier="warning"] {
-  border-color: var(--tier-warn-border, #ea580c);
+  border-color: #ea580c;
+  background: linear-gradient(180deg, rgba(234, 88, 12, 0.11) 0%, var(--sp-card) 70%);
 }
 
 .sp-hero[data-tier="danger"] {
-  border-color: var(--tier-danger-border, #dc2626);
+  border-color: #dc2626;
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.11) 0%, var(--sp-card) 70%);
+}
+
+/* Full-Width Header Signal Banner (Option A + B) */
+.sp-hero-signal-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.sp-hero-signal-banner[data-tier="god"] {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+}
+
+.sp-hero-signal-banner[data-tier="pass"] {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+.sp-hero-signal-banner[data-tier="warning"] {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+}
+
+.sp-hero-signal-banner[data-tier="danger"] {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+}
+
+.sp-signal-title {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.sp-signal-sub {
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.1;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sp-hero-body {
-  padding: 14px 15px 12px;
+  padding: 13px 15px 12px;
 }
 
 .sp-hero-top {
@@ -262,69 +313,14 @@ body[data-theme="dark"] #drb-sidepanel-root {
   margin-bottom: 2px;
 }
 
-.sp-hero-net-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-wrap: wrap;
-}
-
 .sp-hero-net {
-  font-size: 40px;
+  font-size: 46px;
   font-weight: 900;
-  line-height: 1.05;
+  line-height: 1.02;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.025em;
   color: var(--sp-text);
   border-radius: 6px;
-}
-
-.sp-hero-signal-badge {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 10px;
-  border-radius: 9px;
-  line-height: 1.15;
-  white-space: nowrap;
-  flex-shrink: 0;
-  color: #ffffff;
-  background: linear-gradient(135deg, #ea580c, #d97706);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
-}
-
-.sp-hero-signal-badge[data-tier="god"] {
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  box-shadow: 0 3px 10px rgba(124, 58, 237, 0.3);
-}
-
-.sp-hero-signal-badge[data-tier="pass"] {
-  background: linear-gradient(135deg, #16a34a, #15803d);
-  box-shadow: 0 3px 10px rgba(22, 163, 74, 0.28);
-}
-
-.sp-hero-signal-badge[data-tier="warning"] {
-  background: linear-gradient(135deg, #ea580c, #d97706);
-  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.28);
-}
-
-.sp-hero-signal-badge[data-tier="danger"] {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  box-shadow: 0 3px 10px rgba(220, 38, 38, 0.28);
-}
-
-.sp-signal-title {
-  font-size: 13.5px;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-}
-
-.sp-signal-sub {
-  font-size: 10.5px;
-  font-weight: 700;
-  opacity: 0.94;
-  margin-top: 1px;
 }
 
 .sp-hero[data-tier="god"] .sp-hero-net {
