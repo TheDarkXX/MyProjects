@@ -33,10 +33,13 @@
 
       <div class="sp-tabs" role="tablist">
         <button type="button" class="sp-tab-btn active" id="drb-tab-btn-shopee" data-tab="shopee">
-          🛒 สินค้า Shopee
+          🛒 Shopee
         </button>
         <button type="button" class="sp-tab-btn" id="drb-tab-btn-aff" data-tab="aff">
           📊 ข้อเสนอ AFF
+        </button>
+        <button type="button" class="sp-tab-btn" id="drb-tab-btn-spy" data-tab="spy">
+          🕵️ Spy Collector
         </button>
       </div>
     </header>
@@ -266,6 +269,56 @@
             </div>
           </div>
         </details>
+      </section>
+
+      <!-- ================================================================
+           PANE 3: 🕵️ Spy Reel Collector (FB Reels -> Spy Pool)
+           ================================================================ -->
+      <section class="drb-sp-pane" id="drb-pane-spy">
+        <div class="sp-spy-card">
+          <div class="sp-spy-header">
+            <div class="sp-spy-title">🕵️ Spy Reel Collector (FB Reels ➔ Spy Pool)</div>
+            <div class="sp-spy-sub">
+              ดึงป้ายตะกร้า · เช็กเรท Social Media จริง · กรอง Exther Gate (<b style="color:var(--sp-extra);">Extra ≥7%</b> หรือ <b style="color:var(--sp-extra);">สุทธิ ≥฿15</b>) · เจน <code style="font-size:11px;">s.shopee.co.th</code>
+            </div>
+          </div>
+
+          <div class="sp-spy-toolbar">
+            <button type="button" class="sp-spy-grab-btn" id="drb-spy-btn-grab-tab" title="ดึงลิงก์ FB Reel + ชื่อเพจ + แคปชั่น + ป้ายตะกร้า s.shopee.co.th จากแท็บปัจจุบัน">
+              📥 ดึงจากแท็บ FB ปัจจุบัน
+            </button>
+            <div class="sp-spy-toolbar-right">
+              <span class="sp-spy-count-pill" id="drb-spy-count-badge">0/20 ลิงก์</span>
+              <button type="button" class="sp-ghost-sm-btn" id="drb-spy-btn-clear" title="ล้างรายการลิงก์ทั้งหมด">ล้าง</button>
+            </div>
+          </div>
+
+          <div class="sp-spy-tab-preview" id="drb-spy-tab-preview" hidden></div>
+
+          <textarea
+            id="drb-spy-urls-input"
+            class="sp-spy-textarea"
+            rows="4"
+            placeholder="วางลิงก์ Facebook Reels ครั้งละ 1–20 ลิงก์ (บรรทัดละ 1 ลิงก์)&#10;เช่น https://www.facebook.com/reel/... หรือ https://www.facebook.com/share/r/..."
+          ></textarea>
+
+          <button type="button" class="sp-spy-collect-btn" id="drb-spy-btn-collect">
+            🔍 Collect &amp; เช็กค่าคอมเข้า Spy Pool
+          </button>
+
+          <div class="sp-spy-progress-wrap" id="drb-spy-progress-wrap" hidden>
+            <div class="sp-spy-progress-bar-bg">
+              <div class="sp-spy-progress-bar-fill" id="drb-spy-progress-bar" style="width:0%;"></div>
+            </div>
+            <div class="sp-spy-progress-text" id="drb-spy-progress-text">⏳ กำลังเริ่มดึงข้อมูล...</div>
+          </div>
+        </div>
+
+        <div class="sp-spy-summary-strip" id="drb-spy-summary-strip" hidden>
+          <span id="drb-spy-summary-text">รวม 0 รายการ · 🟢 ผ่านเกณฑ์ 0 · 🔴 ไม่คุ้มแอด 0</span>
+        </div>
+
+        <div class="sp-spy-results-list" id="drb-spy-results-list"></div>
       </section>
 
       <!-- ================================================================

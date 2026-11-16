@@ -314,6 +314,256 @@ async function generateAffShortLinkImpl(originalLink, subIds = []) {
   }
 }
 
+async function batchGenerateAffShortLinksImpl(items = []) {
+  if (!Array.isArray(items) || !items.length) {
+    return { ok: true, items: [] };
+  }
+
+  await waitAffRateLimit();
+
+  const openTabs = await findOpenAffTabs();
+  for (const tab of openTabs) {
+    if (isSecurityOrLoginUrl(tab.url)) {
+      return {
+        ok: false,
+        securityCheck: true,
+        error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+      };
+    }
+    try {
+      const resp = await chrome.tabs.sendMessage(tab.id, {
+        action: 'BATCH_GENERATE_SHORTLINKS_IN_AFF_TAB',
+        items
+      });
+      if (resp) return resp;
+    } catch (_err) {}
+  }
+
+  let bgTab = null;
+  try {
+    bgTab = await chrome.tabs.create({
+      url: 'https://affiliate.shopee.co.th/offer/custom_link',
+      active: false
+    });
+    const loadRes = await waitForTabComplete(bgTab.id, 7500);
+    if (loadRes?.securityCheck) {
+      return {
+        ok: false,
+        securityCheck: true,
+        error: 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+      };
+    }
+    await new Promise((r) => setTimeout(r, 750));
+    const resp = await chrome.tabs.sendMessage(bgTab.id, {
+      action: 'BATCH_GENERATE_SHORTLINKS_IN_AFF_TAB',
+      items
+    });
+    return resp || { ok: false, error: 'ไม่สามารถสื่อสารกับหน้า Custom Link ได้' };
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err) };
+  } finally {
+    if (bgTab?.id) {
+      chrome.tabs.remove(bgTab.id).catch(() => {});
+    }
+  }
+}
+
+async function scrapeActiveFacebookReelTabImpl(explicitTabId) {
+  let tab = null;
+  if (explicitTabId) {
+    tab = await chrome.tabs.get(explicitTabId).catch(() => null);
+  }
+  if (!tab) {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => []);
+    tab = activeTab || null;
+  }
+  if (!tab || !tab.url) {
+    throw new Error('ไม่พบแท็บที่เปิดอยู่');
+  }
+  if (!/facebook\.com|fb\.watch/i.test(tab.url)) {
+    throw new Error('แท็บปัจจุบันไม่ใช่หน้า Facebook Reel (กรุณาเปิดหน้าคลิป Facebook Reel ก่อนกดดึง)');
+  }
+
+  const cleanFbReelUrl = (rawUrl) => {
+    try {
+      const u = new URL(rawUrl);
+      u.searchParams.delete('fbclid');
+      u.searchParams.delete('mibextid');
+      u.searchParams.delete('s');
+      return u.toString();
+    } catch (_e) {
+      return rawUrl;
+    }
+  };
+
+  if (chrome.scripting?.executeScript && tab.id) {
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          const shopeeLinks = [];
+          const seenLinks = new Set();
+          let productTagTitle = '';
+
+          const addShopeeUrl = (raw, labelCandidate = '') => {
+            if (!raw) return;
+            let cleaned = String(raw).trim().replace(/[),.]+$/, '');
+            try {
+              if (cleaned.includes('l.facebook.com/l.php') || cleaned.includes('lm.facebook.com/l.php')) {
+                const uObj = new URL(cleaned);
+                const inner = uObj.searchParams.get('u');
+                if (inner) cleaned = decodeURIComponent(inner);
+              }
+            } catch (_e) {}
+            const m = cleaned.match(/https?:\/\/(?:s\.|th\.|shp\.)?shopee\.co\.th\/[^\s"'<>\\)]+/i);
+            if (m) {
+              const finalUrl = m[0].replace(/[),.]+$/, '');
+              if (!seenLinks.has(finalUrl)) {
+                seenLinks.add(finalUrl);
+                shopeeLinks.push(finalUrl);
+              }
+              if (!productTagTitle && labelCandidate && labelCandidate.length >= 4 && !/https?:\/\//i.test(labelCandidate)) {
+                productTagTitle = labelCandidate.replace(/\s+/g, ' ').trim().slice(0, 180);
+              }
+            }
+          };
+
+          // 1. Scan all anchors (Product Tags on Reels + Pinned Comments)
+          document.querySelectorAll('a[href]').forEach((a) => {
+            const href = a.getAttribute('href') || '';
+            const txt = (a.innerText || a.textContent || a.getAttribute('aria-label') || '').trim();
+            if (/shopee\.co\.th|l\.facebook\.com\/l\.php|lm\.facebook\.com\/l\.php/i.test(href)) {
+              addShopeeUrl(href, txt);
+            }
+          });
+
+          // 2. Scan visible body text (in case Shopee shortlink is plain text or inside expanded comments)
+          const bodyText = document.body ? document.body.innerText || '' : '';
+          const regexAll = /https?:\/\/(?:s\.|th\.)?shopee\.co\.th\/[A-Za-z0-9_/?=&.-]+/gi;
+          let match;
+          while ((match = regexAll.exec(bodyText)) !== null) {
+            addShopeeUrl(match[0], '');
+          }
+
+          // 3. Scan inline JSON scripts for "link_uri" (Facebook Reel embedded Product Tag payload!)
+          document.querySelectorAll('script').forEach((scr) => {
+            const txt = scr.textContent || '';
+            if (!txt.includes('shopee.co.th')) return;
+            const decoded = txt
+              .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+              .replace(/\\\//g, '/');
+            let unq = decoded;
+            try {
+              unq = decodeURIComponent(decoded);
+            } catch (_e) {}
+            const m = unq.match(/https?:\/\/(?:s\.)?shopee\.co\.th\/[A-Za-z0-9_]+/);
+            if (m) addShopeeUrl(m[0], '');
+          });
+
+          // 4. Extract Competitor Page Name
+          let competitorPage = '';
+          const headerLinks = document.querySelectorAll('h2 a[role="link"], h3 a[role="link"], a[role="link"] strong, a[aria-label][href*="facebook.com/"]');
+          for (const el of headerLinks) {
+            const t = (el.innerText || el.textContent || '').trim();
+            if (t && t.length >= 2 && t.length <= 70 && !/reels?|watch|แชร์|ติดตาม|follow|ถูกใจ|ความคิดเห็น/i.test(t)) {
+              competitorPage = t.split('\n')[0].trim();
+              break;
+            }
+          }
+          if (!competitorPage) {
+            competitorPage = document.title
+              .replace(/^\(\d+\)\s*/, '')
+              .replace(/\| Facebook.*$/i, '')
+              .replace(/-\s*Facebook.*$/i, '')
+              .trim()
+              .slice(0, 80);
+          }
+
+          // 5. Extract Reel Caption
+          let captionFull = '';
+          const dirEls = Array.from(document.querySelectorAll('div[dir="auto"], span[dir="auto"]'));
+          for (const el of dirEls) {
+            const t = (el.innerText || '').trim();
+            if (t.length >= 15 && t.length <= 600 && t !== competitorPage && !/เขียนความคิดเห็น|ตอบกลับ|ดูเพิ่มเติม$/i.test(t)) {
+              if (t.length > captionFull.length) {
+                captionFull = t;
+              }
+            }
+          }
+
+          // 6. Engagement metrics from aria-labels or text
+          let fbReactions = 0;
+          let fbComments = 0;
+          let fbShares = '0';
+          const parseCompactCount = (str) => {
+            const s = String(str || '').replace(/,/g, '').trim();
+            const m = s.match(/([0-9]+(?:\.[0-9]+)?)\s*(พัน|หมื่น|แสน|ล้าน|K|M)?/i);
+            if (!m) return 0;
+            let n = parseFloat(m[1]) || 0;
+            const unit = (m[2] || '').toUpperCase();
+            if (unit === 'พัน' || unit === 'K') n *= 1000;
+            else if (unit === 'หมื่น') n *= 10000;
+            else if (unit === 'แสน') n *= 100000;
+            else if (unit === 'ล้าน' || unit === 'M') n *= 1000000;
+            return Math.round(n);
+          };
+
+          document.querySelectorAll('[aria-label]').forEach((el) => {
+            const lbl = el.getAttribute('aria-label') || '';
+            if (/ถูกใจ|ความรู้สึก|like|reaction/i.test(lbl) && /\d/.test(lbl) && !fbReactions) {
+              fbReactions = parseCompactCount(lbl);
+            } else if (/ความคิดเห็น|comment/i.test(lbl) && /\d/.test(lbl) && !fbComments) {
+              fbComments = parseCompactCount(lbl);
+            } else if (/แชร์|share/i.test(lbl) && /\d/.test(lbl) && fbShares === '0') {
+              const m = lbl.match(/([0-9.,]+\s*(?:พัน|หมื่น|แสน|ล้าน|K|M)?)/i);
+              if (m) fbShares = m[1].trim();
+            }
+          });
+
+          const prioritizeShort = shopeeLinks.find((u) => /s\.shopee\.co\.th/i.test(u)) || shopeeLinks[0] || '';
+          return {
+            reel_url: location.href,
+            competitor_short_url: prioritizeShort,
+            all_shopee_links: shopeeLinks,
+            product_tag_title: productTagTitle,
+            competitor_page: competitorPage,
+            caption_full: captionFull,
+            fb_reactions: fbReactions,
+            fb_comments: fbComments,
+            fb_shares: fbShares
+          };
+        }
+      });
+
+      const scraped = results?.[0]?.result;
+      if (scraped && scraped.reel_url) {
+        return {
+          ...scraped,
+          reel_url: cleanFbReelUrl(scraped.reel_url)
+        };
+      }
+    } catch (_err) {
+      // Fallback to basic tab metadata below
+    }
+  }
+
+  return {
+    reel_url: cleanFbReelUrl(tab.url),
+    competitor_short_url: '',
+    all_shopee_links: [],
+    product_tag_title: '',
+    competitor_page: String(tab.title || '')
+      .replace(/^\(\d+\)\s*/, '')
+      .replace(/\| Facebook.*$/i, '')
+      .trim()
+      .slice(0, 80),
+    caption_full: '',
+    fb_reactions: 0,
+    fb_comments: 0,
+    fb_shares: '0'
+  };
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message, sender)
     .then((res) => sendResponse({ ok: true, data: res }))
@@ -533,6 +783,35 @@ async function handleMessage(msg, _sender) {
 
     case 'GENERATE_AFF_SHORTLINK': {
       return await generateAffShortLinkImpl(payload?.originalLink, payload?.subIds || []);
+    }
+
+    case 'BATCH_GENERATE_AFF_SHORTLINKS': {
+      return await batchGenerateAffShortLinksImpl(payload?.items || []);
+    }
+
+    case 'SCRAPE_ACTIVE_FB_REEL_TAB': {
+      return await scrapeActiveFacebookReelTabImpl(payload?.tabId);
+    }
+
+    case 'SPY_COLLECT_REELS': {
+      const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
+      const baseUrl = String(payload?.webUiBaseUrl || settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
+      const affToken = String(settings?.affToken || 'doctorbank2026');
+      const reels = Array.isArray(payload?.reels) ? payload.reels : [];
+      const resp = await fetch(`${baseUrl}/api/shopee-aff/spy-collect`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Aff-Token': affToken
+        },
+        body: JSON.stringify({ reels })
+      });
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(errBody?.error || `HTTP ${resp.status} from ${baseUrl}/api/shopee-aff/spy-collect`);
+      }
+      return await resp.json();
     }
 
     default:

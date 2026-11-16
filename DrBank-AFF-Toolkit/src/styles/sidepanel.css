@@ -111,8 +111,8 @@ body[data-theme="dark"] #drb-sidepanel-root {
 
 .sp-tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
   padding: 4px;
   margin: 0 14px 10px;
   background: var(--sp-surface-2);
@@ -120,20 +120,21 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-tab-btn {
-  height: 38px;
+  height: 36px;
   border: none;
   border-radius: 8px;
   background: transparent;
   color: var(--sp-text-2);
-  font-size: 14.5px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   transition: all 0.15s ease;
   white-space: nowrap;
+  padding: 0 4px;
 }
 
 .sp-tab-btn:hover {
@@ -148,6 +149,10 @@ body[data-theme="dark"] #drb-sidepanel-root {
 
 .sp-tab-btn.active[data-tab="aff"] {
   color: var(--sp-base);
+}
+
+.sp-tab-btn.active[data-tab="spy"] {
+  color: #7c3aed;
 }
 
 /* Main Scrollable Body */
@@ -974,6 +979,277 @@ body[data-theme="dark"] #drb-sidepanel-root {
 .sp-btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* ==========================================================================
+   PANE 3: 🕵️ Spy Reel Collector Styles
+   ========================================================================== */
+.sp-spy-card {
+  background: var(--sp-card);
+  border: 2px solid var(--sp-border);
+  border-radius: var(--sp-radius);
+  padding: 13px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.sp-spy-header {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sp-spy-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--sp-text);
+}
+
+.sp-spy-sub {
+  font-size: 12px;
+  color: var(--sp-text-2);
+  line-height: 1.4;
+}
+
+.sp-spy-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sp-spy-grab-btn {
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 8px;
+  border: 1.5px solid #0284c7;
+  background: var(--sp-base-bg);
+  color: var(--sp-base);
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: filter 0.15s ease;
+}
+
+.sp-spy-grab-btn:hover {
+  filter: brightness(0.95);
+}
+
+.sp-spy-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sp-spy-count-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--sp-surface-2);
+  color: var(--sp-text-2);
+}
+
+.sp-spy-tab-preview {
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--sp-surface-2);
+  border: 1px dashed var(--sp-border);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--sp-text-2);
+}
+
+.sp-spy-textarea {
+  width: 100%;
+  min-height: 92px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1.5px solid var(--sp-border);
+  background: var(--sp-bg);
+  color: var(--sp-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.sp-spy-textarea:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+}
+
+.sp-spy-collect-btn {
+  height: 42px;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.28);
+  transition: filter 0.15s ease;
+}
+
+.sp-spy-collect-btn:hover {
+  filter: brightness(1.06);
+}
+
+.sp-spy-collect-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.sp-spy-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sp-spy-progress-bar-bg {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--sp-surface-2);
+  overflow: hidden;
+}
+
+.sp-spy-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #16a34a);
+  transition: width 0.25s ease;
+}
+
+.sp-spy-progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sp-text-2);
+}
+
+.sp-spy-summary-strip {
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--sp-card);
+  border: 1.5px solid var(--sp-border);
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--sp-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sp-spy-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sp-spy-item-card {
+  background: var(--sp-card);
+  border: 2.5px solid var(--sp-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+.sp-spy-item-card[data-gate="pass"] {
+  border-color: #16a34a;
+}
+
+.sp-spy-item-card[data-gate="fail"] {
+  border-color: #dc2626;
+}
+
+.sp-spy-item-card[data-gate="notag"] {
+  border-color: #d97706;
+}
+
+.sp-spy-item-banner {
+  padding: 7px 12px;
+  font-size: 13.5px;
+  font-weight: 900;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.sp-spy-item-card[data-gate="pass"] .sp-spy-item-banner {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+.sp-spy-item-card[data-gate="fail"] .sp-spy-item-banner {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+}
+
+.sp-spy-item-card[data-gate="notag"] .sp-spy-item-banner {
+  background: linear-gradient(135deg, #d97706, #b45309);
+}
+
+.sp-spy-item-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.sp-spy-item-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--sp-text);
+  line-height: 1.35;
+}
+
+.sp-spy-item-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.sp-spy-metric-box {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--sp-surface-2);
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-spy-metric-lbl {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--sp-text-3);
+}
+
+.sp-spy-metric-val {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--sp-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-spy-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px solid var(--sp-border);
 }
 
 /* Update Flash Animation */

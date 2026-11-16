@@ -22,12 +22,14 @@
   "permissions": [
     "storage",
     "tabs",
+    "scripting",
     "sidePanel",
     "clipboardWrite"
   ],
   "host_permissions": [
     "https://shopee.co.th/*",
     "https://affiliate.shopee.co.th/*",
+    "https://*.facebook.com/*",
     "http://localhost:*/*",
     "http://127.0.0.1:*/*",
     "https://*.doctorbankofficial.com/*",

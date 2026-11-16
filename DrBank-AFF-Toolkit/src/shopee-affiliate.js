@@ -910,6 +910,29 @@
         })();
         return true;
       }
+      if (req.action === 'BATCH_GENERATE_SHORTLINKS_IN_AFF_TAB') {
+        (async () => {
+          try {
+            if (/verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+              sendResponse({
+                ok: false,
+                securityCheck: true,
+                error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+              });
+              return;
+            }
+            const list = await batchGenerateShopeeShortLinks(req.items || []);
+            sendResponse({ ok: true, items: list });
+          } catch (err) {
+            sendResponse({
+              ok: false,
+              securityCheck: Boolean(err?.securityCheck),
+              error: err?.message || String(err)
+            });
+          }
+        })();
+        return true;
+      }
     });
   }
 
@@ -3228,7 +3251,15 @@
         if (stEl) {
           stEl.innerHTML = `⏳ กำลังดึงเรท Social Media จริง <code style="color:#93c5fd;">/api/v3/offer/product</code> (${it.sku_code || cleanItemId}) [${idx + 1}/${chunk.length}]...`;
         }
-        const offer = await fetchSingleOfferDetailViaMainBridge(cleanItemId).catch(() => null);
+        let offer = await fetchSingleOfferDetailViaMainBridge(cleanItemId).catch(() => null);
+        if ((!offer || offer.securityCheck) && !/verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+          const bgRes = await ns.sendMessage('GET_REAL_AFF_OFFER', { itemId: cleanItemId, forceRefresh: false }).catch(() => null);
+          if (bgRes?.ok && bgRes.data) {
+            offer = bgRes.data;
+          } else if (bgRes?.securityCheck) {
+            offer = { securityCheck: true, error: bgRes.error };
+          }
+        }
         if (offer?.securityCheck) {
           const secErr = new Error(
             offer.error || 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
