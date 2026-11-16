@@ -46,7 +46,7 @@
   let lastAutoFetchedOfferItemId = '';
 
   let shopeeGridState = {
-    enabled: true,
+    enabled: false, // Default OFF on listing pages for safety & zero background DOM/CPU overhead
     mode: 'all', // 'all' | 'win' | 'warn'
     rateMode: 'auto', // 'auto' | '15' | '10' | '20' | 'base_only'
     dimDanger: false, // Default: show ONLY Signal Pill, leave cards 100% normal
@@ -94,10 +94,8 @@
       currentState.whtRate = Number(s.withholdingTaxRate) || 3.0;
       currentState.theme = s.theme || 'light';
       currentState.displayMode = s.displayMode || 'sidepanel';
-      const localRadar = await chrome.storage.local.get(['radarEnabled']);
-      if (typeof localRadar.radarEnabled === 'boolean') {
-        shopeeGridState.enabled = localRadar.radarEnabled;
-      }
+      // Default OFF on Shopee listing pages for safety & zero background DOM/CPU overhead
+      shopeeGridState.enabled = false;
       document.body.classList.toggle('drb-aff-radar-off', !shopeeGridState.enabled);
     } catch (_e) {}
 
@@ -120,11 +118,16 @@
               fetchRealSocialCommissionForCurrentProduct(Boolean(req.forceRefresh));
             }
           } else {
+            if (req.forceRefresh && !shopeeGridState.enabled) {
+              shopeeGridState.enabled = true;
+              document.body.classList.remove('drb-aff-radar-off');
+            }
             scanAndOverlayShopeeGrid();
           }
           sendResponse({
             ok: true,
             isGridPage: !isSingleProductUrl(),
+            radarEnabled: shopeeGridState.enabled,
             gridCounts: shopeeGridState.counts,
             data: currentState
           });
@@ -185,11 +188,18 @@
       if (location.href !== lastUrl) {
         lastUrl = location.href;
         gridAutoCheckedCountThisPage = 0;
-        gridAutoQueue.length = 0;
-        gridAutoQueuedIds.clear();
-        cardDwellTimers.forEach((t) => clearTimeout(t));
-        cardDwellTimers.clear();
+        if (!isSingleProductUrl() && shopeeGridState.enabled) {
+          shopeeGridState.enabled = false;
+          document.body.classList.add('drb-aff-radar-off');
+        }
+        cleanupShopeeGridOverlays();
+        const oldTb = document.getElementById('drb-aff-grid-toolbar');
+        if (oldTb) oldTb.remove();
         scheduleShopeeScan();
+        return;
+      }
+      // True Pause: when on a listing page with radar OFF and standby toolbar already mounted, ignore all DOM mutations
+      if (!isSingleProductUrl() && !shopeeGridState.enabled && document.getElementById('drb-aff-grid-toolbar')) {
         return;
       }
       for (const m of mutations) {
@@ -431,7 +441,50 @@
     }
   }
 
+  function cleanupShopeeGridOverlays() {
+    gridAutoQueue.length = 0;
+    gridAutoQueuedIds.clear();
+    gridLoadingIds.clear();
+    cardDwellTimers.forEach((t) => clearTimeout(t));
+    cardDwellTimers.clear();
+    gridCardElByItemId.clear();
+    document.querySelectorAll('.drb-aff-card-overlay').forEach((el) => el.remove());
+    document.querySelectorAll('.drb-aff-grid-card').forEach((cardEl) => {
+      cardEl.classList.remove('drb-aff-grid-card', 'drb-aff-grid-card--dim', 'drb-aff-grid-card--hidden');
+      cardEl.removeAttribute('data-drb-sig');
+      cardEl.removeAttribute('data-drb-tier');
+      cardEl.removeAttribute('data-drb-est-net');
+    });
+    shopeeGridState.counts = { total: 0, win: 0, warn: 0, danger: 0, realCount: 0, candidateCount: 0 };
+  }
+
+  function findFirstShopeeGridContainer() {
+    const productLinks = Array.from(
+      document.querySelectorAll('a[href*="-i."], a[href*="/product/"]')
+    ).filter((a) => !a.closest('#drb-aff-hud-root, #drb-aff-grid-toolbar, .drb-aff-card-overlay'));
+    if (productLinks.length < 2) return null;
+    let curr = productLinks[0];
+    for (let depth = 0; depth < 6 && curr.parentElement && curr.parentElement !== document.body; depth++) {
+      const parentLinks = curr.parentElement.querySelectorAll('a[href*="-i."], a[href*="/product/"]');
+      if (parentLinks.length >= 2) {
+        return curr.parentElement;
+      }
+      curr = curr.parentElement;
+    }
+    return productLinks[0].parentElement || null;
+  }
+
   function scanAndOverlayShopeeGrid() {
+    if (!shopeeGridState.enabled) {
+      if (!isSingleProductUrl()) {
+        const container = findFirstShopeeGridContainer();
+        if (container) {
+          renderOrUpdateShopeeGridToolbar(container);
+        }
+      }
+      return 0;
+    }
+
     const productLinks = Array.from(
       document.querySelectorAll('a[href*="-i."], a[href*="/product/"]')
     ).filter((a) => !a.closest('#drb-aff-hud-root, #drb-aff-grid-toolbar, .drb-aff-card-overlay'));
@@ -912,30 +965,38 @@
     tb.setAttribute('data-tb-sig', tbSig);
 
     let realCheckBtnHtml = '';
-    if (gridCircuitTripped) {
-      realCheckBtnHtml = `<button type="button" class="drb-grid-realcheck-btn is-breaker" id="drb-btn-check-top-real" title="Shopee แสดงหน้าตรวจสอบความปลอดภัย กรุณาเปิดหน้า AFF ผ่านด่านตรวจก่อน">🛡️ ติดด่านตรวจ Shopee (คลิกเปิดหน้า AFF)</button>`;
-    } else if (c.candidateCount > 0 || gridAutoQueue.length > 0) {
-      realCheckBtnHtml = `<button type="button" class="drb-grid-realcheck-btn" id="drb-btn-check-top-real" title="ดึงเรทจริง Social Media เฉพาะสินค้าที่ลุ้นแอดได้ (≥฿15) สูงสุด 12 ชิ้น/หน้า พร้อมหน่วงเวลาสุ่มกันแบน">
-        ${gridAutoQueue.length > 0 ? `⏳ กำลังเช็กเรทจริง (${gridAutoQueue.length} คิว)...` : `🎯 เช็กเรทจริงตัวลุ้นแอด (${Math.min(MAX_AUTO_CHECKS_PER_PAGE, c.candidateCount)})`}
-      </button>`;
+    if (isOn) {
+      if (gridCircuitTripped) {
+        realCheckBtnHtml = `<button type="button" class="drb-grid-realcheck-btn is-breaker" id="drb-btn-check-top-real" title="Shopee แสดงหน้าตรวจสอบความปลอดภัย กรุณาเปิดหน้า AFF ผ่านด่านตรวจก่อน">🛡️ ติดด่านตรวจ Shopee (คลิกเปิดหน้า AFF)</button>`;
+      } else if (c.candidateCount > 0 || gridAutoQueue.length > 0) {
+        realCheckBtnHtml = `<button type="button" class="drb-grid-realcheck-btn" id="drb-btn-check-top-real" title="ดึงเรทจริง Social Media เฉพาะสินค้าที่ลุ้นแอดได้ (≥฿15) สูงสุด 12 ชิ้น/หน้า พร้อมหน่วงเวลาสุ่มกันแบน">
+          ${gridAutoQueue.length > 0 ? `⏳ กำลังเช็กเรทจริง (${gridAutoQueue.length} คิว)...` : `🎯 เช็กเรทจริงตัวลุ้นแอด (${Math.min(MAX_AUTO_CHECKS_PER_PAGE, c.candidateCount)})`}
+        </button>`;
+      }
     }
 
-    tb.innerHTML = `
-      <div class="drb-grid-tb-left">
-        <button type="button" class="drb-grid-power-btn ${isOn ? '' : 'is-off'}" id="drb-btn-toggle-radar" title="เปิด/ปิด การแสดงป้าย Signal บนการ์ดทั้งหมด">
-          ${isOn ? '🟢 เรดาร์: เปิด' : '⚪ เรดาร์: ปิด'}
-        </button>
-        <span class="drb-grid-tb-title">⚡ DrBank Radar</span>
-        <span class="drb-grid-tb-summary" style="${isOn ? '' : 'opacity:0.5;'}">
+    const summaryHtml = isOn
+      ? `
           ✓ เรทจริง <strong style="color:#4ade80;">${c.realCount || 0}/${c.total}</strong> |
           ~ ประเมิน <strong>${estRemaining}</strong> |
           🔥✅ น่าลุย <strong>${c.win}</strong> |
           ⚠️ <strong>${c.warn}</strong> |
           ⛔ <strong>${c.danger}</strong>
           ${gridNeedAffTab && !gridCircuitTripped ? ' · <span style="color:#fbbf24;">💡 ชี้ป้ายหรือกดเช็กเรทเพื่อเปิดแท็บ AFF</span>' : ''}
+        `
+      : `🛡️ โหมดปลอดภัย: ปิดสแกนอัตโนมัติในหน้ารวมสินค้า — กดปุ่มซ้ายมือเมื่อต้องการเปิดสแกนหน้านี้`;
+
+    tb.innerHTML = `
+      <div class="drb-grid-tb-left">
+        <button type="button" class="drb-grid-power-btn ${isOn ? '' : 'is-off'}" id="drb-btn-toggle-radar" title="เปิด/ปิด การสแกนและการแสดงป้าย Signal บนการ์ดทั้งหมด">
+          ${isOn ? '🟢 เรดาร์: เปิด' : '⚪ เรดาร์: ปิด (คลิกเพื่อเปิดสแกน)'}
+        </button>
+        <span class="drb-grid-tb-title">⚡ DrBank Radar</span>
+        <span class="drb-grid-tb-summary" style="${isOn ? '' : 'opacity:0.85;'}">
+          ${summaryHtml}
         </span>
         ${realCheckBtnHtml}
-        <select class="drb-grid-rate-select" id="drb-shopee-rate-mode" title="เลือกโหมดประเมินเรทสำหรับสินค้าที่ยังไม่เช็กเรทจริง" ${isOn ? '' : 'disabled'}>
+        <select class="drb-grid-rate-select" id="drb-shopee-rate-mode" title="เลือกโหมดประเมินเรทสำหรับสินค้าที่ยังไม่เช็กเรทจริง" style="${isOn ? '' : 'display:none;'}" ${isOn ? '' : 'disabled'}>
           <option value="auto" ${shopeeGridState.rateMode === 'auto' ? 'selected' : ''}>🤖 Auto แยกตามหมวด A-F</option>
           <option value="15" ${shopeeGridState.rateMode === '15' ? 'selected' : ''}>🎯 ล็อกเรทรวม 15%</option>
           <option value="10" ${shopeeGridState.rateMode === '10' ? 'selected' : ''}>🎯 ล็อกเรทรวม 10%</option>
@@ -1007,14 +1068,15 @@
 
     const powerBtn = tb.querySelector('#drb-btn-toggle-radar');
     if (powerBtn) {
-      powerBtn.addEventListener('click', async () => {
+      powerBtn.addEventListener('click', () => {
         shopeeGridState.enabled = !shopeeGridState.enabled;
         document.body.classList.toggle('drb-aff-radar-off', !shopeeGridState.enabled);
-        try {
-          await chrome.storage.local.set({ radarEnabled: shopeeGridState.enabled });
-        } catch (_e) {}
-        renderOrUpdateShopeeGridToolbar(gridContainerEl);
-        applyShopeeGridFilterClasses();
+        if (shopeeGridState.enabled) {
+          scanAndOverlayShopeeGrid();
+        } else {
+          cleanupShopeeGridOverlays();
+          renderOrUpdateShopeeGridToolbar(gridContainerEl);
+        }
       });
     }
 

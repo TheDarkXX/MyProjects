@@ -481,12 +481,19 @@ async function scrapeShopeeTab(tabId, showToastOnDone, forceRefresh = false) {
           await syncOrFetchRealSocialRateInSidePanel(shopeeProduct, forceRefresh);
         } else if (!shopeeProduct) {
           const gc = response.gridCounts || { total: 0, win: 0 };
-          setText(
-            'drb-sp-title',
-            `⚡ หน้าค้นหา Shopee พบ ${gc.total || 0} ชิ้น (น่าลุย ${gc.win || 0}) — คลิกป้ายบนการ์ดเพื่อดึงเข้า Side Panel`
-          );
+          if (response.radarEnabled === false) {
+            setText(
+              'drb-sp-title',
+              '⚪ เรดาร์หน้ารวมสินค้าปิดอยู่ (โหมดปลอดภัย) — กดปุ่มเปิดสแกนบนหน้าเว็บ หรือกด ↻ ด้านบนเมื่อต้องการใช้งาน'
+            );
+          } else {
+            setText(
+              'drb-sp-title',
+              `⚡ หน้าค้นหา Shopee พบ ${gc.total || 0} ชิ้น (น่าลุย ${gc.win || 0}) — คลิกป้ายบนการ์ดเพื่อดึงเข้า Side Panel`
+            );
+          }
         }
-        if (showToastOnDone) ns.showToast('↻ สแกนป้ายประเมินค่าคอมตามหมวด A-F ครบทุกใบแล้ว!');
+        if (showToastOnDone) ns.showToast('↻ เปิดเรดาร์และสแกนป้ายประเมินค่าคอมครบทุกใบแล้ว!');
       } else if (response.data) {
         const incoming = response.data;
         const preserveVerified =
