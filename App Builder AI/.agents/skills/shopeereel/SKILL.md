@@ -1,7 +1,9 @@
 ---
 name: shopeereel
 description: >-
-  Shopee Affiliate FB Reels & Google Flow Omni UGC Content Factory v2.0 (/shopeereel, alias: /spreel, /reel) — สร้าง Per-Product Asset Vault แยกตาม SKU (01_raw_shopee -> 02_clean_refs QC/Crop -> 03_first_frames ยิง /gptimage เจน 3 ภาพตั้งต้น 9:16 พร้อมบริบทสินค้าเต็ม -> 04_videos + 00_Product_Master_Card.md + INDEX_ALL_PRODUCTS.md) พร้อมชุดพรอมต์ IMAGE + VIDEO Omni 10s/15s, 4 Guard Locks, และแคปชั่น 3 บรรทัด + รหัส 16NOV26FBRAD ใช้เมื่อ: /shopeereel [sub2/SKU/URL หรือชื่อสินค้า]
+  Shopee Affiliate FB Reels & Google Flow Omni UGC Content Factory v2.1 (/shopeereel, alias: /spreel, /reel) — สร้าง Per-Product Asset Vault แยกตาม SKU (01_raw_shopee -> 02_clean_refs QC/Crop -> 03_first_frames ยิง /gptimage เจน 3 ภาพตั้งต้น 9:16 พร้อมบริบทสินค้าเต็ม -> 04_videos + 00_Product_Master_Card.md + INDEX_ALL_PRODUCTS.md) พร้อมชุดพรอมต์ IMAGE + VIDEO Omni 10s/15s, 4 Guard Locks, และแคปชั่น 3 บรรทัด + รหัส 16NOV26FBRAD
+  และโหมด --gem 11 (Thai Raw Action Reels มือกลางท่า บ้านไทยดิบ พากย์ไทยนอกจอ) ที่เขียนแถว TSV 7 คอลัมน์เฉพาะงาน Gen Image & Video (`ID · Product · Ref · Short Story · IMAGE_PROMPT · SB_PROMPT · VIDEO_PROMPT`) + Section กางบท VO ใต้ตาราง ลง production_tables ของแคมเปญ ด้วยรหัสสั้น `nov-xxx` พร้อม Pure JS Linter และ Chat Silence Rule
+  ใช้เมื่อ /shopeereel [sub2/SKU/URL หรือชื่อสินค้า] หรือ /shopeereel [sub2] --gem 11
 ---
 
 # 🎬 Skill: `/shopeereel` — Shopee Affiliate FB Reels & Per-Product Asset Vault Factory v2.0
@@ -35,6 +37,11 @@ node tools/shopee_product_vault.cjs --sku SP078237 --skip-gen
 # 5. ต่อซีนที่ 2+ หรือสั่งเรนเดอร์เข้า FlowKit อัตโนมัติ (เฉพาะตอนสั่ง --render)
 /shopeereel --extend 2
 /shopeereel https://s.shopee.co.th/XXXXX --render
+
+# 6. โหมด Gem #11 (Thai Raw Action Reels) → แถว TSV ลง production_tables ของแคมเปญ (ดูหัวข้อ 6)
+node tools/shopee_product_vault.cjs --sub2 aidrb1611a013 --gem 11 --tpl A --batch 01            # 10s 4 ช็อต เสียงแม่บ้าน F30-40
+node tools/shopee_product_vault.cjs --sub2 aidrb1611a013 --gem 11 --tpl C --channel dad --ver 02 # 15s 5 ช็อต เสียงพ่อบ้าน M35-45
+node tools/shopee_product_vault.cjs --lint-table <ไฟล์ production_tables/G11_*.md>              # ตรวจตารางแบบออฟไลน์ ไม่ยิง API
 ```
 
 ---
@@ -90,7 +97,7 @@ node tools/shopee_product_vault.cjs --sku SP078237 --skip-gen
 1. **Image-First / Zero Auto-Video-Credit Spend:** `/gptimage` เจนภาพตั้งต้น 3 ตัวเลือกใน `03_first_frames/` (ฟรีผ่าน Codex Proxy Subscription) เพื่อให้คนเลือกใบที่เป๊ะสุดก่อน แต่ **ห้ามแอบสั่งเรนเดอร์วิดีโอ Google Flow กินเครดิตเอง** เว้นแต่ผู้ใช้สั่ง `--render` (ให้เรียก FlowKit `/flow` เฉพาะตอนสั่ง `--render`)
 2. **Zero On-Screen Text & Price Tags:** ห้ามมีข้อความ/ซับไตเติล/ราคา/% ปลอมในภาพและวิดีโอ (ซับไทยไปแปะใน CapCut ทีหลัง)
 3. **No Banned Claims & No Children:** ห้ามคำการันตี (`100%`, `รับประกัน`), ห้ามคำการแพทย์ (`รักษา`, `cure`), ห้ามมีเด็ก/ทารก
-4. **Product-Only Dialogue:** บทพูดไทยต้องพูดถึง **ตัวสินค้าและจุดขายจริงเท่านั้น** ห้ามชวนกดไลก์/กดติดตามเพจ/ช่อง ห้ามใส่ `#` หรือชื่อเพจ ปิดท้ายแค่ชวนกดตะกร้า/เช็กลิงก์
+4. **Product-Only Dialogue:** บทพูดไทยต้องพูดถึง **ตัวสินค้าและจุดขายจริงเท่านั้น** ห้ามชวนกดไลก์/กดติดตามเพจ/ช่อง ห้ามใส่ `#` หรือชื่อเพจ ปิดท้ายแค่ชวนกดตะกร้า/เช็กลิงก์ (โหมดเดิมเท่านั้น · **`--gem 11`: คลิป 10s ห้ามมี CTA ในเสียงพากย์** 15s ใช้ได้แค่ "ดูในตะกร้าได้เลย" คำชวนซื้อย้ายไปอยู่ในแคปชั่น)
 5. **4 PD App Guard Locks (ฝังใน Prompt):**
    - `ShortName Lock`: เรียกชื่อสินค้าแค่ 3–4 คำ
    - `Ref Lock`: ใช้ภาพแนบเป็นอ้างอิงหน้าตาเท่านั้น ห้ามแปะภาพนิ่งต้นฉบับเปิดหัวคลิป ห้ามเปลี่ยนแพ็กเกจ (ขวดเป็นซอง ฯลฯ)
@@ -149,3 +156,35 @@ All dialogues must be in Thai language only.
 python "C:\My Claw\The Viral\FlowKit\flow_cli.py" status
 ```
 หาก Offline ให้แจ้งผู้ใช้เปิด Chrome + `flow.google.com` + `start.bat` แล้วส่ง Image/Video Prompt เข้าคิว `9:16` ตามคู่มือ [`/flow`](file:///c:/My%20Claw/Openclaw-VPS/.agents/skills/flow/SKILL.md)
+
+---
+
+## 🧪 6. โหมด Gem #11 (`--gem 11`) — Thai Raw Action Reels → Production Table
+
+> **สไตล์ (แหล่งเดียว):** [`11_Gem11_Thai_Raw_Action_Reels_Master.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/11_Gem11_Thai_Raw_Action_Reels_Master.md) (System Instruction = `raw_instruction` ของ `gem11_thai_raw_action_reels` ใน [`gems_399_registry.json`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/gems_399_registry.json) ต้องตรงกันทุกตัวอักษร)
+> **กฎบท VO:** [`12_Viral_10_Reels_Script_Deconstruction.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/12_Viral_10_Reels_Script_Deconstruction.md) (SF-1..6 · H1–H9 · E1–E6 · งบตัวอักษร)
+> **ตัวอย่างตาราง:** [`G11_20261116_sample.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/Campaigns/2026-11-16_30_16NOV26FBRAD/production_tables/G11_20261116_sample.md)
+
+### Workflow
+1. **Resolve สินค้า** จาก Main Pool (`apps/aff/data/campaign-16nov26-pool.json`) และ Spy Pool (`10M_Project/Shopee_Aff/spy_competitor_pool.json` เช่น `aidrb1611s003`) ด้วย `--sub2` / `--sku` / `--url` → Vault เดิม (`01_raw_shopee` → `02_clean_refs`) ใช้ซ้ำได้จาก cache
+2. **โหลด Gem จาก registry** (`loadGemFromRegistry`) → ใช้ `raw_instruction` เป็นคำสั่งระบบให้ Codex แต่บังคับตอบเป็น JSON slot (Archetype/Story/Mode, INVARIANTS, ช็อต, VO, แคปชั่น) ทั้งใน System และ User Prompt แล้ว cache ไว้ใน `product_info.json` → `gem11_briefs[CLIP_ID]`
+3. **ประกอบพรอมต์ด้วยโค้ด** (ไม่ปล่อยให้ LLM จัดรูปเอง): First Frame (`FF`) ตาม STEP 2 · Storyboard 2×2 (`SB`) ถ้า `MODE = SB` · Video ตามเทมเพลต `A` (10s 4 ช็อต) / `B` (10s 3 ช็อต) / `C` (15s 5 ช็อต) พากย์ไทยนอกจอ ไม่ลิปซิงก์
+4. **เสียงตามเพจ:** `--channel mom` (ค่าเริ่มต้น) = `F30-40` แม่บ้าน 30–40 · `--channel dad` = `M35-45` พ่อบ้าน 35–45
+5. **Lint ด้วย Pure JS (`lintGem11Row`)**: 7 คอลัมน์เฉพาะงาน Gen Image & Video (`ID`, `Product`, `Ref`, `Short Story`, `IMAGE_PROMPT`, `SB_PROMPT`, `VIDEO_PROMPT`) · พรอมต์ทุกตัวขึ้นต้นด้วย `[ID]` · `Ref` ในเซลล์ TSV เป็นชื่อไฟล์ภาพสั้นๆ (ห้ามใส่ path ยาวในเซลล์) · งบตัวอักษรที่พูดจริงไม่นับวรรค (ดึงจาก `[SPOKEN]` ใน `VIDEO_PROMPT`: 10s ≤ `130` · 15s ≤ `185`) · คำต้องห้าม/CTA/คำอ้างสุขภาพ · "ทอด"/"ผัด" ต้องมีในชื่อสินค้า · ห้ามเหลือ `<...>` · ห้าม `\t`/`\n` ในเซลล์ · ต้องมี negative ฉลากฉากหลัง + ข้อยกเว้นฉลากบนตัวสินค้า
+6. **Upsert แถว & ลิงก์ภาพคลิกเปิดได้ 100% (`upsertGem11Rows`)**: เขียนลง `10M_Project/Shopee_Aff/Campaigns/2026-11-16_30_16NOV26FBRAD/production_tables/G11_<YYYYMMDD>_batch<NN>.md` (`ID` ซ้ำ = แทนแถวเดิม) โดยระบบต้องแปลง `Ref` (`<ID>_FF.png`) และ `SB` (`<ID>_SB.png` เมื่อมี) เป็น **ลิงก์ `file:///` คลิกเปิดดูรูปใน DrView ได้จริง** (`[\`<ID>_FF.png\`](file:///...)`) ไว้ทั้ง 2 จุด: (ก) บรรทัด `> **🖼️ คลิกเปิดดูภาพ Ref จริง:**` เหนือตาราง และ (ข) ทุกหัวข้อ `### 🎬 <ID>` ในหมวด `## 🗣️ บทพากย์ (VO) แยกตาม ID` ใต้ตาราง · พร้อมเพิ่มหัวข้อ `## 🎞️ 8. Gem #11 Production Rows` ใน `00_Product_Master_Card.md` (ให้คลิกไฟล์ `03_first_frames/<ID>_FF.png` / `_SB.png` และลิงก์กลับตารางได้เช่นกัน)
+7. **เจนภาพ** `03_first_frames/<ID>_FF.png` (+ `<ID>_SB.png`) ผ่าน `/gptimage` เว้นแต่สั่ง `--skip-gen` · **ไม่เรนเดอร์วิดีโอเอง** วิดีโอที่ได้จาก Flow ให้เซฟเป็น `04_videos/<ID>.mp4`
+
+### ID & ไฟล์
+| สิ่งของ | รูปแบบ | ตัวอย่าง |
+| :--- | :--- | :--- |
+| `ID` (รหัสสั้น) | `<เดือน>-<เลขท้าย sub_id2>` | `nov-013` / `nov-444` / `nov-s003` |
+| First Frame / Storyboard | `03_first_frames/<ID>_FF.png` · `_SB.png` | `nov-013_FF.png` |
+| วิดีโอ | `04_videos/<ID>.mp4` | `nov-013.mp4` |
+
+`--ver` = เวอร์ชัน A/B ของคลิปเดิม (`-v2`, `-v3`) · `--batch` = เลขไฟล์ตารางของวันนั้น
+
+### 🔇 Chat Silence Rule (กฎเหล็กแบบ `/table`)
+- เวลาทำงานกับ Gem #11 ให้ **เขียนลงไฟล์ `production_tables/G11_*.md` เท่านั้น** ห้ามพ่น TSV, พรอมต์ IMAGE/SB/VIDEO หรือบทยาวลงแชท
+- ตอบในแชท **ไม่เกิน 4 บรรทัด**: (1) ลิงก์ไฟล์ตาราง (2) จำนวนคลิปแยกตาม A/B/C (3) แถวที่ lint ไม่ผ่าน/คำเตือนสำคัญ (เช่น VO เกินงบ) (4) ขั้นถัดไป
+- ข้อยกเว้น: ผู้ใช้ขอดูพรอมต์ของแถวไหนเป็นการเฉพาะ (เทียบเท่าเมนู `[5] full` ของ Gem) ค่อยกางเฉพาะแถวนั้น
+- Gem #11 บนเว็บ Gemini ใช้โหมด Compact TSV (1 แถว 7 คอลัมน์เฉพาะงาน Gen Image & Video ไม่มี header + กางบท VO ด้านล่าง) ส่วนข้อมูล Ads/ลิงก์/ค่าคอมแยกเก็บใน Pool/Sheet ไม่เอามาปนในตารางเจนภาพ-วิดีโอ
