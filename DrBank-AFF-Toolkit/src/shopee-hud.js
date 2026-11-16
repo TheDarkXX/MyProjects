@@ -427,9 +427,10 @@
     }
   }
 
-  async function requestSingleCardRealRate(itemId, cardProductPayload = null) {
+  async function requestSingleCardRealRate(itemId, cardProductPayload = null, forceRefresh = false) {
     const cleanId = String(itemId || '').replace(/[^0-9]/g, '');
-    if (!cleanId || gridRealCache.has(cleanId) || gridLoadingIds.has(cleanId)) return null;
+    if (!cleanId || gridLoadingIds.has(cleanId)) return null;
+    if (!forceRefresh && gridRealCache.has(cleanId)) return gridRealCache.get(cleanId);
 
     gridLoadingIds.add(cleanId);
     scanAndOverlayShopeeGrid();
@@ -437,7 +438,7 @@
       const res = await ns.sendMessage('GET_REAL_AFF_OFFER', {
         itemId: cleanId,
         shopId: cardProductPayload?.shopId || '',
-        forceRefresh: false,
+        forceRefresh: Boolean(forceRefresh),
         mode: 'grid_hover'
       });
 
@@ -644,7 +645,7 @@
       }
       countTotal++;
 
-      // Lock Card Signature: Only rebuild DOM if item/price/rateMode/real-rate state changed
+      // Lock Card Signature: Only update if item/price/rateMode/real-rate state changed
       const rateSig = realOffer ? `R_${activeBaseRate}_${activeExtraRate}` : isLoading ? 'L' : 'E';
       const scanSig = `${itemId || title.slice(0, 18)}_${price}_${catEst.catId}_${shopeeGridState.rateMode}_${rateSig}`;
       const existingOv = cardEl.querySelector('.drb-aff-card-overlay');
@@ -654,7 +655,6 @@
       }
       const wasPopPending = itemId && gridPopIds.has(itemId) && rateState === 'real';
       if (wasPopPending) gridPopIds.delete(itemId);
-      if (existingOv) existingOv.remove();
       cardEl.setAttribute('data-drb-sig', scanSig);
 
       const shortNet = comm.netComm >= 100 ? Math.round(comm.netComm) : comm.netComm.toFixed(1);
@@ -738,142 +738,185 @@
         ? `https://affiliate.shopee.co.th/offer/product_offer/${itemId}`
         : `https://affiliate.shopee.co.th/offer/product_offer`;
 
+      const tooltipInnerHtml = `
+        <div class="drb-aff-tt-title">${escHtmlGrid(tierTitle)}</div>
+        ${
+          realOffer
+            ? `
+        <div class="drb-aff-tt-row">
+          <span>✅ เรทจริง Social:</span>
+          <strong style="color:#4ade80;">Extra ${activeExtraRate}% + Base ${activeBaseRate}%</strong>
+        </div>
+        <div class="drb-aff-tt-row">
+          <span>💰 คอมสุทธิจริง:</span>
+          <strong>${ns.formatTHB(comm.netComm)} / ชิ้น</strong>
+        </div>
+        ${
+          deltaArrow
+            ? `<div class="drb-aff-tt-row"><span>📊 เทียบค่าเดา (~${ns.formatTHB(estComm.netComm, 0)}):</span><strong style="color:${deltaArrow.includes('▼') ? '#fca5a5' : '#4ade80'};">${deltaArrow.includes('▼') ? 'ต่ำกว่าคาด ▼' : 'สูงกว่าคาด ▲'}</strong></div>`
+            : ''
+        }`
+            : `
+        <div class="drb-aff-tt-row">
+          <span>🏷️ หมวด (เดา):</span>
+          <strong>${escHtmlGrid(catEst.catLabel)} (~${catEst.totalRate}%)</strong>
+        </div>
+        <div class="drb-aff-tt-row">
+          <span>💰 คอมประเมิน:</span>
+          <strong>~${ns.formatTHB(comm.netComm)} / ชิ้น</strong>
+        </div>`
+        }
+        <div class="drb-aff-tt-row">
+          <span>🎯 คุ้มแอด 107฿:</span>
+          <strong>${realOffer ? '' : '~'}${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)</strong>
+        </div>
+        <div class="drb-aff-tt-row">
+          <span>📦 ยอดขาย:</span>
+          <span>${escHtmlGrid(soldStatusLabel)}${isOverseas ? ' ⚠️จีน' : ''}</span>
+        </div>
+        <div class="drb-aff-card-btn-group">
+          ${
+            itemId
+              ? `<button type="button" class="drb-aff-card-check-btn ${realOffer ? 'is-verified' : ''}">${
+                  isLoading
+                    ? '⏳ กำลังดึงเรทจริง...'
+                    : realOffer
+                    ? '✅ เช็กเรทจริงแล้ว (คลิกเช็กซ้ำ)'
+                    : '🎯 ดึงเรทจริง Social Media'
+                }</button>`
+              : ''
+          }
+          <button type="button" class="drb-aff-card-pick-btn">⚡ ดึงเข้า Side Panel & Web UI</button>
+          <button type="button" class="drb-aff-card-aff-btn">🔍 เช็กตารางหน้า AFF (1-Click)</button>
+        </div>
+      `;
+
+      const cardCtx = {
+        itemId,
+        shopId,
+        title,
+        realOffer,
+        comm,
+        catEst,
+        cardProductPayload,
+        affOfferUrl
+      };
+
+      // Update existing overlay IN PLACE so hovering / clicking NEVER flickers or closes tooltip!
+      if (existingOv) {
+        existingOv.setAttribute('data-tier', cardTier);
+        existingOv.setAttribute('data-rate-state', rateState);
+        existingOv.__drbCtx = cardCtx;
+
+        const existingPill = existingOv.querySelector('.drb-aff-card-pill');
+        if (existingPill) {
+          existingPill.classList.toggle('drb-aff-card-pill--pop', Boolean(wasPopPending));
+          const spanEl = existingPill.querySelector('span');
+          if (spanEl) spanEl.textContent = pillLabel;
+        }
+        const existingTt = existingOv.querySelector('.drb-aff-card-tooltip');
+        if (existingTt) {
+          const rect = cardEl.getBoundingClientRect();
+          existingTt.classList.toggle('drb-aff-card-tooltip--flip-right', rect.left > 0 && rect.left < 220);
+          const innerEl = existingTt.querySelector('.drb-aff-card-tooltip-inner');
+          if (innerEl) innerEl.innerHTML = tooltipInnerHtml;
+        }
+        return;
+      }
+
       const ov = document.createElement('div');
       ov.className = 'drb-aff-card-overlay';
       ov.setAttribute('data-tier', cardTier);
       ov.setAttribute('data-rate-state', rateState);
+      ov.__drbCtx = cardCtx;
+
+      const cardRect = cardEl.getBoundingClientRect();
+      const flipRightCls = cardRect.left > 0 && cardRect.left < 220 ? ' drb-aff-card-tooltip--flip-right' : '';
+
       ov.innerHTML = `
-        <div class="drb-aff-card-pill ${wasPopPending ? 'drb-aff-card-pill--pop' : ''}" title="${
-        realOffer
-          ? `✅ เรทจริง Social Media: Extra ${activeExtraRate}% + Base ${activeBaseRate}% = ${activeTotalRate}%`
-          : `ค่าคอมประเมินตามหมวด (${catEst.catLabel}) — ชี้ค้าง 0.5 วิ หรือคลิกเพื่อดึงเรทจริงทันที`
-      }">
+        <div class="drb-aff-card-pill ${wasPopPending ? 'drb-aff-card-pill--pop' : ''}">
           <span>${escHtmlGrid(pillLabel)}</span>
         </div>
-        <div class="drb-aff-card-tooltip">
-          <div class="drb-aff-card-tooltip-inner">
-            <div class="drb-aff-tt-title">${escHtmlGrid(tierTitle)}</div>
-            ${
-              realOffer
-                ? `
-            <div class="drb-aff-tt-row">
-              <span>✅ เรทจริง Social:</span>
-              <strong style="color:#4ade80;">Extra ${activeExtraRate}% + Base ${activeBaseRate}%</strong>
-            </div>
-            <div class="drb-aff-tt-row">
-              <span>💰 คอมสุทธิจริง:</span>
-              <strong>${ns.formatTHB(comm.netComm)} / ชิ้น</strong>
-            </div>
-            ${
-              deltaArrow
-                ? `<div class="drb-aff-tt-row"><span>📊 เทียบค่าเดา (~${ns.formatTHB(estComm.netComm, 0)}):</span><strong style="color:${deltaArrow.includes('▼') ? '#fca5a5' : '#4ade80'};">${deltaArrow.includes('▼') ? 'ต่ำกว่าคาด ▼' : 'สูงกว่าคาด ▲'}</strong></div>`
-                : ''
-            }`
-                : `
-            <div class="drb-aff-tt-row">
-              <span>🏷️ หมวด (เดา):</span>
-              <strong>${escHtmlGrid(catEst.catLabel)} (~${catEst.totalRate}%)</strong>
-            </div>
-            <div class="drb-aff-tt-row">
-              <span>💰 คอมประเมิน:</span>
-              <strong>~${ns.formatTHB(comm.netComm)} / ชิ้น</strong>
-            </div>`
-            }
-            <div class="drb-aff-tt-row">
-              <span>🎯 คุ้มแอด 107฿:</span>
-              <strong>${realOffer ? '' : '~'}${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)</strong>
-            </div>
-            <div class="drb-aff-tt-row">
-              <span>📦 ยอดขาย:</span>
-              <span>${escHtmlGrid(soldStatusLabel)}${isOverseas ? ' ⚠️จีน' : ''}</span>
-            </div>
-            <div class="drb-aff-card-btn-group">
-              ${
-                !realOffer && itemId
-                  ? `<button type="button" class="drb-aff-card-check-btn">${isLoading ? '⏳ กำลังดึงเรทจริง...' : '🎯 ดึงเรทจริง Social Media'}</button>`
-                  : ''
-              }
-              <button type="button" class="drb-aff-card-pick-btn">⚡ ดึงเข้า Side Panel & Web UI</button>
-              <button type="button" class="drb-aff-card-aff-btn">🔍 เช็กตารางหน้า AFF (1-Click)</button>
-            </div>
-          </div>
+        <div class="drb-aff-card-tooltip${flipRightCls}">
+          <div class="drb-aff-card-tooltip-inner">${tooltipInnerHtml}</div>
         </div>
       `;
 
-      const handlePickShopeeCard = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        currentState = { ...currentState, ...cardProductPayload };
-        updateHUDValues();
-        try {
-          await chrome.storage.local.set({ activeShopeeGridProduct: cardProductPayload });
-          await ns.sendMessage('PUSH_SKU_TO_WEBUI', {
-            id: `shopee_${shopId}_${itemId || Date.now()}`,
-            platform: 'shopee',
-            sourceTab: realOffer ? 'Shopee Grid (Verified SM)' : `Shopee Grid (${catEst.catLabel})`,
-            title: cardProductPayload.title,
-            specText: cardProductPayload.specText,
-            price: cardProductPayload.price,
-            baseRate: cardProductPayload.baseRate,
-            extraRate: cardProductPayload.extraRate,
-            estimatedCommission: Number(comm.netComm.toFixed(2)),
-            realDailyAdCostTHB: 107,
-            breakEvenUnits: comm.breakEvenUnits,
-            breakEvenOrders: comm.breakEvenOrders,
-            adViabilityTier: comm.tier,
-            cleanUrl: cardProductPayload.cleanUrl,
-            imagesHD: cardProductPayload.imagesHD,
-            scrapedAt: new Date().toISOString()
-          });
-        } catch (_err) {}
-        if (itemId && !realOffer && !gridLoadingIds.has(itemId)) {
-          requestSingleCardRealRate(itemId, cardProductPayload);
+      // Event delegation on persistent overlay wrapper (survives in-place HTML updates cleanly!)
+      ov.addEventListener('click', async (e) => {
+        const ctx = ov.__drbCtx || {};
+        const checkTarget = e.target.closest('.drb-aff-card-check-btn');
+        if (checkTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (ctx.itemId) {
+            requestSingleCardRealRate(ctx.itemId, ctx.cardProductPayload, Boolean(ctx.realOffer));
+          }
+          return;
         }
-        ns.showToast(
-          realOffer
-            ? `✓ ดึง "${title.slice(0, 24)}..." (${ns.formatTHB(comm.netComm)} เรทจริง) เข้า Side Panel แล้ว!`
-            : `⚡ ดึง "${title.slice(0, 24)}..." (~${ns.formatTHB(comm.netComm)}) — กำลังเช็กเรทจริงให้ต่อ!`
-        );
-      };
 
-      const pickBtn = ov.querySelector('.drb-aff-card-pick-btn');
-      const pillEl = ov.querySelector('.drb-aff-card-pill');
-      const affBtn = ov.querySelector('.drb-aff-card-aff-btn');
-      const checkBtn = ov.querySelector('.drb-aff-card-check-btn');
-
-      if (pickBtn) pickBtn.addEventListener('click', handlePickShopeeCard);
-      if (pillEl) pillEl.addEventListener('click', handlePickShopeeCard);
-      if (checkBtn && itemId) {
-        checkBtn.addEventListener('click', (e) => {
+        const affTarget = e.target.closest('.drb-aff-card-aff-btn');
+        if (affTarget) {
           e.preventDefault();
           e.stopPropagation();
-          requestSingleCardRealRate(itemId, cardProductPayload);
-        });
-      }
-      if (affBtn) {
-        affBtn.addEventListener('click', (e) => {
+          if (ctx.affOfferUrl) window.open(ctx.affOfferUrl, '_blank', 'noopener');
+          return;
+        }
+
+        const pickTarget = e.target.closest('.drb-aff-card-pick-btn, .drb-aff-card-pill');
+        if (pickTarget) {
           e.preventDefault();
           e.stopPropagation();
-          window.open(affOfferUrl, '_blank', 'noopener');
-        });
-      }
+          currentState = { ...currentState, ...(ctx.cardProductPayload || {}) };
+          updateHUDValues();
+          try {
+            await chrome.storage.local.set({ activeShopeeGridProduct: ctx.cardProductPayload });
+            await ns.sendMessage('PUSH_SKU_TO_WEBUI', {
+              id: `shopee_${ctx.shopId}_${ctx.itemId || Date.now()}`,
+              platform: 'shopee',
+              sourceTab: ctx.realOffer ? 'Shopee Grid (Verified SM)' : `Shopee Grid (${ctx.catEst?.catLabel || ''})`,
+              title: ctx.cardProductPayload?.title,
+              specText: ctx.cardProductPayload?.specText,
+              price: ctx.cardProductPayload?.price,
+              baseRate: ctx.cardProductPayload?.baseRate,
+              extraRate: ctx.cardProductPayload?.extraRate,
+              estimatedCommission: Number((ctx.comm?.netComm || 0).toFixed(2)),
+              realDailyAdCostTHB: 107,
+              breakEvenUnits: ctx.comm?.breakEvenUnits,
+              breakEvenOrders: ctx.comm?.breakEvenOrders,
+              adViabilityTier: ctx.comm?.tier,
+              cleanUrl: ctx.cardProductPayload?.cleanUrl,
+              imagesHD: ctx.cardProductPayload?.imagesHD,
+              scrapedAt: new Date().toISOString()
+            });
+          } catch (_err) {}
+          if (ctx.itemId && !ctx.realOffer && !gridLoadingIds.has(ctx.itemId)) {
+            requestSingleCardRealRate(ctx.itemId, ctx.cardProductPayload, false);
+          }
+          ns.showToast(
+            ctx.realOffer
+              ? `✓ ดึง "${(ctx.title || '').slice(0, 24)}..." (${ns.formatTHB(ctx.comm?.netComm || 0)} เรทจริง) เข้า Side Panel แล้ว!`
+              : `⚡ ดึง "${(ctx.title || '').slice(0, 24)}..." (~${ns.formatTHB(ctx.comm?.netComm || 0)}) — กำลังเช็กเรทจริงให้ต่อ!`
+          );
+        }
+      });
 
       // Layer 2 Hover Intent: hover unverified pill >= 450ms -> auto-check just this item (including <฿15 & base-only)
-      if (!realOffer && itemId) {
-        let hoverTimer = null;
-        ov.addEventListener('mouseenter', () => {
-          if (gridRealCache.has(itemId) || gridLoadingIds.has(itemId) || gridCircuitTripped) return;
-          hoverTimer = setTimeout(() => {
-            requestSingleCardRealRate(itemId, cardProductPayload);
-          }, 450);
-        });
-        ov.addEventListener('mouseleave', () => {
-          if (hoverTimer) {
-            clearTimeout(hoverTimer);
-            hoverTimer = null;
-          }
-        });
-      }
+      let hoverTimer = null;
+      ov.addEventListener('mouseenter', () => {
+        const ctx = ov.__drbCtx || {};
+        if (!ctx.itemId || gridRealCache.has(ctx.itemId) || gridLoadingIds.has(ctx.itemId) || gridCircuitTripped) return;
+        hoverTimer = setTimeout(() => {
+          const latestCtx = ov.__drbCtx || ctx;
+          requestSingleCardRealRate(latestCtx.itemId, latestCtx.cardProductPayload, false);
+        }, 450);
+      });
+      ov.addEventListener('mouseleave', () => {
+        if (hoverTimer) {
+          clearTimeout(hoverTimer);
+          hoverTimer = null;
+        }
+      });
 
       cardEl.appendChild(ov);
     });

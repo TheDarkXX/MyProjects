@@ -1009,9 +1009,10 @@
     }
 
     const list = resList?.data?.data?.list;
-    if (Array.isArray(list) && list.length > 0) {
-      const rawItem =
-        list.find((x) => String(x?.item_id || x?.batch_item_for_item_card_full?.itemid || '') === cleanId) || list[0];
+    const rawItem = Array.isArray(list)
+      ? list.find((x) => String(x?.item_id || x?.batch_item_for_item_card_full?.itemid || '') === cleanId)
+      : null;
+    if (rawItem) {
       const row = mapRawOfferItemToRow(rawItem);
       const baseRate = Number(row.baseRate) > 0 ? Number(row.baseRate) : row.isMall ? 2.0 : 0.6;
       const extraRate = Number(row.extraRate) || 0;

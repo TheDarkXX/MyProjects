@@ -42,7 +42,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 const REAL_OFFER_TTL_MS = 24 * 60 * 60 * 1000;
 const REAL_OFFER_STORAGE_KEY = 'drbRealOfferCacheV1';
 const REAL_OFFER_MAX_ENTRIES = 1000;
-const AFF_RATE_LIMIT_GAP_MS = 650;
+const AFF_RATE_LIMIT_GAP_MS = 350;
 const HOURLY_AUTO_LIMIT = 120;
 const realOfferCache = new Map();
 const pendingOfferWaiters = new Map();
@@ -231,7 +231,7 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
 
   const runPromise = (async () => {
     if (mode === 'grid_auto') {
-      const jitterMs = 1200 + Math.floor(Math.random() * 1100);
+      const jitterMs = 500 + Math.floor(Math.random() * 450);
       await new Promise((r) => setTimeout(r, jitterMs));
       autoFetchTimestamps.push(Date.now());
     }

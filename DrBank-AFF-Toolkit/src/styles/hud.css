@@ -1026,6 +1026,11 @@ body.drb-aff-radar-off .drb-aff-grid-card {
   filter: brightness(1.1);
 }
 
+.drb-aff-card-check-btn.is-verified {
+  background: linear-gradient(90deg, #15803d 0%, #16a34a 100%);
+  border: 1px solid rgba(134, 239, 172, 0.45);
+}
+
 /* Hover Tooltip Popover */
 .drb-aff-card-tooltip {
   display: none;
@@ -1035,6 +1040,11 @@ body.drb-aff-radar-off .drb-aff-grid-card {
   padding-top: 6px; /* hover bridge so cursor can move into button smoothly */
   width: 235px;
   z-index: 80;
+}
+
+.drb-aff-card-tooltip.drb-aff-card-tooltip--flip-right {
+  right: auto;
+  left: -130px;
 }
 
 .drb-aff-card-overlay:hover .drb-aff-card-tooltip {
