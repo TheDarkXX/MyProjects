@@ -505,8 +505,9 @@ window.DrBankAFF = window.DrBankAFF || {};
     const detail = data.commission_rate_detail || {};
     const sellerDetail = detail.seller_commission_detail || {};
     const shopeeDetail = detail.shopee_commission_detail || {};
+    const isMall = Boolean(card.is_official_shop);
 
-    const extraRate = ns.parseShopeeRateToPct(
+    let extraRate = ns.parseShopeeRateToPct(
       sellerDetail.default_exist_commission_rate ??
         sellerDetail.social_media_commission_rate ??
         sellerDetail.default_commission_rate
@@ -525,6 +526,25 @@ window.DrBankAFF = window.DrBankAFF || {};
       baseRate = +(totalDetailRate - extraRate).toFixed(2);
     }
 
+    if (baseRate === 0 && extraRate === 0 && (card.itemid || data.item_id)) {
+      if (data.default_commission_rate !== undefined || data.seller_commission_rate !== undefined) {
+        const listFb = ns.extractListCommissionFallback(
+          {
+            item_id: card.itemid || data.item_id,
+            default_commission_rate: data.default_commission_rate,
+            seller_commission_rate: data.seller_commission_rate
+          },
+          isMall,
+          card.name || data.product_name || ''
+        );
+        extraRate = Number(listFb?.extraRate) || 0;
+        baseRate = Number(listFb?.baseRate) || 0;
+      }
+      if (baseRate === 0) {
+        baseRate = isMall ? 2.0 : 0.6;
+      }
+    }
+
     const totalRate = +(extraRate + baseRate).toFixed(2) || totalDetailRate;
     const rawPrice = Number(card.price) || 0;
     const offerPrice = rawPrice > 100000 ? +(rawPrice / 100000).toFixed(2) : rawPrice;
@@ -538,7 +558,7 @@ window.DrBankAFF = window.DrBankAFF || {};
       : [];
 
     return {
-      hasDetail: Boolean(data.commission_rate_detail),
+      hasDetail: Boolean(data.commission_rate_detail || card.itemid || data.item_id || data.product_name),
       itemId: String(card.itemid || data.item_id || ''),
       shopId: String(card.shopid || data.shop_id || ''),
       title: card.name || data.product_name || '',
@@ -553,7 +573,7 @@ window.DrBankAFF = window.DrBankAFF || {};
       soldTotal: Number(card.historical_sold) || 0,
       stock: Number(card.stock) || 0,
       rating: Number(card?.item_rating?.rating_star) || 0,
-      isMall: Boolean(card.is_official_shop),
+      isMall,
       imagesHD
     };
   };

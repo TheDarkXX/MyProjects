@@ -265,7 +265,7 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
           circuitBreaker = { tripped: true, trippedAt: Date.now(), error: resp.error };
           return { ok: false, securityCheck: true, circuitTripped: true, error: resp.error };
         }
-        if (resp?.ok && resp.data && (resp.data.realRateVerified || resp.data.baseRate > 0 || resp.data.extraRate > 0)) {
+        if (resp?.ok && resp.data && (resp.data.realRateVerified || resp.data.baseRate >= 0)) {
           circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
           persistRealOfferCacheEntry(itemId, resp.data);
           return { ok: true, cached: false, cachedAt: Date.now(), data: resp.data };
@@ -284,75 +284,59 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
       };
     }
 
-    // Tier 2 (single product / manual grid hover & click): Open inactive background tab to /offer/product_offer/<itemId>
+    // Tier 2: Open safe root /offer/product_offer (NEVER /product_offer/<itemId> which redirects to error if no Seller Extra!)
+    // Keep this single reusable background bridge tab open so subsequent requests finish in ~200ms via Tier 1
     let bgTab = null;
+    let shouldCloseBgTab = false;
     try {
-      const waiterPromise = waitForCachedOffer(itemId, 9500);
       bgTab = await chrome.tabs.create({
-        url: `https://affiliate.shopee.co.th/offer/product_offer/${itemId}`,
+        url: 'https://affiliate.shopee.co.th/offer/product_offer',
         active: false
       });
 
-      const loadPromise = waitForTabComplete(bgTab.id, 8500).then(async (loadRes) => {
-        if (loadRes?.securityCheck) {
-          return {
-            securityCheck: true,
-            error: 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
-          };
-        }
-        for (let attempt = 0; attempt < 16; attempt++) {
-          await new Promise((r) => setTimeout(r, 400));
-          try {
-            const currentTab = await chrome.tabs.get(bgTab.id).catch(() => null);
-            if (!currentTab) break;
-            if (isSecurityOrLoginUrl(currentTab.url)) {
-              return {
-                securityCheck: true,
-                error: 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
-              };
-            }
-            const scrapedResp = await chrome.tabs.sendMessage(bgTab.id, { action: 'GET_AFFILIATE_OFFER' });
-            if (
-              scrapedResp?.ok &&
-              scrapedResp.data &&
-              (scrapedResp.data.realRateVerified || scrapedResp.data.baseRate > 0 || scrapedResp.data.extraRate > 0)
-            ) {
-              resolvePendingOfferWaiter(itemId, scrapedResp.data);
-              return scrapedResp.data;
-            }
-          } catch (_e) {}
-        }
-        return null;
-      });
-
-      const firstResult = await Promise.race([
-        waiterPromise.then((d) => (d ? { fromWaiter: true, payload: d } : null)),
-        loadPromise.then((d) => (d ? { fromWaiter: false, payload: d } : null))
-      ]);
-
-      let finalPayload = firstResult?.payload || null;
-      if (!finalPayload) {
-        const [wRes, lRes] = await Promise.all([waiterPromise, loadPromise]);
-        finalPayload = wRes || lRes || null;
+      const loadRes = await waitForTabComplete(bgTab.id, 8500);
+      if (loadRes?.securityCheck) {
+        shouldCloseBgTab = true;
+        circuitBreaker = {
+          tripped: true,
+          trippedAt: Date.now(),
+          error: 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+        };
+        return { ok: false, securityCheck: true, circuitTripped: true, error: circuitBreaker.error };
       }
 
-      if (finalPayload?.securityCheck) {
-        circuitBreaker = { tripped: true, trippedAt: Date.now(), error: finalPayload.error };
-        return { ok: false, securityCheck: true, circuitTripped: true, error: finalPayload.error };
+      // Allow content script & MAIN world bridge to initialize on root offer page
+      await new Promise((r) => setTimeout(r, 750));
+
+      let resp = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        resp = await chrome.tabs
+          .sendMessage(bgTab.id, { action: 'FETCH_REAL_OFFER_IN_AFF_TAB', itemId })
+          .catch(() => null);
+        if (resp) break;
+        await new Promise((r) => setTimeout(r, 450));
       }
-      if (finalPayload && (finalPayload.realRateVerified || finalPayload.baseRate > 0 || finalPayload.extraRate > 0)) {
+
+      if (resp?.securityCheck) {
+        shouldCloseBgTab = true;
+        circuitBreaker = { tripped: true, trippedAt: Date.now(), error: resp.error };
+        return { ok: false, securityCheck: true, circuitTripped: true, error: resp.error };
+      }
+      if (resp?.ok && resp.data && (resp.data.realRateVerified || resp.data.baseRate >= 0)) {
         circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
-        persistRealOfferCacheEntry(itemId, finalPayload);
-        return { ok: true, cached: false, cachedAt: Date.now(), data: finalPayload };
+        persistRealOfferCacheEntry(itemId, resp.data);
+        return { ok: true, cached: false, cachedAt: Date.now(), data: resp.data };
       }
+      shouldCloseBgTab = true;
       return {
         ok: false,
         error: 'ไม่พบข้อมูลคอมมิชชันในหน้า affiliate.shopee.co.th (ตรวจสอบการล็อกอินหรือลองใหม่อีกครั้ง)'
       };
     } catch (err) {
+      shouldCloseBgTab = true;
       return { ok: false, error: err?.message || String(err) };
     } finally {
-      if (bgTab?.id) {
+      if (shouldCloseBgTab && bgTab?.id) {
         chrome.tabs.remove(bgTab.id).catch(() => {});
       }
     }

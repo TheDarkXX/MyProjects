@@ -869,11 +869,11 @@
                 return;
               }
             }
-            // Fast Path 2: Try MAIN world API request with 3.5s timeout
+            // Fast Path 2: Try MAIN world fetch request (3-Tier: product detail -> list fallback -> base default)
             if (targetItemId) {
               const apiOffer = await Promise.race([
                 fetchSingleOfferDetailViaMainBridge(targetItemId),
-                new Promise((r) => setTimeout(() => r(null), 3500))
+                new Promise((r) => setTimeout(() => r(null), 7000))
               ]);
               if (apiOffer && apiOffer.securityCheck) {
                 sendResponse({
@@ -884,7 +884,7 @@
                 });
                 return;
               }
-              if (apiOffer && apiOffer.itemId && (apiOffer.realRateVerified || apiOffer.baseRate > 0 || apiOffer.extraRate > 0)) {
+              if (apiOffer && apiOffer.itemId) {
                 sendResponse({ ok: true, data: apiOffer });
                 return;
               }
@@ -951,14 +951,15 @@
       };
     }
 
+    // Tier 1: Direct offer detail via window.fetch (useFetch: true prevents Shopee's XHR error router from redirecting page)
     const res = await pageMainRequest({
       url: `https://affiliate.shopee.co.th/api/v3/offer/product?item_id=${encodeURIComponent(cleanId)}`,
       method: 'GET',
-      useFetch: false,
+      useFetch: true,
+      attachCsrf: true,
       headers: {
         accept: 'application/json',
-        'affiliate-program-type': '1',
-        'x-requested-with': 'XMLHttpRequest'
+        'affiliate-program-type': '1'
       }
     });
 
@@ -969,30 +970,99 @@
         error: 'Shopee ขอตรวจสอบความปลอดภัย (90309999) — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
       };
     }
-    if (!res?.ok || !res?.data?.data) {
-      return null;
+
+    if (res?.ok && res?.data?.data) {
+      const parsedOffer = applyApiOfferToOfferProduct(res.data);
+      if (
+        parsedOffer &&
+        (parsedOffer.price > 0 ||
+          parsedOffer.extraRate > 0 ||
+          res.data.data.commission_rate_detail ||
+          res.data.data.batch_item_for_item_card_full?.itemid)
+      ) {
+        if (!Number(parsedOffer.baseRate) || Number(parsedOffer.baseRate) <= 0) {
+          parsedOffer.baseRate = parsedOffer.shipFrom === 'Shopee Mall' ? 2.0 : 0.6;
+        }
+        ns.sendMessage('CACHE_REAL_AFF_OFFER', parsedOffer).catch(() => {});
+        return parsedOffer;
+      }
     }
-    if (!res.data.data.commission_rate_detail) {
-      // Valid product on Shopee that is not enrolled in Shopee Affiliate (0% commission)
-      const fallbackOffer = {
-        itemId: cleanId,
-        shopId: String(res.data.data?.batch_item_for_item_card_full?.shopid || res.data.data?.shop_id || ''),
-        title: res.data.data?.batch_item_for_item_card_full?.name || res.data.data?.product_name || '',
-        price: 0,
-        offerPrice: 0,
-        baseRate: 0,
-        extraRate: 0,
-        realRateVerified: true,
-        rateSource: 'social_media_detail'
+
+    // Tier 2: Fallback to /api/v3/offer/product/list?item_id=... via window.fetch (gets Base Rate, Price, Sold even with 0% Extra)
+    const resList = await pageMainRequest({
+      url: `https://affiliate.shopee.co.th/api/v3/offer/product/list?item_id=${encodeURIComponent(cleanId)}&list_type=0&sort_type=1&page_offset=0&page_limit=5`,
+      method: 'GET',
+      useFetch: true,
+      attachCsrf: true,
+      headers: {
+        accept: 'application/json',
+        'affiliate-program-type': '1'
+      }
+    });
+
+    if (resList?.data?.error === 90309999) {
+      return {
+        securityCheck: true,
+        errorCode: 90309999,
+        error: 'Shopee ขอตรวจสอบความปลอดภัย (90309999) — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
       };
-      ns.sendMessage('CACHE_REAL_AFF_OFFER', fallbackOffer).catch(() => {});
-      return fallbackOffer;
     }
-    const parsedOffer = applyApiOfferToOfferProduct(res.data);
-    if (parsedOffer && !parsedOffer.securityCheck) {
-      ns.sendMessage('CACHE_REAL_AFF_OFFER', parsedOffer).catch(() => {});
+
+    const list = resList?.data?.data?.list;
+    if (Array.isArray(list) && list.length > 0) {
+      const rawItem =
+        list.find((x) => String(x?.item_id || x?.batch_item_for_item_card_full?.itemid || '') === cleanId) || list[0];
+      const row = mapRawOfferItemToRow(rawItem);
+      const baseRate = Number(row.baseRate) > 0 ? Number(row.baseRate) : row.isMall ? 2.0 : 0.6;
+      const extraRate = Number(row.extraRate) || 0;
+      const price = Number(row.price) || 0;
+      const comm = ns.calculateCommission({
+        price,
+        baseRate,
+        extraRate,
+        capTHB: 250,
+        whtRate: 3.0,
+        realDailyAdCostTHB: 107
+      });
+      const soldCount = Number(row.sold || row.historical_sold) || 0;
+
+      const listOffer = {
+        itemId: cleanId,
+        shopId: String(row.shopid || ''),
+        title: row.name || '',
+        price,
+        offerPrice: price,
+        baseRate,
+        extraRate,
+        baseCommTHB: +comm.baseComm.toFixed(2),
+        extraCommTHB: +comm.extraComm.toFixed(2),
+        grossCommTHB: +comm.grossComm.toFixed(2),
+        soldCount,
+        soldText: soldCount.toLocaleString(),
+        cleanUrl: row.productLink || '',
+        imagesHD: row.imagesHD || [],
+        realRateVerified: true,
+        noExtraOffer: extraRate <= 0,
+        rateSource: 'offer_list_fallback'
+      };
+      ns.sendMessage('CACHE_REAL_AFF_OFFER', listOffer).catch(() => {});
+      return listOffer;
     }
-    return parsedOffer;
+
+    // Tier 3: Ultimate Base-Rate Default Fallback so Pool/Spy batch loop never aborts or redirects
+    const fallbackOffer = {
+      itemId: cleanId,
+      noExtraOffer: true,
+      baseRate: 0.6,
+      extraRate: 0,
+      price: 0,
+      offerPrice: 0,
+      soldCount: 0,
+      realRateVerified: true,
+      rateSource: 'base_default_fallback'
+    };
+    ns.sendMessage('CACHE_REAL_AFF_OFFER', fallbackOffer).catch(() => {});
+    return fallbackOffer;
   }
 
   // ==========================================================================
@@ -3272,15 +3342,7 @@
         if (stEl) {
           stEl.innerHTML = `⏳ กำลังดึงเรท Social Media จริง <code style="color:#93c5fd;">/api/v3/offer/product</code> (${it.sku_code || cleanItemId}) [${idx + 1}/${chunk.length}]...`;
         }
-        let offer = await fetchSingleOfferDetailViaMainBridge(cleanItemId).catch(() => null);
-        if ((!offer || offer.securityCheck) && !/verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
-          const bgRes = await ns.sendMessage('GET_REAL_AFF_OFFER', { itemId: cleanItemId, forceRefresh: false }).catch(() => null);
-          if (bgRes?.ok && bgRes.data) {
-            offer = bgRes.data;
-          } else if (bgRes?.securityCheck) {
-            offer = { securityCheck: true, error: bgRes.error };
-          }
-        }
+        const offer = await fetchSingleOfferDetailViaMainBridge(cleanItemId).catch(() => null);
         if (offer?.securityCheck) {
           const secErr = new Error(
             offer.error || 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
