@@ -24,6 +24,9 @@ for (const m of literalCalls) {
 const heroSuffixes = [
   'comm-card',
   'breakeven-box',
+  'signal-badge',
+  'signal-title',
+  'signal-sub',
   'net-comm',
   'gross-sub',
   'total-rate',

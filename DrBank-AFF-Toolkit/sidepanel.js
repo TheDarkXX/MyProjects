@@ -697,8 +697,10 @@ async function scrapeAffiliateTab(tabId, showToastOnDone) {
 function renderHero(prefix, prod, comm, animateFlash = false) {
   const cardEl = document.getElementById(`drb-${prefix}-comm-card`);
   const verdictEl = document.getElementById(`drb-${prefix}-breakeven-box`);
+  const sigBadgeEl = document.getElementById(`drb-${prefix}-signal-badge`);
   if (cardEl) cardEl.setAttribute('data-tier', comm.tier);
   if (verdictEl) verdictEl.setAttribute('data-tier', comm.tier);
+  if (sigBadgeEl) sigBadgeEl.setAttribute('data-tier', comm.tier);
 
   setText(`drb-${prefix}-net-comm`, ns.formatTHB(comm.netComm));
   if (animateFlash) flashElement(`drb-${prefix}-net-comm`);
@@ -710,6 +712,25 @@ function renderHero(prefix, prod, comm, animateFlash = false) {
   const extraR = Number(prod.extraRate) || 0;
   const totalPct = +(baseR + extraR).toFixed(1);
   setText(`drb-${prefix}-total-rate`, `${totalPct}%`);
+
+  // Render High-Contrast Action Signal Badge in the center-top slot
+  let sigTitle = '⚠️ ลงเพจ / ลุ้นพ่วง';
+  let sigSub = `แอดต้อง ${comm.breakEvenOrders} ออเดอร์`;
+  if (comm.tier === 'god') {
+    sigTitle = '🔥 ลุยแอดด่วน!';
+    sigSub = '1 ออเดอร์กำไรทันที';
+  } else if (comm.tier === 'pass') {
+    sigTitle = '✅ ยิงแอดคุ้ม!';
+    sigSub = `ขาย ${comm.breakEvenOrders} ออเดอร์คืนทุน`;
+  } else if (comm.tier === 'warning') {
+    sigTitle = '⚠️ ลงเพจ / ลุ้นพ่วง';
+    sigSub = `แอดต้อง ${comm.breakEvenOrders} ออเดอร์`;
+  } else {
+    sigTitle = '⛔ ข้าม! ไม่คุ้ม';
+    sigSub = extraR <= 0 ? 'ไร้ EXTRACOMM' : `ต้องขาย ${comm.breakEvenOrders} ออเดอร์`;
+  }
+  setText(`drb-${prefix}-signal-title`, sigTitle);
+  setText(`drb-${prefix}-signal-sub`, sigSub);
 
   const gross = comm.grossComm > 0 ? comm.grossComm : 1;
   const extraPctWidth = comm.grossComm > 0 ? Math.round((comm.extraComm / gross) * 100) : extraR > 0 ? 75 : 0;
@@ -731,7 +752,7 @@ function renderHero(prefix, prod, comm, animateFlash = false) {
 
   setText(
     `drb-${prefix}-breakeven-text`,
-    `${comm.tierEmoji || '⚠️'} ทุนแอด 107฿: ขาย ${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)`
+    `ทุนแอด 107฿: คืนทุนที่ ${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)`
   );
 }
 

@@ -247,7 +247,12 @@ body[data-theme="dark"] #drb-sidepanel-root {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+}
+
+.sp-hero-left {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .sp-hero-kicker {
@@ -257,14 +262,69 @@ body[data-theme="dark"] #drb-sidepanel-root {
   margin-bottom: 2px;
 }
 
+.sp-hero-net-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
 .sp-hero-net {
-  font-size: 42px;
+  font-size: 40px;
   font-weight: 900;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.025em;
   color: var(--sp-text);
   border-radius: 6px;
+}
+
+.sp-hero-signal-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 9px;
+  line-height: 1.15;
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ea580c, #d97706);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+}
+
+.sp-hero-signal-badge[data-tier="god"] {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  box-shadow: 0 3px 10px rgba(124, 58, 237, 0.3);
+}
+
+.sp-hero-signal-badge[data-tier="pass"] {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  box-shadow: 0 3px 10px rgba(22, 163, 74, 0.28);
+}
+
+.sp-hero-signal-badge[data-tier="warning"] {
+  background: linear-gradient(135deg, #ea580c, #d97706);
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.28);
+}
+
+.sp-hero-signal-badge[data-tier="danger"] {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  box-shadow: 0 3px 10px rgba(220, 38, 38, 0.28);
+}
+
+.sp-signal-title {
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.sp-signal-sub {
+  font-size: 10.5px;
+  font-weight: 700;
+  opacity: 0.94;
+  margin-top: 1px;
 }
 
 .sp-hero[data-tier="god"] .sp-hero-net {
