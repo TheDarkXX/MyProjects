@@ -35,8 +35,98 @@
     shipFrom: 'ส่งในไทย',
     isOverseas: false,
     specText: '',
-    channelRows: []
+    channelRows: [],
+    realRateVerified: false,
+    rateSource: 'dom_scrape',
+    liveExtraRate: 0,
+    liveBaseRate: 0
   };
+
+  function applyApiOfferToOfferProduct(rawPayload) {
+    if (!rawPayload || typeof rawPayload !== 'object') return null;
+    if (rawPayload.error === 90309999) {
+      return {
+        securityCheck: true,
+        errorCode: 90309999,
+        error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+      };
+    }
+    const parsed = ns.extractSocialMediaCommission(rawPayload);
+    if (!parsed || !parsed.hasDetail || !parsed.itemId) return null;
+
+    const price = parsed.offerPrice || offerProduct.price || 0;
+    const comm = ns.calculateCommission({
+      price,
+      baseRate: parsed.baseRate,
+      extraRate: parsed.extraRate,
+      capTHB: 250,
+      whtRate: 3.0,
+      realDailyAdCostTHB: 107
+    });
+
+    const isSameItem = offerProduct.itemId === parsed.itemId;
+    const nextProduct = {
+      ...(isSameItem ? offerProduct : {}),
+      sourceType: 'affiliate_offer_api',
+      title: parsed.title || (isSameItem ? offerProduct.title : '') || 'Shopee Affiliate Offer',
+      price,
+      originalPrice: price,
+      offerPrice: price,
+      baseRate: parsed.baseRate,
+      extraRate: parsed.extraRate,
+      liveExtraRate: parsed.liveExtraRate,
+      liveBaseRate: parsed.liveBaseRate,
+      baseCommTHB: +comm.baseComm.toFixed(2),
+      extraCommTHB: +comm.extraComm.toFixed(2),
+      grossCommTHB: +comm.grossComm.toFixed(2),
+      capTHB: 250,
+      whtRate: 3.0,
+      shopId: parsed.shopId || (isSameItem ? offerProduct.shopId : ''),
+      itemId: parsed.itemId,
+      cleanUrl:
+        parsed.shopId && parsed.itemId
+          ? `https://shopee.co.th/product/${parsed.shopId}/${parsed.itemId}`
+          : (isSameItem && offerProduct.cleanUrl) || location.href,
+      imagesHD: parsed.imagesHD.length ? parsed.imagesHD : isSameItem ? offerProduct.imagesHD || [] : [],
+      variants: [],
+      soldCount: parsed.soldMonthly || parsed.soldTotal || 0,
+      soldText: (parsed.soldMonthly || parsed.soldTotal || 0).toLocaleString(),
+      rating: parsed.rating ? +parsed.rating.toFixed(1) : 4.9,
+      shipFrom: parsed.isMall ? 'Shopee Mall' : 'ส่งในไทย',
+      isOverseas: false,
+      realRateVerified: true,
+      rateSource: 'social_media_detail',
+      channelRows: [
+        { channel: 'โซเชียลมีเดีย', extraRate: parsed.extraRate, baseRate: parsed.baseRate, totalRate: parsed.totalRate },
+        { channel: 'ช้อปปี้ไลฟ์/วิดีโอ', extraRate: parsed.liveExtraRate, baseRate: parsed.liveBaseRate, totalRate: +(parsed.liveExtraRate + parsed.liveBaseRate).toFixed(2) }
+      ],
+      specText:
+        `[ข้อมูลจริงช่องทาง Social Media จาก API Shopee Affiliate]\n` +
+        `• สินค้า: ${parsed.title || '-'}\n` +
+        `• ราคาตั้งต้นหน้า AFF: ฿${price.toLocaleString()}\n` +
+        `• EXTRACOMM (โซเชียลมีเดีย): ${parsed.extraRate}% (฿${comm.extraComm.toFixed(2)})\n` +
+        `• ค่าคอมช้อปปี้ (โซเชียลมีเดีย): ${parsed.baseRate}% (฿${comm.baseComm.toFixed(2)})\n` +
+        `• คอมรวมก่อนหักภาษี (โซเชียลมีเดีย): ฿${comm.grossComm.toFixed(2)} / ชิ้น (สุทธิ ฿${comm.netComm.toFixed(2)})`
+    };
+
+    if (isSameItem || isOfferDetailUrl()) {
+      offerProduct = nextProduct;
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        chrome.storage.local.set({ activeAffOfferProduct: nextProduct }).catch(() => {});
+      }
+    }
+    return nextProduct;
+  }
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    const msg = event.data;
+    if (!msg || msg.type !== 'DRB_AFF_OFFER_INTERCEPTED') return;
+    const parsedOffer = applyApiOfferToOfferProduct(msg.data);
+    if (parsedOffer && !parsedOffer.securityCheck && parsedOffer.itemId) {
+      ns.sendMessage('CACHE_REAL_AFF_OFFER', parsedOffer).catch(() => {});
+    }
+  });
 
   let gridFilterState = {
     enabled: true,
@@ -456,7 +546,7 @@
   // 2. PRODUCT OFFER DETAIL PAGE SCRAPER (affiliate.shopee.co.th/offer/product_offer/<id>)
   // ==========================================================================
   function scrapeOfferDetailPage() {
-    const bodyText = document.body ? document.body.innerText || '' : '';
+    const bodyText = document.body ? document.body.innerText || document.body.textContent || '' : '';
 
     let foundTitle = '';
     let foundPrice = 0;
@@ -534,11 +624,24 @@
     let foundGrossTHB = 0;
 
     let socialSlice = '';
-    const idxSocial = bodyText.indexOf('โซเชียลมีเดีย');
-    if (idxSocial !== -1) {
-      const afterSocial = bodyText.slice(idxSocial, idxSocial + 320);
-      const endMatch = afterSocial.search(/ช้อปปี้ไลฟ์|ช้อปปี้วีดีโอ|เงื่อนไข|รายละเอียดสินค้า/);
-      socialSlice = endMatch !== -1 ? afterSocial.slice(0, endMatch) : afterSocial.slice(0, 180);
+    // Priority 1: Direct <tr>/<td> table row scan (works 100% even in hidden/inactive tabs where innerText collapses)
+    const allTrs = Array.from(document.querySelectorAll('tr'));
+    for (const tr of allTrs) {
+      const trTxt = (tr.textContent || '').trim();
+      if (trTxt.includes('โซเชียลมีเดีย')) {
+        const tdTexts = Array.from(tr.querySelectorAll('td, th')).map((c) => (c.textContent || '').trim());
+        socialSlice = tdTexts.length >= 2 ? tdTexts.join(' | ') : trTxt;
+        break;
+      }
+    }
+    // Priority 2: Fallback text slice from bodyText
+    if (!socialSlice) {
+      const idxSocial = bodyText.indexOf('โซเชียลมีเดีย');
+      if (idxSocial !== -1) {
+        const afterSocial = bodyText.slice(idxSocial, idxSocial + 320);
+        const endMatch = afterSocial.search(/ช้อปปี้ไลฟ์|ช้อปปี้วีดีโอ|ช้อปปี้วิดีโอ|เงื่อนไข|รายละเอียดสินค้า/);
+        socialSlice = endMatch !== -1 ? afterSocial.slice(0, endMatch) : afterSocial.slice(0, 180);
+      }
     }
 
     if (socialSlice) {
@@ -579,33 +682,52 @@
       }
     });
 
+    const preserveVerifiedApi =
+      offerProduct.realRateVerified &&
+      foundItemId &&
+      offerProduct.itemId === foundItemId &&
+      (offerProduct.extraRate > 0 || offerProduct.baseRate > 0);
+
+    const finalPrice = preserveVerifiedApi && offerProduct.offerPrice > 0 ? offerProduct.offerPrice : foundPrice;
+    const finalBaseRate = preserveVerifiedApi ? offerProduct.baseRate : foundBaseRate;
+    const finalExtraRate = preserveVerifiedApi ? offerProduct.extraRate : foundExtraRate;
+    const finalBaseTHB = preserveVerifiedApi ? offerProduct.baseCommTHB : foundBaseTHB;
+    const finalExtraTHB = preserveVerifiedApi ? offerProduct.extraCommTHB : foundExtraTHB;
+    const finalGrossTHB = preserveVerifiedApi ? offerProduct.grossCommTHB : foundGrossTHB || foundBaseTHB + foundExtraTHB;
+
     offerProduct = {
       ...offerProduct,
-      sourceType: 'affiliate_offer',
-      title: foundTitle || document.title.replace(/\| Shopee.*/i, '').trim() || 'Shopee Affiliate Offer',
-      price: foundPrice,
-      originalPrice: foundPrice,
-      baseRate: foundBaseRate,
-      extraRate: foundExtraRate,
-      baseCommTHB: foundBaseTHB,
-      extraCommTHB: foundExtraTHB,
-      grossCommTHB: foundGrossTHB || foundBaseTHB + foundExtraTHB,
-      shopId: foundShopId,
+      sourceType: preserveVerifiedApi ? offerProduct.sourceType : 'affiliate_offer',
+      title: foundTitle || offerProduct.title || document.title.replace(/\| Shopee.*/i, '').trim() || 'Shopee Affiliate Offer',
+      price: finalPrice,
+      originalPrice: finalPrice,
+      offerPrice: finalPrice,
+      baseRate: finalBaseRate,
+      extraRate: finalExtraRate,
+      baseCommTHB: finalBaseTHB,
+      extraCommTHB: finalExtraTHB,
+      grossCommTHB: finalGrossTHB,
+      shopId: foundShopId || offerProduct.shopId,
       itemId: foundItemId,
-      cleanUrl: foundCleanUrl,
-      imagesHD: Array.from(imgSet).slice(0, 8),
-      soldCount: foundSoldNum,
-      soldText: foundSoldText || (foundSoldNum > 0 ? foundSoldNum.toLocaleString() : '0'),
-      rating: foundRating || 4.9,
+      cleanUrl: foundCleanUrl !== location.href ? foundCleanUrl : offerProduct.cleanUrl || foundCleanUrl,
+      imagesHD: Array.from(imgSet).length ? Array.from(imgSet).slice(0, 8) : offerProduct.imagesHD || [],
+      soldCount: foundSoldNum || offerProduct.soldCount || 0,
+      soldText: foundSoldText || offerProduct.soldText || (foundSoldNum > 0 ? foundSoldNum.toLocaleString() : '0'),
+      rating: foundRating || offerProduct.rating || 4.9,
+      realRateVerified: preserveVerifiedApi || finalBaseRate > 0 || finalExtraRate > 0,
       specText:
         `[ข้อมูลจริงจากหน้าข้อเสนอ Shopee Affiliate]\n` +
-        `• สินค้า: ${foundTitle || '-'}\n` +
-        `• ราคาขายจริง: ฿${foundPrice.toLocaleString()}\n` +
+        `• สินค้า: ${foundTitle || offerProduct.title || '-'}\n` +
+        `• ราคาขายจริง: ฿${finalPrice.toLocaleString()}\n` +
         `• ยอดขายสะสม: ${foundSoldText || '0'} ชิ้น (⭐ ${foundRating || 4.9})\n` +
-        `• EXTRACOMM (โซเชียลมีเดีย): ${foundExtraRate}% (฿${foundExtraTHB.toFixed(2)})\n` +
-        `• ค่าคอมช้อปปี้ (โซเชียลมีเดีย): ${foundBaseRate}% (฿${foundBaseTHB.toFixed(2)})\n` +
-        `• ค่าคอมรวมก่อนหักภาษี: ฿${(foundGrossTHB || foundBaseTHB + foundExtraTHB).toFixed(2)} / ชิ้น`
+        `• EXTRACOMM (โซเชียลมีเดีย): ${finalExtraRate}% (฿${Number(finalExtraTHB || 0).toFixed(2)})\n` +
+        `• ค่าคอมช้อปปี้ (โซเชียลมีเดีย): ${finalBaseRate}% (฿${Number(finalBaseTHB || 0).toFixed(2)})\n` +
+        `• ค่าคอมรวมก่อนหักภาษี: ฿${Number(finalGrossTHB || 0).toFixed(2)} / ชิ้น`
     };
+
+    if (offerProduct.itemId && (offerProduct.baseRate > 0 || offerProduct.extraRate > 0)) {
+      ns.sendMessage('CACHE_REAL_AFF_OFFER', offerProduct).catch(() => {});
+    }
 
     return offerProduct;
   }
@@ -685,7 +807,112 @@
         sendResponse({ ok: true });
         return true;
       }
+      if (req.action === 'RUN_POOL_BRIDGE') {
+        ensurePoolBridgeBanner(true);
+        runCampaignPoolBridge(false);
+        sendResponse({ ok: true });
+        return true;
+      }
+      if (req.action === 'FETCH_REAL_OFFER_IN_AFF_TAB') {
+        const targetItemId = String(req.itemId || '').trim();
+        (async () => {
+          try {
+            if (/verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+              sendResponse({
+                ok: false,
+                securityCheck: true,
+                error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+              });
+              return;
+            }
+            // Fast Path 1: If this tab is ALREADY on product_offer/<targetItemId>, scrape DOM/state immediately (<5ms)
+            if (isOfferDetailUrl() && (!targetItemId || location.href.includes(targetItemId))) {
+              const scraped = scrapeOfferDetailPage();
+              if (scraped && (scraped.baseRate > 0 || scraped.extraRate > 0)) {
+                sendResponse({ ok: true, data: scraped });
+                return;
+              }
+            }
+            // Fast Path 2: Try MAIN world API request with 3.5s timeout
+            if (targetItemId) {
+              const apiOffer = await Promise.race([
+                fetchSingleOfferDetailViaMainBridge(targetItemId),
+                new Promise((r) => setTimeout(() => r(null), 3500))
+              ]);
+              if (apiOffer && apiOffer.securityCheck) {
+                sendResponse({ ok: false, securityCheck: true, error: apiOffer.error });
+                return;
+              }
+              if (apiOffer && apiOffer.itemId && (apiOffer.baseRate > 0 || apiOffer.extraRate > 0)) {
+                sendResponse({ ok: true, data: apiOffer });
+                return;
+              }
+            }
+            sendResponse({ ok: false, error: 'ต้องเปิดหน้า product_offer ของสินค้านี้เพื่อดึงตารางเรทจริง' });
+          } catch (err) {
+            sendResponse({ ok: false, error: err?.message || String(err) });
+          }
+        })();
+        return true;
+      }
+      if (req.action === 'GENERATE_SHORTLINK_IN_AFF_TAB') {
+        (async () => {
+          try {
+            if (/verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+              sendResponse({
+                ok: false,
+                securityCheck: true,
+                error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+              });
+              return;
+            }
+            const res = await generateShopeeShortLinkDetailed(req.originalLink, req.subIds || []);
+            sendResponse(res);
+          } catch (err) {
+            sendResponse({ ok: false, error: err?.message || String(err) });
+          }
+        })();
+        return true;
+      }
     });
+  }
+
+  async function fetchSingleOfferDetailViaMainBridge(itemId) {
+    const cleanId = String(itemId || '').replace(/[^0-9]/g, '');
+    if (!cleanId) return null;
+    if (/verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+      return {
+        securityCheck: true,
+        error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+      };
+    }
+
+    const res = await pageMainRequest({
+      url: `https://affiliate.shopee.co.th/api/v3/offer/product?item_id=${encodeURIComponent(cleanId)}`,
+      method: 'GET',
+      useFetch: false,
+      headers: {
+        accept: 'application/json',
+        'affiliate-program-type': '1',
+        'x-requested-with': 'XMLHttpRequest'
+      }
+    });
+
+    if (res?.data?.error === 90309999) {
+      return {
+        securityCheck: true,
+        errorCode: 90309999,
+        error: 'Shopee ขอตรวจสอบความปลอดภัย (90309999) — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+      };
+    }
+    if (!res?.ok || !res?.data?.data?.commission_rate_detail) {
+      return null;
+    }
+    const parsedOffer = applyApiOfferToOfferProduct(res.data);
+    if (parsedOffer && !parsedOffer.securityCheck) {
+      ns.sendMessage('CACHE_REAL_AFF_OFFER', parsedOffer).catch(() => {});
+    }
+    return parsedOffer;
   }
 
   // ==========================================================================
@@ -777,7 +1004,8 @@
     });
   }
 
-  async function generateShopeeShortLink(originalLink, subIds = []) {
+  async function generateShopeeShortLinkDetailed(originalLink, subIds = []) {
+    const cleanSub = (v) => String(v || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 50);
     const body = {
       operationName: 'batchGetCustomLink',
       query: `
@@ -794,11 +1022,11 @@
           {
             originalLink,
             advancedLinkParams: {
-              subId1: subIds[0] || '',
-              subId2: subIds[1] || '',
-              subId3: subIds[2] || '',
-              subId4: subIds[3] || '',
-              subId5: subIds[4] || ''
+              subId1: cleanSub(subIds[0]),
+              subId2: cleanSub(subIds[1]),
+              subId3: cleanSub(subIds[2]),
+              subId4: cleanSub(subIds[3]),
+              subId5: cleanSub(subIds[4])
             }
           }
         ],
@@ -817,8 +1045,91 @@
       },
       body
     });
+    if (res?.data?.error === 90309999) {
+      return {
+        ok: false,
+        securityCheck: true,
+        error: 'Shopee ขอตรวจสอบความปลอดภัย — เปิด affiliate.shopee.co.th ค้างไว้แล้วลองใหม่'
+      };
+    }
     const first = res?.data?.data?.batchCustomLink?.[0];
-    return first?.shortLink || first?.longLink || '';
+    if (first?.failCode) {
+      return { ok: false, failCode: first.failCode, error: `Shopee error failCode=${first.failCode}` };
+    }
+    const shortLink = first?.shortLink || '';
+    const longLink = first?.longLink || '';
+    return {
+      ok: Boolean(shortLink || longLink),
+      shortLink,
+      longLink,
+      error: shortLink || longLink ? '' : res?.data?.msg || 'ไม่ได้รับลิงก์จาก Shopee'
+    };
+  }
+
+  async function generateShopeeShortLink(originalLink, subIds = []) {
+    const res = await generateShopeeShortLinkDetailed(originalLink, subIds);
+    return res.shortLink || res.longLink || '';
+  }
+
+  async function batchGenerateShopeeShortLinks(batchItems = []) {
+    if (!Array.isArray(batchItems) || !batchItems.length) return [];
+    const cleanSub = (v) => String(v || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 50);
+    const linkParams = batchItems.map((it) => ({
+      originalLink: String(it.shopee_url || it.originalLink || '').trim(),
+      advancedLinkParams: {
+        subId1: cleanSub(it.sub_id1 || '16NOV26FBRAD'),
+        subId2: cleanSub(it.sub_id2 || ''),
+        subId3: cleanSub(it.sub_id3 || '20261116'),
+        subId4: cleanSub(it.sub_id4 || it.sku_code || ''),
+        subId5: cleanSub(it.sub_id5 || 'P01REELS')
+      }
+    }));
+
+    const body = {
+      operationName: 'batchGetCustomLink',
+      query: `
+        query batchGetCustomLink($linkParams: [CustomLinkParam!], $sourceCaller: SourceCaller){
+          batchCustomLink(linkParams: $linkParams, sourceCaller: $sourceCaller){
+            shortLink
+            longLink
+            failCode
+          }
+        }
+      `,
+      variables: {
+        linkParams,
+        sourceCaller: 'CUSTOM_LINK_CALLER'
+      }
+    };
+
+    const res = await pageMainRequest({
+      url: 'https://affiliate.shopee.co.th/api/v3/gql?q=batchCustomLink',
+      method: 'POST',
+      useFetch: true,
+      attachCsrf: true,
+      headers: {
+        'content-type': 'application/json; charset=UTF-8',
+        'affiliate-program-type': '1'
+      },
+      body
+    });
+
+    const list = res?.data?.data?.batchCustomLink;
+    if (!Array.isArray(list)) return [];
+    return batchItems.map((it, idx) => {
+      const out = list[idx] || {};
+      return {
+        sub_id1: it.sub_id1 || '16NOV26FBRAD',
+        sub_id2: it.sub_id2,
+        sku_code: it.sku_code || '',
+        item_id: it.item_id || '',
+        title: it.title || '',
+        shopee_url: it.shopee_url || '',
+        short_link: out.shortLink || '',
+        long_link: out.longLink || '',
+        fail_code: out.failCode || 0
+      };
+    });
   }
 
   function mapRawOfferItemToRow(raw) {
@@ -841,11 +1152,9 @@
       ? [imageUrl]
       : [];
 
-    const extraRate = parseFloat(raw?.seller_commission_rate) || 0;
-    // Check if Shopee provides default_commission_rate (e.g. "2.0%" or number), else fallback to smart category baseRate
-    const rawDefaultRate = parseFloat(raw?.default_commission_rate);
-    const catEst = ns.estimateCategoryCommission(name, isMall, 'auto', '');
-    const baseRate = Number.isFinite(rawDefaultRate) && rawDefaultRate > 0 ? rawDefaultRate : catEst.baseRate || 2.0;
+    const rateBreakdown = ns.extractListCommissionFallback(raw, isMall, name);
+    const extraRate = rateBreakdown.extraRate;
+    const baseRate = rateBreakdown.baseRate;
 
     const extraComm = +((price * extraRate) / 100).toFixed(2);
     const extraCommMax = +((priceMax * extraRate) / 100).toFixed(2);
@@ -2139,11 +2448,20 @@
         btn.disabled = true;
         btn.textContent = '⏳..';
         try {
-          const shortLink = await generateShopeeShortLink(r.productLink, ['v1scanner', r.itemid]);
+          const seqPad = String(idx + 1).padStart(3, '0');
+          const sub2 = `aidrb1611a${seqPad}`;
+          const skuCode = `SP${String(r.itemid).slice(-6)}`;
+          const shortLink = await generateShopeeShortLink(r.productLink, [
+            '16NOV26FBRAD',
+            sub2,
+            '20261116',
+            skuCode,
+            `P01REELS${seqPad}`
+          ]);
           if (shortLink) {
             await navigator.clipboard.writeText(shortLink);
             btn.textContent = '✅ก๊อป!';
-            ns.showToast(`🔗 ก๊อปลิงก์สั้น ${shortLink} เรียบร้อย!`);
+            ns.showToast(`🔗 ก๊อป ${shortLink} (16NOV26FBRAD / ${sub2}) เรียบร้อย!`);
           } else {
             throw new Error('ไม่ได้รับ shortLink');
           }
@@ -2162,6 +2480,54 @@
   }
 
   async function pickV1RowToSidePanelAndWebUI(r, btnEl) {
+    const seqNum = Math.max(1, (v1State.rows.indexOf(r) + 1) || 1);
+    const seqPad = String(seqNum).padStart(3, '0');
+    const autoSub2 = `aidrb1611a${seqPad}`;
+    const skuCode = `SP${String(r.itemid).slice(-6)}`;
+
+    // Verify true Social Media commission rate from commission_rate_detail when available
+    try {
+      if (btnEl) btnEl.textContent = '⏳เช็กเรท..';
+      const verifiedOffer = await fetchSingleOfferDetailViaMainBridge(r.itemid);
+      if (verifiedOffer && !verifiedOffer.securityCheck && verifiedOffer.realRateVerified) {
+        r.extraRate = verifiedOffer.extraRate;
+        r.baseRate = verifiedOffer.baseRate;
+        const commRecalc = ns.calculateCommission({
+          price: r.price,
+          baseRate: r.baseRate,
+          extraRate: r.extraRate,
+          capTHB: 250,
+          whtRate: 3.0,
+          realDailyAdCostTHB: 107
+        });
+        r.extraComm = +commRecalc.extraComm.toFixed(2);
+        r.grossComm = +commRecalc.grossComm.toFixed(2);
+        r.netComm = +commRecalc.netComm.toFixed(2);
+        r.effectiveRate = +commRecalc.effectiveRate.toFixed(1);
+        r.tier = commRecalc.tier;
+        r.tierEmoji = commRecalc.tierEmoji;
+        r.tierLabel = commRecalc.tierLabel;
+        r.breakEvenUnits = commRecalc.breakEvenUnits;
+        r.breakEvenOrders = commRecalc.breakEvenOrders;
+        r.realRateVerified = true;
+      }
+    } catch (_err) {}
+
+    let shortLink = '';
+    try {
+      if (btnEl) btnEl.textContent = '⏳เจนลิงก์..';
+      shortLink = await generateShopeeShortLink(r.productLink, [
+        '16NOV26FBRAD',
+        autoSub2,
+        '20261116',
+        skuCode,
+        `P01REELS${seqPad}`
+      ]);
+      if (shortLink) {
+        await navigator.clipboard.writeText(shortLink).catch(() => {});
+      }
+    } catch (_err) {}
+
     const specText =
       `[ดึงจากตาราง V1 Realtime API]\n` +
       `• สินค้า: ${r.name}\n` +
@@ -2169,7 +2535,8 @@
       `• ยอดขาย/เดือนจริง: ${r.sold.toLocaleString()} ชิ้น/เดือน (สะสม ${r.historical_sold.toLocaleString()} ชิ้น)\n` +
       `• สต๊อกคงเหลือจริง: ${r.stock.toLocaleString()} ชิ้น\n` +
       `• เรทค่าคอม: Extra ${r.extraRate}% + Base ${r.baseRate}% = สุทธิ ฿${r.netComm.toFixed(2)}/ชิ้น\n` +
-      `• จุดคุ้มทุนแอด 107฿/วัน: ขาย ${r.breakEvenUnits} ชิ้น (${r.breakEvenOrders} ออเดอร์) [${r.tierLabel}]`;
+      `• จุดคุ้มทุนแอด 107฿/วัน: ขาย ${r.breakEvenUnits} ชิ้น (${r.breakEvenOrders} ออเดอร์) [${r.tierLabel}]\n` +
+      (shortLink ? `• ลิงก์แคมเปญ (16NOV26FBRAD / ${autoSub2}): ${shortLink}` : '');
 
     const payload = {
       sourceType: 'v1_realtime_api',
@@ -2187,6 +2554,9 @@
       shopId: r.shopid,
       itemId: r.itemid,
       cleanUrl: r.productLink,
+      shortLink,
+      subId1: '16NOV26FBRAD',
+      subId2: autoSub2,
       imagesHD: r.imagesHD,
       variants: [],
       soldCount: r.sold,
@@ -2219,17 +2589,20 @@
         historicalSold: r.historical_sold,
         stock: r.stock,
         cleanUrl: r.productLink,
+        shortLink,
+        subId1: '16NOV26FBRAD',
+        subId2: autoSub2,
         imagesHD: r.imagesHD,
         scrapedAt: new Date().toISOString()
       });
       if (btnEl) {
-        const orig = btnEl.textContent;
-        btnEl.textContent = '✅ส่งแล้ว';
+        const orig = 'เลือก';
+        btnEl.textContent = '✅ส่ง+ก๊อป!';
         setTimeout(() => {
           btnEl.textContent = orig;
-        }, 1500);
+        }, 1800);
       }
-      ns.showToast(`⚡ ส่ง "${r.name.slice(0, 28)}..." (สุทธิ ฿${r.netComm.toFixed(2)} | ขาย ${r.sold}/ด.) เข้า Side Panel & Web UI แล้ว!`);
+      ns.showToast(`⚡ ส่ง "${r.name.slice(0, 24)}..." + ก๊อป ${shortLink || 'ลิงก์'} (${autoSub2}) เข้า Web UI แล้ว!`);
     } catch (_e) {
       ns.showToast('⚡ บันทึกลง Side Panel เรียบร้อย!');
     }
@@ -2633,9 +3006,261 @@
     ns.showToast(`📥 ดาวน์โหลด CSV (${rows.length} รายการ) เรียบร้อย!`);
   }
 
+  // ==========================================================================
+  // 5. ZERO-TOUCH 165-ITEM POOL BRIDGE (AG <-> Web UI <-> Shopee GraphQL)
+  // ==========================================================================
+  let poolBridgeRunning = false;
+  let lastPoolConvertedList = [];
+
+  function downloadPoolLinksCsv(items) {
+    if (!Array.isArray(items) || !items.length) {
+      ns.showToast('⚠️ ยังไม่มีรายการลิงก์ที่แปลงเสร็จ');
+      return;
+    }
+    const headers = ['Seq', 'Sub_id1', 'Sub_id2', 'SKU_Code', 'Item_ID', 'Title', 'Short_Link', 'Shopee_URL'];
+    const esc = (v) => {
+      const s = String(v ?? '');
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [
+      headers.join(','),
+      ...items.map((it, idx) =>
+        [
+          idx + 1,
+          it.sub_id1 || '16NOV26FBRAD',
+          it.sub_id2 || '',
+          it.sku_code || '',
+          it.item_id || '',
+          it.title || '',
+          it.short_link || '',
+          it.shopee_url || ''
+        ]
+          .map(esc)
+          .join(',')
+      )
+    ];
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Pool_16NOV26FBRAD_${items.length}_ShortLinks.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    ns.showToast(`📥 ดาวน์โหลดไฟล์สำรอง ${items.length} ลิงก์เรียบร้อย!`);
+  }
+
+  function ensurePoolBridgeBanner(forceShow = false) {
+    const isCustomLinkPage = /\/offer\/custom_link/i.test(location.href);
+    if (!isCustomLinkPage && !forceShow) return null;
+
+    let bar = document.getElementById('drb-pool-bridge-bar');
+    if (bar) {
+      bar.style.display = 'block';
+      return bar;
+    }
+
+    bar = document.createElement('div');
+    bar.id = 'drb-pool-bridge-bar';
+    bar.style.cssText = [
+      'position:fixed',
+      'top:14px',
+      'left:50%',
+      'transform:translateX(-50%)',
+      'z-index:2147483640',
+      'width:min(880px, 95vw)',
+      'background:#0b1120',
+      'color:#f8fafc',
+      'border:1px solid #1e3a8a',
+      'border-radius:14px',
+      'box-shadow:0 16px 40px rgba(0,0,0,0.6)',
+      'padding:14px 18px',
+      'font-family:Inter,Prompt,sans-serif',
+      'font-size:13px'
+    ].join(';');
+
+    bar.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="background:#1e3a8a;color:#dbeafe;border:1px solid #2563eb;font-weight:800;padding:4px 9px;border-radius:8px;font-size:12px;">🌉 POOL BRIDGE</span>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:#fff;">
+              คลังสินค้าคัดเกรดแคมเปญ <code style="color:#93c5fd;background:#172554;border:1px solid #1e3a8a;padding:2px 6px;border-radius:4px;">16NOV26FBRAD</code> (<code id="drb-pool-range-txt" style="color:#fca5a5;">aidrb1611a001..a373</code>)
+            </div>
+            <div id="drb-pool-status-txt" style="font-size:12px;color:#94a3b8;margin-top:2px;">
+              กำลังเช็กจำนวนคิวรอแปลงลิงก์จาก aff.doctorbankonline.com...
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button type="button" id="drb-pool-btn-run" style="background:linear-gradient(180deg,#1d4ed8 0%,#1e3a8a 100%);color:#fff;font-weight:700;border:1px solid #2563eb;border-radius:9px;padding:9px 15px;cursor:pointer;font-size:13px;box-shadow:0 4px 12px rgba(29,78,216,0.35);">
+            🚀 แปลงลิงก์ที่รอใน Pool + ส่งเข้า Web UI
+          </button>
+          <button type="button" id="drb-pool-btn-force" title="บังคับแปลงใหม่ครบทั้ง Pool" style="background:linear-gradient(180deg,#991b1b 0%,#7f1d1d 100%);color:#fef2f2;font-weight:700;border:1px solid #b91c1c;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;box-shadow:0 4px 12px rgba(153,27,27,0.35);">
+            🔄 แปลงซ้ำทั้ง Pool
+          </button>
+          <button type="button" id="drb-pool-btn-csv" style="display:none;background:#172554;color:#dbeafe;font-weight:700;border:1px solid #1d4ed8;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;">
+            📥 โหลด CSV สำรอง
+          </button>
+          <button type="button" id="drb-pool-btn-hide" title="ซ่อนแถบนี้" style="background:transparent;color:#94a3b8;border:none;cursor:pointer;font-size:16px;padding:4px 6px;">✕</button>
+        </div>
+      </div>
+      <div id="drb-pool-prog-wrap" style="display:none;margin-top:10px;background:#172554;height:8px;border-radius:99px;overflow:hidden;border:1px solid #1e3a8a;">
+        <div id="drb-pool-prog-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#1e3a8a,#2563eb);transition:width 0.25s ease;"></div>
+      </div>
+    `;
+
+    document.body.appendChild(bar);
+
+    bar.querySelector('#drb-pool-btn-run').addEventListener('click', () => runCampaignPoolBridge(false));
+    bar.querySelector('#drb-pool-btn-force').addEventListener('click', () => runCampaignPoolBridge(true));
+    bar.querySelector('#drb-pool-btn-csv').addEventListener('click', () => downloadPoolLinksCsv(lastPoolConvertedList));
+    bar.querySelector('#drb-pool-btn-hide').addEventListener('click', () => {
+      bar.style.display = 'none';
+    });
+
+    // Check status on load
+    ns.sendMessage('FETCH_POOL_PENDING', { force: false })
+      .then((res) => {
+        const stEl = bar.querySelector('#drb-pool-status-txt');
+        const runBtn = bar.querySelector('#drb-pool-btn-run');
+        const forceBtn = bar.querySelector('#drb-pool-btn-force');
+        const rangeEl = bar.querySelector('#drb-pool-range-txt');
+        if (!stEl || !res) return;
+        const total = res.totalPool || 0;
+        const done = res.completedCount || 0;
+        const pend = res.pendingCount || 0;
+        if (rangeEl && total > 0) {
+          rangeEl.textContent = `aidrb1611a001..a${String(total).padStart(3, '0')}`;
+        }
+        if (forceBtn && total > 0) {
+          forceBtn.textContent = `🔄 แปลงซ้ำทั้ง ${total}`;
+        }
+        if (pend === 0 && total > 0) {
+          stEl.innerHTML = `<span style="color:#93c5fd;font-weight:700;">✅ แปลงลิงก์ s.shopee.co.th ครบทั้ง ${total}/${total} รายการแล้ว!</span>`;
+          if (runBtn) runBtn.textContent = `✅ แปลงครบ ${total}/${total} แล้ว`;
+        } else {
+          stEl.innerHTML = `พบคิวทั้งหมด <b style="color:#fff;">${total} รายการ</b> · แปลงเสร็จแล้ว <b style="color:#93c5fd;">${done}</b> · รอแปลงใหม่ <b style="color:#fca5a5;">${pend} รายการ</b>`;
+          if (runBtn) runBtn.textContent = `🚀 แปลงลิงก์ที่รอ (${pend} ตัว) + ส่งเข้า Web UI`;
+        }
+      })
+      .catch((err) => {
+        const stEl = bar.querySelector('#drb-pool-status-txt');
+        if (stEl) stEl.textContent = `⚠️ ยังไม่เชื่อม Web UI (${err?.message || 'กรุณาตรวจสอบการเชื่อมต่อ'})`;
+      });
+
+    return bar;
+  }
+
+  async function runCampaignPoolBridge(forceAll = false) {
+    if (poolBridgeRunning) {
+      ns.showToast('⏳ กำลังรันแปลงลิงก์ Pool อยู่...');
+      return;
+    }
+    const bar = ensurePoolBridgeBanner(true);
+    const stEl = bar?.querySelector('#drb-pool-status-txt');
+    const runBtn = bar?.querySelector('#drb-pool-btn-run');
+    const progWrap = bar?.querySelector('#drb-pool-prog-wrap');
+    const progBar = bar?.querySelector('#drb-pool-prog-bar');
+    const csvBtn = bar?.querySelector('#drb-pool-btn-csv');
+
+    poolBridgeRunning = true;
+    if (runBtn) {
+      runBtn.disabled = true;
+      runBtn.textContent = '⏳ กำลังดึงรายการ...';
+    }
+    if (progWrap) progWrap.style.display = 'block';
+    if (progBar) progBar.style.width = '3%';
+
+    try {
+      const poolRes = await ns.sendMessage('FETCH_POOL_PENDING', { force: forceAll });
+      const items = Array.isArray(poolRes?.items) ? poolRes.items : [];
+
+      if (!items.length) {
+        const msg =
+          poolRes?.totalPool > 0 && !forceAll
+            ? `✅ แปลงลิงก์ s.shopee.co.th ครบทั้ง ${poolRes.totalPool}/${poolRes.totalPool} รายการแล้ว (หากต้องการแปลงซ้ำกดปุ่มสีแดง)`
+            : '⚠️ ไม่พบรายการสินค้าที่รอแปลงลิงก์ใน Pool บนเซิร์ฟเวอร์';
+        if (stEl) stEl.textContent = msg;
+        ns.showToast(msg);
+        if (progBar) progBar.style.width = '100%';
+        return;
+      }
+
+      const total = items.length;
+      const batchSize = 5;
+      const convertedAll = [];
+      let pendingSaveBuffer = [];
+      let successCount = 0;
+
+      for (let i = 0; i < total; i += batchSize) {
+        const chunk = items.slice(i, i + batchSize);
+        const batchNum = Math.floor(i / batchSize) + 1;
+        const totalBatches = Math.ceil(total / batchSize);
+        const pct = Math.min(98, Math.round(((i + chunk.length) / total) * 100));
+
+        if (stEl) {
+          stEl.innerHTML = `⏳ กำลังยิง GraphQL <code style="color:#93c5fd;">batchCustomLink</code> ชุดที่ <b>${batchNum}/${totalBatches}</b> (${Math.min(i + batchSize, total)}/${total})...`;
+        }
+        if (runBtn) runBtn.textContent = `⏳ ${Math.min(i + batchSize, total)}/${total} (${pct}%)`;
+        if (progBar) progBar.style.width = `${pct}%`;
+
+        const batchResults = await batchGenerateShopeeShortLinks(chunk);
+        const validResults = batchResults.filter((r) => r.short_link && r.short_link.startsWith('http'));
+        successCount += validResults.length;
+        convertedAll.push(...validResults);
+        pendingSaveBuffer.push(...validResults);
+
+        // Flush to Web UI every 15 items or at the end
+        if (pendingSaveBuffer.length >= 15 || i + batchSize >= total) {
+          if (pendingSaveBuffer.length > 0) {
+            await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: pendingSaveBuffer }).catch(() => {});
+            pendingSaveBuffer = [];
+          }
+        }
+
+        // Polite 260ms pause between GraphQL calls
+        if (i + batchSize < total) {
+          await new Promise((r) => setTimeout(r, 260));
+        }
+      }
+
+      lastPoolConvertedList = convertedAll;
+      if (progBar) progBar.style.width = '100%';
+      if (stEl) {
+        stEl.innerHTML = `<span style="color:#93c5fd;font-weight:800;">🎉 สำเร็จ! แปลงลิงก์ s.shopee.co.th ครบ ${successCount}/${total} รายการ และบันทึกเข้า aff.doctorbankonline.com เรียบร้อยแล้ว!</span>`;
+      }
+      if (csvBtn && convertedAll.length > 0) {
+        csvBtn.style.display = 'inline-block';
+      }
+      ns.showToast(`🎉 แปลงลิงก์ทั้ง Pool สำเร็จ ${successCount}/${total} รายการ! ส่งเข้า Web UI เรียบร้อย!`);
+    } catch (err) {
+      if (stEl) {
+        stEl.innerHTML = `<span style="color:#f87171;">❌ เกิดข้อผิดพลาด: ${err?.message || String(err)}</span>`;
+      }
+      ns.showToast(`❌ แปลงลิงก์ไม่สำเร็จ: ${err?.message || String(err)}`);
+    } finally {
+      poolBridgeRunning = false;
+      if (runBtn) {
+        runBtn.disabled = false;
+        runBtn.textContent = '✅ แปลงลิงก์ใน Pool เรียบร้อยแล้ว';
+      }
+    }
+  }
+
   function checkHashForV1Scanner() {
     if (location.hash.includes('v1_scanner') || location.hash.includes('st-action=get_items')) {
       setTimeout(() => openV1ScannerModal(), 350);
+    }
+    if (location.hash.includes('pool_bridge')) {
+      setTimeout(() => {
+        ensurePoolBridgeBanner(true);
+        runCampaignPoolBridge(false);
+      }, 500);
+    }
+    if (/\/offer\/custom_link/i.test(location.href)) {
+      setTimeout(() => ensurePoolBridgeBanner(true), 400);
     }
   }
   window.addEventListener('hashchange', checkHashForV1Scanner);
@@ -2643,10 +3268,19 @@
 
   // Debounced Auto-Scanner for Offer Grid & Offer Detail
   let scanTimer = null;
+  let lastApiDetailFetchedId = '';
   function scheduleScan() {
     if (scanTimer) clearTimeout(scanTimer);
     scanTimer = setTimeout(() => {
-      if (isOfferDetailUrl()) {
+      if (/\/offer\/custom_link/i.test(location.href)) {
+        ensurePoolBridgeBanner(true);
+      } else if (isOfferDetailUrl()) {
+        const mId = location.href.match(/product_offer\/(\d+)/);
+        const curItemId = mId ? mId[1] : '';
+        if (curItemId && curItemId !== lastApiDetailFetchedId) {
+          lastApiDetailFetchedId = curItemId;
+          fetchSingleOfferDetailViaMainBridge(curItemId).catch(() => {});
+        }
         scrapeOfferDetailPage();
       } else {
         scanAndOverlayOfferGrid();
@@ -2659,7 +3293,7 @@
       if (
         m.target &&
         m.target.nodeType === 1 &&
-        !m.target.closest?.('.drb-aff-card-overlay, #drb-aff-grid-toolbar')
+        !m.target.closest?.('.drb-aff-card-overlay, #drb-aff-grid-toolbar, #drb-pool-bridge-bar')
       ) {
         scheduleScan();
         break;

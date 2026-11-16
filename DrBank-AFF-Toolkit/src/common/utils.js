@@ -478,4 +478,128 @@ window.DrBankAFF = window.DrBankAFF || {};
     } catch (_e) {}
     return nextTheme;
   };
+
+  /**
+   * Parse Shopee API commission rate in any format ("8%", "10.4%", 8000, 0.08, 8) to percentage (0-100)
+   */
+  ns.parseShopeeRateToPct = function (rawVal) {
+    if (rawVal === null || rawVal === undefined || rawVal === '') return 0;
+    if (typeof rawVal === 'string' && rawVal.includes('%')) {
+      const p = parseFloat(rawVal);
+      return Number.isFinite(p) && p > 0 ? +p.toFixed(2) : 0;
+    }
+    const num = Number(rawVal);
+    if (!Number.isFinite(num) || num <= 0) return 0;
+    if (num > 100) return +(num / 1000).toFixed(2);
+    if (num < 1) return +(num * 100).toFixed(2);
+    return +num.toFixed(2);
+  };
+
+  /**
+   * Extract STRICT Social Media channel commission from api/v3/offer/product response.
+   * Never mixes Shopee Live / Shopee Video rates (live_streaming_default_exist_commission_rate) into Social Media.
+   */
+  ns.extractSocialMediaCommission = function (rawPayload) {
+    const data = rawPayload?.data || rawPayload || {};
+    const card = data.batch_item_for_item_card_full || {};
+    const detail = data.commission_rate_detail || {};
+    const sellerDetail = detail.seller_commission_detail || {};
+    const shopeeDetail = detail.shopee_commission_detail || {};
+
+    const extraRate = ns.parseShopeeRateToPct(
+      sellerDetail.default_exist_commission_rate ??
+        sellerDetail.social_media_commission_rate ??
+        sellerDetail.default_commission_rate
+    );
+    let baseRate = ns.parseShopeeRateToPct(
+      shopeeDetail.default_exist_commission_rate ??
+        shopeeDetail.social_media_commission_rate ??
+        shopeeDetail.default_commission_rate
+    );
+
+    const liveExtraRate = ns.parseShopeeRateToPct(sellerDetail.live_streaming_default_exist_commission_rate);
+    const liveBaseRate = ns.parseShopeeRateToPct(shopeeDetail.live_streaming_default_exist_commission_rate);
+    const totalDetailRate = ns.parseShopeeRateToPct(detail.total_commission_rate);
+
+    if (baseRate === 0 && totalDetailRate > extraRate && extraRate > 0) {
+      baseRate = +(totalDetailRate - extraRate).toFixed(2);
+    }
+
+    const totalRate = +(extraRate + baseRate).toFixed(2) || totalDetailRate;
+    const rawPrice = Number(card.price) || 0;
+    const offerPrice = rawPrice > 100000 ? +(rawPrice / 100000).toFixed(2) : rawPrice;
+    const rawPriceMax = Number(card.price_max) || rawPrice;
+    const offerPriceMax = rawPriceMax > 100000 ? +(rawPriceMax / 100000).toFixed(2) : rawPriceMax;
+
+    const imagesHD = Array.isArray(card.images)
+      ? card.images.slice(0, 8).map((h) => `https://down-th.img.susercontent.com/file/${h}`)
+      : card.image
+      ? [`https://down-th.img.susercontent.com/file/${card.image}`]
+      : [];
+
+    return {
+      hasDetail: Boolean(data.commission_rate_detail),
+      itemId: String(card.itemid || data.item_id || ''),
+      shopId: String(card.shopid || data.shop_id || ''),
+      title: card.name || data.product_name || '',
+      offerPrice,
+      offerPriceMax,
+      extraRate,
+      baseRate,
+      totalRate,
+      liveExtraRate,
+      liveBaseRate,
+      soldMonthly: Number(card.sold) || 0,
+      soldTotal: Number(card.historical_sold) || 0,
+      stock: Number(card.stock) || 0,
+      rating: Number(card?.item_rating?.rating_star) || 0,
+      isMall: Boolean(card.is_official_shop),
+      imagesHD
+    };
+  };
+
+  /**
+   * Safe fallback extractor for /api/v3/offer/product/list where commission_rate_detail is absent.
+   * Avoids double-counting default_commission_rate (total) + seller_commission_rate or mixing Live/Video rates.
+   */
+  ns.extractListCommissionFallback = function (rawItem, isMall = false, title = '') {
+    if (rawItem?.commission_rate_detail || rawItem?.data?.commission_rate_detail) {
+      const exact = ns.extractSocialMediaCommission(rawItem);
+      return {
+        extraRate: exact.extraRate,
+        baseRate: exact.baseRate,
+        totalRate: exact.totalRate,
+        isListApprox: false
+      };
+    }
+
+    const defaultTotal = ns.parseShopeeRateToPct(rawItem?.default_commission_rate);
+    const sellerRate = ns.parseShopeeRateToPct(rawItem?.seller_commission_rate);
+    let extraRate = 0;
+    let baseRate = 0;
+
+    if (defaultTotal > 0) {
+      if (sellerRate > 0 && defaultTotal > sellerRate) {
+        extraRate = sellerRate;
+        baseRate = +(defaultTotal - sellerRate).toFixed(2);
+      } else if (sellerRate > 0 && sellerRate >= defaultTotal) {
+        baseRate = defaultTotal > 2.0 ? 2.0 : 0;
+        extraRate = +(defaultTotal - baseRate).toFixed(2);
+      } else {
+        extraRate = 0;
+        baseRate = defaultTotal;
+      }
+    } else {
+      const catEst = ns.estimateCategoryCommission(title, isMall, 'auto', '');
+      baseRate = catEst.baseRate || 2.0;
+      extraRate = sellerRate;
+    }
+
+    return {
+      extraRate,
+      baseRate,
+      totalRate: +(extraRate + baseRate).toFixed(2),
+      isListApprox: true
+    };
+  };
 })(window.DrBankAFF);

@@ -126,6 +126,60 @@
     body[data-theme="dark"] .drb-aff-real-offer-card {
       border-color: #0369a1;
     }
+
+    .drb-aff-subid-card {
+      background: var(--drb-bg-surface);
+      border: 1px solid var(--drb-border-strong);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+    }
+
+    .drb-aff-subid-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--drb-text-main);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .drb-aff-subid-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-bottom: 7px;
+    }
+
+    .drb-aff-subid-grid input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 5px 6px;
+      font-size: 11.5px;
+      border-radius: 5px;
+      border: 1px solid var(--drb-border-strong);
+      background: var(--drb-bg-card);
+      color: var(--drb-text-main);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .drb-aff-shortlink-out {
+      margin-top: 6px;
+      font-size: 12px;
+      word-break: break-all;
+      color: #0284c7;
+      font-weight: 600;
+      display: none;
+      cursor: pointer;
+    }
+
+    .drb-aff-disclaimer {
+      font-size: 11px;
+      color: var(--drb-text-muted);
+      line-height: 1.35;
+      margin-top: 5px;
+    }
   </style>
 </head>
 
@@ -194,6 +248,19 @@
         </div>
       </div>
 
+      <!-- 4.5 การ์ดเรทจริงโซเชียลมีเดีย (Social Media Only) -->
+      <div class="drb-aff-real-offer-card" id="drb-sp-real-rate-box" style="margin-bottom:10px;">
+        <div class="drb-aff-real-offer-title">
+          <span>📊 เรทจริงโซเชียลมีเดีย (Social Media)</span>
+          <button type="button" class="drb-aff-spec-toggle-btn" id="drb-sp-btn-refresh-realrate" title="ดึงเรทจริงจาก affiliate.shopee.co.th ใหม่">↻ ดึงเรท</button>
+        </div>
+        <div id="drb-sp-real-status" style="font-size:12px;line-height:1.4;">กำลังรอตรวจสอบเรทจากบัญชี Affiliate...</div>
+        <div id="drb-sp-real-compare" style="font-size:11.5px;color:var(--drb-text-label);margin-top:4px;display:none;"></div>
+        <div class="drb-aff-disclaimer">
+          ⚠️ เฉพาะช่องทางโซเชียลมีเดีย (ไม่รวม Live/Video) · คอมจริงคิดจากยอดจ่ายสุทธิหลังหักโค้ดส่วนลด และ Base Cap 250฿/ออเดอร์
+        </div>
+      </div>
+
       <!-- 5. กล่องสเปกสินค้า (Default: Collapsed พับไว้แต่แรก) -->
       <div class="drb-aff-spec-box is-collapsed" id="drb-sp-spec-box">
         <div class="drb-aff-spec-header" id="drb-sp-spec-header">
@@ -252,6 +319,24 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- กล่องสร้างลิงก์สั้น s.shopee.co.th + Sub_id1..5 -->
+      <div class="drb-aff-subid-card" id="drb-sp-shortlink-box">
+        <div class="drb-aff-subid-title">
+          <span>🔗 สร้างลิงก์ s.shopee.co.th (Sub_id1–5)</span>
+        </div>
+        <div class="drb-aff-subid-grid">
+          <input type="text" id="drb-sp-sub1" value="16NOV26FBRAD" placeholder="subId1">
+          <input type="text" id="drb-sp-sub2" value="aidrb1611a001" placeholder="subId2">
+          <input type="text" id="drb-sp-sub3" value="20261116" placeholder="subId3">
+          <input type="text" id="drb-sp-sub4" value="" placeholder="subId4 (SKU)">
+          <input type="text" id="drb-sp-sub5" value="P01REELS" placeholder="subId5">
+          <button type="button" class="drb-aff-btn drb-aff-btn--primary" id="drb-sp-btn-gen-shortlink" style="padding:5px 6px;font-size:11.5px;">
+            ⚡ เจน+ก๊อป
+          </button>
+        </div>
+        <div class="drb-aff-shortlink-out" id="drb-sp-shortlink-out" title="คลิกเพื่อก๊อปซ้ำ"></div>
+      </div>
 
       <!-- ปุ่ม Action หลัก -->
       <div class="drb-aff-btn-group">
@@ -327,6 +412,27 @@
             </tr>
           </tbody>
         </table>
+        <div class="drb-aff-disclaimer">
+          ⚠️ เฉพาะช่องทางโซเชียลมีเดีย (ไม่รวม Live/Video) · คอมจริงคิดจากยอดจ่ายสุทธิหลังหักโค้ดส่วนลด และ Base Cap 250฿/ออเดอร์
+        </div>
+      </div>
+
+      <!-- 5.5 กล่องสร้างลิงก์สั้น s.shopee.co.th + Sub_id1..5 (Tab 2) -->
+      <div class="drb-aff-subid-card" id="drb-aff-shortlink-box">
+        <div class="drb-aff-subid-title">
+          <span>🔗 สร้างลิงก์ s.shopee.co.th (Sub_id1–5)</span>
+        </div>
+        <div class="drb-aff-subid-grid">
+          <input type="text" id="drb-aff-sub1" value="16NOV26FBRAD" placeholder="subId1">
+          <input type="text" id="drb-aff-sub2" value="aidrb1611a001" placeholder="subId2">
+          <input type="text" id="drb-aff-sub3" value="20261116" placeholder="subId3">
+          <input type="text" id="drb-aff-sub4" value="" placeholder="subId4 (SKU)">
+          <input type="text" id="drb-aff-sub5" value="P01REELS" placeholder="subId5">
+          <button type="button" class="drb-aff-btn drb-aff-btn--primary" id="drb-aff-btn-gen-shortlink" style="padding:5px 6px;font-size:11.5px;">
+            ⚡ เจน+ก๊อป
+          </button>
+        </div>
+        <div class="drb-aff-shortlink-out" id="drb-aff-shortlink-out" title="คลิกเพื่อก๊อปซ้ำ"></div>
       </div>
 
       <!-- 6. ช่องปรับจำลองตัวเลขในแท็บ Affiliate -->
@@ -354,6 +460,10 @@
 
       <!-- 7. ปุ่มส่งข้อมูลเข้าคลัง Web UI & ดูด Conversion Report -->
       <div class="drb-aff-btn-group">
+        <button class="drb-aff-btn drb-aff-btn--full" id="drb-aff-btn-pool-bridge"
+          style="padding:11px 12px;font-size:14px;background:linear-gradient(180deg,#1d4ed8 0%,#1e3a8a 100%);color:#fff;font-weight:700;border:1px solid #2563eb;margin-bottom:4px;">
+          🔗 แปลงลิงก์ทั้ง Pool (16NOV26FBRAD ➔ s.shopee.co.th)
+        </button>
         <button class="drb-aff-btn drb-aff-btn--full" id="drb-aff-btn-open-v1"
           style="padding:10px 12px;font-size:15px;background:linear-gradient(90deg,#7c3aed 0%,#2563eb 100%);color:#fff;font-weight:700;border:none;">
           🚀 เปิดตารางค้นหา V1 Realtime (500 ชิ้น + Signal)

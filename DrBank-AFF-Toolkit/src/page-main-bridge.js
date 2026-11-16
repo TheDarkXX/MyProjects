@@ -8,6 +8,68 @@
   if (window.__drbMainBridgeLoaded) return;
   window.__drbMainBridgeLoaded = true;
 
+  function isOfferDetailApiUrl(urlStr) {
+    const s = String(urlStr || '');
+    return s.includes('api/v3/offer/product') && !s.includes('api/v3/offer/product/list');
+  }
+
+  function emitInterceptedOffer(url, parsed) {
+    if (!parsed || typeof parsed !== 'object') return;
+    if (parsed.data || typeof parsed.error === 'number') {
+      window.postMessage(
+        {
+          type: 'DRB_AFF_OFFER_INTERCEPTED',
+          url: String(url || ''),
+          data: parsed
+        },
+        '*'
+      );
+    }
+  }
+
+  // Intercept native page XHR & fetch calls to api/v3/offer/product
+  const origXhrOpen = window.XMLHttpRequest.prototype.open;
+  const origXhrSend = window.XMLHttpRequest.prototype.send;
+  window.XMLHttpRequest.prototype.open = function (_method, url) {
+    this.__drbReqUrl = url;
+    return origXhrOpen.apply(this, arguments);
+  };
+  window.XMLHttpRequest.prototype.send = function () {
+    const urlStr = String(this.__drbReqUrl || '');
+    if (isOfferDetailApiUrl(urlStr)) {
+      this.addEventListener('load', () => {
+        if (this.status >= 200 && this.status < 300) {
+          try {
+            const parsed =
+              this.responseType && this.responseType !== 'text' && typeof this.response === 'object'
+                ? this.response
+                : JSON.parse(this.responseText);
+            emitInterceptedOffer(urlStr, parsed);
+          } catch (_e) {}
+        }
+      });
+    }
+    return origXhrSend.apply(this, arguments);
+  };
+
+  const origFetch = window.fetch;
+  if (typeof origFetch === 'function') {
+    window.fetch = async function (input) {
+      const resp = await origFetch.apply(this, arguments);
+      try {
+        const reqUrl = typeof input === 'string' ? input : input?.url || '';
+        if (resp && resp.ok && isOfferDetailApiUrl(reqUrl)) {
+          resp
+            .clone()
+            .json()
+            .then((parsed) => emitInterceptedOffer(reqUrl, parsed))
+            .catch(() => {});
+        }
+      } catch (_e) {}
+      return resp;
+    };
+  }
+
   function getCsrfToken() {
     const match = document.cookie.split('; ').find((r) => r.startsWith('csrftoken='));
     return match ? match.split('=')[1] : '';

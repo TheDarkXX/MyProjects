@@ -33,8 +33,17 @@
     variants: [],
     shopId: '',
     itemId: '',
-    cleanUrl: ''
+    cleanUrl: '',
+    offerPrice: 0,
+    realRateVerified: false,
+    realRateItemId: '',
+    realRateLoading: false,
+    realRateError: '',
+    realRateSecurityCheck: false,
+    liveExtraRate: 0,
+    liveBaseRate: 0
   };
+  let lastAutoFetchedOfferItemId = '';
 
   let shopeeGridState = {
     enabled: true,
@@ -69,6 +78,7 @@
 
     if (isSingleProductUrl()) {
       scrapeShopeeProductDOM();
+      fetchRealSocialCommissionForCurrentProduct(false);
     } else {
       scanAndOverlayShopeeGrid();
     }
@@ -81,6 +91,9 @@
         if (req.action === 'GET_SCRAPED_PRODUCT') {
           if (isSingleProductUrl()) {
             scrapeShopeeProductDOM();
+            if (req.forceRefresh || !currentState.realRateVerified || currentState.realRateItemId !== currentState.itemId) {
+              fetchRealSocialCommissionForCurrentProduct(Boolean(req.forceRefresh));
+            }
           } else {
             scanAndOverlayShopeeGrid();
           }
@@ -122,6 +135,7 @@
     }
 
     let lastUrl = location.href;
+    let lastStorageSyncSig = '';
     let gridTimer = null;
     const scheduleShopeeScan = () => {
       if (gridTimer) clearTimeout(gridTimer);
@@ -131,9 +145,15 @@
           if (oldTb) oldTb.remove();
           scrapeShopeeProductDOM();
           updateHUDValues();
+          const sig = `${currentState.itemId}_${currentState.price}_${currentState.baseRate}_${currentState.extraRate}_${currentState.realRateVerified}`;
+          if (currentState.itemId && sig !== lastStorageSyncSig) {
+            lastStorageSyncSig = sig;
+            chrome.storage.local.set({ activeShopeeGridProduct: { ...currentState } }).catch(() => {});
+          }
+          fetchRealSocialCommissionForCurrentProduct(false);
         }
         scanAndOverlayShopeeGrid();
-      }, 700);
+      }, 650);
     };
 
     const observer = new MutationObserver((mutations) => {
@@ -648,8 +668,73 @@
     });
   }
 
+  async function fetchRealSocialCommissionForCurrentProduct(forceRefresh = false) {
+    if (!isSingleProductUrl()) return;
+    const reqItemId = String(currentState.itemId || '').replace(/[^0-9]/g, '');
+    if (!reqItemId) return;
+    if (!forceRefresh && (reqItemId === lastAutoFetchedOfferItemId || currentState.realRateLoading)) {
+      return;
+    }
+
+    lastAutoFetchedOfferItemId = reqItemId;
+    currentState.realRateLoading = true;
+    currentState.realRateError = '';
+    currentState.realRateSecurityCheck = false;
+    try {
+      await chrome.storage.local.set({ activeShopeeGridProduct: { ...currentState } }).catch(() => {});
+      const res = await ns.sendMessage('GET_REAL_AFF_OFFER', {
+        itemId: reqItemId,
+        shopId: currentState.shopId,
+        title: currentState.title,
+        forceRefresh
+      });
+
+      if (currentState.itemId !== reqItemId) return;
+
+      if (res?.ok && res.data) {
+        currentState.baseRate = Number(res.data.baseRate) || 0;
+        currentState.extraRate = Number(res.data.extraRate) || 0;
+        currentState.offerPrice = Number(res.data.offerPrice || res.data.price) || 0;
+        currentState.liveExtraRate = Number(res.data.liveExtraRate) || 0;
+        currentState.liveBaseRate = Number(res.data.liveBaseRate) || 0;
+        currentState.realRateVerified = true;
+        currentState.realRateItemId = reqItemId;
+        currentState.realRateLoading = false;
+        currentState.realRateError = '';
+        currentState.realRateSecurityCheck = false;
+        currentState.categoryLabel = 'เรทจริง Social Media';
+        scrapeShopeeProductDOM();
+        updateHUDValues();
+        await chrome.storage.local.set({ activeShopeeGridProduct: { ...currentState } }).catch(() => {});
+      } else {
+        currentState.realRateLoading = false;
+        currentState.realRateSecurityCheck = Boolean(res?.securityCheck);
+        currentState.realRateError = res?.error || 'ยังดึงเรทจริงจากหน้า AFF ไม่ได้';
+        await chrome.storage.local.set({ activeShopeeGridProduct: { ...currentState } }).catch(() => {});
+      }
+    } catch (err) {
+      if (currentState.itemId === reqItemId) {
+        currentState.realRateLoading = false;
+        currentState.realRateError = err?.message || String(err);
+        await chrome.storage.local.set({ activeShopeeGridProduct: { ...currentState } }).catch(() => {});
+      }
+    }
+  }
+
   function scrapeShopeeProductDOM() {
     const parsed = ns.parseShopeeIds(location.href);
+    if (parsed.itemId && currentState.lastScrapedItemId && parsed.itemId !== currentState.lastScrapedItemId) {
+      currentState.realRateVerified = false;
+      currentState.realRateItemId = '';
+      currentState.offerPrice = 0;
+      currentState.liveExtraRate = 0;
+      currentState.liveBaseRate = 0;
+      currentState.realRateError = '';
+      currentState.realRateSecurityCheck = false;
+    }
+    if (parsed.itemId) {
+      currentState.lastScrapedItemId = parsed.itemId;
+    }
     currentState.shopId = parsed.shopId;
     currentState.itemId = parsed.itemId;
     currentState.cleanUrl = parsed.cleanUrl;
@@ -671,8 +756,9 @@
     }
     currentState.title = (foundTitle || document.title || 'Shopee Product').replace(/\| Shopee Thailand/i, '').trim();
 
-    // Auto-estimate Category Commission (A - F) from title
-    if (ns.estimateCategoryCommission && currentState.title) {
+    // Auto-estimate Category Commission (A - F) only if real Social Media rate is not yet verified for this itemId
+    const hasVerifiedRealRate = Boolean(currentState.realRateVerified && currentState.itemId && currentState.realRateItemId === currentState.itemId);
+    if (!hasVerifiedRealRate && ns.estimateCategoryCommission && currentState.title) {
       const catEst = ns.estimateCategoryCommission(currentState.title, true, 'auto');
       currentState.categoryLabel = catEst.catLabel;
       currentState.baseRate = catEst.baseRate;
@@ -809,6 +895,17 @@
         .slice(0, 1500);
     } else {
       currentState.specText = `ชื่อสินค้า: ${currentState.title}\nราคาขาย: ฿${currentState.price} | แหล่งส่ง: ${currentState.shipFrom}`;
+    }
+
+    if (hasVerifiedRealRate) {
+      const baseNote =
+        currentState.offerPrice > 0 && currentState.offerPrice !== currentState.price
+          ? ` | ราคาฐาน AFF: ฿${currentState.offerPrice.toLocaleString()}`
+          : '';
+      const rateHeader =
+        `[เรทจริงช่องทางโซเชียลมีเดีย: EXTRACOMM ${currentState.extraRate}% + ช้อปปี้ ${currentState.baseRate}%${baseNote}]\n` +
+        `*คอมจริงคิดจากยอดจ่ายสุทธิหลังหักโค้ดส่วนลด และอาจติด Cap ค่าคอมช้อปปี้ 250฿\n\n`;
+      currentState.specText = `${rateHeader}${currentState.specText}`.slice(0, 1700);
     }
 
     // 5. Extract HD Product Images
@@ -1001,8 +1098,9 @@
 
     document.getElementById('drb-btn-rescan').addEventListener('click', () => {
       scrapeShopeeProductDOM();
+      fetchRealSocialCommissionForCurrentProduct(true);
       updateHUDValues();
-      ns.showToast('อัปเดตราคา, ยอดขาย, สเปก และรูป HD ล่าสุดแล้ว');
+      ns.showToast('อัปเดตราคา, เรทจริง Social Media, สเปก และรูป HD ล่าสุดแล้ว');
     });
 
     // Collapsible 5-Line Spec Box Controls
@@ -1100,6 +1198,10 @@
 
     const priceInp = document.getElementById('drb-inp-price');
     if (priceInp) priceInp.value = currentState.price;
+    const baseInp = document.getElementById('drb-inp-base-rate');
+    if (baseInp) baseInp.value = currentState.baseRate;
+    const extraInp = document.getElementById('drb-inp-extra-rate');
+    if (extraInp) extraInp.value = currentState.extraRate;
 
     const idsEl = document.getElementById('drb-hud-ids');
     if (idsEl) {
@@ -1206,7 +1308,8 @@
     if (netEl) netEl.textContent = `${comm.tierEmoji || ''} ${ns.formatTHB(comm.netComm)}`;
     if (tierBadgeEl) tierBadgeEl.textContent = comm.tierLabel;
     if (effEl) {
-      effEl.textContent = `เรทรวม ${comm.effectiveRate.toFixed(1)}%${comm.isCapped ? ' (ติด Cap)' : ''}`;
+      const srcTag = currentState.realRateVerified ? 'เรทจริง Social' : 'ประเมินหมวด';
+      effEl.textContent = `${srcTag} ${comm.effectiveRate.toFixed(1)}%${comm.isCapped ? ' (ติด Cap)' : ''}`;
     }
 
     if (breakEvenBox && breakEvenText) {
