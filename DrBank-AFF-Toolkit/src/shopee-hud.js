@@ -296,49 +296,9 @@
   }
 
   function ensureGridViewportObserver() {
-    if (gridViewportObserver || typeof IntersectionObserver === 'undefined') return gridViewportObserver;
-    gridViewportObserver = new IntersectionObserver(
-      (entries) => {
-        if (!shopeeGridState.enabled || isSingleProductUrl() || gridCircuitTripped || gridNeedAffTab || gridHourlyQuotaReached) {
-          return;
-        }
-        entries.forEach((entry) => {
-          const cardEl = entry.target;
-          const itemId = cardEl.getAttribute('data-drb-item-id') || '';
-          const shopId = cardEl.getAttribute('data-drb-shop-id') || '';
-          const estNet = Number(cardEl.getAttribute('data-drb-est-net')) || 0;
-          const price = Number(cardEl.getAttribute('data-drb-locked-price')) || 0;
-          if (!itemId || gridRealCache.has(itemId) || gridLoadingIds.has(itemId)) return;
-
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.45) {
-            if (!cardDwellTimers.has(itemId)) {
-              const t = setTimeout(() => {
-                cardDwellTimers.delete(itemId);
-                if (!document.body.contains(cardEl)) return;
-                // Smart Filter: skip cheap low-comm cards automatically (user can still hover/click to check)
-                if (
-                  !gridRealCache.has(itemId) &&
-                  !gridAutoQueuedIds.has(itemId) &&
-                  gridAutoCheckedCountThisPage < MAX_AUTO_CHECKS_PER_PAGE &&
-                  (estNet >= 15 || price >= 180)
-                ) {
-                  enqueueGridAutoItem({ itemId, shopId, estNet });
-                }
-              }, 800);
-              cardDwellTimers.set(itemId, t);
-            }
-          } else {
-            const prevT = cardDwellTimers.get(itemId);
-            if (prevT) {
-              clearTimeout(prevT);
-              cardDwellTimers.delete(itemId);
-            }
-          }
-        });
-      },
-      { threshold: [0, 0.45, 0.75] }
-    );
-    return gridViewportObserver;
+    // Auto-prefetch on scroll is disabled to prevent cross-tab API contention & Shopee verify/traffic triggers.
+    // Real rates are loaded from 24h storage cache (0 API calls) or when the user explicitly clicks a check button.
+    return null;
   }
 
   function enqueueGridAutoItem(item) {
@@ -901,23 +861,7 @@
         }
       });
 
-      // Layer 2 Hover Intent: hover unverified pill >= 450ms -> auto-check just this item (including <฿15 & base-only)
-      let hoverTimer = null;
-      ov.addEventListener('mouseenter', () => {
-        const ctx = ov.__drbCtx || {};
-        if (!ctx.itemId || gridRealCache.has(ctx.itemId) || gridLoadingIds.has(ctx.itemId) || gridCircuitTripped) return;
-        hoverTimer = setTimeout(() => {
-          const latestCtx = ov.__drbCtx || ctx;
-          requestSingleCardRealRate(latestCtx.itemId, latestCtx.cardProductPayload, false);
-        }, 450);
-      });
-      ov.addEventListener('mouseleave', () => {
-        if (hoverTimer) {
-          clearTimeout(hoverTimer);
-          hoverTimer = null;
-        }
-      });
-
+      // Manual Click Only: do not auto-fire on mouseenter hover to protect affiliate.shopee.co.th API quota
       cardEl.appendChild(ov);
     });
 
