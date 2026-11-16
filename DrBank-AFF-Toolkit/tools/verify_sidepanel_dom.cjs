@@ -27,6 +27,8 @@ const heroSuffixes = [
   'net-comm',
   'gross-sub',
   'total-rate',
+  'extra-pct',
+  'base-pct',
   'bar-extra',
   'bar-base',
   'leg-extra',

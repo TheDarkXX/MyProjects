@@ -182,14 +182,63 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   bindShortLinkGenerator();
 
-  // Secondary Tools Grid
-  document.getElementById('drb-sp-btn-check-aff')?.addEventListener('click', () => {
-    const prod = getActiveProduct();
-    const itemId = prod?.itemId || '';
+  // Secondary Tools Grid & Hero Quick-Jump Buttons (Smart Tab Toggle: switch if open, create if not)
+  const openAffOfferPage = async (prod) => {
+    const itemId = String(prod?.itemId || affProduct?.itemId || shopeeProduct?.itemId || '').replace(/[^0-9]/g, '');
     const targetUrl = itemId
       ? `https://affiliate.shopee.co.th/offer/product_offer/${itemId}`
       : `https://affiliate.shopee.co.th/offer/product_offer`;
+    try {
+      const tabs = await chrome.tabs.query({ currentWindow: true });
+      const existing = tabs.find(
+        (t) => t.url && t.url.includes('affiliate.shopee.co.th') && (itemId ? t.url.includes(itemId) : true)
+      );
+      if (existing?.id) {
+        await chrome.tabs.update(existing.id, { active: true });
+        return;
+      }
+    } catch (_e) {}
     chrome.tabs.create({ url: targetUrl });
+  };
+
+  document.getElementById('drb-sp-btn-check-aff')?.addEventListener('click', () => openAffOfferPage(getActiveProduct()));
+  document.getElementById('drb-sp-btn-hero-aff')?.addEventListener('click', () => openAffOfferPage(shopeeProduct || getActiveProduct()));
+
+  document.getElementById('drb-aff-btn-hero-shopee')?.addEventListener('click', async () => {
+    const prod = affProduct || getActiveProduct();
+    const itemId = String(prod?.itemId || shopeeProduct?.itemId || '').replace(/[^0-9]/g, '');
+    const shopId = String(
+      prod?.shopId || (shopeeProduct && String(shopeeProduct.itemId) === itemId ? shopeeProduct.shopId : '') || ''
+    ).replace(/[^0-9]/g, '');
+
+    try {
+      const tabs = await chrome.tabs.query({ currentWindow: true });
+      const existing = tabs.find(
+        (t) =>
+          t.url &&
+          t.url.includes('shopee.co.th') &&
+          !t.url.includes('affiliate.shopee.co.th') &&
+          (itemId ? t.url.includes(itemId) : true)
+      );
+      if (existing?.id) {
+        await chrome.tabs.update(existing.id, { active: true });
+        return;
+      }
+    } catch (_e) {}
+
+    const targetUrl =
+      shopId && itemId
+        ? `https://shopee.co.th/product/${shopId}/${itemId}`
+        : prod?.cleanUrl && !prod.cleanUrl.includes('affiliate.shopee.co.th')
+        ? prod.cleanUrl
+        : shopeeProduct?.cleanUrl && !shopeeProduct.cleanUrl.includes('affiliate.shopee.co.th')
+        ? shopeeProduct.cleanUrl
+        : '';
+    if (targetUrl) {
+      chrome.tabs.create({ url: targetUrl });
+    } else {
+      ns.showToast('กดลิงก์ "ดูสินค้า" บนหน้าเว็บเพื่อเปิดหน้า Shopee');
+    }
   });
 
   document.getElementById('drb-sp-btn-clean-url')?.addEventListener('click', () => {
@@ -351,8 +400,41 @@ async function queryActiveTabAndScrape(showToastOnDone = false) {
 
   if (isAffiliateUrl) {
     switchPanelTab('aff');
-    await scrapeAffiliateTab(tab.id, showToastOnDone);
-    setTimeout(() => scrapeAffiliateTab(tab.id, false), 850);
+    const urlItemMatch = url.match(/product_offer\/(\d+)/);
+    const urlItemId = urlItemMatch ? urlItemMatch[1] : '';
+
+    // Instant 0ms Pre-fill if shopeeProduct already has verified rates for this exact itemId
+    if (
+      urlItemId &&
+      (!affProduct || String(affProduct.itemId) !== urlItemId || (!affProduct.baseRate && !affProduct.extraRate))
+    ) {
+      if (
+        shopeeProduct &&
+        String(shopeeProduct.itemId) === urlItemId &&
+        (Number(shopeeProduct.baseRate) > 0 || Number(shopeeProduct.extraRate) > 0)
+      ) {
+        affProduct = {
+          ...shopeeProduct,
+          price: Number(shopeeProduct.offerPrice || shopeeProduct.price) || 0,
+          realRateVerified: true
+        };
+        renderAffiliateTabData(affProduct);
+      }
+    }
+
+    const ready = await scrapeAffiliateTab(tab.id, showToastOnDone);
+    if (!ready && urlItemId) {
+      // Poll until Shopee Affiliate React table mounts into DOM (up to ~7 seconds)
+      for (let attempt = 0; attempt < 14; attempt++) {
+        await new Promise((r) => setTimeout(r, 500));
+        if (currentTabId !== tab.id) break;
+        const okNow = await scrapeAffiliateTab(tab.id, false);
+        if (okNow) {
+          flashElement('drb-aff-net-comm');
+          break;
+        }
+      }
+    }
     return;
   }
 
@@ -551,17 +633,39 @@ async function scrapeAffiliateTab(tabId, showToastOnDone) {
   try {
     const response = await chrome.tabs.sendMessage(tabId, { action: 'GET_AFFILIATE_OFFER' });
     if (response && response.ok && response.mode === 'offer' && response.data) {
-      affProduct = response.data;
-      renderAffiliateTabData(affProduct);
-      if (affProduct.itemId && (Number(affProduct.baseRate) > 0 || Number(affProduct.extraRate) > 0)) {
-        ns.sendMessage('CACHE_REAL_AFF_OFFER', affProduct).catch(() => {});
-        chrome.storage.local.set({ activeAffOfferProduct: affProduct }).catch(() => {});
-        if (shopeeProduct && String(shopeeProduct.itemId) === String(affProduct.itemId)) {
-          applyRealOfferToShopeeProduct(shopeeProduct, affProduct);
-          renderShopeeTabData(shopeeProduct);
+      const incoming = response.data;
+      const hasValidRates =
+        (Number(incoming.baseRate) > 0 || Number(incoming.extraRate) > 0) && Number(incoming.price) > 0;
+      const badgeEl = document.getElementById('drb-aff-source-badge');
+
+      if (!hasValidRates) {
+        // React table hasn't mounted yet — DO NOT overwrite existing valid rates with 0!
+        if (!affProduct || (incoming.itemId && String(affProduct.itemId) !== String(incoming.itemId))) {
+          affProduct = incoming;
+          renderAffiliateTabData(affProduct);
+          setText('drb-aff-breakeven-text', '⏳ กำลังโหลดตารางค่าคอมจาก Shopee Affiliate...');
         }
+        if (badgeEl) {
+          badgeEl.classList.remove('is-verified');
+          badgeEl.textContent = '⏳ รอตาราง...';
+        }
+        return false;
+      }
+
+      affProduct = incoming;
+      if (badgeEl) {
+        badgeEl.classList.add('is-verified');
+        badgeEl.textContent = '✓ ตาราง AFF';
+      }
+      renderAffiliateTabData(affProduct);
+      ns.sendMessage('CACHE_REAL_AFF_OFFER', affProduct).catch(() => {});
+      chrome.storage.local.set({ activeAffOfferProduct: affProduct }).catch(() => {});
+      if (shopeeProduct && String(shopeeProduct.itemId) === String(affProduct.itemId)) {
+        applyRealOfferToShopeeProduct(shopeeProduct, affProduct);
+        renderShopeeTabData(shopeeProduct);
       }
       if (showToastOnDone) ns.showToast('↻ ดึงเรทจริงจากตารางข้อเสนอ Affiliate แล้ว!');
+      return true;
     } else if (response && response.ok && response.mode === 'grid') {
       if (response.data && response.data.title) {
         affProduct = response.data;
@@ -574,14 +678,17 @@ async function scrapeAffiliateTab(tabId, showToastOnDone) {
         );
       }
       if (showToastOnDone) ns.showToast('↻ สแกนป้ายไฟจราจรบนการ์ดสินค้าครบทุกใบแล้ว!');
+      return true;
     } else if (response && response.ok && response.mode === 'report') {
       setText('drb-aff-title', 'หน้า Conversion Report — เปิด 🛠 เครื่องมือ แล้วกด [📥 ดูด Report]');
+      return true;
     }
   } catch (_e) {
     if (!affProduct) {
       setText('drb-aff-title', 'กรุณากด F5 รีเฟรชหน้า affiliate.shopee.co.th 1 ครั้งเพื่อเริ่มดึงตารางข้อเสนอ');
     }
   }
+  return false;
 }
 
 // ============================================================================
@@ -616,8 +723,10 @@ function renderHero(prefix, prod, comm, animateFlash = false) {
     barBase.classList.toggle('is-capped', Boolean(comm.isCapped));
   }
 
-  setText(`drb-${prefix}-leg-extra`, `${extraR}% · ${ns.formatTHB(comm.extraComm)}`);
-  setText(`drb-${prefix}-leg-base`, `${baseR}% · ${ns.formatTHB(comm.baseComm)}${comm.isCapped ? ' (Cap)' : ''}`);
+  setText(`drb-${prefix}-extra-pct`, `${extraR}%`);
+  setText(`drb-${prefix}-leg-extra`, ns.formatTHB(comm.extraComm));
+  setText(`drb-${prefix}-base-pct`, `${baseR}%`);
+  setText(`drb-${prefix}-leg-base`, `${ns.formatTHB(comm.baseComm)}${comm.isCapped ? ' (Cap)' : ''}`);
   setText(`drb-${prefix}-price`, ns.formatTHB(prod.price));
 
   setText(

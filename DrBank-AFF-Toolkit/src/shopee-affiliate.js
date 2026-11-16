@@ -562,6 +562,39 @@
       foundItemId = urlIdMatch[1];
     }
 
+    if (foundItemId && offerProduct.itemId && foundItemId !== offerProduct.itemId) {
+      offerProduct = {
+        sourceType: 'affiliate_offer',
+        title: '',
+        price: 0,
+        originalPrice: 0,
+        offerPrice: 0,
+        baseRate: 0,
+        extraRate: 0,
+        baseCommTHB: 0,
+        extraCommTHB: 0,
+        grossCommTHB: 0,
+        capTHB: 250,
+        whtRate: 3.0,
+        shopId: '',
+        itemId: foundItemId,
+        cleanUrl: location.href,
+        imagesHD: [],
+        variants: [],
+        soldCount: 0,
+        soldText: '',
+        rating: 4.9,
+        shipFrom: 'ส่งในไทย',
+        isOverseas: false,
+        specText: '',
+        channelRows: [],
+        realRateVerified: false,
+        rateSource: 'dom_scrape',
+        liveExtraRate: 0,
+        liveBaseRate: 0
+      };
+    }
+
     document.querySelectorAll('a[href]').forEach((a) => {
       const href = a.getAttribute('href') || '';
       if (/shopee\.co\.th/i.test(href) && !/affiliate\.shopee\.co\.th/i.test(href)) {
@@ -727,6 +760,9 @@
 
     if (offerProduct.itemId && (offerProduct.baseRate > 0 || offerProduct.extraRate > 0)) {
       ns.sendMessage('CACHE_REAL_AFF_OFFER', offerProduct).catch(() => {});
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        chrome.storage.local.set({ activeAffOfferProduct: { ...offerProduct } }).catch(() => {});
+      }
     }
 
     return offerProduct;
@@ -3304,6 +3340,15 @@
   if (document.body) {
     observer.observe(document.body, { childList: true, subtree: true });
   }
-  setTimeout(scheduleScan, 900);
-  setTimeout(scheduleScan, 2200);
+  [400, 900, 1500, 2200, 3200, 4500].forEach((ms) => {
+    setTimeout(() => {
+      if (isOfferDetailUrl()) {
+        if (!offerProduct.realRateVerified || (offerProduct.baseRate === 0 && offerProduct.extraRate === 0)) {
+          scheduleScan();
+        }
+      } else if (ms <= 2200) {
+        scheduleScan();
+      }
+    }, ms);
+  });
 })();

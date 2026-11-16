@@ -1,33 +1,37 @@
 /* ==========================================================================
-   DrBank AFF Scout v2.12.0 — Clean Modern Side Panel Stylesheet
+   DrBank AFF Scout v2.12.1 — Full-Board High-Impact Side Panel Stylesheet
    Scoped strictly to #drb-sidepanel-root / .sp-* so Floating HUD (hud.css) is untouched.
    ========================================================================== */
 
 body.sp-body {
   margin: 0;
   padding: 0;
-  background: var(--sp-bg, #f6f7f9);
+  background: var(--sp-bg, #f4f6f9);
   color: var(--sp-text, #111827);
   font-family: 'Inter', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
   overflow-x: hidden;
   width: 100%;
   min-height: 100vh;
-  scroll-padding-top: 96px;
+  scroll-padding-top: 104px;
 }
 
 #drb-sidepanel-root {
-  --sp-bg: #f6f7f9;
+  --sp-bg: #f4f6f9;
   --sp-card: #ffffff;
-  --sp-surface-2: #eef0f3;
-  --sp-border: #e4e6ea;
-  --sp-text: #111827;
-  --sp-text-2: #4b5563;
-  --sp-text-3: #6b7280;
+  --sp-surface-2: #eaeef4;
+  --sp-border: #d8dee8;
+  --sp-text: #0f172a;
+  --sp-text-2: #334155;
+  --sp-text-3: #64748b;
   --sp-accent: #ee4d2d;
   --sp-accent-hover: #d73211;
-  --sp-extra: #16a34a;
-  --sp-base: #0284c7;
-  --sp-radius: 12px;
+  --sp-extra: #15803d;
+  --sp-extra-bg: #dcfce7;
+  --sp-extra-border: #16a34a;
+  --sp-base: #0369a1;
+  --sp-base-bg: #e0f2fe;
+  --sp-base-border: #0284c7;
+  --sp-radius: 14px;
 
   width: 100% !important;
   max-width: 100% !important;
@@ -40,7 +44,7 @@ body.sp-body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  font-size: 13px;
+  font-size: 14.5px;
   line-height: 1.45;
   box-sizing: border-box;
 }
@@ -53,22 +57,26 @@ body.sp-body {
 
 body[data-theme="dark"],
 body[data-theme="dark"] #drb-sidepanel-root {
-  --sp-bg: #0e0f12;
-  --sp-card: #17181c;
-  --sp-surface-2: #22242a;
-  --sp-border: #2a2d34;
-  --sp-text: #f4f4f5;
-  --sp-text-2: #b4b4bd;
-  --sp-text-3: #8c8c98;
+  --sp-bg: #0b0d11;
+  --sp-card: #151821;
+  --sp-surface-2: #1f2430;
+  --sp-border: #2d3343;
+  --sp-text: #f8fafc;
+  --sp-text-2: #cbd5e1;
+  --sp-text-3: #94a3b8;
   --sp-accent: #ff5733;
   --sp-accent-hover: #ff6b4a;
   --sp-extra: #4ade80;
+  --sp-extra-bg: rgba(22, 163, 74, 0.2);
+  --sp-extra-border: #22c55e;
   --sp-base: #38bdf8;
+  --sp-base-bg: rgba(2, 132, 199, 0.2);
+  --sp-base-border: #0ea5e9;
   background: var(--sp-bg);
   color: var(--sp-text);
 }
 
-/* Zone 0: Unified Sticky Topbar (Header + Segmented Tabs) */
+/* Zone 0: Unified Sticky Topbar */
 .sp-topbar {
   position: sticky;
   top: 0;
@@ -78,47 +86,47 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-topbar .drb-aff-header {
-  padding: 9px 14px;
+  padding: 10px 14px;
   border-radius: 0 !important;
   border-bottom: none;
   background: var(--sp-card);
 }
 
 .sp-topbar .drb-aff-brand {
-  font-size: 14px;
-  font-weight: 700;
-  gap: 6px;
+  font-size: 16px;
+  font-weight: 800;
+  gap: 7px;
 }
 
 .sp-topbar .drb-aff-version {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--sp-text-3);
 }
 
 .sp-topbar .drb-aff-icon-btn {
-  width: 28px;
-  height: 28px;
-  font-size: 13px;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
 }
 
 .sp-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 5px;
   padding: 4px;
-  margin: 0 14px 8px;
+  margin: 0 14px 10px;
   background: var(--sp-surface-2);
   border-radius: 10px;
 }
 
 .sp-tab-btn {
-  height: 32px;
+  height: 38px;
   border: none;
   border-radius: 8px;
   background: transparent;
   color: var(--sp-text-2);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -135,7 +143,7 @@ body[data-theme="dark"] #drb-sidepanel-root {
 .sp-tab-btn.active {
   background: var(--sp-card);
   color: var(--sp-accent);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .sp-tab-btn.active[data-tab="aff"] {
@@ -145,33 +153,33 @@ body[data-theme="dark"] #drb-sidepanel-root {
 /* Main Scrollable Body */
 .sp-main {
   flex: 1;
-  padding: 12px 14px 82px;
+  padding: 12px 14px 88px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
 }
 
 .drb-sp-pane {
   display: none;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
 }
 
 .drb-sp-pane.active {
   display: flex;
 }
 
-/* Product Title + Single Meta Line */
+/* Product Title + Meta Line */
 .sp-prod-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .sp-prod-title {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.4;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.38;
   color: var(--sp-text);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -181,8 +189,8 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-meta-line {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--sp-text-2);
   display: flex;
   flex-wrap: wrap;
@@ -192,26 +200,26 @@ body[data-theme="dark"] #drb-sidepanel-root {
 
 .sp-meta-bad {
   color: var(--tier-danger-text, #dc2626);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .sp-meta-warn {
   color: var(--tier-warn-text, #d97706);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .sp-meta-ok {
   color: var(--sp-extra);
-  font-weight: 600;
+  font-weight: 700;
 }
 
-/* Zone 1: Hero Profit Card (0.5-Second Glance) */
+/* Zone 1: Hero Profit Card (Full-Board High-Impact) */
 .sp-hero {
   background: var(--sp-card);
-  border: 1.5px solid var(--sp-border);
+  border: 2px solid var(--sp-border);
   border-radius: var(--sp-radius);
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
@@ -232,30 +240,29 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-hero-body {
-  padding: 12px 14px 10px;
+  padding: 14px 15px 12px;
 }
 
 .sp-hero-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .sp-hero-kicker {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--sp-text-3);
-  letter-spacing: 0.02em;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sp-text-2);
   margin-bottom: 2px;
 }
 
 .sp-hero-net {
-  font-size: 34px;
-  font-weight: 800;
-  line-height: 1.08;
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.05;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   color: var(--sp-text);
   border-radius: 6px;
 }
@@ -277,10 +284,10 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-hero-gross-sub {
-  font-size: 11.5px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--sp-text-3);
-  margin-top: 2px;
+  margin-top: 3px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -290,11 +297,89 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-hero-rate-val {
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.15;
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.1;
   color: var(--sp-text);
   font-variant-numeric: tabular-nums;
+}
+
+/* 2-Column Prominent Rate Cards (EXTRACOMM Star vs Shopee Base) */
+.sp-rate-cards {
+  display: grid;
+  grid-template-columns: 1.18fr 0.82fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sp-rate-card {
+  border-radius: 11px;
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-rate-card--extra {
+  background: var(--sp-extra-bg);
+  border: 2px solid var(--sp-extra-border);
+}
+
+.sp-rate-card--base {
+  background: var(--sp-base-bg);
+  border: 1.5px solid var(--sp-base-border);
+}
+
+.sp-rate-card-label {
+  font-size: 12.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.sp-rate-card--extra .sp-rate-card-label {
+  color: var(--sp-extra);
+}
+
+.sp-rate-card--base .sp-rate-card-label {
+  color: var(--sp-base);
+}
+
+.sp-rate-card-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sp-rate-pct-big {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.sp-rate-card--extra .sp-rate-pct-big {
+  color: var(--sp-extra);
+}
+
+.sp-rate-card--base .sp-rate-pct-big {
+  font-size: 24px;
+  color: var(--sp-base);
+}
+
+.sp-rate-baht-big {
+  font-size: 16.5px;
+  font-weight: 800;
+  color: var(--sp-text);
+}
+
+.sp-rate-card--base .sp-rate-baht-big {
+  font-size: 15px;
 }
 
 /* Split Commission Bar */
@@ -304,18 +389,18 @@ body[data-theme="dark"] #drb-sidepanel-root {
   background: var(--sp-surface-2);
   display: flex;
   overflow: hidden;
-  margin: 10px 0 8px;
+  margin: 10px 0 6px;
   gap: 2px;
 }
 
 .sp-split-extra {
-  background: var(--sp-extra);
+  background: var(--sp-extra-border);
   height: 100%;
   transition: width 0.25s ease;
 }
 
 .sp-split-base {
-  background: var(--sp-base);
+  background: var(--sp-base-border);
   height: 100%;
   transition: width 0.25s ease;
 }
@@ -323,53 +408,11 @@ body[data-theme="dark"] #drb-sidepanel-root {
 .sp-split-base.is-capped {
   background: repeating-linear-gradient(
     -45deg,
-    var(--sp-base),
-    var(--sp-base) 4px,
+    var(--sp-base-border),
+    var(--sp-base-border) 4px,
     rgba(255, 255, 255, 0.35) 4px,
     rgba(255, 255, 255, 0.35) 7px
   );
-}
-
-/* Legend Row: Extra vs Base (% + ฿) */
-.sp-legend-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed var(--sp-border);
-}
-
-.sp-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--sp-text-2);
-  font-weight: 500;
-}
-
-.sp-legend-item strong {
-  color: var(--sp-text);
-  font-weight: 700;
-}
-
-.sp-legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
-.sp-legend-dot--extra {
-  background: var(--sp-extra);
-}
-
-.sp-legend-dot--base {
-  background: var(--sp-base);
 }
 
 /* Price & Offer Base Comparison Row */
@@ -380,25 +423,58 @@ body[data-theme="dark"] #drb-sidepanel-root {
   gap: 8px;
   flex-wrap: wrap;
   padding-top: 8px;
-  font-size: 12.5px;
+  border-top: 1px dashed var(--sp-border);
+  font-size: 14px;
+  font-weight: 600;
   color: var(--sp-text-2);
   font-variant-numeric: tabular-nums;
 }
 
+.sp-price-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .sp-price-val {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
   color: var(--sp-text);
+  margin-left: 4px;
 }
 
 .sp-price-diff {
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--sp-text-2);
 }
 
 .sp-price-diff b {
   color: var(--sp-extra);
-  font-weight: 600;
+  font-weight: 800;
+}
+
+.sp-aff-jump-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--sp-base-border);
+  background: var(--sp-base-bg);
+  color: var(--sp-base);
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.sp-aff-jump-btn:hover {
+  filter: brightness(0.95);
 }
 
 /* Horizontal SKU Strip inside Hero (Hidden when empty) */
@@ -407,8 +483,8 @@ body[data-theme="dark"] #drb-sidepanel-root {
   align-items: center;
   gap: 6px;
   overflow-x: auto;
-  padding-top: 8px;
-  margin-top: 8px;
+  padding-top: 9px;
+  margin-top: 9px;
   border-top: 1px solid var(--sp-border);
   scrollbar-width: thin;
 }
@@ -418,24 +494,25 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-sku-strip .drb-aff-variant-pill {
-  height: 28px;
-  padding: 0 9px;
-  font-size: 11.5px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 /* Verdict Strip at bottom of Hero Card */
 .sp-verdict-strip {
-  min-height: 38px;
-  padding: 6px 12px;
+  min-height: 44px;
+  padding: 8px 13px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  border-top: 1px solid var(--sp-border);
+  font-size: 14px;
+  font-weight: 800;
+  border-top: 1.5px solid var(--sp-border);
   background: var(--sp-surface-2);
   color: var(--sp-text);
 }
@@ -467,7 +544,7 @@ body[data-theme="dark"] #drb-sidepanel-root {
 .sp-verdict-right {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
@@ -475,12 +552,12 @@ body[data-theme="dark"] #drb-sidepanel-root {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px;
+  padding: 3px 9px;
   border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   background: var(--sp-card);
-  border: 1px solid var(--sp-border);
+  border: 1.5px solid var(--sp-border);
   color: var(--sp-text-2);
   white-space: nowrap;
   text-decoration: none;
@@ -488,7 +565,7 @@ body[data-theme="dark"] #drb-sidepanel-root {
 
 .sp-source-pill.is-verified {
   color: var(--sp-extra);
-  border-color: var(--sp-extra);
+  border-color: var(--sp-extra-border);
 }
 
 .sp-source-pill.is-error {
@@ -497,13 +574,14 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-mini-icon-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   border: 1px solid var(--sp-border);
   background: var(--sp-card);
   color: var(--sp-text-2);
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -520,10 +598,10 @@ body[data-theme="dark"] #drb-sidepanel-root {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--sp-text-3);
   border: 1px solid var(--sp-border);
@@ -534,9 +612,9 @@ body[data-theme="dark"] #drb-sidepanel-root {
 /* Zone 2: Shared Compact Sub_id Link Card */
 .sp-link-card {
   background: var(--sp-card);
-  border: 1px solid var(--sp-border);
+  border: 1.5px solid var(--sp-border);
   border-radius: var(--sp-radius);
-  padding: 9px 12px;
+  padding: 10px 13px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -559,22 +637,23 @@ body[data-theme="dark"] #drb-sidepanel-root {
 
 .sp-link-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11.5px;
-  color: var(--sp-text-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sp-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .sp-ghost-sm-btn {
-  height: 26px;
-  padding: 0 9px;
-  border-radius: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 7px;
   border: 1px solid var(--sp-border);
   background: var(--sp-surface-2);
-  color: var(--sp-text-2);
-  font-size: 11.5px;
-  font-weight: 600;
+  color: var(--sp-text);
+  font-size: 12.5px;
+  font-weight: 700;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -587,8 +666,8 @@ body[data-theme="dark"] #drb-sidepanel-root {
 .sp-subid-editor {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding-top: 6px;
+  gap: 8px;
+  padding-top: 8px;
   border-top: 1px dashed var(--sp-border);
 }
 
@@ -599,7 +678,7 @@ body[data-theme="dark"] #drb-sidepanel-root {
 .sp-subid-field {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .sp-subid-field--full {
@@ -607,17 +686,18 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-subid-field label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--sp-text-3);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sp-text-2);
 }
 
 .sp-subid-field input {
-  height: 30px;
-  padding: 0 8px;
-  font-size: 12px;
+  height: 34px;
+  padding: 0 9px;
+  font-size: 13px;
+  font-weight: 600;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1px solid var(--sp-border);
   background: var(--sp-surface-2);
   color: var(--sp-text);
@@ -629,13 +709,13 @@ body[data-theme="dark"] #drb-sidepanel-root {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 9px;
+  padding: 8px 10px;
   border-radius: 8px;
   background: var(--sp-surface-2);
-  font-size: 12px;
+  font-size: 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--sp-base);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   word-break: break-all;
 }
@@ -647,20 +727,20 @@ body[data-theme="dark"] #drb-sidepanel-root {
 /* Zone 3: Collapsible <details> Folds */
 .sp-fold {
   background: var(--sp-card);
-  border: 1px solid var(--sp-border);
+  border: 1.5px solid var(--sp-border);
   border-radius: var(--sp-radius);
   overflow: hidden;
 }
 
 .sp-fold > summary {
   list-style: none;
-  height: 38px;
-  padding: 0 12px;
+  height: 44px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--sp-text);
   cursor: pointer;
   user-select: none;
@@ -672,7 +752,7 @@ body[data-theme="dark"] #drb-sidepanel-root {
 
 .sp-fold > summary::after {
   content: '▾';
-  font-size: 12px;
+  font-size: 14px;
   color: var(--sp-text-3);
   transition: transform 0.15s ease;
 }
@@ -686,54 +766,55 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-fold-body {
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 
 .sp-sim-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 9px;
 }
 
 .sp-sim-field label {
   display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--sp-text-3);
-  margin-bottom: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sp-text-2);
+  margin-bottom: 4px;
 }
 
 .sp-sim-field input {
   width: 100%;
-  height: 32px;
-  padding: 0 8px;
+  height: 36px;
+  padding: 0 9px;
   border-radius: 8px;
   border: 1px solid var(--sp-border);
   background: var(--sp-surface-2);
   color: var(--sp-text);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .sp-sim-footer {
-  margin-top: 8px;
+  margin-top: 9px;
   display: flex;
   justify-content: flex-end;
 }
 
 .sp-spec-scroll {
-  max-height: 220px;
+  max-height: 240px;
   overflow-y: auto;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.55;
   color: var(--sp-text-2);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .sp-ids-footnote {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--sp-text-3);
   margin-bottom: 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -746,14 +827,14 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-tool-btn {
-  height: 34px;
-  padding: 0 8px;
-  border-radius: 8px;
-  border: 1px solid var(--sp-border);
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1.5px solid var(--sp-border);
   background: var(--sp-surface-2);
   color: var(--sp-text);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -770,9 +851,9 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-tool-btn--featured {
-  border-color: var(--sp-base);
+  border-color: var(--sp-base-border);
   color: var(--sp-base);
-  background: transparent;
+  background: var(--sp-base-bg);
 }
 
 /* Zone 4: Sticky Bottom Action Bar */
@@ -783,23 +864,23 @@ body[data-theme="dark"] #drb-sidepanel-root {
   right: 0;
   z-index: 100;
   background: var(--sp-card);
-  border-top: 1px solid var(--sp-border);
+  border-top: 1.5px solid var(--sp-border);
   padding: 10px 14px;
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 8px;
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+  gap: 9px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .sp-btn-primary {
-  height: 40px;
-  padding: 0 14px;
+  height: 44px;
+  padding: 0 16px;
   border: none;
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--sp-accent);
   color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15.5px;
+  font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -813,14 +894,14 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-btn-secondary {
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 9px;
-  border: 1.5px solid var(--sp-base);
-  background: transparent;
+  height: 44px;
+  padding: 0 15px;
+  border-radius: 10px;
+  border: 2px solid var(--sp-base-border);
+  background: var(--sp-base-bg);
   color: var(--sp-base);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14.5px;
+  font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -830,7 +911,7 @@ body[data-theme="dark"] #drb-sidepanel-root {
 }
 
 .sp-btn-secondary:hover {
-  background: rgba(2, 132, 199, 0.08);
+  filter: brightness(0.96);
 }
 
 .sp-btn-secondary:disabled,
@@ -842,7 +923,7 @@ body[data-theme="dark"] #drb-sidepanel-root {
 /* Update Flash Animation */
 @keyframes sp-flash {
   0% {
-    background-color: rgba(22, 163, 74, 0.22);
+    background-color: rgba(22, 163, 74, 0.25);
   }
   100% {
     background-color: transparent;
