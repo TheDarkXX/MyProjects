@@ -28,6 +28,7 @@
   ],
   "host_permissions": [
     "https://shopee.co.th/*",
+    "https://*.shopee.co.th/*",
     "https://affiliate.shopee.co.th/*",
     "https://*.facebook.com/*",
     "http://localhost:*/*",

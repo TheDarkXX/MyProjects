@@ -54,7 +54,8 @@
     const parsed = ns.extractSocialMediaCommission(rawPayload);
     if (!parsed || !parsed.hasDetail || !parsed.itemId) return null;
 
-    const price = parsed.offerPrice || offerProduct.price || 0;
+    const isSameItem = offerProduct.itemId === parsed.itemId;
+    const price = parsed.offerPrice || (isSameItem ? offerProduct.price : 0) || 0;
     const comm = ns.calculateCommission({
       price,
       baseRate: parsed.baseRate,
@@ -64,7 +65,6 @@
       realDailyAdCostTHB: 107
     });
 
-    const isSameItem = offerProduct.itemId === parsed.itemId;
     const nextProduct = {
       ...(isSameItem ? offerProduct : {}),
       sourceType: 'affiliate_offer_api',
@@ -94,7 +94,9 @@
       rating: parsed.rating ? +parsed.rating.toFixed(1) : 4.9,
       shipFrom: parsed.isMall ? 'Shopee Mall' : 'ส่งในไทย',
       isOverseas: false,
-      realRateVerified: true,
+      hasRealCommission: Boolean(parsed.hasRealCommission),
+      realRateVerified: Boolean(parsed.hasRealCommission),
+      cacheSchemaV2: true,
       rateSource: 'social_media_detail',
       channelRows: [
         { channel: 'โซเชียลมีเดีย', extraRate: parsed.extraRate, baseRate: parsed.baseRate, totalRate: parsed.totalRate },
@@ -123,7 +125,7 @@
     const msg = event.data;
     if (!msg || msg.type !== 'DRB_AFF_OFFER_INTERCEPTED') return;
     const parsedOffer = applyApiOfferToOfferProduct(msg.data);
-    if (parsedOffer && !parsedOffer.securityCheck && parsedOffer.itemId) {
+    if (parsedOffer && !parsedOffer.securityCheck && parsedOffer.itemId && parsedOffer.hasRealCommission) {
       ns.sendMessage('CACHE_REAL_AFF_OFFER', parsedOffer).catch(() => {});
     }
   });
@@ -715,13 +717,14 @@
       }
     });
 
+    const domHasRates = foundExtraRate > 0 || foundBaseRate > 0;
     const preserveVerifiedApi =
       offerProduct.realRateVerified &&
       foundItemId &&
       offerProduct.itemId === foundItemId &&
-      (offerProduct.extraRate > 0 || offerProduct.baseRate > 0);
+      (offerProduct.extraRate > foundExtraRate || (!domHasRates && offerProduct.baseRate > 0));
 
-    const finalPrice = preserveVerifiedApi && offerProduct.offerPrice > 0 ? offerProduct.offerPrice : foundPrice;
+    const finalPrice = preserveVerifiedApi && offerProduct.offerPrice > 0 ? offerProduct.offerPrice : foundPrice || offerProduct.offerPrice || 0;
     const finalBaseRate = preserveVerifiedApi ? offerProduct.baseRate : foundBaseRate;
     const finalExtraRate = preserveVerifiedApi ? offerProduct.extraRate : foundExtraRate;
     const finalBaseTHB = preserveVerifiedApi ? offerProduct.baseCommTHB : foundBaseTHB;
@@ -747,7 +750,10 @@
       soldCount: foundSoldNum || offerProduct.soldCount || 0,
       soldText: foundSoldText || offerProduct.soldText || (foundSoldNum > 0 ? foundSoldNum.toLocaleString() : '0'),
       rating: foundRating || offerProduct.rating || 4.9,
-      realRateVerified: preserveVerifiedApi || finalBaseRate > 0 || finalExtraRate > 0,
+      domTableVerified: domHasRates,
+      hasRealCommission: Boolean(domHasRates || preserveVerifiedApi),
+      realRateVerified: Boolean(domHasRates || preserveVerifiedApi),
+      cacheSchemaV2: true,
       specText:
         `[ข้อมูลจริงจากหน้าข้อเสนอ Shopee Affiliate]\n` +
         `• สินค้า: ${foundTitle || offerProduct.title || '-'}\n` +
@@ -864,16 +870,20 @@
             // Fast Path 1: If this tab is ALREADY on product_offer/<targetItemId>, scrape DOM/state immediately (<5ms)
             if (isOfferDetailUrl() && (!targetItemId || location.href.includes(targetItemId))) {
               const scraped = scrapeOfferDetailPage();
-              if (scraped && (scraped.realRateVerified || scraped.baseRate > 0 || scraped.extraRate > 0)) {
+              if (
+                scraped &&
+                Number(scraped.price) > 0 &&
+                (scraped.realRateVerified || scraped.baseRate > 0 || scraped.extraRate > 0)
+              ) {
                 sendResponse({ ok: true, data: scraped });
                 return;
               }
             }
-            // Fast Path 2: Try MAIN world fetch request (3-Tier: product detail -> list fallback -> base default)
+            // Fast Path 2: Try MAIN world fetch request (Tier 1: product detail -> Tier 2: list search -> Tier 3: uncached fallback)
             if (targetItemId) {
               const apiOffer = await Promise.race([
-                fetchSingleOfferDetailViaMainBridge(targetItemId),
-                new Promise((r) => setTimeout(() => r(null), 7000))
+                fetchSingleOfferDetailViaMainBridge(targetItemId, req.titleHint || '', req.shopId || ''),
+                new Promise((r) => setTimeout(() => r(null), 9000))
               ]);
               if (apiOffer && apiOffer.securityCheck) {
                 sendResponse({
@@ -941,7 +951,7 @@
     });
   }
 
-  async function fetchSingleOfferDetailViaMainBridge(itemId, titleHint = '') {
+  async function fetchSingleOfferDetailViaMainBridge(itemId, titleHint = '', shopId = '') {
     const cleanId = String(itemId || '').replace(/[^0-9]/g, '');
     if (!cleanId) return null;
     if (/verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
@@ -951,31 +961,25 @@
       };
     }
 
-    // Single-Shot Safe Lookup via /api/v3/offer/product/list with useFetch: false (window.XMLHttpRequest)
-    // Identical to V1 Scanner (line 2224) so Shopee's sec_sdk attaches af-ac-enc-dat signature and NEVER triggers /verify/traffic/error!
-    const cleanHint = String(titleHint || '')
-      .replace(/^SP\d+$/i, '')
-      .replace(/^reel_\d+_\w+$/i, '')
-      .trim();
-    const q = new URLSearchParams({
-      item_id: cleanId,
-      client_type: '1',
-      list_type: '0',
-      sort_type: '1',
-      page_offset: '0',
-      page_limit: '5'
-    });
-    if (cleanHint && cleanHint.length >= 4) {
-      q.set('keyword', cleanHint.slice(0, 60));
-    }
+    const cleanShopId = String(shopId || '').replace(/[^0-9]/g, '');
 
-    const resList = await pageMainRequest({
-      url: `https://affiliate.shopee.co.th/api/v3/offer/product/list?${q.toString()}`,
+    // Tier 1: Direct Offer Detail via Signed window.XMLHttpRequest (useFetch: false so sec_sdk signs request)
+    let partialOffer = null;
+    const detailQuery = cleanShopId
+      ? `item_id=${encodeURIComponent(cleanId)}&shop_id=${encodeURIComponent(cleanShopId)}`
+      : `item_id=${encodeURIComponent(cleanId)}`;
+    const resDetail = await pageMainRequest({
+      url: `https://affiliate.shopee.co.th/api/v3/offer/product?${detailQuery}`,
       method: 'GET',
-      useFetch: false
+      useFetch: false,
+      attachCsrf: true,
+      headers: {
+        accept: 'application/json',
+        'affiliate-program-type': '1'
+      }
     });
 
-    if (resList?.data?.error === 90309999 || /verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+    if (resDetail?.data?.error === 90309999 || /verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
       return {
         securityCheck: true,
         errorCode: 90309999,
@@ -983,52 +987,161 @@
       };
     }
 
-    const list = resList?.data?.data?.list;
-    if (Array.isArray(list) && list.length > 0) {
-      const rawItem = list.find(
-        (x) => String(x?.item_id || x?.batch_item_for_item_card_full?.itemid || '') === cleanId
-      );
-      if (rawItem) {
-        const row = mapRawOfferItemToRow(rawItem);
-        const baseRate = Number(row.baseRate) > 0 ? Number(row.baseRate) : row.isMall ? 2.0 : 0.6;
-        const extraRate = Number(row.extraRate) || 0;
-        const price = Number(row.price) || 0;
-        const comm = ns.calculateCommission({
-          price,
-          baseRate,
-          extraRate,
-          capTHB: 250,
-          whtRate: 3.0,
-          realDailyAdCostTHB: 107
-        });
-        const soldCount = Number(row.sold || row.historical_sold) || 0;
-
-        const listOffer = {
-          itemId: cleanId,
-          shopId: String(row.shopid || ''),
-          title: row.name || '',
-          price,
-          offerPrice: price,
-          baseRate,
-          extraRate,
-          baseCommTHB: +comm.baseComm.toFixed(2),
-          extraCommTHB: +comm.extraComm.toFixed(2),
-          grossCommTHB: +comm.grossComm.toFixed(2),
-          soldCount,
-          soldText: soldCount.toLocaleString(),
-          cleanUrl: row.productLink || '',
-          imagesHD: row.imagesHD || [],
-          realRateVerified: true,
-          noExtraOffer: extraRate <= 0,
-          rateSource: 'offer_list_xhr'
-        };
-        ns.sendMessage('CACHE_REAL_AFF_OFFER', listOffer).catch(() => {});
-        return listOffer;
+    if (resDetail?.ok && resDetail?.data?.data) {
+      const parsedOffer = applyApiOfferToOfferProduct(resDetail.data);
+      if (parsedOffer?.securityCheck) return parsedOffer;
+      if (parsedOffer && (parsedOffer.price > 0 || parsedOffer.extraRate > 0 || resDetail.data.data.commission_rate_detail)) {
+        if (Number(parsedOffer.baseRate) <= 0 && Number(parsedOffer.extraRate) <= 0) {
+          parsedOffer.baseRate = parsedOffer.shipFrom === 'Shopee Mall' ? 2.0 : 0.6;
+        }
+        if (Number(parsedOffer.price) > 0) {
+          const comm = ns.calculateCommission({
+            price: Number(parsedOffer.price),
+            baseRate: Number(parsedOffer.baseRate) || 0,
+            extraRate: Number(parsedOffer.extraRate) || 0,
+            capTHB: 250,
+            whtRate: 3.0,
+            realDailyAdCostTHB: 107
+          });
+          parsedOffer.baseCommTHB = +comm.baseComm.toFixed(2);
+          parsedOffer.extraCommTHB = +comm.extraComm.toFixed(2);
+          parsedOffer.grossCommTHB = +comm.grossComm.toFixed(2);
+        }
+        // Only return early if Tier 1 actually extracted a real commission rate (extraRate > 0 or hasRealCommission)!
+        // Otherwise keep partialOffer (which has the real Shopee product title & price) and run Tier 2 (/offer/product/list)!
+        if (Number(parsedOffer.price) > 0 && (Number(parsedOffer.extraRate) > 0 || parsedOffer.hasRealCommission)) {
+          ns.sendMessage('CACHE_REAL_AFF_OFFER', parsedOffer).catch(() => {});
+          return parsedOffer;
+        }
+        partialOffer = parsedOffer;
       }
     }
 
-    // Immediate Base-Rate Default Fallback (NEVER fire a 2nd request!)
-    const fallbackOffer = {
+    // Tier 2: Offer List Search via Signed window.XMLHttpRequest using the REAL Shopee product title from Tier 1 (or cleaned hint)
+    const cleanTitleCandidate = (str) =>
+      String(str || '')
+        .replace(/^SP\d+$/i, '')
+        .replace(/^reel_\d+_\w+$/i, '')
+        .replace(/^(?:กดสั่งซื้อที่นี่|พิกัดสินค้า|สั่งซื้อที่นี่|ดูสินค้า)\s*/i, '')
+        .replace(/\s+Shopee\s*$/i, '')
+        .trim();
+
+    const realTitleKw = cleanTitleCandidate(partialOffer?.title || '');
+    const hintKw = cleanTitleCandidate(titleHint || '');
+    const keywordCandidates = [];
+    if (realTitleKw && realTitleKw.length >= 4) keywordCandidates.push(realTitleKw.slice(0, 65));
+    if (hintKw && hintKw.length >= 4 && !keywordCandidates.includes(hintKw.slice(0, 65))) {
+      keywordCandidates.push(hintKw.slice(0, 65));
+    }
+    keywordCandidates.push(cleanId);
+
+    let matchedRawItem = null;
+    for (const kw of keywordCandidates) {
+      const q = new URLSearchParams({
+        keyword: kw,
+        client_type: '1',
+        list_type: '0',
+        sort_type: kw === cleanId ? '1' : '2',
+        page_offset: '0',
+        page_limit: kw === cleanId ? '20' : '50'
+      });
+      if (kw === cleanId) {
+        q.set('item_id', cleanId);
+      }
+
+      const resList = await pageMainRequest({
+        url: `https://affiliate.shopee.co.th/api/v3/offer/product/list?${q.toString()}`,
+        method: 'GET',
+        useFetch: false
+      });
+
+      if (resList?.data?.error === 90309999 || /verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+        return {
+          securityCheck: true,
+          errorCode: 90309999,
+          error: 'Shopee ขอตรวจสอบความปลอดภัย (90309999) — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+        };
+      }
+
+      const list = resList?.data?.data?.list;
+      if (Array.isArray(list) && list.length > 0) {
+        const found = list.find(
+          (x) => String(x?.item_id || x?.batch_item_for_item_card_full?.itemid || '') === cleanId
+        );
+        if (found) {
+          matchedRawItem = found;
+          break;
+        }
+      }
+    }
+
+    if (matchedRawItem) {
+      const row = mapRawOfferItemToRow(matchedRawItem);
+      const extraRate =
+        Number(row.extraRate) > 0
+          ? Number(row.extraRate)
+          : partialOffer && Number(partialOffer.extraRate) > 0
+          ? Number(partialOffer.extraRate)
+          : 0;
+      const baseRate =
+        Number(row.baseRate) > 0
+          ? Number(row.baseRate)
+          : partialOffer?.hasRealCommission && Number(partialOffer.baseRate) > 0
+          ? Number(partialOffer.baseRate)
+          : extraRate > 0
+          ? 2.0
+          : row.isMall
+          ? 2.0
+          : 0.6;
+      const price = Number(row.price) || Number(partialOffer?.price) || 0;
+      const comm = ns.calculateCommission({
+        price,
+        baseRate,
+        extraRate,
+        capTHB: 250,
+        whtRate: 3.0,
+        realDailyAdCostTHB: 107
+      });
+      const soldCount = Number(row.sold || row.historical_sold) || Number(partialOffer?.soldCount) || 0;
+      const hasRealCommission = Boolean(extraRate > 0 || Number(row.baseRate) > 0 || partialOffer?.hasRealCommission);
+
+      const listOffer = {
+        ...(partialOffer || {}),
+        itemId: cleanId,
+        shopId: String(row.shopid || partialOffer?.shopId || cleanShopId || ''),
+        title: row.name || partialOffer?.title || '',
+        price,
+        offerPrice: price,
+        baseRate,
+        extraRate,
+        baseCommTHB: +comm.baseComm.toFixed(2),
+        extraCommTHB: +comm.extraComm.toFixed(2),
+        grossCommTHB: +comm.grossComm.toFixed(2),
+        soldCount,
+        soldText: soldCount.toLocaleString(),
+        cleanUrl: row.productLink || partialOffer?.cleanUrl || '',
+        imagesHD: row.imagesHD?.length ? row.imagesHD : partialOffer?.imagesHD || [],
+        hasRealCommission,
+        realRateVerified: hasRealCommission,
+        cacheSchemaV2: true,
+        noExtraOffer: extraRate <= 0,
+        rateSource: partialOffer ? 'social_media_detail_plus_list' : 'offer_list_xhr'
+      };
+      if (hasRealCommission && (price > 0 || extraRate > 0)) {
+        ns.sendMessage('CACHE_REAL_AFF_OFFER', listOffer).catch(() => {});
+      }
+      return listOffer;
+    }
+
+    if (partialOffer && (Number(partialOffer.price) > 0 || Number(partialOffer.extraRate) > 0)) {
+      if (partialOffer.hasRealCommission) {
+        ns.sendMessage('CACHE_REAL_AFF_OFFER', partialOffer).catch(() => {});
+      }
+      return partialOffer;
+    }
+
+    // Tier 3: Uncached Fallback (NEVER poison realOfferCache with price: 0)
+    return {
       itemId: cleanId,
       noExtraOffer: true,
       baseRate: 0.6,
@@ -1036,11 +1149,10 @@
       price: 0,
       offerPrice: 0,
       soldCount: 0,
-      realRateVerified: true,
+      hasRealCommission: false,
+      realRateVerified: false,
       rateSource: 'base_default_fallback'
     };
-    ns.sendMessage('CACHE_REAL_AFF_OFFER', fallbackOffer).catch(() => {});
-    return fallbackOffer;
   }
 
   // ==========================================================================

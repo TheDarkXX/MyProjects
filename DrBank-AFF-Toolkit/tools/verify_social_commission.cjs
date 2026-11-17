@@ -177,7 +177,60 @@ assert.strictEqual(capped.isCapped, true);
 assert.strictEqual(capped.baseComm, 250);
 assert.strictEqual(capped.extraComm, 1000);
 
+// 4. Test Case 4: itemId = 57701386461 (Smokeless Charcoal Kiln ฿1,291.00: EXTRACOMM 5% = ฿64.55, Base 2% = ฿25.82, Gross ฿90.37, Net ฿87.66)
+// Case 4A: /offer/product returns metadata with empty commission_rate_detail -> hasRealCommission MUST be false so Tier 1 does not short-circuit!
+const mockOffer57701386461Partial = {
+  data: {
+    batch_item_for_item_card_full: {
+      itemid: 57701386461,
+      shopid: 1653609367,
+      name: 'เตาเผาถ่าน ถังเผาถ่านไร้ควัน ไส้กลางถอดไม่ได้',
+      price: 129100000,
+      sold: 178,
+      is_official_shop: false
+    },
+    commission_rate_detail: {}
+  }
+};
+const parsed4Partial = ns.extractSocialMediaCommission(mockOffer57701386461Partial);
+assert.strictEqual(parsed4Partial.offerPrice, 1291);
+assert.strictEqual(parsed4Partial.soldMonthly, 178);
+assert.strictEqual(parsed4Partial.hasRealCommission, false, 'Partial offer without rates must report hasRealCommission=false');
+
+// Case 4B: /offer/product/list item with empty commission_rate_detail: {} AND seller_commission_rate: "5%" + max_commission_rate: "7%"
+const mockList57701386461 = {
+  item_id: 57701386461,
+  batch_item_for_item_card_full: {
+    itemid: 57701386461,
+    shopid: 1653609367,
+    name: 'เตาเผาถ่าน ถังเผาถ่านไร้ควัน ไส้กลางถอดไม่ได้',
+    price: 129100000,
+    sold: 178
+  },
+  commission_rate_detail: {},
+  seller_commission_rate: '5%',
+  max_commission_rate: '7%'
+};
+const listFb4 = ns.extractListCommissionFallback(mockList57701386461, false, 'เตาเผาถ่าน ถังเผาถ่านไร้ควัน ไส้กลางถอดไม่ได้');
+assert.strictEqual(listFb4.extraRate, 5);
+assert.strictEqual(listFb4.baseRate, 2);
+assert.strictEqual(listFb4.totalRate, 7);
+assert.strictEqual(listFb4.hasRealCommission, true);
+
+const comm4 = ns.calculateCommission({
+  price: 1291,
+  baseRate: listFb4.baseRate,
+  extraRate: listFb4.extraRate,
+  capTHB: 250,
+  whtRate: 3.0,
+  realDailyAdCostTHB: 107
+});
+assert.strictEqual(+comm4.extraComm.toFixed(2), 64.55);
+assert.strictEqual(+comm4.baseComm.toFixed(2), 25.82);
+assert.strictEqual(+comm4.grossComm.toFixed(2), 90.37);
+assert.strictEqual(+comm4.netComm.toFixed(2), 87.66);
+
 console.log('✅ ALL SOCIAL MEDIA COMMISSION & PARSER ASSERTIONS PASSED:');
 console.log(`   - 24645325790 (฿584.00): Social Media = ${parsed1.extraRate}% + ${parsed1.baseRate}% = ฿${comm1.grossComm.toFixed(2)} (Net ฿${comm1.netComm.toFixed(2)}) | Live/Video = ${parsed1.liveExtraRate}% (isolated)`);
 console.log(`   - 40215480650 (฿1,363.00 AFF): Social Media = ${parsed2.extraRate}% + ${parsed2.baseRate}% = ฿${comm2Offer.grossComm.toFixed(2)} (Net ฿${comm2Offer.netComm.toFixed(2)})`);
-console.log(`   - 40215480650 (฿1,322.00 After Voucher): ฿${comm2AfterVoucher.grossComm.toFixed(2)} (Net ฿${comm2AfterVoucher.netComm.toFixed(2)})`);
+console.log(`   - 57701386461 (฿1,291.00 Kiln): Social Media = ${listFb4.extraRate}% (฿${comm4.extraComm.toFixed(2)}) + ${listFb4.baseRate}% (฿${comm4.baseComm.toFixed(2)}) = ฿${comm4.grossComm.toFixed(2)} (Net ฿${comm4.netComm.toFixed(2)})`);

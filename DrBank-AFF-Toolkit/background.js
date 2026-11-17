@@ -53,6 +53,15 @@ let circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
 let cacheHydrated = false;
 let cachePersistTimer = null;
 
+function isValidRealOfferData(d) {
+  if (!d || typeof d !== 'object') return false;
+  if (d.rateSource === 'base_default_fallback') return false;
+  if (!d.cacheSchemaV2) return false;
+  const price = Number(d.offerPrice || d.price || 0);
+  const extra = Number(d.extraRate || 0);
+  return (price > 0 || extra > 0) && Boolean(extra > 0 || d.hasRealCommission || d.domTableVerified);
+}
+
 async function hydrateRealOfferCache() {
   if (cacheHydrated) return;
   cacheHydrated = true;
@@ -61,14 +70,25 @@ async function hydrateRealOfferCache() {
     const saved = store?.[REAL_OFFER_STORAGE_KEY];
     if (saved && typeof saved === 'object') {
       const now = Date.now();
+      let droppedInvalid = false;
       Object.entries(saved).forEach(([k, entry]) => {
-        if (entry && entry.data && now - Number(entry.cachedAt || 0) < REAL_OFFER_TTL_MS) {
+        if (
+          entry &&
+          entry.data &&
+          isValidRealOfferData(entry.data) &&
+          now - Number(entry.cachedAt || 0) < REAL_OFFER_TTL_MS
+        ) {
           realOfferCache.set(String(k), {
             data: entry.data,
             cachedAt: Number(entry.cachedAt || now)
           });
+        } else {
+          droppedInvalid = true;
         }
       });
+      if (droppedInvalid) {
+        schedulePersistRealOfferCache();
+      }
     }
   } catch (_e) {}
 }
@@ -81,7 +101,7 @@ function schedulePersistRealOfferCache() {
     try {
       const now = Date.now();
       const entries = Array.from(realOfferCache.entries())
-        .filter(([, v]) => v && v.data && now - Number(v.cachedAt || 0) < REAL_OFFER_TTL_MS)
+        .filter(([, v]) => v && v.data && isValidRealOfferData(v.data) && now - Number(v.cachedAt || 0) < REAL_OFFER_TTL_MS)
         .sort((a, b) => Number(b[1].cachedAt || 0) - Number(a[1].cachedAt || 0))
         .slice(0, REAL_OFFER_MAX_ENTRIES);
       const obj = {};
@@ -95,7 +115,7 @@ function schedulePersistRealOfferCache() {
 
 function persistRealOfferCacheEntry(itemId, data) {
   const cleanId = String(itemId || '').replace(/[^0-9]/g, '');
-  if (!cleanId || !data) return;
+  if (!cleanId || !isValidRealOfferData(data)) return;
   const cachedAt = Date.now();
   realOfferCache.set(cleanId, { data, cachedAt });
   schedulePersistRealOfferCache();
@@ -176,6 +196,93 @@ function waitForTabComplete(tabId, timeoutMs = 7000) {
   });
 }
 
+async function sendToAffTabWithReinject(tabId, messagePayload) {
+  try {
+    return await chrome.tabs.sendMessage(tabId, messagePayload);
+  } catch (_err) {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['src/common/utils.js', 'src/shopee-affiliate.js']
+      });
+      await new Promise((r) => setTimeout(r, 180));
+      return await chrome.tabs.sendMessage(tabId, messagePayload);
+    } catch (_err2) {
+      return null;
+    }
+  }
+}
+
+async function scrapeOfferDetailViaBgTab(itemId, partialData = null, existingBgTabId = null) {
+  let tabId = existingBgTabId;
+  let createdNewTab = false;
+  try {
+    if (!tabId) {
+      const openTabs = await findOpenAffTabs();
+      const inactiveTab = openTabs.find((t) => !t.active && !isSecurityOrLoginUrl(t.url));
+      if (inactiveTab?.id) {
+        tabId = inactiveTab.id;
+      }
+    }
+    const targetUrl = `https://affiliate.shopee.co.th/offer/product_offer/${encodeURIComponent(itemId)}`;
+    if (tabId) {
+      await chrome.tabs.update(tabId, { url: targetUrl });
+    } else {
+      const created = await chrome.tabs.create({ url: targetUrl, active: false });
+      tabId = created.id;
+      createdNewTab = true;
+    }
+
+    const loadRes = await waitForTabComplete(tabId, 8000);
+    if (loadRes?.securityCheck) {
+      return {
+        securityCheck: true,
+        error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+      };
+    }
+
+    for (let poll = 0; poll < 8; poll++) {
+      await new Promise((r) => setTimeout(r, 450));
+      const hit = realOfferCache.get(itemId);
+      if (hit?.data && isValidRealOfferData(hit.data) && Number(hit.data.extraRate) > 0) {
+        return {
+          ...(partialData || {}),
+          ...hit.data,
+          soldCount: Number(partialData?.soldCount) || Number(hit.data.soldCount) || 0,
+          cacheSchemaV2: true
+        };
+      }
+      const domRes = await sendToAffTabWithReinject(tabId, { action: 'GET_AFFILIATE_OFFER' });
+      const d = domRes?.data;
+      if (d && String(d.itemId || itemId) === itemId && (d.domTableVerified || Number(d.extraRate) > 0 || Number(d.baseRate) > 0)) {
+        const merged = {
+          ...(partialData || {}),
+          ...d,
+          itemId,
+          shopId: d.shopId || partialData?.shopId || '',
+          title: d.title || partialData?.title || '',
+          price: Number(d.price || d.offerPrice) || Number(partialData?.price) || 0,
+          offerPrice: Number(d.offerPrice || d.price) || Number(partialData?.price) || 0,
+          soldCount: Number(partialData?.soldCount) || Number(d.soldCount) || 0,
+          domTableVerified: true,
+          hasRealCommission: true,
+          realRateVerified: true,
+          cacheSchemaV2: true
+        };
+        persistRealOfferCacheEntry(itemId, merged);
+        return merged;
+      }
+    }
+    return partialData;
+  } catch (_e) {
+    return partialData;
+  } finally {
+    if (createdNewTab && tabId) {
+      chrome.tabs.remove(tabId).catch(() => {});
+    }
+  }
+}
+
 async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = {}) {
   await hydrateRealOfferCache();
   const itemId = String(rawItemId || '').replace(/[^0-9]/g, '');
@@ -183,11 +290,17 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
     return { ok: false, error: 'ไม่พบ itemId ของสินค้า' };
   }
   const mode = options?.mode || 'single'; // 'single' | 'grid_auto' | 'grid_hover'
+  const titleHint = String(options?.titleHint || '');
+  const shopId = String(options?.shopId || '');
 
   if (!forceRefresh) {
     const hit = realOfferCache.get(itemId);
-    if (hit && Date.now() - hit.cachedAt < REAL_OFFER_TTL_MS) {
-      return { ok: true, cached: true, cachedAt: hit.cachedAt, data: hit.data };
+    if (hit) {
+      if (isValidRealOfferData(hit.data) && Date.now() - hit.cachedAt < REAL_OFFER_TTL_MS) {
+        return { ok: true, cached: true, cachedAt: hit.cachedAt, data: hit.data };
+      }
+      realOfferCache.delete(itemId);
+      schedulePersistRealOfferCache();
     }
     try {
       const store = await chrome.storage.local.get(['activeAffOfferProduct']);
@@ -195,7 +308,7 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
       if (
         storedAff &&
         String(storedAff.itemId || '') === itemId &&
-        (storedAff.realRateVerified || Number(storedAff.baseRate) > 0 || Number(storedAff.extraRate) > 0)
+        isValidRealOfferData(storedAff)
       ) {
         persistRealOfferCacheEntry(itemId, storedAff);
         return { ok: true, cached: true, cachedAt: Date.now(), data: storedAff };
@@ -256,21 +369,38 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
           error: msg
         };
       }
-      try {
-        const resp = await chrome.tabs.sendMessage(tab.id, {
-          action: 'FETCH_REAL_OFFER_IN_AFF_TAB',
-          itemId
-        });
-        if (resp?.securityCheck) {
-          circuitBreaker = { tripped: true, trippedAt: Date.now(), error: resp.error };
-          return { ok: false, securityCheck: true, circuitTripped: true, error: resp.error };
+      const resp = await sendToAffTabWithReinject(tab.id, {
+        action: 'FETCH_REAL_OFFER_IN_AFF_TAB',
+        itemId,
+        titleHint,
+        shopId
+      });
+      if (resp?.securityCheck) {
+        circuitBreaker = { tripped: true, trippedAt: Date.now(), error: resp.error };
+        return { ok: false, securityCheck: true, circuitTripped: true, error: resp.error };
+      }
+      if (resp?.ok && resp.data && (resp.data.realRateVerified || resp.data.baseRate >= 0)) {
+        circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+        let finalData = resp.data;
+        if (
+          mode === 'single' &&
+          Number(finalData.price || finalData.offerPrice) > 0 &&
+          Number(finalData.extraRate) <= 0 &&
+          !finalData.hasRealCommission &&
+          !finalData.domTableVerified
+        ) {
+          const domFallback = await scrapeOfferDetailViaBgTab(itemId, finalData, !tab.active ? tab.id : null);
+          if (domFallback?.securityCheck) {
+            circuitBreaker = { tripped: true, trippedAt: Date.now(), error: domFallback.error };
+            return { ok: false, securityCheck: true, circuitTripped: true, error: domFallback.error };
+          }
+          if (domFallback) finalData = domFallback;
         }
-        if (resp?.ok && resp.data && (resp.data.realRateVerified || resp.data.baseRate >= 0)) {
-          circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
-          persistRealOfferCacheEntry(itemId, resp.data);
-          return { ok: true, cached: false, cachedAt: Date.now(), data: resp.data };
+        if (isValidRealOfferData(finalData)) {
+          persistRealOfferCacheEntry(itemId, finalData);
         }
-      } catch (_err) {}
+        return { ok: true, cached: false, cachedAt: Date.now(), data: finalData };
+      }
     }
 
     // Rule #4: Never open background tabs repeatedly in grid_auto mode
@@ -284,7 +414,7 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
       };
     }
 
-    // Tier 2: Open safe root /offer/product_offer (NEVER /product_offer/<itemId> which redirects to error if no Seller Extra!)
+    // Tier 2: Open safe root /offer/product_offer (NEVER /product_offer/<itemId> unless Tier 1 confirms product exists!)
     // Keep this single reusable background bridge tab open so subsequent requests finish in ~200ms via Tier 1
     let bgTab = null;
     let shouldCloseBgTab = false;
@@ -310,9 +440,12 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
 
       let resp = null;
       for (let attempt = 0; attempt < 3; attempt++) {
-        resp = await chrome.tabs
-          .sendMessage(bgTab.id, { action: 'FETCH_REAL_OFFER_IN_AFF_TAB', itemId })
-          .catch(() => null);
+        resp = await sendToAffTabWithReinject(bgTab.id, {
+          action: 'FETCH_REAL_OFFER_IN_AFF_TAB',
+          itemId,
+          titleHint,
+          shopId
+        });
         if (resp) break;
         await new Promise((r) => setTimeout(r, 450));
       }
@@ -324,8 +457,26 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
       }
       if (resp?.ok && resp.data && (resp.data.realRateVerified || resp.data.baseRate >= 0)) {
         circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
-        persistRealOfferCacheEntry(itemId, resp.data);
-        return { ok: true, cached: false, cachedAt: Date.now(), data: resp.data };
+        let finalData = resp.data;
+        if (
+          mode === 'single' &&
+          Number(finalData.price || finalData.offerPrice) > 0 &&
+          Number(finalData.extraRate) <= 0 &&
+          !finalData.hasRealCommission &&
+          !finalData.domTableVerified
+        ) {
+          const domFallback = await scrapeOfferDetailViaBgTab(itemId, finalData, bgTab.id);
+          if (domFallback?.securityCheck) {
+            shouldCloseBgTab = true;
+            circuitBreaker = { tripped: true, trippedAt: Date.now(), error: domFallback.error };
+            return { ok: false, securityCheck: true, circuitTripped: true, error: domFallback.error };
+          }
+          if (domFallback) finalData = domFallback;
+        }
+        if (isValidRealOfferData(finalData)) {
+          persistRealOfferCacheEntry(itemId, finalData);
+        }
+        return { ok: true, cached: false, cachedAt: Date.now(), data: finalData };
       }
       shouldCloseBgTab = true;
       return {
@@ -367,14 +518,12 @@ async function generateAffShortLinkImpl(originalLink, subIds = []) {
         error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
       };
     }
-    try {
-      const resp = await chrome.tabs.sendMessage(tab.id, {
-        action: 'GENERATE_SHORTLINK_IN_AFF_TAB',
-        originalLink: targetUrl,
-        subIds
-      });
-      if (resp) return resp;
-    } catch (_err) {}
+    const resp = await sendToAffTabWithReinject(tab.id, {
+      action: 'GENERATE_SHORTLINK_IN_AFF_TAB',
+      originalLink: targetUrl,
+      subIds
+    });
+    if (resp) return resp;
   }
 
   let bgTab = null;
@@ -392,7 +541,7 @@ async function generateAffShortLinkImpl(originalLink, subIds = []) {
       };
     }
     await new Promise((r) => setTimeout(r, 700));
-    const resp = await chrome.tabs.sendMessage(bgTab.id, {
+    const resp = await sendToAffTabWithReinject(bgTab.id, {
       action: 'GENERATE_SHORTLINK_IN_AFF_TAB',
       originalLink: targetUrl,
       subIds
@@ -423,13 +572,11 @@ async function batchGenerateAffShortLinksImpl(items = []) {
         error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
       };
     }
-    try {
-      const resp = await chrome.tabs.sendMessage(tab.id, {
-        action: 'BATCH_GENERATE_SHORTLINKS_IN_AFF_TAB',
-        items
-      });
-      if (resp) return resp;
-    } catch (_err) {}
+    const resp = await sendToAffTabWithReinject(tab.id, {
+      action: 'BATCH_GENERATE_SHORTLINKS_IN_AFF_TAB',
+      items
+    });
+    if (resp) return resp;
   }
 
   let bgTab = null;
@@ -447,7 +594,7 @@ async function batchGenerateAffShortLinksImpl(items = []) {
       };
     }
     await new Promise((r) => setTimeout(r, 750));
-    const resp = await chrome.tabs.sendMessage(bgTab.id, {
+    const resp = await sendToAffTabWithReinject(bgTab.id, {
       action: 'BATCH_GENERATE_SHORTLINKS_IN_AFF_TAB',
       items
     });
@@ -459,6 +606,215 @@ async function batchGenerateAffShortLinksImpl(items = []) {
       chrome.tabs.remove(bgTab.id).catch(() => {});
     }
   }
+}
+
+function safeDecodeUriComponent(val) {
+  const s = String(val || '');
+  try {
+    return decodeURIComponent(s);
+  } catch (_e) {
+    return s.replace(/https?%3A%2F%2F[^"'\s<>\\]+/gi, (enc) => {
+      try {
+        return decodeURIComponent(enc);
+      } catch (_e2) {
+        return enc;
+      }
+    });
+  }
+}
+
+function decodeUnicodeEscapes(s) {
+  return String(s || '')
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\\//g, '/');
+}
+
+function normalizeShopeeShortUrl(rawStr) {
+  let candidate = decodeUnicodeEscapes(rawStr).trim().replace(/[),.]+$/, '');
+  if (!candidate) return '';
+  candidate = safeDecodeUriComponent(candidate);
+  if (/l\.facebook\.com\/l\.php|lm\.facebook\.com\/l\.php|facebook\.com\/flx\/warn/i.test(candidate)) {
+    try {
+      const uObj = new URL(candidate);
+      const inner = uObj.searchParams.get('u');
+      if (inner) candidate = safeDecodeUriComponent(inner);
+    } catch (_e) {
+      const um = candidate.match(/[?&]u=([^&\s"'<>\\]+)/i);
+      if (um) candidate = safeDecodeUriComponent(um[1]);
+    }
+  }
+  const m = candidate.match(
+    /https?:\/\/(?:(?:s|th|shp)\.)?shopee\.co\.th\/[A-Za-z0-9_./?=&%-]+|https?:\/\/shp\.ee\/[A-Za-z0-9_-]+/i
+  );
+  if (!m) return '';
+  let finalUrl = m[0].replace(/[),.]+$/, '');
+  try {
+    const parsed = new URL(finalUrl);
+    if (/^(?:s\.shopee\.co\.th|shp\.ee)$/i.test(parsed.hostname)) {
+      const slugMatch = parsed.pathname.match(/^\/([A-Za-z0-9_-]+)/);
+      if (slugMatch) {
+        finalUrl = `${parsed.protocol}//${parsed.hostname}/${slugMatch[1]}`;
+      }
+    }
+  } catch (_e) {}
+  return finalUrl;
+}
+
+function extractShopeeShopItemFromUrl(rawUrl) {
+  const candidates = [String(rawUrl || '')];
+  const dec = safeDecodeUriComponent(candidates[0]);
+  if (dec !== candidates[0]) candidates.push(dec);
+  for (const u of candidates) {
+    const m =
+      u.match(/shopee\.co\.th\/(?:opaanlp|product)\/(\d+)\/(\d+)/i) ||
+      u.match(/shopee\.co\.th\/universal-link\/product\/(\d+)\/(\d+)/i) ||
+      u.match(/shopee\.co\.th\/[^/?#]*-i\.(\d+)\.(\d+)/i);
+    if (m) {
+      return {
+        shop_id: m[1],
+        item_id: m[2],
+        clean_product_url: `https://shopee.co.th/product/${m[1]}/${m[2]}`,
+        aff_offer_url: `https://affiliate.shopee.co.th/offer/product_offer/${m[2]}`
+      };
+    }
+    try {
+      const parsed = new URL(u);
+      const sId = parsed.searchParams.get('shop_id') || parsed.searchParams.get('shopid') || '';
+      const iId = parsed.searchParams.get('item_id') || parsed.searchParams.get('itemid') || '';
+      if (/^\d+$/.test(sId) && /^\d+$/.test(iId)) {
+        return {
+          shop_id: sId,
+          item_id: iId,
+          clean_product_url: `https://shopee.co.th/product/${sId}/${iId}`,
+          aff_offer_url: `https://affiliate.shopee.co.th/offer/product_offer/${iId}`
+        };
+      }
+    } catch (_e) {}
+  }
+  return null;
+}
+
+function extractShopeeTagFromHtml(rawHtml) {
+  const raw = String(rawHtml || '');
+  const reactM = raw.match(/"unified_reactors"\s*:\s*\{\s*"count"\s*:\s*(\d+)/);
+  const commM = raw.match(/"total_comment_count"\s*:\s*(\d+)/);
+  const shareM = raw.match(/"share_count_reduced"\s*:\s*"([^"]+)"/);
+
+  let competitorPage = '';
+  const pageM =
+    raw.match(/"__typename"\s*:\s*"Page"[^}]{0,300}?"name"\s*:\s*"([^"]+)"/) ||
+    raw.match(/"owning_profile"\s*:\s*\{[^}]{0,300}?"name"\s*:\s*"([^"]+)"/) ||
+    raw.match(/<title[^>]*>([^<]+)<\/title>/i);
+  if (pageM && pageM[1]) {
+    competitorPage = decodeUnicodeEscapes(pageM[1])
+      .replace(/^\(\d+\)\s*/, '')
+      .replace(/\| Facebook.*$/i, '')
+      .replace(/-\s*Facebook.*$/i, '')
+      .trim()
+      .slice(0, 80);
+  }
+
+  const allLinks = [];
+  const seen = new Set();
+  let shortUrl = '';
+  let tagTitle = '';
+
+  const pushLink = (url, titleCandidate = '') => {
+    if (!url) return;
+    if (!seen.has(url)) {
+      seen.add(url);
+      allLinks.push(url);
+    }
+    if (!shortUrl) shortUrl = url;
+    if (!tagTitle && titleCandidate) tagTitle = titleCandidate.trim().slice(0, 180);
+  };
+
+  for (const lm of raw.matchAll(/"(?:link_uri|external_url)"\s*:\s*"([^"]+)"/g)) {
+    const cleaned = normalizeShopeeShortUrl(lm[1]);
+    if (cleaned) {
+      const idx = lm.index || 0;
+      const chunk = decodeUnicodeEscapes(raw.slice(Math.max(0, idx - 600), Math.min(raw.length, idx + 2200)));
+      const tM = chunk.match(/"title"\s*:\s*"([^"]+)"/);
+      pushLink(cleaned, tM ? decodeUnicodeEscapes(tM[1]) : '');
+    }
+  }
+
+  if (!shortUrl) {
+    const norm = decodeUnicodeEscapes(raw);
+    for (const m of norm.matchAll(
+      /https?:\/\/(?:(?:s|th|shp)\.)?shopee\.co\.th\/[A-Za-z0-9_./?=&%-]+|https?:\/\/shp\.ee\/[A-Za-z0-9_-]+|https?%3A%2F%2F(?:(?:s|th|shp)\.)?shopee\.co\.th%2F[A-Za-z0-9_.%/-]+/gi
+    )) {
+      const cleaned = normalizeShopeeShortUrl(m[0]);
+      if (cleaned) pushLink(cleaned, '');
+    }
+  }
+
+  const prioritizeShort = allLinks.find((u) => /s\.shopee\.co\.th|shp\.ee/i.test(u)) || shortUrl || '';
+  return {
+    competitor_short_url: prioritizeShort,
+    all_shopee_links: allLinks,
+    product_tag_title: tagTitle,
+    competitor_page: competitorPage,
+    fb_reactions: reactM ? parseInt(reactM[1], 10) : 0,
+    fb_comments: commM ? parseInt(commM[1], 10) : 0,
+    fb_shares: shareM ? decodeUnicodeEscapes(shareM[1]) : '0'
+  };
+}
+
+async function scrapeFbReelHtmlAuthenticated(reelUrl) {
+  const target = String(reelUrl || '').trim();
+  if (!target || !/facebook\.com|fb\.watch/i.test(target)) return {};
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const resp = await fetch(target, {
+      credentials: 'include',
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'th-TH,th;q=0.9,en;q=0.8'
+      },
+      signal: ctrl.signal
+    });
+    clearTimeout(timer);
+    if (!resp.ok) return {};
+    const raw = await resp.text();
+    return extractShopeeTagFromHtml(raw);
+  } catch (_e) {
+    return {};
+  }
+}
+
+async function resolveShopeeShortUrlInExt(shortUrl) {
+  const clean = String(shortUrl || '').trim();
+  if (!clean || (!clean.includes('shopee.co.th') && !clean.includes('shp.ee'))) return {};
+  const direct = extractShopeeShopItemFromUrl(clean);
+  if (direct) return direct;
+
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 7000);
+    const resp = await fetch(clean, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: ctrl.signal
+    });
+    clearTimeout(timer);
+    if (resp.url) {
+      const hit = extractShopeeShopItemFromUrl(resp.url);
+      if (hit) return hit;
+    }
+    const html = await resp.text().catch(() => '');
+    if (html) {
+      const urlHit =
+        html.match(/https?:\/\/(?:www\.|th\.)?shopee\.co\.th\/(?:opaanlp|product|universal-link\/product)\/\d+\/\d+/i) ||
+        html.match(/https?:\/\/(?:www\.|th\.)?shopee\.co\.th\/[^"'\s<>\\]*-i\.\d+\.\d+/i);
+      if (urlHit) {
+        const hit = extractShopeeShopItemFromUrl(urlHit[0]);
+        if (hit) return hit;
+      }
+    }
+  } catch (_e) {}
+  return {};
 }
 
 async function scrapeActiveFacebookReelTabImpl(explicitTabId) {
@@ -489,171 +845,245 @@ async function scrapeActiveFacebookReelTabImpl(explicitTabId) {
     }
   };
 
-  if (chrome.scripting?.executeScript && tab.id) {
-    try {
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => {
-          const shopeeLinks = [];
-          const seenLinks = new Set();
-          let productTagTitle = '';
+  const cleanTabReelUrl = cleanFbReelUrl(tab.url);
+  const isReelOrVideoUrl = /\/(?:reel|share\/r|videos)\/|watch/i.test(cleanTabReelUrl);
 
-          const addShopeeUrl = (raw, labelCandidate = '') => {
-            if (!raw) return;
-            let cleaned = String(raw).trim().replace(/[),.]+$/, '');
-            try {
-              if (cleaned.includes('l.facebook.com/l.php') || cleaned.includes('lm.facebook.com/l.php')) {
-                const uObj = new URL(cleaned);
-                const inner = uObj.searchParams.get('u');
-                if (inner) cleaned = decodeURIComponent(inner);
+  const [domScraped, authScraped] = await Promise.all([
+    (async () => {
+      if (!chrome.scripting?.executeScript || !tab.id) return null;
+      try {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => {
+            const shopeeLinks = [];
+            const seenLinks = new Set();
+            let productTagTitle = '';
+
+            const safeDec = (v) => {
+              try {
+                return decodeURIComponent(v);
+              } catch (_e) {
+                return String(v || '').replace(/https?%3A%2F%2F[^"'\s<>\\]+/gi, (enc) => {
+                  try { return decodeURIComponent(enc); } catch (_e2) { return enc; }
+                });
               }
-            } catch (_e) {}
-            const m = cleaned.match(/https?:\/\/(?:s\.|th\.|shp\.)?shopee\.co\.th\/[^\s"'<>\\)]+/i);
-            if (m) {
-              const finalUrl = m[0].replace(/[),.]+$/, '');
-              if (!seenLinks.has(finalUrl)) {
-                seenLinks.add(finalUrl);
-                shopeeLinks.push(finalUrl);
+            };
+
+            const decUni = (s) =>
+              String(s || '')
+                .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+                .replace(/\\\//g, '/');
+
+            const addShopeeUrl = (raw, labelCandidate = '') => {
+              if (!raw) return;
+              let cleaned = safeDec(decUni(raw).trim().replace(/[),.]+$/, ''));
+              if (/l\.facebook\.com\/l\.php|lm\.facebook\.com\/l\.php|facebook\.com\/flx\/warn/i.test(cleaned)) {
+                try {
+                  const uObj = new URL(cleaned);
+                  const inner = uObj.searchParams.get('u');
+                  if (inner) cleaned = safeDec(inner);
+                } catch (_e) {
+                  const um = cleaned.match(/[?&]u=([^&\s"'<>\\]+)/i);
+                  if (um) cleaned = safeDec(um[1]);
+                }
               }
-              if (!productTagTitle && labelCandidate && labelCandidate.length >= 4 && !/https?:\/\//i.test(labelCandidate)) {
-                productTagTitle = labelCandidate.replace(/\s+/g, ' ').trim().slice(0, 180);
+              const m = cleaned.match(
+                /https?:\/\/(?:(?:s|th|shp)\.)?shopee\.co\.th\/[A-Za-z0-9_./?=&%-]+|https?:\/\/shp\.ee\/[A-Za-z0-9_-]+/i
+              );
+              if (m) {
+                let finalUrl = m[0].replace(/[),.]+$/, '');
+                try {
+                  const parsed = new URL(finalUrl);
+                  if (/^(?:s\.shopee\.co\.th|shp\.ee)$/i.test(parsed.hostname)) {
+                    const slugMatch = parsed.pathname.match(/^\/([A-Za-z0-9_-]+)/);
+                    if (slugMatch) finalUrl = `${parsed.protocol}//${parsed.hostname}/${slugMatch[1]}`;
+                  }
+                } catch (_e) {}
+                if (!seenLinks.has(finalUrl)) {
+                  seenLinks.add(finalUrl);
+                  shopeeLinks.push(finalUrl);
+                }
+                if (!productTagTitle && labelCandidate && labelCandidate.length >= 4 && !/https?:\/\//i.test(labelCandidate)) {
+                  productTagTitle = decUni(labelCandidate).replace(/\s+/g, ' ').trim().slice(0, 180);
+                }
+              }
+            };
+
+            // 1. Scan anchors & interactive elements (Product Tags on Reels + Pinned Comments)
+            document.querySelectorAll('a[href], [role="link"], [role="button"]').forEach((el) => {
+              const href = el.getAttribute('href') || el.getAttribute('data-lynx-uri') || '';
+              const txt = (el.innerText || el.textContent || el.getAttribute('aria-label') || '').trim();
+              if (/shopee\.co\.th|shp\.ee|l\.facebook\.com\/l\.php|lm\.facebook\.com\/l\.php|flx\/warn/i.test(href)) {
+                addShopeeUrl(href, txt);
+              }
+              // Bounded React Fiber props walk near interactive tags
+              for (const k of Object.keys(el)) {
+                if (!k.startsWith('__reactProps$') && !k.startsWith('__reactFiber$')) continue;
+                try {
+                  const seenObjs = new Set();
+                  const stack = [{ obj: el[k], depth: 0 }];
+                  let visited = 0;
+                  while (stack.length && visited < 120) {
+                    const { obj, depth } = stack.pop();
+                    if (!obj || typeof obj !== 'object' || seenObjs.has(obj) || depth > 5) continue;
+                    seenObjs.add(obj);
+                    visited++;
+                    if (typeof obj.link_uri === 'string' && /shopee\.co\.th|shp\.ee/i.test(obj.link_uri)) {
+                      addShopeeUrl(obj.link_uri, obj.title || txt);
+                    }
+                    if (typeof obj.href === 'string' && /shopee\.co\.th|shp\.ee|l\.facebook\.com\/l\.php/i.test(obj.href)) {
+                      addShopeeUrl(obj.href, txt);
+                    }
+                    for (const pk of Object.keys(obj)) {
+                      if (pk === 'return' || pk === '_owner' || pk === 'stateNode') continue;
+                      const v = obj[pk];
+                      if (v && typeof v === 'object') stack.push({ obj: v, depth: depth + 1 });
+                    }
+                  }
+                } catch (_e) {}
+              }
+            });
+
+            // 2. Scan visible body text (in case Shopee shortlink is plain text or inside expanded comments)
+            const bodyText = document.body ? document.body.innerText || '' : '';
+            const regexAll = /https?:\/\/(?:(?:s|th|shp)\.)?shopee\.co\.th\/[A-Za-z0-9_./?=&-]+|https?:\/\/shp\.ee\/[A-Za-z0-9_-]+/gi;
+            let match;
+            while ((match = regexAll.exec(bodyText)) !== null) {
+              addShopeeUrl(match[0], '');
+            }
+
+            // 3. Scan ALL inline JSON scripts for "link_uri" / "external_url" (Facebook Reel embedded Product Tag payload!)
+            document.querySelectorAll('script').forEach((scr) => {
+              const txt = scr.textContent || '';
+              if (!txt.includes('shopee.co.th') && !txt.includes('shp.ee')) return;
+              for (const lm of txt.matchAll(/"(?:link_uri|external_url)"\s*:\s*"([^"]+)"/g)) {
+                const idx = lm.index || 0;
+                const chunk = decUni(txt.slice(Math.max(0, idx - 600), Math.min(txt.length, idx + 2200)));
+                const tM = chunk.match(/"title"\s*:\s*"([^"]+)"/);
+                addShopeeUrl(lm[1], tM ? tM[1] : '');
+              }
+              const norm = decUni(txt);
+              for (const sm of norm.matchAll(/https?:\/\/(?:(?:s|th|shp)\.)?shopee\.co\.th\/[A-Za-z0-9_./?=&%-]+|https?:\/\/shp\.ee\/[A-Za-z0-9_-]+/gi)) {
+                addShopeeUrl(sm[0], '');
+              }
+            });
+
+            // 4. Extract Competitor Page Name
+            let competitorPage = '';
+            const headerLinks = document.querySelectorAll('h2 a[role="link"], h3 a[role="link"], a[role="link"] strong, a[aria-label][href*="facebook.com/"]');
+            for (const el of headerLinks) {
+              const t = (el.innerText || el.textContent || '').trim();
+              if (t && t.length >= 2 && t.length <= 70 && !/reels?|watch|แชร์|ติดตาม|follow|ถูกใจ|ความคิดเห็น/i.test(t)) {
+                competitorPage = t.split('\n')[0].trim();
+                break;
               }
             }
-          };
-
-          // 1. Scan all anchors (Product Tags on Reels + Pinned Comments)
-          document.querySelectorAll('a[href]').forEach((a) => {
-            const href = a.getAttribute('href') || '';
-            const txt = (a.innerText || a.textContent || a.getAttribute('aria-label') || '').trim();
-            if (/shopee\.co\.th|l\.facebook\.com\/l\.php|lm\.facebook\.com\/l\.php/i.test(href)) {
-              addShopeeUrl(href, txt);
+            if (!competitorPage) {
+              competitorPage = document.title
+                .replace(/^\(\d+\)\s*/, '')
+                .replace(/\| Facebook.*$/i, '')
+                .replace(/-\s*Facebook.*$/i, '')
+                .trim()
+                .slice(0, 80);
             }
-          });
 
-          // 2. Scan visible body text (in case Shopee shortlink is plain text or inside expanded comments)
-          const bodyText = document.body ? document.body.innerText || '' : '';
-          const regexAll = /https?:\/\/(?:s\.|th\.)?shopee\.co\.th\/[A-Za-z0-9_/?=&.-]+/gi;
-          let match;
-          while ((match = regexAll.exec(bodyText)) !== null) {
-            addShopeeUrl(match[0], '');
-          }
-
-          // 3. Scan inline JSON scripts for "link_uri" (Facebook Reel embedded Product Tag payload!)
-          document.querySelectorAll('script').forEach((scr) => {
-            const txt = scr.textContent || '';
-            if (!txt.includes('shopee.co.th')) return;
-            const decoded = txt
-              .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-              .replace(/\\\//g, '/');
-            let unq = decoded;
-            try {
-              unq = decodeURIComponent(decoded);
-            } catch (_e) {}
-            const m = unq.match(/https?:\/\/(?:s\.)?shopee\.co\.th\/[A-Za-z0-9_]+/);
-            if (m) addShopeeUrl(m[0], '');
-          });
-
-          // 4. Extract Competitor Page Name
-          let competitorPage = '';
-          const headerLinks = document.querySelectorAll('h2 a[role="link"], h3 a[role="link"], a[role="link"] strong, a[aria-label][href*="facebook.com/"]');
-          for (const el of headerLinks) {
-            const t = (el.innerText || el.textContent || '').trim();
-            if (t && t.length >= 2 && t.length <= 70 && !/reels?|watch|แชร์|ติดตาม|follow|ถูกใจ|ความคิดเห็น/i.test(t)) {
-              competitorPage = t.split('\n')[0].trim();
-              break;
-            }
-          }
-          if (!competitorPage) {
-            competitorPage = document.title
-              .replace(/^\(\d+\)\s*/, '')
-              .replace(/\| Facebook.*$/i, '')
-              .replace(/-\s*Facebook.*$/i, '')
-              .trim()
-              .slice(0, 80);
-          }
-
-          // 5. Extract Reel Caption
-          let captionFull = '';
-          const dirEls = Array.from(document.querySelectorAll('div[dir="auto"], span[dir="auto"]'));
-          for (const el of dirEls) {
-            const t = (el.innerText || '').trim();
-            if (t.length >= 15 && t.length <= 600 && t !== competitorPage && !/เขียนความคิดเห็น|ตอบกลับ|ดูเพิ่มเติม$/i.test(t)) {
-              if (t.length > captionFull.length) {
-                captionFull = t;
+            // 5. Extract Reel Caption
+            let captionFull = '';
+            const dirEls = Array.from(document.querySelectorAll('div[dir="auto"], span[dir="auto"]'));
+            for (const el of dirEls) {
+              const t = (el.innerText || '').trim();
+              if (t.length >= 15 && t.length <= 600 && t !== competitorPage && !/เขียนความคิดเห็น|ตอบกลับ|ดูเพิ่มเติม$/i.test(t)) {
+                if (t.length > captionFull.length) {
+                  captionFull = t;
+                }
               }
             }
+
+            // 6. Engagement metrics from aria-labels or text
+            let fbReactions = 0;
+            let fbComments = 0;
+            let fbShares = '0';
+            const parseCompactCount = (str) => {
+              const s = String(str || '').replace(/,/g, '').trim();
+              const m = s.match(/([0-9]+(?:\.[0-9]+)?)\s*(พัน|หมื่น|แสน|ล้าน|K|M)?/i);
+              if (!m) return 0;
+              let n = parseFloat(m[1]) || 0;
+              const unit = (m[2] || '').toUpperCase();
+              if (unit === 'พัน' || unit === 'K') n *= 1000;
+              else if (unit === 'หมื่น') n *= 10000;
+              else if (unit === 'แสน') n *= 100000;
+              else if (unit === 'ล้าน' || unit === 'M') n *= 1000000;
+              return Math.round(n);
+            };
+
+            document.querySelectorAll('[aria-label]').forEach((el) => {
+              const lbl = el.getAttribute('aria-label') || '';
+              if (/ถูกใจ|ความรู้สึก|like|reaction/i.test(lbl) && /\d/.test(lbl) && !fbReactions) {
+                fbReactions = parseCompactCount(lbl);
+              } else if (/ความคิดเห็น|comment/i.test(lbl) && /\d/.test(lbl) && !fbComments) {
+                fbComments = parseCompactCount(lbl);
+              } else if (/แชร์|share/i.test(lbl) && /\d/.test(lbl) && fbShares === '0') {
+                const m = lbl.match(/([0-9.,]+\s*(?:พัน|หมื่น|แสน|ล้าน|K|M)?)/i);
+                if (m) fbShares = m[1].trim();
+              }
+            });
+
+            const prioritizeShort = shopeeLinks.find((u) => /s\.shopee\.co\.th|shp\.ee/i.test(u)) || shopeeLinks[0] || '';
+            return {
+              reel_url: location.href,
+              competitor_short_url: prioritizeShort,
+              all_shopee_links: shopeeLinks,
+              product_tag_title: productTagTitle,
+              competitor_page: competitorPage,
+              caption_full: captionFull,
+              fb_reactions: fbReactions,
+              fb_comments: fbComments,
+              fb_shares: fbShares
+            };
           }
-
-          // 6. Engagement metrics from aria-labels or text
-          let fbReactions = 0;
-          let fbComments = 0;
-          let fbShares = '0';
-          const parseCompactCount = (str) => {
-            const s = String(str || '').replace(/,/g, '').trim();
-            const m = s.match(/([0-9]+(?:\.[0-9]+)?)\s*(พัน|หมื่น|แสน|ล้าน|K|M)?/i);
-            if (!m) return 0;
-            let n = parseFloat(m[1]) || 0;
-            const unit = (m[2] || '').toUpperCase();
-            if (unit === 'พัน' || unit === 'K') n *= 1000;
-            else if (unit === 'หมื่น') n *= 10000;
-            else if (unit === 'แสน') n *= 100000;
-            else if (unit === 'ล้าน' || unit === 'M') n *= 1000000;
-            return Math.round(n);
-          };
-
-          document.querySelectorAll('[aria-label]').forEach((el) => {
-            const lbl = el.getAttribute('aria-label') || '';
-            if (/ถูกใจ|ความรู้สึก|like|reaction/i.test(lbl) && /\d/.test(lbl) && !fbReactions) {
-              fbReactions = parseCompactCount(lbl);
-            } else if (/ความคิดเห็น|comment/i.test(lbl) && /\d/.test(lbl) && !fbComments) {
-              fbComments = parseCompactCount(lbl);
-            } else if (/แชร์|share/i.test(lbl) && /\d/.test(lbl) && fbShares === '0') {
-              const m = lbl.match(/([0-9.,]+\s*(?:พัน|หมื่น|แสน|ล้าน|K|M)?)/i);
-              if (m) fbShares = m[1].trim();
-            }
-          });
-
-          const prioritizeShort = shopeeLinks.find((u) => /s\.shopee\.co\.th/i.test(u)) || shopeeLinks[0] || '';
-          return {
-            reel_url: location.href,
-            competitor_short_url: prioritizeShort,
-            all_shopee_links: shopeeLinks,
-            product_tag_title: productTagTitle,
-            competitor_page: competitorPage,
-            caption_full: captionFull,
-            fb_reactions: fbReactions,
-            fb_comments: fbComments,
-            fb_shares: fbShares
-          };
-        }
-      });
-
-      const scraped = results?.[0]?.result;
-      if (scraped && scraped.reel_url) {
-        return {
-          ...scraped,
-          reel_url: cleanFbReelUrl(scraped.reel_url)
-        };
+        });
+        return results?.[0]?.result || null;
+      } catch (_err) {
+        return null;
       }
-    } catch (_err) {
-      // Fallback to basic tab metadata below
-    }
-  }
+    })(),
+    isReelOrVideoUrl ? scrapeFbReelHtmlAuthenticated(cleanTabReelUrl) : Promise.resolve({})
+  ]);
+
+  const effectiveUrl = cleanFbReelUrl(domScraped?.reel_url || cleanTabReelUrl);
+  const authHasLink = Boolean(authScraped?.competitor_short_url);
+  const mergedShortUrl = authHasLink
+    ? authScraped.competitor_short_url
+    : domScraped?.competitor_short_url || '';
+  const mergedLinks = authHasLink
+    ? authScraped.all_shopee_links
+    : domScraped?.all_shopee_links || [];
+  const mergedTitle =
+    (authHasLink && authScraped.product_tag_title) ||
+    domScraped?.product_tag_title ||
+    authScraped?.product_tag_title ||
+    '';
 
   return {
-    reel_url: cleanFbReelUrl(tab.url),
-    competitor_short_url: '',
-    all_shopee_links: [],
-    product_tag_title: '',
-    competitor_page: String(tab.title || '')
-      .replace(/^\(\d+\)\s*/, '')
-      .replace(/\| Facebook.*$/i, '')
-      .trim()
-      .slice(0, 80),
-    caption_full: '',
-    fb_reactions: 0,
-    fb_comments: 0,
-    fb_shares: '0'
+    reel_url: effectiveUrl,
+    competitor_short_url: mergedShortUrl,
+    all_shopee_links: mergedLinks,
+    product_tag_title: mergedTitle,
+    competitor_page:
+      domScraped?.competitor_page ||
+      authScraped?.competitor_page ||
+      String(tab.title || '')
+        .replace(/^\(\d+\)\s*/, '')
+        .replace(/\| Facebook.*$/i, '')
+        .trim()
+        .slice(0, 80),
+    caption_full: domScraped?.caption_full || '',
+    fb_reactions: Number(authScraped?.fb_reactions) || Number(domScraped?.fb_reactions) || 0,
+    fb_comments: Number(authScraped?.fb_comments) || Number(domScraped?.fb_comments) || 0,
+    fb_shares:
+      authScraped?.fb_shares && authScraped.fb_shares !== '0'
+        ? authScraped.fb_shares
+        : domScraped?.fb_shares || '0'
   };
 }
 
@@ -864,12 +1294,12 @@ async function handleMessage(msg, _sender) {
     case 'CACHE_REAL_AFF_OFFER': {
       await hydrateRealOfferCache();
       const itemId = String(payload?.itemId || '').replace(/[^0-9]/g, '');
-      if (itemId && (payload?.realRateVerified || Number(payload?.baseRate) > 0 || Number(payload?.extraRate) > 0)) {
+      if (itemId && isValidRealOfferData(payload)) {
         circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
         persistRealOfferCacheEntry(itemId, payload);
         resolvePendingOfferWaiter(itemId, payload);
       }
-      return { cached: Boolean(itemId) };
+      return { cached: Boolean(itemId && isValidRealOfferData(payload)) };
     }
 
     case 'GET_CACHED_REAL_OFFERS': {
@@ -920,7 +1350,12 @@ async function handleMessage(msg, _sender) {
       return await fetchRealAffOfferImpl(
         payload?.itemId,
         Boolean(payload?.forceRefresh),
-        payload?.options || { mode: payload?.mode || 'single' }
+        {
+          ...(payload?.options || {}),
+          mode: payload?.mode || payload?.options?.mode || 'single',
+          shopId: payload?.shopId || payload?.options?.shopId || '',
+          titleHint: payload?.titleHint || payload?.options?.titleHint || ''
+        }
       );
     }
 
@@ -940,7 +1375,54 @@ async function handleMessage(msg, _sender) {
       const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
       const baseUrl = String(payload?.webUiBaseUrl || settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
       const affToken = String(settings?.affToken || 'doctorbank2026');
-      const reels = Array.isArray(payload?.reels) ? payload.reels : [];
+      const rawReels = Array.isArray(payload?.reels) ? payload.reels : [];
+
+      const enrichOneReel = async (orig) => {
+        const item = { ...orig };
+        const reelUrl = String(item.reel_url || item.url || '').trim();
+        if (reelUrl && (!item.competitor_short_url || !item.product_tag_title || (!item.fb_reactions && !item.fb_comments))) {
+          const fbMeta = await scrapeFbReelHtmlAuthenticated(reelUrl);
+          if (!item.competitor_short_url && fbMeta.competitor_short_url) {
+            item.competitor_short_url = fbMeta.competitor_short_url;
+          }
+          if (!item.product_tag_title && fbMeta.product_tag_title) {
+            item.product_tag_title = fbMeta.product_tag_title;
+          }
+          if (!item.competitor_page && fbMeta.competitor_page) {
+            item.competitor_page = fbMeta.competitor_page;
+          }
+          if (!item.fb_reactions && fbMeta.fb_reactions) {
+            item.fb_reactions = fbMeta.fb_reactions;
+          }
+          if (!item.fb_comments && fbMeta.fb_comments) {
+            item.fb_comments = fbMeta.fb_comments;
+          }
+          if ((!item.fb_shares || item.fb_shares === '0') && fbMeta.fb_shares) {
+            item.fb_shares = fbMeta.fb_shares;
+          }
+        }
+        if (item.competitor_short_url && (!item.item_id || !item.shop_id)) {
+          const resolved = await resolveShopeeShortUrlInExt(item.competitor_short_url);
+          if (resolved.shop_id) item.shop_id = resolved.shop_id;
+          if (resolved.item_id) item.item_id = resolved.item_id;
+          if (resolved.clean_product_url) item.clean_product_url = resolved.clean_product_url;
+          if (resolved.aff_offer_url) item.aff_offer_url = resolved.aff_offer_url;
+        }
+        return item;
+      };
+
+      const reels = new Array(rawReels.length);
+      let cursor = 0;
+      const workerCount = Math.min(4, Math.max(1, rawReels.length));
+      await Promise.all(
+        Array.from({ length: workerCount }, async () => {
+          while (cursor < rawReels.length) {
+            const idx = cursor++;
+            reels[idx] = await enrichOneReel(rawReels[idx]);
+          }
+        })
+      );
+
       const resp = await fetch(`${baseUrl}/api/shopee-aff/spy-collect`, {
         method: 'POST',
         credentials: 'include',

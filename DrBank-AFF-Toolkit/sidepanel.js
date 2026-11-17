@@ -1120,7 +1120,7 @@ function parseSpyTextareaReels() {
   const seenKeys = new Set();
   for (const line of lines) {
     const fbMatch = line.match(/https?:\/\/(?:www\.|m\.|web\.)?(?:facebook\.com\/[^\s|,;]+|fb\.watch\/[^\s|,;]+)/i);
-    const shMatch = line.match(/https?:\/\/(?:s\.|th\.)?shopee\.co\.th\/[^\s|,;]+/i);
+    const shMatch = line.match(/https?:\/\/(?:(?:s|th|shp)\.)?shopee\.co\.th\/[^\s|,;]+|https?:\/\/shp\.ee\/[^\s|,;]+/i);
     const reelUrl = fbMatch ? fbMatch[0].replace(/[),.]+$/, '') : /^https?:\/\//i.test(line) ? line.split(/[\s|,;]+/)[0] : '';
     if (!reelUrl) continue;
 
@@ -1304,7 +1304,9 @@ async function runSpyReelCollector() {
 
       if (!cleanItemId) {
         row.rateChecked = true;
-        row.rateError = 'ไม่พบป้ายตะกร้า Shopee ในคลิปนี้';
+        row.rateError = row.competitor_short_url
+          ? `พบลิงก์ตะกร้า (${row.competitor_short_url}) แต่แกะรหัสสินค้าไม่ได้`
+          : 'ไม่พบป้ายตะกร้า Shopee ในคลิปนี้';
         renderSpyCollectorResults(enrichedItems);
         continue;
       }
@@ -1320,7 +1322,8 @@ async function runSpyReelCollector() {
         const offerRes = await ns.sendMessage('GET_REAL_AFF_OFFER', {
           itemId: cleanItemId,
           shopId: row.shop_id || '',
-          forceRefresh: false
+          titleHint: row.product_tag_title || '',
+          forceRefresh: Number(row.price) <= 0 || Number(row.netComm) <= 0 || Number(row.extraRate) <= 0
         });
         if (offerRes?.securityCheck) {
           throw new Error(offerRes.error || 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิด affiliate.shopee.co.th ผ่านด่านตรวจก่อน');
@@ -1417,6 +1420,7 @@ async function runSpyReelCollector() {
         sub_id2: r.spy_sub_id2,
         sku_code: r.sku_code || '',
         item_id: String(r.item_id || ''),
+        title: r.product_tag_title || '',
         short_link: r.shortLink || '',
         long_link: r.longLink || r.clean_product_url || '',
         price: Number(r.price) || 0,
@@ -1495,7 +1499,9 @@ function renderSpyCollectorResults(items = []) {
 
       let bannerLeft = '⏳ กำลังเช็กค่าคอม...';
       if (!hasItem) {
-        bannerLeft = '⚠️ ไม่พบป้ายตะกร้า Shopee';
+        bannerLeft = r.competitor_short_url
+          ? '⚠️ พบตะกร้าแต่แกะรหัสสินค้าไม่ได้'
+          : '⚠️ ไม่พบป้ายตะกร้า Shopee';
       } else if (!r.rateChecked && r.netComm <= 0 && r.extraRate <= 0) {
         bannerLeft = '⏳ กำลังดึงเรท Social Media...';
       } else if (isPass) {
@@ -1511,7 +1517,9 @@ function renderSpyCollectorResults(items = []) {
       const totalPct = +((Number(r.baseRate) || 0) + (Number(r.extraRate) || 0)).toFixed(1);
       const shortLinkHtml = r.shortLink
         ? `<button type="button" class="sp-ghost-sm-btn spy-copy-link-btn" data-link="${escHtml(r.shortLink)}" title="คลิกเพื่อคัดลอกลิงก์ s.shopee.co.th ของเรา">🔗 ${escHtml(r.shortLink)}</button>`
-        : `<span style="font-size:11px;color:var(--sp-text-3);">${hasItem ? '⏳ รอเจนลิงก์...' : 'ไม่มีลิงก์สินค้า'}</span>`;
+        : !hasItem && r.competitor_short_url
+          ? `<button type="button" class="sp-ghost-sm-btn spy-open-url-btn" data-url="${escHtml(r.competitor_short_url)}" title="เปิดลิงก์ตะกร้าที่พบในคลิป">🛒 ${escHtml(r.competitor_short_url)} ↗</button>`
+          : `<span style="font-size:11px;color:var(--sp-text-3);">${hasItem ? '⏳ รอเจนลิงก์...' : 'ไม่มีลิงก์สินค้า'}</span>`;
 
       const affUrl = r.item_id ? `https://affiliate.shopee.co.th/offer/product_offer/${r.item_id}` : '';
       return `
