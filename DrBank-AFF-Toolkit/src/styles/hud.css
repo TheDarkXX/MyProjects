@@ -917,11 +917,51 @@ body.drb-aff-radar-off .drb-aff-grid-card {
   white-space: nowrap !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.32) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
-  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.15s ease !important;
 }
 
 .drb-aff-card-pill:hover {
   transform: scale(1.06) !important;
+}
+
+/* Estimated Pill (Translucent + Dashed Border — visually distinct from Verified) */
+.drb-aff-card-overlay[data-rate-state="est"] .drb-aff-card-pill {
+  border-style: dashed !important;
+  border-width: 1.5px !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
+  opacity: 0.84 !important;
+  font-weight: 600 !important;
+  filter: saturate(0.78);
+}
+
+/* Loading Pill (Shimmer / Pulse while checking Social Media rate) */
+@keyframes drb-pill-pulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.52; }
+}
+
+.drb-aff-card-overlay[data-rate-state="loading"] .drb-aff-card-pill {
+  border-style: dashed !important;
+  animation: drb-pill-pulse 1s ease-in-out infinite !important;
+}
+
+/* Verified Real Social Media Rate Pill (Solid Border, Full Contrast, Bold) */
+.drb-aff-card-overlay[data-rate-state="real"] .drb-aff-card-pill {
+  border: 2px solid #ffffff !important;
+  opacity: 1 !important;
+  font-weight: 800 !important;
+  filter: none;
+  box-shadow: 0 3px 11px rgba(0, 0, 0, 0.44) !important;
+}
+
+@keyframes drb-pill-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+.drb-aff-card-pill--pop {
+  animation: drb-pill-pop 0.32s ease-out !important;
 }
 
 .drb-aff-card-overlay[data-tier="god"] .drb-aff-card-pill {
@@ -940,6 +980,57 @@ body.drb-aff-radar-off .drb-aff-grid-card {
   background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
 }
 
+/* Toolbar Real-Rate Check & Circuit Breaker Button */
+.drb-grid-realcheck-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 27px;
+  padding: 0 11px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border: 1px solid #38bdf8;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: filter 0.14s ease, transform 0.14s ease;
+}
+
+.drb-grid-realcheck-btn:hover {
+  filter: brightness(1.1);
+}
+
+.drb-grid-realcheck-btn.is-breaker {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  border-color: #fca5a5;
+}
+
+.drb-aff-card-check-btn {
+  width: 100%;
+  background: linear-gradient(90deg, #0284c7 0%, #0ea5e9 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.12s ease;
+}
+
+.drb-aff-card-check-btn:hover {
+  filter: brightness(1.1);
+}
+
+.drb-aff-card-check-btn.is-verified {
+  background: linear-gradient(90deg, #15803d 0%, #16a34a 100%);
+  border: 1px solid rgba(134, 239, 172, 0.45);
+}
+
 /* Hover Tooltip Popover */
 .drb-aff-card-tooltip {
   display: none;
@@ -949,6 +1040,11 @@ body.drb-aff-radar-off .drb-aff-grid-card {
   padding-top: 6px; /* hover bridge so cursor can move into button smoothly */
   width: 235px;
   z-index: 80;
+}
+
+.drb-aff-card-tooltip.drb-aff-card-tooltip--flip-right {
+  right: auto;
+  left: -130px;
 }
 
 .drb-aff-card-overlay:hover .drb-aff-card-tooltip {

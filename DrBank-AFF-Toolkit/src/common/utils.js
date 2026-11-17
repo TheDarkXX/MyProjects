@@ -478,4 +478,263 @@ window.DrBankAFF = window.DrBankAFF || {};
     } catch (_e) {}
     return nextTheme;
   };
+
+  /**
+   * Parse Shopee API commission rate in any format ("8%", "10.4%", 8000, 0.08, 8) to percentage (0-100)
+   */
+  ns.parseShopeeRateToPct = function (rawVal) {
+    if (rawVal === null || rawVal === undefined || rawVal === '') return 0;
+    if (typeof rawVal === 'string') {
+      const trimmed = rawVal.trim();
+      if (!trimmed) return 0;
+      if (trimmed.includes('%')) {
+        const p = parseFloat(trimmed);
+        return Number.isFinite(p) && p > 0 ? +p.toFixed(2) : 0;
+      }
+    }
+    const num = Number(rawVal);
+    if (!Number.isFinite(num) || num <= 0) return 0;
+    if (num >= 100) return +(num / 1000).toFixed(2);
+    if (num < 1) return +(num * 100).toFixed(2);
+    return +num.toFixed(2);
+  };
+
+  /**
+   * Return the first positive percentage (> 0) from an array of raw candidate values.
+   * Unlike `??`, this skips 0, "0%", "", null, and undefined.
+   */
+  ns.pickFirstPositiveRate = function (candidates = []) {
+    if (!Array.isArray(candidates)) return 0;
+    for (const c of candidates) {
+      const pct = ns.parseShopeeRateToPct(c);
+      if (pct > 0) return pct;
+    }
+    return 0;
+  };
+
+  /**
+   * Recursively scan an object for any commission rate fields (> 0%).
+   */
+  ns.scanNestedCommissionRates = function (obj, prefix = '', out = []) {
+    if (!obj || typeof obj !== 'object') return out;
+    for (const [k, v] of Object.entries(obj)) {
+      const path = prefix ? `${prefix}.${k}` : k;
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        ns.scanNestedCommissionRates(v, path, out);
+      } else if (/commission_rate|comm_rate|_rate$/i.test(k) && !/tax|wht|discount|cancel|return/i.test(k)) {
+        const pct = ns.parseShopeeRateToPct(v);
+        if (pct > 0) {
+          out.push({ key: path, value: pct });
+        }
+      }
+    }
+    return out;
+  };
+
+  /**
+   * Extract STRICT Social Media channel commission from api/v3/offer/product response.
+   * Never mixes Shopee Live / Shopee Video rates (live_streaming_default_exist_commission_rate) into Social Media.
+   */
+  ns.extractSocialMediaCommission = function (rawPayload) {
+    const data = rawPayload?.data || rawPayload || {};
+    const card = data.batch_item_for_item_card_full || data.item_card_full || {};
+    const detail = data.commission_rate_detail || data.commission_detail || {};
+    const sellerDetail = detail.seller_commission_detail || data.seller_commission_detail || {};
+    const shopeeDetail = detail.shopee_commission_detail || data.shopee_commission_detail || {};
+    const isMall = Boolean(card.is_official_shop ?? data.is_official_shop);
+
+    let extraRate = ns.pickFirstPositiveRate([
+      sellerDetail.default_exist_commission_rate,
+      sellerDetail.social_media_default_exist_commission_rate,
+      sellerDetail.social_media_exist_commission_rate,
+      sellerDetail.social_media_commission_rate,
+      sellerDetail.default_commission_rate,
+      sellerDetail.exist_commission_rate,
+      sellerDetail.new_commission_rate,
+      sellerDetail.commission_rate,
+      sellerDetail.max_commission_rate,
+      detail.seller_commission_rate
+    ]);
+
+    let baseRate = ns.pickFirstPositiveRate([
+      shopeeDetail.default_exist_commission_rate,
+      shopeeDetail.social_media_default_exist_commission_rate,
+      shopeeDetail.social_media_exist_commission_rate,
+      shopeeDetail.social_media_commission_rate,
+      shopeeDetail.default_commission_rate,
+      shopeeDetail.exist_commission_rate,
+      shopeeDetail.new_commission_rate,
+      shopeeDetail.commission_rate,
+      shopeeDetail.max_commission_rate,
+      detail.shopee_commission_rate,
+      data.shopee_commission_rate
+    ]);
+
+    if (extraRate === 0) {
+      const scannedSeller = ns.scanNestedCommissionRates(sellerDetail);
+      const nonLiveExist = scannedSeller.find((x) => !/live|video/i.test(x.key) && /exist|social|default/i.test(x.key));
+      const nonLiveAny = scannedSeller.find((x) => !/live|video/i.test(x.key));
+      if (nonLiveExist) extraRate = nonLiveExist.value;
+      else if (nonLiveAny) extraRate = nonLiveAny.value;
+    }
+
+    if (baseRate === 0) {
+      const scannedShopee = ns.scanNestedCommissionRates(shopeeDetail);
+      const nonLiveExist = scannedShopee.find((x) => !/live|video/i.test(x.key) && /exist|social|default/i.test(x.key));
+      const nonLiveAny = scannedShopee.find((x) => !/live|video/i.test(x.key));
+      if (nonLiveExist) baseRate = nonLiveExist.value;
+      else if (nonLiveAny) baseRate = nonLiveAny.value;
+    }
+
+    const liveExtraRate = ns.pickFirstPositiveRate([
+      sellerDetail.live_streaming_default_exist_commission_rate,
+      sellerDetail.live_streaming_commission_rate
+    ]);
+    const liveBaseRate = ns.pickFirstPositiveRate([
+      shopeeDetail.live_streaming_default_exist_commission_rate,
+      shopeeDetail.live_streaming_commission_rate
+    ]);
+    const totalDetailRate = ns.pickFirstPositiveRate([
+      detail.total_commission_rate,
+      detail.default_exist_commission_rate,
+      detail.social_media_commission_rate,
+      detail.default_commission_rate,
+      detail.commission_rate
+    ]);
+
+    if (baseRate === 0 && totalDetailRate > extraRate && extraRate > 0) {
+      baseRate = +(totalDetailRate - extraRate).toFixed(2);
+    } else if (extraRate === 0 && totalDetailRate > baseRate && baseRate > 0) {
+      extraRate = +(totalDetailRate - baseRate).toFixed(2);
+    }
+
+    if (
+      baseRate === 0 &&
+      extraRate === 0 &&
+      (data.default_commission_rate !== undefined ||
+        data.max_commission_rate !== undefined ||
+        data.seller_commission_rate !== undefined)
+    ) {
+      const listFb = ns.extractListCommissionFallback(
+        {
+          item_id: card.itemid || data.item_id,
+          default_commission_rate: data.default_commission_rate,
+          max_commission_rate: data.max_commission_rate,
+          seller_commission_rate: data.seller_commission_rate
+        },
+        isMall,
+        card.name || data.product_name || ''
+      );
+      if (Number(listFb?.extraRate) > 0 || Number(listFb?.baseRate) > 0) {
+        extraRate = Number(listFb?.extraRate) || 0;
+        baseRate = Number(listFb?.baseRate) || 0;
+      }
+    }
+
+    const hasRealCommission = Boolean(extraRate > 0 || baseRate > 0 || totalDetailRate > 0);
+
+    if (extraRate > 0 && baseRate === 0) {
+      baseRate = 2.0;
+    } else if (baseRate === 0 && extraRate === 0 && (card.itemid || data.item_id)) {
+      baseRate = isMall ? 2.0 : 0.6;
+    }
+
+    const totalRate = +(extraRate + baseRate).toFixed(2) || totalDetailRate;
+    const rawPrice = Number(card.price ?? data.price) || 0;
+    const offerPrice = rawPrice > 100000 ? +(rawPrice / 100000).toFixed(2) : rawPrice;
+    const rawPriceMax = Number(card.price_max ?? data.price_max) || rawPrice;
+    const offerPriceMax = rawPriceMax > 100000 ? +(rawPriceMax / 100000).toFixed(2) : rawPriceMax;
+
+    const imagesHD = Array.isArray(card.images)
+      ? card.images.slice(0, 8).map((h) => `https://down-th.img.susercontent.com/file/${h}`)
+      : card.image
+      ? [`https://down-th.img.susercontent.com/file/${card.image}`]
+      : [];
+
+    return {
+      hasDetail: Boolean(data.commission_rate_detail || card.itemid || data.item_id || data.product_name),
+      hasRealCommission,
+      itemId: String(card.itemid || data.item_id || ''),
+      shopId: String(card.shopid || data.shop_id || ''),
+      title: card.name || data.product_name || '',
+      offerPrice,
+      offerPriceMax,
+      extraRate,
+      baseRate,
+      totalRate,
+      liveExtraRate,
+      liveBaseRate,
+      soldMonthly: Number(card.sold ?? data.sold) || 0,
+      soldTotal: Number(card.historical_sold ?? data.historical_sold) || 0,
+      stock: Number(card.stock ?? data.stock) || 0,
+      rating: Number(card?.item_rating?.rating_star) || 0,
+      isMall,
+      imagesHD
+    };
+  };
+
+  /**
+   * Safe fallback extractor for /api/v3/offer/product/list where commission_rate_detail is absent or partial.
+   * Avoids double-counting default_commission_rate (total) + seller_commission_rate or mixing Live/Video rates.
+   */
+  ns.extractListCommissionFallback = function (rawItem, isMall = false, title = '') {
+    if (rawItem?.commission_rate_detail || rawItem?.data?.commission_rate_detail) {
+      const exact = ns.extractSocialMediaCommission(rawItem);
+      if (exact.hasRealCommission && (exact.extraRate > 0 || exact.baseRate > 0)) {
+        return {
+          extraRate: exact.extraRate,
+          baseRate: exact.baseRate,
+          totalRate: exact.totalRate,
+          hasRealCommission: true,
+          isListApprox: false
+        };
+      }
+    }
+
+    const defaultTotal = ns.pickFirstPositiveRate([
+      rawItem?.default_commission_rate,
+      rawItem?.max_commission_rate,
+      rawItem?.commission_rate,
+      rawItem?.commission_rate_detail?.total_commission_rate
+    ]);
+    const sellerRate = ns.pickFirstPositiveRate([
+      rawItem?.seller_commission_rate,
+      rawItem?.commission_rate_detail?.seller_commission_detail?.default_exist_commission_rate,
+      rawItem?.commission_rate_detail?.seller_commission_detail?.social_media_commission_rate,
+      rawItem?.commission_rate_detail?.seller_commission_detail?.commission_rate
+    ]);
+    let extraRate = 0;
+    let baseRate = 0;
+    let hasRealCommission = false;
+
+    if (defaultTotal > 0) {
+      hasRealCommission = true;
+      if (sellerRate > 0 && defaultTotal > sellerRate) {
+        extraRate = sellerRate;
+        baseRate = +(defaultTotal - sellerRate).toFixed(2);
+      } else if (sellerRate > 0 && sellerRate >= defaultTotal) {
+        baseRate = defaultTotal > 2.0 ? 2.0 : 0;
+        extraRate = +(defaultTotal - baseRate).toFixed(2);
+      } else {
+        extraRate = 0;
+        baseRate = defaultTotal;
+      }
+    } else if (sellerRate > 0) {
+      hasRealCommission = true;
+      extraRate = sellerRate;
+      baseRate = 2.0;
+    } else {
+      const catEst = ns.estimateCategoryCommission(title, isMall, 'auto', '');
+      baseRate = catEst.baseRate || 2.0;
+      extraRate = 0;
+    }
+
+    return {
+      extraRate,
+      baseRate,
+      totalRate: +(extraRate + baseRate).toFixed(2),
+      hasRealCommission,
+      isListApprox: !hasRealCommission
+    };
+  };
 })(window.DrBankAFF);
