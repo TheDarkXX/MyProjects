@@ -353,6 +353,77 @@ window.DrBankAFF = window.DrBankAFF || {};
     };
   };
 
+  ns.GATE_CONFIG = {
+    gateVersion: 'v2.13.2',
+    minExtraPct: 0.01,
+    minNetCommBaht: 20.0,
+    baseCapTHB: 250.0,
+    dailyAdCostTHB: 100.0
+  };
+
+  /**
+   * Unified Signal Gate check matching server lib/gate.js (extraRate > 0 && netComm >= 20 THB)
+   */
+  ns.evaluateSpyGate = function (row = {}, customAdCost = 100) {
+    const itemId = String(row.item_id || row.itemId || '').replace(/[^0-9]/g, '');
+    const price = Math.max(0, Number(row.price) || 0);
+    const baseRate = Math.max(0, Number(row.baseRate ?? row.base_comm_pct) || 0);
+    const extraRate = Math.max(0, Number(row.extraRate ?? row.extra_comm_pct) || 0);
+    const adCost = Number(customAdCost) || ns.GATE_CONFIG.dailyAdCostTHB;
+    const comm = ns.calculateCommission({
+      price,
+      baseRate,
+      extraRate,
+      capTHB: ns.GATE_CONFIG.baseCapTHB,
+      whtRate: 0.0,
+      realDailyAdCostTHB: adCost
+    });
+    const explicit = Number(row.netComm ?? row.net_comm_baht ?? row.estimatedCommission);
+    const effectiveNet = (Number.isFinite(explicit) && explicit > 0 && (extraRate > 0 || baseRate > 0))
+      ? Math.round(explicit * 100) / 100
+      : Math.round(comm.netComm * 100) / 100;
+
+    if (!itemId) {
+      return {
+        pass: false,
+        decision: 'REJECT_NO_TAG',
+        reason: 'ไม่พบป้ายตะกร้า Shopee / item_id',
+        tier: 'danger',
+        netComm: 0,
+        breakEvenUnits: 0
+      };
+    }
+    if (extraRate <= 0) {
+      return {
+        pass: false,
+        decision: 'REJECT_NO_EXTRA',
+        reason: `ไม่มี Extra Comm (Base ${baseRate}% · คอม ฿${effectiveNet.toFixed(2)})`,
+        tier: 'danger',
+        netComm: effectiveNet,
+        breakEvenUnits: effectiveNet > 0 ? Math.ceil(adCost / effectiveNet) : 0
+      };
+    }
+    if (effectiveNet < ns.GATE_CONFIG.minNetCommBaht) {
+      return {
+        pass: false,
+        decision: 'REJECT_LOW_COMM',
+        reason: `ค่าคอม ฿${effectiveNet.toFixed(2)} ต่ำกว่าเกณฑ์ขั้นต่ำ ฿${ns.GATE_CONFIG.minNetCommBaht}`,
+        tier: 'danger',
+        netComm: effectiveNet,
+        breakEvenUnits: Math.ceil(adCost / effectiveNet)
+      };
+    }
+    const tier = effectiveNet >= 80 ? 'god' : (effectiveNet >= 45 ? 'pass' : 'warning');
+    return {
+      pass: true,
+      decision: 'PASS',
+      reason: `ผ่านเกณฑ์ (Extra ${extraRate}% · คอม ฿${effectiveNet.toFixed(2)})`,
+      tier,
+      netComm: effectiveNet,
+      breakEvenUnits: Math.ceil(adCost / effectiveNet)
+    };
+  };
+
   /**
    * Send message to background service worker
    */

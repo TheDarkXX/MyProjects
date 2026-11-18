@@ -1698,11 +1698,35 @@ async function handleMessage(msg, _sender) {
           'Content-Type': 'application/json',
           'X-Aff-Token': affToken
         },
-        body: JSON.stringify({ reels })
+        body: JSON.stringify({
+          reels,
+          resolve_only: payload?.resolveOnly !== false
+        })
       });
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({}));
         throw new Error(errBody?.error || `HTTP ${resp.status} from ${baseUrl}/api/shopee-aff/spy-collect`);
+      }
+      return await resp.json();
+    }
+
+    case 'SPY_COMMIT_REELS': {
+      const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
+      const baseUrl = String(payload?.webUiBaseUrl || settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
+      const affToken = String(settings?.affToken || 'doctorbank2026');
+      const items = Array.isArray(payload?.items) ? payload.items : [];
+      const resp = await fetch(`${baseUrl}/api/shopee-aff/spy-commit`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Aff-Token': affToken
+        },
+        body: JSON.stringify({ items })
+      });
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(errBody?.error || `HTTP ${resp.status} from ${baseUrl}/api/shopee-aff/spy-commit`);
       }
       return await resp.json();
     }

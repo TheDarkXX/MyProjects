@@ -619,7 +619,7 @@
 
       if (realOffer) {
         countReal++;
-      } else if (estComm.netComm >= 15 || price >= 180) {
+      } else if (estComm.netComm >= 20) {
         countCandidates++;
       }
 
