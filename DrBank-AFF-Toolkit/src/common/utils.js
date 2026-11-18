@@ -1,7 +1,7 @@
 /**
  * DrBank AFF Scout v2.0.0 — Lean Scout & Web UI Bridge Utilities
  * Features:
- *  - Shopee Commission & 4-Tier Ad Viability Engine (100฿ + VAT 7% = 107฿ Real Ad Cost)
+ *  - Shopee Commission & 4-Tier Ad Viability Engine (100฿/Day Real Ad Cost, Direct AFF Match)
  *  - Strict Alphanumeric Sub_ID Sanitizer (Zero _ or special chars)
  *  - Shopee DOM Helpers & Light/Dark Theme Controller
  */
@@ -252,15 +252,15 @@ window.DrBankAFF = window.DrBankAFF || {};
   };
 
   /**
-   * Calculate Shopee Commission Breakdown + 4-Tier 107฿/Day (100฿ + VAT 7%) Ad Viability
+   * Calculate Shopee Commission Breakdown + 4-Tier 100฿/Day Ad Viability (Zero Tax Deduction, Direct AFF Parity)
    */
   ns.calculateCommission = function ({
     price,
     baseRate = 3.5,
     extraRate = 10.0,
     capTHB = 250,
-    whtRate = 3.0,
-    realDailyAdCostTHB = 107
+    whtRate = 0.0,
+    realDailyAdCostTHB = 100
   }) {
     const p = Math.max(0, Number(price) || 0);
     const bRate = Math.max(0, Number(baseRate) || 0);
@@ -272,8 +272,8 @@ window.DrBankAFF = window.DrBankAFF || {};
     const isCapped = rawBaseComm > cap;
     const extraComm = p * (xRate / 100);
     const grossComm = baseComm + extraComm;
-    const whtAmount = grossComm * (Math.max(0, Number(whtRate) || 0) / 100);
-    const netComm = grossComm - whtAmount;
+    const whtAmount = 0;
+    const netComm = grossComm;
     const effectiveRate = p > 0 ? (grossComm / p) * 100 : 0;
 
     const viability = ns.evaluateAdViability(netComm, xRate, realDailyAdCostTHB);
@@ -292,16 +292,16 @@ window.DrBankAFF = window.DrBankAFF || {};
   };
 
   /**
-   * Evaluate 4-Tier Ad Viability against Real Daily Ad Spend (100 THB + 7% VAT = 107 THB)
+   * Evaluate 4-Tier Ad Viability against Daily Ad Spend (100 THB/day)
    * - GOD TIER: netComm >= 80 THB & extraRate > 0
    * - PASS:     netComm 45 - 79.99 THB & extraRate > 0
    * - WARNING:  netComm 20 - 44.99 THB & extraRate > 0 (e.g. ฿23.57)
    * - DANGER:   netComm < 20 THB OR extraRate <= 0
    */
-  ns.evaluateAdViability = function (netComm, extraRate, realDailyAdCostTHB = 107) {
+  ns.evaluateAdViability = function (netComm, extraRate, realDailyAdCostTHB = 100) {
     const net = Number(netComm) || 0;
     const extra = Number(extraRate) || 0;
-    const adCost = Number(realDailyAdCostTHB) || 107;
+    const adCost = Number(realDailyAdCostTHB) || 100;
     const breakEvenNum = net > 0 ? adCost / net : 999;
     const breakEvenUnits = net > 0 ? breakEvenNum.toFixed(1) : '∞';
     const breakEvenOrders = net > 0 ? Math.ceil(breakEvenNum) : 999;
@@ -313,7 +313,7 @@ window.DrBankAFF = window.DrBankAFF || {};
         tierLabel: '⛔ ห้ามยิง! คอมต่ำ/ไร้ Extra',
         bannerText:
           net > 0
-            ? `⛔ [ไฟแดง ห้ามยิงแอด!] ต้องขายถึง ${breakEvenUnits} ชิ้น (${breakEvenOrders} ออเดอร์) ไม่คุ้มทุนแอด 107฿`
+            ? `⛔ [ไฟแดง ห้ามยิงแอด!] ต้องขายถึง ${breakEvenUnits} ชิ้น (${breakEvenOrders} ออเดอร์) ไม่คุ้มทุนแอด 100฿`
             : `⛔ [ไฟแดง ห้ามยิงแอด!] ค่าคอม 0฿ หรือไม่มี Extra Comm`,
         breakEvenUnits,
         breakEvenOrders,
@@ -325,7 +325,7 @@ window.DrBankAFF = window.DrBankAFF || {};
         tier: 'warning',
         tierEmoji: '⚠️',
         tierLabel: '⚠️ ระวัง! ต้องขาย 3-5 ชิ้น/วัน',
-        bannerText: `⚠️ [ไฟเหลือง ระวังเหนื่อย!] แอด 107฿ ต้องขายตรงปก ${breakEvenUnits} ชิ้น (${breakEvenOrders} ออเดอร์) ถึงคุ้มทุน`,
+        bannerText: `⚠️ [ไฟเหลือง ระวังเหนื่อย!] แอด 100฿ ต้องขายตรงปก ${breakEvenUnits} ชิ้น (${breakEvenOrders} ออเดอร์) ถึงคุ้มทุน`,
         breakEvenUnits,
         breakEvenOrders,
         realDailyAdCostTHB: adCost
@@ -336,7 +336,7 @@ window.DrBankAFF = window.DrBankAFF || {};
         tier: 'pass',
         tierEmoji: '✅',
         tierLabel: '✅ ไฟเขียว! ขาย 1.5-2 ชิ้นคืนทุน',
-        bannerText: `✅ [ไฟเขียว ลุยยิงแอด!] แอด 107฿ ขายตรงปกแค่ ${breakEvenUnits} ชิ้น (${breakEvenOrders} ออเดอร์) คืนทุนทันที!`,
+        bannerText: `✅ [ไฟเขียว ลุยยิงแอด!] แอด 100฿ ขายตรงปกแค่ ${breakEvenUnits} ชิ้น (${breakEvenOrders} ออเดอร์) คืนทุนทันที!`,
         breakEvenUnits,
         breakEvenOrders,
         realDailyAdCostTHB: adCost
@@ -346,7 +346,7 @@ window.DrBankAFF = window.DrBankAFF || {};
       tier: 'god',
       tierEmoji: '🔥',
       tierLabel: '🔥 GOD TIER! 1 ชิ้นกำไรทันที',
-      bannerText: `🔥 [GOD TIER!] ขายแค่ ${breakEvenUnits} ชิ้น (1 ออเดอร์) กำไรทะลุค่าแอด 107฿ ทันที!`,
+      bannerText: `🔥 [GOD TIER!] ขายแค่ ${breakEvenUnits} ชิ้น (1 ออเดอร์) กำไรทะลุค่าแอด 100฿ ทันที!`,
       breakEvenUnits,
       breakEvenOrders,
       realDailyAdCostTHB: adCost

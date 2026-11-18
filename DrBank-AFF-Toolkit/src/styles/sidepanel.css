@@ -719,9 +719,14 @@ body[data-theme="dark"] #drb-sidepanel-root {
   flex-shrink: 0;
 }
 
-.sp-ghost-sm-btn:hover {
+.sp-ghost-sm-btn:hover:not(:disabled) {
   border-color: var(--sp-base);
   color: var(--sp-base);
+}
+
+.sp-ghost-sm-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .sp-subid-editor {
@@ -1150,6 +1155,40 @@ body[data-theme="dark"] #drb-sidepanel-root {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sp-spy-summary-strip[hidden],
+.sp-spy-retry-all-btn[hidden] {
+  display: none !important;
+}
+
+.sp-spy-retry-all-btn,
+.spy-rerun-row-btn {
+  border-color: rgba(124, 58, 237, 0.4);
+  background: rgba(124, 58, 237, 0.1);
+  color: #6d28d9;
+}
+
+body[data-theme="dark"] .sp-spy-retry-all-btn,
+body[data-theme="dark"] .spy-rerun-row-btn {
+  color: #c4b5fd;
+  background: rgba(124, 58, 237, 0.22);
+  border-color: rgba(167, 139, 250, 0.45);
+}
+
+.sp-spy-retry-all-btn:hover:not(:disabled),
+.spy-rerun-row-btn:hover:not(:disabled) {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.18);
+  color: #5b21b6;
+}
+
+body[data-theme="dark"] .sp-spy-retry-all-btn:hover:not(:disabled),
+body[data-theme="dark"] .spy-rerun-row-btn:hover:not(:disabled) {
+  color: #ede9fe;
+  background: rgba(124, 58, 237, 0.34);
 }
 
 .sp-spy-results-list {

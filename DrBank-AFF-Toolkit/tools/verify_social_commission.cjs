@@ -61,13 +61,14 @@ const comm1 = ns.calculateCommission({
   baseRate: parsed1.baseRate,
   extraRate: parsed1.extraRate,
   capTHB: 250,
-  whtRate: 3.0,
-  realDailyAdCostTHB: 107
+  whtRate: 0.0,
+  realDailyAdCostTHB: 100
 });
 assert.strictEqual(+comm1.extraComm.toFixed(2), 46.72);
 assert.strictEqual(+comm1.baseComm.toFixed(2), 11.68);
 assert.strictEqual(+comm1.grossComm.toFixed(2), 58.4);
-assert.strictEqual(+comm1.netComm.toFixed(2), 56.65);
+assert.strictEqual(+comm1.netComm.toFixed(2), 58.4);
+assert.strictEqual(comm1.realDailyAdCostTHB, 100);
 
 // Also verify integer 1e5 format (8000 = 8%, 10400 = 10.4%, 2000 = 2%)
 const mockOffer24645325790Int = {
@@ -143,27 +144,27 @@ const comm2Offer = ns.calculateCommission({
   baseRate: parsed2.baseRate,
   extraRate: parsed2.extraRate,
   capTHB: 250,
-  whtRate: 3.0,
-  realDailyAdCostTHB: 107
+  whtRate: 0.0,
+  realDailyAdCostTHB: 100
 });
 assert.strictEqual(parsed2.offerPrice, 1363);
 assert.strictEqual(+comm2Offer.extraComm.toFixed(2), 109.04);
 assert.strictEqual(+comm2Offer.baseComm.toFixed(2), 27.26);
 assert.strictEqual(+comm2Offer.grossComm.toFixed(2), 136.3);
-assert.strictEqual(+comm2Offer.netComm.toFixed(2), 132.21);
+assert.strictEqual(+comm2Offer.netComm.toFixed(2), 136.3);
 
 const comm2AfterVoucher = ns.calculateCommission({
   price: 1322,
   baseRate: parsed2.baseRate,
   extraRate: parsed2.extraRate,
   capTHB: 250,
-  whtRate: 3.0,
-  realDailyAdCostTHB: 107
+  whtRate: 0.0,
+  realDailyAdCostTHB: 100
 });
 assert.strictEqual(+comm2AfterVoucher.grossComm.toFixed(2), 132.2);
-assert.strictEqual(+comm2AfterVoucher.netComm.toFixed(2), 128.23);
+assert.strictEqual(+comm2AfterVoucher.netComm.toFixed(2), 132.2);
 
-// 3. Test URL ID parsing & Base Cap 250 THB
+// 3. Test URL ID parsing & Base Cap 250 THB (even if legacy whtRate is passed, zero WHT deduction applies)
 const u1 = ns.parseShopeeIds('https://shopee.co.th/Seagull-i.1485671971.24645325790?sp_atk=123');
 assert.strictEqual(u1.shopId, '1485671971');
 assert.strictEqual(u1.itemId, '24645325790');
@@ -176,8 +177,9 @@ const capped = ns.calculateCommission({ price: 20000, baseRate: 2, extraRate: 5,
 assert.strictEqual(capped.isCapped, true);
 assert.strictEqual(capped.baseComm, 250);
 assert.strictEqual(capped.extraComm, 1000);
+assert.strictEqual(capped.netComm, 1250);
 
-// 4. Test Case 4: itemId = 57701386461 (Smokeless Charcoal Kiln ฿1,291.00: EXTRACOMM 5% = ฿64.55, Base 2% = ฿25.82, Gross ฿90.37, Net ฿87.66)
+// 4. Test Case 4: itemId = 57701386461 (Smokeless Charcoal Kiln ฿1,291.00: EXTRACOMM 5% = ฿64.55, Base 2% = ฿25.82, Direct Total ฿90.37)
 // Case 4A: /offer/product returns metadata with empty commission_rate_detail -> hasRealCommission MUST be false so Tier 1 does not short-circuit!
 const mockOffer57701386461Partial = {
   data: {
@@ -222,13 +224,13 @@ const comm4 = ns.calculateCommission({
   baseRate: listFb4.baseRate,
   extraRate: listFb4.extraRate,
   capTHB: 250,
-  whtRate: 3.0,
-  realDailyAdCostTHB: 107
+  whtRate: 0.0,
+  realDailyAdCostTHB: 100
 });
 assert.strictEqual(+comm4.extraComm.toFixed(2), 64.55);
 assert.strictEqual(+comm4.baseComm.toFixed(2), 25.82);
 assert.strictEqual(+comm4.grossComm.toFixed(2), 90.37);
-assert.strictEqual(+comm4.netComm.toFixed(2), 87.66);
+assert.strictEqual(+comm4.netComm.toFixed(2), 90.37);
 
 console.log('✅ ALL SOCIAL MEDIA COMMISSION & PARSER ASSERTIONS PASSED:');
 console.log(`   - 24645325790 (฿584.00): Social Media = ${parsed1.extraRate}% + ${parsed1.baseRate}% = ฿${comm1.grossComm.toFixed(2)} (Net ฿${comm1.netComm.toFixed(2)}) | Live/Video = ${parsed1.liveExtraRate}% (isolated)`);

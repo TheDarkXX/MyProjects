@@ -2,7 +2,7 @@
  * DrBank AFF Scout v2.5.0 — Shopee Affiliate Offer Detail, Grid Signal Radar & Report Engine
  * Works on https://affiliate.shopee.co.th/*
  * Features:
- *  1. Product Offer Grid Signal Overlay (แปะป้ายไฟจราจร + คำนวณคอมสุทธิ & จุดคุ้มทุน 107฿ บนการ์ดทุกใบ)
+ *  1. Product Offer Grid Signal Overlay (แปะป้ายไฟจราจร + คำนวณค่าคอม & จุดคุ้มทุน 100฿ บนการ์ดทุกใบ)
  *  2. Interactive Filter Toolbar above Grid (กรองเฉพาะไฟเขียว/ม่วง, ดรอปแสง/ซ่อนการ์ดไฟแดง)
  *  3. Product Offer Detail Page Real Commission Table Scraper
  *  4. Conversion Report Table Bridge
@@ -23,7 +23,7 @@
     extraCommTHB: 0,
     grossCommTHB: 0,
     capTHB: 250,
-    whtRate: 3.0,
+    whtRate: 0.0,
     shopId: '',
     itemId: '',
     cleanUrl: '',
@@ -61,8 +61,8 @@
       baseRate: parsed.baseRate,
       extraRate: parsed.extraRate,
       capTHB: 250,
-      whtRate: 3.0,
-      realDailyAdCostTHB: 107
+      whtRate: 0.0,
+      realDailyAdCostTHB: 100
     });
 
     const nextProduct = {
@@ -80,7 +80,7 @@
       extraCommTHB: +comm.extraComm.toFixed(2),
       grossCommTHB: +comm.grossComm.toFixed(2),
       capTHB: 250,
-      whtRate: 3.0,
+      whtRate: 0.0,
       shopId: parsed.shopId || (isSameItem ? offerProduct.shopId : ''),
       itemId: parsed.itemId,
       cleanUrl:
@@ -108,7 +108,7 @@
         `• ราคาตั้งต้นหน้า AFF: ฿${price.toLocaleString()}\n` +
         `• EXTRACOMM (โซเชียลมีเดีย): ${parsed.extraRate}% (฿${comm.extraComm.toFixed(2)})\n` +
         `• ค่าคอมช้อปปี้ (โซเชียลมีเดีย): ${parsed.baseRate}% (฿${comm.baseComm.toFixed(2)})\n` +
-        `• คอมรวมก่อนหักภาษี (โซเชียลมีเดีย): ฿${comm.grossComm.toFixed(2)} / ชิ้น (สุทธิ ฿${comm.netComm.toFixed(2)})`
+        `• ค่าคอมรวม (โซเชียลมีเดีย): ฿${comm.netComm.toFixed(2)} / ชิ้น`
     };
 
     if (isSameItem || isOfferDetailUrl()) {
@@ -251,14 +251,14 @@
         baseRate,
         extraRate,
         capTHB: 250,
-        whtRate: 3.0,
-        realDailyAdCostTHB: 107
+        whtRate: 0.0,
+        realDailyAdCostTHB: 100
       });
 
-      // 6. Determine Card Signal Tier by Net Commission Viability (Ad 107฿/day)
+      // 6. Determine Card Signal Tier by Commission Viability (Ad 100฿/day)
       let cardTier = 'danger';
       let pillEmoji = '⛔';
-      let tierTitle = '⛔ ไฟแดง! ไม่คุ้มแอด 107฿';
+      let tierTitle = '⛔ ไฟแดง! ไม่คุ้มแอด 100฿';
 
       if (comm.netComm >= 80) {
         cardTier = 'god';
@@ -311,7 +311,7 @@
         extraCommTHB: comm.extraComm,
         grossCommTHB: comm.grossComm,
         capTHB: 250,
-        whtRate: 3.0,
+        whtRate: 0.0,
         shopId: '',
         itemId,
         cleanUrl: cardHref,
@@ -326,8 +326,8 @@
           `[เลือกจากการ์ดข้อเสนอ Shopee Affiliate]\n` +
           `• สินค้า: ${title}\n` +
           `• ราคาขายจริง: ฿${price.toLocaleString()}\n` +
-          `• อัตราค่าคอมรวม: ${totalRate}% (สุทธิ ฿${comm.netComm.toFixed(2)}/ชิ้น)\n` +
-          `• จุดคุ้มทุนแอด 107฿: ${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)\n` +
+          `• อัตราค่าคอมรวม: ${totalRate}% (฿${comm.netComm.toFixed(2)}/ชิ้น)\n` +
+          `• จุดคุ้มทุนแอด 100฿: ${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)\n` +
           `• ยอดขายสะสม: ${soldText} ชิ้น`
       };
 
@@ -348,18 +348,18 @@
       ov.className = 'drb-aff-card-overlay';
       ov.setAttribute('data-tier', cardTier);
       ov.innerHTML = `
-        <div class="drb-aff-card-pill" title="เอาเมาส์ชี้เพื่อดูจุดคุ้มทุนแอด 107฿ หรือคลิกเพื่อดึงเข้า Side Panel">
+        <div class="drb-aff-card-pill" title="เอาเมาส์ชี้เพื่อดูจุดคุ้มทุนแอด 100฿ หรือคลิกเพื่อดึงเข้า Side Panel">
           <span>${pillLabel}</span>
         </div>
         <div class="drb-aff-card-tooltip">
           <div class="drb-aff-card-tooltip-inner">
             <div class="drb-aff-tt-title">${tierTitle}</div>
             <div class="drb-aff-tt-row">
-              <span>💰 คอมสุทธิ:</span>
+              <span>💰 ค่าคอม/ชิ้น:</span>
               <strong>${ns.formatTHB(comm.netComm)} / ชิ้น (${totalRate}%)</strong>
             </div>
             <div class="drb-aff-tt-row">
-              <span>🎯 คุ้มแอด 107฿:</span>
+              <span>🎯 คุ้มแอด 100฿:</span>
               <strong>${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)</strong>
             </div>
             <div class="drb-aff-tt-row">
@@ -387,7 +387,7 @@
             baseRate: cardProductPayload.baseRate,
             extraRate: cardProductPayload.extraRate,
             estimatedCommission: Number(comm.netComm.toFixed(2)),
-            realDailyAdCostTHB: 107,
+            realDailyAdCostTHB: 100,
             breakEvenUnits: comm.breakEvenUnits,
             breakEvenOrders: comm.breakEvenOrders,
             adViabilityTier: comm.tier,
@@ -396,7 +396,7 @@
             scrapedAt: new Date().toISOString()
           });
         } catch (_err) {}
-        ns.showToast(`⚡ ดึง "${title.slice(0, 26)}..." (สุทธิ ${ns.formatTHB(comm.netComm)}) เข้า Side Panel แล้ว!`);
+        ns.showToast(`⚡ ดึง "${title.slice(0, 26)}..." (${ns.formatTHB(comm.netComm)}) เข้า Side Panel แล้ว!`);
       };
 
       const pickBtn = ov.querySelector('.drb-aff-card-pick-btn');
@@ -438,7 +438,7 @@
           <span class="drb-grid-power-dot"></span>
           <span>${isOn ? 'RADAR ON' : 'RADAR OFF'}</span>
         </button>
-        <button type="button" class="drb-grid-v1-launch-btn" id="drb-btn-open-v1-scanner" title="เปิดตารางค้นหาสินค้า V1 Realtime (ดูดรวดเดียว 500 ชิ้น + คำนวณ Signal จุดคุ้มทุนแอด 107฿)">
+        <button type="button" class="drb-grid-v1-launch-btn" id="drb-btn-open-v1-scanner" title="เปิดตารางค้นหาสินค้า V1 Realtime (ดูดรวดเดียว 500 ชิ้น + คำนวณ Signal จุดคุ้มทุนแอด 100฿)">
           เปิดตาราง V1 Scanner ↗
         </button>
       </div>
@@ -446,10 +446,10 @@
         <button type="button" class="drb-grid-filter-btn ${gridFilterState.mode === 'all' && !gridFilterState.dimDanger && !gridFilterState.hideDanger ? 'active' : ''}" id="drb-btn-reset-default" title="ค่าเริ่มต้น: แสดงการ์ดทั้งหมดตามปกติ">
           ทั้งหมด <span class="drb-grid-cnt">${c.total}</span>
         </button>
-        <button type="button" class="drb-grid-filter-btn drb-grid-filter-btn--win ${gridFilterState.mode === 'win' ? 'active' : ''}" data-mode="win" title="แสดงเฉพาะสินค้าที่น่าลุยแอด (คอมสุทธิ ≥฿45/ชิ้น)">
+        <button type="button" class="drb-grid-filter-btn drb-grid-filter-btn--win ${gridFilterState.mode === 'win' ? 'active' : ''}" data-mode="win" title="แสดงเฉพาะสินค้าที่น่าลุยแอด (ค่าคอม ≥฿45/ชิ้น)">
           <span class="drb-v1-dot drb-v1-dot--pass"></span>น่าลุย ≥฿45 <span class="drb-grid-cnt">${c.win}</span>
         </button>
-        <button type="button" class="drb-grid-filter-btn drb-grid-filter-btn--warn ${gridFilterState.mode === 'warn' ? 'active' : ''}" data-mode="warn" title="แสดงสินค้าที่ได้คอมสุทธิ ≥฿20/ชิ้น ขึ้นไป">
+        <button type="button" class="drb-grid-filter-btn drb-grid-filter-btn--warn ${gridFilterState.mode === 'warn' ? 'active' : ''}" data-mode="warn" title="แสดงสินค้าที่ได้ค่าคอม ≥฿20/ชิ้น ขึ้นไป">
           <span class="drb-v1-dot drb-v1-dot--warn"></span>พอไหว ≥฿20 <span class="drb-grid-cnt">${c.win + c.warn}</span>
         </button>
         <span class="drb-grid-tb-sep"></span>
@@ -577,7 +577,7 @@
         extraCommTHB: 0,
         grossCommTHB: 0,
         capTHB: 250,
-        whtRate: 3.0,
+        whtRate: 0.0,
         shopId: '',
         itemId: foundItemId,
         cleanUrl: location.href,
@@ -761,7 +761,7 @@
         `• ยอดขายสะสม: ${foundSoldText || '0'} ชิ้น (⭐ ${foundRating || 4.9})\n` +
         `• EXTRACOMM (โซเชียลมีเดีย): ${finalExtraRate}% (฿${Number(finalExtraTHB || 0).toFixed(2)})\n` +
         `• ค่าคอมช้อปปี้ (โซเชียลมีเดีย): ${finalBaseRate}% (฿${Number(finalBaseTHB || 0).toFixed(2)})\n` +
-        `• ค่าคอมรวมก่อนหักภาษี: ฿${Number(finalGrossTHB || 0).toFixed(2)} / ชิ้น`
+        `• ค่าคอมรวม (โซเชียลมีเดีย): ฿${Number(finalGrossTHB || 0).toFixed(2)} / ชิ้น`
     };
 
     if (offerProduct.itemId && (offerProduct.baseRate > 0 || offerProduct.extraRate > 0)) {
@@ -811,7 +811,7 @@
     if (currencyValues.length > 0) {
       const maxVal = Math.max(...currencyValues);
       reportStats.totalCommission = maxVal;
-      reportStats.netCommission = maxVal * 0.97;
+      reportStats.netCommission = maxVal;
       reportStats.orderCount = extractedRows.length || currencyValues.length;
     }
     return reportStats;
@@ -1000,8 +1000,8 @@
             baseRate: Number(parsedOffer.baseRate) || 0,
             extraRate: Number(parsedOffer.extraRate) || 0,
             capTHB: 250,
-            whtRate: 3.0,
-            realDailyAdCostTHB: 107
+            whtRate: 0.0,
+            realDailyAdCostTHB: 100
           });
           parsedOffer.baseCommTHB = +comm.baseComm.toFixed(2);
           parsedOffer.extraCommTHB = +comm.extraComm.toFixed(2);
@@ -1024,14 +1024,37 @@
         .replace(/^reel_\d+_\w+$/i, '')
         .replace(/^(?:กดสั่งซื้อที่นี่|พิกัดสินค้า|สั่งซื้อที่นี่|ดูสินค้า)\s*/i, '')
         .replace(/\s+Shopee\s*$/i, '')
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, ' ')
+        .replace(/[\[\]()【】「」『』<>|•★☆]+/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
+
+    const makeShortCore = (cleanStr) => {
+      const words = String(cleanStr || '').split(/\s+/).filter(Boolean);
+      let acc = '';
+      for (const w of words) {
+        const next = acc ? `${acc} ${w}` : w;
+        if (next.length > 32 && acc.length >= 10) break;
+        acc = next;
+      }
+      return (acc || cleanStr).slice(0, 32).trim();
+    };
+
+    const pushCandidate = (arr, kw) => {
+      const k = String(kw || '').trim();
+      if (k.length >= 4 && !arr.includes(k)) arr.push(k);
+    };
 
     const realTitleKw = cleanTitleCandidate(partialOffer?.title || '');
     const hintKw = cleanTitleCandidate(titleHint || '');
     const keywordCandidates = [];
-    if (realTitleKw && realTitleKw.length >= 4) keywordCandidates.push(realTitleKw.slice(0, 65));
-    if (hintKw && hintKw.length >= 4 && !keywordCandidates.includes(hintKw.slice(0, 65))) {
-      keywordCandidates.push(hintKw.slice(0, 65));
+    if (realTitleKw) {
+      pushCandidate(keywordCandidates, realTitleKw.slice(0, 60));
+      pushCandidate(keywordCandidates, makeShortCore(realTitleKw));
+    }
+    if (hintKw) {
+      pushCandidate(keywordCandidates, hintKw.slice(0, 60));
+      pushCandidate(keywordCandidates, makeShortCore(hintKw));
     }
     keywordCandidates.push(cleanId);
 
@@ -1099,8 +1122,8 @@
         baseRate,
         extraRate,
         capTHB: 250,
-        whtRate: 3.0,
-        realDailyAdCostTHB: 107
+        whtRate: 0.0,
+        realDailyAdCostTHB: 100
       });
       const soldCount = Number(row.sold || row.historical_sold) || Number(partialOffer?.soldCount) || 0;
       const hasRealCommission = Boolean(extraRate > 0 || Number(row.baseRate) > 0 || partialOffer?.hasRealCommission);
@@ -1156,7 +1179,7 @@
   }
 
   // ==========================================================================
-  // 4. V1 REALTIME 500-ITEM SCANNER & DRBANK 107฿ SIGNAL RADAR WRAPPER
+  // 4. V1 REALTIME 500-ITEM SCANNER & DRBANK 100฿ SIGNAL RADAR WRAPPER
   //    Direct Shopee Internal API: GET /api/v3/offer/product/list
   //    + GraphQL Shortlink Generator: POST /api/v3/gql?q=batchCustomLink
   // ==========================================================================
@@ -1171,10 +1194,10 @@
     showAdvFilters: false,    // ซ่อนเมนู Advanced Filter เป็นค่าเริ่มต้น (กดเปิดเมื่อต้องการตั้งค่า)
     activePreset: '',         // '' | 'ad107' | 'impulse' | 'mallhot' | 'bigcomm'
     signalFilter: 'all',      // 'all' | 'win' | 'god' | 'pass' | 'warning' | 'danger'
-    minNetComm: 0,            // คอมสุทธิ/ชิ้น ต่ำสุด (฿)
-    maxNetComm: 0,            // คอมสุทธิ/ชิ้น สูงสุด (฿)
-    minBreakEven: 0,          // คุ้มแอด 107฿ ต่ำสุด (ชิ้น)
-    maxBreakEven: 0,          // คุ้มแอด 107฿ สูงสุด (ชิ้น)
+    minNetComm: 0,            // ค่าคอม/ชิ้น ต่ำสุด (฿)
+    maxNetComm: 0,            // ค่าคอม/ชิ้น สูงสุด (฿)
+    minBreakEven: 0,          // คุ้มแอด 100฿ ต่ำสุด (ชิ้น)
+    maxBreakEven: 0,          // คุ้มแอด 100฿ สูงสุด (ชิ้น)
     textFilter: '',           // ค้นชื่อสินค้า / ID (รองรับ -คำ เพื่อตัดคำออก)
     onlyMall: false,          // เฉพาะร้าน Shopee Mall
     onlyExtra: false,         // เฉพาะที่มี Extra (>0%)
@@ -1406,27 +1429,27 @@
     const extraComm = +((price * extraRate) / 100).toFixed(2);
     const extraCommMax = +((priceMax * extraRate) / 100).toFixed(2);
 
-    // คำนวณ DrBank Signal (งบแอดจริง 100฿ + VAT 7% = 107฿/วัน, หักภาษี ณ ที่จ่าย 3%, เพดาน Base 250฿)
+    // คำนวณ DrBank Signal (งบแอด 100฿/วัน, ไม่หักภาษี ตรงตาม AFF, เพดาน Base 250฿)
     const commMin = ns.calculateCommission({
       price,
       baseRate,
       extraRate,
       capTHB: 250,
-      whtRate: 3.0,
-      realDailyAdCostTHB: 107
+      whtRate: 0.0,
+      realDailyAdCostTHB: 100
     });
     const commMax = ns.calculateCommission({
       price: priceMax,
       baseRate,
       extraRate,
       capTHB: 250,
-      whtRate: 3.0,
-      realDailyAdCostTHB: 107
+      whtRate: 0.0,
+      realDailyAdCostTHB: 100
     });
 
     const productLink = raw?.product_link || (shopid && itemid ? `https://shopee.co.th/product/${shopid}/${itemid}` : '');
     const affUrl = itemid ? `https://affiliate.shopee.co.th/offer/product_offer/${itemid}` : '';
-    const breakEvenNum = commMin.netComm > 0 ? +(107 / commMin.netComm).toFixed(1) : 999;
+    const breakEvenNum = commMin.netComm > 0 ? +(100 / commMin.netComm).toFixed(1) : 999;
 
     const tierRankMap = { god: 4, pass: 3, warning: 2, danger: 1 };
     const tierRank = tierRankMap[commMin.tier] || 1;
@@ -1475,7 +1498,7 @@
     wrap.innerHTML = `
       <!-- Row 1: Unified Single-Line Command Cockpit (Clean Minimal 40px) -->
       <div class="drb-v1-controls">
-        <span class="drb-v1-badge-live" title="Shopee Affiliate V1 Realtime API + DrBank 107฿/Day Signal Radar">
+        <span class="drb-v1-badge-live" title="Shopee Affiliate V1 Realtime API + DrBank 100฿/Day Signal Radar">
           <span class="drb-v1-live-dot"></span>V1 RADAR
         </span>
 
@@ -1627,7 +1650,7 @@
           <div class="drb-v1-preset-group" id="drb-v1-preset-group">
             <span class="drb-v1-ctrl-label">Presets</span>
             <button type="button" class="drb-v1-preset-btn" data-preset="ad107" title="คอม ≥฿45 + คืนทุน 1–2 ชิ้น + มี Extra + ขาย ≥100/ด. + สต๊อก ≥50">
-              สูตรเทพ 107฿
+              สูตรเทพ 100฿
             </button>
             <button type="button" class="drb-v1-preset-btn" data-preset="impulse" title="ราคา ฿150–500 + Extra ≥8% + ขาย ≥50/ด. + สต๊อก ≥30">
               Impulse 150–500฿
@@ -1635,7 +1658,7 @@
             <button type="button" class="drb-v1-preset-btn" data-preset="mallhot" title="เฉพาะร้านทางการ Shopee Mall + มี Extra + ขาย ≥100/ด. + สต๊อก ≥50">
               Mall ขายดี
             </button>
-            <button type="button" class="drb-v1-preset-btn" data-preset="bigcomm" title="คอมสุทธิ ≥฿100/ชิ้น + ขาย ≥20/ด. + สต๊อก ≥20">
+            <button type="button" class="drb-v1-preset-btn" data-preset="bigcomm" title="ค่าคอม ≥฿100/ชิ้น + ขาย ≥20/ด. + สต๊อก ≥20">
               คอมโหด ≥฿100
             </button>
             <span class="drb-v1-custom-presets" id="drb-v1-custom-presets"></span>
@@ -1668,7 +1691,7 @@
 
         <div class="drb-adv-grid">
           <div class="drb-adv-field">
-            <label class="drb-adv-label" title="ค่าคอมมิชชั่นสุทธิต่อชิ้น (บาท) หลังหักภาษี ณ ที่จ่าย 3% แล้ว">Net Comm (฿)</label>
+            <label class="drb-adv-label" title="ค่าคอมมิชชั่นต่อชิ้น (บาท) ตรงตามหน้า AFF">Commission (฿)</label>
             <div class="drb-adv-minmax">
               <input type="number" id="drb-af-min-netcomm" class="drb-adv-num drb-v1-mono" placeholder="Min" min="0" step="5">
               <span class="drb-adv-sep">–</span>
@@ -1677,7 +1700,7 @@
           </div>
 
           <div class="drb-adv-field">
-            <label class="drb-adv-label drb-adv-label--tip" data-tip="Break-Even Point (จุดคุ้มทุนแอด 107฿/วัน) = ต้องขายกี่ชิ้นต่อวันถึงคืนทุนค่าแอด 100฿ + VAT 7% (คำนวณจาก 107 ÷ Net Comm) • ยิ่งตัวเลขน้อย ยิ่งคืนทุนไว (แนะนำ 1–2 ชิ้น)" title="Break-Even Point (จุดคุ้มทุนแอด 107฿/วัน) = ต้องขายกี่ชิ้นต่อวันถึงคืนทุนค่าแอด 100฿ + VAT 7% (คำนวณจาก 107 ÷ Net Comm) • ยิ่งตัวเลขน้อย ยิ่งคืนทุนไว">
+            <label class="drb-adv-label drb-adv-label--tip" data-tip="Break-Even Point (จุดคุ้มทุนแอด 100฿/วัน) = ต้องขายกี่ชิ้นต่อวันถึงคืนทุนค่าแอด 100฿ (คำนวณจาก 100 ÷ ค่าคอม) • ยิ่งตัวเลขน้อย ยิ่งคืนทุนไว (แนะนำ 1–2 ชิ้น)" title="Break-Even Point (จุดคุ้มทุนแอด 100฿/วัน) = ต้องขายกี่ชิ้นต่อวันถึงคืนทุนค่าแอด 100฿ (คำนวณจาก 100 ÷ ค่าคอม) • ยิ่งตัวเลขน้อย ยิ่งคืนทุนไว">
               BE Point (Units) <span class="drb-v1-help-icon">?</span>
             </label>
             <div class="drb-adv-minmax">
@@ -1751,8 +1774,8 @@
               <th style="width:34px; text-align:center;">#</th>
               <th style="width:38px; text-align:center;">IMG</th>
               <th class="drb-v1-sortable is-sorted" data-sort="signalScore" data-label="SIGNAL" style="width:132px;" title="คลิกเพื่อเรียงตามเกรดความน่าลุยแอด (GOD ➔ คุ้ม ➔ พอไหว ➔ ห้ามยิง)">SIGNAL ▼</th>
-              <th class="drb-v1-sortable" data-sort="netComm" data-label="NET COMM" style="width:130px; text-align:right;" title="คลิกเพื่อเรียงตามค่าคอมสุทธิต่อชิ้น หลังหักภาษี ณ ที่จ่าย 3%">NET COMM ⇅</th>
-              <th class="drb-v1-sortable drb-v1-th-tip" data-sort="breakEvenNum" data-label="BE POINT" style="width:112px; text-align:center;" data-tip="Break-Even Point = ต้องขายกี่ชิ้น/วัน ถึงจะคุ้มค่าแอด 107฿ (100฿ + VAT 7%) • ยิ่งน้อยยิ่งคืนทุนไว" title="Break-Even Point (จุดคุ้มทุนแอด 107฿/วัน) = ต้องขายกี่ชิ้นต่อวันถึงจะคุ้มค่าแอด 107฿ (คำนวณจาก 107 ÷ Net Comm)">BE POINT ⇅</th>
+              <th class="drb-v1-sortable" data-sort="netComm" data-label="COMM (฿)" style="width:130px; text-align:right;" title="คลิกเพื่อเรียงตามค่าคอมมิชชั่นต่อชิ้น (ตรงตามหน้า AFF)">COMM (฿) ⇅</th>
+              <th class="drb-v1-sortable drb-v1-th-tip" data-sort="breakEvenNum" data-label="BE POINT" style="width:112px; text-align:center;" data-tip="Break-Even Point = ต้องขายกี่ชิ้น/วัน ถึงจะคุ้มค่าแอด 100฿ • ยิ่งน้อยยิ่งคืนทุนไว" title="Break-Even Point (จุดคุ้มทุนแอด 100฿/วัน) = ต้องขายกี่ชิ้นต่อวันถึงจะคุ้มค่าแอด 100฿ (คำนวณจาก 100 ÷ ค่าคอม)">BE POINT ⇅</th>
               <th class="drb-v1-sortable" data-sort="name" data-label="PRODUCT / SHOP" title="คลิกเพื่อเรียงตามชื่อสินค้า ก-ฮ / A-Z">PRODUCT / SHOP ⇅</th>
               <th class="drb-v1-sortable" data-sort="price" data-label="PRICE" style="width:112px; text-align:right;" title="คลิกเพื่อเรียงตามราคาขายจริง">PRICE ⇅</th>
               <th class="drb-v1-sortable" data-sort="sold" data-label="SOLD / MO" style="width:94px; text-align:right;" title="คลิกเพื่อเรียงตามยอดขายต่อเดือน (ชิ้น)">SOLD / MO ⇅</th>
@@ -1760,13 +1783,13 @@
               <th class="drb-v1-sortable" data-sort="extraRate" data-label="EXTRA %" style="width:82px; text-align:right;" title="คลิกเพื่อเรียงตามเปอร์เซ็นต์ค่าคอมพิเศษ Extra %">EXTRA % ⇅</th>
               <th class="drb-v1-sortable" data-sort="extraComm" data-label="EXTRA ฿" style="width:96px; text-align:right;" title="คลิกเพื่อเรียงตามจำนวนเงินค่าคอมพิเศษ Extra (฿)">EXTRA ฿ ⇅</th>
               <th class="drb-v1-sortable" data-sort="stock" data-label="STOCK" style="width:78px; text-align:right;" title="คลิกเพื่อเรียงตามจำนวนสต๊อกคงเหลือ">STOCK ⇅</th>
-              <th style="width:118px; text-align:center;">ACTION</th>
+              <th style="width:146px; text-align:center;">ACTION</th>
             </tr>
           </thead>
           <tbody id="drb-v1-tbody">
             <tr>
               <td colspan="13" class="drb-v1-empty">
-                พิมพ์คำค้นหาด้านบนแล้วกด <strong>[ค้นหา]</strong> หรือเลือกหมวดหมู่แล้วกดปุ่มสีน้ำเงิน <strong class="drb-v1-empty-cta-blue">[⚡ ดึงหมวดนี้]</strong> เพื่อสแกนข้อมูล Realtime พร้อมคำนวณจุดคุ้มทุนแอด 107฿
+                พิมพ์คำค้นหาด้านบนแล้วกด <strong>[ค้นหา]</strong> หรือเลือกหมวดหมู่แล้วกดปุ่มสีน้ำเงิน <strong class="drb-v1-empty-cta-blue">[⚡ ดึงหมวดนี้]</strong> เพื่อสแกนข้อมูล Realtime พร้อมคำนวณจุดคุ้มทุนแอด 100฿
               </td>
             </tr>
           </tbody>
@@ -2586,7 +2609,7 @@
                 ? 'กำลังดึงข้อมูลจาก Shopee API...'
                 : v1State.rows.length > 0
                 ? 'ไม่พบสินค้าที่ตรงกับตัวกรองที่เลือก — กด [↺ ล้างกรอง] เพื่อดูรายการทั้งหมด'
-                : 'พิมพ์คำค้นหาด้านบนแล้วกด <strong>[ค้นหา]</strong> หรือเลือกหมวดหมู่แล้วกดปุ่มสีน้ำเงิน <strong class="drb-v1-empty-cta-blue">[⚡ ดึงหมวดนี้]</strong> เพื่อสแกนข้อมูล Realtime พร้อมคำนวณจุดคุ้มทุนแอด 107฿'
+                : 'พิมพ์คำค้นหาด้านบนแล้วกด <strong>[ค้นหา]</strong> หรือเลือกหมวดหมู่แล้วกดปุ่มสีน้ำเงิน <strong class="drb-v1-empty-cta-blue">[⚡ ดึงหมวดนี้]</strong> เพื่อสแกนข้อมูล Realtime พร้อมคำนวณจุดคุ้มทุนแอด 100฿'
             }
           </td>
         </tr>
@@ -2637,11 +2660,11 @@
                 ${compactSig}
               </span>
             </td>
-            <td class="drb-v1-td-right drb-v1-nowrap" title="รวม ${r.effectiveRate}% (Base ${r.baseRate}% + Extra ${r.extraRate}%) หักภาษี ณ ที่จ่าย 3% แล้ว">
+            <td class="drb-v1-td-right drb-v1-nowrap" title="รวม ${r.effectiveRate}% (Base ${r.baseRate}% + Extra ${r.extraRate}%) ตรงตามหน้า AFF">
               <span class="drb-v1-netcomm drb-v1-mono" data-tier="${r.tier}">${netCommLabel}</span>
               <span class="drb-v1-rate-chip drb-v1-mono">${r.effectiveRate}%</span>
             </td>
-            <td class="drb-v1-td-center drb-v1-nowrap" title="ต้องขาย ${r.breakEvenUnits} ชิ้น (${r.breakEvenOrders} ออเดอร์) เพื่อคืนทุนค่าแอด 107฿/วัน">
+            <td class="drb-v1-td-center drb-v1-nowrap" title="ต้องขาย ${r.breakEvenUnits} ชิ้น (${r.breakEvenOrders} ออเดอร์) เพื่อคืนทุนค่าแอด 100฿/วัน">
               <span class="drb-v1-breakeven drb-v1-mono" data-tier="${r.tier}">${r.breakEvenUnits} ชิ้น</span>
               <span class="drb-v1-inline-sub drb-v1-mono">(${r.breakEvenOrders} ออเดอร์)</span>
             </td>
@@ -2664,6 +2687,9 @@
             <td class="drb-v1-td-right drb-v1-nowrap drb-v1-mono">${extraCommLabel}</td>
             <td class="drb-v1-td-right drb-v1-nowrap drb-v1-mono ${r.stock < 20 ? 'drb-v1-low-stock' : 'drb-v1-muted'}">${r.stock.toLocaleString()}</td>
             <td class="drb-v1-td-actions">
+              <button type="button" class="drb-v1-act-btn drb-v1-act-btn--recheck" data-recheck-idx="${idx}" title="ดึงเรทจริง Social Media ใหม่เฉพาะแถวนี้">
+                🔄
+              </button>
               <button type="button" class="drb-v1-act-btn drb-v1-act-btn--pick" data-idx="${idx}" title="ดึงเข้า Side Panel & ส่งไปเว็บ aff.doctorbankonline.com">
                 เลือก
               </button>
@@ -2677,6 +2703,15 @@
       .join('');
 
     // Bind row action buttons
+    tbody.querySelectorAll('.drb-v1-act-btn--recheck').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.getAttribute('data-recheck-idx'), 10);
+        const r = rows[idx];
+        if (!r) return;
+        await recheckV1RowRealRate(r, btn);
+      });
+    });
+
     tbody.querySelectorAll('.drb-v1-act-btn--pick').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const idx = parseInt(btn.getAttribute('data-idx'), 10);
@@ -2726,6 +2761,99 @@
     });
   }
 
+  function applyVerifiedOfferToV1Row(r, verifiedOffer) {
+    if (!r || !verifiedOffer) return false;
+    const resolvedPrice = Number(verifiedOffer.offerPrice || verifiedOffer.price) > 0
+      ? Number(verifiedOffer.offerPrice || verifiedOffer.price)
+      : r.price;
+    r.price = resolvedPrice;
+    if (r.priceMax < resolvedPrice) r.priceMax = resolvedPrice;
+    r.extraRate = Number(verifiedOffer.extraRate) || 0;
+    r.baseRate = Number(verifiedOffer.baseRate) || 0;
+    const commRecalc = ns.calculateCommission({
+      price: r.price,
+      baseRate: r.baseRate,
+      extraRate: r.extraRate,
+      capTHB: 250,
+      whtRate: 0.0,
+      realDailyAdCostTHB: 100
+    });
+    const commMaxRecalc = ns.calculateCommission({
+      price: r.priceMax || r.price,
+      baseRate: r.baseRate,
+      extraRate: r.extraRate,
+      capTHB: 250,
+      whtRate: 0.0,
+      realDailyAdCostTHB: 100
+    });
+    const tierRankMap = { god: 4, pass: 3, warning: 2, danger: 1 };
+    r.extraComm = +commRecalc.extraComm.toFixed(2);
+    r.extraCommMax = +commMaxRecalc.extraComm.toFixed(2);
+    r.grossComm = +commRecalc.grossComm.toFixed(2);
+    r.netComm = +commRecalc.netComm.toFixed(2);
+    r.netCommMax = +commMaxRecalc.netComm.toFixed(2);
+    r.effectiveRate = +commRecalc.effectiveRate.toFixed(1);
+    r.tier = commRecalc.tier;
+    r.tierRank = tierRankMap[commRecalc.tier] || 1;
+    r.signalScore = +(r.tierRank * 100000 + r.netComm).toFixed(2);
+    r.tierEmoji = commRecalc.tierEmoji;
+    r.tierLabel = commRecalc.tierLabel;
+    r.breakEvenUnits = commRecalc.breakEvenUnits;
+    r.breakEvenOrders = commRecalc.breakEvenOrders;
+    r.breakEvenNum = r.netComm > 0 ? +(100 / r.netComm).toFixed(1) : 999;
+    r.realRateVerified = true;
+    return true;
+  }
+
+  async function recheckV1RowRealRate(r, btnEl) {
+    if (!r || !r.itemid) return;
+    const origTxt = btnEl ? btnEl.textContent : '🔄';
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.textContent = '⏳';
+    }
+    try {
+      const bgRes = await ns
+        .sendMessage('GET_REAL_AFF_OFFER', {
+          itemId: r.itemid,
+          shopId: r.shopid || '',
+          titleHint: r.name || '',
+          forceRefresh: true
+        })
+        .catch(() => null);
+      if (bgRes?.securityCheck) {
+        throw new Error(bgRes.error || 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาผ่านด่านตรวจก่อน');
+      }
+      let verifiedOffer = bgRes?.ok && bgRes?.data ? bgRes.data : null;
+      if (!verifiedOffer || (!verifiedOffer.realRateVerified && Number(verifiedOffer.extraRate) <= 0)) {
+        const directOffer = await fetchSingleOfferDetailViaMainBridge(r.itemid, r.name || '', r.shopid || '');
+        if (directOffer?.securityCheck) {
+          throw new Error(directOffer.error || 'Shopee ขอตรวจสอบความปลอดภัย');
+        }
+        if (directOffer && (directOffer.realRateVerified || Number(directOffer.extraRate) > 0 || Number(directOffer.baseRate) > 0)) {
+          verifiedOffer = directOffer;
+        }
+      }
+      if (verifiedOffer && (verifiedOffer.realRateVerified || Number(verifiedOffer.extraRate) > 0 || Number(verifiedOffer.baseRate) > 0)) {
+        applyVerifiedOfferToV1Row(r, verifiedOffer);
+        chrome.storage.local
+          .set({ [V1_STORAGE_KEY]: { savedAt: Date.now(), rows: v1State.rows } })
+          .catch(() => {});
+        renderV1TableRows();
+        ns.showToast(`✅ อัปเดตเรทจริง: Extra ${r.extraRate}% + Base ${r.baseRate}% = ${ns.formatTHB(r.netComm)}`);
+      } else {
+        ns.showToast(`⚠️ ยังดึง Extra % ของ ID ${r.itemid} ไม่สำเร็จ (ลองเปิดหน้า AFF ↗ เช็กตาราง)`, 'error');
+      }
+    } catch (err) {
+      ns.showToast(`❌ ${err?.message || String(err)}`, 'error');
+    } finally {
+      if (btnEl && document.body.contains(btnEl)) {
+        btnEl.disabled = false;
+        btnEl.textContent = origTxt;
+      }
+    }
+  }
+
   async function pickV1RowToSidePanelAndWebUI(r, btnEl) {
     const seqNum = Math.max(1, (v1State.rows.indexOf(r) + 1) || 1);
     const seqPad = String(seqNum).padStart(3, '0');
@@ -2735,28 +2863,9 @@
     // Verify true Social Media commission rate from commission_rate_detail when available
     try {
       if (btnEl) btnEl.textContent = '⏳เช็กเรท..';
-      const verifiedOffer = await fetchSingleOfferDetailViaMainBridge(r.itemid);
+      const verifiedOffer = await fetchSingleOfferDetailViaMainBridge(r.itemid, r.name || '', r.shopid || '');
       if (verifiedOffer && !verifiedOffer.securityCheck && verifiedOffer.realRateVerified) {
-        r.extraRate = verifiedOffer.extraRate;
-        r.baseRate = verifiedOffer.baseRate;
-        const commRecalc = ns.calculateCommission({
-          price: r.price,
-          baseRate: r.baseRate,
-          extraRate: r.extraRate,
-          capTHB: 250,
-          whtRate: 3.0,
-          realDailyAdCostTHB: 107
-        });
-        r.extraComm = +commRecalc.extraComm.toFixed(2);
-        r.grossComm = +commRecalc.grossComm.toFixed(2);
-        r.netComm = +commRecalc.netComm.toFixed(2);
-        r.effectiveRate = +commRecalc.effectiveRate.toFixed(1);
-        r.tier = commRecalc.tier;
-        r.tierEmoji = commRecalc.tierEmoji;
-        r.tierLabel = commRecalc.tierLabel;
-        r.breakEvenUnits = commRecalc.breakEvenUnits;
-        r.breakEvenOrders = commRecalc.breakEvenOrders;
-        r.realRateVerified = true;
+        applyVerifiedOfferToV1Row(r, verifiedOffer);
       }
     } catch (_err) {}
 
@@ -2781,8 +2890,8 @@
       `• ราคาขายจริง: ฿${r.price.toLocaleString()}${r.priceMax > r.price ? ` - ฿${r.priceMax.toLocaleString()}` : ''}\n` +
       `• ยอดขาย/เดือนจริง: ${r.sold.toLocaleString()} ชิ้น/เดือน (สะสม ${r.historical_sold.toLocaleString()} ชิ้น)\n` +
       `• สต๊อกคงเหลือจริง: ${r.stock.toLocaleString()} ชิ้น\n` +
-      `• เรทค่าคอม: Extra ${r.extraRate}% + Base ${r.baseRate}% = สุทธิ ฿${r.netComm.toFixed(2)}/ชิ้น\n` +
-      `• จุดคุ้มทุนแอด 107฿/วัน: ขาย ${r.breakEvenUnits} ชิ้น (${r.breakEvenOrders} ออเดอร์) [${r.tierLabel}]\n` +
+      `• เรทค่าคอม: Extra ${r.extraRate}% + Base ${r.baseRate}% = ฿${r.netComm.toFixed(2)}/ชิ้น\n` +
+      `• จุดคุ้มทุนแอด 100฿/วัน: ขาย ${r.breakEvenUnits} ชิ้น (${r.breakEvenOrders} ออเดอร์) [${r.tierLabel}]\n` +
       (shortLink ? `• ลิงก์แคมเปญ (16NOV26FBRAD / ${autoSub2}): ${shortLink}` : '');
 
     const payload = {
@@ -2797,7 +2906,7 @@
       extraCommTHB: r.extraComm,
       grossCommTHB: r.grossComm,
       capTHB: 250,
-      whtRate: 3.0,
+      whtRate: 0.0,
       shopId: r.shopid,
       itemId: r.itemid,
       cleanUrl: r.productLink,
@@ -2828,7 +2937,7 @@
         baseRate: r.baseRate,
         extraRate: r.extraRate,
         estimatedCommission: r.netComm,
-        realDailyAdCostTHB: 107,
+        realDailyAdCostTHB: 100,
         breakEvenUnits: r.breakEvenUnits,
         breakEvenOrders: r.breakEvenOrders,
         adViabilityTier: r.tier,
@@ -2978,9 +3087,9 @@
 
     const headers = [
       'ลำดับ',
-      'Signal (แอด 107฿)',
-      'คอมสุทธิ/ชิ้น (฿)',
-      'จุดคุ้มทุนแอด 107฿ (ชิ้น)',
+      'Signal (แอด 100฿)',
+      'ค่าคอม/ชิ้น (฿)',
+      'จุดคุ้มทุนแอด 100฿ (ชิ้น)',
       'สินค้า',
       'ราคาเริ่มต้น (฿)',
       'ราคาสูงสุด (฿)',
@@ -3182,9 +3291,9 @@
 
     const headers = [
       'ลำดับ',
-      'Signal (แอด 107฿)',
-      'คอมสุทธิ/ชิ้น (฿)',
-      'จุดคุ้มทุนแอด 107฿ (ชิ้น)',
+      'Signal (แอด 100฿)',
+      'ค่าคอม/ชิ้น (฿)',
+      'จุดคุ้มทุนแอด 100฿ (ชิ้น)',
       'สินค้า',
       'ราคาเริ่มต้น (฿)',
       'ราคาสูงสุด (฿)',
@@ -3449,8 +3558,8 @@
             baseRate,
             extraRate,
             capTHB: 250,
-            whtRate: 3.0,
-            realDailyAdCostTHB: 107
+            whtRate: 0.0,
+            realDailyAdCostTHB: 100
           });
           const netComm = +comm.netComm.toFixed(2);
           const soldCount = Number(offer.soldCount) || Number(it.sold_monthly) || 0;

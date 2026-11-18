@@ -3,7 +3,7 @@
  * Features:
  *  - High-Contrast 3 Checklist Badges (Single-Line Locked: Sold | Extra Comm | Rating & Origin)
  *  - Collapsible 5-Line Product Spec & Description Box with Scrollbar + Expand/Fold buttons
- *  - Vivid 4-Tier Traffic-Light Net Commission Card & Solid Break-Even Banner (100฿ + VAT 7% = 107฿)
+ *  - Vivid 4-Tier Traffic-Light Commission Card & Solid Break-Even Banner (100฿/Day, Direct AFF Match)
  *  - One-Click Hero Button: Push Full SKU + HD Photos + Spec to Web UI Command Center
  */
 
@@ -21,8 +21,8 @@
     baseRate: 3.5,
     extraRate: 10.0,
     capTHB: 250,
-    whtRate: 3.0,
-    realDailyAdCostTHB: 107,
+    whtRate: 0.0,
+    realDailyAdCostTHB: 100,
     soldCount: 0,
     soldText: '',
     rating: 4.9,
@@ -91,7 +91,8 @@
       currentState.baseRate = Number(s.shopeeBaseRate) || 3.5;
       currentState.extraRate = Number(s.shopeeExtraRate) ?? 10.0;
       currentState.capTHB = Number(s.shopeeCapTHB) || 250;
-      currentState.whtRate = Number(s.withholdingTaxRate) || 3.0;
+      currentState.whtRate = 0.0;
+      currentState.realDailyAdCostTHB = 100;
       currentState.theme = s.theme || 'light';
       currentState.displayMode = s.displayMode || 'sidepanel';
       // Default OFF on Shopee listing pages for safety & zero background DOM/CPU overhead
@@ -590,8 +591,8 @@
         baseRate: catEst.baseRate,
         extraRate: catEst.extraRate,
         capTHB: 250,
-        whtRate: 3.0,
-        realDailyAdCostTHB: 107
+        whtRate: 0.0,
+        realDailyAdCostTHB: 100
       });
 
       cardEl.setAttribute('data-drb-est-net', String(+estComm.netComm.toFixed(2)));
@@ -611,8 +612,8 @@
             baseRate: activeBaseRate,
             extraRate: activeExtraRate,
             capTHB: 250,
-            whtRate: 3.0,
-            realDailyAdCostTHB: 107
+            whtRate: 0.0,
+            realDailyAdCostTHB: 100
           })
         : estComm;
 
@@ -625,7 +626,7 @@
       // 6. Determine Card Tier (If real rate has 0% Extra, force danger per Exther rule)
       let cardTier = 'danger';
       let pillEmoji = '⛔';
-      let tierTitle = '⛔ ไฟแดง! ไม่คุ้มแอด 107฿';
+      let tierTitle = '⛔ ไฟแดง! ไม่คุ้มแอด 100฿';
 
       if (realOffer && activeExtraRate <= 0) {
         cardTier = 'danger';
@@ -733,14 +734,14 @@
             `• ราคาขายจริง: ฿${price.toLocaleString()}\n` +
             `• EXTRACOMM (Social Media): ${activeExtraRate}% (฿${comm.extraComm.toFixed(2)})\n` +
             `• ช้อปปี้ (Base Social): ${activeBaseRate}% (฿${comm.baseComm.toFixed(2)})\n` +
-            `• คอมสุทธิจริง: ฿${comm.netComm.toFixed(2)} / ชิ้น\n` +
-            `• จุดคุ้มทุนแอด 107฿: ${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)`
+            `• ค่าคอมจริง (ตรง AFF): ฿${comm.netComm.toFixed(2)} / ชิ้น\n` +
+            `• จุดคุ้มทุนแอด 100฿: ${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)`
           : `[ประเมินจากหน้าค้นหา Shopee — ${catEst.catLabel}]\n` +
             `• สินค้า: ${title}\n` +
             `• ราคาขายจริง: ฿${price.toLocaleString()}\n` +
             `• หมวดหมู่ประเมิน: ${catEst.catLabel} (Base ${catEst.baseRate}% + Extra ${catEst.extraRate}% = ~${catEst.totalRate}%)\n` +
-            `• คอมสุทธิประเมิน: ~฿${comm.netComm.toFixed(2)} / ชิ้น\n` +
-            `• จุดคุ้มทุนแอด 107฿: ~${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)\n` +
+            `• ค่าคอมประเมิน: ~฿${comm.netComm.toFixed(2)} / ชิ้น\n` +
+            `• จุดคุ้มทุนแอด 100฿: ~${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)\n` +
             `• ยอดขายจริงบนการ์ด: ${soldText} ชิ้น (${isOverseas ? 'ส่งจากต่างประเทศ' : 'ส่งในไทย'})`
       };
 
@@ -761,7 +762,7 @@
           <strong style="color:#4ade80;">Extra ${activeExtraRate}% + Base ${activeBaseRate}%</strong>
         </div>
         <div class="drb-aff-tt-row">
-          <span>💰 คอมสุทธิจริง:</span>
+          <span>💰 ค่าคอมจริง:</span>
           <strong>${ns.formatTHB(comm.netComm)} / ชิ้น</strong>
         </div>
         ${
@@ -780,7 +781,7 @@
         </div>`
         }
         <div class="drb-aff-tt-row">
-          <span>🎯 คุ้มแอด 107฿:</span>
+          <span>🎯 คุ้มแอด 100฿:</span>
           <strong>${realOffer ? '' : '~'}${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)</strong>
         </div>
         <div class="drb-aff-tt-row">
@@ -894,7 +895,7 @@
               baseRate: ctx.cardProductPayload?.baseRate,
               extraRate: ctx.cardProductPayload?.extraRate,
               estimatedCommission: Number((ctx.comm?.netComm || 0).toFixed(2)),
-              realDailyAdCostTHB: 107,
+              realDailyAdCostTHB: 100,
               breakEvenUnits: ctx.comm?.breakEvenUnits,
               breakEvenOrders: ctx.comm?.breakEvenOrders,
               adViabilityTier: ctx.comm?.tier,
@@ -1442,9 +1443,9 @@
       </div>
 
       <div class="drb-aff-body">
-        <!-- 1. แถบป้ายไฟจราจรสีสดทึบบนสุด: จุดคุ้มทุนแอด 100฿ (+VAT 7% = 107฿) สแกน 0.5 วิ รู้ทันที! -->
+        <!-- 1. แถบป้ายไฟจราจรสีสดทึบบนสุด: จุดคุ้มทุนแอด 100฿ สแกน 0.5 วิ รู้ทันที! -->
         <div class="drb-aff-breakeven-box" id="drb-breakeven-box" data-tier="warning">
-          <span id="drb-breakeven-text">⚠️ [ไฟเหลือง] แอด 107฿ ต้องขายตรงปก: 0.0 ชิ้น ถึงคุ้มทุน</span>
+          <span id="drb-breakeven-text">⚠️ [ไฟเหลือง] แอด 100฿ ต้องขายตรงปก: 0.0 ชิ้น ถึงคุ้มทุน</span>
         </div>
 
         <!-- 2. ชื่อสินค้า -->
@@ -1457,7 +1458,7 @@
           <span class="drb-aff-check-pill drb-aff-check-pill--green" id="drb-badge-rating">🟢⭐ 4.9 (ส่งไทย)</span>
         </div>
 
-        <!-- 4. ไฟจราจร 4 สีของการ์ดค่าคอมสุทธิ (High-Contrast Left Accent + Solid Badge) -->
+        <!-- 4. ไฟจราจร 4 สีของการ์ดค่าคอม (High-Contrast Left Accent + Solid Badge) -->
         <div class="drb-aff-kpi-grid">
           <div class="drb-aff-kpi-card">
             <div class="drb-aff-kpi-label">ราคาขายจริง (THB)</div>
@@ -1465,10 +1466,10 @@
             <div class="drb-aff-kpi-sub" id="drb-hud-ids">Shop: - | Item: -</div>
           </div>
           <div class="drb-aff-kpi-card" id="drb-comm-card" data-tier="warning">
-            <div class="drb-aff-kpi-label">ค่าคอมสุทธิ / ชิ้น</div>
+            <div class="drb-aff-kpi-label">ค่าคอม / ชิ้น (ตรง AFF)</div>
             <div class="drb-aff-kpi-val" id="drb-hud-net-comm">⚠️ ฿0.00</div>
             <div class="drb-aff-tier-badge" id="drb-hud-tier-badge">⚠️ คำนวณความคุ้มแอด...</div>
-            <div class="drb-aff-kpi-sub" id="drb-hud-eff-rate">รวมเรท 0.0% (หักภาษี 3%)</div>
+            <div class="drb-aff-kpi-sub" id="drb-hud-eff-rate">รวมเรท 0.0% (ตรงตามหน้า AFF)</div>
           </div>
         </div>
 
@@ -1523,7 +1524,7 @@
               <td id="drb-tbl-breakdown">฿0.00 + ฿0.00</td>
             </tr>
             <tr>
-              <td>จุดคุ้มทุนแอด 107฿ (ต้องขายตรงปก):</td>
+              <td>จุดคุ้มทุนแอด 100฿ (ต้องขายตรงปก):</td>
               <td id="drb-tbl-100" style="color:var(--drb-accent);font-weight:700;">0 ชิ้น/วัน</td>
             </tr>
           </tbody>
@@ -1634,7 +1635,7 @@
         baseRate: currentState.baseRate,
         extraRate: currentState.extraRate,
         estimatedCommission: Number(comm.netComm.toFixed(2)),
-        realDailyAdCostTHB: 107,
+        realDailyAdCostTHB: 100,
         breakEvenUnits: comm.breakEvenUnits,
         breakEvenOrders: comm.breakEvenOrders,
         viabilityTier: comm.tier,

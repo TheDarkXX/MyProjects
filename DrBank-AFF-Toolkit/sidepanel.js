@@ -532,7 +532,7 @@ async function scrapeShopeeTab(tabId, showToastOnDone, forceRefresh = false) {
             title: rawTitle,
             price: shopeeProduct?.price || Number(document.getElementById('drb-sp-inp-price')?.value) || 0,
             capTHB: 250,
-            whtRate: 3.0,
+            whtRate: 0.0,
             baseRate: catEst.baseRate,
             extraRate: catEst.extraRate,
             categoryLabel: catEst.catLabel,
@@ -731,8 +731,8 @@ function renderHero(prefix, prod, comm, animateFlash = false) {
   setText(`drb-${prefix}-net-comm`, ns.formatTHB(comm.netComm));
   if (animateFlash) flashElement(`drb-${prefix}-net-comm`);
 
-  const whtText = comm.isCapped ? 'ก่อนภาษี (Base ติด Cap 250฿)' : 'ก่อนภาษี';
-  setText(`drb-${prefix}-gross-sub`, `${whtText} ${ns.formatTHB(comm.grossComm)} · หัก 3%`);
+  const capText = comm.isCapped ? ' · Base ติด Cap 250฿' : '';
+  setText(`drb-${prefix}-gross-sub`, `Extra ${ns.formatTHB(comm.extraComm)} + Base ${ns.formatTHB(comm.baseComm)}${capText}`);
 
   const baseR = Number(prod.baseRate) || 0;
   const extraR = Number(prod.extraRate) || 0;
@@ -778,7 +778,7 @@ function renderHero(prefix, prod, comm, animateFlash = false) {
 
   setText(
     `drb-${prefix}-breakeven-text`,
-    `ทุนแอด 107฿: คืนทุนที่ ${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)`
+    `ทุนแอด 100฿: คืนทุนที่ ${comm.breakEvenUnits} ชิ้น (${comm.breakEvenOrders} ออเดอร์)`
   );
 }
 
@@ -1064,7 +1064,7 @@ async function pushProductToWebUI(prod, label) {
     baseRate: prod.baseRate,
     extraRate: prod.extraRate,
     estimatedCommission: Number(comm.netComm.toFixed(2)),
-    realDailyAdCostTHB: 107,
+    realDailyAdCostTHB: 100,
     breakEvenUnits: comm.breakEvenUnits,
     breakEvenOrders: comm.breakEvenOrders,
     adViabilityTier: comm.tier,
@@ -1102,6 +1102,9 @@ function openWebUI() {
 // ============================================================================
 const spyTabMetaByUrl = new Map();
 let spyCollectRunning = false;
+let spyBatchRetryRunning = false;
+let lastSpyEnrichedItems = [];
+const spyRerunningIndices = new Set();
 
 function normalizeReelKey(rawUrl) {
   const s = String(rawUrl || '').trim();
@@ -1156,6 +1159,7 @@ function bindSpyCollector() {
   const grabBtn = document.getElementById('drb-spy-btn-grab-tab');
   const clearBtn = document.getElementById('drb-spy-btn-clear');
   const collectBtn = document.getElementById('drb-spy-btn-collect');
+  const retryFailedBtn = document.getElementById('drb-spy-btn-retry-failed');
 
   inp?.addEventListener('input', () => {
     syncSpyCountBadge();
@@ -1177,6 +1181,10 @@ function bindSpyCollector() {
 
   collectBtn?.addEventListener('click', () => {
     runSpyReelCollector();
+  });
+
+  retryFailedBtn?.addEventListener('click', () => {
+    rerunFailedSpyRows();
   });
 }
 
@@ -1246,8 +1254,264 @@ async function grabActiveFacebookReelTab(showToast = true) {
   }
 }
 
+async function resolveSpyRowItemAndRate(row, forceRefresh = true) {
+  if (!row) return { ok: false, securityCheck: false, error: 'ไม่พบข้อมูลแถวสินค้า' };
+
+  if (!row.item_id && row.competitor_short_url) {
+    const resolved = await ns
+      .sendMessage('RESOLVE_SHOPEE_SHORT_URL', { shortUrl: row.competitor_short_url })
+      .catch(() => null);
+    if (resolved?.item_id) {
+      row.item_id = String(resolved.item_id).replace(/[^0-9]/g, '');
+      if (resolved.shop_id) row.shop_id = String(resolved.shop_id).replace(/[^0-9]/g, '');
+      if (resolved.clean_product_url) row.clean_product_url = resolved.clean_product_url;
+      if (resolved.aff_offer_url) row.aff_offer_url = resolved.aff_offer_url;
+    }
+  }
+
+  const cleanItemId = String(row.item_id || '').replace(/[^0-9]/g, '');
+  if (!cleanItemId) {
+    row.rateChecked = true;
+    row.rateError = row.competitor_short_url
+      ? `พบลิงก์ตะกร้า (${row.competitor_short_url}) แต่แกะรหัสสินค้าไม่ได้`
+      : 'ไม่พบป้ายตะกร้า Shopee ในคลิปนี้';
+    return { ok: false, securityCheck: false, error: row.rateError };
+  }
+
+  try {
+    const offerRes = await ns.sendMessage('GET_REAL_AFF_OFFER', {
+      itemId: cleanItemId,
+      shopId: row.shop_id || '',
+      titleHint: row.product_tag_title || '',
+      forceRefresh: Boolean(forceRefresh)
+    });
+    if (offerRes?.securityCheck) {
+      row.rateChecked = true;
+      row.rateError =
+        offerRes.error || 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิด affiliate.shopee.co.th ผ่านด่านตรวจก่อน';
+      return { ok: false, securityCheck: true, error: row.rateError };
+    }
+    if (offerRes?.ok && offerRes.data) {
+      const d = offerRes.data;
+      const resolvedPrice = Number(d.offerPrice || d.price) > 0 ? Number(d.offerPrice || d.price) : row.price;
+      const baseRate = Number(d.baseRate) || 0;
+      const extraRate = Number(d.extraRate) || 0;
+      const comm = ns.calculateCommission({
+        price: resolvedPrice,
+        baseRate,
+        extraRate,
+        capTHB: 250,
+        whtRate: 0.0,
+        realDailyAdCostTHB: 100
+      });
+
+      row.product_tag_title = d.title || row.product_tag_title || row.sku_code;
+      if (d.shopId && !row.shop_id) row.shop_id = String(d.shopId);
+      row.price = resolvedPrice;
+      row.baseRate = baseRate;
+      row.extraRate = extraRate;
+      row.netComm = +comm.netComm.toFixed(2);
+      row.soldCount = Number(d.soldCount) || row.soldCount || 0;
+      if (!row.clean_product_url && (d.cleanUrl || (row.shop_id && cleanItemId))) {
+        row.clean_product_url = d.cleanUrl || `https://shopee.co.th/product/${row.shop_id}/${cleanItemId}`;
+      }
+      row.rateChecked = true;
+      row.rateError = '';
+      return { ok: true, securityCheck: false };
+    }
+    row.rateChecked = true;
+    row.rateError = offerRes?.error || 'ดึงเรทไม่สำเร็จ';
+    return { ok: false, securityCheck: false, error: row.rateError };
+  } catch (offerErr) {
+    row.rateChecked = true;
+    row.rateError = offerErr?.message || String(offerErr);
+    return { ok: false, securityCheck: false, error: row.rateError };
+  }
+}
+
+function buildSpyLinkPayloadForSave(r) {
+  return {
+    sub_id1: '16NOV26FBRAD',
+    sub_id2: r.spy_sub_id2,
+    sku_code: r.sku_code || '',
+    item_id: String(r.item_id || ''),
+    title: r.product_tag_title || '',
+    short_link: r.shortLink || '',
+    long_link: r.longLink || r.clean_product_url || '',
+    price: Number(r.price) || 0,
+    baseRate: Number(r.baseRate) || 0,
+    extraRate: Number(r.extraRate) || 0,
+    base_comm_pct: Number(r.baseRate) || 0,
+    extra_comm_pct: Number(r.extraRate) || 0,
+    estimatedCommission: Number(r.netComm) || 0,
+    net_comm_baht: Number(r.netComm) || 0,
+    soldCount: Number(r.soldCount) || 0,
+    sold_monthly: Number(r.soldCount) || 0
+  };
+}
+
+async function ensureSpyRowsShortLinksAndSave(targetRows = []) {
+  const needLinkRows = targetRows.filter((r) => {
+    const prodUrl =
+      r.clean_product_url ||
+      (r.shop_id && r.item_id ? `https://shopee.co.th/product/${r.shop_id}/${r.item_id}` : '');
+    return Boolean(prodUrl) && !r.shortLink;
+  });
+
+  if (needLinkRows.length > 0) {
+    const batchPayload = needLinkRows.map((r) => ({
+      shopee_url: r.clean_product_url || `https://shopee.co.th/product/${r.shop_id}/${r.item_id}`,
+      sub_id1: '16NOV26FBRAD',
+      sub_id2: r.spy_sub_id2 || '',
+      sub_id3: '20261116',
+      sub_id4: r.sku_code || '',
+      sub_id5: `P01SPY${String(r.spy_seq || 1).padStart(3, '0')}`,
+      sku_code: r.sku_code || '',
+      item_id: String(r.item_id || ''),
+      title: r.product_tag_title || ''
+    }));
+
+    const batchRes = await ns.sendMessage('BATCH_GENERATE_AFF_SHORTLINKS', { items: batchPayload }).catch(() => null);
+    const genItems = Array.isArray(batchRes?.items) ? batchRes.items : [];
+    const linkBySub2 = new Map();
+    genItems.forEach((g) => {
+      if (g.sub_id2 && g.short_link) {
+        linkBySub2.set(g.sub_id2, g);
+      }
+    });
+
+    for (const r of needLinkRows) {
+      const hit = linkBySub2.get(r.spy_sub_id2);
+      if (hit?.short_link) {
+        r.shortLink = hit.short_link;
+        r.longLink = hit.long_link || r.clean_product_url || '';
+      }
+    }
+  }
+
+  const linksToSave = targetRows
+    .filter((r) => r.spy_sub_id2 && (r.shortLink || r.netComm > 0 || r.price > 0))
+    .map(buildSpyLinkPayloadForSave);
+
+  if (linksToSave.length > 0) {
+    await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: linksToSave });
+  }
+}
+
+async function rerunSingleSpyRow(idx) {
+  if (spyCollectRunning || spyBatchRetryRunning || spyRerunningIndices.has(idx)) {
+    ns.showToast('⏳ กำลังดึงข้อมูลอยู่...');
+    return;
+  }
+  const row = lastSpyEnrichedItems[idx];
+  if (!row) return;
+
+  spyRerunningIndices.add(idx);
+  renderSpyCollectorResults(lastSpyEnrichedItems);
+
+  try {
+    const res = await resolveSpyRowItemAndRate(row, true);
+    if (res.securityCheck) {
+      ns.showToast(`❌ ${res.error}`, 'error');
+      return;
+    }
+    if (row.item_id) {
+      await ensureSpyRowsShortLinksAndSave([row]).catch(() => {});
+    }
+    if (Number(row.extraRate) > 0 || Number(row.netComm) > 0) {
+      ns.showToast(
+        `✅ อัปเดต ${row.spy_sub_id2 || row.item_id}: Extra ${row.extraRate}% · ค่าคอม ${ns.formatTHB(row.netComm)}`
+      );
+    } else {
+      ns.showToast(`⚠️ ${row.rateError || 'ยังดึง EXTRACOMM ไม่สำเร็จ (ลองเปิด 🔍 หน้า AFF ↗)'}`, 'error');
+    }
+  } finally {
+    spyRerunningIndices.delete(idx);
+    renderSpyCollectorResults(lastSpyEnrichedItems);
+    const cardEl = document.querySelector(`#drb-spy-results-list .sp-spy-item-card[data-idx="${idx}"]`);
+    if (cardEl) {
+      cardEl.classList.remove('sp-flash-anim');
+      void cardEl.offsetWidth;
+      cardEl.classList.add('sp-flash-anim');
+    }
+  }
+}
+
+async function rerunFailedSpyRows() {
+  if (spyCollectRunning || spyBatchRetryRunning) {
+    ns.showToast('⏳ กำลังดึงข้อมูลอยู่...');
+    return;
+  }
+  const targetIndices = lastSpyEnrichedItems
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => !r.item_id || Number(r.extraRate) <= 0 || Number(r.netComm) <= 0)
+    .map(({ i }) => i);
+
+  if (!targetIndices.length) {
+    ns.showToast('✅ ทุกรายการมีค่าคอมครบแล้ว!');
+    return;
+  }
+
+  const progWrap = document.getElementById('drb-spy-progress-wrap');
+  const progBar = document.getElementById('drb-spy-progress-bar');
+  const progTxt = document.getElementById('drb-spy-progress-text');
+
+  spyBatchRetryRunning = true;
+  if (progWrap) progWrap.hidden = false;
+  if (progBar) progBar.style.width = '5%';
+  renderSpyCollectorResults(lastSpyEnrichedItems);
+
+  let updatedCount = 0;
+  let stoppedBySec = false;
+  try {
+    for (let step = 0; step < targetIndices.length; step++) {
+      const idx = targetIndices[step];
+      const row = lastSpyEnrichedItems[idx];
+      if (!row) continue;
+
+      const pct = Math.round(((step + 1) / targetIndices.length) * 100);
+      if (progBar) progBar.style.width = `${pct}%`;
+      if (progTxt) {
+        progTxt.textContent = `🔄 รีเช็กตัวที่ 0% (${step + 1}/${targetIndices.length}): ${row.spy_sub_id2 || row.item_id || 'Reel'}...`;
+      }
+
+      spyRerunningIndices.add(idx);
+      renderSpyCollectorResults(lastSpyEnrichedItems);
+
+      const res = await resolveSpyRowItemAndRate(row, true);
+      if (res.securityCheck) {
+        spyRerunningIndices.delete(idx);
+        stoppedBySec = true;
+        if (progTxt) {
+          progTxt.innerHTML = `<span style="color:#dc2626;font-weight:700;">❌ ${escHtml(res.error)}</span>`;
+        }
+        ns.showToast(`❌ ${res.error}`, 'error');
+        break;
+      }
+      if (row.item_id) {
+        await ensureSpyRowsShortLinksAndSave([row]).catch(() => {});
+        if (Number(row.extraRate) > 0 || Number(row.netComm) > 0) updatedCount++;
+      }
+      spyRerunningIndices.delete(idx);
+      renderSpyCollectorResults(lastSpyEnrichedItems);
+    }
+
+    if (!stoppedBySec) {
+      if (progBar) progBar.style.width = '100%';
+      if (progTxt) {
+        progTxt.innerHTML = `<span style="color:#15803d;font-weight:800;">✅ รีเช็กตัวที่ 0% เสร็จสิ้น — ดึงค่าคอมเพิ่มได้ ${updatedCount}/${targetIndices.length} ตัว</span>`;
+      }
+      ns.showToast(`✅ รีเช็กเสร็จสิ้น (อัปเดตได้ ${updatedCount}/${targetIndices.length} ตัว)`);
+    }
+  } finally {
+    spyBatchRetryRunning = false;
+    spyRerunningIndices.clear();
+    renderSpyCollectorResults(lastSpyEnrichedItems);
+  }
+}
+
 async function runSpyReelCollector() {
-  if (spyCollectRunning) {
+  if (spyCollectRunning || spyBatchRetryRunning) {
     ns.showToast('⏳ กำลังรัน Collect & เช็กค่าคอมอยู่...');
     return;
   }
@@ -1293,6 +1557,7 @@ async function runSpyReelCollector() {
       rateChecked: false,
       rateError: ''
     }));
+    lastSpyEnrichedItems = enrichedItems;
     renderSpyCollectorResults(enrichedItems);
 
     // Stage 2: Fetch Real Social Media Commission for each item with item_id
@@ -1302,146 +1567,48 @@ async function runSpyReelCollector() {
       const pct = 15 + Math.round(((idx + 1) / enrichedItems.length) * 55);
       if (progBar) progBar.style.width = `${pct}%`;
 
-      if (!cleanItemId) {
-        row.rateChecked = true;
-        row.rateError = row.competitor_short_url
-          ? `พบลิงก์ตะกร้า (${row.competitor_short_url}) แต่แกะรหัสสินค้าไม่ได้`
-          : 'ไม่พบป้ายตะกร้า Shopee ในคลิปนี้';
-        renderSpyCollectorResults(enrichedItems);
-        continue;
-      }
-
-      if (progTxt) {
-        progTxt.textContent = `⏳ [2/4] เช็กเรท Social Media จริง (${idx + 1}/${enrichedItems.length}): ${row.spy_sub_id2 || cleanItemId}...`;
-      }
-      if (collectBtn) {
-        collectBtn.textContent = `⏳ เช็กค่าคอม (${idx + 1}/${enrichedItems.length})...`;
-      }
-
-      try {
-        const offerRes = await ns.sendMessage('GET_REAL_AFF_OFFER', {
-          itemId: cleanItemId,
-          shopId: row.shop_id || '',
-          titleHint: row.product_tag_title || '',
-          forceRefresh: Number(row.price) <= 0 || Number(row.netComm) <= 0 || Number(row.extraRate) <= 0
-        });
-        if (offerRes?.securityCheck) {
-          throw new Error(offerRes.error || 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิด affiliate.shopee.co.th ผ่านด่านตรวจก่อน');
+      if (cleanItemId) {
+        if (progTxt) {
+          progTxt.textContent = `⏳ [2/4] เช็กเรท Social Media จริง (${idx + 1}/${enrichedItems.length}): ${row.spy_sub_id2 || cleanItemId}...`;
         }
-        if (offerRes?.ok && offerRes.data) {
-          const d = offerRes.data;
-          const resolvedPrice = Number(d.offerPrice || d.price) > 0 ? Number(d.offerPrice || d.price) : row.price;
-          const baseRate = Number(d.baseRate) || 0;
-          const extraRate = Number(d.extraRate) || 0;
-          const comm = ns.calculateCommission({
-            price: resolvedPrice,
-            baseRate,
-            extraRate,
-            capTHB: 250,
-            whtRate: 3.0,
-            realDailyAdCostTHB: 107
-          });
-
-          row.product_tag_title = d.title || row.product_tag_title || row.sku_code;
-          row.price = resolvedPrice;
-          row.baseRate = baseRate;
-          row.extraRate = extraRate;
-          row.netComm = +comm.netComm.toFixed(2);
-          row.soldCount = Number(d.soldCount) || row.soldCount || 0;
-          if (!row.clean_product_url && (d.cleanUrl || (d.shopId && cleanItemId))) {
-            row.clean_product_url = d.cleanUrl || `https://shopee.co.th/product/${d.shopId}/${cleanItemId}`;
-          }
-          row.rateChecked = true;
-        } else {
-          row.rateChecked = true;
-          row.rateError = offerRes?.error || 'ดึงเรทไม่สำเร็จ';
+        if (collectBtn) {
+          collectBtn.textContent = `⏳ เช็กค่าคอม (${idx + 1}/${enrichedItems.length})...`;
         }
-      } catch (offerErr) {
-        row.rateChecked = true;
-        row.rateError = offerErr?.message || String(offerErr);
+      }
+
+      const needForce = Number(row.price) <= 0 || Number(row.netComm) <= 0 || Number(row.extraRate) <= 0;
+      const res = await resolveSpyRowItemAndRate(row, needForce);
+      if (res.securityCheck) {
+        throw new Error(res.error);
       }
 
       renderSpyCollectorResults(enrichedItems);
     }
 
-    // Stage 3: Generate our s.shopee.co.th shortlinks via batchCustomLink
-    const needLinkRows = enrichedItems.filter((r) => {
+    // Stage 3 & 4: Generate our s.shopee.co.th shortlinks & persist rates into Spy Pool
+    const needLinkCount = enrichedItems.filter((r) => {
       const prodUrl =
         r.clean_product_url ||
         (r.shop_id && r.item_id ? `https://shopee.co.th/product/${r.shop_id}/${r.item_id}` : '');
-      return Boolean(prodUrl);
-    });
-
-    if (needLinkRows.length > 0) {
+      return Boolean(prodUrl) && !r.shortLink;
+    }).length;
+    if (needLinkCount > 0) {
       if (progBar) progBar.style.width = '82%';
       if (progTxt) {
-        progTxt.textContent = `⏳ [3/4] เจนลิงก์ s.shopee.co.th ติดรหัส Sub_id1–5 (${needLinkRows.length} รายการ)...`;
+        progTxt.textContent = `⏳ [3/4] เจนลิงก์ s.shopee.co.th ติดรหัส Sub_id1–5 (${needLinkCount} รายการ)...`;
       }
       if (collectBtn) {
-        collectBtn.textContent = `⏳ เจนลิงก์ s.shopee (${needLinkRows.length} ตัว)...`;
-      }
-
-      const batchPayload = needLinkRows.map((r) => ({
-        shopee_url:
-          r.clean_product_url || `https://shopee.co.th/product/${r.shop_id}/${r.item_id}`,
-        sub_id1: '16NOV26FBRAD',
-        sub_id2: r.spy_sub_id2 || '',
-        sub_id3: '20261116',
-        sub_id4: r.sku_code || '',
-        sub_id5: `P01SPY${String(r.spy_seq || 1).padStart(3, '0')}`,
-        sku_code: r.sku_code || '',
-        item_id: String(r.item_id || ''),
-        title: r.product_tag_title || ''
-      }));
-
-      const batchRes = await ns.sendMessage('BATCH_GENERATE_AFF_SHORTLINKS', { items: batchPayload }).catch(() => null);
-      const genItems = Array.isArray(batchRes?.items) ? batchRes.items : [];
-      const linkBySub2 = new Map();
-      genItems.forEach((g) => {
-        if (g.sub_id2 && g.short_link) {
-          linkBySub2.set(g.sub_id2, g);
-        }
-      });
-
-      for (const r of needLinkRows) {
-        const hit = linkBySub2.get(r.spy_sub_id2);
-        if (hit?.short_link) {
-          r.shortLink = hit.short_link;
-          r.longLink = hit.long_link || r.clean_product_url || '';
-        }
+        collectBtn.textContent = `⏳ เจนลิงก์ s.shopee (${needLinkCount} ตัว)...`;
       }
     }
 
-    // Stage 4: POST /api/shopee-aff/pool-shortlinks to persist rates + shortlinks into SQLite & spy_competitor_pool.json
-    const linksToSave = enrichedItems
-      .filter((r) => r.spy_sub_id2 && (r.shortLink || r.netComm > 0 || r.price > 0))
-      .map((r) => ({
-        sub_id1: '16NOV26FBRAD',
-        sub_id2: r.spy_sub_id2,
-        sku_code: r.sku_code || '',
-        item_id: String(r.item_id || ''),
-        title: r.product_tag_title || '',
-        short_link: r.shortLink || '',
-        long_link: r.longLink || r.clean_product_url || '',
-        price: Number(r.price) || 0,
-        baseRate: Number(r.baseRate) || 0,
-        extraRate: Number(r.extraRate) || 0,
-        base_comm_pct: Number(r.baseRate) || 0,
-        extra_comm_pct: Number(r.extraRate) || 0,
-        estimatedCommission: Number(r.netComm) || 0,
-        net_comm_baht: Number(r.netComm) || 0,
-        soldCount: Number(r.soldCount) || 0,
-        sold_monthly: Number(r.soldCount) || 0
-      }));
-
-    if (linksToSave.length > 0) {
-      if (progBar) progBar.style.width = '94%';
-      if (progTxt) {
-        progTxt.textContent = `⏳ [4/4] บันทึกค่าคอม + ลิงก์ s.shopee.co.th (${linksToSave.length} รายการ) เข้า Spy Pool...`;
-      }
-      await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: linksToSave });
+    if (progBar) progBar.style.width = '94%';
+    if (progTxt) {
+      progTxt.textContent = `⏳ [4/4] บันทึกค่าคอม + ลิงก์ s.shopee.co.th เข้า Spy Pool...`;
     }
+    await ensureSpyRowsShortLinksAndSave(enrichedItems);
 
+    spyCollectRunning = false;
     renderSpyCollectorResults(enrichedItems);
     const passCount = enrichedItems.filter((r) => r.item_id && (r.extraRate >= 7 || r.netComm >= 15)).length;
     if (progBar) progBar.style.width = '100%';
@@ -1461,25 +1628,32 @@ async function runSpyReelCollector() {
       collectBtn.disabled = false;
       collectBtn.textContent = '🔍 Collect & เช็กค่าคอมเข้า Spy Pool';
     }
+    renderSpyCollectorResults(lastSpyEnrichedItems);
   }
 }
 
 function renderSpyCollectorResults(items = []) {
   const listEl = document.getElementById('drb-spy-results-list');
   const sumStrip = document.getElementById('drb-spy-summary-strip');
+  const retryFailedBtn = document.getElementById('drb-spy-btn-retry-failed');
   if (!listEl) return;
 
   let passCount = 0;
   let failCount = 0;
   let noTagCount = 0;
+  let retryNeedCount = 0;
 
   items.forEach((r) => {
     if (!r.item_id) {
       noTagCount++;
-    } else if (Number(r.extraRate) >= 7 || Number(r.netComm) >= 15) {
-      passCount++;
+      retryNeedCount++;
     } else {
-      failCount++;
+      if (Number(r.extraRate) <= 0 || Number(r.netComm) <= 0) retryNeedCount++;
+      if (Number(r.extraRate) >= 7 || Number(r.netComm) >= 15) {
+        passCount++;
+      } else {
+        failCount++;
+      }
     }
   });
 
@@ -1490,15 +1664,25 @@ function renderSpyCollectorResults(items = []) {
       `รวม ${items.length} คลิป · 🟢 ผ่านเกณฑ์ ${passCount} · 🔴 คอมต่ำ ${failCount}${noTagCount > 0 ? ` · ⚠️ ไร้ตะกร้า ${noTagCount}` : ''}`
     );
   }
+  if (retryFailedBtn) {
+    retryFailedBtn.hidden = items.length === 0 || spyCollectRunning || retryNeedCount === 0;
+    retryFailedBtn.disabled = spyCollectRunning || spyBatchRetryRunning;
+    retryFailedBtn.textContent = spyBatchRetryRunning
+      ? '⏳ กำลังรีเช็ก...'
+      : `🔄 รีเช็กตัวที่ 0% (${retryNeedCount})`;
+  }
 
   listEl.innerHTML = items
     .map((r, i) => {
       const hasItem = Boolean(r.item_id);
       const isPass = hasItem && (Number(r.extraRate) >= 7 || Number(r.netComm) >= 15);
       const gate = !hasItem ? 'notag' : isPass ? 'pass' : 'fail';
+      const isRerunning = spyRerunningIndices.has(i);
 
       let bannerLeft = '⏳ กำลังเช็กค่าคอม...';
-      if (!hasItem) {
+      if (isRerunning) {
+        bannerLeft = '⏳ กำลังดึงเรทใหม่...';
+      } else if (!hasItem) {
         bannerLeft = r.competitor_short_url
           ? '⚠️ พบตะกร้าแต่แกะรหัสสินค้าไม่ได้'
           : '⚠️ ไม่พบป้ายตะกร้า Shopee';
@@ -1522,8 +1706,9 @@ function renderSpyCollectorResults(items = []) {
           : `<span style="font-size:11px;color:var(--sp-text-3);">${hasItem ? '⏳ รอเจนลิงก์...' : 'ไม่มีลิงก์สินค้า'}</span>`;
 
       const affUrl = r.item_id ? `https://affiliate.shopee.co.th/offer/product_offer/${r.item_id}` : '';
+      const disableRowActions = spyCollectRunning || spyBatchRetryRunning || isRerunning;
       return `
-        <div class="sp-spy-item-card" data-gate="${gate}">
+        <div class="sp-spy-item-card" data-gate="${gate}" data-idx="${i}">
           <div class="sp-spy-item-banner">
             <span>${bannerLeft}</span>
             <code style="font-size:11px;background:rgba(0,0,0,0.25);padding:2px 7px;border-radius:999px;">${sub2Badge}</code>
@@ -1543,7 +1728,7 @@ function renderSpyCollectorResults(items = []) {
                 ? `
             <div class="sp-spy-item-metrics">
               <div class="sp-spy-metric-box">
-                <span class="sp-spy-metric-lbl">คอมสุทธิ/ชิ้น</span>
+                <span class="sp-spy-metric-lbl">ค่าคอม/ชิ้น (ตรง AFF)</span>
                 <span class="sp-spy-metric-val" style="color:${isPass ? 'var(--sp-extra)' : '#dc2626'};">${ns.formatTHB(r.netComm || 0)}</span>
               </div>
               <div class="sp-spy-metric-box">
@@ -1560,7 +1745,10 @@ function renderSpyCollectorResults(items = []) {
             }
             <div class="sp-spy-item-footer">
               ${shortLinkHtml}
-              <div style="display:flex;gap:5px;">
+              <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                <button type="button" class="sp-ghost-sm-btn spy-rerun-row-btn" data-idx="${i}" ${disableRowActions ? 'disabled' : ''} title="ดึงเรทค่าคอม EXTRACOMM และราคาของสินค้านี้ใหม่อีกครั้ง">
+                  ${isRerunning ? '⏳ กำลังดึง...' : '🔄 ดึงเรทใหม่'}
+                </button>
                 ${affUrl ? `<button type="button" class="sp-ghost-sm-btn spy-open-url-btn" data-url="${escHtml(affUrl)}">🔍 หน้า AFF ↗</button>` : ''}
                 ${r.source_reel_url ? `<button type="button" class="sp-ghost-sm-btn spy-open-url-btn" data-url="${escHtml(r.source_reel_url)}">🎬 คลิป Reel ↗</button>` : ''}
               </div>
@@ -1570,6 +1758,13 @@ function renderSpyCollectorResults(items = []) {
       `;
     })
     .join('');
+
+  listEl.querySelectorAll('.spy-rerun-row-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-idx'), 10);
+      if (Number.isInteger(idx)) rerunSingleSpyRow(idx);
+    });
+  });
 
   listEl.querySelectorAll('.spy-copy-link-btn').forEach((btn) => {
     btn.addEventListener('click', () => {

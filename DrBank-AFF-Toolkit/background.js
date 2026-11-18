@@ -10,9 +10,9 @@ const DEFAULT_SETTINGS = {
   shopeeBaseRate: 0.6,                              // % ค่าคอมพื้นฐาน Shopee จริงตาม Ground Truth 11.11
   shopeeExtraRate: 10.0,                            // % ค่าคอม Extra เริ่มต้น (เกณฑ์ อ.เอสเธอร์ >= 7%)
   shopeeCapTHB: 250,                                // เพดานค่าคอมพื้นฐานต่อชิ้น (บาท)
-  withholdingTaxRate: 3.0,                          // หัก ณ ที่จ่าย 3% จากยอดคอมมิชชั่น
+  withholdingTaxRate: 0.0,                          // ไม่หักภาษี ณ ที่จ่าย (คำนวณตรงตามหน้า affiliate.shopee.co.th 100%)
   dailyAdBudgetTHB: 100,                            // งบแอดต่อโพสต์ (100 บาท/วัน)
-  fbVatRate: 7.0,                                   // VAT 7% ของค่าแอด FB (รวมเป็น 107 บาท/วัน)
+  fbVatRate: 0.0,                                   // คิดทุนแอดกลมๆ 100 บาท/วัน (ไม่บวก VAT)
   theme: 'light',
   displayMode: 'sidepanel',                         // 'sidepanel' (Default) | 'float'
   hudMinimized: false
@@ -293,7 +293,9 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
   const titleHint = String(options?.titleHint || '');
   const shopId = String(options?.shopId || '');
 
-  if (!forceRefresh) {
+  if (forceRefresh) {
+    realOfferCache.delete(itemId);
+  } else {
     const hit = realOfferCache.get(itemId);
     if (hit) {
       if (isValidRealOfferData(hit.data) && Date.now() - hit.cachedAt < REAL_OFFER_TTL_MS) {
@@ -384,9 +386,9 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
         let finalData = resp.data;
         if (
           mode === 'single' &&
-          Number(finalData.price || finalData.offerPrice) > 0 &&
+          (forceRefresh || Number(finalData.price || finalData.offerPrice) > 0) &&
           Number(finalData.extraRate) <= 0 &&
-          !finalData.hasRealCommission &&
+          (forceRefresh || !finalData.hasRealCommission) &&
           !finalData.domTableVerified
         ) {
           const domFallback = await scrapeOfferDetailViaBgTab(itemId, finalData, !tab.active ? tab.id : null);
@@ -460,9 +462,9 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
         let finalData = resp.data;
         if (
           mode === 'single' &&
-          Number(finalData.price || finalData.offerPrice) > 0 &&
+          (forceRefresh || Number(finalData.price || finalData.offerPrice) > 0) &&
           Number(finalData.extraRate) <= 0 &&
-          !finalData.hasRealCommission &&
+          (forceRefresh || !finalData.hasRealCommission) &&
           !finalData.domTableVerified
         ) {
           const domFallback = await scrapeOfferDetailViaBgTab(itemId, finalData, bgTab.id);
@@ -1149,7 +1151,7 @@ async function handleMessage(msg, _sender) {
         baseRate: Number(payload.baseRate) || 0,
         extraRate: Number(payload.extraRate) || 0,
         estimatedCommission: Number(payload.estimatedCommission) || 0,
-        realDailyAdCostTHB: Number(payload.realDailyAdCostTHB) || 107,
+        realDailyAdCostTHB: Number(payload.realDailyAdCostTHB) || 100,
         breakEvenUnits: payload.breakEvenUnits || '0.0',
         breakEvenOrders: Number(payload.breakEvenOrders) || 0,
         viabilityTier: payload.viabilityTier || 'warning',
@@ -1369,6 +1371,10 @@ async function handleMessage(msg, _sender) {
 
     case 'SCRAPE_ACTIVE_FB_REEL_TAB': {
       return await scrapeActiveFacebookReelTabImpl(payload?.tabId);
+    }
+
+    case 'RESOLVE_SHOPEE_SHORT_URL': {
+      return await resolveShopeeShortUrlInExt(payload?.shortUrl);
     }
 
     case 'SPY_COLLECT_REELS': {
