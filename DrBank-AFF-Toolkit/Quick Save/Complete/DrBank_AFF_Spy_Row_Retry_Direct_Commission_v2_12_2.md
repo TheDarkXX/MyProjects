@@ -34,8 +34,17 @@ summary: >
 - Updated `src/shopee-affiliate.js` V1 Scanner table headers, `.xlsx` / `.csv` export columns, and Conversion Report `scanReportDOM` (`netCommission = maxVal` without `0.97` multiplier).
 - Updated `popup.html` status summary to display `100฿ / วัน (ตรงตาม AFF)`.
 
+### 4. Auto-Detect & On-Demand Auto-Wake for Sleeping AFF Tabs (`v2.13.0`)
+- **Version Bump (`manifest.json`, `sidepanel.html`, `popup.html`, `src/common/utils.js`)**: Bumped extension version from `2.12.0` to `2.13.0` and updated manifest description to `100฿/วัน (ตรงตามหน้า AFF)`.
+- **On-Demand Wakeup Without RAM Lock (`background.js`)**:
+  - Added `isTabSleeping(tab)` (`tab.discarded || tab.status === 'unloaded'`), `wakeAffTabIfSleeping(tab)` (reloads sleeping tab, waits for completion + 750ms for `sec_sdk`), `inspectAffBridgeStatus()`, and `ensureAffBridgeReady(options)` without forcing permanent `autoDiscardable: false`.
+  - Sorted `findOpenAffTabs()` and `fetchRealAffOfferImpl()` to prioritize awake AFF tabs over sleeping tabs, and updated `sendToAffTabWithReinject()` to auto-wake discarded tabs before messaging.
+  - Added `GET_AFF_BRIDGE_STATUS` and `ENSURE_AFF_BRIDGE_READY` message handlers (and unified `OPEN_BACKGROUND_AFF_BRIDGE_TAB`).
+- **Live Bridge Status Strip & Pre-Flight Feedback (`sidepanel.html`, `sidepanel.js`, `src/styles/sidepanel.css`)**:
+  - Added `#drb-spy-aff-bridge` banner and `#drb-spy-btn-wake-aff` button displaying live state (`ready`, `sleeping`, `missing`, `security`), plus `ensureSpyAffBridgeReadyWithFeedback()` wired into `runSpyReelCollector()`, `rerunSingleSpyRow()`, and `rerunFailedSpyRows()`.
+
 ### Verification Results
-- `node tools/verify_sidepanel_dom.cjs` — PASSED (`All 110 HTML IDs verified`).
+- `node tools/verify_sidepanel_dom.cjs` — PASSED (`All 113 HTML IDs verified`).
 - `node tools/verify_social_commission.cjs` — PASSED (direct parity `58.40`, `136.30`, `90.37`).
 - `node --check` on `background.js`, `sidepanel.js`, `src/shopee-affiliate.js`, `src/shopee-hud.js`, `src/common/utils.js` — all exited 0.
 
@@ -58,6 +67,7 @@ summary: >
 - 09:51 — Audited `sidepanel.js`, `background.js`, and `src/shopee-affiliate.js`; identified Tier 2 65-char keyword misses and skipped DOM fallback on base-only API responses as causes of intermittent `EXTRACOMM` 0%.
 - 09:57 — Aligned on removing 3% WHT and 107฿ VAT adjustment so displayed baht amounts match `affiliate.shopee.co.th` directly using 100฿ daily ad budget.
 - 10:02–10:09 — Implemented per-row/batch retry UI, API/DOM hardening, and direct commission parity across 9 files; verified all DOM, commission, and syntax checks.
+- 10:34–10:39 — Implemented v2.13.0 version bump + sleeping AFF tab auto-detect, on-demand auto-wake (`wakeAffTabIfSleeping`), and Spy Collector live bridge status banner (`#drb-spy-aff-bridge`); verified 113 DOM IDs and all checks.
 
 ## 🔗 GBRAIN Backlinks
 - **2026-11-18** | [sidepanel.js](file:///C:/My%20Claw/MyProjects/DrBank-AFF-Toolkit/sidepanel.js) -- Spy Reel Collector per-row & 0% batch retry controllers + direct commission hero rendering

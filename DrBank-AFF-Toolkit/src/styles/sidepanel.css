@@ -1018,6 +1018,55 @@ body[data-theme="dark"] #drb-sidepanel-root {
   line-height: 1.4;
 }
 
+.sp-spy-aff-bridge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--sp-text-2);
+}
+
+.sp-spy-aff-bridge-text {
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.sp-spy-aff-bridge[data-state="ready"] {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.35);
+  color: #15803d;
+}
+
+.sp-spy-aff-bridge[data-state="sleeping"] {
+  background: rgba(217, 119, 6, 0.12);
+  border-color: rgba(217, 119, 6, 0.42);
+  color: #b45309;
+}
+
+.sp-spy-aff-bridge[data-state="security"] {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #dc2626;
+}
+
+body[data-theme="dark"] .sp-spy-aff-bridge[data-state="ready"] {
+  color: #4ade80;
+}
+
+body[data-theme="dark"] .sp-spy-aff-bridge[data-state="sleeping"] {
+  color: #fbbf24;
+}
+
+body[data-theme="dark"] .sp-spy-aff-bridge[data-state="security"] {
+  color: #f87171;
+}
+
 .sp-spy-toolbar {
   display: flex;
   align-items: center;

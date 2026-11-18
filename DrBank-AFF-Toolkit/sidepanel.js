@@ -296,10 +296,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Listen to browser tab switches & URL changes for Auto-Detect
   chrome.tabs.onActivated.addListener(() => {
     queryActiveTabAndScrape(false);
+    if (activePanelTab === 'spy') refreshSpyAffBridgeStatus();
   });
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (tabId === currentTabId && (changeInfo.url || changeInfo.status === 'complete')) {
       queryActiveTabAndScrape(false);
+    }
+    if (
+      activePanelTab === 'spy' &&
+      (changeInfo.status === 'complete' ||
+        typeof changeInfo.discarded === 'boolean' ||
+        (tab?.url || '').includes('affiliate.shopee.co.th'))
+    ) {
+      refreshSpyAffBridgeStatus();
     }
   });
 
@@ -353,6 +362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   queryActiveTabAndScrape(false);
+  refreshSpyAffBridgeStatus();
 });
 
 function switchPanelTab(tabName) {
@@ -388,6 +398,7 @@ function switchPanelTab(tabName) {
       badge.style.color = '#7c3aed';
       badge.style.borderColor = 'rgba(124, 58, 237, 0.32)';
     }
+    refreshSpyAffBridgeStatus();
   } else {
     if (badge) {
       badge.textContent = 'Shopee';
@@ -1160,6 +1171,7 @@ function bindSpyCollector() {
   const clearBtn = document.getElementById('drb-spy-btn-clear');
   const collectBtn = document.getElementById('drb-spy-btn-collect');
   const retryFailedBtn = document.getElementById('drb-spy-btn-retry-failed');
+  const wakeAffBtn = document.getElementById('drb-spy-btn-wake-aff');
 
   inp?.addEventListener('input', () => {
     syncSpyCountBadge();
@@ -1186,6 +1198,96 @@ function bindSpyCollector() {
   retryFailedBtn?.addEventListener('click', () => {
     rerunFailedSpyRows();
   });
+
+  wakeAffBtn?.addEventListener('click', async () => {
+    const orig = wakeAffBtn.textContent;
+    wakeAffBtn.disabled = true;
+    wakeAffBtn.textContent = '⏳...';
+    try {
+      const res = await ensureSpyAffBridgeReadyWithFeedback({ manualClick: true });
+      if (res.ok && !res.wokeUp && !res.openedNew) {
+        ns.showToast('🟢 แท็บ Shopee Affiliate พร้อมใช้งานแล้ว!');
+      } else if (!res.ok && res.error) {
+        ns.showToast(`🚨 ${res.error}`, 'error');
+      }
+    } finally {
+      wakeAffBtn.disabled = false;
+      if (wakeAffBtn.textContent === '⏳...') wakeAffBtn.textContent = orig;
+      refreshSpyAffBridgeStatus();
+    }
+  });
+}
+
+async function refreshSpyAffBridgeStatus() {
+  const box = document.getElementById('drb-spy-aff-bridge');
+  const wakeBtn = document.getElementById('drb-spy-btn-wake-aff');
+  if (!box) return null;
+
+  try {
+    const status = await ns.sendMessage('GET_AFF_BRIDGE_STATUS');
+    const st = status?.state || 'missing';
+    box.setAttribute('data-state', st);
+
+    if (st === 'ready') {
+      setText('drb-spy-aff-bridge-text', '🟢 แท็บ Shopee Affiliate พร้อมดึงค่าคอม');
+      if (wakeBtn) wakeBtn.hidden = true;
+    } else if (st === 'sleeping') {
+      setText('drb-spy-aff-bridge-text', '💤 แท็บ AFF หลับอยู่ — จะปลุกอัตโนมัติตอนกด Collect');
+      if (wakeBtn) {
+        wakeBtn.hidden = false;
+        wakeBtn.textContent = '⚡ ปลุกแท็บ';
+      }
+    } else if (st === 'security') {
+      setText('drb-spy-aff-bridge-text', '🚨 แท็บ AFF ติดด่านตรวจ/ยังไม่ล็อกอิน — กดปุ่มขวาเพื่อผ่านด่านก่อน');
+      if (wakeBtn) {
+        wakeBtn.hidden = false;
+        wakeBtn.textContent = '🔓 เปิดหน้า AFF ↗';
+      }
+    } else {
+      setText('drb-spy-aff-bridge-text', '⚪ ยังไม่เปิดแท็บ AFF — จะเปิดเบื้องหลังให้ตอนกด Collect');
+      if (wakeBtn) {
+        wakeBtn.hidden = false;
+        wakeBtn.textContent = '🌐 เปิดแท็บ AFF';
+      }
+    }
+    return status;
+  } catch (_e) {
+    return null;
+  }
+}
+
+async function ensureSpyAffBridgeReadyWithFeedback({ manualClick = false, progTxtEl = null } = {}) {
+  const preStatus = await ns.sendMessage('GET_AFF_BRIDGE_STATUS').catch(() => null);
+  if (preStatus?.state === 'sleeping') {
+    const msg = '💤 พบแท็บ AFF หลับอยู่ — กำลังปลุกให้ตื่นอัตโนมัติ...';
+    if (progTxtEl) progTxtEl.textContent = msg;
+    ns.showToast(msg);
+  } else if (preStatus?.state === 'missing') {
+    const msg = '🌐 ยังไม่ได้เปิดหน้า AFF — กำลังเปิดแท็บเบื้องหลังให้อัตโนมัติ...';
+    if (progTxtEl) progTxtEl.textContent = msg;
+    ns.showToast(msg);
+  }
+
+  try {
+    const res = await ns.sendMessage('ENSURE_AFF_BRIDGE_READY', { focusIfSecurity: manualClick });
+    await refreshSpyAffBridgeStatus();
+    if (!res?.ok && res?.securityCheck) {
+      return {
+        ok: false,
+        securityCheck: true,
+        error: res.error || 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิด affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+      };
+    }
+    if (res?.wokeUp) {
+      ns.showToast('⚡ ปลุกแท็บ Shopee Affiliate ตื่นพร้อมใช้งานแล้ว!');
+    } else if (res?.openedNew) {
+      ns.showToast('🌐 เปิดแท็บ Shopee Affiliate เบื้องหลังพร้อมใช้งานแล้ว!');
+    }
+    return { ok: true, ...res };
+  } catch (err) {
+    await refreshSpyAffBridgeStatus();
+    return { ok: false, securityCheck: false, error: err?.message || String(err) };
+  }
 }
 
 async function grabActiveFacebookReelTab(showToast = true) {
@@ -1410,6 +1512,11 @@ async function rerunSingleSpyRow(idx) {
   renderSpyCollectorResults(lastSpyEnrichedItems);
 
   try {
+    const bridgeRes = await ensureSpyAffBridgeReadyWithFeedback();
+    if (!bridgeRes.ok && bridgeRes.securityCheck) {
+      ns.showToast(`🚨 ${bridgeRes.error}`, 'error');
+      return;
+    }
     const res = await resolveSpyRowItemAndRate(row, true);
     if (res.securityCheck) {
       ns.showToast(`❌ ${res.error}`, 'error');
@@ -1464,6 +1571,16 @@ async function rerunFailedSpyRows() {
   let updatedCount = 0;
   let stoppedBySec = false;
   try {
+    const bridgeRes = await ensureSpyAffBridgeReadyWithFeedback({ progTxtEl: progTxt });
+    if (!bridgeRes.ok && bridgeRes.securityCheck) {
+      stoppedBySec = true;
+      if (progTxt) {
+        progTxt.innerHTML = `<span style="color:#dc2626;font-weight:700;">🚨 ${escHtml(bridgeRes.error)}</span>`;
+      }
+      ns.showToast(`🚨 ${bridgeRes.error}`, 'error');
+      return;
+    }
+
     for (let step = 0; step < targetIndices.length; step++) {
       const idx = targetIndices[step];
       const row = lastSpyEnrichedItems[idx];
@@ -1559,6 +1676,14 @@ async function runSpyReelCollector() {
     }));
     lastSpyEnrichedItems = enrichedItems;
     renderSpyCollectorResults(enrichedItems);
+
+    if (enrichedItems.some((r) => r.item_id || r.competitor_short_url)) {
+      if (collectBtn) collectBtn.textContent = '⏳ เตรียม/ปลุกแท็บ AFF...';
+      const bridgeRes = await ensureSpyAffBridgeReadyWithFeedback({ progTxtEl: progTxt });
+      if (!bridgeRes.ok && bridgeRes.securityCheck) {
+        throw new Error(bridgeRes.error);
+      }
+    }
 
     // Stage 2: Fetch Real Social Media Commission for each item with item_id
     for (let idx = 0; idx < enrichedItems.length; idx++) {

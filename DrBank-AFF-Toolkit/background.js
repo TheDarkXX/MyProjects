@@ -134,12 +134,254 @@ async function waitAffRateLimit() {
   lastAffApiCallAt = Date.now();
 }
 
+function isTabSleeping(tab) {
+  return Boolean(tab && (tab.discarded || tab.status === 'unloaded'));
+}
+
 async function findOpenAffTabs() {
   try {
     const tabs = await chrome.tabs.query({ url: 'https://affiliate.shopee.co.th/*' });
-    return Array.isArray(tabs) ? tabs : [];
+    if (!Array.isArray(tabs)) return [];
+    return [...tabs].sort((a, b) => (isTabSleeping(a) ? 1 : 0) - (isTabSleeping(b) ? 1 : 0));
   } catch (_e) {
     return [];
+  }
+}
+
+async function wakeAffTabIfSleeping(tab) {
+  if (!tab || !tab.id) {
+    return { tab: null, wokeUp: false, securityCheck: false };
+  }
+  if (!isTabSleeping(tab)) {
+    return {
+      tab,
+      wokeUp: false,
+      securityCheck: isSecurityOrLoginUrl(tab.url),
+      error: isSecurityOrLoginUrl(tab.url)
+        ? 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+        : ''
+    };
+  }
+
+  try {
+    await chrome.tabs.reload(tab.id).catch(async () => {
+      await chrome.tabs.update(tab.id, {
+        url: tab.url || 'https://affiliate.shopee.co.th/offer/product_offer'
+      });
+    });
+    const loadRes = await waitForTabComplete(tab.id, 8500);
+    const refreshedTab = await chrome.tabs.get(tab.id).catch(() => tab);
+    if (loadRes?.securityCheck || isSecurityOrLoginUrl(refreshedTab?.url)) {
+      return {
+        tab: refreshedTab,
+        wokeUp: true,
+        securityCheck: true,
+        error: 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+      };
+    }
+    await new Promise((r) => setTimeout(r, 750));
+    return { tab: refreshedTab, wokeUp: true, securityCheck: false, error: '' };
+  } catch (err) {
+    return { tab, wokeUp: false, securityCheck: false, error: err?.message || String(err) };
+  }
+}
+
+async function inspectAffBridgeStatus() {
+  const openTabs = await findOpenAffTabs();
+  const secTab = openTabs.find((t) => isSecurityOrLoginUrl(t.url));
+  const awakeTabs = openTabs.filter((t) => !isTabSleeping(t));
+  const sleepingTabs = openTabs.filter((t) => isTabSleeping(t));
+
+  if (secTab || circuitBreaker.tripped) {
+    return {
+      ok: true,
+      state: 'security',
+      openCount: openTabs.length,
+      awakeCount: awakeTabs.length,
+      sleepingCount: sleepingTabs.length,
+      securityCheck: true,
+      tabId: secTab?.id || awakeTabs[0]?.id || sleepingTabs[0]?.id || null,
+      error:
+        circuitBreaker.error ||
+        'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+    };
+  }
+  if (awakeTabs.length > 0) {
+    return {
+      ok: true,
+      state: 'ready',
+      openCount: openTabs.length,
+      awakeCount: awakeTabs.length,
+      sleepingCount: sleepingTabs.length,
+      securityCheck: false,
+      tabId: awakeTabs[0].id,
+      error: ''
+    };
+  }
+  if (sleepingTabs.length > 0) {
+    return {
+      ok: true,
+      state: 'sleeping',
+      openCount: openTabs.length,
+      awakeCount: 0,
+      sleepingCount: sleepingTabs.length,
+      securityCheck: false,
+      tabId: sleepingTabs[0].id,
+      error: ''
+    };
+  }
+  return {
+    ok: true,
+    state: 'missing',
+    openCount: 0,
+    awakeCount: 0,
+    sleepingCount: 0,
+    securityCheck: false,
+    tabId: null,
+    error: ''
+  };
+}
+
+let inFlightBridgeEnsure = null;
+async function ensureAffBridgeReady(options = {}) {
+  if (inFlightBridgeEnsure) {
+    return await inFlightBridgeEnsure;
+  }
+
+  const runPromise = (async () => {
+    const openTabs = await findOpenAffTabs();
+    const secTab = openTabs.find((t) => isSecurityOrLoginUrl(t.url));
+    if (secTab) {
+      const msg =
+        'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน';
+      circuitBreaker = { tripped: true, trippedAt: Date.now(), error: msg };
+      if (options.focusIfSecurity && secTab.id) {
+        await chrome.tabs.update(secTab.id, { active: true }).catch(() => {});
+        if (secTab.windowId) await chrome.windows.update(secTab.windowId, { focused: true }).catch(() => {});
+      }
+      return {
+        ok: false,
+        state: 'security',
+        securityCheck: true,
+        wokeUp: false,
+        openedNew: false,
+        tabId: secTab.id,
+        openAffTabCount: openTabs.length,
+        error: msg
+      };
+    }
+
+    if (circuitBreaker.tripped && options.focusIfSecurity) {
+      circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+      const target = openTabs[0];
+      if (target?.id) {
+        if (isTabSleeping(target)) await wakeAffTabIfSleeping(target);
+        await chrome.tabs.update(target.id, { active: true }).catch(() => {});
+        if (target.windowId) await chrome.windows.update(target.windowId, { focused: true }).catch(() => {});
+      } else {
+        const created = await chrome.tabs.create({
+          url: 'https://affiliate.shopee.co.th/offer/product_offer',
+          active: true
+        });
+        await waitForTabComplete(created.id, 8500);
+        return {
+          ok: true,
+          state: 'ready',
+          securityCheck: false,
+          wokeUp: false,
+          openedNew: true,
+          tabId: created.id,
+          openAffTabCount: 1
+        };
+      }
+    }
+
+    const awakeTab = openTabs.find((t) => !isTabSleeping(t));
+    if (awakeTab) {
+      circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+      return {
+        ok: true,
+        state: 'ready',
+        securityCheck: false,
+        wokeUp: false,
+        openedNew: false,
+        tabId: awakeTab.id,
+        openAffTabCount: openTabs.length
+      };
+    }
+
+    const sleepingTab = openTabs.find((t) => isTabSleeping(t));
+    if (sleepingTab) {
+      const wakeRes = await wakeAffTabIfSleeping(sleepingTab);
+      if (wakeRes?.securityCheck) {
+        circuitBreaker = { tripped: true, trippedAt: Date.now(), error: wakeRes.error };
+        if (options.focusIfSecurity && sleepingTab.id) {
+          await chrome.tabs.update(sleepingTab.id, { active: true }).catch(() => {});
+        }
+        return {
+          ok: false,
+          state: 'security',
+          securityCheck: true,
+          wokeUp: Boolean(wakeRes.wokeUp),
+          openedNew: false,
+          tabId: sleepingTab.id,
+          openAffTabCount: openTabs.length,
+          error: wakeRes.error
+        };
+      }
+      circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+      return {
+        ok: true,
+        state: 'ready',
+        securityCheck: false,
+        wokeUp: Boolean(wakeRes?.wokeUp),
+        openedNew: false,
+        tabId: wakeRes?.tab?.id || sleepingTab.id,
+        openAffTabCount: openTabs.length
+      };
+    }
+
+    const created = await chrome.tabs.create({
+      url: 'https://affiliate.shopee.co.th/offer/product_offer',
+      active: Boolean(options.focusNew)
+    });
+    const loadRes = await waitForTabComplete(created.id, 8500);
+    const createdTab = await chrome.tabs.get(created.id).catch(() => created);
+    if (loadRes?.securityCheck || isSecurityOrLoginUrl(createdTab?.url)) {
+      const msg = 'กรุณาผ่านด่านตรวจหรือล็อกอิน affiliate.shopee.co.th';
+      circuitBreaker = { tripped: true, trippedAt: Date.now(), error: msg };
+      if (options.focusIfSecurity) {
+        await chrome.tabs.update(created.id, { active: true }).catch(() => {});
+      }
+      return {
+        ok: false,
+        state: 'security',
+        securityCheck: true,
+        wokeUp: false,
+        openedNew: true,
+        tabId: created.id,
+        openAffTabCount: 1,
+        error: msg
+      };
+    }
+    await new Promise((r) => setTimeout(r, 750));
+    circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
+    return {
+      ok: true,
+      state: 'ready',
+      securityCheck: false,
+      wokeUp: false,
+      openedNew: true,
+      tabId: created.id,
+      openAffTabCount: 1
+    };
+  })();
+
+  inFlightBridgeEnsure = runPromise;
+  try {
+    return await runPromise;
+  } finally {
+    inFlightBridgeEnsure = null;
   }
 }
 
@@ -197,6 +439,28 @@ function waitForTabComplete(tabId, timeoutMs = 7000) {
 }
 
 async function sendToAffTabWithReinject(tabId, messagePayload) {
+  try {
+    const tabObj = await chrome.tabs.get(tabId).catch(() => null);
+    if (!tabObj) return null;
+    if (isSecurityOrLoginUrl(tabObj.url)) {
+      return {
+        ok: false,
+        securityCheck: true,
+        error: 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ผ่านด่านตรวจก่อน'
+      };
+    }
+    if (isTabSleeping(tabObj)) {
+      const wakeRes = await wakeAffTabIfSleeping(tabObj);
+      if (wakeRes?.securityCheck) {
+        return {
+          ok: false,
+          securityCheck: true,
+          error: wakeRes.error
+        };
+      }
+    }
+  } catch (_e) {}
+
   try {
     return await chrome.tabs.sendMessage(tabId, messagePayload);
   } catch (_err) {
@@ -352,9 +616,12 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
     }
     await waitAffRateLimit();
 
-    // Tier 1: Query any open affiliate.shopee.co.th tab (prioritizing tab already on itemId)
+    // Tier 1: Query any open affiliate.shopee.co.th tab (prioritizing awake tabs & tabs already on itemId)
     const openTabs = await findOpenAffTabs();
     const sortedTabs = [...openTabs].sort((a, b) => {
+      const aSleep = isTabSleeping(a) ? 1 : 0;
+      const bSleep = isTabSleeping(b) ? 1 : 0;
+      if (aSleep !== bSleep) return aSleep - bSleep;
       const aMatch = String(a.url || '').includes(itemId) ? 0 : 1;
       const bMatch = String(b.url || '').includes(itemId) ? 0 : 1;
       return aMatch - bMatch;
@@ -1330,22 +1597,17 @@ async function handleMessage(msg, _sender) {
       return { ok: true };
     }
 
+    case 'GET_AFF_BRIDGE_STATUS': {
+      return await inspectAffBridgeStatus();
+    }
+
+    case 'ENSURE_AFF_BRIDGE_READY':
     case 'OPEN_BACKGROUND_AFF_BRIDGE_TAB': {
-      const existing = await findOpenAffTabs();
-      if (existing.length > 0) {
-        return { ok: true, alreadyOpen: true, openAffTabCount: existing.length };
+      const res = await ensureAffBridgeReady(payload || {});
+      if (!res?.ok && res?.securityCheck) {
+        return res;
       }
-      const tab = await chrome.tabs.create({
-        url: 'https://affiliate.shopee.co.th/offer/custom_link',
-        active: false
-      });
-      const loadRes = await waitForTabComplete(tab.id, 8500);
-      if (loadRes?.securityCheck) {
-        circuitBreaker = { tripped: true, trippedAt: Date.now(), error: 'กรุณาผ่านด่านตรวจหรือล็อกอิน affiliate.shopee.co.th' };
-        return { ok: false, securityCheck: true, error: circuitBreaker.error };
-      }
-      await new Promise((r) => setTimeout(r, 700));
-      return { ok: true, openedTabId: tab.id, openAffTabCount: 1 };
+      return res;
     }
 
     case 'GET_REAL_AFF_OFFER': {

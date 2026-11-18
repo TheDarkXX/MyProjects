@@ -11,9 +11,9 @@ window.DrBankAFF = window.DrBankAFF || {};
 (function (ns) {
   ns.getVersion = function () {
     try {
-      return chrome?.runtime?.getManifest?.()?.version || '2.5.0';
+      return chrome?.runtime?.getManifest?.()?.version || '2.13.0';
     } catch (_e) {
-      return '2.5.0';
+      return '2.13.0';
     }
   };
 

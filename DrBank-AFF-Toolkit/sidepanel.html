@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>DrBank AFF Scout v2.12 — Side Panel</title>
+  <title>DrBank AFF Scout v2.13.0 — Side Panel</title>
   <link rel="stylesheet" href="src/styles/hud.css">
   <link rel="stylesheet" href="src/styles/sidepanel.css">
 </head>
@@ -19,7 +19,7 @@
             style="width:18px;height:18px;border-radius:4px;display:inline-block;vertical-align:middle;"
             alt="Logo">
           <span>DrBank AFF</span>
-          <span class="drb-aff-version" id="drb-sp-ver">v2.12.0</span>
+          <span class="drb-aff-version" id="drb-sp-ver">v2.13.0</span>
           <span class="drb-aff-badge-platform" id="drb-sp-mode-badge"
             style="background:rgba(22,163,74,0.12);color:#16a34a;border:1px solid rgba(22,163,74,0.3);font-size:11px;padding:1px 6px;">Shopee</span>
         </div>
@@ -281,6 +281,11 @@
             <div class="sp-spy-sub">
               ดึงป้ายตะกร้า · เช็กเรท Social Media จริง · กรอง Exther Gate (<b style="color:var(--sp-extra);">Extra ≥7%</b> หรือ <b style="color:var(--sp-extra);">คอม ≥฿15</b>) · เจน <code style="font-size:11px;">s.shopee.co.th</code>
             </div>
+          </div>
+
+          <div class="sp-spy-aff-bridge" id="drb-spy-aff-bridge" data-state="checking">
+            <span class="sp-spy-aff-bridge-text" id="drb-spy-aff-bridge-text">⏳ กำลังเช็กสถานะแท็บ Shopee Affiliate...</span>
+            <button type="button" class="sp-ghost-sm-btn" id="drb-spy-btn-wake-aff" hidden>⚡ ปลุกแท็บ</button>
           </div>
 
           <div class="sp-spy-toolbar">
