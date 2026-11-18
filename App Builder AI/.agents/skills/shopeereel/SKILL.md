@@ -16,11 +16,21 @@ description: >-
 
 ---
 
-## ⚡ 1. Quick Start & Commands
+## ⚡ 1. Quick Start & Default Routing Rule
+
+> 🚨 **กฎเลือกโหมดอัตโนมัติ (Default Mode Priority — ป้องกันสับสนโหมดเก่า vs โหมดใหม่):**
+> 1. **เมื่อผู้ใช้สั่งด้วยรหัสคลิป (`nov-xxx`), สั่ง `"ทำครบสูตร"`, หรือสั่ง `"กางตาราง"` / `table`:** ให้ใช้ **โหมดที่ 7 (`SB6–8` Dynamic 6–8 Panels + 2-Scene 10s+10s + ตารางสถานะ 6 คอลัมน์)** เป็น **ค่าเริ่มต้นหลัก (Primary Default)** เสมอ!
+> 2. **เมื่อผู้ใช้สั่ง `--gem 11` เพื่อออกตาราง TSV ชุดใหญ่เข้า Sheet:** ให้ใช้โหมดที่ 6 (`shopee_product_vault.cjs --gem 11`)
+> 3. **โหมดดั้งเดิม (Legacy 3 First Frames เห็นหน้าคนลิปซิงก์ในหัวข้อ 3–4):** ใช้เฉพาะเมื่อผู้ใช้สั่ง `--mode same` / `--mode diverse` หรือระบุชัดเจนว่าเอาคลิปคนพูดหน้ากล้องเท่านั้น
 
 ```bash
-# 1. รัน Full Content Vault Pipeline จาก Pool Sub2 / SKU / URL (Default: เจน 3 ภาพตั้งต้นมุมเดียวกันใน 03_first_frames/)
-node tools/shopee_product_vault.cjs --sub2 aidrb1611a013
+# 🔥 [PRIMARY DEFAULT] โหมด SB6–8 (6–8 ช่องตามบริบท) + 2 ซีน (10s+10s) + ตารางสถานะ 6 คอลัมน์ (ดูหัวข้อ 7)
+python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --table
+python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --gen-sb6 nov-013-v3
+python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --merge nov-013 "Y:\Download\scene1.mp4" "Y:\Download\scene2.mp4"
+
+# 1. รัน Full Content Vault Pipeline จาก Pool Sub2 / SKU / URL (ดึงรูป Shopee HD + Vision QC/Crop ลง 02_clean_refs/)
+node tools/shopee_product_vault.cjs --sub2 aidrb1611a013 --skip-gen
 node tools/shopee_product_vault.cjs --sku SP078237 --channel mom --duration 10
 node tools/shopee_product_vault.cjs --url https://s.shopee.co.th/2BGM5rcFij
 
@@ -183,35 +193,109 @@ python "C:\My Claw\The Viral\FlowKit\flow_cli.py" status
 
 `--ver` = เวอร์ชัน A/B ของคลิปเดิม (`-v2`, `-v3`) · `--batch` = เลขไฟล์ตารางของวันนั้น
 
-### 🔇 Chat Silence Rule (กฎเหล็กแบบ `/table`)
-- เวลาทำงานกับ Gem #11 ให้ **เขียนลงไฟล์ `production_tables/G11_*.md` เท่านั้น** ห้ามพ่น TSV, พรอมต์ IMAGE/SB/VIDEO หรือบทยาวลงแชท
-- ตอบในแชท **ไม่เกิน 4 บรรทัด**: (1) ลิงก์ไฟล์ตาราง (2) จำนวนคลิปแยกตาม A/B/C (3) แถวที่ lint ไม่ผ่าน/คำเตือนสำคัญ (เช่น VO เกินงบ) (4) ขั้นถัดไป
-- ข้อยกเว้น: ผู้ใช้ขอดูพรอมต์ของแถวไหนเป็นการเฉพาะ (เทียบเท่าเมนู `[5] full` ของ Gem) ค่อยกางเฉพาะแถวนั้น
-- Gem #11 บนเว็บ Gemini ใช้โหมด Compact TSV (1 แถว 7 คอลัมน์เฉพาะงาน Gen Image & Video ไม่มี header + กางบท VO ด้านล่าง) ส่วนข้อมูล Ads/ลิงก์/ค่าคอมแยกเก็บใน Pool/Sheet ไม่เอามาปนในตารางเจนภาพ-วิดีโอ
+### 🔇 Chat Silence Rule (กฎเหล็กห้ามพ่นตารางหรือกล่อง Prompt ลงแชทโดยไม่สั่ง!)
+- **ค่าเริ่มต้น (Default = เขียนลงไฟล์ `.md` เท่านั้น):** ทุกครั้งที่รันสร้าง Vault, เจนภาพ `SB6–8`, หรือรัน `--gem 11` ให้บันทึกตารางและกล่อง Prompt ทั้งหมดลงไฟล์ `.md` (`Meta_AI_2Scene_10s_Ready_Prompts.md`, `00_Product_Master_Card.md`, หรือ `production_tables/G11_*.md`) เงียบๆ เท่านั้น **ห้ามพ่นก้อน TSV, ห้ามพ่นตารางสถานะ 6 คอลัมน์, และห้ามกางกล่อง Prompt ยาวๆ ลงในแชทเองเด็ดขาด!** (ในแชทให้ตอบสรุปสั้นๆ พร้อมลิงก์คลิกเปิดไฟล์ `.md` และลิงก์รูป `SB6` เท่านั้น)
+- **พ่นเฉพาะเมื่อผู้ใช้สั่งเจาะจงเท่านั้น (On-Demand Only):**
+  1. **สั่ง `table` / `กางตาราง` (`/shopeereel table`):** จึงค่อยพ่น **ตารางสถานะ 6 คอลัมน์ (ตามหัวข้อ 7.5)** ลงในแชท
+  2. **สั่ง `prompt` / `ขอดูพรอมต์` / `กางพรอมต์`:** จึงค่อยกาง **บล็อก Prompt ของ Scene 1 และ Scene 2 พร้อมลิงก์รูป (`top`/`bot` และ `p1..p6`)** ลงในแชท!
 
 ---
 
-## 🏆 7. โหมด `SB6` (3×2 6-Panel Grid) + 2-Scene (3+3 Cuts) & ตารางสถานะ 6 คอลัมน์ในแชท
+## 🏆 7. โหมด `SB6–8` (Dynamic 6–8 Panel Grid ตามบริบทสินค้า) + 2-Scene (10s+10s) & ตารางสถานะ 6 คอลัมน์
 
-เมื่อผู้ใช้สั่งทำคลิปแบบ **ครบสูตร 6 ช็อต (`SB6`)** หรือสั่ง **`/shopeereel table`** / **`กางตาราง`** ให้รันตามมาตรฐานนี้ 100%:
+เมื่อผู้ใช้สั่งทำคลิปแบบ **ครบสูตร 2 ซีน (`SB6` / `SB7` / `SB8`)** หรือสั่ง **`/shopeereel table`** / **`กางตาราง`** ให้เลือกจำนวนช่อง (`6–8 ช่อง`) ตามบริบทจริงของสินค้าโดยไม่ฟิกตายตัว:
 
-### 7.1 สูตรเจนภาพตาราง 6 ช่อง (`<ID>_SB6.png`) & Auto-Slicer (`tools/shopee_meta_pipeline.py`)
-1. **เจนแผ่นตาราง `3 คอลัมน์ × 2 แถว` (รวม 6 ช่องแนวตั้ง 9:16 ในแผ่นเดียว):**
-   - ใช้ `node tools/gpt-image.cjs --ar 9:16` แนบรูปสินค้าจริงจาก `02_clean_refs/` ทั้งหมด เพื่อล็อกทรงสินค้า โลโก้ ปุ่ม มือคน แสงไฟ และฉากหลังให้ตรงกันทั้ง 6 ช่อง 100%
-   - **แถวบน (`Panel 1–3`):** จังหวะเตรียมของ ➔ ปิดฝา/ใส่เครื่อง ➔ กดปุ่ม/เร่งไฟทำงาน (สำหรับ **Scene 1: 0–10s · 3 คัต**)
-   - **แถวล่าง (`Panel 4–6`):** จังหวะเปิดฝาเห็นผลลัพธ์ ➔ โชว์ฟีเจอร์ถอดล้าง/วัสดุ ➔ Money Shot ตัก/ราด/คีบโชว์หน้ากล้อง (สำหรับ **Scene 2: 10–20s · 3 คัต**)
-2. **หั่นภาพอัตโนมัติไร้ขอบขาว 3 รูปแบบพร้อมกัน:**
-   - แผ่นเต็ม: `<ID>_SB6.png`
+### 7.0 เกณฑ์ตัดสินใจเลือกจำนวนช่อง (`6`, `7`, หรือ `8` Panels ตามบริบทสินค้า)
+- **`SB6` (`3×2 Grid` = 6 ช่อง · ซีนละ `3 + 3 คัต` · ช็อตละ `~3.3s`):**
+  - **ใช้เมื่อ:** สินค้ามีขั้นตอนชัดเจนและต้องการให้คนดูเห็นจังหวะเครื่องทำงานต่อเนื่อง (เช่น ปั่นหมู/น้ำจิ้ม, ต้มสุกี้/พะโล้เดือดปุดๆ, ตีหมูเด้ง) ไม่ตัดถี่เกินไปจนไม่เห็นความเปลี่ยนแปลงของวัตถุดิบ
+- **`SB7` (บน 4 + ล่าง 3 · Free-Layout Collage):**
+  - **ใช้เมื่อ:** ซีนแรกต้องสับไว 4 จังหวะ (ใส่ของ/ประกอบหลายขั้น) แต่ซีนสองต้องการแช่ผลลัพธ์ + ฟีเจอร์ + Money Shot 3 จังหวะ
+  - ✅ **ทดสอบจริงแล้ว (`nov-013-v3_SB7_test.png`):** เจนบน `--ar 9:16` ด้วยสูตร Gem 3 (ปล่อยให้โมเดลจัดเลย์เอาต์เอง) ได้ 4 ช่องบน + 3 ช่องล่างกว้างกว่า **ไม่มีช่องว่าง** สินค้า/มือ/ฉากตรงกันทุกช่อง ตัวหั่นนับได้ 4+3 ถูกต้อง
+- **`SB8` (บน 4 + ล่าง 4 · Free-Layout Collage):**
+  - **ใช้เมื่อ:** สินค้ามีลูกเล่น/อะไหล่หลายชิ้น หรือต้องการจังหวะ Fast-Cut รัวทั้งคลิป
+  - เจนบน `--ar 9:16` ด้วยสูตรเดียวกับ SB7 ได้เลย (ไม่ต้องใช้ 1:1)
+
+> 📐 **สองสูตรเจนแผ่น (เลือกตามปลายทาง):**
+> - **สูตร Grid เท่ากัน (`SB6` เดิม):** สั่ง "3 columns x 2 rows equal grid" → ไฟล์จริง `1024×1536` · หั่นเป็น 9:16 `720×1280` ได้ (ครอปบน-ล่างทิ้ง ~20%) → ใช้ได้ทั้ง **Meta AI** (ต้องการ Frame 0 แบบ 9:16) และ Flow
+> - **สูตร Free-Layout Collage (Gem 3 · `SB7`/`SB8` และใช้กับ 6 ได้):** สั่ง "vertical 9:16 collage with N panels · upper half = Scene 1 · lower half = Scene 2 · white gutter at exact middle" → ช่องจะผอม (สัดส่วน ~0.26–0.38) **ห้ามครอปเป็น 9:16** (หายครึ่งภาพ) → ตัวหั่นเก็บสัดส่วนเดิม (`fit_9x16=False`) · **ปลายทางหลัก = Google Flow Omni แนบ `top.png` / `bot.png`** (สูตร A ที่พิสูจน์แล้ว)
+> - **วาง Action สำคัญไว้กลางช่องเสมอ** อย่าให้มือ/สินค้าชิดขอบ
+> 🔧 **ขอบเขตโค้ดตอนนี้:** `--gen-sb6` เจนอัตโนมัติได้เฉพาะ `SB6` · `SB7`/`SB8` ให้เจนผ่าน `gpt-image.cjs --ar 9:16` ด้วยพรอมต์ด้านล่าง ตั้งชื่อ `<ID>_SB7.png` / `<ID>_SB8.png` แล้ว `slice_auto_storyboard` (ตรวจร่องขาวกลางแผ่น + นับช่องแต่ละครึ่งอัตโนมัติ) / `--table` / `--merge` รับต่อให้เอง · คลิปใหม่ต้องเพิ่มพรอมต์วิดีโอใน `CURATED_2SCENE_PROMPTS` ก่อนรัน Meta CDP
+
+### 7.1 คำสั่งรันอัตโนมัติครบวงจร (`tools/shopee_meta_pipeline.py`)
+```powershell
+# 1. เจนภาพตาราง 6–8 ช่อง (<ID>_SB6.png / SB7 / SB8) + หั่น top/bot & ภาพเดี่ยว 9:16 (720x1280) + อัปเดต Prompt + พ่นตาราง 6 คอลัมน์
+python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --gen-sb6 nov-013-v3
+python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --gen-sb6 all
+
+# 2. ตัดหางเงียบท้ายซีน + เฟดเสียง 0.08s รวม 2 ซีนจาก Flow Omni + พ่นตาราง 6 คอลัมน์อัปเดตสถานะทันที
+python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --merge nov-013 "Y:\Download\scene1.mp4" "Y:\Download\scene2.mp4"
+
+# 3. กางตารางสถานะ 6 คอลัมน์ลงในแชท (แผ่น SB คอลัมน์ 5 + ไฟล์ .mp4 ในคอลัมน์สถานะท้ายสุด)
+python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --table
+```
+
+### 7.2 สูตรเจนภาพตาราง `6–8 ช่อง` (`<ID>_SB6.png` / `_SB7.png` / `_SB8.png`) & Auto-Slicer
+1. **พรอมต์ SB6 (Grid เท่ากัน · `--ar 9:16` ได้ไฟล์จริง 1024×1536):**
+   - ยิง `node "C:\My Claw\DoctorBank-Brand\tools\gpt-image.cjs" --ar 9:16` พร้อมแนบรูปสินค้าจริงจาก `02_clean_refs/clean_*.jpg` ทุกรูป เพื่อล็อกทรงสินค้า โลโก้ ปุ่ม มือคน แสงไฟ และฉากหลังให้ตรงกันทุกช่อง 100%
+   ```text
+   One image composed of exactly SIX equal vertical 9:16 photographs arranged in a 3 columns x 2 rows grid, separated only by thin solid white gutters about 1.5% wide. Zero text, zero numbers, zero labels anywhere except the real printed brand logo on the product.
+   All panels are consecutive moments filmed on a smartphone in the same real lived-in Thai kitchen under natural daylight 5400K, same adult Thai hands, same sleeve, showing the EXACT SAME product from the reference images.
+   ROW 1 (Top Row — Scene 1: 0–10s · 3 Cuts):
+   - Panel 1..3: เตรียม/ใส่วัตถุดิบ ➔ ปิดฝา/ประกอบเครื่อง ➔ กดปุ่ม/หมุนสวิตช์ทำงานจริง
+   ROW 2 (Bottom Row — Scene 2: 10–20s · 3 Cuts):
+   - Panel 4..6: เปิดฝาโชว์ผลลัพธ์ ➔ โชว์จุดขายวัสดุ/ถอดล้างง่าย/ไม่ติดหม้อ ➔ ECU Money Shot ตัก/ราด/คีบโชว์หน้ากล้อง
+   ```
+   **พรอมต์ SB7 / SB8 (Free-Layout Collage สูตร Gem 3 · `--ar 9:16` · ทดสอบผ่านแล้ว):**
+   ```text
+   Create a realistic vertical 9:16 storyboard collage with <SEVEN|EIGHT> panels (1..N) for a Thai home-cooking product video. Read order: left to right, top to bottom.
+   LAYOUT: The UPPER HALF holds panels 1-4 (Scene 1). The LOWER HALF holds panels 5-<7|8> (Scene 2). A clear thin white horizontal gutter separates the two halves exactly at the vertical middle of the image. Inside each half arrange the panels freely as tall vertical frames separated by thin white gutters; every panel must be fully visible, no empty cells, no blank space.
+   STRICT PRODUCT LOCK: Use ONLY the <PRODUCT + INVARIANTS> from the reference images. Do not change shape, color, proportions, logo or any detail. Identical in every panel.
+   SAME SCENE IN ALL PANELS: real lived-in Thai kitchen, natural daylight 5400K, same adult Thai hands with <sleeve>, no face.
+   Panel 1: ... Panel N: ...
+   STYLE: raw Thai smartphone photos, real shadows, no color grading, mild sensor noise.
+   NEGATIVE: no text, no letters, no numbers, no numbered circles, no doodles, no stickers, no watermark (except the real logo printed on the product), no product redesign, no extra fingers, no empty panel.
+   ```
+   > ⚠️ ตัดของ Gem 3 ต้นฉบับออก 3 อย่าง (ขัดกับสไตล์ Raw Thai ของเรา): วงกลมเลข 1–N, ฟอนต์ลายมือ/Doodle, ฉาก Korean Minimal พาสเทล
+2. **หั่นภาพอัตโนมัติไร้ขอบขาวใน `03_first_frames/` (`slice_3x2_storyboard_grid` สำหรับ SB6 · `slice_auto_storyboard` สำหรับ SB7/SB8):**
+   - แผ่นรวม: `<ID>_SB6.png` (หรือ `_SB7.png` / `_SB8.png`)
    - แบ่งครึ่งบน-ล่าง: `<ID>_SB6_top.png` (Scene 1) และ `<ID>_SB6_bot.png` (Scene 2)
-   - ภาพเดี่ยว `9:16` (`720×1280`): `<ID>_s6_p1.png` ถึง `<ID>_s6_p6.png`
-3. **ตัดหางเงียบท้ายซีน + เฟดเสียงรอยต่อ (`trim_and_concat_two_scenes`):**
-   - เมื่อได้คลิป 10s ของทั้ง 2 ซีน (จาก Google Flow Omni หรือ Meta AI) ให้รัน `shopee_meta_pipeline.py` เพื่อตัดเดดแอร์ท้ายซีนอัตโนมัติ + เชื่อม `acrossfade=d=0.08` ออกเป็น `04_videos/combined_<ID>_omni_trimmed.mp4`
+   - ภาพเดี่ยว `9:16` (`720×1280` ไร้ขอบขาว 100%): `<ID>_s6_p1.png..p6.png` (หรือ `s7_p1..p7` / `s8_p1..p8`)
 
-### 7.2 กฎเหล็กการพ่น "ตารางคิว 6 คอลัมน์ (รูปรวมในคอลัมน์เดียว + สถานะท้ายสุด)" ลงในแชท
-ทุกครั้งที่เจน/หั่นภาพเสร็จ หรือเมื่อผู้ใช้สั่ง **`กางตาราง`** / **`/shopeereel table`** ต้องรัน `python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --table` และพ่นตาราง **6 คอลัมน์ (รวมลิงก์ไฟล์ทั้งหมดไว้ในคอลัมน์เดียวอ่านง่าย และวาง `สถานะ` ไว้คอลัมน์ขวาสุด)** ลงในแชทตามโครงสร้างนี้เป๊ะ:
+### 7.3 โครงสร้าง VIDEO PROMPT 2 ซีน (`10s + 10s = 20s` · ซีนละ `3` หรือ `4` คัต ตามจำนวนภาพ)
+บันทึกอัตโนมัติลงใน [`Meta_AI_2Scene_10s_Ready_Prompts.md`](file:///C:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/Campaigns/2026-11-16_30_16NOV26FBRAD/production_tables/Meta_AI_2Scene_10s_Ready_Prompts.md) เสมอ **(ห้ามกางกล่อง Prompt ลงในแชทเองเด็ดขาด ยกเว้นเมื่อผู้ใช้สั่ง `prompt` / `ขอดูพรอมต์` / `กางพรอมต์` เท่านั้น จึงค่อยกางบล็อกพร้อมลิงก์รูปทั้ง 2 ทางเลือก Half-Board `top`/`bot` และภาพเดี่ยว `p1..p6` คู่กับกล่อง `VIDEO PROMPT` ของ Scene 1 และ Scene 2 ลงในแชท):**
+- **ทางเลือกโยนรูปเข้า Flow Omni (Ingredient Mode — ใช้ได้ทั้ง 2 สูตร):**
+  - **สูตร A (แบ่งครึ่งแผ่น):** Scene 1 แนบ `<ID>_SB6_top.png` (1 รูป) · Scene 2 แนบ `<ID>_SB6_bot.png` (1 รูป)
+  - **สูตร B (ภาพเดี่ยว `9:16` `720×1280`):** Scene 1 แนบ `s6_p1.png` + `p2.png` + `p3.png` · Scene 2 แนบ `s6_p4.png` + `p5.png` + `p6.png`
+- **จังหวะแบ่งช็อตใน Prompt:**
+  - **ซีนละ 3 คัต (`3 Panels`):** `0.0–3.3s SHOT 1` · `3.3–6.6s HARD CUT — SHOT 2` · `6.6–10.0s HARD CUT — SHOT 3`
+  - **ซีนละ 4 คัต (`4 Panels`):** `0.0–2.5s SHOT 1` · `2.5–5.0s HARD CUT — SHOT 2` · `5.0–7.5s HARD CUT — SHOT 3` · `7.5–10.0s HARD CUT — SHOT 4`
+```text
+[VIDEO — image to video, 10 seconds, 3 shots, hands-only, vertical 9:16]
+Use the 3 attached images as the exact keyframes for Shot 1, Shot 2, and Shot 3. Never show any collage, grid, or still image. Keep the <PRODUCT_EN + INVARIANTS> identical in all 3 shots. Hands only, no face, raw handheld Thai smartphone footage.
+0.0–3.3s SHOT 1 [45° POV close, matching Image 1]: <Action 1>.
+3.3–6.6s HARD CUT — SHOT 2 [medium close, matching Image 2]: <Action 2>.
+6.6–10.0s HARD CUT — SHOT 3 [ECU, matching Image 3]: <Action 3>.
+[AUDIO] Off-screen Thai voiceover (<VOICE>), natural fast conversational pace, starts at 0.0s and runs continuously to the end, never cut off. <Diegetic SFX> underneath. No music.
+[SPOKEN — Thai, off-screen narrator, no lip-sync] "<บทพากย์ไทยธรรมชาติ 85–110 ตัวอักษรต่อซีน ตัวเลขเขียนคำไทย>"
+[NEGATIVE] no on-screen text, no captions, no watermark, no grid lines, no product morphing, no extra fingers, no slow motion, no music, nobody talking on camera, no face. All dialogues must be in Thai language only.
+```
+
+### 7.4 กฎเหล็กตรวจคลิป Flow Omni & ตัดหางเงียบท้ายซีน (`trim_and_concat_two_scenes`)
+เมื่อผู้ใช้ส่ง Path ไฟล์ `.mp4` จาก `Y:\Download\...` มาให้ในแชท ต้องทำตามลำดับนี้ 100%:
+1. **สับเฟรม `1 fps Contact Sheet` ส่องภาพจริงก่อนเสมอ (`fps=1,scale=270:480,tile=5x2`):**
+   - เพื่อระบุให้แม่นยำว่าไฟล์ไหนคือ **Scene 1** และไฟล์ไหนคือ **Scene 2** (ห้ามเดาจากลำดับที่วางในแชท หรือกรณีมีไฟล์คลิปอื่นปนมาจะได้คัดแยกถูก) และตรวจ QC ว่าไม่มีขอบตารางขาวหลุดเข้ามา
+2. **ห้ามตัดเสียงกลางคลิปเด็ดขาด (Boundary-Only Silence Trim):**
+   - ห้ามใช้ `silenceremove` หั่นกลางประโยคเพราะจะทำให้คำพูดขาดและภาพกระตุก ต้องใช้ `trim_and_concat_two_scenes(s1_path, s2_path, raw20s_out, trimmed_out)` ซึ่งวัด `detect_speech_end()` เพื่อตัดเฉพาะ **เดดแอร์ท้ายซีน (Tail Silence)** เท่านั้น แล้วเชื่อมรอยต่อด้วย `acrossfade=d=0.08:c1=tri:c2=tri` ออกเป็น `04_videos/combined_<ID>_omni_trimmed.mp4`
+3. **กฎ `9:16 Aspect Ratio Lock (720×1280)` สำหรับภาพหั่นย่อย (`_fit_panel_to_9x16`):**
+   - ภาพเดี่ยวทุกใบที่หั่นจากตาราง (`p1..p8`) ต้องบังคับ Center-Crop + Resize เป็น `720×1280` (`9:16` เป๊ะ) เสมอ เพราะถ้าสัดส่วนเพี้ยนเป็น `3:4` AI (โดยเฉพาะ Meta AI) จะไม่ยอมล็อกเป็น Frame 0
+4. **กรณีรันผ่าน Meta AI Playwright CDP (`:9222`):**
+   - ดึงพอร์ตตามลำดับ `:9225` (Bot Chrome) → `:9222` → `User Data/DevToolsActivePort`, ใช้ `:visible` selector เท่านั้นเพื่อข้าม hidden `<textarea>`, เช็ก `len(text) >= 20` ก่อนกดส่ง และหากเจอ `"video generation quota is exhausted"` หรือ `"You reached your limit"` ให้หยุดและแจ้งสลับมาใช้ Google Flow Omni ทันที
+
+### 7.5 กฎเหล็กการพ่น "ตารางคิว 6 คอลัมน์" ลงในแชท (เฉพาะเมื่อสั่ง `table` / `กางตาราง` เท่านั้น!)
+เมื่อผู้ใช้สั่ง **`กางตาราง`** หรือ **`/shopeereel table`** เท่านั้น (ห้ามพ่นเองตอนไม่ได้สั่ง) จึงรัน `python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --table` และพ่นตาราง **6 คอลัมน์แบบคลีนที่สุด (คอลัมน์ 5 ใส่เฉพาะลิงก์แผ่น `SB6`/`SB` ใบเดียว ส่วนลิงก์ไฟล์วิดีโอ `.mp4` ที่เสร็จแล้วให้เอาไปวางคู่กับคำว่า `✅ เสร็จแล้ว` ในคอลัมน์ `สถานะ` ขวาสุด)** ลงในแชทตามโครงสร้างนี้เป๊ะ:
 
 | # | รหัสคลิป | สินค้า (มุมคอนเทนต์) | ชุดภาพตั้งต้น | ไฟล์พร้อมใช้งาน / ลิงก์คลิกเปิด | สถานะ |
-| :-: | :--- | :--- | :---: | :--- | :---: |
-| **1** | **`<ID>`** | ชื่อสินค้า *(มุมคอนเทนต์)* | `SB6` (`s6_p1..p6`) | 🎬 `[combined_..._trimmed.mp4]` · `[SB6]` · `[top]/[bot]` · `[p1][p2][p3] / [p4][p5][p6]` | ✅ **เสร็จแล้ว** (`19.3s`) |
+| :-: | :--- | :--- | :---: | :--- | :--- |
+| **1** | **`<ID>`** | ชื่อสินค้า *(มุมคอนเทนต์)* | `SB6` (`s6_p1..p6`) | `[<ID>_SB6.png]` | ✅ **เสร็จแล้ว** · 🎬 `[combined_..._trimmed.mp4]` (`19.3s`) |
 
-> 📌 **เหตุผลที่ล็อกฟอร์แมตนี้:** การรวมลิงก์คลิปและรูปภาพ (`[SB6] · [top]/[bot] · [p1..p3] / [p4..p6]`) ไว้ในคอลัมน์เดียวแบบปุ่มสั้นๆ และเอา **`สถานะ`** ไว้หลังสุด ทำให้ตารางไม่รก กวาดตาเช็กคิวงานและคลิกเปิดไฟล์ได้ในคลิกเดียว
+> 📌 **เหตุผลที่ล็อกฟอร์แมตนี้:** แยกฝั่งภาพ (`SB` ใบเดียวในคอลัมน์ 5) ออกจากฝั่งผลลัพธ์วิดีโอ (`.mp4` อยู่ในคอลัมน์ `สถานะ` ท้ายสุดเฉพาะตัวที่เสร็จแล้ว) ทำให้กวาดตาดูง่ายสุดและพ่นตารางไวมาก
