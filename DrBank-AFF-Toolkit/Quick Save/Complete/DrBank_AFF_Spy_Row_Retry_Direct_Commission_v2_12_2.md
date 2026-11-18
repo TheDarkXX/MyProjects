@@ -1,13 +1,13 @@
 ---
-version: "2.12.2"
+version: "2.13.1"
 type: impl
 status: complete
 outcome: shipped
 date: 2026-11-18
-aliases: [drbank-aff-toolkit, spy-collector, extracom-retry, direct-commission]
+aliases: [drbank-aff-toolkit, spy-collector, extracom-retry, direct-commission, vps-image-mirror]
 conversation: "a58191f5-eea7-413f-8beb-4c5598b58569"
 summary: >
-  Add per-row and batch 0% retry buttons for Spy Reel Collector & V1 Scanner, harden Tier 2 keyword search + DOM fallback for EXTRACOMM fetching, and remove 3% WHT and 7% VAT ad-cost adjustments so commission values match affiliate.shopee.co.th 100%.
+  Add per-row and batch 0% retry buttons, harden EXTRACOMM fetching, align direct AFF commission parity (zero 3% WHT / 7% VAT), add sleeping AFF tab auto-detect & on-demand wake (v2.13.0), and mirror Shopee HD product images to VPS disk with Sidepanel & Spy Pool UI galleries (v2.13.1).
 ---
 # DrBank AFF Toolkit v2.12.2 — Per-Row EXTRACOMM Retry & Direct AFF Commission Parity
 
@@ -43,10 +43,20 @@ summary: >
 - **Live Bridge Status Strip & Pre-Flight Feedback (`sidepanel.html`, `sidepanel.js`, `src/styles/sidepanel.css`)**:
   - Added `#drb-spy-aff-bridge` banner and `#drb-spy-btn-wake-aff` button displaying live state (`ready`, `sleeping`, `missing`, `security`), plus `ensureSpyAffBridgeReadyWithFeedback()` wired into `runSpyReelCollector()`, `rerunSingleSpyRow()`, and `rerunFailedSpyRows()`.
 
+### 5. Spy Collector Shopee HD Image Capture & Permanent VPS Mirroring (`v2.13.1`)
+- **Extension Capture & Thumbnail Rendering (`manifest.json`, `sidepanel.js`, `src/styles/sidepanel.css`, `popup.html`, `sidepanel.html`, `src/common/utils.js`)**:
+  - Bumped extension version from `2.13.0` to `2.13.1`.
+  - Updated `resolveSpyRowItemAndRate`, `buildSpyLinkPayloadForSave`, `ensureSpyRowsShortLinksAndSave`, and `runSpyReelCollector` in `sidepanel.js` to capture up to 8 `imagesHD` URLs per item, send them in `SAVE_POOL_SHORTLINKS`, store returned `localImagesMap` paths on rows, and render `.sp-spy-item-thumb` (`44×44` thumbnail + `🖼️ N รูป`) in Spy Collector cards.
+- **XBrain VPS Mirroring & Spy Pool UI (`C:\XBrain\apps\aff\index.js`, `C:\XBrain\apps\aff\public\index.html`)**:
+  - Added SSRF-safe `isAllowedShopeeImgUrl`, `sanitizeSpyImgFileKey`, `findExistingSpyImgUrl`, and `mirrorSpyProductImages` saving up to 3 HD images per item to `data/spy_product_images/` (`SPY_PRODUCT_IMG_DIR`) and serving them via `GET /assets/spy-products/:file`.
+  - Updated `POST /api/shopee-aff/pool-shortlinks`, `syncSpyPoolFile`, `loadSpyPoolItems`, `POST /api/shopee-aff/spy-collect`, and `POST /api/aff/spy/:spySubId2/promote` to persist `images_hd`, `local_images`, `product_image_url`, and `aff_skus.images_json`, returning `localImagesMap`.
+  - Updated `getSpyDerivedMetrics`, `renderSpyPool`, and `openSpyDetailModal` in `apps/aff/public/index.html` to prioritize VPS-mirrored `local_images` with fallback to `images_hd[0]` and `vdogrid_url`, plus a clickable 6-image gallery in the Spy detail modal.
+
 ### Verification Results
 - `node tools/verify_sidepanel_dom.cjs` — PASSED (`All 113 HTML IDs verified`).
 - `node tools/verify_social_commission.cjs` — PASSED (direct parity `58.40`, `136.30`, `90.37`).
-- `node --check` on `background.js`, `sidepanel.js`, `src/shopee-affiliate.js`, `src/shopee-hud.js`, `src/common/utils.js` — all exited 0.
+- `node --check` on `background.js`, `sidepanel.js`, `src/shopee-affiliate.js`, `src/shopee-hud.js`, `src/common/utils.js`, and `C:\XBrain\apps\aff\index.js` — all exited 0.
+- `node apps/aff/test/golden-reconcile.mjs` (in `C:\XBrain`) — PASSED `[1]`–`[9]` including inline `<script>` syntax check on `apps/aff/public/index.html`.
 
 
 
@@ -68,9 +78,11 @@ summary: >
 - 09:57 — Aligned on removing 3% WHT and 107฿ VAT adjustment so displayed baht amounts match `affiliate.shopee.co.th` directly using 100฿ daily ad budget.
 - 10:02–10:09 — Implemented per-row/batch retry UI, API/DOM hardening, and direct commission parity across 9 files; verified all DOM, commission, and syntax checks.
 - 10:34–10:39 — Implemented v2.13.0 version bump + sleeping AFF tab auto-detect, on-demand auto-wake (`wakeAffTabIfSleeping`), and Spy Collector live bridge status banner (`#drb-spy-aff-bridge`); verified 113 DOM IDs and all checks.
+- 11:15–11:20 — Implemented v2.13.1 Shopee HD image capture in Extension + permanent VPS disk mirroring (`data/spy_product_images/`) and Spy Pool gallery UI in `C:\XBrain\apps\aff`; verified DOM, commission, syntax, and `golden-reconcile.mjs` (`[1]`–`[9]`).
 
 ## 🔗 GBRAIN Backlinks
-- **2026-11-18** | [sidepanel.js](file:///C:/My%20Claw/MyProjects/DrBank-AFF-Toolkit/sidepanel.js) -- Spy Reel Collector per-row & 0% batch retry controllers + direct commission hero rendering
+- **2026-11-18** | [sidepanel.js](file:///C:/My%20Claw/MyProjects/DrBank-AFF-Toolkit/sidepanel.js) -- Spy Reel Collector per-row & 0% batch retry controllers + direct commission hero rendering + HD image capture
+- **2026-11-18** | [index.js](file:///C:/XBrain/apps/aff/index.js) -- Permanent VPS mirroring (`mirrorSpyProductImages`), `/assets/spy-products/:file`, and `localImagesMap` response
 - **2026-11-18** | [shopee-affiliate.js](file:///C:/My%20Claw/MyProjects/DrBank-AFF-Toolkit/src/shopee-affiliate.js) -- Hardened Tier 2 keyword candidates + V1 row `🔄` recheck
 - **2026-11-18** | [utils.js](file:///C:/My%20Claw/MyProjects/DrBank-AFF-Toolkit/src/common/utils.js) -- Zero-tax `calculateCommission` & 100฿ `evaluateAdViability`
 

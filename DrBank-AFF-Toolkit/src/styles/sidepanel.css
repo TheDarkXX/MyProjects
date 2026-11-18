@@ -1296,6 +1296,22 @@ body[data-theme="dark"] .spy-rerun-row-btn:hover:not(:disabled) {
   gap: 7px;
 }
 
+.sp-spy-item-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.sp-spy-item-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface-2);
+  flex-shrink: 0;
+}
+
 .sp-spy-item-title {
   font-size: 13.5px;
   font-weight: 700;

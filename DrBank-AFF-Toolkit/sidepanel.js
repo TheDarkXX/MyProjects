@@ -1409,6 +1409,9 @@ async function resolveSpyRowItemAndRate(row, forceRefresh = true) {
 
       row.product_tag_title = d.title || row.product_tag_title || row.sku_code;
       if (d.shopId && !row.shop_id) row.shop_id = String(d.shopId);
+      if (Array.isArray(d.imagesHD) && d.imagesHD.length > 0) {
+        row.imagesHD = d.imagesHD.slice(0, 8);
+      }
       row.price = resolvedPrice;
       row.baseRate = baseRate;
       row.extraRate = extraRate;
@@ -1448,7 +1451,8 @@ function buildSpyLinkPayloadForSave(r) {
     estimatedCommission: Number(r.netComm) || 0,
     net_comm_baht: Number(r.netComm) || 0,
     soldCount: Number(r.soldCount) || 0,
-    sold_monthly: Number(r.soldCount) || 0
+    sold_monthly: Number(r.soldCount) || 0,
+    imagesHD: Array.isArray(r.imagesHD) ? r.imagesHD.slice(0, 8) : []
   };
 }
 
@@ -1492,11 +1496,19 @@ async function ensureSpyRowsShortLinksAndSave(targetRows = []) {
   }
 
   const linksToSave = targetRows
-    .filter((r) => r.spy_sub_id2 && (r.shortLink || r.netComm > 0 || r.price > 0))
+    .filter((r) => r.spy_sub_id2 && (r.shortLink || r.netComm > 0 || r.price > 0 || (r.imagesHD && r.imagesHD.length > 0)))
     .map(buildSpyLinkPayloadForSave);
 
   if (linksToSave.length > 0) {
-    await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: linksToSave });
+    const saveRes = await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: linksToSave });
+    const localMap = saveRes?.localImagesMap;
+    if (localMap && typeof localMap === 'object') {
+      for (const r of targetRows) {
+        if (r.spy_sub_id2 && Array.isArray(localMap[r.spy_sub_id2]) && localMap[r.spy_sub_id2].length > 0) {
+          r.localImages = localMap[r.spy_sub_id2];
+        }
+      }
+    }
   }
 }
 
@@ -1671,6 +1683,12 @@ async function runSpyReelCollector() {
       netComm: Number(it.net_comm_baht) || 0,
       soldCount: Number(it.sold_monthly) || 0,
       shortLink: it.our_short_link || '',
+      imagesHD: Array.isArray(it.images_hd)
+        ? it.images_hd
+        : it.product_image_url && /^https?:\/\//i.test(it.product_image_url)
+          ? [it.product_image_url]
+          : [],
+      localImages: Array.isArray(it.local_images) ? it.local_images : [],
       rateChecked: false,
       rateError: ''
     }));
@@ -1832,6 +1850,14 @@ function renderSpyCollectorResults(items = []) {
 
       const affUrl = r.item_id ? `https://affiliate.shopee.co.th/offer/product_offer/${r.item_id}` : '';
       const disableRowActions = spyCollectRunning || spyBatchRetryRunning || isRerunning;
+      const baseWebUrl = String(currentSettings.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
+      const localThumb = Array.isArray(r.localImages) && r.localImages[0]
+        ? (r.localImages[0].startsWith('http') ? r.localImages[0] : `${baseWebUrl}${r.localImages[0]}`)
+        : '';
+      const thumbUrl = (Array.isArray(r.imagesHD) && r.imagesHD[0]) || localThumb || '';
+      const thumbHtml = thumbUrl
+        ? `<img src="${escHtml(thumbUrl)}" class="sp-spy-item-thumb" alt="" loading="lazy" referrerpolicy="no-referrer">`
+        : '';
       return `
         <div class="sp-spy-item-card" data-gate="${gate}" data-idx="${i}">
           <div class="sp-spy-item-banner">
@@ -1839,14 +1865,20 @@ function renderSpyCollectorResults(items = []) {
             <code style="font-size:11px;background:rgba(0,0,0,0.25);padding:2px 7px;border-radius:999px;">${sub2Badge}</code>
           </div>
           <div class="sp-spy-item-body">
-            <div class="sp-spy-item-title">
-              ${escHtml(r.product_tag_title || r.slug || 'คลิป Facebook Reel')}
-            </div>
-            <div style="font-size:11.5px;color:var(--sp-text-2);display:flex;gap:6px;flex-wrap:wrap;">
-              <span>📺 <b>${escHtml(r.competitor_page || '-')}</b></span>
-              <span>·</span>
-              <span>SKU: <code>${escHtml(r.sku_code || '-')}</code></span>
-              ${r.soldCount > 0 ? `<span>· ขาย ${Number(r.soldCount).toLocaleString()}/ด.</span>` : ''}
+            <div class="sp-spy-item-head">
+              ${thumbHtml}
+              <div style="min-width:0;flex:1;">
+                <div class="sp-spy-item-title">
+                  ${escHtml(r.product_tag_title || r.slug || 'คลิป Facebook Reel')}
+                </div>
+                <div style="font-size:11.5px;color:var(--sp-text-2);display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;">
+                  <span>📺 <b>${escHtml(r.competitor_page || '-')}</b></span>
+                  <span>·</span>
+                  <span>SKU: <code>${escHtml(r.sku_code || '-')}</code></span>
+                  ${r.soldCount > 0 ? `<span>· ขาย ${Number(r.soldCount).toLocaleString()}/ด.</span>` : ''}
+                  ${Array.isArray(r.imagesHD) && r.imagesHD.length ? `<span>· 🖼️ ${r.imagesHD.length} รูป</span>` : ''}
+                </div>
+              </div>
             </div>
             ${
               hasItem
