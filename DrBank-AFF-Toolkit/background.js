@@ -55,7 +55,8 @@ let cachePersistTimer = null;
 
 function isValidRealOfferData(d) {
   if (!d || typeof d !== 'object') return false;
-  if (d.rateSource === 'base_default_fallback') return false;
+  if (d.rateSource === 'base_default_fallback' || d.rateSource === 'offer_list_xhr' || d.rateSource === 'list_approx' || d.rateSource === 'error_unknown') return false;
+  if (d.realRateVerified === false) return false;
   if (!d.cacheSchemaV2) return false;
   const price = Number(d.offerPrice || d.price || 0);
   const extra = Number(d.extraRate || 0);
@@ -509,16 +510,25 @@ async function scrapeOfferDetailViaBgTab(itemId, partialData = null, existingBgT
       await new Promise((r) => setTimeout(r, 450));
       const hit = realOfferCache.get(itemId);
       if (hit?.data && isValidRealOfferData(hit.data) && Number(hit.data.extraRate) > 0) {
+        const resolvedSold =
+          partialData?.soldCount !== null && partialData?.soldCount !== undefined
+            ? partialData.soldCount
+            : (hit.data.soldCount !== undefined ? hit.data.soldCount : null);
         return {
           ...(partialData || {}),
           ...hit.data,
-          soldCount: Number(partialData?.soldCount) || Number(hit.data.soldCount) || 0,
+          soldCount: resolvedSold,
+          soldSource: partialData?.soldSource || hit.data.soldSource || (resolvedSold !== null ? 'affiliate_offer_api' : 'unknown'),
           cacheSchemaV2: true
         };
       }
       const domRes = await sendToAffTabWithReinject(tabId, { action: 'GET_AFFILIATE_OFFER' });
       const d = domRes?.data;
       if (d && String(d.itemId || itemId) === itemId && (d.domTableVerified || Number(d.extraRate) > 0 || Number(d.baseRate) > 0)) {
+        const resolvedSold =
+          d.soldCount !== null && d.soldCount !== undefined
+            ? d.soldCount
+            : (partialData?.soldCount !== undefined ? partialData.soldCount : null);
         const merged = {
           ...(partialData || {}),
           ...d,
@@ -527,7 +537,8 @@ async function scrapeOfferDetailViaBgTab(itemId, partialData = null, existingBgT
           title: d.title || partialData?.title || '',
           price: Number(d.price || d.offerPrice) || Number(partialData?.price) || 0,
           offerPrice: Number(d.offerPrice || d.price) || Number(partialData?.price) || 0,
-          soldCount: Number(partialData?.soldCount) || Number(d.soldCount) || 0,
+          soldCount: resolvedSold,
+          soldSource: d.soldSource || partialData?.soldSource || (resolvedSold !== null ? 'dom_card' : 'unknown'),
           domTableVerified: true,
           hasRealCommission: true,
           realRateVerified: true,
@@ -648,7 +659,7 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
         circuitBreaker = { tripped: true, trippedAt: Date.now(), error: resp.error };
         return { ok: false, securityCheck: true, circuitTripped: true, error: resp.error };
       }
-      if (resp?.ok && resp.data && (resp.data.realRateVerified || resp.data.baseRate >= 0)) {
+      if (resp?.ok && resp.data && !resp.data.rateError && (resp.data.realRateVerified || resp.data.baseRate >= 0)) {
         circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
         let finalData = resp.data;
         if (
@@ -669,6 +680,9 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
           persistRealOfferCacheEntry(itemId, finalData);
         }
         return { ok: true, cached: false, cachedAt: Date.now(), data: finalData };
+      }
+      if (resp?.ok && resp.data?.rateError && openTabs.length === 1) {
+        return { ok: false, rateError: true, error: resp.data.error || 'Shopee API Rate Error' };
       }
     }
 
@@ -724,7 +738,7 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
         circuitBreaker = { tripped: true, trippedAt: Date.now(), error: resp.error };
         return { ok: false, securityCheck: true, circuitTripped: true, error: resp.error };
       }
-      if (resp?.ok && resp.data && (resp.data.realRateVerified || resp.data.baseRate >= 0)) {
+      if (resp?.ok && resp.data && !resp.data.rateError && (resp.data.realRateVerified || resp.data.baseRate >= 0)) {
         circuitBreaker = { tripped: false, trippedAt: 0, error: '' };
         let finalData = resp.data;
         if (
@@ -746,6 +760,10 @@ async function fetchRealAffOfferImpl(rawItemId, forceRefresh = false, options = 
           persistRealOfferCacheEntry(itemId, finalData);
         }
         return { ok: true, cached: false, cachedAt: Date.now(), data: finalData };
+      }
+      if (resp?.ok && resp.data?.rateError) {
+        shouldCloseBgTab = true;
+        return { ok: false, rateError: true, error: resp.data.error || 'Shopee API Rate Error' };
       }
       shouldCloseBgTab = true;
       return {
@@ -1703,7 +1721,11 @@ async function handleMessage(msg, _sender) {
         breakEvenUnits: payload.breakEvenUnits || '0.0',
         breakEvenOrders: Number(payload.breakEvenOrders) || 0,
         viabilityTier: payload.viabilityTier || 'warning',
-        soldCount: Number(payload.soldCount) || 0,
+        soldCount:
+          payload.soldCount !== null && payload.soldCount !== undefined && payload.soldCount !== ''
+            ? Number(payload.soldCount) || 0
+            : null,
+        soldSource: payload.soldSource || (payload.soldCount !== null && payload.soldCount !== undefined ? 'affiliate_offer_api' : 'unknown'),
         soldText: payload.soldText || '',
         rating: Number(payload.rating) || 0,
         shipFrom: payload.shipFrom || '',
@@ -1857,14 +1879,19 @@ async function handleMessage(msg, _sender) {
       const ids = Array.isArray(payload?.itemIds) ? payload.itemIds : [];
       const now = Date.now();
       const cached = {};
+      let purged = false;
       ids.forEach((raw) => {
         const id = String(raw || '').replace(/[^0-9]/g, '');
         if (!id) return;
         const hit = realOfferCache.get(id);
-        if (hit && hit.data && now - hit.cachedAt < REAL_OFFER_TTL_MS) {
+        if (hit && hit.data && isValidRealOfferData(hit.data) && now - hit.cachedAt < REAL_OFFER_TTL_MS) {
           cached[id] = { ...hit.data, cachedAt: hit.cachedAt };
+        } else if (hit) {
+          realOfferCache.delete(id);
+          purged = true;
         }
       });
+      if (purged) schedulePersistRealOfferCache();
       const openAffTabs = await findOpenAffTabs();
       return {
         cached,
@@ -1997,6 +2024,33 @@ async function handleMessage(msg, _sender) {
       return await postWebUiJson(
         '/api/shopee-aff/spy-commit',
         { items },
+        { baseUrlOverride: payload?.webUiBaseUrl, timeoutMs: 20000 }
+      );
+    }
+
+    case 'FIND_BETTER_SHOPS_FOR_ITEM': {
+      const bridgeRes = await ensureAffBridgeReady({ focusIfSecurity: true });
+      if (!bridgeRes?.ok || !bridgeRes.tabId) {
+        return {
+          ok: false,
+          securityCheck: Boolean(bridgeRes?.securityCheck),
+          error: bridgeRes?.error || 'กรุณาเปิดหน้า affiliate.shopee.co.th ก่อนค้นหาร้านทดแทน'
+        };
+      }
+      const resp = await sendToAffTabWithReinject(bridgeRes.tabId, {
+        action: 'FIND_BETTER_SHOPS_FOR_ITEM',
+        payload: payload || {}
+      });
+      if (!resp) {
+        return { ok: false, error: 'ไม่สามารถติดต่อแท็บ affiliate.shopee.co.th ได้ ลองรีเฟรชหน้า AFF แล้วลองใหม่' };
+      }
+      return resp;
+    }
+
+    case 'SPY_SWAP_SHOP': {
+      return await postWebUiJson(
+        '/api/shopee-aff/spy-swap-shop',
+        payload || {},
         { baseUrlOverride: payload?.webUiBaseUrl, timeoutMs: 20000 }
       );
     }

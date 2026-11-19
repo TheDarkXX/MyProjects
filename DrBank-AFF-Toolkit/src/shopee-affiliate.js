@@ -29,7 +29,8 @@
     cleanUrl: '',
     imagesHD: [],
     variants: [],
-    soldCount: 0,
+    soldCount: null,
+    soldSource: 'unknown',
     soldText: '',
     rating: 4.9,
     shipFrom: 'ส่งในไทย',
@@ -89,15 +90,20 @@
           : (isSameItem && offerProduct.cleanUrl) || location.href,
       imagesHD: parsed.imagesHD.length ? parsed.imagesHD : isSameItem ? offerProduct.imagesHD || [] : [],
       variants: [],
-      soldCount: parsed.soldMonthly || parsed.soldTotal || 0,
-      soldText: (parsed.soldMonthly || parsed.soldTotal || 0).toLocaleString(),
+      soldCount: parsed.soldMonthly !== undefined ? parsed.soldMonthly : null,
+      historicalSold: parsed.soldTotal !== undefined ? parsed.soldTotal : null,
+      soldSource: parsed.soldSource || (parsed.soldMonthly !== null ? 'affiliate_offer_api' : 'unknown'),
+      soldText:
+        parsed.soldMonthly !== null && parsed.soldMonthly !== undefined
+          ? parsed.soldMonthly.toLocaleString()
+          : (parsed.soldTotal !== null && parsed.soldTotal !== undefined ? parsed.soldTotal.toLocaleString() : 'ไม่ทราบ'),
       rating: parsed.rating ? +parsed.rating.toFixed(1) : 4.9,
       shipFrom: parsed.isMall ? 'Shopee Mall' : 'ส่งในไทย',
       isOverseas: false,
       hasRealCommission: Boolean(parsed.hasRealCommission),
-      realRateVerified: Boolean(parsed.hasRealCommission),
+      realRateVerified: Boolean(parsed.realRateVerified),
       cacheSchemaV2: true,
-      rateSource: 'social_media_detail',
+      rateSource: parsed.rateSource || (parsed.realRateVerified ? 'social_media_detail_api' : 'list_approx'),
       channelRows: [
         { channel: 'โซเชียลมีเดีย', extraRate: parsed.extraRate, baseRate: parsed.baseRate, totalRate: parsed.totalRate },
         { channel: 'ช้อปปี้ไลฟ์/วิดีโอ', extraRate: parsed.liveExtraRate, baseRate: parsed.liveBaseRate, totalRate: +(parsed.liveExtraRate + parsed.liveBaseRate).toFixed(2) }
@@ -553,7 +559,8 @@
     let foundTitle = '';
     let foundPrice = 0;
     let foundSoldText = '';
-    let foundSoldNum = 0;
+    let foundSoldNum = null;
+    let foundSoldSource = 'unknown';
     let foundRating = 0;
     let foundShopId = '';
     let foundItemId = '';
@@ -583,7 +590,8 @@
         cleanUrl: location.href,
         imagesHD: [],
         variants: [],
-        soldCount: 0,
+        soldCount: null,
+        soldSource: 'unknown',
         soldText: '',
         rating: 4.9,
         shipFrom: 'ส่งในไทย',
@@ -639,6 +647,7 @@
     if (mSold && mSold[1]) {
       foundSoldText = mSold[1].trim().slice(0, 14);
       foundSoldNum = ns.parseSoldCount(foundSoldText);
+      foundSoldSource = 'dom_card';
     }
 
     const mRating =
@@ -732,6 +741,21 @@
     const finalExtraTHB = preserveVerifiedApi ? offerProduct.extraCommTHB : foundExtraTHB;
     const finalGrossTHB = preserveVerifiedApi ? offerProduct.grossCommTHB : foundGrossTHB || foundBaseTHB + foundExtraTHB;
 
+    const finalSoldCount =
+      preserveVerifiedApi && offerProduct.soldCount !== null && offerProduct.soldCount !== undefined
+        ? offerProduct.soldCount
+        : foundSoldNum !== null
+        ? foundSoldNum
+        : offerProduct.soldCount !== undefined
+        ? offerProduct.soldCount
+        : null;
+    const finalSoldSource =
+      preserveVerifiedApi && offerProduct.soldSource && offerProduct.soldSource !== 'unknown'
+        ? offerProduct.soldSource
+        : foundSoldNum !== null
+        ? foundSoldSource
+        : offerProduct.soldSource || 'unknown';
+
     offerProduct = {
       ...offerProduct,
       sourceType: preserveVerifiedApi ? offerProduct.sourceType : 'affiliate_offer',
@@ -748,8 +772,9 @@
       itemId: foundItemId,
       cleanUrl: foundCleanUrl !== location.href ? foundCleanUrl : offerProduct.cleanUrl || foundCleanUrl,
       imagesHD: Array.from(imgSet).length ? Array.from(imgSet).slice(0, 8) : offerProduct.imagesHD || [],
-      soldCount: foundSoldNum || offerProduct.soldCount || 0,
-      soldText: foundSoldText || offerProduct.soldText || (foundSoldNum > 0 ? foundSoldNum.toLocaleString() : '0'),
+      soldCount: finalSoldCount,
+      soldSource: finalSoldSource,
+      soldText: foundSoldText || offerProduct.soldText || (finalSoldCount !== null ? finalSoldCount.toLocaleString() : 'ไม่ทราบ'),
       rating: foundRating || offerProduct.rating || 4.9,
       domTableVerified: domHasRates,
       hasRealCommission: Boolean(domHasRates || preserveVerifiedApi),
@@ -955,6 +980,25 @@
         })();
         return true;
       }
+      if (req.action === 'FIND_BETTER_SHOPS_FOR_ITEM') {
+        (async () => {
+          try {
+            if (/verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+              sendResponse({
+                ok: false,
+                securityCheck: true,
+                error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+              });
+              return;
+            }
+            const res = await findBetterShopsForSpyItem(req.payload || {});
+            sendResponse(res);
+          } catch (err) {
+            sendResponse({ ok: false, error: err?.message || String(err) });
+          }
+        })();
+        return true;
+      }
     });
   }
 
@@ -1014,9 +1058,9 @@
           parsedOffer.extraCommTHB = +comm.extraComm.toFixed(2);
           parsedOffer.grossCommTHB = +comm.grossComm.toFixed(2);
         }
-        // Only return early if Tier 1 actually extracted a real commission rate (extraRate > 0 or hasRealCommission)!
+        // Only return early if Tier 1 actually extracted a verified Social Media commission rate!
         // Otherwise keep partialOffer (which has the real Shopee product title & price) and run Tier 2 (/offer/product/list)!
-        if (Number(parsedOffer.price) > 0 && (Number(parsedOffer.extraRate) > 0 || parsedOffer.hasRealCommission)) {
+        if (parsedOffer.realRateVerified && Number(parsedOffer.price) > 0 && (Number(parsedOffer.extraRate) > 0 || parsedOffer.hasRealCommission)) {
           ns.sendMessage('CACHE_REAL_AFF_OFFER', parsedOffer).catch(() => {});
           return parsedOffer;
         }
@@ -1041,10 +1085,10 @@
       let acc = '';
       for (const w of words) {
         const next = acc ? `${acc} ${w}` : w;
-        if (next.length > 32 && acc.length >= 10) break;
+        if (next.length > 48 && acc.length >= 16) break;
         acc = next;
       }
-      return (acc || cleanStr).slice(0, 32).trim();
+      return (acc || cleanStr).slice(0, 64).trim();
     };
 
     const pushCandidate = (arr, kw) => {
@@ -1056,16 +1100,17 @@
     const hintKw = cleanTitleCandidate(titleHint || '');
     const keywordCandidates = [];
     if (realTitleKw) {
-      pushCandidate(keywordCandidates, realTitleKw.slice(0, 60));
+      pushCandidate(keywordCandidates, realTitleKw.slice(0, 64));
       pushCandidate(keywordCandidates, makeShortCore(realTitleKw));
     }
     if (hintKw) {
-      pushCandidate(keywordCandidates, hintKw.slice(0, 60));
+      pushCandidate(keywordCandidates, hintKw.slice(0, 64));
       pushCandidate(keywordCandidates, makeShortCore(hintKw));
     }
     keywordCandidates.push(cleanId);
 
     let matchedRawItem = null;
+    let lastListApiError = '';
     for (const kw of keywordCandidates) {
       const q = new URLSearchParams({
         keyword: kw,
@@ -1091,6 +1136,13 @@
           errorCode: 90309999,
           error: 'Shopee ขอตรวจสอบความปลอดภัย (90309999) — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
         };
+      }
+
+      if (!resList?.ok || (typeof resList?.data?.error === 'number' && resList.data.error !== 0)) {
+        lastListApiError =
+          resList?.data?.msg ||
+          (typeof resList?.data?.error === 'number' ? `Shopee API Error ${resList.data.error}` : `HTTP ${resList?.status || 'Network Error'}`);
+        break;
       }
 
       const list = resList?.data?.data?.list;
@@ -1132,8 +1184,26 @@
         whtRate: 0.0,
         realDailyAdCostTHB: 100
       });
-      const soldCount = Number(row.sold || row.historical_sold) || Number(partialOffer?.soldCount) || 0;
-      const hasRealCommission = Boolean(extraRate > 0 || Number(row.baseRate) > 0 || partialOffer?.hasRealCommission);
+
+      const partialSoldKnown =
+        partialOffer &&
+        partialOffer.soldCount !== null &&
+        partialOffer.soldCount !== undefined &&
+        partialOffer.soldSource &&
+        partialOffer.soldSource !== 'unknown';
+      const soldCount = row.soldKnown
+        ? Number(row.sold) || 0
+        : partialSoldKnown
+        ? Number(partialOffer.soldCount) || 0
+        : null;
+      const soldSource = row.soldKnown
+        ? row.soldSource || 'offer_list_xhr'
+        : partialSoldKnown
+        ? partialOffer.soldSource
+        : 'unknown';
+
+      const isVerifiedRate = Boolean(partialOffer?.realRateVerified || row.realRateVerified);
+      const hasRealCommission = Boolean(isVerifiedRate && (extraRate > 0 || Number(row.baseRate) > 0 || partialOffer?.hasRealCommission));
 
       const listOffer = {
         ...(partialOffer || {}),
@@ -1148,29 +1218,48 @@
         extraCommTHB: +comm.extraComm.toFixed(2),
         grossCommTHB: +comm.grossComm.toFixed(2),
         soldCount,
-        soldText: soldCount.toLocaleString(),
+        soldSource,
+        soldText: soldCount !== null ? soldCount.toLocaleString() : 'ไม่ทราบ',
         cleanUrl: row.productLink || partialOffer?.cleanUrl || '',
         imagesHD: row.imagesHD?.length ? row.imagesHD : partialOffer?.imagesHD || [],
         hasRealCommission,
-        realRateVerified: hasRealCommission,
+        realRateVerified: isVerifiedRate,
         cacheSchemaV2: true,
         noExtraOffer: extraRate <= 0,
-        rateSource: partialOffer ? 'social_media_detail_plus_list' : 'offer_list_xhr'
+        rateSource: isVerifiedRate ? 'social_media_detail_plus_list' : 'list_approx'
       };
-      if (hasRealCommission && (price > 0 || extraRate > 0)) {
+      if (isVerifiedRate && hasRealCommission && (price > 0 || extraRate > 0)) {
         ns.sendMessage('CACHE_REAL_AFF_OFFER', listOffer).catch(() => {});
       }
       return listOffer;
     }
 
     if (partialOffer && (Number(partialOffer.price) > 0 || Number(partialOffer.extraRate) > 0)) {
-      if (partialOffer.hasRealCommission) {
+      if (partialOffer.realRateVerified && partialOffer.hasRealCommission) {
         ns.sendMessage('CACHE_REAL_AFF_OFFER', partialOffer).catch(() => {});
       }
       return partialOffer;
     }
 
-    // Tier 3: Uncached Fallback (NEVER poison realOfferCache with price: 0)
+    // Tier 3: Error/Unknown Fallback (NEVER report fake 0.6% rate or 0 sold on API failure)
+    if (lastListApiError) {
+      return {
+        itemId: cleanId,
+        rateError: true,
+        error: lastListApiError,
+        noExtraOffer: false,
+        baseRate: 0,
+        extraRate: 0,
+        price: 0,
+        offerPrice: 0,
+        soldCount: null,
+        soldSource: 'unknown',
+        hasRealCommission: false,
+        realRateVerified: false,
+        rateSource: 'error_unknown'
+      };
+    }
+
     return {
       itemId: cleanId,
       noExtraOffer: true,
@@ -1178,10 +1267,202 @@
       extraRate: 0,
       price: 0,
       offerPrice: 0,
-      soldCount: 0,
+      soldCount: null,
+      soldSource: 'unknown',
       hasRealCommission: false,
       realRateVerified: false,
       rateSource: 'base_default_fallback'
+    };
+  }
+
+  let lastBestShopSearchAt = 0;
+  async function findBetterShopsForSpyItem(payload = {}) {
+    const cleanOrigId = String(payload.itemId || payload.item_id || '').replace(/[^0-9]/g, '');
+    const sourceTitle = String(payload.title || payload.product_tag_title || '').trim();
+    const sourcePrice = Math.max(0, Number(payload.price) || 0);
+    const origNet = Math.max(0, Number(payload.netComm ?? payload.net_comm_baht) || 0);
+    const origSold = Math.max(0, Number(payload.soldCount ?? payload.sold_monthly) || 0);
+    const origScore = origNet > 0 ? origNet * Math.log10(origSold + 10) : 0;
+
+    if (!sourceTitle) {
+      return { ok: false, error: 'ไม่มีชื่อสินค้าสำหรับค้นหาร้านทดแทน', candidates: [] };
+    }
+
+    const now = Date.now();
+    const minIntervalMs = 5000 + Math.floor(Math.random() * 1800);
+    const elapsed = now - lastBestShopSearchAt;
+    if (lastBestShopSearchAt > 0 && elapsed < minIntervalMs) {
+      await new Promise((r) => setTimeout(r, minIntervalMs - elapsed));
+    }
+    lastBestShopSearchAt = Date.now();
+
+    const cleanKeywordSource = sourceTitle
+      .replace(/^SP\d+\s*/i, '')
+      .replace(/^(?:กดสั่งซื้อที่นี่|พิกัดสินค้า|สั่งซื้อที่นี่|ดูสินค้า|พร้อมส่ง|ส่งไว|ส่งฟรี|ของแท้|100%)\s*/gi, '')
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, ' ')
+      .replace(/[\[\]()【】「」『』<>|•★☆\/,+!@#$%^&*=_~`'"]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const modelTokens = (cleanKeywordSource.match(/[A-Za-z]{1,5}-?\d{1,5}[A-Za-z]?/g) || []).map((t) =>
+      t.toLowerCase().replace(/-/g, '')
+    );
+    const unitTokens = (
+      cleanKeywordSource.match(/\d+(?:\.\d+)?\s*(?:ซม\.?|cm|มม\.?|mm|ลิตร|l|ml|มล\.?|วัตต์|w|นิ้ว|โวลต์|v|ah|kg|กก\.?|ชั้น|ช่อง)/gi) ||
+      []
+    ).map((t) => t.toLowerCase().replace(/\s+|\./g, ''));
+    const mandatoryTokens = Array.from(new Set([...modelTokens, ...unitTokens])).slice(0, 4);
+
+    // Build clean search keyword <= 64 chars while keeping model/unit tokens intact
+    const words = cleanKeywordSource.split(/\s+/).filter((w) => w.length >= 2);
+    let searchKw = '';
+    for (const w of words) {
+      const next = searchKw ? `${searchKw} ${w}` : w;
+      if (next.length > 64 && searchKw.length >= 16) break;
+      searchKw = next;
+    }
+    searchKw = (searchKw || cleanKeywordSource).slice(0, 64).trim();
+    if (searchKw.length < 3) {
+      return { ok: false, error: 'คำค้นหาสั้นเกินไปไม่สามารถหาร้านอื่นได้', candidates: [] };
+    }
+
+    const q = new URLSearchParams({
+      keyword: searchKw,
+      client_type: '1',
+      list_type: '0',
+      sort_type: '2',
+      page_offset: '0',
+      page_limit: '50'
+    });
+    const resList = await pageMainRequest({
+      url: `https://affiliate.shopee.co.th/api/v3/offer/product/list?${q.toString()}`,
+      method: 'GET',
+      useFetch: false
+    });
+
+    if (resList?.data?.error === 90309999 || /verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+      return {
+        ok: false,
+        securityCheck: true,
+        errorCode: 90309999,
+        error: 'Shopee ขอตรวจสอบความปลอดภัย (90309999) — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน',
+        candidates: []
+      };
+    }
+
+    if (!resList?.ok || (typeof resList?.data?.error === 'number' && resList.data.error !== 0)) {
+      return {
+        ok: false,
+        error: resList?.data?.msg || `ค้นหาร้านอื่นไม่สำเร็จ (${resList?.data?.error || resList?.status || 'Network'})`,
+        candidates: []
+      };
+    }
+
+    const list = Array.isArray(resList?.data?.data?.list) ? resList.data.data.list : [];
+    const srcWordSet = new Set(words.filter((w) => !/^(?:รุ่นใหม่|รุ่น|สี|ขนาด|แบบ|และ|สำหรับ|อย่างดี|ราคาถูก)$/i.test(w)).map((w) => w.toLowerCase()));
+    const qualified = [];
+
+    for (const rawEntry of list) {
+      const card = rawEntry?.batch_item_for_item_card_full || {};
+      const row = mapRawOfferItemToRow(rawEntry);
+      if (!row.itemid || (cleanOrigId && String(row.itemid) === cleanOrigId)) continue;
+
+      const candTitleRaw = String(row.name || '');
+      const candNormCompact = candTitleRaw.toLowerCase().replace(/[\s.\-_\/]+/g, '');
+      const candWords = candTitleRaw
+        .toLowerCase()
+        .replace(/[\[\]()【】「」『』<>|•★☆\/,+!@#$%^&*=_~`'"]+/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length >= 2);
+
+      // Guard 1: Mandatory model & unit tokens must match
+      let missingMandatory = false;
+      for (const tok of mandatoryTokens) {
+        if (!candNormCompact.includes(tok)) {
+          missingMandatory = true;
+          break;
+        }
+      }
+      if (missingMandatory) continue;
+
+      // Guard 2: Core word overlap
+      let overlapCount = 0;
+      srcWordSet.forEach((sw) => {
+        if (candWords.some((cw) => cw.includes(sw) || sw.includes(cw))) {
+          overlapCount++;
+        }
+      });
+      const overlapRatio = srcWordSet.size > 0 ? overlapCount / srcWordSet.size : 1;
+      if (overlapRatio < 0.4 && overlapCount < 2) continue;
+
+      // Guard 3 (Trap D): Spare-part price_min guard + +-25% price window
+      let effectivePrice = Number(row.price) || 0;
+      const priceMax = Number(row.priceMax) || effectivePrice;
+      let priceAdjusted = false;
+      if (sourcePrice > 0 && effectivePrice < sourcePrice * 0.5 && priceMax >= sourcePrice * 0.75) {
+        effectivePrice = priceMax;
+        priceAdjusted = true;
+      }
+      if (sourcePrice > 0 && (effectivePrice < sourcePrice * 0.75 || effectivePrice > sourcePrice * 1.25)) {
+        continue;
+      }
+
+      // Guard 4 (Trap B): Only real monthly sold >= 30 (never historical_sold)
+      const soldMonthly = row.soldKnown ? Number(row.sold) || 0 : 0;
+      if (soldMonthly < 30) continue;
+
+      // Guard 5: Extra > 0 and netComm >= 20
+      const comm = ns.calculateCommission({
+        price: effectivePrice,
+        baseRate: Number(row.baseRate) || 0,
+        extraRate: Number(row.extraRate) || 0,
+        capTHB: 250,
+        whtRate: 0.0,
+        realDailyAdCostTHB: 100
+      });
+      const effectiveNet = +comm.netComm.toFixed(2);
+      if (Number(row.extraRate) <= 0 || effectiveNet < 20) continue;
+
+      const score = +(effectiveNet * Math.log10(soldMonthly + 10)).toFixed(2);
+      const upliftPct = origScore > 0 ? Math.round(((score - origScore) / origScore) * 100) : 100;
+
+      qualified.push({
+        itemId: String(row.itemid),
+        shopId: String(row.shopid || ''),
+        shopName: String(card.shop_name || rawEntry?.shop_name || (row.isMall ? 'Shopee Mall' : 'ร้านแนะนำ')),
+        isMall: Boolean(row.isMall),
+        isPreferred: Boolean(card.shopee_verified),
+        title: candTitleRaw,
+        price: effectivePrice,
+        priceMin: Number(row.price) || effectivePrice,
+        priceMax,
+        priceAdjusted,
+        soldMonthly,
+        historicalSold: Number(row.historical_sold) || 0,
+        baseRate: Number(row.baseRate) || 0,
+        extraRate: Number(row.extraRate) || 0,
+        totalRate: +((Number(row.baseRate) || 0) + (Number(row.extraRate) || 0)).toFixed(2),
+        netComm: effectiveNet,
+        imageUrl: row.imageUrl || '',
+        imagesHD: Array.isArray(row.imagesHD) ? row.imagesHD.slice(0, 8) : [],
+        cleanUrl: row.productLink || `https://shopee.co.th/product/${row.shopid}/${row.itemid}`,
+        offerUrl: row.affUrl || `https://affiliate.shopee.co.th/offer/product_offer/${row.itemid}`,
+        score,
+        upliftPct,
+        recommended: origScore <= 0 || score >= origScore * 1.2,
+        rateSource: 'list_approx',
+        tier1Verified: false
+      });
+    }
+
+    qualified.sort((a, b) => b.score - a.score || b.soldMonthly - a.soldMonthly);
+    return {
+      ok: true,
+      keyword: searchKw,
+      origScore: +origScore.toFixed(2),
+      totalScanned: list.length,
+      qualifiedCount: qualified.length,
+      candidates: qualified.slice(0, 3)
     };
   }
 
@@ -1417,7 +1698,10 @@
     const price = (Number(a.price) || 0) / 1e5;
     const priceMax = (Number(a.price_max) || Number(a.price) || 0) / 1e5;
     const stock = Number(a.stock) || 0;
-    const sold = Number(a.sold) || 0; // ขาย/เดือน (ชิ้น) จริงจาก API!
+    const rawSoldVal = a.sold;
+    const soldKnown = rawSoldVal !== undefined && rawSoldVal !== null && rawSoldVal !== '' && Number.isFinite(Number(rawSoldVal));
+    const sold = soldKnown ? Math.max(0, Number(rawSoldVal)) : 0; // ขาย/เดือน (ชิ้น) จริงจาก API!
+    const soldSource = soldKnown ? 'offer_list_xhr' : 'unknown';
     const historical_sold = Number(a.historical_sold) || 0; // ขายทั้งหมด (ชิ้น) จริง!
     const isMall = Boolean(a.is_official_shop);
     const isFreeSample = Boolean(raw?.is_free_sample);
@@ -1472,7 +1756,11 @@
       priceMax,
       stock,
       sold,
+      soldKnown,
+      soldSource,
       historical_sold,
+      realRateVerified: Boolean(rateBreakdown.realRateVerified),
+      rateSource: rateBreakdown.rateSource || 'list_approx',
       isMall,
       isFreeSample,
       baseRate,
@@ -3596,7 +3884,15 @@
             realDailyAdCostTHB: 100
           });
           const netComm = +comm.netComm.toFixed(2);
-          const soldCount = Number(offer.soldCount) || Number(it.sold_monthly) || 0;
+          const offerSoldKnown =
+            offer.soldCount !== null &&
+            offer.soldCount !== undefined &&
+            offer.soldSource &&
+            offer.soldSource !== 'unknown';
+          const soldCount = offerSoldKnown
+            ? Number(offer.soldCount) || 0
+            : (it.sold_monthly !== null && it.sold_monthly !== undefined ? Number(it.sold_monthly) || 0 : null);
+          const soldSource = offerSoldKnown ? offer.soldSource : (it.sold_source || 'unknown');
 
           merged = {
             ...merged,
@@ -3613,7 +3909,10 @@
             estimatedCommission: netComm,
             net_comm_baht: netComm,
             soldCount,
-            sold_monthly: soldCount
+            sold_monthly: soldCount,
+            soldSource,
+            sold_source: soldSource,
+            sold_known: soldCount !== null
           };
         }
 
@@ -3784,8 +4083,11 @@
             extra_comm_pct: Number(it.extra_comm_pct ?? it.extraRate) || 0,
             estimatedCommission: Number(it.estimatedCommission ?? it.net_comm_baht) || 0,
             net_comm_baht: Number(it.net_comm_baht ?? it.estimatedCommission) || 0,
-            soldCount: Number(it.soldCount ?? it.sold_monthly) || 0,
-            sold_monthly: Number(it.sold_monthly ?? it.soldCount) || 0
+            soldCount: it.soldCount !== null && it.soldCount !== undefined ? Number(it.soldCount) || 0 : null,
+            sold_monthly: it.sold_monthly !== null && it.sold_monthly !== undefined ? Number(it.sold_monthly) || 0 : null,
+            soldSource: it.soldSource || it.sold_source || 'unknown',
+            sold_source: it.sold_source || it.soldSource || 'unknown',
+            sold_known: Boolean(it.sold_known)
           });
         }
 

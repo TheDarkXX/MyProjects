@@ -354,15 +354,24 @@ window.DrBankAFF = window.DrBankAFF || {};
   };
 
   ns.GATE_CONFIG = {
-    gateVersion: 'v2.13.2',
+    gateVersion: 'v2.14.0',
     minExtraPct: 0.01,
     minNetCommBaht: 20.0,
     baseCapTHB: 250.0,
-    dailyAdCostTHB: 100.0
+    dailyAdCostTHB: 100.0,
+    minSoldMonthly: 30,
+    gradeASoldMonthly: 100,
+    highPriceThreshold: 2000,
+    gradeBMaxPrice: 3000,
+    gradeBMinNetComm: 100,
+    hookMinViews: 100000,
+    hookMinShares: 1000
   };
 
   /**
-   * Unified Signal Gate check matching server lib/gate.js (extraRate > 0 && netComm >= 20 THB)
+   * 2-Stage Decision Rule & Grade Classification matching server lib/gate.js:
+   *  - Stage 1 (Hard Reject): missing item_id, extra <= 0, netComm < 20, confirmed sold === 0, or (sold < 30 && price > 2000)
+   *  - Stage 2 (Yellow Warnings + Grade A / B / PASS_WARN): Hook + Sales Velocity + Price guard
    */
   ns.evaluateSpyGate = function (row = {}, customAdCost = 100) {
     const itemId = String(row.item_id || row.itemId || '').replace(/[^0-9]/g, '');
@@ -382,13 +391,36 @@ window.DrBankAFF = window.DrBankAFF || {};
     const effectiveNet = (Number.isFinite(explicit) && explicit > 0 && (extraRate > 0 || baseRate > 0))
       ? Math.round(explicit * 100) / 100
       : Math.round(comm.netComm * 100) / 100;
+    const totalPct = Math.round((baseRate + extraRate) * 100) / 100;
+
+    const soldRaw = row.soldCount !== undefined ? row.soldCount : row.sold_monthly;
+    const soldSource = String(row.soldSource || row.sold_source || '');
+    const soldKnown =
+      soldRaw !== null &&
+      soldRaw !== undefined &&
+      soldRaw !== '' &&
+      Number.isFinite(Number(soldRaw)) &&
+      (Number(soldRaw) > 0 || (Boolean(soldSource) && soldSource !== 'unknown') || row.sold_known === true);
+    const soldVal = soldKnown ? Math.max(0, Number(soldRaw) || 0) : null;
+
+    const views = Number(row.fb_views ?? row.fbViews) || 0;
+    const shares = Number(row.fb_shares_num ?? row.fb_shares ?? row.fbShares) || 0;
+    const hasHook = views >= ns.GATE_CONFIG.hookMinViews || shares >= ns.GATE_CONFIG.hookMinShares;
+    const beUnits = effectiveNet > 0 ? Math.ceil(adCost / effectiveNet) : 0;
 
     if (!itemId) {
       return {
         pass: false,
         decision: 'REJECT_NO_TAG',
         reason: 'ไม่พบป้ายตะกร้า Shopee / item_id',
+        reasonTh: 'ไม่พบป้ายตะกร้า Shopee / item_id',
         tier: 'danger',
+        grade: 'REJECT',
+        warnings: [],
+        soldKnown,
+        soldMonthly: soldVal,
+        effectiveNet: 0,
+        totalPct: 0,
         netComm: 0,
         breakEvenUnits: 0
       };
@@ -398,9 +430,16 @@ window.DrBankAFF = window.DrBankAFF || {};
         pass: false,
         decision: 'REJECT_NO_EXTRA',
         reason: `ไม่มี Extra Comm (Base ${baseRate}% · คอม ฿${effectiveNet.toFixed(2)})`,
+        reasonTh: `ไม่มี Extra Comm (Base ${baseRate}% · คอม ฿${effectiveNet.toFixed(2)})`,
         tier: 'danger',
+        grade: 'REJECT',
+        warnings: [],
+        soldKnown,
+        soldMonthly: soldVal,
+        effectiveNet,
+        totalPct,
         netComm: effectiveNet,
-        breakEvenUnits: effectiveNet > 0 ? Math.ceil(adCost / effectiveNet) : 0
+        breakEvenUnits: beUnits
       };
     }
     if (effectiveNet < ns.GATE_CONFIG.minNetCommBaht) {
@@ -408,19 +447,87 @@ window.DrBankAFF = window.DrBankAFF || {};
         pass: false,
         decision: 'REJECT_LOW_COMM',
         reason: `ค่าคอม ฿${effectiveNet.toFixed(2)} ต่ำกว่าเกณฑ์ขั้นต่ำ ฿${ns.GATE_CONFIG.minNetCommBaht}`,
+        reasonTh: `ค่าคอม ฿${effectiveNet.toFixed(2)} ต่ำกว่าเกณฑ์ขั้นต่ำ ฿${ns.GATE_CONFIG.minNetCommBaht}`,
         tier: 'danger',
+        grade: 'REJECT',
+        warnings: [],
+        soldKnown,
+        soldMonthly: soldVal,
+        effectiveNet,
+        totalPct,
         netComm: effectiveNet,
-        breakEvenUnits: Math.ceil(adCost / effectiveNet)
+        breakEvenUnits: beUnits
       };
     }
+    if (soldKnown && soldVal === 0) {
+      return {
+        pass: false,
+        decision: 'REJECT_ZERO_SOLD',
+        reason: 'ยอดขาย 0 ชิ้น/เดือน (เสี่ยงคลิกฟรี CR ตก)',
+        reasonTh: 'ยอดขาย 0 ชิ้น/เดือน (เสี่ยงคลิกฟรี CR ตก)',
+        tier: 'danger',
+        grade: 'REJECT',
+        warnings: [],
+        soldKnown,
+        soldMonthly: 0,
+        effectiveNet,
+        totalPct,
+        netComm: effectiveNet,
+        breakEvenUnits: beUnits
+      };
+    }
+    if (soldKnown && soldVal < ns.GATE_CONFIG.minSoldMonthly && price > ns.GATE_CONFIG.highPriceThreshold) {
+      return {
+        pass: false,
+        decision: 'REJECT_HIGH_PRICE_LOW_SOLD',
+        reason: `ของแพง (>฿${ns.GATE_CONFIG.highPriceThreshold.toLocaleString()}) แต่ยอดขายต่ำ (${soldVal} < ${ns.GATE_CONFIG.minSoldMonthly} ชิ้น/ด.)`,
+        reasonTh: `ของแพง (>฿${ns.GATE_CONFIG.highPriceThreshold.toLocaleString()}) แต่ยอดขายต่ำ (${soldVal} < ${ns.GATE_CONFIG.minSoldMonthly} ชิ้น/ด.)`,
+        tier: 'danger',
+        grade: 'REJECT',
+        warnings: [],
+        soldKnown,
+        soldMonthly: soldVal,
+        effectiveNet,
+        totalPct,
+        netComm: effectiveNet,
+        breakEvenUnits: beUnits
+      };
+    }
+
+    const warnings = [];
+    if (!soldKnown) warnings.push('WARN_SOLD_UNKNOWN');
+    else if (soldVal > 0 && soldVal < ns.GATE_CONFIG.minSoldMonthly) warnings.push('WARN_LOW_SOLD');
+    if (price > ns.GATE_CONFIG.highPriceThreshold) warnings.push('WARN_HIGH_PRICE');
+    if (!hasHook && (views > 0 || shares > 0)) warnings.push('WARN_NO_HOOK');
+
+    let grade = 'PASS_WARN';
+    if (soldKnown && soldVal >= ns.GATE_CONFIG.gradeASoldMonthly && effectiveNet >= ns.GATE_CONFIG.minNetCommBaht) {
+      grade = 'A';
+    } else if (
+      effectiveNet >= ns.GATE_CONFIG.gradeBMinNetComm &&
+      price <= ns.GATE_CONFIG.gradeBMaxPrice &&
+      (!soldKnown || soldVal >= ns.GATE_CONFIG.minSoldMonthly)
+    ) {
+      grade = 'B';
+    }
+
     const tier = effectiveNet >= 80 ? 'god' : (effectiveNet >= 45 ? 'pass' : 'warning');
+    const warnSuffix = warnings.length > 0 ? ` · เตือน ${warnings.length} จุด` : '';
+    const passReason = `ผ่านเกณฑ์ Grade ${grade} (Extra ${extraRate}% · คอม ฿${effectiveNet.toFixed(2)}${warnSuffix})`;
     return {
       pass: true,
       decision: 'PASS',
-      reason: `ผ่านเกณฑ์ (Extra ${extraRate}% · คอม ฿${effectiveNet.toFixed(2)})`,
+      reason: passReason,
+      reasonTh: passReason,
       tier,
+      grade,
+      warnings,
+      soldKnown,
+      soldMonthly: soldVal,
+      effectiveNet,
+      totalPct,
       netComm: effectiveNet,
-      breakEvenUnits: Math.ceil(adCost / effectiveNet)
+      breakEvenUnits: beUnits
     };
   };
 
@@ -679,6 +786,7 @@ window.DrBankAFF = window.DrBankAFF || {};
       extraRate = +(totalDetailRate - baseRate).toFixed(2);
     }
 
+    let usedListApprox = false;
     if (
       baseRate === 0 &&
       extraRate === 0 &&
@@ -699,10 +807,20 @@ window.DrBankAFF = window.DrBankAFF || {};
       if (Number(listFb?.extraRate) > 0 || Number(listFb?.baseRate) > 0) {
         extraRate = Number(listFb?.extraRate) || 0;
         baseRate = Number(listFb?.baseRate) || 0;
+        if (listFb?.isListApprox) usedListApprox = true;
       }
     }
 
-    const hasRealCommission = Boolean(extraRate > 0 || baseRate > 0 || totalDetailRate > 0);
+    const hasDetailNode = Boolean(
+      data.commission_rate_detail ||
+      data.commission_detail ||
+      data.seller_commission_detail ||
+      data.shopee_commission_detail ||
+      totalDetailRate > 0
+    );
+    const hasRealCommission = Boolean(!usedListApprox && (extraRate > 0 || baseRate > 0 || totalDetailRate > 0));
+    const realRateVerified = Boolean(hasDetailNode && hasRealCommission);
+    const rateSource = realRateVerified ? 'social_media_detail_api' : (usedListApprox ? 'list_approx' : 'unknown');
 
     if (extraRate > 0 && baseRate === 0) {
       baseRate = 2.0;
@@ -716,6 +834,17 @@ window.DrBankAFF = window.DrBankAFF || {};
     const rawPriceMax = Number(card.price_max ?? data.price_max) || rawPrice;
     const offerPriceMax = rawPriceMax > 100000 ? +(rawPriceMax / 100000).toFixed(2) : rawPriceMax;
 
+    const rawSoldMonthly = card.sold !== undefined && card.sold !== null ? card.sold : data.sold;
+    const rawSoldTotal = card.historical_sold !== undefined && card.historical_sold !== null ? card.historical_sold : data.historical_sold;
+    const soldMonthly =
+      rawSoldMonthly !== undefined && rawSoldMonthly !== null && rawSoldMonthly !== '' && Number.isFinite(Number(rawSoldMonthly))
+        ? Math.max(0, Number(rawSoldMonthly))
+        : null;
+    const soldTotal =
+      rawSoldTotal !== undefined && rawSoldTotal !== null && rawSoldTotal !== '' && Number.isFinite(Number(rawSoldTotal))
+        ? Math.max(0, Number(rawSoldTotal))
+        : null;
+
     const imagesHD = Array.isArray(card.images)
       ? card.images.slice(0, 8).map((h) => `https://down-th.img.susercontent.com/file/${h}`)
       : card.image
@@ -725,6 +854,8 @@ window.DrBankAFF = window.DrBankAFF || {};
     return {
       hasDetail: Boolean(data.commission_rate_detail || card.itemid || data.item_id || data.product_name),
       hasRealCommission,
+      realRateVerified,
+      rateSource,
       itemId: String(card.itemid || data.item_id || ''),
       shopId: String(card.shopid || data.shop_id || ''),
       title: card.name || data.product_name || '',
@@ -735,8 +866,9 @@ window.DrBankAFF = window.DrBankAFF || {};
       totalRate,
       liveExtraRate,
       liveBaseRate,
-      soldMonthly: Number(card.sold ?? data.sold) || 0,
-      soldTotal: Number(card.historical_sold ?? data.historical_sold) || 0,
+      soldMonthly,
+      soldTotal,
+      soldSource: soldMonthly !== null ? 'affiliate_offer_api' : 'unknown',
       stock: Number(card.stock ?? data.stock) || 0,
       rating: Number(card?.item_rating?.rating_star) || 0,
       isMall,
@@ -746,18 +878,40 @@ window.DrBankAFF = window.DrBankAFF || {};
 
   /**
    * Safe fallback extractor for /api/v3/offer/product/list where commission_rate_detail is absent or partial.
-   * Avoids double-counting default_commission_rate (total) + seller_commission_rate or mixing Live/Video rates.
+   * Marks list-only approximations as realRateVerified: false so Live/Video rates never poison Social Media cache.
    */
   ns.extractListCommissionFallback = function (rawItem, isMall = false, title = '') {
-    if (rawItem?.commission_rate_detail || rawItem?.data?.commission_rate_detail) {
+    const channelDetail =
+      rawItem?.commission_rate_detail ||
+      rawItem?.data?.commission_rate_detail ||
+      rawItem?.channel_commission_rate;
+    const card = rawItem?.batch_item_for_item_card_full || rawItem?.item_card_full || {};
+    const rawListSold = card.sold !== undefined && card.sold !== null ? card.sold : rawItem?.sold;
+    const rawListHist = card.historical_sold !== undefined && card.historical_sold !== null ? card.historical_sold : rawItem?.historical_sold;
+    const soldMonthly =
+      rawListSold !== undefined && rawListSold !== null && rawListSold !== '' && Number.isFinite(Number(rawListSold))
+        ? Math.max(0, Number(rawListSold))
+        : null;
+    const soldTotal =
+      rawListHist !== undefined && rawListHist !== null && rawListHist !== '' && Number.isFinite(Number(rawListHist))
+        ? Math.max(0, Number(rawListHist))
+        : null;
+    const soldSource = soldMonthly !== null ? 'offer_list_xhr' : 'unknown';
+
+    if (channelDetail) {
       const exact = ns.extractSocialMediaCommission(rawItem);
-      if (exact.hasRealCommission && (exact.extraRate > 0 || exact.baseRate > 0)) {
+      if (exact.realRateVerified && (exact.extraRate > 0 || exact.baseRate > 0)) {
         return {
           extraRate: exact.extraRate,
           baseRate: exact.baseRate,
           totalRate: exact.totalRate,
           hasRealCommission: true,
-          isListApprox: false
+          realRateVerified: true,
+          isListApprox: false,
+          rateSource: 'offer_list_channel_detail',
+          soldMonthly: soldMonthly !== null ? soldMonthly : exact.soldMonthly,
+          soldTotal: soldTotal !== null ? soldTotal : exact.soldTotal,
+          soldSource: soldMonthly !== null ? soldSource : exact.soldSource
         };
       }
     }
@@ -776,10 +930,10 @@ window.DrBankAFF = window.DrBankAFF || {};
     ]);
     let extraRate = 0;
     let baseRate = 0;
-    let hasRealCommission = false;
+    let hasListRate = false;
 
     if (defaultTotal > 0) {
-      hasRealCommission = true;
+      hasListRate = true;
       if (sellerRate > 0 && defaultTotal > sellerRate) {
         extraRate = sellerRate;
         baseRate = +(defaultTotal - sellerRate).toFixed(2);
@@ -791,7 +945,7 @@ window.DrBankAFF = window.DrBankAFF || {};
         baseRate = defaultTotal;
       }
     } else if (sellerRate > 0) {
-      hasRealCommission = true;
+      hasListRate = true;
       extraRate = sellerRate;
       baseRate = 2.0;
     } else {
@@ -804,8 +958,13 @@ window.DrBankAFF = window.DrBankAFF || {};
       extraRate,
       baseRate,
       totalRate: +(extraRate + baseRate).toFixed(2),
-      hasRealCommission,
-      isListApprox: !hasRealCommission
+      hasRealCommission: false,
+      realRateVerified: false,
+      isListApprox: true,
+      rateSource: hasListRate ? 'list_approx' : 'category_estimate',
+      soldMonthly,
+      soldTotal,
+      soldSource
     };
   };
 })(window.DrBankAFF);
