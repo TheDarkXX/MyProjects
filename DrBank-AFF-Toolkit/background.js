@@ -898,6 +898,47 @@ function decodeUnicodeEscapes(s) {
     .replace(/\\\//g, '/');
 }
 
+function decodeHtmlEntities(s) {
+  return String(s || '')
+    .replace(/&#x([0-9a-fA-F]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(parseInt(d, 10)))
+    .replace(/&amp;/g, '&')
+    .replace(/&middot;/g, '·')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function parseCompactFbCount(str) {
+  const s = String(str || '').replace(/,/g, '').trim();
+  const m = s.match(/([0-9]+(?:\.[0-9]+)?)\s*(พัน|หมื่น|แสน|ล้าน|K|M|B)?/i);
+  if (!m) return 0;
+  let n = parseFloat(m[1]) || 0;
+  const unit = (m[2] || '').toUpperCase();
+  if (unit === 'พัน' || unit === 'K') n *= 1000;
+  else if (unit === 'หมื่น') n *= 10000;
+  else if (unit === 'แสน') n *= 100000;
+  else if (unit === 'ล้าน' || unit === 'M') n *= 1000000;
+  else if (unit === 'B') n *= 1000000000;
+  return Math.round(n);
+}
+
+function isInvalidCompetitorPageName(name) {
+  const s = String(name || '').trim();
+  if (!s || s.length < 2) return true;
+  if (/^facebook$/i.test(s)) return true;
+  if (/^[\d.,]+\s*(?:K|M|B|พัน|หมื่น|แสน|ล้าน)?$/i.test(s)) return true;
+  if (/^(?:reels?|watch|แชร์|ติดตาม|follow|ถูกใจ|ความคิดเห็น|ความรู้สึก|ยอดดู|views?)$/i.test(s)) return true;
+  return false;
+}
+
+function extractFbReelIdFromUrl(rawUrl) {
+  const s = String(rawUrl || '').trim();
+  const m = s.match(/\/(?:reel|videos)\/(\d+)/i) || s.match(/[?&]v=(\d+)/i);
+  return m ? m[1] : '';
+}
+
 function normalizeShopeeShortUrl(rawStr) {
   let candidate = decodeUnicodeEscapes(rawStr).trim().replace(/[),.]+$/, '');
   if (!candidate) return '';
@@ -963,25 +1004,109 @@ function extractShopeeShopItemFromUrl(rawUrl) {
   return null;
 }
 
-function extractShopeeTagFromHtml(rawHtml) {
+function extractFbMetricsFromHtml(rawHtml) {
   const raw = String(rawHtml || '');
-  const reactM = raw.match(/"unified_reactors"\s*:\s*\{\s*"count"\s*:\s*(\d+)/);
-  const commM = raw.match(/"total_comment_count"\s*:\s*(\d+)/);
-  const shareM = raw.match(/"share_count_reduced"\s*:\s*"([^"]+)"/);
+  const ogMetaM =
+    raw.match(/<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+    raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:title["']/i) ||
+    raw.match(/<meta[^>]+name=["']twitter:title["'][^>]*content=["']([^"']+)["']/i) ||
+    raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]*name=["']twitter:title["']/i);
+  const ogTitle = ogMetaM ? decodeHtmlEntities(decodeUnicodeEscapes(ogMetaM[1])) : '';
 
+  // 1) Parse views from og:title (e.g., "839K views · 9.3K reactions" or "ยอดดู 8.3 แสน ครั้ง · 9.3 พัน ความรู้สึก")
+  let ogViews = 0;
+  if (ogTitle) {
+    const enViewM = ogTitle.match(/([\d.,]+\s*(?:[KMB])?)\s*(?:views?|plays?)\b/i);
+    const thViewM = ogTitle.match(/(?:ยอดดู|ยอดรับชม|การรับชม|รับชม)\s*([\d.,]+\s*(?:พัน|หมื่น|แสน|ล้าน)?)\s*(?:ครั้ง)?/i);
+    if (enViewM) ogViews = parseCompactFbCount(enViewM[1]);
+    else if (thViewM) ogViews = parseCompactFbCount(thViewM[1]);
+  }
+
+  // 2) Fallback JSON view counts (video_view_count / viewCount belong to main video; avoid sidebar play_count)
+  let jsonViews = 0;
+  const jsonViewM =
+    raw.match(/"video_view_count"\s*:\s*(\d+)/) ||
+    raw.match(/\bviewCount\s*:\s*["']([\d,.]+)["']/);
+  if (jsonViewM) {
+    jsonViews = parseInt(String(jsonViewM[1]).replace(/,/g, ''), 10) || 0;
+  }
+
+  // Prefer og:title view count (matches FB UI Reel views), fallback to video_view_count
+  const fbViews = ogViews > 0 ? ogViews : jsonViews;
+
+  // 3) Duration in seconds from playable_duration_in_ms
+  let durationSec = 0;
+  const durM = raw.match(/"playable_duration_in_ms"\s*:\s*(\d+)/);
+  if (durM) {
+    const ms = parseInt(durM[1], 10) || 0;
+    if (ms > 0) durationSec = Math.round((ms / 1000) * 10) / 10;
+  }
+
+  // 4) Reliable Competitor Page Name (JSON owner/Page -> og:title tail -> <title>)
   let competitorPage = '';
-  const pageM =
+  const jsonPageM =
     raw.match(/"__typename"\s*:\s*"Page"[^}]{0,300}?"name"\s*:\s*"([^"]+)"/) ||
     raw.match(/"owning_profile"\s*:\s*\{[^}]{0,300}?"name"\s*:\s*"([^"]+)"/) ||
-    raw.match(/<title[^>]*>([^<]+)<\/title>/i);
-  if (pageM && pageM[1]) {
-    competitorPage = decodeUnicodeEscapes(pageM[1])
-      .replace(/^\(\d+\)\s*/, '')
-      .replace(/\| Facebook.*$/i, '')
-      .replace(/-\s*Facebook.*$/i, '')
-      .trim()
-      .slice(0, 80);
+    raw.match(/"owner"\s*:\s*\{[^}]{0,300}?"name"\s*:\s*"([^"]+)"/) ||
+    raw.match(/"ownerName"\s*:\s*"([^"]+)"/);
+  if (jsonPageM && jsonPageM[1]) {
+    const candidate = decodeHtmlEntities(decodeUnicodeEscapes(jsonPageM[1])).trim().slice(0, 80);
+    if (!isInvalidCompetitorPageName(candidate)) {
+      competitorPage = candidate;
+    }
   }
+  if (!competitorPage && ogTitle) {
+    const parts = ogTitle.split(/\s*\|\s*/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const tail = parts[parts.length - 1].replace(/\s*-\s*Facebook.*$/i, '').trim().slice(0, 80);
+      if (!isInvalidCompetitorPageName(tail) && (parts.length >= 3 || /(?:views?|reactions?|ความรู้สึก|ยอดดู|แชร์)/i.test(parts[0]))) {
+        competitorPage = tail;
+      }
+    }
+  }
+  if (!competitorPage) {
+    const titleM = raw.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (titleM && titleM[1]) {
+      const cleanedTitle = decodeHtmlEntities(decodeUnicodeEscapes(titleM[1]))
+        .replace(/^\(\d+\)\s*/, '')
+        .replace(/\| Facebook.*$/i, '')
+        .replace(/-\s*Facebook.*$/i, '')
+        .trim()
+        .slice(0, 80);
+      if (!isInvalidCompetitorPageName(cleanedTitle)) {
+        competitorPage = cleanedTitle;
+      }
+    }
+  }
+
+  // Fallback reactions/shares from og:title if JSON unified_reactors is absent (e.g. watch/?v= HTML)
+  let ogReactions = 0;
+  if (ogTitle) {
+    const enReactM = ogTitle.match(/([\d.,]+\s*(?:[KMB])?)\s*reactions?\b/i);
+    const thReactM = ogTitle.match(/([\d.,]+\s*(?:พัน|หมื่น|แสน|ล้าน)?)\s*ความรู้สึก/);
+    if (enReactM) ogReactions = parseCompactFbCount(enReactM[1]);
+    else if (thReactM) ogReactions = parseCompactFbCount(thReactM[1]);
+  }
+
+  return {
+    fb_views: fbViews,
+    fb_views_source: ogViews > 0 ? 'og' : jsonViews > 0 ? 'json' : '',
+    og_reactions: ogReactions,
+    duration_sec: durationSec,
+    competitor_page: competitorPage
+  };
+}
+
+function extractShopeeTagFromHtml(rawHtml) {
+  const raw = String(rawHtml || '');
+  const reelBarReactM = raw.match(/"unified_reactors"\s*:\s*\{\s*"count"\s*:\s*(\d+)[\s\S]{0,400}?"__module_operation_FBReelsFeedbackBar_feedback"/);
+  const reactM = reelBarReactM || raw.match(/"unified_reactors"\s*:\s*\{\s*"count"\s*:\s*(\d+)/);
+  const reelBarCommShareM = raw.match(/"total_comment_count"\s*:\s*(\d+)[\s\S]{0,200}?"share_count_reduced"\s*:\s*"([^"]+)"[\s\S]{0,80}?"fb_reel_react_button"/);
+  const commM = reelBarCommShareM ? [null, reelBarCommShareM[1]] : raw.match(/"total_comment_count"\s*:\s*(\d+)/);
+  const shareM = reelBarCommShareM ? [null, reelBarCommShareM[2]] : raw.match(/"share_count_reduced"\s*:\s*"([^"]+)"/);
+  const fbMeta = extractFbMetricsFromHtml(raw);
+  const jsonReact = reactM ? parseInt(reactM[1], 10) : 0;
+  const bestReactions = fbMeta.og_reactions > 0 && jsonReact < fbMeta.og_reactions * 0.5 ? fbMeta.og_reactions : (jsonReact || fbMeta.og_reactions || 0);
 
   const allLinks = [];
   const seen = new Set();
@@ -1023,24 +1148,26 @@ function extractShopeeTagFromHtml(rawHtml) {
     competitor_short_url: prioritizeShort,
     all_shopee_links: allLinks,
     product_tag_title: tagTitle,
-    competitor_page: competitorPage,
-    fb_reactions: reactM ? parseInt(reactM[1], 10) : 0,
+    competitor_page: fbMeta.competitor_page,
+    fb_views: fbMeta.fb_views,
+    fb_views_source: fbMeta.fb_views_source,
+    duration_sec: fbMeta.duration_sec,
+    fb_reactions: bestReactions,
     fb_comments: commM ? parseInt(commM[1], 10) : 0,
     fb_shares: shareM ? decodeUnicodeEscapes(shareM[1]) : '0'
   };
 }
 
-async function scrapeFbReelHtmlAuthenticated(reelUrl) {
-  const target = String(reelUrl || '').trim();
-  if (!target || !/facebook\.com|fb\.watch/i.test(target)) return {};
+async function scrapeFbWatchFallback(videoId) {
+  if (!videoId) return {};
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    const resp = await fetch(target, {
-      credentials: 'include',
+    const timer = setTimeout(() => ctrl.abort(), 7000);
+    const resp = await fetch(`https://www.facebook.com/watch/?v=${videoId}`, {
+      credentials: 'omit',
       headers: {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'th-TH,th;q=0.9,en;q=0.8'
+        'Accept-Language': 'en-US,en;q=0.9'
       },
       signal: ctrl.signal
     });
@@ -1051,6 +1178,64 @@ async function scrapeFbReelHtmlAuthenticated(reelUrl) {
   } catch (_e) {
     return {};
   }
+}
+
+async function scrapeFbReelHtmlAuthenticated(reelUrl) {
+  const target = String(reelUrl || '').trim();
+  if (!target || !/facebook\.com|fb\.watch/i.test(target)) return {};
+  let parsed = {};
+  let resolvedUrl = target;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const resp = await fetch(target, {
+      credentials: 'include',
+      redirect: 'follow',
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'th-TH,th;q=0.9,en;q=0.8'
+      },
+      signal: ctrl.signal
+    });
+    clearTimeout(timer);
+    if (resp.url) resolvedUrl = resp.url;
+    if (resp.ok) {
+      const raw = await resp.text();
+      parsed = extractShopeeTagFromHtml(raw);
+    }
+  } catch (_e) {}
+
+  const videoId = extractFbReelIdFromUrl(resolvedUrl) || extractFbReelIdFromUrl(target);
+  const needsWatchFallback =
+    videoId &&
+    !/watch\/?\?v=/i.test(target) &&
+    (!parsed.fb_views || !parsed.duration_sec || isInvalidCompetitorPageName(parsed.competitor_page) || !parsed.competitor_short_url);
+
+  if (needsWatchFallback) {
+    const watchData = await scrapeFbWatchFallback(videoId);
+    if (watchData.fb_views > 0 && (!parsed.fb_views || watchData.fb_views_source === 'og')) {
+      parsed.fb_views = Math.max(Number(parsed.fb_views) || 0, Number(watchData.fb_views) || 0);
+      parsed.fb_views_source = watchData.fb_views_source || parsed.fb_views_source;
+    }
+    if (!parsed.duration_sec && watchData.duration_sec) {
+      parsed.duration_sec = watchData.duration_sec;
+    }
+    if (isInvalidCompetitorPageName(parsed.competitor_page) && !isInvalidCompetitorPageName(watchData.competitor_page)) {
+      parsed.competitor_page = watchData.competitor_page;
+    }
+    if (!parsed.competitor_short_url && watchData.competitor_short_url) {
+      parsed.competitor_short_url = watchData.competitor_short_url;
+      parsed.all_shopee_links = watchData.all_shopee_links || parsed.all_shopee_links || [];
+    }
+    if (!parsed.product_tag_title && watchData.product_tag_title) {
+      parsed.product_tag_title = watchData.product_tag_title;
+    }
+    if (!parsed.fb_reactions && watchData.fb_reactions) parsed.fb_reactions = watchData.fb_reactions;
+    if (!parsed.fb_comments && watchData.fb_comments) parsed.fb_comments = watchData.fb_comments;
+    if ((!parsed.fb_shares || parsed.fb_shares === '0') && watchData.fb_shares) parsed.fb_shares = watchData.fb_shares;
+  }
+
+  return parsed;
 }
 
 async function resolveShopeeShortUrlInExt(shortUrl) {
@@ -1237,23 +1422,32 @@ async function scrapeActiveFacebookReelTabImpl(explicitTabId) {
               }
             });
 
-            // 4. Extract Competitor Page Name
+            // 4. Extract Competitor Page Name (never accept compact metric strings like "10K" or "4.4K")
+            const isBadPageName = (val) => {
+              const s = String(val || '').trim();
+              if (!s || s.length < 2) return true;
+              if (/^facebook$/i.test(s)) return true;
+              if (/^[\d.,]+\s*(?:K|M|B|พัน|หมื่น|แสน|ล้าน)?$/i.test(s)) return true;
+              if (/^(?:reels?|watch|แชร์|ติดตาม|follow|ถูกใจ|ความคิดเห็น|ความรู้สึก|ยอดดู|views?)$/i.test(s)) return true;
+              return false;
+            };
             let competitorPage = '';
             const headerLinks = document.querySelectorAll('h2 a[role="link"], h3 a[role="link"], a[role="link"] strong, a[aria-label][href*="facebook.com/"]');
             for (const el of headerLinks) {
-              const t = (el.innerText || el.textContent || '').trim();
-              if (t && t.length >= 2 && t.length <= 70 && !/reels?|watch|แชร์|ติดตาม|follow|ถูกใจ|ความคิดเห็น/i.test(t)) {
-                competitorPage = t.split('\n')[0].trim();
+              const t = (el.innerText || el.textContent || '').split('\n')[0].trim();
+              if (t && t.length <= 70 && !isBadPageName(t)) {
+                competitorPage = t;
                 break;
               }
             }
             if (!competitorPage) {
-              competitorPage = document.title
+              const cleanedDocTitle = document.title
                 .replace(/^\(\d+\)\s*/, '')
                 .replace(/\| Facebook.*$/i, '')
                 .replace(/-\s*Facebook.*$/i, '')
                 .trim()
                 .slice(0, 80);
+              if (!isBadPageName(cleanedDocTitle)) competitorPage = cleanedDocTitle;
             }
 
             // 5. Extract Reel Caption
@@ -1268,13 +1462,15 @@ async function scrapeActiveFacebookReelTabImpl(explicitTabId) {
               }
             }
 
-            // 6. Engagement metrics from aria-labels or text
+            // 6. Engagement metrics (Views + Reactions + Comments + Shares + Duration)
+            let fbViews = 0;
             let fbReactions = 0;
             let fbComments = 0;
             let fbShares = '0';
+            let durationSec = 0;
             const parseCompactCount = (str) => {
               const s = String(str || '').replace(/,/g, '').trim();
-              const m = s.match(/([0-9]+(?:\.[0-9]+)?)\s*(พัน|หมื่น|แสน|ล้าน|K|M)?/i);
+              const m = s.match(/([0-9]+(?:\.[0-9]+)?)\s*(พัน|หมื่น|แสน|ล้าน|K|M|B)?/i);
               if (!m) return 0;
               let n = parseFloat(m[1]) || 0;
               const unit = (m[2] || '').toUpperCase();
@@ -1282,9 +1478,33 @@ async function scrapeActiveFacebookReelTabImpl(explicitTabId) {
               else if (unit === 'หมื่น') n *= 10000;
               else if (unit === 'แสน') n *= 100000;
               else if (unit === 'ล้าน' || unit === 'M') n *= 1000000;
+              else if (unit === 'B') n *= 1000000000;
               return Math.round(n);
             };
 
+            // 6a. Views / duration from inline JSON scripts & video element
+            document.querySelectorAll('script').forEach((scr) => {
+              const txt = scr.textContent || '';
+              if (!fbViews) {
+                const vm = txt.match(/"video_view_count"\s*:\s*(\d+)/);
+                if (vm) fbViews = parseInt(vm[1], 10) || 0;
+              }
+              if (!durationSec) {
+                const dm = txt.match(/"playable_duration_in_ms"\s*:\s*(\d+)/);
+                if (dm) {
+                  const ms = parseInt(dm[1], 10) || 0;
+                  if (ms > 0) durationSec = Math.round((ms / 1000) * 10) / 10;
+                }
+              }
+            });
+            if (!durationSec) {
+              const vidEl = document.querySelector('video');
+              if (vidEl && Number.isFinite(vidEl.duration) && vidEl.duration > 0 && vidEl.duration < 3600) {
+                durationSec = Math.round(vidEl.duration * 10) / 10;
+              }
+            }
+
+            // 6b. Aria-labels for reactions, comments, shares, views
             document.querySelectorAll('[aria-label]').forEach((el) => {
               const lbl = el.getAttribute('aria-label') || '';
               if (/ถูกใจ|ความรู้สึก|like|reaction/i.test(lbl) && /\d/.test(lbl) && !fbReactions) {
@@ -1294,8 +1514,29 @@ async function scrapeActiveFacebookReelTabImpl(explicitTabId) {
               } else if (/แชร์|share/i.test(lbl) && /\d/.test(lbl) && fbShares === '0') {
                 const m = lbl.match(/([0-9.,]+\s*(?:พัน|หมื่น|แสน|ล้าน|K|M)?)/i);
                 if (m) fbShares = m[1].trim();
+              } else if (/(?:ยอดดู|ยอดรับชม|การรับชม|รับชม|views?|plays?)/i.test(lbl) && /\d/.test(lbl) && !fbViews) {
+                const vm =
+                  lbl.match(/([\d.,]+\s*(?:[KMB]|พัน|หมื่น|แสน|ล้าน)?)\s*(?:views?|plays?)/i) ||
+                  lbl.match(/(?:ยอดดู|ยอดรับชม|การรับชม|รับชม)\s*([\d.,]+\s*(?:พัน|หมื่น|แสน|ล้าน)?)/i);
+                if (vm) fbViews = parseCompactCount(vm[1]);
               }
             });
+
+            // 6c. Fallback visible view count badges in Reel UI (only short leaf nodes)
+            if (!fbViews) {
+              for (const el of document.querySelectorAll('span, div')) {
+                if (el.children.length > 0) continue;
+                const txt = (el.textContent || '').trim();
+                if (!txt || txt.length > 40) continue;
+                const vm =
+                  txt.match(/^([\d.,]+\s*(?:[KMB]|พัน|หมื่น|แสน|ล้าน)?)\s*(?:views?|plays?)$/i) ||
+                  txt.match(/^(?:ยอดดู|ยอดรับชม|การรับชม|รับชม)\s*([\d.,]+\s*(?:พัน|หมื่น|แสน|ล้าน)?)\s*(?:ครั้ง)?$/i);
+                if (vm) {
+                  fbViews = parseCompactCount(vm[1]);
+                  if (fbViews > 0) break;
+                }
+              }
+            }
 
             const prioritizeShort = shopeeLinks.find((u) => /s\.shopee\.co\.th|shp\.ee/i.test(u)) || shopeeLinks[0] || '';
             return {
@@ -1305,6 +1546,8 @@ async function scrapeActiveFacebookReelTabImpl(explicitTabId) {
               product_tag_title: productTagTitle,
               competitor_page: competitorPage,
               caption_full: captionFull,
+              fb_views: fbViews,
+              duration_sec: durationSec,
               fb_reactions: fbReactions,
               fb_comments: fbComments,
               fb_shares: fbShares
@@ -1333,20 +1576,25 @@ async function scrapeActiveFacebookReelTabImpl(explicitTabId) {
     authScraped?.product_tag_title ||
     '';
 
+  const tabTitlePage = String(tab.title || '')
+    .replace(/^\(\d+\)\s*/, '')
+    .replace(/\| Facebook.*$/i, '')
+    .replace(/-\s*Facebook.*$/i, '')
+    .trim()
+    .slice(0, 80);
+  const mergedPage = [domScraped?.competitor_page, authScraped?.competitor_page, tabTitlePage].find(
+    (p) => !isInvalidCompetitorPageName(p)
+  ) || '';
+
   return {
     reel_url: effectiveUrl,
     competitor_short_url: mergedShortUrl,
     all_shopee_links: mergedLinks,
     product_tag_title: mergedTitle,
-    competitor_page:
-      domScraped?.competitor_page ||
-      authScraped?.competitor_page ||
-      String(tab.title || '')
-        .replace(/^\(\d+\)\s*/, '')
-        .replace(/\| Facebook.*$/i, '')
-        .trim()
-        .slice(0, 80),
+    competitor_page: mergedPage,
     caption_full: domScraped?.caption_full || '',
+    fb_views: Math.max(Number(authScraped?.fb_views) || 0, Number(domScraped?.fb_views) || 0),
+    duration_sec: Number(authScraped?.duration_sec) || Number(domScraped?.duration_sec) || 0,
     fb_reactions: Number(authScraped?.fb_reactions) || Number(domScraped?.fb_reactions) || 0,
     fb_comments: Number(authScraped?.fb_comments) || Number(domScraped?.fb_comments) || 0,
     fb_shares:
@@ -1678,7 +1926,14 @@ async function handleMessage(msg, _sender) {
       const enrichOneReel = async (orig) => {
         const item = { ...orig };
         const reelUrl = String(item.reel_url || item.url || '').trim();
-        if (reelUrl && (!item.competitor_short_url || !item.product_tag_title || (!item.fb_reactions && !item.fb_comments))) {
+        const needsMeta =
+          !item.competitor_short_url ||
+          !item.product_tag_title ||
+          (!item.fb_reactions && !item.fb_comments) ||
+          !Number(item.fb_views) ||
+          isInvalidCompetitorPageName(item.competitor_page) ||
+          !Number(item.duration_sec);
+        if (reelUrl && needsMeta) {
           const fbMeta = await scrapeFbReelHtmlAuthenticated(reelUrl);
           if (!item.competitor_short_url && fbMeta.competitor_short_url) {
             item.competitor_short_url = fbMeta.competitor_short_url;
@@ -1686,8 +1941,14 @@ async function handleMessage(msg, _sender) {
           if (!item.product_tag_title && fbMeta.product_tag_title) {
             item.product_tag_title = fbMeta.product_tag_title;
           }
-          if (!item.competitor_page && fbMeta.competitor_page) {
+          if (isInvalidCompetitorPageName(item.competitor_page) && !isInvalidCompetitorPageName(fbMeta.competitor_page)) {
             item.competitor_page = fbMeta.competitor_page;
+          }
+          if (fbMeta.fb_views > 0) {
+            item.fb_views = Math.max(Number(item.fb_views) || 0, Number(fbMeta.fb_views) || 0);
+          }
+          if (!Number(item.duration_sec) && fbMeta.duration_sec > 0) {
+            item.duration_sec = fbMeta.duration_sec;
           }
           if (!item.fb_reactions && fbMeta.fb_reactions) {
             item.fb_reactions = fbMeta.fb_reactions;

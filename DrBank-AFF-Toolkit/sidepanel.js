@@ -1213,6 +1213,8 @@ function parseSpyTextareaReels() {
       product_tag_title: savedMeta.product_tag_title || '',
       competitor_page: savedMeta.competitor_page || '',
       caption_full: savedMeta.caption_full || '',
+      fb_views: Number(savedMeta.fb_views) || 0,
+      duration_sec: Number(savedMeta.duration_sec) || 0,
       fb_reactions: Number(savedMeta.fb_reactions) || 0,
       fb_comments: Number(savedMeta.fb_comments) || 0,
       fb_shares: String(savedMeta.fb_shares || '0')
@@ -1400,7 +1402,7 @@ async function grabActiveFacebookReelTab(showToast = true) {
         <div style="font-weight:800;color:var(--sp-text);">
           📺 ${escHtml(res.competitor_page || 'Facebook Reel')}
           <span style="font-weight:600;color:var(--sp-text-3);font-size:11px;">
-            (👍 ${(res.fb_reactions || 0).toLocaleString()} · 💬 ${(res.fb_comments || 0).toLocaleString()} · ↗ ${escHtml(res.fb_shares || '0')})
+            (👁️ ${(res.fb_views || 0).toLocaleString()} · 👍 ${(res.fb_reactions || 0).toLocaleString()} · 💬 ${(res.fb_comments || 0).toLocaleString()} · ↗ ${escHtml(res.fb_shares || '0')})
           </span>
         </div>
         <div style="margin-top:2px;">${tagBadge}</div>
@@ -2187,6 +2189,8 @@ function renderSpyCollectorResults(items = []) {
                 </div>
                 <div style="font-size:11.5px;color:var(--sp-text-2);display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;">
                   <span>📺 <b>${escHtml(r.competitor_page || '-')}</b></span>
+                  <span>·</span>
+                  <span>👁️ ${Number(r.fb_views || 0).toLocaleString()}</span>
                   <span>·</span>
                   <span>SKU: <code>${escHtml(r.sku_code || '-')}</code></span>
                   ${r.soldCount > 0 ? `<span>· ขาย ${Number(r.soldCount).toLocaleString()}/ด.</span>` : ''}
