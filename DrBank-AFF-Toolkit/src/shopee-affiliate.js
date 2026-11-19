@@ -633,8 +633,9 @@
     }
 
     const mSold =
-      cardSection.match(/ขาย(?:ได้|แล้ว)\s*([0-9.,]+\s*(?:พัน|หมื่น|แสน|ล้าน|k|m)?\+?)/i) ||
-      bodyText.match(/ขาย(?:ได้|แล้ว)\s*([0-9.,]+\s*(?:พัน|หมื่น|แสน|ล้าน|k|m)?\+?)/i);
+      // ห้าม fallback ไป bodyText: เคยดูด "1พัน+" ของการ์ดสินค้าอื่นมาใส่ร้านที่ขายจริง 0 ชิ้น (SP930689)
+      // ถ้าไม่เจอการ์ด cardSection = bodyText อยู่แล้ว (บรรทัด ~610)
+      cardSection.match(/ขาย(?:ได้|แล้ว)\s*([0-9.,]+\s*(?:พัน|หมื่น|แสน|ล้าน|k|m)?\+?)/i);
     if (mSold && mSold[1]) {
       foundSoldText = mSold[1].trim().slice(0, 14);
       foundSoldNum = ns.parseSoldCount(foundSoldText);
