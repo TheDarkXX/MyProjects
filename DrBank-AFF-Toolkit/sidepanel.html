@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>DrBank AFF Scout v2.13.1 — Side Panel</title>
+  <title>DrBank AFF Scout v2.13.3 — Side Panel</title>
   <link rel="stylesheet" href="src/styles/hud.css">
   <link rel="stylesheet" href="src/styles/sidepanel.css">
 </head>
@@ -19,15 +19,17 @@
             style="width:18px;height:18px;border-radius:4px;display:inline-block;vertical-align:middle;"
             alt="Logo">
           <span>DrBank AFF</span>
-          <span class="drb-aff-version" id="drb-sp-ver">v2.13.1</span>
+          <span class="drb-aff-version" id="drb-sp-ver">v2.13.3</span>
           <span class="drb-aff-badge-platform" id="drb-sp-mode-badge"
             style="background:rgba(22,163,74,0.12);color:#16a34a;border:1px solid rgba(22,163,74,0.3);font-size:11px;padding:1px 6px;">Shopee</span>
         </div>
         <div class="drb-aff-header-actions">
-          <button class="drb-aff-icon-btn" id="drb-sp-btn-switch-hud"
+          <button type="button" class="drb-aff-icon-btn" id="drb-sp-btn-switch-hud"
             title="สลับไปใช้กล่องลอย (Floating HUD) บนหน้าเว็บ">↗</button>
-          <button class="drb-aff-icon-btn" id="drb-sp-theme-btn" title="สลับโหมด สว่าง/มืด">🌙</button>
-          <button class="drb-aff-icon-btn" id="drb-sp-rescan-btn" title="รีเฟรชข้อมูลจากแท็บปัจจุบัน">↻</button>
+          <button type="button" class="drb-aff-icon-btn" id="drb-sp-theme-btn" title="สลับโหมด สว่าง/มืด">🌙</button>
+          <button type="button" class="drb-aff-icon-btn" id="drb-sp-rescan-btn" title="รีเฟรชข้อมูลจากแท็บปัจจุบัน">↻</button>
+          <button type="button" class="drb-aff-icon-btn drb-aff-icon-btn--reload" id="drb-sp-btn-reload-ext"
+            title="Reload Extension (โหลดโค้ด Extension ใหม่ทันที)">♻️</button>
         </div>
       </div>
 
@@ -321,9 +323,14 @@
 
         <div class="sp-spy-summary-strip" id="drb-spy-summary-strip" hidden>
           <span id="drb-spy-summary-text">รวม 0 รายการ · 🟢 ผ่านเกณฑ์ 0 · 🔴 ไม่คุ้มแอด 0</span>
-          <button type="button" class="sp-ghost-sm-btn sp-spy-retry-all-btn" id="drb-spy-btn-retry-failed" hidden title="รันดึงเรทค่าคอมใหม่เฉพาะแถวที่ยังได้ Extra 0% หรือดึงไม่สำเร็จ">
-            🔄 รีเช็กตัวที่ 0%
-          </button>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <button type="button" class="sp-ghost-sm-btn" id="drb-spy-btn-sync-unsent" hidden title="ส่งรายการที่เช็กราคาแล้วแต่ยังไม่ได้ซิงก์ขึ้นเว็บ aff.doctorbankonline.com ทันที โดยไม่ต้องดึงเรท Shopee ซ้ำ">
+              ☁️ ส่งขึ้นเว็บทันที
+            </button>
+            <button type="button" class="sp-ghost-sm-btn sp-spy-retry-all-btn" id="drb-spy-btn-retry-failed" hidden title="รันดึงเรทค่าคอมใหม่เฉพาะแถวที่ยังได้ Extra 0% หรือดึงไม่สำเร็จ">
+              🔄 รีเช็กตัวที่ 0%
+            </button>
+          </div>
         </div>
 
         <div class="sp-spy-results-list" id="drb-spy-results-list"></div>
@@ -391,6 +398,14 @@
             </button>
             <button type="button" class="sp-tool-btn" id="drb-sp-btn-open-webui">
               🖥️ เปิด Web UI
+            </button>
+            <button type="button" class="sp-tool-btn" id="drb-sp-btn-refresh-pool"
+              title="ดึงสถานะคิว Pool ล่าสุดจาก Server (ไม่ต้อง Reload Extension)">
+              🔄 เช็กคิว Pool ใหม่
+            </button>
+            <button type="button" class="sp-tool-btn" id="drb-sp-btn-reload-ext-tool"
+              title="Reload Extension (โหลดโค้ดตัวเสริมใหม่ทันที)">
+              ♻️ Reload Ext
             </button>
           </div>
         </div>

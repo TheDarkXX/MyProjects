@@ -855,6 +855,12 @@
         sendResponse({ ok: true });
         return true;
       }
+      if (req.action === 'REFRESH_POOL_BRIDGE_STATUS') {
+        const bar = ensurePoolBridgeBanner(false);
+        if (bar) refreshPoolBridgeBannerStatus(bar, { manual: false });
+        sendResponse({ ok: true, refreshed: Boolean(bar) });
+        return true;
+      }
       if (req.action === 'FETCH_REAL_OFFER_IN_AFF_TAB') {
         const targetItemId = String(req.itemId || '').trim();
         (async () => {
@@ -3453,6 +3459,9 @@
           <button type="button" id="drb-pool-btn-run" style="background:linear-gradient(180deg,#1d4ed8 0%,#1e3a8a 100%);color:#fff;font-weight:700;border:1px solid #2563eb;border-radius:9px;padding:9px 15px;cursor:pointer;font-size:13px;box-shadow:0 4px 12px rgba(29,78,216,0.35);">
             🚀 ดึงค่าคอม + แปลงลิงก์ที่รอ ➔ Web UI
           </button>
+          <button type="button" id="drb-pool-btn-refresh-queue" title="เช็กจำนวนคิวรอแปลงลิงก์ล่าสุดจาก Server โดยไม่ต้อง Reload Extension" style="background:#0f172a;color:#93c5fd;font-weight:700;border:1px solid #2563eb;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;">
+            🔄 เช็กคิวใหม่
+          </button>
           <button type="button" id="drb-pool-btn-force" title="บังคับดึงเรทจริง + แปลงลิงก์ใหม่ครบทั้ง Pool" style="background:linear-gradient(180deg,#991b1b 0%,#7f1d1d 100%);color:#fef2f2;font-weight:700;border:1px solid #b91c1c;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;box-shadow:0 4px 12px rgba(153,27,27,0.35);">
             🔄 รีเฟรชทั้ง Pool
           </button>
@@ -3470,6 +3479,9 @@
     document.body.appendChild(bar);
 
     bar.querySelector('#drb-pool-btn-run').addEventListener('click', () => runCampaignPoolBridge(false));
+    bar.querySelector('#drb-pool-btn-refresh-queue').addEventListener('click', () =>
+      refreshPoolBridgeBannerStatus(bar, { manual: true })
+    );
     bar.querySelector('#drb-pool-btn-force').addEventListener('click', () => runCampaignPoolBridge(true));
     bar.querySelector('#drb-pool-btn-csv').addEventListener('click', () => downloadPoolLinksCsv(lastPoolConvertedList));
     bar.querySelector('#drb-pool-btn-hide').addEventListener('click', () => {
@@ -3477,46 +3489,67 @@
     });
 
     // Check status on load (Master Pool + Spy Pool breakdown)
-    ns.sendMessage('FETCH_POOL_PENDING', { force: false })
-      .then((res) => {
-        const stEl = bar.querySelector('#drb-pool-status-txt');
-        const runBtn = bar.querySelector('#drb-pool-btn-run');
-        const forceBtn = bar.querySelector('#drb-pool-btn-force');
-        const rangeEl = bar.querySelector('#drb-pool-range-txt');
-        if (!stEl || !res) return;
-        const total = res.totalPool || 0;
-        const masterCount = res.masterCount ?? total;
-        const spyCount = res.spyCount ?? 0;
-        const done = res.completedCount || 0;
-        const pend = res.pendingCount || 0;
-        const pendingItems = Array.isArray(res.items) ? res.items : [];
-        const pendSpy = pendingItems.filter((x) => x.pool_source === 'spy').length;
-        const pendMaster = Math.max(0, pend - pendSpy);
-        const pendParts = [];
-        if (pendMaster > 0) pendParts.push(`Master ${pendMaster}`);
-        if (pendSpy > 0) pendParts.push(`Spy ${pendSpy}`);
-        const pendBreakdown = pendParts.length ? ` (${pendParts.join(' + ')})` : '';
-
-        if (rangeEl && total > 0) {
-          rangeEl.textContent = spyCount > 0 ? `Master ${masterCount} + Spy ${spyCount}` : `aidrb1611a001..a${String(total).padStart(3, '0')}`;
-        }
-        if (forceBtn && total > 0) {
-          forceBtn.textContent = `🔄 รีเฟรชทั้ง ${total}`;
-        }
-        if (pend === 0 && total > 0) {
-          stEl.innerHTML = `<span style="color:#93c5fd;font-weight:700;">✅ ครบทั้ง ${total}/${total} รายการแล้ว (Master ${masterCount} · Spy ${spyCount}) — มีลิงก์ s.shopee.co.th + ค่าคอมครบ!</span>`;
-          if (runBtn) runBtn.textContent = `✅ ครบ ${total}/${total} แล้ว`;
-        } else {
-          stEl.innerHTML = `คิวรวม <b style="color:#fff;">${total}</b> (Master ${masterCount} · Spy ${spyCount}) · เสร็จแล้ว <b style="color:#93c5fd;">${done}</b> · รอแปลง/ดึงคอม <b style="color:#fca5a5;">${pend} ตัว${pendBreakdown}</b>`;
-          if (runBtn) runBtn.textContent = `🚀 ดึงค่าคอม+แปลงลิงก์ที่รอ (${pend} ตัว) ➔ Web UI`;
-        }
-      })
-      .catch((err) => {
-        const stEl = bar.querySelector('#drb-pool-status-txt');
-        if (stEl) stEl.textContent = `⚠️ ยังไม่เชื่อม Web UI (${err?.message || 'กรุณาตรวจสอบการเชื่อมต่อ'})`;
-      });
+    refreshPoolBridgeBannerStatus(bar, { manual: false });
 
     return bar;
+  }
+
+  async function refreshPoolBridgeBannerStatus(bar, { manual = false } = {}) {
+    if (!bar) return null;
+    const stEl = bar.querySelector('#drb-pool-status-txt');
+    const runBtn = bar.querySelector('#drb-pool-btn-run');
+    const forceBtn = bar.querySelector('#drb-pool-btn-force');
+    const rangeEl = bar.querySelector('#drb-pool-range-txt');
+    const refreshBtn = bar.querySelector('#drb-pool-btn-refresh-queue');
+    const origRefreshTxt = refreshBtn?.textContent || '🔄 เช็กคิวใหม่';
+
+    if (manual && refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = '⏳ กำลังเช็ก...';
+    }
+
+    try {
+      const res = await ns.sendMessage('FETCH_POOL_PENDING', { force: false });
+      if (!stEl || !res) return res || null;
+      const total = res.totalPool || 0;
+      const masterCount = res.masterCount ?? total;
+      const spyCount = res.spyCount ?? 0;
+      const done = res.completedCount || 0;
+      const pend = res.pendingCount || 0;
+      const pendingItems = Array.isArray(res.items) ? res.items : [];
+      const pendSpy = pendingItems.filter((x) => x.pool_source === 'spy').length;
+      const pendMaster = Math.max(0, pend - pendSpy);
+      const pendParts = [];
+      if (pendMaster > 0) pendParts.push(`Master ${pendMaster}`);
+      if (pendSpy > 0) pendParts.push(`Spy ${pendSpy}`);
+      const pendBreakdown = pendParts.length ? ` (${pendParts.join(' + ')})` : '';
+
+      if (rangeEl && total > 0) {
+        rangeEl.textContent = spyCount > 0 ? `Master ${masterCount} + Spy ${spyCount}` : `aidrb1611a001..a${String(total).padStart(3, '0')}`;
+      }
+      if (forceBtn && total > 0) {
+        forceBtn.textContent = `🔄 รีเฟรชทั้ง ${total}`;
+      }
+      if (pend === 0 && total > 0) {
+        stEl.innerHTML = `<span style="color:#93c5fd;font-weight:700;">✅ ครบทั้ง ${total}/${total} รายการแล้ว (Master ${masterCount} · Spy ${spyCount}) — มีลิงก์ s.shopee.co.th + ค่าคอมครบ!</span>`;
+        if (runBtn && !poolBridgeRunning) runBtn.textContent = `✅ ครบ ${total}/${total} แล้ว`;
+        if (manual) ns.showToast(`✅ คิว Pool ครบทั้ง ${total}/${total} รายการแล้ว!`);
+      } else {
+        stEl.innerHTML = `คิวรวม <b style="color:#fff;">${total}</b> (Master ${masterCount} · Spy ${spyCount}) · เสร็จแล้ว <b style="color:#93c5fd;">${done}</b> · รอแปลง/ดึงคอม <b style="color:#fca5a5;">${pend} ตัว${pendBreakdown}</b>`;
+        if (runBtn && !poolBridgeRunning) runBtn.textContent = `🚀 ดึงค่าคอม+แปลงลิงก์ที่รอ (${pend} ตัว) ➔ Web UI`;
+        if (manual) ns.showToast(`🔄 อัปเดตคิวล่าสุด: รอ ${pend} ตัว${pendBreakdown}`);
+      }
+      return res;
+    } catch (err) {
+      if (stEl) stEl.textContent = `⚠️ ยังไม่เชื่อม Web UI (${err?.message || 'กรุณาตรวจสอบการเชื่อมต่อ'})`;
+      if (manual) ns.showToast(`⚠️ เช็กคิวไม่สำเร็จ: ${err?.message || String(err)}`, 'error');
+      return null;
+    } finally {
+      if (manual && refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = origRefreshTxt;
+      }
+    }
   }
 
   async function enrichPoolChunkWithOffers(chunk, forceAll, stEl) {

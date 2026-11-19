@@ -1664,7 +1664,7 @@
     });
 
     document.getElementById('drb-btn-open-webui').addEventListener('click', () => {
-      const baseUrl = currentState.settings?.webUiBaseUrl || 'http://localhost:3000';
+      const baseUrl = currentState.settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com';
       window.open(baseUrl, '_blank', 'noopener');
     });
   }

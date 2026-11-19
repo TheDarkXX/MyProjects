@@ -109,6 +109,12 @@ body[data-theme="dark"] #drb-sidepanel-root {
   font-size: 15px;
 }
 
+.sp-topbar .drb-aff-icon-btn--reload:hover {
+  border-color: var(--sp-extra-border);
+  color: var(--sp-extra);
+  background: var(--sp-extra-bg);
+}
+
 .sp-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

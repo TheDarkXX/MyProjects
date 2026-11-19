@@ -19,6 +19,7 @@
   async function loadAllState() {
     appState = await ns.sendMessage('GET_STATE');
     const s = appState.settings || {};
+
     const themeBtn = document.getElementById('popup-theme-btn');
     ns.applyTheme(document.body, s.theme || 'light', themeBtn);
 
@@ -26,12 +27,12 @@
     document.getElementById('stat-sku-count').textContent = `${count} รายการ`;
     document.getElementById('btn-sku-count').textContent = count;
 
-    document.getElementById('set-webui-url').value = s.webUiBaseUrl || 'http://localhost:3000';
-    document.getElementById('set-shopee-base').value = s.shopeeBaseRate ?? 3.5;
+    document.getElementById('set-webui-url').value = s.webUiBaseUrl || 'https://aff.doctorbankonline.com';
+    document.getElementById('set-shopee-base').value = s.shopeeBaseRate ?? 0.6;
     document.getElementById('set-shopee-extra').value = s.shopeeExtraRate ?? 10.0;
     document.getElementById('set-shopee-cap').value = s.shopeeCapTHB ?? 250;
 
-    checkWebUiConnection(s.webUiBaseUrl || 'http://localhost:3000');
+    checkWebUiConnection(s.webUiBaseUrl || 'https://aff.doctorbankonline.com');
   }
 
   async function checkWebUiConnection(url) {
@@ -53,6 +54,24 @@
   }
 
   function bindActions() {
+    const reloadBtn = document.getElementById('popup-reload-ext-btn');
+    if (reloadBtn) {
+      reloadBtn.addEventListener('click', async () => {
+        try {
+          const res = await ns.sendMessage('RELOAD_EXTENSION');
+          if (res && res.reloaded === false && res.busy) {
+            ns.showToast(`⏳ ${res.error || 'กำลังดึงข้อมูลอยู่ รอสักครู่'}`, 'error');
+            return;
+          }
+          ns.showToast('♻️ กำลัง Reload Extension...');
+        } catch (_err) {
+          try {
+            chrome.runtime.reload();
+          } catch (_e2) {}
+        }
+      });
+    }
+
     const themeBtn = document.getElementById('popup-theme-btn');
     if (themeBtn) {
       themeBtn.addEventListener('click', async () => {
@@ -64,7 +83,7 @@
 
     // 1. Launch Full-Screen Web UI Command Center
     document.getElementById('btn-launch-webui').addEventListener('click', () => {
-      const targetUrl = document.getElementById('set-webui-url').value.trim() || appState.settings?.webUiBaseUrl || 'http://localhost:3000';
+      const targetUrl = document.getElementById('set-webui-url').value.trim() || appState.settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com';
       chrome.tabs.create({ url: targetUrl });
     });
 
@@ -84,10 +103,10 @@
 
     // 4. Save Settings
     document.getElementById('btn-save-settings').addEventListener('click', async () => {
-      const nextUrl = document.getElementById('set-webui-url').value.trim() || 'http://localhost:3000';
+      const nextUrl = document.getElementById('set-webui-url').value.trim() || 'https://aff.doctorbankonline.com';
       const payload = {
         webUiBaseUrl: nextUrl,
-        shopeeBaseRate: Number(document.getElementById('set-shopee-base').value) || 3.5,
+        shopeeBaseRate: Number(document.getElementById('set-shopee-base').value) || 0.6,
         shopeeExtraRate: Number(document.getElementById('set-shopee-extra').value) ?? 10.0,
         shopeeCapTHB: Number(document.getElementById('set-shopee-cap').value) || 250
       };

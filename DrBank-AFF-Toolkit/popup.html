@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>DrBank AFF Scout v2.13.1 — Web UI Bridge</title>
+  <title>DrBank AFF Scout v2.13.3 — Web UI Bridge</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -10,11 +10,14 @@
     <div class="brand-wrap">
       <div class="brand-logo">⚡</div>
       <div>
-        <div class="brand-title">DrBank AFF Scout <span id="popup-version-badge" class="ver-badge">v2.13.1</span></div>
+        <div class="brand-title">DrBank AFF Scout <span id="popup-version-badge" class="ver-badge">v2.13.3</span></div>
         <div class="brand-sub">Shopee Winning SKU & Web UI Bridge</div>
       </div>
     </div>
-    <button id="popup-theme-btn" class="btn btn--ghost" style="padding:4px 9px;" title="สลับโหมด สว่าง/มืด">🌙</button>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button id="popup-reload-ext-btn" class="btn btn--ghost" style="padding:4px 9px;" title="Reload Extension (โหลดโค้ด Extension ใหม่ทันที)">♻️</button>
+      <button id="popup-theme-btn" class="btn btn--ghost" style="padding:4px 9px;" title="สลับโหมด สว่าง/มืด">🌙</button>
+    </div>
   </header>
 
   <main class="launcher-body">
@@ -51,7 +54,7 @@
       <div class="card-title">⚙️ ตั้งค่าสะพานเชื่อม Web UI & เรทเริ่มต้น</div>
       <div style="margin-bottom:8px;">
         <label>Web UI Server URL (Full-Screen Dashboard)</label>
-        <input type="url" id="set-webui-url" class="inp" placeholder="http://localhost:3000">
+        <input type="url" id="set-webui-url" class="inp" placeholder="https://aff.doctorbankonline.com">
       </div>
       <div class="form-grid-3">
         <div>

@@ -1363,6 +1363,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+async function postWebUiJson(endpointPath, body, { baseUrlOverride = '', timeoutMs = 15000 } = {}) {
+  const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
+  const rawBase = String(baseUrlOverride || settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').trim();
+  const baseUrl = (rawBase === 'http://localhost:3000' ? 'https://aff.doctorbankonline.com' : rawBase).replace(/\/+$/, '');
+  const affToken = String(settings?.affToken || 'doctorbank2026');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const resp = await fetch(`${baseUrl}${endpointPath}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Aff-Token': affToken
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    });
+    if (!resp.ok) {
+      const errBody = await resp.json().catch(() => ({}));
+      throw new Error(errBody?.error || errBody?.message || `HTTP ${resp.status} from ${baseUrl}${endpointPath}`);
+    }
+    return await resp.json();
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error(`หมดเวลาเชื่อมต่อ ${baseUrl}${endpointPath} (${Math.round(timeoutMs / 1000)}s)`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function handleMessage(msg, _sender) {
   const { action, payload } = msg || {};
 
@@ -1640,9 +1673,6 @@ async function handleMessage(msg, _sender) {
     }
 
     case 'SPY_COLLECT_REELS': {
-      const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
-      const baseUrl = String(payload?.webUiBaseUrl || settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
-      const affToken = String(settings?.affToken || 'doctorbank2026');
       const rawReels = Array.isArray(payload?.reels) ? payload.reels : [];
 
       const enrichOneReel = async (orig) => {
@@ -1691,44 +1721,39 @@ async function handleMessage(msg, _sender) {
         })
       );
 
-      const resp = await fetch(`${baseUrl}/api/shopee-aff/spy-collect`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Aff-Token': affToken
-        },
-        body: JSON.stringify({
+      return await postWebUiJson(
+        '/api/shopee-aff/spy-collect',
+        {
           reels,
           resolve_only: payload?.resolveOnly !== false
-        })
-      });
-      if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({}));
-        throw new Error(errBody?.error || `HTTP ${resp.status} from ${baseUrl}/api/shopee-aff/spy-collect`);
-      }
-      return await resp.json();
+        },
+        { baseUrlOverride: payload?.webUiBaseUrl, timeoutMs: 25000 }
+      );
     }
 
     case 'SPY_COMMIT_REELS': {
-      const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
-      const baseUrl = String(payload?.webUiBaseUrl || settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
-      const affToken = String(settings?.affToken || 'doctorbank2026');
       const items = Array.isArray(payload?.items) ? payload.items : [];
-      const resp = await fetch(`${baseUrl}/api/shopee-aff/spy-commit`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Aff-Token': affToken
-        },
-        body: JSON.stringify({ items })
-      });
-      if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({}));
-        throw new Error(errBody?.error || `HTTP ${resp.status} from ${baseUrl}/api/shopee-aff/spy-commit`);
+      return await postWebUiJson(
+        '/api/shopee-aff/spy-commit',
+        { items },
+        { baseUrlOverride: payload?.webUiBaseUrl, timeoutMs: 20000 }
+      );
+    }
+
+    case 'RELOAD_EXTENSION': {
+      if (!payload?.force && inFlightOfferFetches.size > 0) {
+        return {
+          reloaded: false,
+          busy: true,
+          error: `กำลังดึงเรทค่าคอมอยู่ ${inFlightOfferFetches.size} รายการ รอให้เสร็จก่อนค่อย Reload Extension`
+        };
       }
-      return await resp.json();
+      setTimeout(() => {
+        try {
+          chrome.runtime.reload();
+        } catch (_e) {}
+      }, 90);
+      return { reloaded: true };
     }
 
     default:

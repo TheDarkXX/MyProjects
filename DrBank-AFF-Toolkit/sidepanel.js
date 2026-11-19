@@ -113,6 +113,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     queryActiveTabAndScrape(true);
   });
 
+  // Reload Extension Buttons (Header + Tools Grid)
+  document.getElementById('drb-sp-btn-reload-ext')?.addEventListener('click', triggerExtensionReload);
+  document.getElementById('drb-sp-btn-reload-ext-tool')?.addEventListener('click', triggerExtensionReload);
+
   // Refresh Real Social Media Rate Button inside Hero Strip
   document.getElementById('drb-sp-btn-refresh-realrate')?.addEventListener('click', async () => {
     ns.showToast('⏳ กำลังดึงเรทจริง Social Media จากบัญชี Affiliate...');
@@ -257,6 +261,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('drb-sp-btn-open-webui')?.addEventListener('click', openWebUI);
+
+  document.getElementById('drb-sp-btn-refresh-pool')?.addEventListener('click', refreshPoolPendingFromSidePanel);
 
   document.getElementById('drb-aff-btn-pool-bridge')?.addEventListener('click', async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -1112,6 +1118,60 @@ function openWebUI() {
   window.open(baseUrl, '_blank', 'noopener');
 }
 
+async function triggerExtensionReload() {
+  if (spyCollectRunning || spyBatchRetryRunning) {
+    ns.showToast('⏳ กำลัง Collect/รีเช็ก Spy Pool อยู่ รอให้เสร็จก่อนค่อย Reload Extension', 'error');
+    return;
+  }
+  try {
+    const res = await ns.sendMessage('RELOAD_EXTENSION');
+    if (res && res.reloaded === false && res.busy) {
+      ns.showToast(`⏳ ${res.error || 'กำลังดึงข้อมูลอยู่ รอสักครู่แล้วกดใหม่'}`, 'error');
+      return;
+    }
+    ns.showToast('♻️ กำลัง Reload Extension... (หากเปิดหน้า Shopee/AFF ค้างไว้ กด F5 เพื่อเชื่อมใหม่)');
+  } catch (_err) {
+    try {
+      chrome.runtime.reload();
+    } catch (_e2) {}
+  }
+}
+
+async function refreshPoolPendingFromSidePanel() {
+  const btn = document.getElementById('drb-sp-btn-refresh-pool');
+  const origTxt = btn?.textContent || '🔄 เช็กคิว Pool ใหม่';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ กำลังเช็กคิว...';
+  }
+  try {
+    const res = await ns.sendMessage('FETCH_POOL_PENDING', { force: false });
+    const affTabs = await chrome.tabs.query({ url: 'https://affiliate.shopee.co.th/*' }).catch(() => []);
+    for (const tab of affTabs) {
+      if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { action: 'REFRESH_POOL_BRIDGE_STATUS' }).catch(() => {});
+      }
+    }
+    const total = res?.totalPool || 0;
+    const pend = res?.pendingCount || 0;
+    const items = Array.isArray(res?.items) ? res.items : [];
+    const pendSpy = items.filter((x) => x.pool_source === 'spy').length;
+    const pendMaster = Math.max(0, pend - pendSpy);
+    if (pend === 0 && total > 0) {
+      ns.showToast(`✅ คิว Pool ครบทั้ง ${total}/${total} รายการแล้ว!`);
+    } else {
+      ns.showToast(`🔄 คิวล่าสุด: รอ ${pend} ตัว (Master ${pendMaster} · Spy ${pendSpy}) / รวม ${total}`);
+    }
+  } catch (err) {
+    ns.showToast(`⚠️ เช็กคิวไม่สำเร็จ: ${err?.message || String(err)}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origTxt;
+    }
+  }
+}
+
 // ============================================================================
 // PANE 3: 🕵️ SPY REEL COLLECTOR (FB Reels -> Exther Gate -> Spy Pool)
 // ============================================================================
@@ -1174,6 +1234,7 @@ function bindSpyCollector() {
   const grabBtn = document.getElementById('drb-spy-btn-grab-tab');
   const clearBtn = document.getElementById('drb-spy-btn-clear');
   const collectBtn = document.getElementById('drb-spy-btn-collect');
+  const syncUnsentBtn = document.getElementById('drb-spy-btn-sync-unsent');
   const retryFailedBtn = document.getElementById('drb-spy-btn-retry-failed');
   const wakeAffBtn = document.getElementById('drb-spy-btn-wake-aff');
 
@@ -1197,6 +1258,10 @@ function bindSpyCollector() {
 
   collectBtn?.addEventListener('click', () => {
     runSpyReelCollector();
+  });
+
+  syncUnsentBtn?.addEventListener('click', () => {
+    syncUnsentSpyRowsToServer();
   });
 
   retryFailedBtn?.addEventListener('click', () => {
@@ -1555,32 +1620,126 @@ async function ensureSpyRowsShortLinksAndSave(targetRows = []) {
   }
 
   const commitPayload = targetRows.map(buildSpyLinkPayloadForSave);
+  let commitRes = null;
   if (commitPayload.length > 0) {
-    const commitRes = await ns.sendMessage('SPY_COMMIT_REELS', { items: commitPayload });
-    const committedItems = Array.isArray(commitRes?.items) ? commitRes.items : [];
-    const localMap = commitRes?.localImagesMap;
+    try {
+      commitRes = await ns.sendMessage('SPY_COMMIT_REELS', { items: commitPayload });
+      if (!commitRes || commitRes.ok === false) {
+        throw new Error(commitRes?.error || 'ส่งข้อมูลเข้า Spy Pool บนเซิร์ฟเวอร์ไม่สำเร็จ');
+      }
+      const committedItems = Array.isArray(commitRes?.items) ? commitRes.items : [];
+      const localMap = commitRes?.localImagesMap;
 
-    for (let i = 0; i < targetRows.length; i++) {
-      const r = targetRows[i];
-      const serverIt = committedItems[i] || committedItems.find((x) =>
-        (r.source_reel_url && x.source_reel_url === r.source_reel_url) ||
-        (r.item_id && String(x.item_id) === String(r.item_id))
-      );
-      if (serverIt) {
-        if (serverIt.spy_sub_id2) r.spy_sub_id2 = serverIt.spy_sub_id2;
-        if (serverIt.spy_seq) r.spy_seq = serverIt.spy_seq;
-        if (serverIt.sku_code) r.sku_code = serverIt.sku_code;
-        if (serverIt.our_short_link) r.shortLink = serverIt.our_short_link;
-        r.gatePass = Boolean(serverIt.gatePass);
-        if (serverIt.decision) r.gateDecision = serverIt.decision;
-        if (serverIt.reason) r.gateReason = serverIt.reason;
+      for (let i = 0; i < targetRows.length; i++) {
+        const r = targetRows[i];
+        const serverIt = committedItems[i] || committedItems.find((x) =>
+          (r.source_reel_url && x.source_reel_url === r.source_reel_url) ||
+          (r.item_id && String(x.item_id) === String(r.item_id))
+        );
+        if (serverIt) {
+          if (serverIt.spy_sub_id2) r.spy_sub_id2 = serverIt.spy_sub_id2;
+          if (serverIt.spy_seq) r.spy_seq = serverIt.spy_seq;
+          if (serverIt.sku_code) r.sku_code = serverIt.sku_code;
+          if (serverIt.our_short_link) r.shortLink = serverIt.our_short_link;
+          r.gatePass = Boolean(serverIt.gatePass);
+          if (serverIt.decision) r.gateDecision = serverIt.decision;
+          if (serverIt.reason) r.gateReason = serverIt.reason;
+        }
+        if (localMap && r.spy_sub_id2 && Array.isArray(localMap[r.spy_sub_id2]) && localMap[r.spy_sub_id2].length > 0) {
+          r.localImages = localMap[r.spy_sub_id2];
+        }
+        r.serverSynced = true;
+        r.serverSyncError = '';
+        r.serverSyncedAt = new Date().toISOString();
       }
-      if (localMap && r.spy_sub_id2 && Array.isArray(localMap[r.spy_sub_id2]) && localMap[r.spy_sub_id2].length > 0) {
-        r.localImages = localMap[r.spy_sub_id2];
+    } catch (err) {
+      const errMsg = err?.message || String(err);
+      for (const r of targetRows) {
+        r.serverSynced = false;
+        r.serverSyncError = errMsg;
       }
+      persistLastSpySession();
+      throw err;
     }
   }
   persistLastSpySession();
+  return commitRes;
+}
+
+function isSpyRowReadyToSync(r) {
+  return Boolean(r) && !r.serverSynced && (Boolean(r.rateChecked) || Number(r.price) > 0 || !r.item_id);
+}
+
+async function syncSingleSpyRowToServer(idx) {
+  if (spyCollectRunning || spyBatchRetryRunning || spyRerunningIndices.has(idx)) {
+    ns.showToast('⏳ กำลังดำเนินการอยู่...');
+    return;
+  }
+  const row = lastSpyEnrichedItems[idx];
+  if (!row) return;
+
+  spyRerunningIndices.add(idx);
+  renderSpyCollectorResults(lastSpyEnrichedItems);
+
+  try {
+    await ensureSpyRowsShortLinksAndSave([row]);
+    if (ns.evaluateSpyGate(row).pass) {
+      ns.showToast(`☁️ ส่งขึ้นเว็บ Spy Pool สำเร็จ (${row.spy_sub_id2 || row.item_id})!`);
+    } else {
+      ns.showToast(`🗂️ บันทึกลง Reject Log บนเว็บแล้ว (${row.spy_sub_id2 || row.item_id})`);
+    }
+  } catch (err) {
+    ns.showToast(`❌ ส่งขึ้นเว็บไม่สำเร็จ: ${err?.message || String(err)}`, 'error');
+  } finally {
+    spyRerunningIndices.delete(idx);
+    persistLastSpySession();
+    renderSpyCollectorResults(lastSpyEnrichedItems);
+  }
+}
+
+async function syncUnsentSpyRowsToServer() {
+  if (spyCollectRunning || spyBatchRetryRunning) {
+    ns.showToast('⏳ กำลังดำเนินการอยู่...');
+    return;
+  }
+  const unsentRows = lastSpyEnrichedItems.filter(isSpyRowReadyToSync);
+  if (!unsentRows.length) {
+    ns.showToast('☁️ ทุกรายการซิงก์ขึ้นเว็บครบแล้ว!');
+    return;
+  }
+
+  const progWrap = document.getElementById('drb-spy-progress-wrap');
+  const progBar = document.getElementById('drb-spy-progress-bar');
+  const progTxt = document.getElementById('drb-spy-progress-text');
+
+  spyBatchRetryRunning = true;
+  if (progWrap) progWrap.hidden = false;
+  if (progBar) progBar.style.width = '35%';
+  if (progTxt) {
+    progTxt.textContent = `⏳ กำลังส่ง ${unsentRows.length} รายการขึ้นเว็บ aff.doctorbankonline.com...`;
+  }
+  renderSpyCollectorResults(lastSpyEnrichedItems);
+
+  try {
+    const commitRes = await ensureSpyRowsShortLinksAndSave(unsentRows);
+    const srvPassed = Number(commitRes?.passedCount ?? 0);
+    const srvRejected = Number(commitRes?.rejectedCount ?? 0);
+    if (progBar) progBar.style.width = '100%';
+    if (progTxt) {
+      progTxt.innerHTML = `<span style="color:#15803d;font-weight:800;">☁️ ซิงก์ขึ้นเว็บสำเร็จ ${unsentRows.length} รายการ (ขึ้น Spy Pool ${srvPassed} · Reject Log ${srvRejected})!</span>`;
+    }
+    ns.showToast(`☁️ ซิงก์ขึ้นเว็บสำเร็จ ${unsentRows.length} รายการ!`);
+  } catch (err) {
+    const msg = err?.message || String(err);
+    if (progTxt) {
+      progTxt.innerHTML = `<span style="color:#dc2626;font-weight:700;">❌ ส่งขึ้นเว็บไม่สำเร็จ: ${escHtml(msg)}</span>`;
+    }
+    ns.showToast(`❌ ส่งขึ้นเว็บไม่สำเร็จ: ${msg}`, 'error');
+  } finally {
+    spyBatchRetryRunning = false;
+    persistLastSpySession();
+    renderSpyCollectorResults(lastSpyEnrichedItems);
+  }
 }
 
 async function rerunSingleSpyRow(idx) {
@@ -1605,13 +1764,20 @@ async function rerunSingleSpyRow(idx) {
       ns.showToast(`❌ ${res.error}`, 'error');
       return;
     }
+    let commitErr = '';
     if (row.item_id) {
-      await ensureSpyRowsShortLinksAndSave([row]).catch(() => {});
+      try {
+        await ensureSpyRowsShortLinksAndSave([row]);
+      } catch (saveErr) {
+        commitErr = saveErr?.message || String(saveErr);
+      }
     }
     const g = ns.evaluateSpyGate(row);
-    if (g.pass) {
+    if (commitErr) {
+      ns.showToast(`⚠️ เช็กเรทได้ แต่ส่งขึ้นเว็บไม่สำเร็จ: ${commitErr}`, 'error');
+    } else if (g.pass) {
       ns.showToast(
-        `✅ ผ่านเกณฑ์ ${row.spy_sub_id2 || row.item_id}: Extra ${row.extraRate}% · ค่าคอม ${ns.formatTHB(row.netComm)}`
+        `✅ ผ่านเกณฑ์ ${row.spy_sub_id2 || row.item_id}: Extra ${row.extraRate}% · ค่าคอม ${ns.formatTHB(row.netComm)} (ขึ้นเว็บแล้ว)`
       );
     } else if (Number(row.price) > 0) {
       ns.showToast(`🔴 ${g.reason} (บันทึก Reject Log แล้ว)`, 'error');
@@ -1668,6 +1834,8 @@ async function rerunFailedSpyRows() {
       return;
     }
 
+    let commitFailedCount = 0;
+    let lastCommitErr = '';
     for (let step = 0; step < targetIndices.length; step++) {
       const idx = targetIndices[step];
       const row = lastSpyEnrichedItems[idx];
@@ -1693,8 +1861,13 @@ async function rerunFailedSpyRows() {
         break;
       }
       if (row.item_id) {
-        await ensureSpyRowsShortLinksAndSave([row]).catch(() => {});
-        if (ns.evaluateSpyGate(row).pass) updatedCount++;
+        try {
+          await ensureSpyRowsShortLinksAndSave([row]);
+          if (ns.evaluateSpyGate(row).pass) updatedCount++;
+        } catch (saveErr) {
+          commitFailedCount++;
+          lastCommitErr = saveErr?.message || String(saveErr);
+        }
       }
       spyRerunningIndices.delete(idx);
       renderSpyCollectorResults(lastSpyEnrichedItems);
@@ -1702,10 +1875,17 @@ async function rerunFailedSpyRows() {
 
     if (!stoppedBySec) {
       if (progBar) progBar.style.width = '100%';
-      if (progTxt) {
-        progTxt.innerHTML = `<span style="color:#15803d;font-weight:800;">✅ รีเช็กเสร็จสิ้น — ผ่านเกณฑ์ ${updatedCount}/${targetIndices.length} ตัว</span>`;
+      if (commitFailedCount > 0) {
+        if (progTxt) {
+          progTxt.innerHTML = `<span style="color:#dc2626;font-weight:800;">⚠️ เช็กเรทแล้ว แต่ส่งขึ้นเว็บพลาด ${commitFailedCount} ตัว: ${escHtml(lastCommitErr)}</span>`;
+        }
+        ns.showToast(`⚠️ ส่งขึ้นเว็บไม่สำเร็จ ${commitFailedCount} ตัว: ${lastCommitErr}`, 'error');
+      } else {
+        if (progTxt) {
+          progTxt.innerHTML = `<span style="color:#15803d;font-weight:800;">✅ รีเช็กเสร็จสิ้น — ผ่านเกณฑ์ ${updatedCount}/${targetIndices.length} ตัว (ซิงก์เว็บแล้ว)</span>`;
+        }
+        ns.showToast(`✅ รีเช็กเสร็จสิ้น (ผ่านเกณฑ์ ${updatedCount}/${targetIndices.length} ตัว)`);
       }
-      ns.showToast(`✅ รีเช็กเสร็จสิ้น (ผ่านเกณฑ์ ${updatedCount}/${targetIndices.length} ตัว)`);
     }
   } finally {
     spyBatchRetryRunning = false;
@@ -1770,7 +1950,9 @@ async function runSpyReelCollector() {
       confirmedNoExtra: false,
       gatePass: false,
       gateDecision: '',
-      gateReason: ''
+      gateReason: '',
+      serverSynced: false,
+      serverSyncError: ''
     }));
     lastSpyEnrichedItems = enrichedItems;
     persistLastSpySession();
@@ -1784,16 +1966,17 @@ async function runSpyReelCollector() {
       }
     }
 
-    // Stage 2: Fetch Real Social Media Commission for each item with item_id
+    // Stage 2 + Per-Card Instant Sync: Check rate & immediately commit each card to Spy Pool / Reject Log
+    let securityBlockedErr = '';
     for (let idx = 0; idx < enrichedItems.length; idx++) {
       const row = enrichedItems[idx];
       const cleanItemId = String(row.item_id || '').replace(/[^0-9]/g, '');
-      const pct = 15 + Math.round(((idx + 1) / enrichedItems.length) * 55);
-      if (progBar) progBar.style.width = `${pct}%`;
+      const basePct = 15 + Math.round((idx / enrichedItems.length) * 80);
+      if (progBar) progBar.style.width = `${basePct}%`;
 
       if (cleanItemId) {
         if (progTxt) {
-          progTxt.textContent = `⏳ [2/4] เช็กเรท Social Media จริง (${idx + 1}/${enrichedItems.length}): ${row.spy_sub_id2 || cleanItemId}...`;
+          progTxt.textContent = `⏳ [${idx + 1}/${enrichedItems.length}] เช็กเรท Social Media จริง: ${row.spy_sub_id2 || cleanItemId}...`;
         }
         if (collectBtn) {
           collectBtn.textContent = `⏳ เช็กค่าคอม (${idx + 1}/${enrichedItems.length})...`;
@@ -1803,46 +1986,62 @@ async function runSpyReelCollector() {
       const needForce = Number(row.price) <= 0 || Number(row.netComm) <= 0 || Number(row.extraRate) <= 0;
       const res = await resolveSpyRowItemAndRate(row, needForce);
       if (res.securityCheck) {
-        throw new Error(res.error);
+        securityBlockedErr = res.error;
+        renderSpyCollectorResults(enrichedItems);
+        break;
       }
 
+      const rowLabel = row.spy_sub_id2 || cleanItemId || 'รายการ';
+      if (progTxt) {
+        progTxt.textContent = `⏳ [${idx + 1}/${enrichedItems.length}] กำลังส่ง ${rowLabel} ขึ้นเว็บทันที...`;
+      }
+      if (collectBtn) {
+        collectBtn.textContent = `☁️ ส่งขึ้นเว็บ (${idx + 1}/${enrichedItems.length})...`;
+      }
+      try {
+        await ensureSpyRowsShortLinksAndSave([row]);
+      } catch (commitErr) {
+        row.serverSynced = false;
+        row.serverSyncError = commitErr?.message || String(commitErr);
+      }
+
+      const donePct = 15 + Math.round(((idx + 1) / enrichedItems.length) * 80);
+      if (progBar) progBar.style.width = `${donePct}%`;
+      persistLastSpySession();
       renderSpyCollectorResults(enrichedItems);
     }
 
-    // Stage 3 & 4: Generate our s.shopee.co.th shortlinks ONLY for passing items & commit to Spy Pool + Reject Log
-    const passingItems = enrichedItems.filter((r) => ns.evaluateSpyGate(r).pass);
-    const needLinkCount = passingItems.filter((r) => {
-      const prodUrl =
-        r.clean_product_url ||
-        (r.shop_id && r.item_id ? `https://shopee.co.th/product/${r.shop_id}/${r.item_id}` : '');
-      return Boolean(prodUrl) && !r.shortLink;
-    }).length;
-    if (needLinkCount > 0) {
-      if (progBar) progBar.style.width = '82%';
-      if (progTxt) {
-        progTxt.textContent = `⏳ [3/4] เจนลิงก์ s.shopee เฉพาะตัวผ่านเกณฑ์ (${needLinkCount} รายการ)...`;
-      }
-      if (collectBtn) {
-        collectBtn.textContent = `⏳ เจนลิงก์ s.shopee (${needLinkCount} ตัว)...`;
-      }
+    if (securityBlockedErr) {
+      throw new Error(securityBlockedErr);
     }
 
-    if (progBar) progBar.style.width = '94%';
-    if (progTxt) {
-      progTxt.textContent = `⏳ [4/4] บันทึกตัวผ่านเกณฑ์เข้า Spy Pool + ตัวไม่ผ่านเข้า Reject Log...`;
+    const unsentRemaining = enrichedItems.filter((r) => !r.serverSynced && !r.rateError);
+    if (unsentRemaining.length > 0) {
+      if (progBar) progBar.style.width = '96%';
+      if (progTxt) {
+        progTxt.textContent = `⏳ กำลังเก็บตกส่งรายการที่เหลือ (${unsentRemaining.length} ตัว) ขึ้นเว็บ...`;
+      }
+      await ensureSpyRowsShortLinksAndSave(unsentRemaining).catch(() => {});
     }
-    await ensureSpyRowsShortLinksAndSave(enrichedItems);
 
     spyCollectRunning = false;
     renderSpyCollectorResults(enrichedItems);
-    const passCount = enrichedItems.filter((r) => ns.evaluateSpyGate(r).pass).length;
-    const rejectCount = enrichedItems.length - passCount;
+    const syncedPassCount = enrichedItems.filter((r) => r.serverSynced && ns.evaluateSpyGate(r).pass).length;
+    const syncedRejectCount = enrichedItems.filter((r) => r.serverSynced && !ns.evaluateSpyGate(r).pass).length;
+    const unsyncedCount = enrichedItems.filter((r) => !r.serverSynced).length;
     if (progBar) progBar.style.width = '100%';
-    if (progTxt) {
-      progTxt.innerHTML = `<span style="color:#15803d;font-weight:800;">✅ ขึ้น Spy Pool ${passCount} ตัว · 🗂️ คัดออกเข้า Reject Log ${rejectCount} ตัว!</span>`;
+    if (unsyncedCount > 0) {
+      if (progTxt) {
+        progTxt.innerHTML = `<span style="color:#d97706;font-weight:800;">⚠️ ขึ้นเว็บแล้ว ${syncedPassCount} ตัว · คัดออก ${syncedRejectCount} ตัว · ยังไม่ขึ้นเว็บ ${unsyncedCount} ตัว (กดปุ่ม ☁️ ส่งขึ้นเว็บทันที)</span>`;
+      }
+      ns.showToast(`⚠️ ขึ้นเว็บแล้ว ${syncedPassCount} ตัว · ยังค้างส่ง ${unsyncedCount} ตัว`, 'error');
+    } else {
+      if (progTxt) {
+        progTxt.innerHTML = `<span style="color:#15803d;font-weight:800;">✅ ขึ้นเว็บ Spy Pool แล้ว ${syncedPassCount} ตัว · 🗂️ ลง Reject Log บนเว็บแล้ว ${syncedRejectCount} ตัว!</span>`;
+      }
+      ns.showToast(`🎉 Collect เสร็จ! ขึ้นเว็บ ${syncedPassCount} ตัว (ลง Reject Log ${syncedRejectCount} ตัว)`);
     }
     if (sumStrip) sumStrip.hidden = false;
-    ns.showToast(`🎉 Collect เสร็จ! ขึ้นเว็บ ${passCount} ตัว (คัดตัวแดงออก ${rejectCount} ตัว)`);
   } catch (err) {
     if (progTxt) {
       progTxt.innerHTML = `<span style="color:#dc2626;font-weight:700;">❌ ${escHtml(err?.message || String(err))}</span>`;
@@ -1862,15 +2061,21 @@ async function runSpyReelCollector() {
 function renderSpyCollectorResults(items = []) {
   const listEl = document.getElementById('drb-spy-results-list');
   const sumStrip = document.getElementById('drb-spy-summary-strip');
+  const syncUnsentBtn = document.getElementById('drb-spy-btn-sync-unsent');
   const retryFailedBtn = document.getElementById('drb-spy-btn-retry-failed');
   if (!listEl) return;
 
-  let passCount = 0;
+  let syncedPassCount = 0;
+  let localPassUnsyncedCount = 0;
   let failCount = 0;
   let noTagCount = 0;
   let retryNeedCount = 0;
+  let unsentCount = 0;
 
   items.forEach((r) => {
+    if (isSpyRowReadyToSync(r)) {
+      unsentCount++;
+    }
     if (!r.item_id) {
       noTagCount++;
       retryNeedCount++;
@@ -1879,7 +2084,11 @@ function renderSpyCollectorResults(items = []) {
         retryNeedCount++;
       }
       if (ns.evaluateSpyGate(r).pass) {
-        passCount++;
+        if (r.serverSynced) {
+          syncedPassCount++;
+        } else {
+          localPassUnsyncedCount++;
+        }
       } else {
         failCount++;
       }
@@ -1890,8 +2099,15 @@ function renderSpyCollectorResults(items = []) {
     sumStrip.hidden = items.length === 0;
     setText(
       'drb-spy-summary-text',
-      `รวม ${items.length} คลิป · 🟢 ขึ้นเว็บ ${passCount} · 🔴 คัดออก(Log) ${failCount}${noTagCount > 0 ? ` · ⚠️ ไร้ตะกร้า ${noTagCount}` : ''}`
+      `รวม ${items.length} คลิป · ☁️ ขึ้นเว็บแล้ว ${syncedPassCount}${localPassUnsyncedCount > 0 ? ` (⚠️ รอส่งขึ้นเว็บ ${localPassUnsyncedCount})` : ''} · 🗂️ คัดออก ${failCount}${noTagCount > 0 ? ` · ⚠️ ไร้ตะกร้า ${noTagCount}` : ''}`
     );
+  }
+  if (syncUnsentBtn) {
+    syncUnsentBtn.hidden = items.length === 0 || spyCollectRunning || unsentCount === 0;
+    syncUnsentBtn.disabled = spyCollectRunning || spyBatchRetryRunning;
+    syncUnsentBtn.textContent = spyBatchRetryRunning
+      ? '⏳ กำลังซิงก์...'
+      : `☁️ ส่งขึ้นเว็บทันที (${unsentCount})`;
   }
   if (retryFailedBtn) {
     retryFailedBtn.hidden = items.length === 0 || spyCollectRunning || retryNeedCount === 0;
@@ -1906,25 +2122,35 @@ function renderSpyCollectorResults(items = []) {
       const hasItem = Boolean(r.item_id);
       const gate = ns.evaluateSpyGate(r);
       const isPass = hasItem && gate.pass;
-      const gateTier = !hasItem ? 'notag' : isPass ? 'pass' : 'fail';
+      const isSynced = Boolean(r.serverSynced);
+      const gateTier = !hasItem ? 'notag' : isPass ? (isSynced ? 'pass' : 'notag') : 'fail';
       const isRerunning = spyRerunningIndices.has(i);
 
       let bannerLeft = '⏳ กำลังเช็กค่าคอม...';
       if (isRerunning) {
-        bannerLeft = '⏳ กำลังดึงเรทใหม่...';
+        bannerLeft = '⏳ กำลังดำเนินการ...';
       } else if (!hasItem) {
-        bannerLeft = r.competitor_short_url
-          ? '⚠️ พบตะกร้าแต่แกะรหัสสินค้าไม่ได้'
-          : '⚠️ ไม่พบป้ายตะกร้า Shopee';
+        if (isSynced) {
+          bannerLeft = r.competitor_short_url
+            ? '⚠️ แกะรหัสสินค้าไม่ได้ — 🗂️ ลง Reject Log บนเว็บแล้ว'
+            : '⚠️ ไม่พบป้ายตะกร้า — 🗂️ ลง Reject Log บนเว็บแล้ว';
+        } else {
+          bannerLeft = r.competitor_short_url
+            ? '⚠️ พบตะกร้าแต่แกะรหัสสินค้าไม่ได้ (ยังไม่ส่ง Log ขึ้นเว็บ)'
+            : '⚠️ ไม่พบป้ายตะกร้า Shopee (ยังไม่ส่ง Log ขึ้นเว็บ)';
+        }
       } else if (!r.rateChecked && r.netComm <= 0 && r.extraRate <= 0) {
         bannerLeft = '⏳ กำลังดึงเรท Social Media...';
       } else if (isPass) {
-        bannerLeft =
-          Number(r.netComm) >= 45
-            ? '🟢 ผ่านเกณฑ์! คอมสูงน่าลุยแอด'
-            : '🟢 ผ่านเกณฑ์ (Extra > 0 & คอม ≥ ฿20)';
+        if (isSynced) {
+          bannerLeft = `🟢 ☁️ ขึ้นเว็บ Spy Pool แล้ว! (${r.spy_sub_id2 || 'Synced'})`;
+        } else {
+          bannerLeft = '🟡 เช็กเรทผ่านเกณฑ์แล้ว — ⚠️ ยังไม่ได้ส่งขึ้นเว็บ (กด ☁️ ส่งขึ้นเว็บ)';
+        }
       } else {
-        bannerLeft = `🔴 ${gate.reason} — เข้า Reject Log แล้ว`;
+        bannerLeft = isSynced
+          ? `🔴 ${gate.reason} — 🗂️ บันทึก Reject Log บนเว็บแล้ว`
+          : `🔴 ${gate.reason} — ⚠️ ยังไม่ได้ส่ง Log ขึ้นเว็บ`;
       }
 
       const sub2Badge = escHtml(r.spy_sub_id2 || `SPY#${i + 1}`);
@@ -1937,6 +2163,7 @@ function renderSpyCollectorResults(items = []) {
 
       const affUrl = r.item_id ? `https://affiliate.shopee.co.th/offer/product_offer/${r.item_id}` : '';
       const disableRowActions = spyCollectRunning || spyBatchRetryRunning || isRerunning;
+      const showRowSyncBtn = !isSynced && (Boolean(r.rateChecked) || Number(r.price) > 0 || !hasItem);
       const baseWebUrl = String(currentSettings.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
       const localThumb = Array.isArray(r.localImages) && r.localImages[0]
         ? (r.localImages[0].startsWith('http') ? r.localImages[0] : `${baseWebUrl}${r.localImages[0]}`)
@@ -1987,9 +2214,11 @@ function renderSpyCollectorResults(items = []) {
             `
                 : `<div style="font-size:12px;color:#b45309;">${escHtml(r.rateError || 'คลิกลิงก์ Reel เพื่อเช็กว่ามีลิงก์ในคอมเมนต์หรือไม่')}</div>`
             }
+            ${r.serverSyncError ? `<div style="font-size:11.5px;color:#dc2626;font-weight:700;">⚠️ ซิงก์เว็บพลาด: ${escHtml(r.serverSyncError)}</div>` : ''}
             <div class="sp-spy-item-footer">
               ${shortLinkHtml}
               <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                ${showRowSyncBtn ? `<button type="button" class="sp-ghost-sm-btn spy-sync-row-btn" data-idx="${i}" ${disableRowActions ? 'disabled' : ''} style="border-color:var(--sp-extra-border);color:var(--sp-extra);" title="ส่งข้อมูลการ์ดนี้ขึ้นเว็บ aff.doctorbankonline.com ทันทีโดยไม่ต้องเช็กเรท Shopee ซ้ำ">☁️ ส่งขึ้นเว็บ</button>` : ''}
                 <button type="button" class="sp-ghost-sm-btn spy-rerun-row-btn" data-idx="${i}" ${disableRowActions ? 'disabled' : ''} title="ดึงเรทค่าคอม EXTRACOMM และราคาของสินค้านี้ใหม่อีกครั้ง">
                   ${isRerunning ? '⏳ กำลังดึง...' : '🔄 ดึงเรทใหม่'}
                 </button>
@@ -2002,6 +2231,13 @@ function renderSpyCollectorResults(items = []) {
       `;
     })
     .join('');
+
+  listEl.querySelectorAll('.spy-sync-row-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-idx'), 10);
+      if (Number.isInteger(idx)) syncSingleSpyRowToServer(idx);
+    });
+  });
 
   listEl.querySelectorAll('.spy-rerun-row-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
