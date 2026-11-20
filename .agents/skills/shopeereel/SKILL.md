@@ -11,7 +11,7 @@ description: >-
 > **Canonical Engine for Shopee Affiliate Short-Form Video (`FACEBOOK · REELS` + `FB Reels 50K Mission`)**
 > ระบบโรงงานแยกโฟลเดอร์ถาวรต่อ 1 สินค้า (`10M_Project/Shopee_Aff/Products/<SKU>_<Slug>/`): ดึงรูปสินค้า HD หลายมุม Auto (Hybrid Extractor) ➔ รัน Codex Vision Recheck QC & Auto-Crop ➔ ส่งบริบทสินค้า + รูป Clean Refs ทั้งหมดให้ `/gptimage` ปั้นภาพตั้งต้น **3 รูป (`03_first_frames/`)** ➔ ออก `00_Product_Master_Card.md` พร้อมพรอมต์ Omni 10s/15s & แคปชั่น ➔ ผูก 2 ทางกับ Pool JSON และ `INDEX_ALL_PRODUCTS.md`
 > **Aliases:** `/spreel`, `/reel`
-> **Master Prompts Reference:** [`10M_Project/Shopee_Aff/06_UGC_Omni_And_PD_Vids_Master_Prompts.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/06_UGC_Omni_And_PD_Vids_Master_Prompts.md)
+> **Master Prompts Reference:** [`10M_Project/Shopee_Aff/rules/06_UGC_Omni_And_PD_Vids_Master_Prompts.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/rules/06_UGC_Omni_And_PD_Vids_Master_Prompts.md)
 > **Vault Registry:** [`10M_Project/Shopee_Aff/Products/INDEX_ALL_PRODUCTS.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/Products/INDEX_ALL_PRODUCTS.md)
 
 ---
@@ -58,7 +58,7 @@ node tools/shopee_product_vault.cjs --lint-table <ไฟล์ production_tables
 
 ## 🎯 2. กฎแคมเปญ `FACEBOOK · REELS` & `FB Reels 50K Mission` (ห้ามพลาด)
 
-อ้างอิงจาก [`10M_Project/Shopee_Aff/03_FB_Reels_50K_Mission_Rules.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/03_FB_Reels_50K_Mission_Rules.md) และ [`README_Campaign_Brief.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/Campaigns/2026-11-16_30_16NOV26FBRAD/README_Campaign_Brief.md):
+อ้างอิงจาก [`10M_Project/Shopee_Aff/rules/03_FB_Reels_50K_Mission_Rules.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/rules/03_FB_Reels_50K_Mission_Rules.md) และ [`README_Campaign_Brief.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/Campaigns/2026-11-16_30_16NOV26FBRAD/README_Campaign_Brief.md):
 
 1. **รหัส `Sub_id1` บังคับ:** ใช้รหัสของรอบแคมเปญ Reels เท่านั้น (เช่น `16NOV26FBRAD`) ห้ามใช้ปนกับโพสต์รูป (`16NOV26FBSPCAD`)
 2. **รูปแบบชื่อแคมเปญใน FB Ads Manager:** `16NOV26FBRAD_<Sub_id2>_<ชื่อสินค้าสั้น>` (เช่น `16NOV26FBRAD_P01R01_กระทะ4หลุม`)
@@ -171,8 +171,8 @@ python "C:\My Claw\The Viral\FlowKit\flow_cli.py" status
 
 ## 🧪 6. โหมด Gem #11 (`--gem 11`) — Thai Raw Action Reels → Production Table
 
-> **สไตล์ (แหล่งเดียว):** [`11_Gem11_Thai_Raw_Action_Reels_Master.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/11_Gem11_Thai_Raw_Action_Reels_Master.md) (System Instruction = `raw_instruction` ของ `gem11_thai_raw_action_reels` ใน [`gems_399_registry.json`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/gems_399_registry.json) ต้องตรงกันทุกตัวอักษร)
-> **กฎบท VO:** [`12_Viral_10_Reels_Script_Deconstruction.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/12_Viral_10_Reels_Script_Deconstruction.md) (SF-1..6 · H1–H9 · E1–E6 · งบตัวอักษร)
+> **สไตล์ (แหล่งเดียว):** [`rules/11_Gem11_Thai_Raw_Action_Reels_Master.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/rules/11_Gem11_Thai_Raw_Action_Reels_Master.md) (System Instruction = `raw_instruction` ของ `gem11_thai_raw_action_reels` ใน [`gems_399_registry.json`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/gems_399_registry.json) ต้องตรงกันทุกตัวอักษร)
+> **กฎบท VO:** [`rules/12_Viral_10_Reels_Script_Deconstruction.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/rules/12_Viral_10_Reels_Script_Deconstruction.md) (SF-1..6 · H1–H9 · E1–E6 · งบตัวอักษร)
 > **ตัวอย่างตาราง:** [`G11_20261116_sample.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/Campaigns/2026-11-16_30_16NOV26FBRAD/production_tables/G11_20261116_sample.md)
 
 ### Workflow
@@ -292,7 +292,7 @@ Use the 3 attached images as the exact keyframes for Shot 1, Shot 2, and Shot 3.
    - ดึงพอร์ตตามลำดับ `:9225` (Bot Chrome) → `:9222` → `User Data/DevToolsActivePort`, ใช้ `:visible` selector เท่านั้นเพื่อข้าม hidden `<textarea>`, เช็ก `len(text) >= 20` ก่อนกดส่ง และหากเจอ `"video generation quota is exhausted"` หรือ `"You reached your limit"` ให้หยุดและแจ้งสลับมาใช้ Google Flow Omni ทันที
 
 ### 7.5 ท่อ Meta Auto Extension v1.4.1, 3-Tier Video QA & มาตรฐาน 3 บัญชี (`DRB` · `Namcha` · `Ashira`)
-> **คัมภีร์ฉบับเต็ม (Single Source of Truth):** [`16_Master_Batch_Production_Posting_And_3Account_Bible.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/16_Master_Batch_Production_Posting_And_3Account_Bible.md)
+> **คัมภีร์ฉบับเต็ม (Single Source of Truth):** [`rules/16_Master_Batch_Production_Posting_And_3Account_Bible.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/rules/16_Master_Batch_Production_Posting_And_3Account_Bible.md)
 
 1. **ไม่ต้องพ่นตารางรอเจน 2 โหมดลงแชทแล้ว:** ให้บันทึกตาราง Excel-Like ````tsv` ลง `Meta_AI_2Scene_10s_Ready_Prompts.md` แล้วส่งคิวผ่าน **`Meta Auto Extension v1.4.1`** (`python tools/meta_ext_bridge.py` ที่ `http://127.0.0.1:8765`) โดยแนบไฟล์เดี่ยวไร้ขอบขาว (`p1..p3` ซีน 1 · `p4..p6` ซีน 2) ห้ามแนบ `2x2 Clean Ref Grid` เด็ดขาด!
 2. **ผัง 3 บัญชี × 6 เพจ (`<page>/v<N>/` + บังคับ `-v1` เสมอ):**
