@@ -17,12 +17,18 @@ description: >-
 > - `/postshopeefb "clip.mp4" "แคปชั่น..." "https://s.shopee.co.th/xxxxx" "2026-11-18 19:00" --channel namcha2kids --ai-label`
 > - `/postshopeefb --flush-comments` (ไล่แปะเม้นต์แรกให้โพสต์ตั้งเวลาที่ถึงเวลาแล้ว)
 
-ระบบโพสต์และตั้งเวลาวิดีโอ Facebook Reels ครบวงจรผ่าน `https://www.facebook.com/reels/create`:
-1. **ปักตะกร้าสินค้า (`Add product`):** ใส่ `URL` + `Link name` อัตโนมัติ (ขึ้นป้าย `Commission eligible` + ป้ายตะกร้าบนคลิป)
-2. **แคปชั่น Reels-Native (`shopee_caption_gen.py`):** ล็อกบรรทัดแรก **≤ 35 ตัวอักษร** (ไม่โดนตัดกลางคำก่อน `... See more` บนมือถือ) + ท่อนล่างสเปกและลิงก์สั้น + `#16NOV26FBRAD` ตาม Persona 4 เพจ (`namcha2kids`, `porbaan`, `homebody`, `luxury100`)
-3. **แปะพิกัดเม้นต์แรกอัตโนมัติ:**
-   - **โพสต์ทันที (`Share Now`):** เปิดคลิปใหม่บนโปรไฟล์แล้วแปะลิงก์ `s.shopee.co.th` + ข้อความพิกัดในเม้นต์แรกทันที (เรนเดอร์การ์ดพรีวิว Shopee)
-   - **ตั้งเวลา (`--schedule`):** บันทึกคิวลง `tools/fb-poster/data/pending_comments.json` เพื่อรัน `--flush-comments` แปะเม้นต์แรกเมื่อถึงเวลาโพสต์จริง
+ระบบโพสต์และตั้งเวลาวิดีโอ Facebook Reels ครบวงจรผ่าน `https://www.facebook.com/reels/create` (อ้างอิง Master Bible: [`16_Master_Batch_Production_Posting_And_3Account_Bible.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/16_Master_Batch_Production_Posting_And_3Account_Bible.md)):
+1. **ปักตะกร้าสินค้า (`Add product`):** ใส่ `URL` + `Link name` อัตโนมัติ (ขึ้นป้าย `Commission eligible` + ป้ายตะกร้าบนคลิป) + เปิด `Add AI label = ON` + ตั้ง `Public` (และกรอกแคปชั่นตั้งแต่ **Step 1 `Edit`** ทันทีสำหรับ UI ใหม่แบบ `homebody`)
+2. **สูตร `3-Line Caption` (`shopee_caption_gen.py`):**
+   - บรรทัด 1: `{short_name_th} {opener ตามเพจ}`
+   - บรรทัด 2: `📌 พิกัด: https://s.shopee.co.th/<unique_per_clip>`
+   - บรรทัด 3: `#tag1 #tag2` (เคาะแยกบรรทัดล่างสุดเสมอ)
+3. **สูตร `High-CTR First Comment` (1 เม้นต์ = 1 จิตวิทยา + `{คำเรียกสั้น}ตัวนี้`):**
+   - หมุนเวียน 4 ฮุค (`ใครถามราคา กดดูตรงนี้เลย ถูกกว่าที่คิด 👇`, `นึกว่าหลักพัน กดดูหลักร้อยเฉย 👇` *(เฉพาะ < ฿1,000)*, `ตอนนี้มีคูปองลดเยอะมาก กดดูราคาตรงนี้ 👇`, `ตอนแรกนึกว่าแพง พอกดดูหลักร้อยเอง 👇` *(เฉพาะ < ฿1,000)*) + บรรทัด 2 วางลิงก์ `s.shopee.co.th` เฉพาะคลิปนั้น
+   - **ตั้งเวลา (`--schedule`):** บันทึกคิวลง `tools/fb-poster/data/pending_comments.json` เพื่อรัน `--flush-comments` หรือ `reel_queue_worker.py --headless` แปะเม้นต์แรกเมื่อถึงเวลาโพสต์จริง
+4. **กฎแยก 3 บัญชี 6 เพจ (ห้ามปักลิงก์ข้ามบัญชี!) & กฎ Ads Manager:**
+   - `DRB` (`aidrb...`) ➔ `porbaan`, `homebody` | `Namcha` (`ainam...`) ➔ `namcha2kids`, `luxury100` | `Ashira` (`aiash...`) ➔ `ashira_p1`, `ashira_p2`
+   - ตอนขึ้นแอด `Use Existing Post` (`12211...`) ใน Meta Ads Manager **ต้องติดปุ่ม CTA + ใส่ลิงก์ `s.shopee.co.th` เดียวกันใน Website URL ของแอดด้วยเสมอ!**
 
 ---
 
