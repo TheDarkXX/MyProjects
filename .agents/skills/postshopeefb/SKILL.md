@@ -17,7 +17,7 @@ description: >-
 > - `/postshopeefb "clip.mp4" "แคปชั่น..." "https://s.shopee.co.th/xxxxx" "2026-11-18 19:00" --channel namcha2kids --ai-label`
 > - `/postshopeefb --flush-comments` (ไล่แปะเม้นต์แรกให้โพสต์ตั้งเวลาที่ถึงเวลาแล้ว)
 
-ระบบโพสต์และตั้งเวลาวิดีโอ Facebook Reels ครบวงจรผ่าน `https://www.facebook.com/reels/create` (อ้างอิง Master Bible: [`16_Master_Batch_Production_Posting_And_3Account_Bible.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/16_Master_Batch_Production_Posting_And_3Account_Bible.md)):
+ระบบโพสต์และตั้งเวลาวิดีโอ Facebook Reels ครบวงจรผ่าน `https://www.facebook.com/reels/create` (อ้างอิง Master Bible: [`rules/16_Master_Batch_Production_Posting_And_3Account_Bible.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/rules/16_Master_Batch_Production_Posting_And_3Account_Bible.md)):
 1. **ปักตะกร้าสินค้า (`Add product`):** ใส่ `URL` + `Link name` อัตโนมัติ (ขึ้นป้าย `Commission eligible` + ป้ายตะกร้าบนคลิป) + เปิด `Add AI label = ON` + ตั้ง `Public` (และกรอกแคปชั่นตั้งแต่ **Step 1 `Edit`** ทันทีสำหรับ UI ใหม่แบบ `homebody`)
 2. **สูตร `3-Line Caption` (`shopee_caption_gen.py`):**
    - บรรทัด 1: `{short_name_th} {opener ตามเพจ}`
