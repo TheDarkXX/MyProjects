@@ -261,8 +261,8 @@ python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --table
    - แบ่งครึ่งบน-ล่าง: `<ID>_SB6_top.png` (Scene 1) และ `<ID>_SB6_bot.png` (Scene 2)
    - ภาพเดี่ยว `9:16` (`720×1280` ไร้ขอบขาว 100%): `<ID>_s6_p1.png..p6.png` (หรือ `s7_p1..p7` / `s8_p1..p8`)
 
-### 7.3 โครงสร้าง VIDEO PROMPT 2 ซีน (`10s + 10s = 20s` · ซีนละ `3` หรือ `4` คัต ตามจำนวนภาพ)
-บันทึกอัตโนมัติลงใน [`Meta_AI_2Scene_10s_Ready_Prompts.md`](file:///C:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/Campaigns/2026-11-16_30_16NOV26FBRAD/production_tables/Meta_AI_2Scene_10s_Ready_Prompts.md) เสมอ **(ห้ามกางกล่อง Prompt ลงในแชทเองเด็ดขาด ยกเว้นเมื่อผู้ใช้สั่ง `prompt` / `ขอดูพรอมต์` / `กางพรอมต์` เท่านั้น จึงค่อยกางบล็อกพร้อมลิงก์รูปทั้ง 2 ทางเลือก Half-Board `top`/`bot` และภาพเดี่ยว `p1..p6` คู่กับกล่อง `VIDEO PROMPT` ของ Scene 1 และ Scene 2 ลงในแชท):**
+### 7.3 โครงสร้าง VIDEO PROMPT 2 ซีน (`10s + 10s = 20s` · ซีนละ `3` หรือ `4` คัต ตามจำนวนภาพ) & ฟอร์แมตตาราง Excel-Like TSV
+บันทึกอัตโนมัติลงใน [`Meta_AI_2Scene_10s_Ready_Prompts.md`](file:///C:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/Campaigns/2026-11-16_30_16NOV26FBRAD/production_tables/Meta_AI_2Scene_10s_Ready_Prompts.md) เสมอ โดยในไฟล์ `.md` ต้องจัดเป็น **ตาราง ````tsv` แบบ Excel-Like Table** แยก Section ตามสินค้า (`SKU 1..N`) และแยกย่อยตามเพจ (`porbaan/v1..v3` และ `homebody/v4..v6`) คอลัมน์ครบ (`ID · Folder · Wave · Menu_Hook · Status · Ref_S1 · Ref_S2 · VO_Scene1 · VO_Scene2 · SB6_PROMPT · SCENE1_PROMPT · SCENE2_PROMPT`) เพื่อให้คลิกคัดลอกเซลล์ใน DrView / Google Sheets ได้ในคลิกเดียว **(ห้ามกางกล่อง Prompt ลงในแชทเองเด็ดขาด ยกเว้นเมื่อผู้ใช้สั่ง `prompt` / `ขอดูพรอมต์` / `กางพรอมต์` เท่านั้น):**
 - **ทางเลือกโยนรูปเข้า Flow Omni (Ingredient Mode — ใช้ได้ทั้ง 2 สูตร):**
   - **สูตร A (แบ่งครึ่งแผ่น):** Scene 1 แนบ `<ID>_SB6_top.png` (1 รูป) · Scene 2 แนบ `<ID>_SB6_bot.png` (1 รูป)
   - **สูตร B (ภาพเดี่ยว `9:16` `720×1280`):** Scene 1 แนบ `s6_p1.png` + `p2.png` + `p3.png` · Scene 2 แนบ `s6_p4.png` + `p5.png` + `p6.png`
@@ -291,11 +291,19 @@ Use the 3 attached images as the exact keyframes for Shot 1, Shot 2, and Shot 3.
 4. **กรณีรันผ่าน Meta AI Playwright CDP (`:9222`):**
    - ดึงพอร์ตตามลำดับ `:9225` (Bot Chrome) → `:9222` → `User Data/DevToolsActivePort`, ใช้ `:visible` selector เท่านั้นเพื่อข้าม hidden `<textarea>`, เช็ก `len(text) >= 20` ก่อนกดส่ง และหากเจอ `"video generation quota is exhausted"` หรือ `"You reached your limit"` ให้หยุดและแจ้งสลับมาใช้ Google Flow Omni ทันที
 
-### 7.5 กฎเหล็กการพ่น "ตารางคิว 6 คอลัมน์" ลงในแชท (เฉพาะเมื่อสั่ง `table` / `กางตาราง` เท่านั้น!)
-เมื่อผู้ใช้สั่ง **`กางตาราง`** หรือ **`/shopeereel table`** เท่านั้น (ห้ามพ่นเองตอนไม่ได้สั่ง) จึงรัน `python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --table` และพ่นตาราง **6 คอลัมน์แบบคลีนที่สุด (คอลัมน์ 5 ใส่เฉพาะลิงก์แผ่น `SB6`/`SB` ใบเดียว ส่วนลิงก์ไฟล์วิดีโอ `.mp4` ที่เสร็จแล้วให้เอาไปวางคู่กับคำว่า `✅ เสร็จแล้ว` ในคอลัมน์ `สถานะ` ขวาสุด)** ลงในแชทตามโครงสร้างนี้เป๊ะ:
+### 7.5 ท่อ Meta Auto Extension v1.4.1, 3-Tier Video QA & มาตรฐาน 3 บัญชี (`DRB` · `Namcha` · `Ashira`)
+> **คัมภีร์ฉบับเต็ม (Single Source of Truth):** [`16_Master_Batch_Production_Posting_And_3Account_Bible.md`](file:///c:/My%20Claw/Openclaw-VPS/10M_Project/Shopee_Aff/16_Master_Batch_Production_Posting_And_3Account_Bible.md)
 
-| # | รหัสคลิป | สินค้า (มุมคอนเทนต์) | ชุดภาพตั้งต้น | ไฟล์พร้อมใช้งาน / ลิงก์คลิกเปิด | สถานะ |
-| :-: | :--- | :--- | :---: | :--- | :--- |
-| **1** | **`<ID>`** | ชื่อสินค้า *(มุมคอนเทนต์)* | `SB6` (`s6_p1..p6`) | `[<ID>_SB6.png]` | ✅ **เสร็จแล้ว** · 🎬 `[combined_..._trimmed.mp4]` (`19.3s`) |
-
-> 📌 **เหตุผลที่ล็อกฟอร์แมตนี้:** แยกฝั่งภาพ (`SB` ใบเดียวในคอลัมน์ 5) ออกจากฝั่งผลลัพธ์วิดีโอ (`.mp4` อยู่ในคอลัมน์ `สถานะ` ท้ายสุดเฉพาะตัวที่เสร็จแล้ว) ทำให้กวาดตาดูง่ายสุดและพ่นตารางไวมาก
+1. **ไม่ต้องพ่นตารางรอเจน 2 โหมดลงแชทแล้ว:** ให้บันทึกตาราง Excel-Like ````tsv` ลง `Meta_AI_2Scene_10s_Ready_Prompts.md` แล้วส่งคิวผ่าน **`Meta Auto Extension v1.4.1`** (`python tools/meta_ext_bridge.py` ที่ `http://127.0.0.1:8765`) โดยแนบไฟล์เดี่ยวไร้ขอบขาว (`p1..p3` ซีน 1 · `p4..p6` ซีน 2) ห้ามแนบ `2x2 Clean Ref Grid` เด็ดขาด!
+2. **ผัง 3 บัญชี × 6 เพจ (`<page>/v<N>/` + บังคับ `-v1` เสมอ):**
+   - `DRB` (`aidrb...`): `porbaan/v1..v3` + `homebody/v4..v6` (มือชาย + เสียงชายวัย 45–50)
+   - `Namcha` (`ainam...`): `namcha2kids/v7..v9` + `luxury100/v10..v12` (มือหญิงสะอาด + เสียงป้าข้างบ้าน 45–55 ซื่อๆ บ้านๆ)
+   - `Ashira` (`aiash...`): `ashira_p1/v13..v15` + `ashira_p2/v16..v18` (กฎดองสิทธิ์ พ.ย. ห้ามยิงเกิน 20 vis/วัน หรือ 30 ออเดอร์)
+3. **กฎ `TTS-Safe Thai Karaoke`:** บทพากย์ `110–120 ตัวอักษร/ซีน` (ไม่นับวรรค), **ห้ามใช้ไม้ยมก `ๆ` 100%**, แปลงคำทับศัพท์เป็นคำอ่านไทยอ่านคล่อง แต่ **ห้ามลดเกรดสเปกจริง** (เช่น ห้ามแก้ `สเตนเลส` เป็น `เหล็ก`)
+4. **รวมคลิป + ตรวจจับผิดวิดีโอตาทิพย์ 3 เกรด + ซ่อมเฉพาะซีน (`Single-Scene Repair-Merge`):**
+   ```powershell
+   python "C:\My Claw\Openclaw-VPS\tools\shopee_meta_pipeline.py" --merge-queue
+   python "C:\My Claw\Openclaw-VPS\tools\shopee_video_qa.py" --queue-failed
+   ```
+   - แบ่งเกรด `🟢 PASS` / `🟡 MINOR (ปล่อยผ่านลงแอดได้)` / `🔴 CRITICAL (ส่งเฉพาะซีนที่พังเข้าคิวซ่อม Meta Auto)`
+5. **สูตรคัดสินค้าทำเงิน (`v2.14.0`):** ใช้ `2-Stage Signal Gate` (`extra > 0`, `คอม ≥ ฿20`, `ยอดขาย > 0`, `Grade A: ขาย ≥ 100` / `Grade B: คอม ≥ ฿100 & ราคา ≤ ฿3,000 & ขาย ≥ 30`) + กด `🔎 หาร้านขายดีแทน` (`Best-Shop Swap`) สำหรับคลิปไวรัลที่ร้านต้นฉบับยอดขาย 0!
