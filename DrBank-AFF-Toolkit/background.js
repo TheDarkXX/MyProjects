@@ -1777,8 +1777,10 @@ async function handleMessage(msg, _sender) {
       const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
       const baseUrl = String(payload?.webUiBaseUrl || settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
       const affToken = String(settings?.affToken || 'doctorbank2026');
-      const forceParam = payload?.force ? '?force=1' : '';
-      const resp = await fetch(`${baseUrl}/api/shopee-aff/pool-pending${forceParam}`, {
+      const qs = new URLSearchParams();
+      if (payload?.force) qs.set('force', '1');
+      qs.set('account', String(payload?.account || 'drb').toLowerCase());
+      const resp = await fetch(`${baseUrl}/api/shopee-aff/pool-pending?${qs.toString()}`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -1813,31 +1815,59 @@ async function handleMessage(msg, _sender) {
     }
 
     case 'PUSH_REPORT_TO_WEBUI': {
-      const { syncedReports = [], settings = DEFAULT_SETTINGS } = await chrome.storage.local.get([
+      const { syncedReports = [], settings = DEFAULT_SETTINGS, autoPullSettings = {} } = await chrome.storage.local.get([
         'syncedReports',
-        'settings'
+        'settings',
+        'autoPullSettings'
       ]);
+
+      const conversions = Array.isArray(payload.conversions)
+        ? payload.conversions
+        : (Array.isArray(payload.rows) ? payload.rows : []);
+      const clicks = Array.isArray(payload.clicks) ? payload.clicks : [];
+      const daily = Array.isArray(payload.daily) ? payload.daily : [];
+      const accountLabel = String(payload.accountLabel || autoPullSettings?.accountLabel || 'DRB').trim();
 
       const reportBatch = {
         id: `rep_${Date.now()}`,
-        date: payload.date || new Date().toISOString().slice(0, 10),
+        source: payload.source || 'manual',
+        accountLabel,
+        date: payload.date || new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10),
         totalCommission: Number(payload.totalCommission) || 0,
-        netCommission: Number(payload.netCommission) || 0,
-        orderCount: Number(payload.orderCount) || 0,
-        rows: Array.isArray(payload.rows) ? payload.rows : [],
+        netCommission: Number(payload.netCommission || payload.totalCommission) || 0,
+        orderCount: Number(payload.orderCount || conversions.length) || 0,
+        conversions,
+        rows: conversions,
+        clicks,
+        daily,
         syncedAt: new Date().toISOString()
       };
 
-      const updatedReports = [reportBatch, ...syncedReports].slice(0, 100);
+      const updatedReports = [
+        {
+          id: reportBatch.id,
+          source: reportBatch.source,
+          accountLabel,
+          date: reportBatch.date,
+          totalCommission: reportBatch.totalCommission,
+          orderCount: reportBatch.orderCount,
+          clicksCount: clicks.length,
+          dailyCount: daily.length,
+          syncedAt: reportBatch.syncedAt
+        },
+        ...syncedReports
+      ].slice(0, 50);
       await chrome.storage.local.set({ syncedReports: updatedReports });
 
       let syncedToServer = false;
+      let serverRes = null;
+      let serverError = '';
       const baseUrl = String(settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
       const affToken = String(settings?.affToken || 'doctorbank2026');
       if (baseUrl && /^https?:\/\//i.test(baseUrl)) {
         try {
           const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), 5000);
+          const timer = setTimeout(() => ctrl.abort(), 12000);
           const resp = await fetch(`${baseUrl}/api/shopee-aff/report-ingest`, {
             method: 'POST',
             credentials: 'include',
@@ -1849,13 +1879,85 @@ async function handleMessage(msg, _sender) {
             signal: ctrl.signal
           });
           clearTimeout(timer);
-          syncedToServer = Boolean(resp && resp.ok);
-        } catch (_err) {
+          if (resp && resp.ok) {
+            serverRes = await resp.json().catch(() => ({ ok: true }));
+            syncedToServer = Boolean(serverRes?.ok !== false);
+          } else {
+            serverError = `HTTP ${resp?.status || 0}`;
+          }
+        } catch (err) {
           syncedToServer = false;
+          serverError = err?.message || 'Network error';
         }
       }
 
-      return { reports: updatedReports, reportBatch, syncedToServer };
+      const lastReportSync = {
+        at: new Date().toISOString(),
+        source: reportBatch.source,
+        accountLabel,
+        conversions: Number(serverRes?.conversions ?? conversions.length),
+        clicks: Number(serverRes?.clicks ?? clicks.length),
+        daily: Number(serverRes?.daily ?? daily.length),
+        totalNetComm: Number(serverRes?.totalNetComm ?? reportBatch.totalCommission),
+        syncedToServer,
+        error: serverError
+      };
+      await chrome.storage.local.set({ lastReportSync });
+
+      return { reports: updatedReports, reportBatch: lastReportSync, syncedToServer, serverRes, serverError };
+    }
+
+    case 'AUTO_PULL_COMMISSION_NOW': {
+      return await runAutoPullCommissionNow(payload || {});
+    }
+
+    case 'GET_REPORT_SYNC_STATE': {
+      const store = await chrome.storage.local.get(['autoPullSettings', 'lastReportSync', 'settings']);
+      const autoPullSettings = {
+        enabled: true,
+        intervalMin: 30,
+        accountLabel: 'DRB',
+        days: 14,
+        ...(store?.autoPullSettings || {})
+      };
+      let dbStatus = null;
+      if (payload?.fetchServer !== false) {
+        try {
+          const baseUrl = String(store?.settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
+          const affToken = String(store?.settings?.affToken || 'doctorbank2026');
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 4500);
+          const resp = await fetch(`${baseUrl}/api/shopee-aff/report-sync-status`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { Accept: 'application/json', 'X-Aff-Token': affToken },
+            signal: ctrl.signal
+          });
+          clearTimeout(t);
+          if (resp && resp.ok) dbStatus = await resp.json().catch(() => null);
+        } catch (_e) {}
+      }
+      return {
+        ok: true,
+        autoPullSettings,
+        lastReportSync: store?.lastReportSync || null,
+        dbStatus
+      };
+    }
+
+    case 'SET_AUTO_PULL_SETTINGS': {
+      const store = await chrome.storage.local.get(['autoPullSettings']);
+      const merged = {
+        enabled: true,
+        intervalMin: 30,
+        accountLabel: 'DRB',
+        days: 14,
+        ...(store?.autoPullSettings || {}),
+        ...(payload || {})
+      };
+      await chrome.storage.local.set({ autoPullSettings: merged });
+      await configureAutoPullAlarm(merged);
+      return { ok: true, autoPullSettings: merged };
     }
 
     case 'CLEAR_SAVED_PRODUCTS': {
@@ -2075,3 +2177,115 @@ async function handleMessage(msg, _sender) {
       throw new Error(`Unknown action: ${action}`);
   }
 }
+
+// ============================================================================
+// AUTO-PULL SHOPEE COMMISSION & CLICKS -> aff.db (v2.14.0)
+// ============================================================================
+const AUTO_PULL_ALARM_NAME = 'drb_auto_pull_commission';
+
+async function configureAutoPullAlarm(cfg = null) {
+  try {
+    if (!chrome.alarms) return;
+    let settings = cfg;
+    if (!settings) {
+      const store = await chrome.storage.local.get(['autoPullSettings']);
+      settings = { enabled: true, intervalMin: 30, accountLabel: 'DRB', days: 14, ...(store?.autoPullSettings || {}) };
+    }
+    await chrome.alarms.clear(AUTO_PULL_ALARM_NAME);
+    if (settings.enabled !== false) {
+      const periodInMinutes = Math.max(5, Math.min(180, Number(settings.intervalMin || 30)));
+      chrome.alarms.create(AUTO_PULL_ALARM_NAME, { periodInMinutes });
+    }
+  } catch (_e) {}
+}
+
+async function runAutoPullCommissionNow(options = {}) {
+  const store = await chrome.storage.local.get(['autoPullSettings']);
+  const cfg = {
+    enabled: true,
+    intervalMin: 30,
+    accountLabel: 'DRB',
+    days: 14,
+    ...(store?.autoPullSettings || {}),
+    ...(options || {})
+  };
+
+  if (options?.silent && cfg.enabled === false) {
+    return { ok: false, skipped: true, reason: 'disabled' };
+  }
+
+  const bridgeRes = await ensureAffBridgeReady({
+    allowCreate: !options?.silent,
+    wakeSleeping: true
+  });
+  if (!bridgeRes?.ok || !bridgeRes.tabId) {
+    return {
+      ok: false,
+      securityCheck: Boolean(bridgeRes?.securityCheck),
+      error: bridgeRes?.error || 'ยังไม่ได้เปิดหน้า affiliate.shopee.co.th ใน Chrome'
+    };
+  }
+
+  const pullRes = await sendToAffTabWithReinject(bridgeRes.tabId, {
+    action: 'PULL_SHOPEE_REPORTS',
+    days: cfg.days || 14
+  });
+
+  if (!pullRes || !pullRes.ok) {
+    return {
+      ok: false,
+      securityCheck: Boolean(pullRes?.securityCheck),
+      error: pullRes?.error || 'ไม่สามารถดึงรายงานจากแท็บ affiliate.shopee.co.th ได้ ลองเปิดหน้า รายงานการขาย (Conversion Report) แล้วกดดูดอีกครั้ง'
+    };
+  }
+
+  const convLen = Array.isArray(pullRes.conversions) ? pullRes.conversions.length : 0;
+  const clickLen = Array.isArray(pullRes.clicks) ? pullRes.clicks.length : 0;
+  const dailyLen = Array.isArray(pullRes.daily) ? pullRes.daily.length : 0;
+
+  if (convLen === 0 && clickLen === 0 && dailyLen === 0) {
+    return {
+      ok: true,
+      empty: true,
+      syncedToServer: false,
+      source: pullRes.source || 'empty',
+      message: 'ยังไม่พบข้อมูลรายงานในแท็บนี้ — ลองเปิดหน้า affiliate.shopee.co.th/report/conversion_report แล้วกดดูดอีกครั้ง (ระบบจะดักจับ JSON อัตโนมัติทันที)'
+    };
+  }
+
+  const pushRes = await handleMessage({
+    action: 'PUSH_REPORT_TO_WEBUI',
+    payload: {
+      source: options?.silent ? 'auto_alarm' : (pullRes.source || 'manual_pull'),
+      accountLabel: cfg.accountLabel || 'DRB',
+      date: pullRes.date,
+      conversions: pullRes.conversions,
+      clicks: pullRes.clicks,
+      daily: pullRes.daily,
+      totalCommission: pullRes.totalCommission,
+      orderCount: pullRes.orderCount
+    }
+  });
+
+  return {
+    ok: true,
+    empty: false,
+    source: pullRes.source,
+    accountLabel: cfg.accountLabel || 'DRB',
+    conversions: convLen,
+    clicks: clickLen,
+    daily: dailyLen,
+    totalCommission: pullRes.totalCommission || 0,
+    syncedToServer: Boolean(pushRes?.syncedToServer),
+    serverRes: pushRes?.serverRes || null,
+    serverError: pushRes?.serverError || ''
+  };
+}
+
+chrome.alarms?.onAlarm?.addListener((alarm) => {
+  if (alarm?.name === AUTO_PULL_ALARM_NAME) {
+    runAutoPullCommissionNow({ silent: true }).catch(() => {});
+  }
+});
+
+configureAutoPullAlarm();

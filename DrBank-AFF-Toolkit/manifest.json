@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "DrBank AFF Scout v2.13.4 — Clean Modern Social Media Radar & Pool Bridge",
-  "version": "2.13.4",
-  "description": "Dual-Mode Lean Scout + V1 Realtime 500-Item Scanner: ดึงยอดขาย/เดือนจริง, คำนวณ Signal จุดคุ้มทุนแอด 100฿/วัน (ตรงตามหน้า AFF), เจนลิงก์ s.shopee และส่งเข้า Web UI",
+  "name": "DrBank AFF Scout v2.14.0 — Auto-Pull Commission, Social Radar & Pool Bridge",
+  "version": "2.14.0",
+  "description": "Dual-Mode Lean Scout + Auto-Pull ยอดคอม/คลิกเข้า aff.db อัตโนมัติ + V1 Realtime 500-Item Scanner: ดึงยอดขาย/เดือนจริง, เจนลิงก์ s.shopee และส่งเข้า Web UI",
   "icons": {
     "16": "images/icon16.png",
     "48": "images/icon48.png",
@@ -24,7 +24,8 @@
     "tabs",
     "scripting",
     "sidePanel",
-    "clipboardWrite"
+    "clipboardWrite",
+    "alarms"
   ],
   "host_permissions": [
     "https://shopee.co.th/*",

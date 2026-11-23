@@ -13,6 +13,22 @@
     return s.includes('api/v3/offer/product') && !s.includes('api/v3/offer/product/list');
   }
 
+  function isReportApiUrl(urlStr) {
+    const s = String(urlStr || '').toLowerCase();
+    if (!s.includes('/api/')) return false;
+    if (s.includes('/offer/product') || s.includes('batchcustomlink') || s.includes('/account/')) return false;
+    return (
+      s.includes('/report') ||
+      s.includes('/dashboard') ||
+      s.includes('/conversion') ||
+      s.includes('/click') ||
+      s.includes('/order') ||
+      s.includes('/gql') ||
+      s.includes('/performance') ||
+      s.includes('/commission')
+    );
+  }
+
   function emitInterceptedOffer(url, parsed) {
     if (!parsed || typeof parsed !== 'object') return;
     if (parsed.data || typeof parsed.error === 'number') {
@@ -27,16 +43,38 @@
     }
   }
 
-  // Intercept native page XHR & fetch calls to api/v3/offer/product
+  function emitInterceptedReport(url, parsed, reqMeta = {}) {
+    if (!parsed || typeof parsed !== 'object') return;
+    if (parsed.data || Array.isArray(parsed.list) || typeof parsed.code === 'number') {
+      window.postMessage(
+        {
+          type: 'DRB_AFF_REPORT_INTERCEPTED',
+          url: String(url || ''),
+          method: reqMeta.method || 'GET',
+          reqBody: reqMeta.body || null,
+          data: parsed,
+          capturedAt: Date.now()
+        },
+        '*'
+      );
+    }
+  }
+
+  // Intercept native page XHR & fetch calls to api/v3/offer/product and ALL report/dashboard/gql APIs
   const origXhrOpen = window.XMLHttpRequest.prototype.open;
   const origXhrSend = window.XMLHttpRequest.prototype.send;
-  window.XMLHttpRequest.prototype.open = function (_method, url) {
+  window.XMLHttpRequest.prototype.open = function (method, url) {
+    this.__drbReqMethod = String(method || 'GET').toUpperCase();
     this.__drbReqUrl = url;
     return origXhrOpen.apply(this, arguments);
   };
-  window.XMLHttpRequest.prototype.send = function () {
+  window.XMLHttpRequest.prototype.send = function (body) {
     const urlStr = String(this.__drbReqUrl || '');
-    if (isOfferDetailApiUrl(urlStr)) {
+    const reqMethod = this.__drbReqMethod || 'GET';
+    const reqBody = typeof body === 'string' ? body : null;
+    const isOffer = isOfferDetailApiUrl(urlStr);
+    const isReport = !isOffer && isReportApiUrl(urlStr);
+    if (isOffer || isReport) {
       this.addEventListener('load', () => {
         if (this.status >= 200 && this.status < 300) {
           try {
@@ -44,7 +82,8 @@
               this.responseType && this.responseType !== 'text' && typeof this.response === 'object'
                 ? this.response
                 : JSON.parse(this.responseText);
-            emitInterceptedOffer(urlStr, parsed);
+            if (isOffer) emitInterceptedOffer(urlStr, parsed);
+            else emitInterceptedReport(urlStr, parsed, { method: reqMethod, body: reqBody });
           } catch (_e) {}
         }
       });
@@ -54,15 +93,22 @@
 
   const origFetch = window.fetch;
   if (typeof origFetch === 'function') {
-    window.fetch = async function (input) {
+    window.fetch = async function (input, init) {
       const resp = await origFetch.apply(this, arguments);
       try {
         const reqUrl = typeof input === 'string' ? input : input?.url || '';
-        if (resp && resp.ok && isOfferDetailApiUrl(reqUrl)) {
+        const reqMethod = String(init?.method || (typeof input === 'object' && input?.method) || 'GET').toUpperCase();
+        const reqBody = typeof init?.body === 'string' ? init.body : null;
+        const isOffer = resp && resp.ok && isOfferDetailApiUrl(reqUrl);
+        const isReport = resp && resp.ok && !isOffer && isReportApiUrl(reqUrl);
+        if (isOffer || isReport) {
           resp
             .clone()
             .json()
-            .then((parsed) => emitInterceptedOffer(reqUrl, parsed))
+            .then((parsed) => {
+              if (isOffer) emitInterceptedOffer(reqUrl, parsed);
+              else emitInterceptedReport(reqUrl, parsed, { method: reqMethod, body: reqBody });
+            })
             .catch(() => {});
         }
       } catch (_e) {}

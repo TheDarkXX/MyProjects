@@ -126,13 +126,332 @@
     return nextProduct;
   }
 
+  // ==========================================================================
+  // 0. AUTO-PULL COMMISSION & CLICKS INTERCEPTOR BUCKET (v2.14.0)
+  // ==========================================================================
+  const interceptedReportBucket = {
+    conversions: new Map(),
+    clicks: new Map(),
+    daily: new Map(),
+    lastCapturedAt: 0,
+    lastAutoPushAt: 0,
+    sources: new Set(),
+    capturedRequests: [] // stores { url, method, reqBody, kind } for auto-pagination replay!
+  };
+  let reportAutoPushTimer = null;
+
+  function normalizeShopeeMoney(rawVal) {
+    if (rawVal === null || rawVal === undefined || rawVal === '') return 0;
+    const str = String(rawVal).replace(/[฿,\s]/g, '');
+    const n = Number(str);
+    if (!Number.isFinite(n)) return 0;
+    // Shopee internal APIs sometimes return micro-currency scaled by 1e5 (e.g. 1525000 = 15.25 THB)
+    if (Number.isInteger(n) && Math.abs(n) >= 100000 && !String(rawVal).includes('.')) {
+      return Math.round((n / 100000) * 100) / 100;
+    }
+    return Math.round(n * 100) / 100;
+  }
+
+  function normalizeShopeeTimestamp(rawTs) {
+    if (!rawTs) return '';
+    if (typeof rawTs === 'number' || /^\d{10,13}$/.test(String(rawTs).trim())) {
+      const num = Number(rawTs);
+      const ms = num > 1e12 ? num : num * 1000;
+      const d = new Date(ms);
+      if (!Number.isNaN(d.getTime())) {
+        // Format in Asia/Bangkok (+07:00) YYYY-MM-DD HH:mm:ss
+        const bkk = new Date(d.getTime() + 7 * 3600 * 1000);
+        return bkk.toISOString().replace('T', ' ').slice(0, 19);
+      }
+    }
+    return String(rawTs).trim();
+  }
+
+  function extractSubIdsFromRecord(rec) {
+    const out = { subId1: '', subId2: '', subId3: '', subId4: '', subId5: '' };
+    if (!rec || typeof rec !== 'object') return out;
+    const rawArr = Array.isArray(rec.sub_ids)
+      ? rec.sub_ids
+      : Array.isArray(rec.subIds)
+        ? rec.subIds
+        : null;
+    if (rawArr) {
+      out.subId1 = String(rawArr[0] || '').trim();
+      out.subId2 = String(rawArr[1] || '').trim();
+      out.subId3 = String(rawArr[2] || '').trim();
+      out.subId4 = String(rawArr[3] || '').trim();
+      out.subId5 = String(rawArr[4] || '').trim();
+    }
+    const utm = String(rec.utm_content || rec.utmContent || rec.sub_id || rec.subId || '').trim();
+    if (utm && !out.subId1 && !out.subId2) {
+      const parts = utm.split('-');
+      out.subId1 = String(parts[0] || '').trim();
+      out.subId2 = String(parts[1] || '').trim();
+      out.subId3 = String(parts[2] || '').trim();
+      out.subId4 = String(parts[3] || '').trim();
+      out.subId5 = String(parts[4] || '').trim();
+    }
+    if (rec.sub_id1 || rec.subId1) out.subId1 = String(rec.sub_id1 || rec.subId1).trim();
+    if (rec.sub_id2 || rec.subId2) out.subId2 = String(rec.sub_id2 || rec.subId2).trim();
+    if (rec.sub_id3 || rec.subId3) out.subId3 = String(rec.sub_id3 || rec.subId3).trim();
+    if (rec.sub_id4 || rec.subId4) out.subId4 = String(rec.sub_id4 || rec.subId4).trim();
+    if (rec.sub_id5 || rec.subId5) out.subId5 = String(rec.sub_id5 || rec.subId5).trim();
+    return out;
+  }
+
+  function ingestRawReportPayload(url, payload) {
+    if (!payload || typeof payload !== 'object') return { conversions: 0, clicks: 0, daily: 0 };
+    if (payload.error === 90309999) return { conversions: 0, clicks: 0, daily: 0, securityCheck: true };
+
+    const urlLower = String(url || '').toLowerCase();
+    const root = payload.data || payload;
+    let addedConv = 0;
+    let addedClicks = 0;
+    let addedDaily = 0;
+
+    // 1. Find arrays of records inside response
+    const candidateArrays = [];
+    const scanForArrays = (obj, depth = 0) => {
+      if (!obj || typeof obj !== 'object' || depth > 4) return;
+      if (Array.isArray(obj)) {
+        if (obj.length > 0 && typeof obj[0] === 'object') candidateArrays.push(obj);
+        return;
+      }
+      for (const k of Object.keys(obj)) {
+        const v = obj[k];
+        if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object') {
+          candidateArrays.push(v);
+        } else if (v && typeof v === 'object') {
+          scanForArrays(v, depth + 1);
+        }
+      }
+    };
+    scanForArrays(root);
+
+    for (const arr of candidateArrays) {
+      for (const rec of arr) {
+        if (!rec || typeof rec !== 'object') continue;
+        // Detect Conversion / Order record
+        const orderId = rec.order_sn || rec.order_id || rec.orderId || rec.conversion_id || rec.conversionId || '';
+        const hasCommField =
+          rec.estimated_total_commission !== undefined ||
+          rec.net_commission !== undefined ||
+          rec.total_commission !== undefined ||
+          rec.commission !== undefined ||
+          rec.shopee_commission !== undefined ||
+          rec.seller_commission !== undefined ||
+          rec.gross_commission !== undefined;
+        const ordersNested = Array.isArray(rec.orders) ? rec.orders : null;
+
+        if (ordersNested) {
+          for (const ord of ordersNested) {
+            const subIds = extractSubIdsFromRecord({ ...rec, ...ord });
+            const items = Array.isArray(ord.items) && ord.items.length ? ord.items : [ord];
+            for (const it of items) {
+              const oid = String(ord.order_sn || ord.order_id || rec.conversion_id || '').trim();
+              const iid = String(it.item_id || it.itemId || '0').trim();
+              const mid = String(it.model_id || it.modelId || '').trim();
+              if (!oid) continue;
+              const commRaw =
+                it.net_commission ?? it.item_commission ?? it.total_commission ??
+                ord.estimated_total_commission ?? ord.net_commission ?? rec.estimated_total_commission ?? 0;
+              const statusStr = String(ord.order_status || rec.conversion_status || rec.status || 'สำเร็จ');
+              const key = `${oid}|${iid}|${mid}|${subIds.subId2}`;
+              interceptedReportBucket.conversions.set(key, {
+                dedup_key: key,
+                orderId: oid,
+                itemId: iid,
+                modelId: mid,
+                itemName: String(it.item_name || it.product_name || rec.item_name || '').trim(),
+                shopName: String(ord.shop_name || it.shop_name || rec.shop_name || '').trim(),
+                categoryL1: String(it.global_category_lv1_name || it.category_l1 || '').trim(),
+                price: normalizeShopeeMoney(it.item_price ?? it.price ?? 0),
+                qty: parseInt(it.qty ?? it.quantity ?? 1, 10) || 1,
+                gmv: normalizeShopeeMoney(it.actual_amount ?? it.gmv ?? ord.order_amount ?? 0),
+                shopeeCommPct: Number(it.shopee_commission_rate || 0) || 0,
+                sellerCommPct: Number(it.seller_commission_rate || 0) || 0,
+                orderStatus: statusStr,
+                affStatus: String(rec.conversion_status || ord.aff_status || 'รอดำเนินการ'),
+                isCancelled: /cancel|invalid|ยกเลิก|unpaid/i.test(statusStr),
+                ...subIds,
+                netComm: normalizeShopeeMoney(commRaw),
+                clickTime: normalizeShopeeTimestamp(rec.click_time || ord.click_time),
+                purchaseAt: normalizeShopeeTimestamp(rec.purchase_time || ord.purchase_time || ord.checkout_time)
+              });
+              addedConv++;
+            }
+          }
+          continue;
+        }
+
+        if (orderId && hasCommField) {
+          const subIds = extractSubIdsFromRecord(rec);
+          const iid = String(rec.item_id || rec.itemId || '0').trim();
+          const mid = String(rec.model_id || rec.modelId || '').trim();
+          const commRaw =
+            rec.net_commission ??
+            rec.estimated_total_commission ??
+            rec.total_commission ??
+            rec.gross_commission ??
+            rec.commission ??
+            0;
+          const statusStr = String(rec.order_status || rec.conversion_status || rec.status || 'สำเร็จ');
+          const key = `${orderId}|${iid}|${mid}|${subIds.subId2}`;
+          interceptedReportBucket.conversions.set(key, {
+            dedup_key: key,
+            orderId: String(orderId).trim(),
+            itemId: iid,
+            modelId: mid,
+            itemName: String(rec.item_name || rec.product_name || rec.title || '').trim(),
+            shopName: String(rec.shop_name || rec.shopName || '').trim(),
+            categoryL1: String(rec.global_category_lv1_name || rec.category_l1 || '').trim(),
+            price: normalizeShopeeMoney(rec.item_price ?? rec.price ?? 0),
+            qty: parseInt(rec.qty ?? rec.quantity ?? 1, 10) || 1,
+            gmv: normalizeShopeeMoney(rec.actual_amount ?? rec.gmv ?? rec.order_amount ?? 0),
+            shopeeCommPct: Number(rec.shopee_commission_rate || 0) || 0,
+            sellerCommPct: Number(rec.seller_commission_rate || 0) || 0,
+            orderStatus: statusStr,
+            affStatus: String(rec.aff_status || rec.conversion_status || 'รอดำเนินการ'),
+            isCancelled: /cancel|invalid|ยกเลิก|unpaid/i.test(statusStr),
+            ...subIds,
+            netComm: normalizeShopeeMoney(commRaw),
+            clickTime: normalizeShopeeTimestamp(rec.click_time || rec.clickTime),
+            purchaseAt: normalizeShopeeTimestamp(rec.purchase_time || rec.checkout_time || rec.purchaseTime)
+          });
+          addedConv++;
+          continue;
+        }
+
+        // Detect Click record
+        if ((rec.click_id || rec.clickId || urlLower.includes('click')) && (rec.click_time || rec.clickTime)) {
+          const subIds = extractSubIdsFromRecord(rec);
+          const clickTime = normalizeShopeeTimestamp(rec.click_time || rec.clickTime);
+          const cid = String(rec.click_id || rec.clickId || `${clickTime}_${subIds.subId2}_${addedClicks}`);
+          interceptedReportBucket.clicks.set(cid, {
+            clickId: cid,
+            clickTime,
+            clickDate: clickTime.slice(0, 10),
+            region: String(rec.region || 'Thailand'),
+            rawSubId: String(rec.utm_content || rec.sub_id || [subIds.subId1, subIds.subId2].filter(Boolean).join('-')),
+            subId1: subIds.subId1,
+            subId2: subIds.subId2,
+            referrer: String(rec.referrer || rec.source || '')
+          });
+          addedClicks++;
+          continue;
+        }
+
+        // Detect Daily summary record
+        const dateVal = rec.date || rec.stat_date || rec.report_date || rec.day;
+        if (dateVal && (rec.clicks !== undefined || rec.orders !== undefined || rec.commission !== undefined || rec.estimated_commission !== undefined)) {
+          const dStr = normalizeShopeeTimestamp(dateVal).slice(0, 10);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+            interceptedReportBucket.daily.set(dStr, {
+              date: dStr,
+              clicks: parseInt(rec.clicks ?? rec.click_count ?? 0, 10) || 0,
+              orders: parseInt(rec.orders ?? rec.order_count ?? rec.conversions ?? 0, 10) || 0,
+              commission: normalizeShopeeMoney(rec.commission ?? rec.estimated_commission ?? rec.total_commission ?? 0),
+              itemsSold: parseInt(rec.items_sold ?? rec.item_count ?? 0, 10) || 0,
+              gmv: normalizeShopeeMoney(rec.gmv ?? rec.sales ?? rec.order_amount ?? 0)
+            });
+            addedDaily++;
+          }
+        }
+      }
+    }
+
+    // Also check flat overview object (dashboard summary card)
+    if (
+      addedDaily === 0 &&
+      root &&
+      typeof root === 'object' &&
+      (root.total_commission !== undefined || root.estimated_commission !== undefined || root.clicks !== undefined)
+    ) {
+      const today = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+      const comm = normalizeShopeeMoney(root.total_commission ?? root.estimated_commission ?? root.commission ?? 0);
+      const clicks = parseInt(root.clicks ?? root.total_clicks ?? 0, 10) || 0;
+      const orders = parseInt(root.orders ?? root.total_orders ?? root.conversions ?? 0, 10) || 0;
+      if (comm > 0 || clicks > 0 || orders > 0) {
+        interceptedReportBucket.daily.set(today, {
+          date: today,
+          clicks,
+          orders,
+          commission: comm,
+          itemsSold: parseInt(root.items_sold ?? root.total_items ?? 0, 10) || 0,
+          gmv: normalizeShopeeMoney(root.gmv ?? root.total_gmv ?? root.sales ?? 0)
+        });
+        addedDaily++;
+      }
+    }
+
+    if (addedConv > 0 || addedClicks > 0 || addedDaily > 0) {
+      interceptedReportBucket.lastCapturedAt = Date.now();
+      interceptedReportBucket.sources.add(String(url || 'intercept').slice(0, 120));
+    }
+
+    return { conversions: addedConv, clicks: addedClicks, daily: addedDaily };
+  }
+
+  function scheduleAutoPushInterceptedReport() {
+    if (reportAutoPushTimer) clearTimeout(reportAutoPushTimer);
+    reportAutoPushTimer = setTimeout(async () => {
+      try {
+        const now = Date.now();
+        if (now - interceptedReportBucket.lastAutoPushAt < 15000) return;
+        const store = await chrome.storage.local.get(['autoPullSettings']);
+        const cfg = store?.autoPullSettings || { enabled: true };
+        if (cfg.enabled === false) return;
+
+        const conversions = Array.from(interceptedReportBucket.conversions.values());
+        const clicks = Array.from(interceptedReportBucket.clicks.values());
+        const daily = Array.from(interceptedReportBucket.daily.values());
+        if (!conversions.length && !clicks.length && !daily.length) return;
+
+        interceptedReportBucket.lastAutoPushAt = now;
+        await ns.sendMessage('PUSH_REPORT_TO_WEBUI', {
+          source: 'auto_intercept',
+          accountLabel: cfg.accountLabel || 'DRB',
+          date: new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10),
+          conversions,
+          clicks,
+          daily,
+          totalCommission: conversions.reduce((s, r) => s + (r.isCancelled ? 0 : Number(r.netComm || 0)), 0),
+          orderCount: conversions.length
+        });
+      } catch (_e) {}
+    }, 2200);
+  }
+
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
     const msg = event.data;
-    if (!msg || msg.type !== 'DRB_AFF_OFFER_INTERCEPTED') return;
-    const parsedOffer = applyApiOfferToOfferProduct(msg.data);
-    if (parsedOffer && !parsedOffer.securityCheck && parsedOffer.itemId && parsedOffer.hasRealCommission) {
-      ns.sendMessage('CACHE_REAL_AFF_OFFER', parsedOffer).catch(() => {});
+    if (!msg) return;
+    if (msg.type === 'DRB_AFF_OFFER_INTERCEPTED') {
+      const parsedOffer = applyApiOfferToOfferProduct(msg.data);
+      if (parsedOffer && !parsedOffer.securityCheck && parsedOffer.itemId && parsedOffer.hasRealCommission) {
+        ns.sendMessage('CACHE_REAL_AFF_OFFER', parsedOffer).catch(() => {});
+      }
+      return;
+    }
+    if (msg.type === 'DRB_AFF_REPORT_INTERCEPTED') {
+      const counts = ingestRawReportPayload(msg.url, msg.data);
+      if (counts.conversions > 0 || counts.clicks > 0 || counts.daily > 0) {
+        const kind = counts.conversions > 0 ? 'conversions' : (counts.clicks > 0 ? 'clicks' : 'daily');
+        const fullUrl = String(msg.url || '').startsWith('http')
+          ? String(msg.url)
+          : `${location.origin}${String(msg.url || '').startsWith('/') ? '' : '/'}${String(msg.url || '')}`;
+        interceptedReportBucket.capturedRequests = [
+          {
+            url: fullUrl,
+            method: msg.method || 'GET',
+            reqBody: msg.reqBody || null,
+            kind,
+            capturedAt: Date.now()
+          },
+          ...interceptedReportBucket.capturedRequests.filter((r) => r.kind !== kind)
+        ].slice(0, 6);
+        scheduleAutoPushInterceptedReport();
+      }
     }
   });
 
@@ -868,6 +1187,207 @@
       if (req.action === 'SCAN_AFFILIATE_REPORT') {
         const rep = scanReportDOM();
         sendResponse({ ok: true, report: rep });
+        return true;
+      }
+      if (req.action === 'PULL_SHOPEE_REPORTS') {
+        (async () => {
+          try {
+            if (/verify\/captcha|verify\/traffic|buyer\/login/i.test(location.href)) {
+              sendResponse({
+                ok: false,
+                securityCheck: true,
+                error: 'Shopee ขอตรวจสอบความปลอดภัยหรือยังไม่ได้ล็อกอิน — กรุณาเปิดหน้า affiliate.shopee.co.th ก่อน'
+              });
+              return;
+            }
+            const days = Math.max(1, Math.min(90, Number(req.days || 14)));
+            const nowSec = Math.floor(Date.now() / 1000);
+            const startSec = nowSec - days * 86400;
+            const commonHeaders = {
+              accept: 'application/json',
+              'affiliate-program-type': '1'
+            };
+
+            // Step 1: Auto-paginate any REAL captured API request from this page (pages 2..25)
+            let apiHits = 0;
+            const captured = [...(interceptedReportBucket.capturedRequests || [])];
+            for (const cap of captured) {
+              if (!cap || !cap.url) continue;
+              const isPaginatedGet = /[?&](page_num|page|pageNum|offset)=/i.test(cap.url);
+              const isPaginatedPost = cap.method === 'POST' && typeof cap.reqBody === 'string' && /"(page_num|page|pageNum|pageNo|offset)"\s*:\s*\d+/i.test(cap.reqBody);
+              if (!isPaginatedGet && !isPaginatedPost) continue;
+
+              for (let pg = 2; pg <= 25; pg++) {
+                let nextUrl = cap.url;
+                let nextBody = cap.reqBody;
+                if (isPaginatedGet) {
+                  nextUrl = cap.url.replace(/([?&](?:page_num|page|pageNum)=)\d+/i, `$1${pg}`);
+                } else if (isPaginatedPost) {
+                  nextBody = cap.reqBody.replace(/("(?:page_num|page|pageNum|pageNo)"\s*:\s*)\d+/i, `$1${pg}`);
+                }
+                if (nextUrl === cap.url && nextBody === cap.reqBody) break;
+
+                await new Promise((r) => setTimeout(r, 250));
+                const res = await Promise.race([
+                  pageMainRequest({
+                    url: nextUrl,
+                    method: cap.method || 'GET',
+                    body: nextBody || null,
+                    useFetch: false,
+                    attachCsrf: true,
+                    headers: {
+                      ...commonHeaders,
+                      ...(cap.method === 'POST' ? { 'content-type': 'application/json;charset=UTF-8' } : {})
+                    }
+                  }),
+                  new Promise((r) => setTimeout(() => r(null), 6000))
+                ]);
+                if (!res || !res.ok || !res.data || res.data.error === 90309999) break;
+                const beforeTotal =
+                  interceptedReportBucket.conversions.size +
+                  interceptedReportBucket.clicks.size +
+                  interceptedReportBucket.daily.size;
+                const added = ingestRawReportPayload(nextUrl, res.data);
+                const afterTotal =
+                  interceptedReportBucket.conversions.size +
+                  interceptedReportBucket.clicks.size +
+                  interceptedReportBucket.daily.size;
+                if (afterTotal > beforeTotal && (added.conversions > 0 || added.clicks > 0 || added.daily > 0)) {
+                  apiHits++;
+                } else {
+                  break; // reached last page
+                }
+              }
+            }
+
+            // Step 2: If nothing captured yet, probe standard internal endpoints
+            if (interceptedReportBucket.conversions.size === 0 && interceptedReportBucket.clicks.size === 0) {
+              const apiCandidates = [
+                `https://affiliate.shopee.co.th/api/v3/report/list?page_size=100&page_num=1&purchase_time_s=${startSec}&purchase_time_e=${nowSec}`,
+                `https://affiliate.shopee.co.th/api/v3/report/conversion_report?page_size=100&page_num=1&purchase_time_s=${startSec}&purchase_time_e=${nowSec}`,
+                `https://affiliate.shopee.co.th/api/v3/dashboard/overview?start_time=${startSec}&end_time=${nowSec}`,
+                `https://affiliate.shopee.co.th/api/v3/report/click_list?page_size=100&page_num=1&click_time_s=${startSec}&click_time_e=${nowSec}`
+              ];
+              for (const url of apiCandidates) {
+                try {
+                  const res = await Promise.race([
+                    pageMainRequest({
+                      url,
+                      method: 'GET',
+                      useFetch: false,
+                      attachCsrf: true,
+                      headers: commonHeaders
+                    }),
+                    new Promise((r) => setTimeout(() => r(null), 5000))
+                  ]);
+                  if (res?.data?.error === 90309999) {
+                    sendResponse({
+                      ok: false,
+                      securityCheck: true,
+                      error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาผ่านด่านตรวจบนหน้า affiliate.shopee.co.th ก่อน'
+                    });
+                    return;
+                  }
+                  if (res && res.ok && res.data) {
+                    const added = ingestRawReportPayload(url, res.data);
+                    if (added.conversions > 0 || added.clicks > 0 || added.daily > 0) apiHits++;
+                  }
+                } catch (_e) {}
+              }
+            }
+
+            // Step 3: Rich Ant-Design DOM Table Fallback (works on BOTH รายงานคำสั่งซื้อ & รายงานคลิก without refresh!)
+            if (interceptedReportBucket.conversions.size === 0 && interceptedReportBucket.clicks.size === 0) {
+              document.querySelectorAll('tbody tr, .ant-table-tbody tr').forEach((tr, idx) => {
+                if (tr.closest('#drb-aff-hud-root')) return;
+                const cells = Array.from(tr.querySelectorAll('td')).map((td) => (td.innerText || td.textContent || '').trim());
+                if (cells.length < 3) return;
+                const fullTxt = cells.join(' | ');
+
+                // A. Order Report row (รายงานคำสั่งซื้อ)
+                const oidMatch = fullTxt.match(/รหัสการสั่งซื้อ[:\s]+([A-Z0-9]{10,20})/i);
+                if (oidMatch) {
+                  const oid = oidMatch[1].trim();
+                  const iidMatch = fullTxt.match(/รหัสรายการสินค้า[:\s]+(\d+)/i);
+                  const midMatch = fullTxt.match(/เลขที่\s*โมเดล[:\s]+(\d+)/i);
+                  const statusMatch = fullTxt.match(/สถานะการสั่งซื้อ[:\s]+([^\n|]+)/i);
+                  const buyMatch = fullTxt.match(/เวลาที่สั่งซื้อ[:\s]+([\d\-:\s]+)/i);
+                  const clkMatch = fullTxt.match(/เวลาคลิก[:\s]+([\d\-:\s]+)/i);
+                  const subMatch = fullTxt.match(/\b(16NOV[A-Z0-9_-]+|[A-Z0-9]+-ai[a-z0-9]+-[A-Z0-9-]+)\b/i);
+                  const subIds = extractSubIdsFromRecord({ utm_content: subMatch ? subMatch[1] : '' });
+                  const moneyAll = [...fullTxt.matchAll(/฿\s?([0-9,]+(?:\.[0-9]{1,2})?)/g)].map((m) => ns.parsePriceNumber(m[1]));
+                  const price = moneyAll[0] || 0;
+                  const netComm = moneyAll.length >= 2 ? moneyAll[moneyAll.length - 1] : 0;
+                  const iid = iidMatch ? iidMatch[1] : String(idx);
+                  const mid = midMatch ? midMatch[1] : '';
+                  const key = `${oid}|${iid}|${mid}|${subIds.subId2}`;
+                  interceptedReportBucket.conversions.set(key, {
+                    dedup_key: key,
+                    orderId: oid,
+                    itemId: iid,
+                    modelId: mid,
+                    itemName: (cells[2] || '').split('\n')[0].trim(),
+                    shopName: (cells[1] || '').split('\n')[0].trim(),
+                    price,
+                    qty: 1,
+                    gmv: price,
+                    orderStatus: statusMatch ? statusMatch[1].trim() : 'รอดำเนินการ',
+                    affStatus: statusMatch ? statusMatch[1].trim() : 'รอดำเนินการ',
+                    isCancelled: /ยกเลิก|cancel/i.test(statusMatch ? statusMatch[1] : ''),
+                    ...subIds,
+                    netComm,
+                    clickTime: clkMatch ? clkMatch[1].trim() : '',
+                    purchaseAt: buyMatch ? buyMatch[1].trim() : ''
+                  });
+                  return;
+                }
+
+                // B. Click Report row (รายงานคลิก)
+                const clickDateMatch = fullTxt.match(/(\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}:\d{2})/);
+                if (clickDateMatch && /Thailand/i.test(fullTxt)) {
+                  const rawTs = clickDateMatch[1];
+                  const [dPart, tPart] = rawTs.split(/\s+/);
+                  const [dd, mm, yyyy] = dPart.split('-');
+                  const isoTime = `${yyyy}-${mm}-${dd} ${tPart}`;
+                  const rawSub = (cells[2] || '').replace(/\s+/g, '').trim();
+                  const subIds = extractSubIdsFromRecord({ utm_content: rawSub });
+                  const cid = `dom_${isoTime}_${rawSub}_${idx}`;
+                  interceptedReportBucket.clicks.set(cid, {
+                    clickId: cid,
+                    clickTime: isoTime,
+                    clickDate: `${yyyy}-${mm}-${dd}`,
+                    region: (cells[1] || 'Thailand').trim(),
+                    rawSubId: rawSub,
+                    subId1: subIds.subId1,
+                    subId2: subIds.subId2,
+                    referrer: (cells[3] || 'Facebook').trim()
+                  });
+                }
+              });
+            }
+
+            const conversions = Array.from(interceptedReportBucket.conversions.values());
+            const clicks = Array.from(interceptedReportBucket.clicks.values());
+            const daily = Array.from(interceptedReportBucket.daily.values());
+            const totalCommission = conversions.length
+              ? Math.round(conversions.reduce((s, r) => s + (r.isCancelled ? 0 : Number(r.netComm || 0)), 0) * 100) / 100
+              : Math.round(daily.reduce((s, r) => s + Number(r.commission || 0), 0) * 100) / 100;
+
+            sendResponse({
+              ok: true,
+              apiHits,
+              source: apiHits > 0 ? 'shopee_api_paginated' : (captured.length > 0 ? 'page_intercept' : (conversions.length || clicks.length ? 'dom_table' : 'empty')),
+              date: new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10),
+              conversions,
+              clicks,
+              daily,
+              totalCommission,
+              orderCount: conversions.length
+            });
+          } catch (err) {
+            sendResponse({ ok: false, error: err?.message || String(err) });
+          }
+        })();
         return true;
       }
       if (req.action === 'OPEN_V1_SCANNER') {

@@ -287,21 +287,103 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  document.getElementById('drb-aff-btn-sync-report')?.addEventListener('click', async () => {
-    if (!currentTabId) return;
+  async function refreshAutoPullUI(fetchServer = true) {
+    const badgeEl = document.getElementById('drb-autopull-badge');
+    const statusEl = document.getElementById('drb-autopull-status');
+    const toggleEl = document.getElementById('drb-autopull-toggle');
+    const accEl = document.getElementById('drb-autopull-account');
+    if (!statusEl) return;
     try {
-      const resp = await chrome.tabs.sendMessage(currentTabId, { action: 'SCAN_AFFILIATE_REPORT' });
-      const rep = resp?.report;
-      if (rep && rep.orderCount > 0) {
-        await ns.sendMessage('PUSH_REPORT_TO_WEBUI', rep);
-        ns.showToast(`📥 ดูดตาราง Report (${rep.orderCount} แถว) ส่งเข้า Web UI สำเร็จ!`);
-      } else {
-        ns.showToast('ไม่พบตาราง Conversion Report ในหน้านี้');
+      const res = await ns.sendMessage('GET_REPORT_SYNC_STATE', { fetchServer });
+      const cfg = res?.autoPullSettings || { enabled: true, accountLabel: 'DRB' };
+      const last = res?.lastReportSync || null;
+      const db = res?.dbStatus || null;
+      if (toggleEl) toggleEl.checked = cfg.enabled !== false;
+      if (accEl && cfg.accountLabel) accEl.value = cfg.accountLabel;
+
+      const lines = [];
+      if (last && last.at) {
+        const t = new Date(last.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        if (last.syncedToServer) {
+          if (badgeEl) {
+            badgeEl.textContent = `🟢 ${t} (+${last.conversions || 0})`;
+            badgeEl.style.color = '#16a34a';
+          }
+          lines.push(`ล่าสุด ${t} [${last.accountLabel || 'DRB'}]: ${last.conversions || 0} ออเดอร์ · ${last.clicks || 0} คลิก · ฿${Number(last.totalNetComm || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        } else {
+          if (badgeEl) {
+            badgeEl.textContent = `⚠️ ${t} (Offline)`;
+            badgeEl.style.color = '#d97706';
+          }
+          lines.push(`ล่าสุด ${t}: ซิงก์เข้า aff.db ไม่สำเร็จ (${last.error || 'server offline'})`);
+        }
+      } else if (badgeEl) {
+        badgeEl.textContent = cfg.enabled !== false ? '🟢 Auto ON' : '⏸️ Pause';
+        badgeEl.style.color = cfg.enabled !== false ? '#16a34a' : '#6b7280';
       }
+
+      if (db?.ok && db.conversions) {
+        const c = db.conversions;
+        lines.push(`aff.db รวม: ${Number(c.active_orders || 0).toLocaleString()} ออเดอร์ · คอมสุทธิ ฿${Number(c.total_comm || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+      } else if (!lines.length) {
+        lines.push('เปิดหน้า affiliate.shopee.co.th แล้วกดปุ่มด้านล่าง หรือปล่อยให้ดูดอัตโนมัติ');
+      }
+      statusEl.innerHTML = lines.join('<br>');
     } catch (_e) {
-      ns.showToast('กรุณาเปิดหน้า Conversion Report บน affiliate.shopee.co.th');
+      statusEl.textContent = 'พร้อมใช้งาน — เปิดหน้า affiliate.shopee.co.th เพื่อดูดยอดคอมเข้า aff.db';
     }
+  }
+
+  async function triggerAutoPullNow() {
+    const btn = document.getElementById('drb-autopull-btn-now');
+    const accEl = document.getElementById('drb-autopull-account');
+    const accountLabel = accEl?.value || 'DRB';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ กำลังดูดยอดคอม ➔ aff.db...';
+    }
+    try {
+      const res = await ns.sendMessage('AUTO_PULL_COMMISSION_NOW', { accountLabel, days: 14 });
+      if (res?.ok && !res.empty && res.syncedToServer) {
+        const skipped = Number(res?.serverRes?.skippedExisting || 0);
+        const inserted = Number(res?.serverRes?.conversions ?? res.conversions ?? 0);
+        const skipTxt = skipped > 0 ? ` (ข้ามของเดิม ${skipped} แถว ไม่ทับ)` : '';
+        ns.showToast(`💰 ซิงก์เข้า aff.db สำเร็จ! +${inserted} ใหม่${skipTxt} · ${res.clicks} คลิก`);
+      } else if (res?.ok && res.empty) {
+        ns.showToast(res.message || 'เปิดหน้า Conversion Report บน affiliate.shopee.co.th แล้วกดอีกครั้ง');
+      } else if (res?.ok && !res.syncedToServer) {
+        ns.showToast(`⚠️ ดูดได้ ${res.conversions} ออเดอร์ แต่ส่งขึ้น aff.db ไม่สำเร็จ (${res.serverError || 'เช็ก Web UI'})`);
+      } else {
+        ns.showToast(`⚠️ ${res?.error || 'ดึงรายงานไม่สำเร็จ'}`);
+      }
+      await refreshAutoPullUI(true);
+    } catch (err) {
+      ns.showToast(`❌ ${err?.message || 'เกิดข้อผิดพลาดขณะดูดยอดคอม'}`);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '⚡ ดูดยอดคอม ➔ aff.db ตอนนี้';
+      }
+    }
+  }
+
+  document.getElementById('drb-autopull-btn-now')?.addEventListener('click', triggerAutoPullNow);
+  document.getElementById('drb-aff-btn-sync-report')?.addEventListener('click', triggerAutoPullNow);
+  document.getElementById('drb-autopull-btn-open-report')?.addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://affiliate.shopee.co.th/report/conversion_report' });
   });
+  document.getElementById('drb-autopull-toggle')?.addEventListener('change', async (e) => {
+    const enabled = Boolean(e.target?.checked);
+    await ns.sendMessage('SET_AUTO_PULL_SETTINGS', { enabled });
+    ns.showToast(enabled ? '🟢 เปิด Auto-Pull ยอดคอมอัตโนมัติแล้ว' : '⏸️ พัก Auto-Pull ชั่วคราวแล้ว');
+    refreshAutoPullUI(false);
+  });
+  document.getElementById('drb-autopull-account')?.addEventListener('change', async (e) => {
+    const accountLabel = String(e.target?.value || 'DRB');
+    await ns.sendMessage('SET_AUTO_PULL_SETTINGS', { accountLabel });
+    ns.showToast(`สลับบัญชี Auto-Pull เป็น ${accountLabel}`);
+  });
+  refreshAutoPullUI(true);
 
   // Listen to browser tab switches & URL changes for Auto-Detect
   chrome.tabs.onActivated.addListener(() => {

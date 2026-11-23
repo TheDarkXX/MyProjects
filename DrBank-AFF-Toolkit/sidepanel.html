@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>DrBank AFF Scout v2.13.4 — Side Panel</title>
+  <title>DrBank AFF Scout v2.14.0 — Side Panel</title>
   <link rel="stylesheet" href="src/styles/hud.css">
   <link rel="stylesheet" href="src/styles/sidepanel.css">
 </head>
@@ -19,7 +19,7 @@
             style="width:18px;height:18px;border-radius:4px;display:inline-block;vertical-align:middle;"
             alt="Logo">
           <span>DrBank AFF</span>
-          <span class="drb-aff-version" id="drb-sp-ver">v2.13.4</span>
+          <span class="drb-aff-version" id="drb-sp-ver">v2.14.0</span>
           <span class="drb-aff-badge-platform" id="drb-sp-mode-badge"
             style="background:rgba(22,163,74,0.12);color:#16a34a;border:1px solid rgba(22,163,74,0.3);font-size:11px;padding:1px 6px;">Shopee</span>
         </div>
@@ -373,6 +373,37 @@
 
         <div class="sp-shortlink-out" id="drb-sp-shortlink-out" hidden title="คลิกเพื่อก๊อปซ้ำ"></div>
       </div>
+
+      <!-- ================================================================
+           ZONE 2.5 (SHARED): Auto-Pull Commission & Clicks -> aff.db (v2.14.0)
+           ================================================================ -->
+      <details class="sp-fold" id="sp-fold-autopull" open>
+        <summary>💰 Auto-Pull ยอดคอม ➔ aff.db <span id="drb-autopull-badge" style="margin-left:auto;font-size:11px;font-weight:600;color:#16a34a;">พร้อมซิงก์</span></summary>
+        <div class="sp-fold-body" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" id="drb-autopull-toggle" checked>
+              <span>ดูดอัตโนมัติ (เปิดหน้า AFF + ทุก 30 นาที)</span>
+            </label>
+            <select id="drb-autopull-account" title="บัญชี Shopee Affiliate" style="font-size:11px;padding:2px 6px;border-radius:6px;border:1px solid var(--sp-border,#d1d5db);background:var(--sp-bg,#fff);color:var(--sp-text,#111);">
+              <option value="DRB">DRB</option>
+              <option value="Namcha">Namcha</option>
+              <option value="Ashira">Ashira</option>
+            </select>
+          </div>
+          <div id="drb-autopull-status" style="font-size:11px;color:var(--sp-text-2,#4b5563);line-height:1.4;">
+            ⏳ กำลังเช็กสถานะ aff.db...
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="sp-tool-btn sp-tool-btn--featured" id="drb-autopull-btn-now" style="flex:1;">
+              ⚡ ดูดยอดคอม ➔ aff.db ตอนนี้
+            </button>
+            <button type="button" class="sp-ghost-sm-btn" id="drb-autopull-btn-open-report" title="เปิดหน้า Conversion Report บน affiliate.shopee.co.th">
+              📊 หน้า Report ↗
+            </button>
+          </div>
+        </div>
+      </details>
 
       <!-- ================================================================
            ZONE 3 (SHARED): Collapsible Secondary Tools & Scanners
