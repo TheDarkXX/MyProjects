@@ -4857,11 +4857,13 @@
     }
   }
 
-  async function enrichPoolChunkWithOffers(chunk, forceAll, stEl) {
+  async function enrichPoolChunkWithOffers(chunk, forceAll, stEl, offerCache = new Map()) {
     const enriched = [];
+    let fetchedCount = 0;
     for (let idx = 0; idx < chunk.length; idx++) {
       const it = chunk[idx];
       const cleanItemId = String(it.item_id || it.itemId || '').replace(/[^0-9]/g, '');
+      const cacheKey = cleanItemId || String(it.sku_code || '').trim().toUpperCase();
       const needsCommission =
         Boolean(cleanItemId) &&
         (forceAll || Number(it.net_comm_baht || 0) <= 0 || it.pool_source === 'spy' || Number(it.price || 0) <= 0);
@@ -4876,16 +4878,24 @@
       };
 
       if (needsCommission) {
-        if (stEl) {
-          stEl.innerHTML = `⏳ [Step 2/2] ดึงเรทค่าคอม + ราคา (${it.sku_code || cleanItemId}) [${idx + 1}/${chunk.length}] (บันทึก s.shopee.co.th ครบแล้ว)...`;
-        }
-        const offer = await fetchSingleOfferDetailViaMainBridge(cleanItemId, it.title || '').catch(() => null);
-        if (offer?.securityCheck) {
-          const secErr = new Error(
-            offer.error || 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
-          );
-          secErr.securityCheck = true;
-          throw secErr;
+        let offer = null;
+        const fromCache = Boolean(cacheKey && offerCache.has(cacheKey));
+        if (fromCache) {
+          offer = offerCache.get(cacheKey);
+        } else {
+          if (stEl) {
+            stEl.innerHTML = `⏳ [Step 2/2] ดึงเรทค่าคอม + ราคา (${it.sku_code || cleanItemId}) [${idx + 1}/${chunk.length}] (บันทึก s.shopee.co.th ครบแล้ว)...`;
+          }
+          offer = await fetchSingleOfferDetailViaMainBridge(cleanItemId, it.title || '').catch(() => null);
+          fetchedCount++;
+          if (offer?.securityCheck) {
+            const secErr = new Error(
+              offer.error || 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาเปิดหน้า affiliate.shopee.co.th แล้วผ่านด่านตรวจก่อน'
+            );
+            secErr.securityCheck = true;
+            throw secErr;
+          }
+          if (cacheKey) offerCache.set(cacheKey, offer || null);
         }
         if (offer) {
           const baseRate = Number(offer.baseRate) || 0.6;
@@ -4932,14 +4942,15 @@
           };
         }
 
-        // Polite 900ms delay between items to prevent Shopee verify/traffic trigger
-        if (idx + 1 < chunk.length) {
+        // Polite 900ms delay ONLY after an actual live Shopee API fetch (skip when served from SKU cache)
+        if (!fromCache && idx + 1 < chunk.length) {
           await new Promise((r) => setTimeout(r, 900));
         }
       }
 
       enriched.push(merged);
     }
+    enriched._fetchedCount = fetchedCount;
     return enriched;
   }
 
@@ -5070,15 +5081,16 @@
       }
 
       // ======================================================================
-      // STEP 2 (FOLLOW-UP): Fetch Commission + Price via XHR Offer List & Save Incrementally
+      // STEP 2 (FOLLOW-UP): Fetch Commission + Price via XHR Offer List (deduplicated 1x per SKU/item_id)
       // ======================================================================
+      const runOfferCache = new Map();
       for (let i = 0; i < itemsWithShortLinks.length; i += batchSize) {
         const chunk = itemsWithShortLinks.slice(i, i + batchSize);
         const pct = 45 + Math.min(53, Math.round(((i + chunk.length) / total) * 53));
         if (runBtn) runBtn.textContent = `⏳ ดึงค่าคอม ${Math.min(i + batchSize, total)}/${total} (${pct}%)`;
         if (progBar) progBar.style.width = `${pct}%`;
 
-        const enrichedChunk = await enrichPoolChunkWithOffers(chunk, forceAll, stEl);
+        const enrichedChunk = await enrichPoolChunkWithOffers(chunk, forceAll, stEl, runOfferCache);
         const validResults = [];
         for (const it of enrichedChunk) {
           const hasValidLink = Boolean(it.short_link && String(it.short_link).startsWith('http'));
@@ -5116,7 +5128,7 @@
           await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: validResults });
         }
 
-        if (i + batchSize < itemsWithShortLinks.length) {
+        if ((enrichedChunk._fetchedCount || 0) > 0 && i + batchSize < itemsWithShortLinks.length) {
           await new Promise((r) => setTimeout(r, 900));
         }
       }
