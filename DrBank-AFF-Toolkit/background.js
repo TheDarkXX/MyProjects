@@ -2286,19 +2286,43 @@ async function runAutoPullCommissionNow(options = {}) {
     return { ok: false, skipped: true, reason: 'disabled' };
   }
 
-  const bridgeRes = await ensureAffBridgeReady({
-    allowCreate: !options?.silent,
-    wakeSleeping: true
-  });
-  if (!bridgeRes?.ok || !bridgeRes.tabId) {
-    return {
-      ok: false,
-      securityCheck: Boolean(bridgeRes?.securityCheck),
-      error: bridgeRes?.error || 'ยังไม่ได้เปิดหน้า affiliate.shopee.co.th ใน Chrome'
-    };
+  let targetTabId = null;
+  if (options?.preferredTabId) {
+    try {
+      const prefTab = await chrome.tabs.get(options.preferredTabId);
+      if (prefTab?.id && String(prefTab.url || '').includes('affiliate.shopee.co.th') && !isSecurityOrLoginUrl(prefTab.url)) {
+        if (isTabSleeping(prefTab)) await wakeAffTabIfSleeping(prefTab);
+        targetTabId = prefTab.id;
+      }
+    } catch (_e) {}
   }
 
-  const pullRes = await sendToAffTabWithReinject(bridgeRes.tabId, {
+  if (!targetTabId) {
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      if (activeTab?.id && String(activeTab.url || '').includes('affiliate.shopee.co.th') && !isSecurityOrLoginUrl(activeTab.url)) {
+        if (isTabSleeping(activeTab)) await wakeAffTabIfSleeping(activeTab);
+        targetTabId = activeTab.id;
+      }
+    } catch (_e) {}
+  }
+
+  if (!targetTabId) {
+    const bridgeRes = await ensureAffBridgeReady({
+      allowCreate: !options?.silent,
+      wakeSleeping: true
+    });
+    if (!bridgeRes?.ok || !bridgeRes.tabId) {
+      return {
+        ok: false,
+        securityCheck: Boolean(bridgeRes?.securityCheck),
+        error: bridgeRes?.error || 'ยังไม่ได้เปิดหน้า affiliate.shopee.co.th ใน Chrome'
+      };
+    }
+    targetTabId = bridgeRes.tabId;
+  }
+
+  const pullRes = await sendToAffTabWithReinject(targetTabId, {
     action: 'PULL_SHOPEE_REPORTS',
     days: cfg.days || 30
   });

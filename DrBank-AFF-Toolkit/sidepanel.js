@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       btn.textContent = '⏳ กำลังดูดยอดคอม ➔ aff.db...';
     }
     try {
-      const res = await ns.sendMessage('AUTO_PULL_COMMISSION_NOW', { accountLabel, days });
+      const res = await ns.sendMessage('AUTO_PULL_COMMISSION_NOW', { accountLabel, days, preferredTabId: currentTabId || null });
       if (res?.ok && !res.empty && res.syncedToServer) {
         const skipped = Number(res?.serverRes?.skippedExisting || 0);
         const updated = Number(res?.serverRes?.updatedExisting || 0);

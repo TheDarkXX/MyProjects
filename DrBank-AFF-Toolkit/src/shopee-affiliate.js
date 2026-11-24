@@ -1253,15 +1253,24 @@
               'affiliate-program-type': '1'
             };
 
-            const buildPaginatedRequest = (cap, pg, pSize, sSec, eSec, scrollId = '') => {
+            const buildPaginatedRequest = (cap, pg, pSize, sSec, eSec, scrollId = '', overrideDates = true) => {
               let nextUrl = cap.url;
               let nextBody = cap.reqBody;
               const isMs = (v) => Number(v) >= 1e12;
+              let effectivePageSize = pSize;
 
               try {
                 const u = new URL(cap.url, location.origin);
                 const sp = u.searchParams;
                 let touchedUrl = false;
+                if (!effectivePageSize) {
+                  for (const k of ['page_size', 'pageSize', 'limit']) {
+                    if (sp.has(k)) {
+                      effectivePageSize = parseInt(sp.get(k), 10) || 20;
+                      break;
+                    }
+                  }
+                }
                 for (const k of ['page_num', 'page', 'pageNum', 'pageNo']) {
                   if (sp.has(k)) {
                     sp.set(k, String(pg));
@@ -1269,17 +1278,30 @@
                   }
                 }
                 if (sp.has('offset')) {
-                  sp.set('offset', String((pg - 1) * pSize));
+                  sp.set('offset', String((pg - 1) * (effectivePageSize || 20)));
                   touchedUrl = true;
                 }
-                for (const k of ['page_size', 'pageSize', 'limit']) {
-                  if (sp.has(k)) sp.set(k, String(pSize));
+                if (pSize) {
+                  for (const k of ['page_size', 'pageSize', 'limit']) {
+                    if (sp.has(k)) {
+                      sp.set(k, String(pSize));
+                      touchedUrl = true;
+                    }
+                  }
                 }
-                for (const k of ['click_time_s', 'purchase_time_s', 'start_time', 'startTime']) {
-                  if (sp.has(k)) sp.set(k, String(isMs(sp.get(k)) ? sSec * 1000 : sSec));
-                }
-                for (const k of ['click_time_e', 'purchase_time_e', 'end_time', 'endTime']) {
-                  if (sp.has(k)) sp.set(k, String(isMs(sp.get(k)) ? eSec * 1000 : eSec));
+                if (overrideDates) {
+                  for (const k of ['click_time_s', 'purchase_time_s', 'start_time', 'startTime']) {
+                    if (sp.has(k)) {
+                      sp.set(k, String(isMs(sp.get(k)) ? sSec * 1000 : sSec));
+                      touchedUrl = true;
+                    }
+                  }
+                  for (const k of ['click_time_e', 'purchase_time_e', 'end_time', 'endTime']) {
+                    if (sp.has(k)) {
+                      sp.set(k, String(isMs(sp.get(k)) ? eSec * 1000 : eSec));
+                      touchedUrl = true;
+                    }
+                  }
                 }
                 if (scrollId && (sp.has('scroll_id') || sp.has('scrollId'))) {
                   if (sp.has('scroll_id')) sp.set('scroll_id', scrollId);
@@ -1295,6 +1317,14 @@
                   const patchObj = (target) => {
                     if (!target || typeof target !== 'object') return false;
                     let touched = false;
+                    if (!effectivePageSize) {
+                      for (const k of ['page_size', 'pageSize', 'limit']) {
+                        if (k in target) {
+                          effectivePageSize = parseInt(target[k], 10) || 20;
+                          break;
+                        }
+                      }
+                    }
                     for (const k of ['page_num', 'page', 'pageNum', 'pageNo']) {
                       if (k in target) {
                         target[k] = pg;
@@ -1302,17 +1332,30 @@
                       }
                     }
                     if ('offset' in target) {
-                      target.offset = (pg - 1) * pSize;
+                      target.offset = (pg - 1) * (effectivePageSize || 20);
                       touched = true;
                     }
-                    for (const k of ['page_size', 'pageSize', 'limit']) {
-                      if (k in target) target[k] = pSize;
+                    if (pSize) {
+                      for (const k of ['page_size', 'pageSize', 'limit']) {
+                        if (k in target) {
+                          target[k] = pSize;
+                          touched = true;
+                        }
+                      }
                     }
-                    for (const k of ['click_time_s', 'purchase_time_s', 'start_time', 'startTime']) {
-                      if (k in target) target[k] = isMs(target[k]) ? sSec * 1000 : sSec;
-                    }
-                    for (const k of ['click_time_e', 'purchase_time_e', 'end_time', 'endTime']) {
-                      if (k in target) target[k] = isMs(target[k]) ? eSec * 1000 : eSec;
+                    if (overrideDates) {
+                      for (const k of ['click_time_s', 'purchase_time_s', 'start_time', 'startTime']) {
+                        if (k in target) {
+                          target[k] = isMs(target[k]) ? sSec * 1000 : sSec;
+                          touched = true;
+                        }
+                      }
+                      for (const k of ['click_time_e', 'purchase_time_e', 'end_time', 'endTime']) {
+                        if (k in target) {
+                          target[k] = isMs(target[k]) ? eSec * 1000 : eSec;
+                          touched = true;
+                        }
+                      }
                     }
                     if (scrollId && ('scroll_id' in target || 'scrollId' in target)) {
                       if ('scroll_id' in target) target.scroll_id = scrollId;
@@ -1337,11 +1380,12 @@
               let hits = 0;
               let emptyStreak = 0;
               let scrollId = '';
-              for (let pg = 1; pg <= maxPages; pg++) {
-                const { nextUrl, nextBody } = buildPaginatedRequest(cap, pg, pageSize, startSec, nowSec, scrollId);
-                if (pg > 1 && nextUrl === cap.url && nextBody === cap.reqBody) break;
+              let activePageSize = pageSize;
+              let activeOverrideDates = true;
 
-                if (pg > 1) await new Promise((r) => setTimeout(r, 220));
+              const fetchPage = async (pg, pSize, overrideDates) => {
+                const { nextUrl, nextBody } = buildPaginatedRequest(cap, pg, pSize, startSec, nowSec, scrollId, overrideDates);
+                if (pg > 1 && nextUrl === cap.url && nextBody === cap.reqBody) return { done: true };
                 const res = await Promise.race([
                   pageMainRequest({
                     url: nextUrl,
@@ -1356,6 +1400,24 @@
                   }),
                   new Promise((r) => setTimeout(() => r(null), 6500))
                 ]);
+                return { res, nextUrl };
+              };
+
+              for (let pg = 1; pg <= maxPages; pg++) {
+                if (pg > 1) await new Promise((r) => setTimeout(r, 200));
+                let attempt = await fetchPage(pg, activePageSize, activeOverrideDates);
+                if (attempt.done) break;
+                let res = attempt.res;
+                let nextUrl = attempt.nextUrl;
+
+                if (pg === 1 && (!res || !res.ok || !res.data)) {
+                  // Fallback: keep original page_size & date params from captured request
+                  activePageSize = null;
+                  activeOverrideDates = false;
+                  attempt = await fetchPage(1, null, false);
+                  res = attempt.res;
+                  nextUrl = attempt.nextUrl;
+                }
                 if (!res || !res.ok || !res.data) break;
                 if (res.data.error === 90309999) return { hits, securityCheck: true };
 
@@ -1366,13 +1428,27 @@
                   interceptedReportBucket.conversions.size +
                   interceptedReportBucket.clicks.size +
                   interceptedReportBucket.daily.size;
-                const added = ingestRawReportPayload(nextUrl, res.data);
+                let added = ingestRawReportPayload(nextUrl, res.data);
+                let batchRows = added.conversions + added.clicks + added.daily;
+
+                if (pg === 1 && batchRows === 0 && (activePageSize !== null || activeOverrideDates)) {
+                  // Retry page 1 with original page_size & date range in case Shopee rejected page_size=100 or date override
+                  activePageSize = null;
+                  activeOverrideDates = false;
+                  attempt = await fetchPage(1, null, false);
+                  if (attempt.res && attempt.res.ok && attempt.res.data && attempt.res.data.error !== 90309999) {
+                    const retryScroll = attempt.res.data?.data?.scroll_id || attempt.res.data?.scroll_id || '';
+                    if (retryScroll) scrollId = String(retryScroll);
+                    added = ingestRawReportPayload(attempt.nextUrl, attempt.res.data);
+                    batchRows = added.conversions + added.clicks + added.daily;
+                  }
+                }
+
                 const afterTotal =
                   interceptedReportBucket.conversions.size +
                   interceptedReportBucket.clicks.size +
                   interceptedReportBucket.daily.size;
 
-                const batchRows = added.conversions + added.clicks + added.daily;
                 if (batchRows === 0) break;
                 if (afterTotal > beforeTotal) {
                   hits++;
@@ -1385,21 +1461,46 @@
               return { hits, securityCheck: false };
             };
 
-            // Merge in-memory captured templates + persisted templates from chrome.storage.local
-            const mergedByKind = new Map();
+            // Reset bucket so re-pulling on the same tab always yields fresh full counts
+            interceptedReportBucket.conversions.clear();
+            interceptedReportBucket.clicks.clear();
+            interceptedReportBucket.daily.clear();
+
+            // Ask MAIN-world bridge for any live captured requests (survives extension reload!)
+            const mainCaptured = await new Promise((resolve) => {
+              const reqId = `cap_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+              const timer = setTimeout(() => {
+                window.removeEventListener('message', onMsg);
+                resolve([]);
+              }, 800);
+              const onMsg = (ev) => {
+                if (ev.source !== window || !ev.data || ev.data.type !== 'DRB_GET_CAPTURED_REQS_RES' || ev.data.reqId !== reqId) return;
+                clearTimeout(timer);
+                window.removeEventListener('message', onMsg);
+                resolve(Array.isArray(ev.data.requests) ? ev.data.requests : []);
+              };
+              window.addEventListener('message', onMsg);
+              window.postMessage({ type: 'DRB_GET_CAPTURED_REQS', reqId }, '*');
+            });
+
+            // Merge persisted templates + MAIN-world live requests + in-memory captured requests
+            const mergedByKey = new Map();
             try {
               if (typeof chrome !== 'undefined' && chrome.storage?.local) {
                 const st = await chrome.storage.local.get(['drbAffCapturedReportTemplates']);
                 const saved = st?.drbAffCapturedReportTemplates || {};
                 for (const k of Object.keys(saved)) {
-                  if (saved[k]?.url) mergedByKind.set(k, saved[k]);
+                  if (saved[k]?.url) mergedByKey.set(k, saved[k]);
                 }
               }
             } catch (_e) {}
-            for (const cap of interceptedReportBucket.capturedRequests || []) {
-              if (cap?.url) mergedByKind.set(cap.kind || cap.url, cap);
+            for (const cap of mainCaptured) {
+              if (cap?.url) mergedByKey.set(`main:${cap.url.split('?')[0]}`, cap);
             }
-            const captured = Array.from(mergedByKind.values());
+            for (const cap of interceptedReportBucket.capturedRequests || []) {
+              if (cap?.url) mergedByKey.set(cap.kind || cap.url.split('?')[0], cap);
+            }
+            const captured = Array.from(mergedByKey.values());
 
             // Step 1: Auto-paginate all captured templates (up to 150 pages / 15,000 rows, 30d window)
             let apiHits = 0;

@@ -43,17 +43,34 @@
     }
   }
 
+  window.__drbCapturedReportReqs = window.__drbCapturedReportReqs || [];
+
   function emitInterceptedReport(url, parsed, reqMeta = {}) {
     if (!parsed || typeof parsed !== 'object') return;
     if (parsed.data || Array.isArray(parsed.list) || typeof parsed.code === 'number') {
+      const urlStr = String(url || '');
+      const fullUrl = urlStr.startsWith('http')
+        ? urlStr
+        : `${location.origin}${urlStr.startsWith('/') ? '' : '/'}${urlStr}`;
+      const rec = {
+        url: fullUrl,
+        method: reqMeta.method || 'GET',
+        reqBody: reqMeta.body || null,
+        capturedAt: Date.now()
+      };
+      window.__drbCapturedReportReqs = [
+        rec,
+        ...window.__drbCapturedReportReqs.filter((r) => r.url !== fullUrl || r.reqBody !== rec.reqBody)
+      ].slice(0, 10);
+
       window.postMessage(
         {
           type: 'DRB_AFF_REPORT_INTERCEPTED',
-          url: String(url || ''),
-          method: reqMeta.method || 'GET',
-          reqBody: reqMeta.body || null,
+          url: urlStr,
+          method: rec.method,
+          reqBody: rec.reqBody,
           data: parsed,
-          capturedAt: Date.now()
+          capturedAt: rec.capturedAt
         },
         '*'
       );
@@ -194,7 +211,19 @@
   window.addEventListener('message', async (event) => {
     if (event.source !== window) return;
     const msg = event.data;
-    if (!msg || msg.type !== 'DRB_MAIN_WORLD_REQ' || !msg.reqId) return;
+    if (!msg) return;
+    if (msg.type === 'DRB_GET_CAPTURED_REQS' && msg.reqId) {
+      window.postMessage(
+        {
+          type: 'DRB_GET_CAPTURED_REQS_RES',
+          reqId: msg.reqId,
+          requests: window.__drbCapturedReportReqs || []
+        },
+        '*'
+      );
+      return;
+    }
+    if (msg.type !== 'DRB_MAIN_WORLD_REQ' || !msg.reqId) return;
 
     try {
       const headers = { ...(msg.headers || {}) };
