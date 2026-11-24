@@ -1560,9 +1560,24 @@
               ? Math.round(conversions.reduce((s, r) => s + (r.isCancelled ? 0 : Number(r.netComm || 0)), 0) * 100) / 100
               : Math.round(daily.reduce((s, r) => s + Number(r.commission || 0), 0) * 100) / 100;
 
+            let drbHits = 0;
+            let namHits = 0;
+            for (const r of conversions) {
+              const s2 = String(r.subId2 || '').toLowerCase();
+              if (s2.startsWith('aidrb')) drbHits++;
+              else if (s2.startsWith('ainam')) namHits++;
+            }
+            for (const c of clicks) {
+              const s2 = String(c.subId2 || '').toLowerCase();
+              if (s2.startsWith('aidrb')) drbHits++;
+              else if (s2.startsWith('ainam')) namHits++;
+            }
+            const detectedAccount = namHits > drbHits ? 'Namcha' : (drbHits > 0 ? 'DRB' : '');
+
             sendResponse({
               ok: true,
               apiHits,
+              detectedAccount,
               source: apiHits > 0 ? 'shopee_api_paginated' : (captured.length > 0 ? 'page_intercept' : (conversions.length || clicks.length ? 'dom_table' : 'empty')),
               date: new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10),
               conversions,

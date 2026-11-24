@@ -310,11 +310,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (last && last.at) {
         const t = new Date(last.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
         if (last.syncedToServer) {
+          const pulledConv = Number(last.pulledConversions ?? last.conversions ?? 0);
+          const pulledClicks = Number(last.pulledClicks ?? last.clicks ?? 0);
+          const newConv = Number(last.conversions || 0);
+          const newClicks = Number(last.clicks || 0);
           if (badgeEl) {
-            badgeEl.textContent = `🟢 ${t} (+${last.conversions || 0})`;
+            badgeEl.textContent = `🟢 ${t} (${pulledClicks.toLocaleString()} คลิก / +${newClicks} ใหม่)`;
             badgeEl.style.color = '#16a34a';
           }
-          lines.push(`ล่าสุด ${t} [${last.accountLabel || 'DRB'}]: ${last.conversions || 0} ออเดอร์ · ${last.clicks || 0} คลิก · ฿${Number(last.totalNetComm || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+          lines.push(`ล่าสุด ${t} [${last.accountLabel || 'DRB'}]: ดูดได้ ${pulledConv} ออเดอร์ (+${newConv} ใหม่) · ${pulledClicks.toLocaleString()} คลิก (+${newClicks} ใหม่) · ฿${Number(last.totalNetComm || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
         } else {
           if (badgeEl) {
             badgeEl.textContent = `⚠️ ${t} (Offline)`;

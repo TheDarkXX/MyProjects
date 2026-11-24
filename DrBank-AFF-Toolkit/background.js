@@ -1949,8 +1949,11 @@ async function handleMessage(msg, _sender) {
       const lastReportSync = {
         at: new Date().toISOString(),
         source: reportBatch.source,
-        accountLabel,
+        accountLabel: payload.detectedAccount || accountLabel,
+        pulledConversions: conversions.length,
+        pulledClicks: clicks.length,
         conversions: Number(serverRes?.conversions ?? conversions.length),
+        updatedExisting: Number(serverRes?.updatedExisting ?? 0),
         clicks: Number(serverRes?.clicks ?? clicks.length),
         daily: Number(serverRes?.daily ?? daily.length),
         totalNetComm: Number(serverRes?.totalNetComm ?? reportBatch.totalCommission),
@@ -2326,7 +2329,8 @@ async function runAutoPullCommissionNow(options = {}) {
     action: 'PUSH_REPORT_TO_WEBUI',
     payload: {
       source: options?.silent ? 'auto_alarm' : (pullRes.source || 'manual_pull'),
-      accountLabel: cfg.accountLabel || 'DRB',
+      accountLabel: pullRes.detectedAccount || cfg.accountLabel || 'DRB',
+      detectedAccount: pullRes.detectedAccount || '',
       date: pullRes.date,
       conversions: pullRes.conversions,
       clicks: pullRes.clicks,
