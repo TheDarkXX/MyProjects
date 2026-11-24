@@ -1976,27 +1976,41 @@ async function handleMessage(msg, _sender) {
         ...(store?.autoPullSettings || {})
       };
       let dbStatus = null;
+      let campaignReport = null;
       if (payload?.fetchServer !== false) {
         try {
           const baseUrl = String(store?.settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').replace(/\/+$/, '');
           const affToken = String(store?.settings?.affToken || 'doctorbank2026');
-          const ctrl = new AbortController();
-          const t = setTimeout(() => ctrl.abort(), 4500);
-          const resp = await fetch(`${baseUrl}/api/shopee-aff/report-sync-status`, {
-            method: 'GET',
-            credentials: 'include',
-            headers: { Accept: 'application/json', 'X-Aff-Token': affToken },
-            signal: ctrl.signal
-          });
-          clearTimeout(t);
-          if (resp && resp.ok) dbStatus = await resp.json().catch(() => null);
+          const fetchJsonWithTimeout = async (pathUrl) => {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 5000);
+            try {
+              const resp = await fetch(`${baseUrl}${pathUrl}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: { Accept: 'application/json', 'X-Aff-Token': affToken },
+                signal: ctrl.signal
+              });
+              if (resp && resp.ok) return await resp.json().catch(() => null);
+              return null;
+            } finally {
+              clearTimeout(t);
+            }
+          };
+          const [stRes, campRes] = await Promise.allSettled([
+            fetchJsonWithTimeout('/api/shopee-aff/report-sync-status'),
+            fetchJsonWithTimeout('/api/shopee-aff/campaign-report?sub_id1=16NOV26FBRAD')
+          ]);
+          if (stRes.status === 'fulfilled') dbStatus = stRes.value;
+          if (campRes.status === 'fulfilled') campaignReport = campRes.value;
         } catch (_e) {}
       }
       return {
         ok: true,
         autoPullSettings,
         lastReportSync: store?.lastReportSync || null,
-        dbStatus
+        dbStatus,
+        campaignReport
       };
     }
 

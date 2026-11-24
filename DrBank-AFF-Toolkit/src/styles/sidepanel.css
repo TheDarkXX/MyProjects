@@ -117,7 +117,7 @@ body[data-theme="dark"] #drb-sidepanel-root {
 
 .sp-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   padding: 4px;
   margin: 0 14px 10px;
@@ -131,16 +131,16 @@ body[data-theme="dark"] #drb-sidepanel-root {
   border-radius: 8px;
   background: transparent;
   color: var(--sp-text-2);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   transition: all 0.15s ease;
   white-space: nowrap;
-  padding: 0 4px;
+  padding: 0 3px;
 }
 
 .sp-tab-btn:hover {
@@ -159,6 +159,10 @@ body[data-theme="dark"] #drb-sidepanel-root {
 
 .sp-tab-btn.active[data-tab="spy"] {
   color: #7c3aed;
+}
+
+.sp-tab-btn.active[data-tab="sync"] {
+  color: #059669;
 }
 
 /* Main Scrollable Body */

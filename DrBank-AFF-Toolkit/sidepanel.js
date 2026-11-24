@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('drb-tab-btn-shopee')?.addEventListener('click', () => switchPanelTab('shopee'));
   document.getElementById('drb-tab-btn-aff')?.addEventListener('click', () => switchPanelTab('aff'));
   document.getElementById('drb-tab-btn-spy')?.addEventListener('click', () => switchPanelTab('spy'));
+  document.getElementById('drb-tab-btn-sync')?.addEventListener('click', () => switchPanelTab('sync'));
   bindSpyCollector();
 
   // Switch to Floating HUD Button
@@ -290,16 +291,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function refreshAutoPullUI(fetchServer = true) {
     const badgeEl = document.getElementById('drb-autopull-badge');
     const statusEl = document.getElementById('drb-autopull-status');
+    const healthEl = document.getElementById('drb-autopull-campaign-health');
     const toggleEl = document.getElementById('drb-autopull-toggle');
     const accEl = document.getElementById('drb-autopull-account');
+    const daysEl = document.getElementById('drb-autopull-days');
     if (!statusEl) return;
     try {
       const res = await ns.sendMessage('GET_REPORT_SYNC_STATE', { fetchServer });
-      const cfg = res?.autoPullSettings || { enabled: true, accountLabel: 'DRB' };
+      const cfg = res?.autoPullSettings || { enabled: true, accountLabel: 'DRB', days: 30 };
       const last = res?.lastReportSync || null;
       const db = res?.dbStatus || null;
+      const camp = res?.campaignReport || null;
       if (toggleEl) toggleEl.checked = cfg.enabled !== false;
       if (accEl && cfg.accountLabel) accEl.value = cfg.accountLabel;
+      if (daysEl && cfg.days) daysEl.value = String(cfg.days);
 
       const lines = [];
       if (last && last.at) {
@@ -324,11 +329,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (db?.ok && db.conversions) {
         const c = db.conversions;
-        lines.push(`aff.db รวม: ${Number(c.active_orders || 0).toLocaleString()} ออเดอร์ · คอมสุทธิ ฿${Number(c.total_comm || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        lines.push(`aff.db รวม: ${Number(c.active_orders || 0).toLocaleString()} ออเดอร์ · ${Number(db.clicks?.total_clicks || 0).toLocaleString()} คลิก · คอม ฿${Number(c.total_comm || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
       } else if (!lines.length) {
-        lines.push('เปิดหน้า affiliate.shopee.co.th แล้วกดปุ่มด้านล่าง หรือปล่อยให้ดูดอัตโนมัติ');
+        lines.push('เปิดหน้า affiliate.shopee.co.th แล้วกดปุ่มด้านบน หรือปล่อยให้ดูดอัตโนมัติ');
       }
       statusEl.innerHTML = lines.join('<br>');
+
+      if (healthEl) {
+        if (camp?.ok && camp.by_account) {
+          const drb = camp.by_account.drb || {};
+          const nam = camp.by_account.nam || {};
+          const zeroCnt = Number(camp.diagnostics?.zero_comm_active_orders || 0);
+          const drbRange = drb.date_min && drb.date_max ? `${drb.date_min.slice(5)}..${drb.date_max.slice(5)}` : '-';
+          const namRange = nam.date_min && nam.date_max ? `${nam.date_min.slice(5)}..${nam.date_max.slice(5)}` : '-';
+          const hLines = [
+            `• <b>DRB</b>: ${Number(drb.clicks || 0).toLocaleString()} คลิก · ${drb.orders || 0} ออเดอร์ · ฿${Number(drb.comm || 0).toFixed(2)} (${drbRange})`,
+            `• <b>Namcha</b>: ${Number(nam.clicks || 0).toLocaleString()} คลิก · ${nam.orders || 0} ออเดอร์ · ฿${Number(nam.comm || 0).toFixed(2)} (${namRange})`,
+            `• รวมแคมเปญ: <b>฿${Number(camp.total_comm || 0).toFixed(2)}</b> · GMV ฿${Number(camp.total_gmv || 0).toLocaleString()} · CR ${Number(camp.cr_pct || 0).toFixed(2)}%`
+          ];
+          if (zeroCnt > 0) {
+            hLines.push(`<span style="color:#d97706;">⚠️ มี ${zeroCnt} ออเดอร์ที่คอมยัง 0 (เปิด Conversion Report แล้วกดดูดเพื่อเติม)</span>`);
+          }
+          healthEl.innerHTML = hLines.join('<br>');
+        } else if (fetchServer) {
+          healthEl.textContent = 'ยังดึงสรุปแคมเปญจาก VPS ไม่สำเร็จ (เช็กอินเทอร์เน็ต/Token)';
+        }
+      }
     } catch (_e) {
       statusEl.textContent = 'พร้อมใช้งาน — เปิดหน้า affiliate.shopee.co.th เพื่อดูดยอดคอมเข้า aff.db';
     }
@@ -337,13 +363,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function triggerAutoPullNow() {
     const btn = document.getElementById('drb-autopull-btn-now');
     const accEl = document.getElementById('drb-autopull-account');
+    const daysEl = document.getElementById('drb-autopull-days');
     const accountLabel = accEl?.value || 'DRB';
+    const days = Math.max(1, Math.min(90, Number(daysEl?.value || 30)));
     if (btn) {
       btn.disabled = true;
       btn.textContent = '⏳ กำลังดูดยอดคอม ➔ aff.db...';
     }
     try {
-      const res = await ns.sendMessage('AUTO_PULL_COMMISSION_NOW', { accountLabel, days: 30 });
+      const res = await ns.sendMessage('AUTO_PULL_COMMISSION_NOW', { accountLabel, days });
       if (res?.ok && !res.empty && res.syncedToServer) {
         const skipped = Number(res?.serverRes?.skippedExisting || 0);
         const updated = Number(res?.serverRes?.updatedExisting || 0);
@@ -366,7 +394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '⚡ ดูดยอดคอม ➔ aff.db ตอนนี้';
+        btn.textContent = '⚡ ดูดยอดคอม + คลิก ➔ aff.db ตอนนี้';
       }
     }
   }
@@ -376,6 +404,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('drb-autopull-btn-open-report')?.addEventListener('click', () => {
     chrome.tabs.create({ url: 'https://affiliate.shopee.co.th/report/conversion_report' });
   });
+  document.getElementById('drb-autopull-btn-open-click-report')?.addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://affiliate.shopee.co.th/report/click_report' });
+  });
+  document.getElementById('drb-autopull-btn-refresh')?.addEventListener('click', () => refreshAutoPullUI(true));
   document.getElementById('drb-autopull-toggle')?.addEventListener('change', async (e) => {
     const enabled = Boolean(e.target?.checked);
     await ns.sendMessage('SET_AUTO_PULL_SETTINGS', { enabled });
@@ -386,6 +418,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const accountLabel = String(e.target?.value || 'DRB');
     await ns.sendMessage('SET_AUTO_PULL_SETTINGS', { accountLabel });
     ns.showToast(`สลับบัญชี Auto-Pull เป็น ${accountLabel}`);
+  });
+  document.getElementById('drb-autopull-days')?.addEventListener('change', async (e) => {
+    const days = Math.max(1, Math.min(90, Number(e.target?.value || 30)));
+    await ns.sendMessage('SET_AUTO_PULL_SETTINGS', { days });
+    ns.showToast(`ตั้งช่วงดึงย้อนหลังเป็น ${days} วัน`);
   });
   refreshAutoPullUI(true);
 
@@ -462,22 +499,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function switchPanelTab(tabName) {
-  activePanelTab = tabName === 'aff' ? 'aff' : tabName === 'spy' ? 'spy' : 'shopee';
+  activePanelTab =
+    tabName === 'aff' ? 'aff' : tabName === 'spy' ? 'spy' : tabName === 'sync' ? 'sync' : 'shopee';
 
   const btnShopee = document.getElementById('drb-tab-btn-shopee');
   const btnAff = document.getElementById('drb-tab-btn-aff');
   const btnSpy = document.getElementById('drb-tab-btn-spy');
+  const btnSync = document.getElementById('drb-tab-btn-sync');
   const paneShopee = document.getElementById('drb-pane-shopee');
   const paneAff = document.getElementById('drb-pane-aff');
   const paneSpy = document.getElementById('drb-pane-spy');
+  const paneSync = document.getElementById('drb-pane-sync');
+  const linkCard = document.getElementById('sp-link-card');
   const badge = document.getElementById('drb-sp-mode-badge');
 
   btnShopee?.classList.toggle('active', activePanelTab === 'shopee');
   btnAff?.classList.toggle('active', activePanelTab === 'aff');
   btnSpy?.classList.toggle('active', activePanelTab === 'spy');
+  btnSync?.classList.toggle('active', activePanelTab === 'sync');
   paneShopee?.classList.toggle('active', activePanelTab === 'shopee');
   paneAff?.classList.toggle('active', activePanelTab === 'aff');
   paneSpy?.classList.toggle('active', activePanelTab === 'spy');
+  paneSync?.classList.toggle('active', activePanelTab === 'sync');
+  if (linkCard) linkCard.hidden = activePanelTab === 'sync';
 
   if (activePanelTab === 'aff') {
     if (badge) {
@@ -495,6 +539,14 @@ function switchPanelTab(tabName) {
       badge.style.borderColor = 'rgba(124, 58, 237, 0.32)';
     }
     refreshSpyAffBridgeStatus();
+  } else if (activePanelTab === 'sync') {
+    if (badge) {
+      badge.textContent = 'Auto-Pull';
+      badge.style.background = 'rgba(5, 150, 105, 0.14)';
+      badge.style.color = '#059669';
+      badge.style.borderColor = 'rgba(5, 150, 105, 0.32)';
+    }
+    refreshAutoPullUI(true);
   } else {
     if (badge) {
       badge.textContent = 'Shopee';
@@ -525,6 +577,10 @@ async function queryActiveTabAndScrape(showToastOnDone = false) {
   }
 
   if (isAffiliateUrl) {
+    if (/\/report\//i.test(url)) {
+      switchPanelTab('sync');
+      return;
+    }
     switchPanelTab('aff');
     const urlItemMatch = url.match(/product_offer\/(\d+)/);
     const urlItemId = urlItemMatch ? urlItemMatch[1] : '';

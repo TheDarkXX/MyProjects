@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>DrBank AFF Scout v2.14.0 — Side Panel</title>
+  <title>DRB Shopee Aff v2.15.0 — Side Panel</title>
   <link rel="stylesheet" href="src/styles/hud.css">
   <link rel="stylesheet" href="src/styles/sidepanel.css">
 </head>
@@ -18,8 +18,8 @@
           <img src="images/icon48.png"
             style="width:18px;height:18px;border-radius:4px;display:inline-block;vertical-align:middle;"
             alt="Logo">
-          <span>DrBank AFF</span>
-          <span class="drb-aff-version" id="drb-sp-ver">v2.14.0</span>
+          <span>DRB Shopee Aff</span>
+          <span class="drb-aff-version" id="drb-sp-ver">v2.15.0</span>
           <span class="drb-aff-badge-platform" id="drb-sp-mode-badge"
             style="background:rgba(22,163,74,0.12);color:#16a34a;border:1px solid rgba(22,163,74,0.3);font-size:11px;padding:1px 6px;">Shopee</span>
         </div>
@@ -35,13 +35,16 @@
 
       <div class="sp-tabs" role="tablist">
         <button type="button" class="sp-tab-btn active" id="drb-tab-btn-shopee" data-tab="shopee">
-          🛒 Shopee
+          🛒 สินค้า
         </button>
         <button type="button" class="sp-tab-btn" id="drb-tab-btn-aff" data-tab="aff">
-          📊 ข้อเสนอ AFF
+          📊 AFF
         </button>
         <button type="button" class="sp-tab-btn" id="drb-tab-btn-spy" data-tab="spy">
-          🕵️ Spy Collector
+          🕵️ Spy
+        </button>
+        <button type="button" class="sp-tab-btn" id="drb-tab-btn-sync" data-tab="sync">
+          💰 Sync
         </button>
       </div>
     </header>
@@ -337,6 +340,65 @@
       </section>
 
       <!-- ================================================================
+           PANE 4: 💰 Shopee Auto-Pull -> aff.db (v2.15.0)
+           ================================================================ -->
+      <section class="drb-sp-pane" id="drb-pane-sync">
+        <div class="sp-card" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div style="font-size:13px;font-weight:800;">💰 Shopee Auto-Pull ➔ aff.db</div>
+            <span id="drb-autopull-badge" style="font-size:11px;font-weight:700;color:#16a34a;">พร้อมซิงก์</span>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11.5px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" id="drb-autopull-toggle" checked>
+              <span>ดูดอัตโนมัติ (เปิดหน้า AFF + ทุก 30 นาที)</span>
+            </label>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <select id="drb-autopull-account" title="บัญชี Shopee Affiliate" style="font-size:11.5px;padding:5px 8px;border-radius:7px;border:1px solid var(--sp-border,#d1d5db);background:var(--sp-bg,#fff);color:var(--sp-text,#111);font-weight:600;">
+              <option value="DRB">บัญชี: DRB</option>
+              <option value="Namcha">บัญชี: Namcha</option>
+              <option value="Ashira">บัญชี: Ashira</option>
+            </select>
+            <select id="drb-autopull-days" title="ช่วงวันย้อนหลัง" style="font-size:11.5px;padding:5px 8px;border-radius:7px;border:1px solid var(--sp-border,#d1d5db);background:var(--sp-bg,#fff);color:var(--sp-text,#111);font-weight:600;">
+              <option value="7">ย้อนหลัง 7 วัน</option>
+              <option value="14">ย้อนหลัง 14 วัน</option>
+              <option value="30" selected>ย้อนหลัง 30 วัน</option>
+            </select>
+          </div>
+
+          <button type="button" class="sp-tool-btn sp-tool-btn--featured" id="drb-autopull-btn-now" style="width:100%;padding:9px 10px;font-size:12.5px;">
+            ⚡ ดูดยอดคอม + คลิก ➔ aff.db ตอนนี้
+          </button>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button type="button" class="sp-ghost-sm-btn" id="drb-autopull-btn-open-report" title="เปิดหน้า Conversion Report บน affiliate.shopee.co.th">
+              📊 Conversion Report ↗
+            </button>
+            <button type="button" class="sp-ghost-sm-btn" id="drb-autopull-btn-open-click-report" title="เปิดหน้า Click Report บน affiliate.shopee.co.th">
+              🖱️ Click Report ↗
+            </button>
+          </div>
+
+          <div id="drb-autopull-status" style="font-size:11px;color:var(--sp-text-2,#4b5563);line-height:1.45;padding:7px 9px;border-radius:7px;background:var(--sp-surface-2,#f3f4f6);">
+            ⏳ กำลังเช็กสถานะ aff.db...
+          </div>
+        </div>
+
+        <div class="sp-card" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+            <div style="font-size:12.5px;font-weight:800;">📡 Live aff.db Health (16NOV26FBRAD)</div>
+            <button type="button" class="sp-ghost-sm-btn" id="drb-autopull-btn-refresh" title="รีเฟรชยอดล่าสุดจาก VPS aff.db">↻ เช็กยอด</button>
+          </div>
+          <div id="drb-autopull-campaign-health" style="font-size:11px;color:var(--sp-text-2,#4b5563);line-height:1.5;">
+            ⏳ กำลังโหลดข้อมูล DRB vs Namcha จาก aff.db...
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================
            ZONE 2 (SHARED): Compact Sub_id Link Builder
            ================================================================ -->
       <div class="sp-link-card" id="sp-link-card">
@@ -373,37 +435,6 @@
 
         <div class="sp-shortlink-out" id="drb-sp-shortlink-out" hidden title="คลิกเพื่อก๊อปซ้ำ"></div>
       </div>
-
-      <!-- ================================================================
-           ZONE 2.5 (SHARED): Auto-Pull Commission & Clicks -> aff.db (v2.14.0)
-           ================================================================ -->
-      <details class="sp-fold" id="sp-fold-autopull" open>
-        <summary>💰 Auto-Pull ยอดคอม ➔ aff.db <span id="drb-autopull-badge" style="margin-left:auto;font-size:11px;font-weight:600;color:#16a34a;">พร้อมซิงก์</span></summary>
-        <div class="sp-fold-body" style="display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-              <input type="checkbox" id="drb-autopull-toggle" checked>
-              <span>ดูดอัตโนมัติ (เปิดหน้า AFF + ทุก 30 นาที)</span>
-            </label>
-            <select id="drb-autopull-account" title="บัญชี Shopee Affiliate" style="font-size:11px;padding:2px 6px;border-radius:6px;border:1px solid var(--sp-border,#d1d5db);background:var(--sp-bg,#fff);color:var(--sp-text,#111);">
-              <option value="DRB">DRB</option>
-              <option value="Namcha">Namcha</option>
-              <option value="Ashira">Ashira</option>
-            </select>
-          </div>
-          <div id="drb-autopull-status" style="font-size:11px;color:var(--sp-text-2,#4b5563);line-height:1.4;">
-            ⏳ กำลังเช็กสถานะ aff.db...
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button type="button" class="sp-tool-btn sp-tool-btn--featured" id="drb-autopull-btn-now" style="flex:1;">
-              ⚡ ดูดยอดคอม ➔ aff.db ตอนนี้
-            </button>
-            <button type="button" class="sp-ghost-sm-btn" id="drb-autopull-btn-open-report" title="เปิดหน้า Conversion Report บน affiliate.shopee.co.th">
-              📊 หน้า Report ↗
-            </button>
-          </div>
-        </div>
-      </details>
 
       <!-- ================================================================
            ZONE 3 (SHARED): Collapsible Secondary Tools & Scanners

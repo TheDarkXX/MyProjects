@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "DrBank AFF Scout v2.15.0 — Auto-Pull Commission, Social Radar & Pool Bridge",
+  "name": "DRB Shopee Aff — Auto-Pull, Social Radar & Pool Bridge",
   "version": "2.15.0",
-  "description": "Dual-Mode Lean Scout + Auto-Pull ยอดคอม/คลิกเข้า aff.db อัตโนมัติ + V1 Realtime 500-Item Scanner: ดึงยอดขาย/เดือนจริง, เจนลิงก์ s.shopee และส่งเข้า Web UI",
+  "description": "DRB Shopee Aff v2.15.0: Auto-Pull ยอดคอม/คลิกเข้า aff.db อัตโนมัติ + Social Radar + V1 Realtime Scanner + Pool Bridge",
   "icons": {
     "16": "images/icon16.png",
     "48": "images/icon48.png",
     "128": "images/icon128.png"
   },
   "action": {
-    "default_title": "DrBank AFF Scout — เปิดแถบข้าง Side Panel / Web UI",
+    "default_title": "DRB Shopee Aff — เปิดแถบข้าง Side Panel / Web UI",
     "default_icon": {
       "16": "images/icon16.png",
       "48": "images/icon48.png",
