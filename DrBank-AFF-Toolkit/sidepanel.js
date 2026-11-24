@@ -364,11 +364,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  async function syncActiveShopeeAccountFromTab() {
+    const detEl = document.getElementById('drb-autopull-detected-acct');
+    const accEl = document.getElementById('drb-autopull-account');
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id || !String(tab.url || '').includes('affiliate.shopee.co.th')) {
+        if (detEl) {
+          detEl.textContent = 'ℹ️ เปิดหน้า affiliate.shopee.co.th เพื่อตรวจจับชื่อบัญชีอัตโนมัติ';
+          detEl.style.background = 'var(--sp-surface-2,#f3f4f6)';
+          detEl.style.color = 'var(--sp-text-2,#4b5563)';
+          detEl.style.borderColor = 'var(--sp-border,#d1d5db)';
+        }
+        return null;
+      }
+      const res = await chrome.tabs.sendMessage(tab.id, { action: 'GET_ACTIVE_SHOPEE_ACCOUNT' }).catch(() => null);
+      if (res?.ok && res.accountLabel) {
+        if (accEl && accEl.value !== res.accountLabel) {
+          accEl.value = res.accountLabel;
+          await ns.sendMessage('SET_AUTO_PULL_SETTINGS', { accountLabel: res.accountLabel }).catch(() => {});
+        }
+        if (detEl) {
+          detEl.textContent = `🟢 ตรวจพบหน้าเว็บ: ${res.rawName || res.accountLabel} ➔ ล็อกเป็น ${res.accountLabel} อัตโนมัติ`;
+          detEl.style.background = 'rgba(5,150,105,0.10)';
+          detEl.style.color = '#047857';
+          detEl.style.borderColor = 'rgba(5,150,105,0.32)';
+        }
+        return res.accountLabel;
+      }
+      if (detEl) {
+        detEl.textContent = '⚠️ ยังอ่านชื่อบัญชีจากหน้าเว็บไม่เจอ — ลองรีเฟรชหน้า (F5) หรือเลือกเอง';
+        detEl.style.background = 'rgba(217,119,6,0.08)';
+        detEl.style.color = '#b45309';
+        detEl.style.borderColor = 'rgba(217,119,6,0.28)';
+      }
+    } catch (_e) {}
+    return null;
+  }
+
   async function triggerAutoPullNow() {
     const btn = document.getElementById('drb-autopull-btn-now');
     const accEl = document.getElementById('drb-autopull-account');
     const daysEl = document.getElementById('drb-autopull-days');
-    const accountLabel = accEl?.value || 'DRB';
+    const detected = await syncActiveShopeeAccountFromTab();
+    const accountLabel = detected || accEl?.value || 'DRB';
     const days = Math.max(1, Math.min(90, Number(daysEl?.value || 30)));
     if (btn) {
       btn.disabled = true;
@@ -434,10 +473,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   chrome.tabs.onActivated.addListener(() => {
     queryActiveTabAndScrape(false);
     if (activePanelTab === 'spy') refreshSpyAffBridgeStatus();
+    if (activePanelTab === 'sync') syncActiveShopeeAccountFromTab();
   });
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (tabId === currentTabId && (changeInfo.url || changeInfo.status === 'complete')) {
       queryActiveTabAndScrape(false);
+      if (activePanelTab === 'sync') syncActiveShopeeAccountFromTab();
     }
     if (
       activePanelTab === 'spy' &&
@@ -550,7 +591,7 @@ function switchPanelTab(tabName) {
       badge.style.color = '#059669';
       badge.style.borderColor = 'rgba(5, 150, 105, 0.32)';
     }
-    refreshAutoPullUI(true);
+    syncActiveShopeeAccountFromTab().finally(() => refreshAutoPullUI(true));
   } else {
     if (badge) {
       badge.textContent = 'Shopee';

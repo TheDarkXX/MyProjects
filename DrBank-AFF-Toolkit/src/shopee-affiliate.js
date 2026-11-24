@@ -1233,6 +1233,54 @@
         sendResponse({ ok: true, report: rep });
         return true;
       }
+      if (req.action === 'GET_ACTIVE_SHOPEE_ACCOUNT') {
+        const detectAccountFromDom = () => {
+          const matchAcct = (txt) => {
+            const s = String(txt || '').trim();
+            if (!s || s.length > 60) return null;
+            if (/namcha|น้ำชา/i.test(s)) return { accountLabel: 'Namcha', rawName: s };
+            if (/ashira|อชิระ/i.test(s)) return { accountLabel: 'Ashira', rawName: s };
+            if (/(?:^|\b)drb(?:\b|$)|doctorbank/i.test(s)) return { accountLabel: 'DRB', rawName: s };
+            return null;
+          };
+          const headerSelectors = [
+            'header *',
+            '.ant-layout-header *',
+            '[class*="header" i] *',
+            '[class*="account" i]',
+            '[class*="user" i]',
+            '.ant-dropdown-trigger'
+          ];
+          const seen = new Set();
+          for (const sel of headerSelectors) {
+            for (const el of document.querySelectorAll(sel)) {
+              if (seen.has(el) || el.closest('#drb-aff-hud-root, #drb-pool-bridge-bar')) continue;
+              seen.add(el);
+              if (el.children.length > 2) continue;
+              const rect = el.getBoundingClientRect();
+              if (rect.width === 0 || rect.height === 0 || rect.top > 120) continue;
+              const hit = matchAcct(el.innerText || el.textContent || '');
+              if (hit) return { ...hit, source: 'header_dom' };
+            }
+          }
+          const rows = document.querySelectorAll('tbody tr, .ant-table-tbody tr');
+          let drbCnt = 0;
+          let namCnt = 0;
+          let ashCnt = 0;
+          for (let i = 0; i < Math.min(rows.length, 10); i++) {
+            const t = (rows[i].innerText || rows[i].textContent || '').toLowerCase();
+            if (t.includes('ainam')) namCnt++;
+            if (t.includes('aiash')) ashCnt++;
+            if (t.includes('aidrb')) drbCnt++;
+          }
+          if (namCnt > drbCnt && namCnt >= ashCnt) return { accountLabel: 'Namcha', rawName: 'ainam* (ตาราง)', source: 'table_dom' };
+          if (ashCnt > drbCnt && ashCnt > namCnt) return { accountLabel: 'Ashira', rawName: 'aiash* (ตาราง)', source: 'table_dom' };
+          if (drbCnt > 0) return { accountLabel: 'DRB', rawName: 'aidrb* (ตาราง)', source: 'table_dom' };
+          return { accountLabel: '', rawName: '', source: 'none' };
+        };
+        sendResponse({ ok: true, ...detectAccountFromDom(), url: location.href });
+        return true;
+      }
       if (req.action === 'PULL_SHOPEE_REPORTS') {
         (async () => {
           try {
