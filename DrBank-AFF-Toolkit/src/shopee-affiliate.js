@@ -4547,14 +4547,14 @@
   }
 
   // ==========================================================================
-  // 5. ZERO-TOUCH 165-ITEM POOL BRIDGE (AG <-> Web UI <-> Shopee GraphQL)
+  // 5. ZERO-TOUCH POOL BRIDGE (AG <-> Web UI <-> Shopee GraphQL)
   // ==========================================================================
   let poolBridgeRunning = false;
   let lastPoolConvertedList = [];
   const POOL_ACCOUNTS = {
-    drb: { id: 'drb', expectedUtm: 'an_15324240509', label: '🔵 DRB (aidrb)', title: 'Shopee DRB (beyond8989)', border: '#1e3a8a', accent: '#2563eb', badgeBg: '#1e3a8a', badgeText: '#dbeafe' },
-    namcha: { id: 'namcha', expectedUtm: 'an_15351250491', label: '🩷 Namcha (ainam)', title: 'Shopee Namcha', border: '#9d174d', accent: '#db2777', badgeBg: '#831843', badgeText: '#fce7f3' },
-    ashira: { id: 'ashira', expectedUtm: '', label: '🟣 Ashira (aiash)', title: 'Shopee Ashira', border: '#6b21a8', accent: '#9333ea', badgeBg: '#581c87', badgeText: '#f3e8ff' }
+    drb: { id: 'drb', expectedUtm: 'an_15324240509', label: 'DRB', dot: '#38bdf8', title: 'Shopee DRB (beyond8989)', border: '#1e3a8a', accent: '#2563eb', badgeBg: 'rgba(37,99,235,0.16)', badgeText: '#93c5fd' },
+    namcha: { id: 'namcha', expectedUtm: 'an_15351250491', label: 'Namcha', dot: '#f472b6', title: 'Shopee Namcha', border: '#831843', accent: '#db2777', badgeBg: 'rgba(219,39,119,0.16)', badgeText: '#f9a8d4' },
+    ashira: { id: 'ashira', expectedUtm: '', label: 'Ashira', dot: '#a855f7', title: 'Shopee Ashira', border: '#581c87', accent: '#9333ea', badgeBg: 'rgba(147,51,234,0.16)', badgeText: '#d8b4fe' }
   };
   let selectedPoolAccount = (() => {
     try {
@@ -4564,10 +4564,18 @@
       return 'drb';
     }
   })();
+  let selectedPoolScope = (() => {
+    try {
+      const saved = String(localStorage.getItem('drb_pool_scope') || 'reels').toLowerCase();
+      return saved === 'all' ? 'all' : 'reels';
+    } catch {
+      return 'reels';
+    }
+  })();
 
   function setPoolAccount(acctId, bar) {
     if (poolBridgeRunning) {
-      ns.showToast('⏳ รอให้รอบปัจจุบันแปลงเสร็จก่อนค่อยสลับบัญชี');
+      ns.showToast('⏳ Wait for current link generation batch to finish');
       return;
     }
     const next = POOL_ACCOUNTS[acctId] ? acctId : 'drb';
@@ -4579,10 +4587,23 @@
     }
   }
 
+  function setPoolScope(scope, bar) {
+    if (poolBridgeRunning) {
+      ns.showToast('⏳ Wait for current link generation batch to finish');
+      return;
+    }
+    selectedPoolScope = scope === 'all' ? 'all' : 'reels';
+    try { localStorage.setItem('drb_pool_scope', selectedPoolScope); } catch {}
+    if (bar) {
+      applyPoolAccountTheme(bar);
+      refreshPoolBridgeBannerStatus(bar, { manual: true });
+    }
+  }
+
   function applyPoolAccountTheme(bar, accountCounts = null) {
     if (!bar) return;
     const cfg = POOL_ACCOUNTS[selectedPoolAccount] || POOL_ACCOUNTS.drb;
-    bar.style.borderColor = cfg.border;
+    bar.style.borderColor = 'rgba(148,163,184,0.22)';
     const badge = bar.querySelector('#drb-pool-badge');
     if (badge) {
       badge.style.background = cfg.badgeBg;
@@ -4590,29 +4611,38 @@
       badge.style.color = cfg.badgeText;
     }
     const runBtn = bar.querySelector('#drb-pool-btn-run');
-    if (runBtn && !poolBridgeRunning) {
-      runBtn.style.background = `linear-gradient(180deg, ${cfg.accent} 0%, ${cfg.border} 100%)`;
+    if (runBtn && !poolBridgeRunning && !runBtn.dataset.isEmpty) {
+      runBtn.style.background = cfg.accent;
       runBtn.style.borderColor = cfg.accent;
+      runBtn.style.color = '#fff';
     }
     bar.querySelectorAll('.drb-acct-tab').forEach((btn) => {
       const id = btn.getAttribute('data-acct');
       const ac = POOL_ACCOUNTS[id];
       const active = id === selectedPoolAccount;
-      btn.style.background = active ? ac.accent : '#0f172a';
-      btn.style.borderColor = active ? ac.accent : '#334155';
-      btn.style.color = active ? '#fff' : '#94a3b8';
-      btn.style.fontWeight = active ? '800' : '600';
+      btn.style.background = active ? 'rgba(255,255,255,0.1)' : 'transparent';
+      btn.style.borderColor = active ? ac.accent : 'rgba(148,163,184,0.18)';
+      btn.style.color = active ? '#f8fafc' : '#94a3b8';
+      btn.style.fontWeight = active ? '700' : '500';
       if (accountCounts && accountCounts[id]) {
         const p = Number(accountCounts[id].pending || 0);
-        const t = Number(accountCounts[id].total || 0);
-        btn.textContent = p > 0 ? `${ac.label} · รอ ${p}` : `${ac.label} (${t}✓)`;
+        const badgeHtml = p > 0
+          ? `<span style="background:${ac.accent};color:#fff;padding:1px 6px;border-radius:999px;font-size:10.5px;font-weight:700;">${p}</span>`
+          : `<span style="color:#10b981;font-weight:700;">✓</span>`;
+        btn.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${ac.dot};display:inline-block;"></span><span>${ac.label}</span>${badgeHtml}`;
       }
+    });
+    bar.querySelectorAll('.drb-scope-btn').forEach((btn) => {
+      const isAct = btn.getAttribute('data-scope') === selectedPoolScope;
+      btn.style.background = isAct ? 'rgba(56,189,248,0.18)' : 'transparent';
+      btn.style.color = isAct ? '#38bdf8' : '#64748b';
+      btn.style.fontWeight = isAct ? '700' : '500';
     });
   }
 
   function downloadPoolLinksCsv(items) {
     if (!Array.isArray(items) || !items.length) {
-      ns.showToast('⚠️ ยังไม่มีรายการลิงก์ที่แปลงเสร็จ');
+      ns.showToast('⚠️ No generated links available to export yet');
       return;
     }
     const headers = ['Seq', 'Sub_id1', 'Sub_id2', 'SKU_Code', 'Item_ID', 'Title', 'Short_Link', 'Shopee_URL'];
@@ -4646,7 +4676,7 @@
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    ns.showToast(`📥 ดาวน์โหลดไฟล์สำรอง ${items.length} ลิงก์เรียบร้อย!`);
+    ns.showToast(`📥 Exported ${items.length} short links to CSV`);
   }
 
   function ensurePoolBridgeBanner(forceShow = false) {
@@ -4663,60 +4693,60 @@
     bar.id = 'drb-pool-bridge-bar';
     bar.style.cssText = [
       'position:fixed',
-      'top:14px',
+      'top:12px',
       'left:50%',
       'transform:translateX(-50%)',
       'z-index:2147483640',
-      'width:min(880px, 95vw)',
-      'background:#0b1120',
+      'width:min(940px, 96vw)',
+      'background:rgba(11,17,32,0.96)',
+      'backdrop-filter:blur(10px)',
       'color:#f8fafc',
-      'border:1px solid #1e3a8a',
+      'border:1px solid rgba(148,163,184,0.22)',
       'border-radius:14px',
-      'box-shadow:0 16px 40px rgba(0,0,0,0.6)',
-      'padding:14px 18px',
-      'font-family:Inter,Prompt,sans-serif',
-      'font-size:13px'
+      'box-shadow:0 16px 40px rgba(0,0,0,0.55)',
+      'padding:10px 14px',
+      'font-family:Inter,system-ui,-apple-system,sans-serif',
+      'font-size:12.5px'
     ].join(';');
 
     bar.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span id="drb-pool-badge" style="background:#1e3a8a;color:#dbeafe;border:1px solid #2563eb;font-weight:800;padding:4px 9px;border-radius:8px;font-size:12px;">🌉 POOL BRIDGE</span>
-          <div>
-            <div style="font-weight:700;font-size:14px;color:#fff;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <span>คลังแคมเปญ</span>
-              <code style="color:#93c5fd;background:#172554;border:1px solid #1e3a8a;padding:2px 6px;border-radius:4px;">16NOV26FBRAD</code>
-              <span>(<code id="drb-pool-range-txt" style="color:#fca5a5;">Master + Spy Pool</code>)</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap;">
-              <span style="font-size:11px;color:#94a3b8;">แยกบัญชี Shopee:</span>
-              <button type="button" class="drb-acct-tab" data-acct="drb" style="border:1px solid #2563eb;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:11px;">🔵 DRB (aidrb)</button>
-              <button type="button" class="drb-acct-tab" data-acct="namcha" style="border:1px solid #334155;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:11px;">🩷 Namcha (ainam)</button>
-              <button type="button" class="drb-acct-tab" data-acct="ashira" style="border:1px solid #334155;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:11px;">🟣 Ashira (aiash)</button>
-            </div>
-            <div id="drb-pool-status-txt" style="font-size:12px;color:#94a3b8;margin-top:4px;">
-              กำลังเช็กจำนวนคิวรอแปลงลิงก์ + ดึงค่าคอมจาก aff.doctorbankonline.com...
-            </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span id="drb-pool-badge" style="border:1px solid #2563eb;font-weight:700;padding:4px 9px;border-radius:8px;font-size:11px;letter-spacing:0.04em;">POOL BRIDGE</span>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <button type="button" class="drb-acct-tab" data-acct="drb" style="display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:4px 9px;cursor:pointer;font-size:12px;">DRB</button>
+            <button type="button" class="drb-acct-tab" data-acct="namcha" style="display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:4px 9px;cursor:pointer;font-size:12px;">Namcha</button>
+            <button type="button" class="drb-acct-tab" data-acct="ashira" style="display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:4px 9px;cursor:pointer;font-size:12px;">Ashira</button>
+          </div>
+          <div style="display:inline-flex;border:1px solid rgba(148,163,184,0.18);border-radius:8px;overflow:hidden;padding:2px;gap:2px;">
+            <button type="button" class="drb-scope-btn" data-scope="reels" style="border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;">Reels</button>
+            <button type="button" class="drb-scope-btn" data-scope="all" style="border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;">All</button>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <button type="button" id="drb-pool-btn-run" style="background:linear-gradient(180deg,#1d4ed8 0%,#1e3a8a 100%);color:#fff;font-weight:700;border:1px solid #2563eb;border-radius:9px;padding:9px 15px;cursor:pointer;font-size:13px;box-shadow:0 4px 12px rgba(29,78,216,0.35);">
-            🚀 ดึงค่าคอม + แปลงลิงก์ที่รอ ➔ Web UI
+
+        <div id="drb-pool-status-txt" style="font-size:12.5px;color:#cbd5e1;flex:1;min-width:170px;text-align:center;">
+          Checking queue...
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px;position:relative;">
+          <button type="button" id="drb-pool-btn-run" style="background:#2563eb;color:#fff;font-weight:700;border:1px solid #2563eb;border-radius:8px;padding:6px 13px;cursor:pointer;font-size:12px;white-space:nowrap;">
+            ✓ Up to date
           </button>
-          <button type="button" id="drb-pool-btn-refresh-queue" title="เช็กจำนวนคิวรอแปลงลิงก์ล่าสุดจาก Server โดยไม่ต้อง Reload Extension" style="background:#0f172a;color:#93c5fd;font-weight:700;border:1px solid #2563eb;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;">
-            🔄 เช็กคิวใหม่
+          <button type="button" id="drb-pool-btn-refresh-queue" title="Refresh queue count" style="background:rgba(255,255,255,0.06);color:#cbd5e1;font-weight:700;border:1px solid rgba(148,163,184,0.2);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:12px;">
+            ↻
           </button>
-          <button type="button" id="drb-pool-btn-force" title="บังคับดึงเรทจริง + แปลงลิงก์ใหม่เฉพาะบัญชีที่เลือก" style="background:linear-gradient(180deg,#991b1b 0%,#7f1d1d 100%);color:#fef2f2;font-weight:700;border:1px solid #b91c1c;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;box-shadow:0 4px 12px rgba(153,27,27,0.35);">
-            🔄 รีเฟรชบัญชีนี้
+          <button type="button" id="drb-pool-btn-more" title="More options" style="background:rgba(255,255,255,0.06);color:#94a3b8;font-weight:700;border:1px solid rgba(148,163,184,0.2);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:12px;">
+            ⋯
           </button>
-          <button type="button" id="drb-pool-btn-csv" style="display:none;background:#172554;color:#dbeafe;font-weight:700;border:1px solid #1d4ed8;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;">
-            📥 โหลด CSV สำรอง
-          </button>
-          <button type="button" id="drb-pool-btn-hide" title="ซ่อนแถบนี้" style="background:transparent;color:#94a3b8;border:none;cursor:pointer;font-size:16px;padding:4px 6px;">✕</button>
+          <div id="drb-pool-more-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:24px;min-width:190px;background:#0f172a;border:1px solid rgba(148,163,184,0.26);border-radius:10px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,0.6);z-index:2147483645;flex-direction:column;gap:4px;">
+            <button type="button" id="drb-pool-btn-csv" style="display:none;width:100%;text-align:left;background:transparent;color:#e2e8f0;border:none;border-radius:6px;padding:7px 9px;cursor:pointer;font-size:12px;">📥 Download CSV</button>
+            <button type="button" id="drb-pool-btn-force" style="width:100%;text-align:left;background:transparent;color:#fca5a5;border:none;border-radius:6px;padding:7px 9px;cursor:pointer;font-size:12px;">⚠️ Force Refresh All</button>
+          </div>
+          <button type="button" id="drb-pool-btn-hide" title="Hide bar" style="background:transparent;color:#64748b;border:none;cursor:pointer;font-size:14px;padding:4px 5px;">✕</button>
         </div>
       </div>
-      <div id="drb-pool-prog-wrap" style="display:none;margin-top:10px;background:#172554;height:8px;border-radius:99px;overflow:hidden;border:1px solid #1e3a8a;">
-        <div id="drb-pool-prog-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#1e3a8a,#2563eb);transition:width 0.25s ease;"></div>
+      <div id="drb-pool-prog-wrap" style="display:none;margin-top:8px;background:rgba(148,163,184,0.16);height:4px;border-radius:99px;overflow:hidden;">
+        <div id="drb-pool-prog-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#38bdf8,#2563eb);transition:width 0.25s ease;"></div>
       </div>
     `;
 
@@ -4725,18 +4755,35 @@
     bar.querySelectorAll('.drb-acct-tab').forEach((btn) => {
       btn.addEventListener('click', () => setPoolAccount(btn.getAttribute('data-acct'), bar));
     });
+    bar.querySelectorAll('.drb-scope-btn').forEach((btn) => {
+      btn.addEventListener('click', () => setPoolScope(btn.getAttribute('data-scope'), bar));
+    });
     bar.querySelector('#drb-pool-btn-run').addEventListener('click', () => runCampaignPoolBridge(false));
     bar.querySelector('#drb-pool-btn-refresh-queue').addEventListener('click', () =>
       refreshPoolBridgeBannerStatus(bar, { manual: true })
     );
-    bar.querySelector('#drb-pool-btn-force').addEventListener('click', () => runCampaignPoolBridge(true));
-    bar.querySelector('#drb-pool-btn-csv').addEventListener('click', () => downloadPoolLinksCsv(lastPoolConvertedList));
+    const moreBtn = bar.querySelector('#drb-pool-btn-more');
+    const moreMenu = bar.querySelector('#drb-pool-more-menu');
+    moreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      moreMenu.style.display = moreMenu.style.display === 'flex' ? 'none' : 'flex';
+    });
+    document.addEventListener('click', () => {
+      if (moreMenu) moreMenu.style.display = 'none';
+    });
+    bar.querySelector('#drb-pool-btn-force').addEventListener('click', () => {
+      moreMenu.style.display = 'none';
+      runCampaignPoolBridge(true);
+    });
+    bar.querySelector('#drb-pool-btn-csv').addEventListener('click', () => {
+      moreMenu.style.display = 'none';
+      downloadPoolLinksCsv(lastPoolConvertedList);
+    });
     bar.querySelector('#drb-pool-btn-hide').addEventListener('click', () => {
       bar.style.display = 'none';
     });
     applyPoolAccountTheme(bar);
 
-    // Check status on load (Master Pool + Spy Pool breakdown)
     refreshPoolBridgeBannerStatus(bar, { manual: false });
 
     return bar;
@@ -4747,60 +4794,65 @@
     const stEl = bar.querySelector('#drb-pool-status-txt');
     const runBtn = bar.querySelector('#drb-pool-btn-run');
     const forceBtn = bar.querySelector('#drb-pool-btn-force');
-    const rangeEl = bar.querySelector('#drb-pool-range-txt');
     const refreshBtn = bar.querySelector('#drb-pool-btn-refresh-queue');
-    const origRefreshTxt = refreshBtn?.textContent || '🔄 เช็กคิวใหม่';
 
     if (manual && refreshBtn) {
       refreshBtn.disabled = true;
-      refreshBtn.textContent = '⏳ กำลังเช็ก...';
+      refreshBtn.textContent = '…';
     }
 
     try {
-      const res = await ns.sendMessage('FETCH_POOL_PENDING', { force: false, account: selectedPoolAccount });
+      const res = await ns.sendMessage('FETCH_POOL_PENDING', {
+        force: false,
+        account: selectedPoolAccount,
+        pool: selectedPoolScope
+      });
       if (!stEl || !res) return res || null;
       const acctCfg = POOL_ACCOUNTS[selectedPoolAccount] || POOL_ACCOUNTS.drb;
       applyPoolAccountTheme(bar, res.accountCounts || null);
       const total = res.totalPool || 0;
-      const masterCount = res.masterCount ?? total;
+      const masterCount = res.masterCount ?? 0;
       const spyCount = res.spyCount ?? 0;
       const reelsCount = res.reelsCount ?? 0;
       const done = res.completedCount || 0;
       const pend = res.pendingCount || 0;
-      const pendingItems = Array.isArray(res.items) ? res.items : [];
-      const pendSpy = pendingItems.filter((x) => x.pool_source === 'spy').length;
-      const pendReels = pendingItems.filter((x) => x.pool_source === 'reels_variant').length;
-      const pendMaster = Math.max(0, pend - pendSpy - pendReels);
-      const pendParts = [];
-      if (pendMaster > 0) pendParts.push(`Master ${pendMaster}`);
-      if (pendSpy > 0) pendParts.push(`Spy ${pendSpy}`);
-      if (pendReels > 0) pendParts.push(`Reels ${pendReels}`);
-      const pendBreakdown = pendParts.length ? ` (${pendParts.join(' + ')})` : '';
+      const scopeLbl = selectedPoolScope === 'reels' ? 'Reels' : 'Pool';
 
-      if (rangeEl) {
-        rangeEl.textContent = `${acctCfg.title} · รวม ${total}`;
-      }
       if (forceBtn) {
-        forceBtn.textContent = total > 0 ? `🔄 รีเฟรช ${acctCfg.id.toUpperCase()} (${total})` : '🔄 รีเฟรชบัญชีนี้';
+        forceBtn.textContent = total > 0 ? `⚠️ Force Refresh All (${total})` : '⚠️ Force Refresh All';
       }
+      stEl.title = `${acctCfg.title} · Campaign 16NOV26FBRAD · Reels ${reelsCount} · Master ${masterCount} · Spy ${spyCount}`;
+
       if (pend === 0) {
-        stEl.innerHTML = `<span style="color:#93c5fd;font-weight:700;">✅ [${acctCfg.title}] ครบทั้ง ${total}/${total} รายการแล้ว — มีลิงก์ s.shopee.co.th ครบ!</span>`;
-        if (runBtn && !poolBridgeRunning) runBtn.textContent = `✅ [${acctCfg.id.toUpperCase()}] ครบ ${total}/${total} แล้ว`;
-        if (manual) ns.showToast(`✅ [${acctCfg.title}] ครบทั้ง ${total}/${total} รายการแล้ว!`);
+        stEl.innerHTML = `<span style="color:#10b981;font-weight:700;">All ${scopeLbl} links ready ✓</span> <span style="color:#64748b;font-size:11.5px;">(${done}/${total})</span>`;
+        if (runBtn && !poolBridgeRunning) {
+          runBtn.dataset.isEmpty = '1';
+          runBtn.style.background = 'rgba(255,255,255,0.06)';
+          runBtn.style.borderColor = 'rgba(148,163,184,0.22)';
+          runBtn.style.color = '#94a3b8';
+          runBtn.textContent = '✓ Up to date';
+        }
+        if (manual) ns.showToast(`✓ ${acctCfg.label}: All ${total} ${scopeLbl} links ready`);
       } else {
-        stEl.innerHTML = `[<b style="color:#fff;">${acctCfg.title}</b>] รวม <b style="color:#fff;">${total}</b> (Master ${masterCount} · Spy ${spyCount} · Reels ${reelsCount}) · เสร็จ <b style="color:#93c5fd;">${done}</b> · รอแปลง <b style="color:#fca5a5;">${pend} ตัว${pendBreakdown}</b>`;
-        if (runBtn && !poolBridgeRunning) runBtn.textContent = `🚀 [${acctCfg.id.toUpperCase()}] แปลงที่รอ (${pend} ตัว) ➔ Web UI`;
-        if (manual) ns.showToast(`🔄 [${acctCfg.title}] รอ ${pend} ตัว${pendBreakdown}`);
+        stEl.innerHTML = `<b style="color:#fff;">${pend}</b> ${scopeLbl} links pending <span style="color:#64748b;font-size:11.5px;">(${done}/${total} ready)</span>`;
+        if (runBtn && !poolBridgeRunning) {
+          delete runBtn.dataset.isEmpty;
+          runBtn.style.background = acctCfg.accent;
+          runBtn.style.borderColor = acctCfg.accent;
+          runBtn.style.color = '#fff';
+          runBtn.textContent = `⚡ Generate ${pend} Links`;
+        }
+        if (manual) ns.showToast(`🔄 ${acctCfg.label}: ${pend} ${scopeLbl} links pending`);
       }
       return res;
     } catch (err) {
-      if (stEl) stEl.textContent = `⚠️ ยังไม่เชื่อม Web UI (${err?.message || 'กรุณาตรวจสอบการเชื่อมต่อ'})`;
-      if (manual) ns.showToast(`⚠️ เช็กคิวไม่สำเร็จ: ${err?.message || String(err)}`, 'error');
+      if (stEl) stEl.textContent = `⚠️ Web UI disconnected (${err?.message || 'Check connection'})`;
+      if (manual) ns.showToast(`⚠️ Queue check failed: ${err?.message || String(err)}`, 'error');
       return null;
     } finally {
       if (manual && refreshBtn) {
         refreshBtn.disabled = false;
-        refreshBtn.textContent = origRefreshTxt;
+        refreshBtn.textContent = '↻';
       }
     }
   }
@@ -4913,7 +4965,11 @@
 
     let pendingSaveBuffer = [];
     try {
-      const poolRes = await ns.sendMessage('FETCH_POOL_PENDING', { force: forceAll, account: selectedPoolAccount });
+      const poolRes = await ns.sendMessage('FETCH_POOL_PENDING', {
+        force: forceAll,
+        account: selectedPoolAccount,
+        pool: selectedPoolScope
+      });
       const items = Array.isArray(poolRes?.items) ? poolRes.items : [];
 
       if (!items.length) {
@@ -5071,9 +5127,10 @@
         stEl.innerHTML = `<span style="color:#93c5fd;font-weight:800;">🎉 สำเร็จ! บันทึกลิงก์ s.shopee.co.th ครบ ${successCount}/${total} รายการ · อัปเดตค่าคอม ${rateSyncedCount} ตัว ➔ aff.doctorbankonline.com แล้ว!</span>`;
       }
       if (csvBtn && lastPoolConvertedList.length > 0) {
-        csvBtn.style.display = 'inline-block';
+        csvBtn.style.display = 'block';
       }
-      ns.showToast(`🎉 ซิงก์ Pool สำเร็จ (ลิงก์ ${successCount}/${total} · ค่าคอม ${rateSyncedCount})!`);
+      ns.showToast(`🎉 Synced ${successCount}/${total} links (${rateSyncedCount} rates updated)`);
+      refreshPoolBridgeBannerStatus(bar, { manual: false });
     } catch (err) {
       if (pendingSaveBuffer.length > 0) {
         await ns.sendMessage('SAVE_POOL_SHORTLINKS', { links: pendingSaveBuffer }).catch(() => {});
@@ -5081,14 +5138,13 @@
       }
       if (stEl) {
         const icon = err?.securityCheck ? '🛑' : '❌';
-        stEl.innerHTML = `<span style="color:#f87171;">${icon} ${err?.message || String(err)} (ลิงก์ s.shopee.co.th ทั้ง ${successCount || 0} ตัวถูกบันทึกเข้าเว็บไปแล้ว!)</span>`;
+        stEl.innerHTML = `<span style="color:#f87171;">${icon} ${err?.message || String(err)} (${successCount || 0} saved)</span>`;
       }
       ns.showToast(`${err?.securityCheck ? '🛑' : '❌'} ${err?.message || String(err)}`);
     } finally {
       poolBridgeRunning = false;
       if (runBtn) {
         runBtn.disabled = false;
-        runBtn.textContent = '✅ ซิงก์ลิงก์ + ค่าคอมใน Pool เรียบร้อย';
       }
     }
   }

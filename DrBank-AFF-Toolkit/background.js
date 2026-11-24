@@ -1780,6 +1780,7 @@ async function handleMessage(msg, _sender) {
       const qs = new URLSearchParams();
       if (payload?.force) qs.set('force', '1');
       qs.set('account', String(payload?.account || 'drb').toLowerCase());
+      qs.set('pool', String(payload?.pool || 'reels').toLowerCase());
       const resp = await fetch(`${baseUrl}/api/shopee-aff/pool-pending?${qs.toString()}`, {
         method: 'GET',
         credentials: 'include',
