@@ -343,11 +343,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       btn.textContent = '⏳ กำลังดูดยอดคอม ➔ aff.db...';
     }
     try {
-      const res = await ns.sendMessage('AUTO_PULL_COMMISSION_NOW', { accountLabel, days: 14 });
+      const res = await ns.sendMessage('AUTO_PULL_COMMISSION_NOW', { accountLabel, days: 30 });
       if (res?.ok && !res.empty && res.syncedToServer) {
         const skipped = Number(res?.serverRes?.skippedExisting || 0);
+        const updated = Number(res?.serverRes?.updatedExisting || 0);
         const inserted = Number(res?.serverRes?.conversions ?? res.conversions ?? 0);
-        const skipTxt = skipped > 0 ? ` (ข้ามของเดิม ${skipped} แถว ไม่ทับ)` : '';
+        const notes = [];
+        if (updated > 0) notes.push(`เติมข้อมูล ${updated} แถว`);
+        if (skipped > 0) notes.push(`ข้ามของเดิม ${skipped} แถว ไม่ทับ`);
+        const skipTxt = notes.length ? ` (${notes.join(', ')})` : '';
         ns.showToast(`💰 ซิงก์เข้า aff.db สำเร็จ! +${inserted} ใหม่${skipTxt} · ${res.clicks} คลิก`);
       } else if (res?.ok && res.empty) {
         ns.showToast(res.message || 'เปิดหน้า Conversion Report บน affiliate.shopee.co.th แล้วกดอีกครั้ง');

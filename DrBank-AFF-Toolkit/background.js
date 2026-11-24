@@ -1866,24 +1866,79 @@ async function handleMessage(msg, _sender) {
       const affToken = String(settings?.affToken || 'doctorbank2026');
       if (baseUrl && /^https?:\/\//i.test(baseUrl)) {
         try {
-          const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), 12000);
-          const resp = await fetch(`${baseUrl}/api/shopee-aff/report-ingest`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Aff-Token': affToken
-            },
-            body: JSON.stringify(reportBatch),
-            signal: ctrl.signal
-          });
-          clearTimeout(timer);
-          if (resp && resp.ok) {
-            serverRes = await resp.json().catch(() => ({ ok: true }));
-            syncedToServer = Boolean(serverRes?.ok !== false);
-          } else {
-            serverError = `HTTP ${resp?.status || 0}`;
+          const clickChunkSize = 800;
+          const convChunkSize = 300;
+          const clickChunks = [];
+          for (let i = 0; i < clicks.length; i += clickChunkSize) {
+            clickChunks.push(clicks.slice(i, i + clickChunkSize));
+          }
+          const convChunks = [];
+          for (let i = 0; i < conversions.length; i += convChunkSize) {
+            convChunks.push(conversions.slice(i, i + convChunkSize));
+          }
+          const totalBatches = Math.max(1, clickChunks.length, convChunks.length);
+          const agg = {
+            ok: true,
+            inserted: 0,
+            conversions: 0,
+            updatedExisting: 0,
+            skippedExisting: 0,
+            cancelled: 0,
+            clicks: 0,
+            daily: 0,
+            autoNormalizedMicro: 0,
+            totalNetComm: reportBatch.totalCommission,
+            accountLabel
+          };
+
+          for (let b = 0; b < totalBatches; b++) {
+            const chunkPayload = {
+              id: `${reportBatch.id}_b${b}`,
+              source: reportBatch.source,
+              accountLabel,
+              date: reportBatch.date,
+              conversions: convChunks[b] || [],
+              clicks: clickChunks[b] || [],
+              daily: b === 0 ? daily : [],
+              totalCommission: reportBatch.totalCommission,
+              orderCount: (convChunks[b] || []).length
+            };
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 25000);
+            const resp = await fetch(`${baseUrl}/api/shopee-aff/report-ingest`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Aff-Token': affToken
+              },
+              body: JSON.stringify(chunkPayload),
+              signal: ctrl.signal
+            });
+            clearTimeout(timer);
+            if (!resp || !resp.ok) {
+              serverError = `HTTP ${resp?.status || 0} (batch ${b + 1}/${totalBatches})`;
+              syncedToServer = false;
+              break;
+            }
+            const resJson = await resp.json().catch(() => ({ ok: true }));
+            if (resJson?.ok === false) {
+              serverError = resJson?.error || `Ingest failed (batch ${b + 1}/${totalBatches})`;
+              syncedToServer = false;
+              break;
+            }
+            agg.inserted += Number(resJson?.inserted || 0);
+            agg.conversions += Number(resJson?.conversions || 0);
+            agg.updatedExisting += Number(resJson?.updatedExisting || 0);
+            agg.skippedExisting += Number(resJson?.skippedExisting || 0);
+            agg.cancelled += Number(resJson?.cancelled || 0);
+            agg.clicks += Number(resJson?.clicks || 0);
+            agg.daily += Number(resJson?.daily || 0);
+            agg.autoNormalizedMicro += Number(resJson?.autoNormalizedMicro || 0);
+            syncedToServer = true;
+          }
+          if (syncedToServer) {
+            serverRes = agg;
           }
         } catch (err) {
           syncedToServer = false;
@@ -1917,7 +1972,7 @@ async function handleMessage(msg, _sender) {
         enabled: true,
         intervalMin: 30,
         accountLabel: 'DRB',
-        days: 14,
+        days: 30,
         ...(store?.autoPullSettings || {})
       };
       let dbStatus = null;
@@ -1951,7 +2006,7 @@ async function handleMessage(msg, _sender) {
         enabled: true,
         intervalMin: 30,
         accountLabel: 'DRB',
-        days: 14,
+        days: 30,
         ...(store?.autoPullSettings || {}),
         ...(payload || {})
       };
@@ -2189,7 +2244,7 @@ async function configureAutoPullAlarm(cfg = null) {
     let settings = cfg;
     if (!settings) {
       const store = await chrome.storage.local.get(['autoPullSettings']);
-      settings = { enabled: true, intervalMin: 30, accountLabel: 'DRB', days: 14, ...(store?.autoPullSettings || {}) };
+      settings = { enabled: true, intervalMin: 30, accountLabel: 'DRB', days: 30, ...(store?.autoPullSettings || {}) };
     }
     await chrome.alarms.clear(AUTO_PULL_ALARM_NAME);
     if (settings.enabled !== false) {
@@ -2205,7 +2260,7 @@ async function runAutoPullCommissionNow(options = {}) {
     enabled: true,
     intervalMin: 30,
     accountLabel: 'DRB',
-    days: 14,
+    days: 30,
     ...(store?.autoPullSettings || {}),
     ...(options || {})
   };
@@ -2228,7 +2283,7 @@ async function runAutoPullCommissionNow(options = {}) {
 
   const pullRes = await sendToAffTabWithReinject(bridgeRes.tabId, {
     action: 'PULL_SHOPEE_REPORTS',
-    days: cfg.days || 14
+    days: cfg.days || 30
   });
 
   if (!pullRes || !pullRes.ok) {

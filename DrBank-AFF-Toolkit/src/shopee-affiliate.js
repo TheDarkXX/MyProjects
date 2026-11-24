@@ -140,16 +140,47 @@
   };
   let reportAutoPushTimer = null;
 
-  function normalizeShopeeMoney(rawVal) {
+  function normalizeShopeeMoney(rawVal, opts = {}) {
     if (rawVal === null || rawVal === undefined || rawVal === '') return 0;
-    const str = String(rawVal).replace(/[฿,\s]/g, '');
+    const rawStr = String(rawVal).trim();
+    const hasCurrencySymbol = /[฿,]/.test(rawStr);
+    const hasDecimalPoint = rawStr.includes('.');
+    const str = rawStr.replace(/[฿,\s]/g, '');
     const n = Number(str);
-    if (!Number.isFinite(n)) return 0;
-    // Shopee internal APIs sometimes return micro-currency scaled by 1e5 (e.g. 1525000 = 15.25 THB)
-    if (Number.isInteger(n) && Math.abs(n) >= 100000 && !String(rawVal).includes('.')) {
-      return Math.round((n / 100000) * 100) / 100;
+    if (!Number.isFinite(n) || n === 0) return 0;
+    // Shopee internal APIs return micro-currency scaled by 1e5 (e.g. 90600 = 0.906 THB, 1525000 = 15.25 THB)
+    if (!hasCurrencySymbol && !hasDecimalPoint && Number.isInteger(n) && (opts.microScale || Math.abs(n) >= 100000)) {
+      return Math.round((n / 100000) * 10000) / 10000;
     }
-    return Math.round(n * 100) / 100;
+    return Math.round(n * 10000) / 10000;
+  }
+
+  function normalizeShopeeOrderMeta(rec, ord, it, subIds) {
+    const rawOrderStatus = String(ord?.order_status ?? rec?.order_status ?? rec?.status ?? '').trim();
+    const rawConvStatus = String(rec?.conversion_status ?? ord?.conversion_status ?? ord?.aff_status ?? rec?.aff_status ?? '').trim();
+    const isCancelled =
+      /cancel|invalid|ยกเลิก|unpaid/i.test(rawOrderStatus) ||
+      /cancel|invalid|ยกเลิก/i.test(rawConvStatus) ||
+      rawConvStatus === '3' ||
+      rawConvStatus === '4';
+    const isCompleted =
+      !isCancelled &&
+      (/complet|สำเร็จ/i.test(rawOrderStatus) || /complet|สำเร็จ/i.test(rawConvStatus) || rawConvStatus === '2');
+    const orderStatus = isCancelled ? 'ยกเลิก' : (isCompleted ? 'สำเร็จ' : 'รอดำเนินการ');
+    const affStatus = isCancelled ? 'ยกเลิก' : (isCompleted ? 'สำเร็จ' : 'รอดำเนินการ');
+    const attrRaw = String(
+      it?.attribution_type ?? ord?.attribution_type ?? rec?.attribution_type ?? ord?.order_type ?? rec?.order_type ?? ''
+    ).trim();
+    const attributionType =
+      /indirect|ต่างกัน|cross/i.test(attrRaw) ||
+      it?.is_same_shop === false ||
+      ord?.is_same_shop === false ||
+      rec?.is_same_shop === false
+        ? 'indirect'
+        : 'direct';
+    const ctypeRaw = String(it?.content_type ?? ord?.content_type ?? rec?.content_type ?? '').trim().toLowerCase();
+    const contentType = ctypeRaw || (/REELS/i.test(subIds?.subId5 || '') ? 'reels' : 'reels');
+    return { orderStatus, affStatus, isCancelled, attributionType, contentType };
   }
 
   function normalizeShopeeTimestamp(rawTs) {
@@ -255,7 +286,7 @@
               const commRaw =
                 it.net_commission ?? it.item_commission ?? it.total_commission ??
                 ord.estimated_total_commission ?? ord.net_commission ?? rec.estimated_total_commission ?? 0;
-              const statusStr = String(ord.order_status || rec.conversion_status || rec.status || 'สำเร็จ');
+              const meta = normalizeShopeeOrderMeta(rec, ord, it, subIds);
               const key = `${oid}|${iid}|${mid}|${subIds.subId2}`;
               interceptedReportBucket.conversions.set(key, {
                 dedup_key: key,
@@ -265,16 +296,18 @@
                 itemName: String(it.item_name || it.product_name || rec.item_name || '').trim(),
                 shopName: String(ord.shop_name || it.shop_name || rec.shop_name || '').trim(),
                 categoryL1: String(it.global_category_lv1_name || it.category_l1 || '').trim(),
-                price: normalizeShopeeMoney(it.item_price ?? it.price ?? 0),
+                price: normalizeShopeeMoney(it.item_price ?? it.price ?? 0, { microScale: true }),
                 qty: parseInt(it.qty ?? it.quantity ?? 1, 10) || 1,
-                gmv: normalizeShopeeMoney(it.actual_amount ?? it.gmv ?? ord.order_amount ?? 0),
+                gmv: normalizeShopeeMoney(it.actual_amount ?? it.gmv ?? ord.order_amount ?? 0, { microScale: true }),
                 shopeeCommPct: Number(it.shopee_commission_rate || 0) || 0,
                 sellerCommPct: Number(it.seller_commission_rate || 0) || 0,
-                orderStatus: statusStr,
-                affStatus: String(rec.conversion_status || ord.aff_status || 'รอดำเนินการ'),
-                isCancelled: /cancel|invalid|ยกเลิก|unpaid/i.test(statusStr),
+                attributionType: meta.attributionType,
+                contentType: meta.contentType,
+                orderStatus: meta.orderStatus,
+                affStatus: meta.affStatus,
+                isCancelled: meta.isCancelled,
                 ...subIds,
-                netComm: normalizeShopeeMoney(commRaw),
+                netComm: normalizeShopeeMoney(commRaw, { microScale: true }),
                 clickTime: normalizeShopeeTimestamp(rec.click_time || ord.click_time),
                 purchaseAt: normalizeShopeeTimestamp(rec.purchase_time || ord.purchase_time || ord.checkout_time)
               });
@@ -295,7 +328,7 @@
             rec.gross_commission ??
             rec.commission ??
             0;
-          const statusStr = String(rec.order_status || rec.conversion_status || rec.status || 'สำเร็จ');
+          const meta = normalizeShopeeOrderMeta(rec, null, null, subIds);
           const key = `${orderId}|${iid}|${mid}|${subIds.subId2}`;
           interceptedReportBucket.conversions.set(key, {
             dedup_key: key,
@@ -305,16 +338,18 @@
             itemName: String(rec.item_name || rec.product_name || rec.title || '').trim(),
             shopName: String(rec.shop_name || rec.shopName || '').trim(),
             categoryL1: String(rec.global_category_lv1_name || rec.category_l1 || '').trim(),
-            price: normalizeShopeeMoney(rec.item_price ?? rec.price ?? 0),
+            price: normalizeShopeeMoney(rec.item_price ?? rec.price ?? 0, { microScale: true }),
             qty: parseInt(rec.qty ?? rec.quantity ?? 1, 10) || 1,
-            gmv: normalizeShopeeMoney(rec.actual_amount ?? rec.gmv ?? rec.order_amount ?? 0),
+            gmv: normalizeShopeeMoney(rec.actual_amount ?? rec.gmv ?? rec.order_amount ?? 0, { microScale: true }),
             shopeeCommPct: Number(rec.shopee_commission_rate || 0) || 0,
             sellerCommPct: Number(rec.seller_commission_rate || 0) || 0,
-            orderStatus: statusStr,
-            affStatus: String(rec.aff_status || rec.conversion_status || 'รอดำเนินการ'),
-            isCancelled: /cancel|invalid|ยกเลิก|unpaid/i.test(statusStr),
+            attributionType: meta.attributionType,
+            contentType: meta.contentType,
+            orderStatus: meta.orderStatus,
+            affStatus: meta.affStatus,
+            isCancelled: meta.isCancelled,
             ...subIds,
-            netComm: normalizeShopeeMoney(commRaw),
+            netComm: normalizeShopeeMoney(commRaw, { microScale: true }),
             clickTime: normalizeShopeeTimestamp(rec.click_time || rec.clickTime),
             purchaseAt: normalizeShopeeTimestamp(rec.purchase_time || rec.checkout_time || rec.purchaseTime)
           });
@@ -350,9 +385,9 @@
               date: dStr,
               clicks: parseInt(rec.clicks ?? rec.click_count ?? 0, 10) || 0,
               orders: parseInt(rec.orders ?? rec.order_count ?? rec.conversions ?? 0, 10) || 0,
-              commission: normalizeShopeeMoney(rec.commission ?? rec.estimated_commission ?? rec.total_commission ?? 0),
+              commission: normalizeShopeeMoney(rec.commission ?? rec.estimated_commission ?? rec.total_commission ?? 0, { microScale: true }),
               itemsSold: parseInt(rec.items_sold ?? rec.item_count ?? 0, 10) || 0,
-              gmv: normalizeShopeeMoney(rec.gmv ?? rec.sales ?? rec.order_amount ?? 0)
+              gmv: normalizeShopeeMoney(rec.gmv ?? rec.sales ?? rec.order_amount ?? 0, { microScale: true })
             });
             addedDaily++;
           }
@@ -368,7 +403,7 @@
       (root.total_commission !== undefined || root.estimated_commission !== undefined || root.clicks !== undefined)
     ) {
       const today = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-      const comm = normalizeShopeeMoney(root.total_commission ?? root.estimated_commission ?? root.commission ?? 0);
+      const comm = normalizeShopeeMoney(root.total_commission ?? root.estimated_commission ?? root.commission ?? 0, { microScale: true });
       const clicks = parseInt(root.clicks ?? root.total_clicks ?? 0, 10) || 0;
       const orders = parseInt(root.orders ?? root.total_orders ?? root.conversions ?? 0, 10) || 0;
       if (comm > 0 || clicks > 0 || orders > 0) {
@@ -378,7 +413,7 @@
           orders,
           commission: comm,
           itemsSold: parseInt(root.items_sold ?? root.total_items ?? 0, 10) || 0,
-          gmv: normalizeShopeeMoney(root.gmv ?? root.total_gmv ?? root.sales ?? 0)
+          gmv: normalizeShopeeMoney(root.gmv ?? root.total_gmv ?? root.sales ?? 0, { microScale: true })
         });
         addedDaily++;
       }
@@ -440,16 +475,25 @@
         const fullUrl = String(msg.url || '').startsWith('http')
           ? String(msg.url)
           : `${location.origin}${String(msg.url || '').startsWith('/') ? '' : '/'}${String(msg.url || '')}`;
+        const tpl = {
+          url: fullUrl,
+          method: msg.method || 'GET',
+          reqBody: msg.reqBody || null,
+          kind,
+          capturedAt: Date.now()
+        };
         interceptedReportBucket.capturedRequests = [
-          {
-            url: fullUrl,
-            method: msg.method || 'GET',
-            reqBody: msg.reqBody || null,
-            kind,
-            capturedAt: Date.now()
-          },
+          tpl,
           ...interceptedReportBucket.capturedRequests.filter((r) => r.kind !== kind)
         ].slice(0, 6);
+        if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+          chrome.storage.local.get(['drbAffCapturedReportTemplates']).then((res) => {
+            const prev = (res && res.drbAffCapturedReportTemplates) || {};
+            chrome.storage.local.set({
+              drbAffCapturedReportTemplates: { ...prev, [kind]: tpl }
+            }).catch(() => {});
+          }).catch(() => {});
+        }
         scheduleAutoPushInterceptedReport();
       }
     }
@@ -1200,7 +1244,8 @@
               });
               return;
             }
-            const days = Math.max(1, Math.min(90, Number(req.days || 14)));
+            const days = Math.max(1, Math.min(90, Number(req.days || 30)));
+            const pageSize = 100;
             const nowSec = Math.floor(Date.now() / 1000);
             const startSec = nowSec - days * 86400;
             const commonHeaders = {
@@ -1208,26 +1253,95 @@
               'affiliate-program-type': '1'
             };
 
-            // Step 1: Auto-paginate any REAL captured API request from this page (pages 2..25)
-            let apiHits = 0;
-            const captured = [...(interceptedReportBucket.capturedRequests || [])];
-            for (const cap of captured) {
-              if (!cap || !cap.url) continue;
-              const isPaginatedGet = /[?&](page_num|page|pageNum|offset)=/i.test(cap.url);
-              const isPaginatedPost = cap.method === 'POST' && typeof cap.reqBody === 'string' && /"(page_num|page|pageNum|pageNo|offset)"\s*:\s*\d+/i.test(cap.reqBody);
-              if (!isPaginatedGet && !isPaginatedPost) continue;
+            const buildPaginatedRequest = (cap, pg, pSize, sSec, eSec, scrollId = '') => {
+              let nextUrl = cap.url;
+              let nextBody = cap.reqBody;
+              const isMs = (v) => Number(v) >= 1e12;
 
-              for (let pg = 2; pg <= 25; pg++) {
-                let nextUrl = cap.url;
-                let nextBody = cap.reqBody;
-                if (isPaginatedGet) {
-                  nextUrl = cap.url.replace(/([?&](?:page_num|page|pageNum)=)\d+/i, `$1${pg}`);
-                } else if (isPaginatedPost) {
-                  nextBody = cap.reqBody.replace(/("(?:page_num|page|pageNum|pageNo)"\s*:\s*)\d+/i, `$1${pg}`);
+              try {
+                const u = new URL(cap.url, location.origin);
+                const sp = u.searchParams;
+                let touchedUrl = false;
+                for (const k of ['page_num', 'page', 'pageNum', 'pageNo']) {
+                  if (sp.has(k)) {
+                    sp.set(k, String(pg));
+                    touchedUrl = true;
+                  }
                 }
-                if (nextUrl === cap.url && nextBody === cap.reqBody) break;
+                if (sp.has('offset')) {
+                  sp.set('offset', String((pg - 1) * pSize));
+                  touchedUrl = true;
+                }
+                for (const k of ['page_size', 'pageSize', 'limit']) {
+                  if (sp.has(k)) sp.set(k, String(pSize));
+                }
+                for (const k of ['click_time_s', 'purchase_time_s', 'start_time', 'startTime']) {
+                  if (sp.has(k)) sp.set(k, String(isMs(sp.get(k)) ? sSec * 1000 : sSec));
+                }
+                for (const k of ['click_time_e', 'purchase_time_e', 'end_time', 'endTime']) {
+                  if (sp.has(k)) sp.set(k, String(isMs(sp.get(k)) ? eSec * 1000 : eSec));
+                }
+                if (scrollId && (sp.has('scroll_id') || sp.has('scrollId'))) {
+                  if (sp.has('scroll_id')) sp.set('scroll_id', scrollId);
+                  if (sp.has('scrollId')) sp.set('scrollId', scrollId);
+                  touchedUrl = true;
+                }
+                if (touchedUrl) nextUrl = u.toString();
+              } catch (_e) {}
 
-                await new Promise((r) => setTimeout(r, 250));
+              if (cap.method === 'POST' && typeof cap.reqBody === 'string' && cap.reqBody.trim().startsWith('{')) {
+                try {
+                  const obj = JSON.parse(cap.reqBody);
+                  const patchObj = (target) => {
+                    if (!target || typeof target !== 'object') return false;
+                    let touched = false;
+                    for (const k of ['page_num', 'page', 'pageNum', 'pageNo']) {
+                      if (k in target) {
+                        target[k] = pg;
+                        touched = true;
+                      }
+                    }
+                    if ('offset' in target) {
+                      target.offset = (pg - 1) * pSize;
+                      touched = true;
+                    }
+                    for (const k of ['page_size', 'pageSize', 'limit']) {
+                      if (k in target) target[k] = pSize;
+                    }
+                    for (const k of ['click_time_s', 'purchase_time_s', 'start_time', 'startTime']) {
+                      if (k in target) target[k] = isMs(target[k]) ? sSec * 1000 : sSec;
+                    }
+                    for (const k of ['click_time_e', 'purchase_time_e', 'end_time', 'endTime']) {
+                      if (k in target) target[k] = isMs(target[k]) ? eSec * 1000 : eSec;
+                    }
+                    if (scrollId && ('scroll_id' in target || 'scrollId' in target)) {
+                      if ('scroll_id' in target) target.scroll_id = scrollId;
+                      if ('scrollId' in target) target.scrollId = scrollId;
+                      touched = true;
+                    }
+                    if (target.variables && typeof target.variables === 'object') {
+                      if (patchObj(target.variables)) touched = true;
+                    }
+                    return touched;
+                  };
+                  if (patchObj(obj)) {
+                    nextBody = JSON.stringify(obj);
+                  }
+                } catch (_e) {}
+              }
+
+              return { nextUrl, nextBody };
+            };
+
+            const paginateEndpoint = async (cap, maxPages = 150) => {
+              let hits = 0;
+              let emptyStreak = 0;
+              let scrollId = '';
+              for (let pg = 1; pg <= maxPages; pg++) {
+                const { nextUrl, nextBody } = buildPaginatedRequest(cap, pg, pageSize, startSec, nowSec, scrollId);
+                if (pg > 1 && nextUrl === cap.url && nextBody === cap.reqBody) break;
+
+                if (pg > 1) await new Promise((r) => setTimeout(r, 220));
                 const res = await Promise.race([
                   pageMainRequest({
                     url: nextUrl,
@@ -1240,9 +1354,14 @@
                       ...(cap.method === 'POST' ? { 'content-type': 'application/json;charset=UTF-8' } : {})
                     }
                   }),
-                  new Promise((r) => setTimeout(() => r(null), 6000))
+                  new Promise((r) => setTimeout(() => r(null), 6500))
                 ]);
-                if (!res || !res.ok || !res.data || res.data.error === 90309999) break;
+                if (!res || !res.ok || !res.data) break;
+                if (res.data.error === 90309999) return { hits, securityCheck: true };
+
+                const nextScroll = res.data?.data?.scroll_id || res.data?.scroll_id || res.data?.data?.scrollId || '';
+                if (nextScroll) scrollId = String(nextScroll);
+
                 const beforeTotal =
                   interceptedReportBucket.conversions.size +
                   interceptedReportBucket.clicks.size +
@@ -1252,48 +1371,116 @@
                   interceptedReportBucket.conversions.size +
                   interceptedReportBucket.clicks.size +
                   interceptedReportBucket.daily.size;
-                if (afterTotal > beforeTotal && (added.conversions > 0 || added.clicks > 0 || added.daily > 0)) {
-                  apiHits++;
+
+                const batchRows = added.conversions + added.clicks + added.daily;
+                if (batchRows === 0) break;
+                if (afterTotal > beforeTotal) {
+                  hits++;
+                  emptyStreak = 0;
                 } else {
-                  break; // reached last page
+                  emptyStreak++;
+                  if (emptyStreak >= 2) break;
                 }
+              }
+              return { hits, securityCheck: false };
+            };
+
+            // Merge in-memory captured templates + persisted templates from chrome.storage.local
+            const mergedByKind = new Map();
+            try {
+              if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+                const st = await chrome.storage.local.get(['drbAffCapturedReportTemplates']);
+                const saved = st?.drbAffCapturedReportTemplates || {};
+                for (const k of Object.keys(saved)) {
+                  if (saved[k]?.url) mergedByKind.set(k, saved[k]);
+                }
+              }
+            } catch (_e) {}
+            for (const cap of interceptedReportBucket.capturedRequests || []) {
+              if (cap?.url) mergedByKind.set(cap.kind || cap.url, cap);
+            }
+            const captured = Array.from(mergedByKind.values());
+
+            // Step 1: Auto-paginate all captured templates (up to 150 pages / 15,000 rows, 30d window)
+            let apiHits = 0;
+            for (const cap of captured) {
+              if (!cap || !cap.url) continue;
+              const isPaginatedGet = /[?&](page_num|page|pageNum|pageNo|offset|limit|page_size|pageSize)=/i.test(cap.url);
+              const isPaginatedPost =
+                cap.method === 'POST' &&
+                typeof cap.reqBody === 'string' &&
+                /"(page_num|page|pageNum|pageNo|offset|limit|page_size|pageSize)"\s*:\s*\d+/i.test(cap.reqBody);
+              if (!isPaginatedGet && !isPaginatedPost) continue;
+              const pgRes = await paginateEndpoint(cap, 150);
+              if (pgRes.securityCheck) {
+                sendResponse({
+                  ok: false,
+                  securityCheck: true,
+                  error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาผ่านด่านตรวจบนหน้า affiliate.shopee.co.th ก่อน'
+                });
+                return;
+              }
+              apiHits += pgRes.hits;
+            }
+
+            // Step 2: Independent per-report fallback probes if conversions, clicks, or daily are still empty
+            if (interceptedReportBucket.conversions.size === 0) {
+              for (const baseConvUrl of [
+                `https://affiliate.shopee.co.th/api/v3/report/list?page_size=${pageSize}&page_num=1&purchase_time_s=${startSec}&purchase_time_e=${nowSec}`,
+                `https://affiliate.shopee.co.th/api/v3/report/conversion_report?page_size=${pageSize}&page_num=1&purchase_time_s=${startSec}&purchase_time_e=${nowSec}`
+              ]) {
+                const pgRes = await paginateEndpoint({ url: baseConvUrl, method: 'GET', reqBody: null, kind: 'conversions' }, 50);
+                if (pgRes.securityCheck) {
+                  sendResponse({
+                    ok: false,
+                    securityCheck: true,
+                    error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาผ่านด่านตรวจบนหน้า affiliate.shopee.co.th ก่อน'
+                  });
+                  return;
+                }
+                apiHits += pgRes.hits;
+                if (interceptedReportBucket.conversions.size > 0) break;
               }
             }
 
-            // Step 2: If nothing captured yet, probe standard internal endpoints
-            if (interceptedReportBucket.conversions.size === 0 && interceptedReportBucket.clicks.size === 0) {
-              const apiCandidates = [
-                `https://affiliate.shopee.co.th/api/v3/report/list?page_size=100&page_num=1&purchase_time_s=${startSec}&purchase_time_e=${nowSec}`,
-                `https://affiliate.shopee.co.th/api/v3/report/conversion_report?page_size=100&page_num=1&purchase_time_s=${startSec}&purchase_time_e=${nowSec}`,
-                `https://affiliate.shopee.co.th/api/v3/dashboard/overview?start_time=${startSec}&end_time=${nowSec}`,
-                `https://affiliate.shopee.co.th/api/v3/report/click_list?page_size=100&page_num=1&click_time_s=${startSec}&click_time_e=${nowSec}`
-              ];
-              for (const url of apiCandidates) {
-                try {
-                  const res = await Promise.race([
-                    pageMainRequest({
-                      url,
-                      method: 'GET',
-                      useFetch: false,
-                      attachCsrf: true,
-                      headers: commonHeaders
-                    }),
-                    new Promise((r) => setTimeout(() => r(null), 5000))
-                  ]);
-                  if (res?.data?.error === 90309999) {
-                    sendResponse({
-                      ok: false,
-                      securityCheck: true,
-                      error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาผ่านด่านตรวจบนหน้า affiliate.shopee.co.th ก่อน'
-                    });
-                    return;
-                  }
-                  if (res && res.ok && res.data) {
-                    const added = ingestRawReportPayload(url, res.data);
-                    if (added.conversions > 0 || added.clicks > 0 || added.daily > 0) apiHits++;
-                  }
-                } catch (_e) {}
+            if (interceptedReportBucket.clicks.size === 0) {
+              const pgRes = await paginateEndpoint(
+                {
+                  url: `https://affiliate.shopee.co.th/api/v3/report/click_list?page_size=${pageSize}&page_num=1&click_time_s=${startSec}&click_time_e=${nowSec}`,
+                  method: 'GET',
+                  reqBody: null,
+                  kind: 'clicks'
+                },
+                150
+              );
+              if (pgRes.securityCheck) {
+                sendResponse({
+                  ok: false,
+                  securityCheck: true,
+                  error: 'Shopee ขอตรวจสอบความปลอดภัย — กรุณาผ่านด่านตรวจบนหน้า affiliate.shopee.co.th ก่อน'
+                });
+                return;
               }
+              apiHits += pgRes.hits;
+            }
+
+            if (interceptedReportBucket.daily.size === 0) {
+              try {
+                const res = await Promise.race([
+                  pageMainRequest({
+                    url: `https://affiliate.shopee.co.th/api/v3/dashboard/overview?start_time=${startSec}&end_time=${nowSec}`,
+                    method: 'GET',
+                    useFetch: false,
+                    attachCsrf: true,
+                    headers: commonHeaders
+                  }),
+                  new Promise((r) => setTimeout(() => r(null), 5000))
+                ]);
+                if (res && res.ok && res.data && res.data.error !== 90309999) {
+                  const added = ingestRawReportPayload('dashboard/overview', res.data);
+                  if (added.daily > 0) apiHits++;
+                }
+              } catch (_e) {}
             }
 
             // Step 3: Rich Ant-Design DOM Table Fallback (works on BOTH รายงานคำสั่งซื้อ & รายงานคลิก without refresh!)
