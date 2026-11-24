@@ -521,7 +521,7 @@ function switchPanelTab(tabName) {
   paneAff?.classList.toggle('active', activePanelTab === 'aff');
   paneSpy?.classList.toggle('active', activePanelTab === 'spy');
   paneSync?.classList.toggle('active', activePanelTab === 'sync');
-  if (linkCard) linkCard.hidden = activePanelTab === 'sync';
+  if (linkCard) linkCard.style.display = activePanelTab === 'sync' ? 'none' : '';
 
   if (activePanelTab === 'aff') {
     if (badge) {
