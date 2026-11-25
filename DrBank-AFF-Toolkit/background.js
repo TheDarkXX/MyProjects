@@ -1629,7 +1629,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
-async function postWebUiJson(endpointPath, body, { baseUrlOverride = '', timeoutMs = 15000 } = {}) {
+async function requestWebUiJson(method, endpointPath, body = null, { baseUrlOverride = '', timeoutMs = 15000 } = {}) {
   const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
   const rawBase = String(baseUrlOverride || settings?.webUiBaseUrl || 'https://aff.doctorbankonline.com').trim();
   const baseUrl = (rawBase === 'http://localhost:3000' ? 'https://aff.doctorbankonline.com' : rawBase).replace(/\/+$/, '');
@@ -1637,16 +1637,19 @@ async function postWebUiJson(endpointPath, body, { baseUrlOverride = '', timeout
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const resp = await fetch(`${baseUrl}${endpointPath}`, {
-      method: 'POST',
+    const opts = {
+      method,
       credentials: 'include',
       headers: {
-        'Content-Type': 'application/json',
         'X-Aff-Token': affToken
       },
-      body: JSON.stringify(body),
       signal: ctrl.signal
-    });
+    };
+    if (body !== null && method !== 'GET') {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const resp = await fetch(`${baseUrl}${endpointPath}`, opts);
     if (!resp.ok) {
       const errBody = await resp.json().catch(() => ({}));
       throw new Error(errBody?.error || errBody?.message || `HTTP ${resp.status} from ${baseUrl}${endpointPath}`);
@@ -1660,6 +1663,14 @@ async function postWebUiJson(endpointPath, body, { baseUrlOverride = '', timeout
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function postWebUiJson(endpointPath, body, opts = {}) {
+  return await requestWebUiJson('POST', endpointPath, body, opts);
+}
+
+async function getWebUiJson(endpointPath, opts = {}) {
+  return await requestWebUiJson('GET', endpointPath, null, opts);
 }
 
 async function handleMessage(msg, _sender) {
@@ -2201,6 +2212,41 @@ async function handleMessage(msg, _sender) {
         { items },
         { baseUrlOverride: payload?.webUiBaseUrl, timeoutMs: 20000 }
       );
+    }
+
+    case 'FAMILY_ENQUEUE': {
+      return await postWebUiJson(
+        '/api/shopee-aff/family-enqueue',
+        payload || {},
+        { baseUrlOverride: payload?.webUiBaseUrl, timeoutMs: 25000 }
+      );
+    }
+
+    case 'FAMILY_QUEUE_STATUS': {
+      const lim = Number(payload?.limit) || 8;
+      return await getWebUiJson(
+        `/api/shopee-aff/family-queue?limit=${Math.min(50, Math.max(1, lim))}`,
+        { baseUrlOverride: payload?.webUiBaseUrl, timeoutMs: 12000 }
+      );
+    }
+
+    case 'DETECT_AFF_TAB_ACCOUNT': {
+      const tabs = await chrome.tabs.query({ url: ['*://affiliate.shopee.co.th/*'] }).catch(() => []);
+      if (!tabs.length) {
+        return { ok: false, state: 'missing', accountLabel: null, rawName: '' };
+      }
+      const targetTab = tabs.find((t) => t.active) || tabs[0];
+      const resp = await sendToAffTabWithReinject(targetTab.id, { action: 'GET_ACTIVE_SHOPEE_ACCOUNT' }).catch(() => null);
+      if (resp?.ok && resp.accountLabel) {
+        return {
+          ok: true,
+          state: 'detected',
+          accountLabel: resp.accountLabel,
+          rawName: resp.rawName || resp.accountLabel,
+          tabId: targetTab.id
+        };
+      }
+      return { ok: false, state: 'unknown', accountLabel: null, rawName: '', tabId: targetTab.id };
     }
 
     case 'FIND_BETTER_SHOPS_FOR_ITEM': {

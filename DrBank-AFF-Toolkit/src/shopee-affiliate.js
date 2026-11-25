@@ -1238,9 +1238,9 @@
           const matchAcct = (txt) => {
             const s = String(txt || '').trim();
             if (!s || s.length > 60) return null;
-            if (/namcha|น้ำชา/i.test(s)) return { accountLabel: 'Namcha', rawName: s };
+            if (/namcha|น้ำชา|15351250491/i.test(s)) return { accountLabel: 'Namcha', rawName: s };
             if (/ashira|อชิระ/i.test(s)) return { accountLabel: 'Ashira', rawName: s };
-            if (/(?:^|\b)drb(?:\b|$)|doctorbank/i.test(s)) return { accountLabel: 'DRB', rawName: s };
+            if (/(?:^|\b)drb(?:\b|$)|doctorbank|beyond8989|15324240509/i.test(s)) return { accountLabel: 'DRB', rawName: s };
             return null;
           };
           const headerSelectors = [

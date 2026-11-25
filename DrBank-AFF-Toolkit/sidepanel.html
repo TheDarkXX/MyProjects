@@ -282,10 +282,37 @@
       <section class="drb-sp-pane" id="drb-pane-spy">
         <div class="sp-spy-card">
           <div class="sp-spy-header">
-            <div class="sp-spy-title">🕵️ Spy Reel Collector (FB Reels ➔ Spy Pool)</div>
-            <div class="sp-spy-sub">
+            <div class="sp-spy-header-top">
+              <div class="sp-spy-title" id="drb-spy-title">🕵️ Spy Reel Collector (FB Reels ➔ Spy Pool)</div>
+              <div class="sp-spy-mode-switch" role="group" aria-label="Spy or Family mode">
+                <button type="button" class="sp-spy-mode-btn active" id="drb-spy-mode-spy">🕵️ SPY</button>
+                <button type="button" class="sp-spy-mode-btn" id="drb-spy-mode-family">🏠 FAMILY</button>
+              </div>
+            </div>
+            <div class="sp-spy-sub" id="drb-spy-sub">
               ดึงป้ายตะกร้า · เช็กเรท Social Media จริง · กรอง Exther Gate (<b style="color:var(--sp-extra);">Extra ≥7%</b> หรือ <b style="color:var(--sp-extra);">คอม ≥฿15</b>) · เจน <code style="font-size:11px;">s.shopee.co.th</code>
             </div>
+          </div>
+
+          <div class="sp-family-bar" id="drb-family-bar" hidden>
+            <div class="sp-family-row">
+              <label class="sp-family-lbl" for="drb-family-page-select">เลือกเพจที่จะโพสต์ (1 คลิป 10 วิ · Publish Now):</label>
+              <select id="drb-family-page-select" class="sp-family-select">
+                <option value="namcha2kids">👩 แม่น้ำชา มีลูกชาย 2 คน (Namcha)</option>
+                <option value="luxury100">💎 ชีวิตติดหรู หลักร้อย (Namcha)</option>
+                <option value="porbaan">👨 พ่อบ้านปากแซ่บ (DRB)</option>
+                <option value="homebody">🏠 มนุษย์ติดบ้าน (DRB)</option>
+              </select>
+            </div>
+            <div class="sp-family-acct-guard" id="drb-family-acct-guard" data-state="checking">
+              ⏳ กำลังตรวจบัญชี Shopee Affiliate ที่ล็อกอินอยู่...
+            </div>
+            <input
+              type="text"
+              id="drb-family-note"
+              class="sp-family-note-input"
+              placeholder="โน้ตสั้นๆ เช่น น้องซื้อกาแฟ ปิดหลอด 100 (ไม่บังคับ)"
+            />
           </div>
 
           <div class="sp-spy-aff-bridge" id="drb-spy-aff-bridge" data-state="checking">
@@ -294,7 +321,7 @@
           </div>
 
           <div class="sp-spy-toolbar">
-            <button type="button" class="sp-spy-grab-btn" id="drb-spy-btn-grab-tab" title="ดึงลิงก์ FB Reel + ชื่อเพจ + แคปชั่น + ป้ายตะกร้า s.shopee.co.th จากแท็บปัจจุบัน">
+            <button type="button" class="sp-spy-grab-btn" id="drb-spy-btn-grab-tab" title="ดึงลิงก์จากแท็บปัจจุบัน">
               📥 ดึงจากแท็บ FB ปัจจุบัน
             </button>
             <div class="sp-spy-toolbar-right">
@@ -323,6 +350,8 @@
             <div class="sp-spy-progress-text" id="drb-spy-progress-text">⏳ กำลังเริ่มดึงข้อมูล...</div>
           </div>
         </div>
+
+        <div class="sp-family-status-box" id="drb-family-status-box" hidden></div>
 
         <div class="sp-spy-summary-strip" id="drb-spy-summary-strip" hidden>
           <span id="drb-spy-summary-text">รวม 0 รายการ · 🟢 ผ่านเกณฑ์ 0 · 🔴 ไม่คุ้มแอด 0</span>
