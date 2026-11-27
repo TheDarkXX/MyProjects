@@ -1,0 +1,56 @@
+Act as an accountant expert. Extract all individual purchase/expense transactions from this Thai credit card statement text.
+
+Rules:
+CRITICAL: LINE ID SYSTEM
+- Each line in the statement text is prefixed with a UNIQUE line ID like [L001], [L002], etc.
+- Even if two lines look IDENTICAL, they are DIFFERENT transactions because they have DIFFERENT line IDs.
+- You MUST output one JSON object per transaction line. NEVER merge, group, or deduplicate lines.
+- Do NOT include the [LXXX] prefix in any output field.
+
+Additional Rules:
+1. EXCLUDE Previous Balance (ยอดยกมา), Payment Received (ยอดชำระเงิน), PAID BY OTHER BANK, or Cash Received.
+2. Include all new purchases, installment amounts for this month, fees, interest, and CASH REBATE.
+3. For installment items (e.g. 01/10), extract the amount due for THIS month only.
+4. CASH REBATE: Set price to positive number and "is_refund": 1.
+5. INTEREST: Extract as a normal charge with category "Interest".
+6. Output format MUST be strictly a JSON object:
+{
+  "bank": "{BANK_NAME}",
+  "statement_month": "{STATEMENT_MONTH}",
+  "transactions": [
+    { "date": "YYYY-MM-DD", "name": "MerchantName", "description": "Original text", "price": 100.00, "category": "Category", "payee": "Personal", "is_refund": 0 }
+  ]
+}
+
+Price must be positive numbers with exact decimals. Date format YYYY-MM-DD. Year is {YEAR}.
+
+=== NAME CLEANING RULES ===
+The "name" field must be a SHORT, CLEAN merchant name. Strip locations, branch codes, cities. Examples:
+- "TRIPLE T BROADBAND P NONTHABURI TH" → "3BB"
+- "TRIPLE T BROADBAND PCL" → "3BB"
+- "AMP*3BB FIBRE3 BANGKOK TH" → "3BB"
+- "KALODATA KWUN TONG HK" → "KALODATA"
+- "LOTUS'S 5116 RUAMCHOK CHIANGMAI TH" → "Lotus"
+- "PTTST.D SUKHUM SERVIC CHIANGMAI TH" or any "PTTST.*" → "PTT"
+- "PAID BY OTHER BANK B004" → DO NOT EXTRACT (this is a payment)
+- "CASH REBATE" → "Cash Rebate"
+- "INTEREST" → "Interest"
+- "COLLECTION FEE" → "FEE"
+- "VAT COLLECTION FEE" → "VAT"
+- "http://WWW.2C2P.COM*2C2P" → "2C2P"
+
+=== CATEGORY RULES (Use ONLY these categories) ===
+- "Monthly Bill" — 3BB, 2C2P, FEE, VAT
+- "Subscription" — KALODATA, online services
+- "Local Shopping" — Lotus, physical stores
+- "Fuel" — PTT, any gas station
+- "Interest" — Interest charges
+- "Refund" — Cash Rebate (with is_refund: 1)
+- "Other" — Anything that doesn't fit above
+
+=== PAYEE RULES ===
+Default payee is "Personal".
+EXCEPTIONS (use these exact payee values):
+- PTT (Fuel) → payee = "Ashira"
+- 3BB (AMP*3BB variant only) → payee = "Ashira"
+- KALODATA → payee = "Alpha-B"

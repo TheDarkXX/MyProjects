@@ -1,0 +1,88 @@
+Act as an expert Thai accountant. Extract ALL credit card expense transactions from this SCB / CardX Credit Card statement layout text.
+
+CRITICAL RULES FOR SCB / CARDX:
+
+1. REPEAT / CONSECUTIVE IDENTICAL ROWS (STRICT MANDATE):
+   - Each line in the statement text is prefixed with a UNIQUE line ID like [L001], [L002], etc.
+   - Even if two lines have IDENTICAL merchant names, amounts, and dates, they are DIFFERENT transactions because they have DIFFERENT line IDs.
+   - You MUST output one JSON object per line ID. If [L045], [L046], [L047] all say "TikTok Ads 167.00", you MUST output exactly 3 separate JSON objects.
+   - NEVER merge, group, deduplicate, or skip lines. Count by line IDs, not by content.
+   - Do NOT include the [LXXX] prefix in any output field.
+
+2. INTEREST REBATES / DISCOUNTS:
+   - If there is an "Interest Rebate" or credit (e.g. -28.49), set price to positive 28.49 and "is_refund": 1.
+   - Name it "Interest Rebate", category "Interest".
+
+3. INTEREST & FEES:
+   - Extract "Retail Interest / ดอกเบี้ย" or "Finance Charge" (e.g. 2093.61).
+   - Name it "Interest" or "Retail Interest", category "Interest".
+
+4. EXCLUSIONS:
+   - DO NOT extract "PREVIOUS BALANCE" (ยอดยกมา).
+   - DO NOT extract "PAYMENT RECEIVED" / "THANK YOU" (ยอดชำระเงิน).
+   - DO NOT extract "TOTAL BALANCE" (ยอดรวมชำระ).
+
+Output MUST be strictly JSON format:
+{
+  "bank": "{BANK_NAME}",
+  "statement_month": "{STATEMENT_MONTH}",
+  "transactions": [
+    { "date": "YYYY-MM-DD", "name": "MerchantName", "description": "Original text", "price": 100.00, "category": "Category", "payee": "Personal", "is_refund": 0 }
+  ]
+}
+
+Price must be positive numbers with exact decimals. Date format YYYY-MM-DD. Year is {YEAR}.
+
+=== NAME CLEANING RULES ===
+The "name" field must be a SHORT, CLEAN merchant name. Strip locations, branch codes, cities, country codes. Examples:
+- "OMISE*TikTok Ads Bangkok THA" or "TikTok Ads Singapore SGP" → "TikTok Ads"
+- "OMISE*TikTok Shop Sel Bangkok THA" → "TikTok Shop"
+- "OMISE*TrueiService Pay Bangkok THA" → "True"
+- "WWW.GRAB.COM BANGKOK THA" or "GRABTAXI BANGKOK THA" → "Grab"
+- "1788 PETBURETADMAI RD. SHOPEE BANGKOK TH" → "Shopee"
+- "SHOPEE UTILITIES BANGKOK THA" → if price <= 2000: name="Electric Clinic", category="Electric Clinic"; if price > 2000: name="Electric Home", category="Electric Home"
+- "SHOPEE INSTALLMENT BANGKOK 007/010" → "Shopee Installment 07/10"
+- "SHOPEE INSTALLMENT BANGKOK 008/010" → "Shopee Installment 08/10"
+- "SHOPEE INSTALLMENT BANGKOK" (no number) → "Shopee Installment"
+- "TRIPLE T BROADBAND PCL NONTHABURI THA" → "3BB"
+- "Google One Mountain View USA" or "Google YouTube Mountain View USA" or "GOOGLE*GOOGLE ONE" → "Google"
+- "OPENAI *CHATGPT SUBSCR SAN FRANCISCO USA" → "ChatGPT"
+- "LOTUS'S 5116 RUAMCHOK CHIANGMAI THA" → "Lotus"
+- "MINI BIG C -TALAD CHAT LAMPHUN THA" → "MINI BIG C"
+- "PTTST.D SUKHUM SERVICE CHIANGMAI THA" or any "PTTST.*" → "PTT"
+- "KALODATA KWUN TONG HKG" → "Kalodata"
+- "VULTR BY CONSTANT MATAWAN USA" → "Vultr"
+- "TradingViewM*Product New York GBR" → "TradingView"
+- "OMISE*TikTok Ads BANGKOK THA" (via OMISE) → "TikTok Ads"
+- "62 MAHIDOL RD. NIYOM PHANICH CO.,LTD." → "Niyom Phanich"
+- "THAI LIFE-CHIANGMAI CHIANGMAI THA" → "Thai Life"
+- "THE VIRIYAH INSURANCE PCLCHIANG" → "Viriyah Insurance"
+- "WWW_CONTABO_COM MUNCHEN DEU" → "Contabo"
+- "90 PHAHONYOTHIN RD. SOI 7 WWW.RD.GO.TH BANGKOK TH" → "Revenue Department"
+- "Retail Interest" → "Retail Interest"
+- "Interest Rebate" → "Interest Rebate"
+
+=== CATEGORY RULES (Use ONLY these categories) ===
+- "Ads" — TikTok Ads, OMISE (when used for TikTok Ads)
+- "Online Shopping" — Shopee, TikTok Shop
+- "Local Shopping" — Lotus, MINI BIG C, Niyom Phanich, physical stores
+- "Food Delivery" — Grab (food/transport)
+- "Fuel" — PTT, any gas station
+- "Subscription" — Google, ChatGPT, 3BB, True, Vultr, Kalodata
+- "App&Tools" — TradingView, Contabo, software tools
+- "Installment" — Shopee Installment (any)
+- "Insurance" — Thai Life, Viriyah Insurance
+- "Interest" — Interest, Retail Interest, Interest Rebate
+- "Monthly Bill" — Revenue Department, government fees
+- "Electric Clinic" — Utility bills (e.g. Shopee Utilities) where price <= 2000
+- "Electric Home" — Utility bills (e.g. Shopee Utilities) where price > 2000
+- "Other" — Anything that doesn't fit above
+
+=== PAYEE RULES ===
+Default payee is "Personal".
+EXCEPTIONS (use these exact payee values):
+- TikTok Ads → payee = "Alpha-B"
+- Vultr → payee = "Alpha-B"
+- OMISE (when for TikTok Ads) → payee = "Alpha-B"
+- Kalodata → payee = "Alpha-B" (sometimes "Ashira" — if unsure use "Alpha-B")
+- PTT (Fuel) → payee = "Ashira"

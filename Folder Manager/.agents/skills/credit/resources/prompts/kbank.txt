@@ -1,0 +1,62 @@
+Act as an accountant expert. Extract all individual purchase/expense transactions from this Thai credit card statement text.
+
+Rules:
+CRITICAL: LINE ID SYSTEM
+- Each line in the statement text is prefixed with a UNIQUE line ID like [L001], [L002], etc.
+- Even if two lines look IDENTICAL, they are DIFFERENT transactions because they have DIFFERENT line IDs.
+- You MUST output one JSON object per transaction line. NEVER merge, group, or deduplicate lines.
+- Do NOT include the [LXXX] prefix in any output field.
+
+Additional Rules:
+1. EXCLUDE Previous Balance (ยอดยกมา), Payment Received (ยอดชำระเงิน), or Cash Received.
+2. Include all new purchases, installment amounts for this month, fees, and interest.
+3. For installment items (e.g. 01/10), extract the amount due for THIS month only.
+4. KBank Special: Some transactions might span multiple lines or have installment patterns (e.g., 02/06). Extract the full meaning and DO NOT skip installment items. DO NOT extract "Previous Balance" or "Payment".
+5. Output format MUST be strictly a JSON object:
+{
+  "bank": "{BANK_NAME}",
+  "statement_month": "{STATEMENT_MONTH}",
+  "transactions": [
+    { "date": "YYYY-MM-DD", "name": "MerchantName", "description": "Original text", "price": 100.00, "category": "Category", "payee": "Personal", "is_refund": 0 }
+  ]
+}
+
+Price must be positive numbers with exact decimals. Date format YYYY-MM-DD. 
+KBank dates are often DD/MM/YY (e.g. 25/05/26). If you see YY like 26, it means year 2026. Always output full YYYY-MM-DD where YYYY is {YEAR}.
+
+=== NAME CLEANING RULES ===
+The "name" field must be a SHORT, CLEAN merchant name. Strip locations, branch codes, cities. Examples:
+- "LOTUS'S 5116 RUAMCHOKCHIANGMAI" → "Lotus"
+- "7-11 BANGKOK CHIANGMAINONGPAKHRANG" → "7-11"
+- "BANGKOK HOSPITAL CHIANGMACHIANGMAI" → "Bangkok Hospital"
+- "RIMPING -MEECHOK PLAZACHIANGMAI" → "Rimping"
+- "PTTRM_CM MAE-JOCHIANGMAI" or any "PTTST.*" → "PTT"
+- "CROCS(00858)-CT.FESTIVALCHIANGMAI" → "Crocs"
+- "SKECHERS(00791)-FESTIVALCHIANGMAI" → "Skechers"
+- "AIRPAY (FOR SHOPEE)" → "Shopee"
+- "CDS-FESTIVAL CHIANGMAI" → "CDS-Festival"
+- "APPLE.COM Meitu" or "APPLE.COM/BILL" → "Apple"
+- "AUNTIE ANNE'S(14395)-CENTCHIANGMAI" → "Auntie Anne's"
+- "HomePro CHIANGMAI" → "HomePro"
+- "ORIENTAL PRINCESS" → "Oriental Princess"
+- "ADJ. INT (CAMP.)" → "Interest Adjustment"
+- "INTEREST CHARGE" → "Interest Charge"
+
+=== CATEGORY RULES (Use ONLY these categories) ===
+- "Local Shopping" — Physical retail stores: Lotus, 7-11, MINI BIG C, HomePro, CDS, Watsons, Crocs, Skechers, H&M, AIIZ, Oriental Princess, Beautrium, Central, etc.
+- "Online Shopping" — Shopee, TikTok, etc.
+- "Health" — Bangkok Hospital, any hospital or clinic
+- "Local Food" — Restaurants, food shops: Auntie Anne's, KFC, Domino Pizza, ILM, etc.
+- "Food Delivery" — Grab (food), Foodpanda, LINE MAN
+- "Fuel" — PTT, any gas station
+- "Subscription" — Apple, Consensus, etc.
+- "Installment" — Installment payments (e.g., HomePro installment)
+- "Interest" — Interest Charge, Interest Adjustment
+- "Monthly Bill" — Spending Summary
+- "Other" — Anything that doesn't fit above
+
+=== PAYEE RULES ===
+Default payee is "Personal".
+EXCEPTIONS (use these exact payee values):
+- PTT (Fuel) → payee = "Ashira"
+- CapCut (via Apple) → payee = "Alpha-B"

@@ -1,0 +1,87 @@
+Act as an expert Thai accountant. Extract ALL expense transactions from this Krungsri Credit Card statement.
+
+CRITICAL: LINE ID SYSTEM
+- Each line in the statement text is prefixed with a UNIQUE line ID like [L001], [L002], etc.
+- Even if two lines look IDENTICAL (same merchant, same amount, same date), they are DIFFERENT transactions because they have DIFFERENT line IDs.
+- You MUST output one JSON object per transaction line. NEVER merge, group, or deduplicate lines.
+- Do NOT include the [LXXX] prefix in any output field.
+
+CRITICAL SECTION BREAKDOWN & RULES:
+
+1. SECTION "รายการผ่อนชำระรายเดือน / Installment Transactions":
+   - You MUST extract every installment row!
+   - For price: USE THE "Amount Due / ยอดผ่อนชำระงวดนี้" (e.g. 803.67).
+   - DO NOT use "Loan Balance / ยอดสินเชื่อคงเหลือ" (e.g. 2410.99).
+
+2. SECTION "รายการดอกเบี้ยและค่าธรรมเนียมอื่นๆ / Interest and Other Fees Amount":
+   - Extract interest charges (e.g. 1880.05).
+   - If there is a discount/credit (e.g. ส่วนลดดอกเบี้ย -9.18), set price to positive 9.18 and "is_refund": 1.
+
+3. SECTION "รายการใช้จ่าย / Transaction Amount":
+   - Extract all new purchase transactions row by row.
+
+4. EXCLUSIONS (STRICT):
+   - IGNORE "ยอดรวมที่ต้องชำระสำหรับบัตรเครดิต / Total Payment Due For Credit Card" (the large total at the bottom — this includes previous balance).
+   - IGNORE "รายการชำระเงินสำหรับบัตรเครดิต / Payment Transactions" (payments made).
+   - IGNORE Subtotals and Previous Balances.
+
+Output MUST be strictly JSON format:
+{
+  "bank": "{BANK_NAME}",
+  "statement_month": "{STATEMENT_MONTH}",
+  "transactions": [
+    { "date": "YYYY-MM-DD", "name": "MerchantName", "description": "Original text", "price": 100.00, "category": "Category", "payee": "Personal", "is_refund": 0 }
+  ]
+}
+
+Price must be positive numbers with exact decimals. Date format YYYY-MM-DD. Year is {YEAR}.
+
+=== NAME CLEANING RULES ===
+The "name" field must be a SHORT, CLEAN merchant name. Strip locations, branch codes, cities, country codes. Examples:
+- "SHOPEEPAY*SHOPEE BANGKOK" or "SHOPEETH BANGKOK TH" or "(FOR *(FOR SHOPEE) BANGKOK TH" → "Shopee"
+- "SHOPEEPAY (THAILAND) - SH 6 MONTHS ANY BRAND ANY MODEL" → "Shopee Installment"
+- "SHOPEE UTILITIES BANGKOK TH" → if price <= 2000: name="Electric Clinic", category="Electric Clinic"; if price > 2000: name="Electric Home", category="Electric Home"
+- "PTTRM_CM MAE-JO CHIANGMAI TH" or any "PTTST.*" → "PTT"
+- "PTTST.C SARAPHI CHIANGMAI TH" → "PTT"
+- "PTTST.D CHO.CHAYA PETR LAMPHUN TH" → "PTT"
+- "MINI BIG C -TALAD CHAT LAMPHUN TH" → "MINI BIG C"
+- "MINI BIG C -TALAD PHU CHIANGMAI TH" → "MINI BIG C"
+- "LOTUS'S 5116 RUAMCHOK CHIANGMAI TH" → "Lotus"
+- "LOTUS'S 5034 KHAMTHENG CHIANGMAI TH" → "Lotus"
+- "RIMPING -MEECHOK PLAZA CHIANGMAI TH" → "Rimping"
+- "NIGIGRILL CHIANGMAI TH" → "NIGIGRILL"
+- "OPENAI *CHATGPT SUBSCR OPENAI.COM CA" → "OpenAI"
+- "OPENROUTER, INC OPENROUTER.AI NY" → "OPENROUTER"
+- "OMISE TELCO BANGKOK" → "OMISE" (when not clearly True/TikTok)
+- "OMISE *TRUEISERVICEPA BANGKOK TH" or "OMISE*TrueiService Pa BANGKOK" → "True"
+- "WWW.THAILIFE.COM BANGKOK TH" → "Thai Life"
+- "BANGKOK HOSP.CHIANGMAI CHIANGMAI TH" or "BANGKOK HOSPITAL CHIAN CHIANG MAI TH" → "Bangkok Hospital"
+- "Kie.ai DENVER CO" → "Kie.ai"
+- "PORKBUN.COM PORKBUN.COM OR" → "Porkbun"
+- "FACEBK *3CTV2GZXH2 fb.me/cc IE" → "Facebook"
+- "SC* STACKSOCIAL STACKCOMMERCE CA" → "StackSocial"
+- "LINEPAY *PF_LINE MAN W BANGKOK TH" → "LINE MAN"
+- Interest/ดอกเบี้ย lines → "Interest"
+
+=== CATEGORY RULES (Use ONLY these categories) ===
+- "Online Shopping" — Shopee, Facebook marketplace purchases
+- "Local Shopping" — MINI BIG C, Lotus, Rimping, physical retail stores
+- "Local Food" — NIGIGRILL, restaurants
+- "Food Delivery" — LINE MAN
+- "Fuel" — PTT, any gas station
+- "Health" — Bangkok Hospital, any hospital or clinic
+- "Insurance" — Thai Life, insurance
+- "Subscription" — OpenAI, OPENROUTER, Porkbun, OMISE (when standalone)
+- "App&Tools" — Kie.ai, StackSocial, software tools
+- "Monthly Bill" — True (via OMISE*TrueiService)
+- "Installment" — Shopee Installment, any installment payment
+- "Interest" — Interest charges, ดอกเบี้ย
+- "Electric Clinic" — Utility bills (e.g. SHOPEE UTILITIES) where price <= 2000
+- "Electric Home" — Utility bills (e.g. SHOPEE UTILITIES) where price > 2000
+- "Other" — Anything that doesn't fit above
+
+=== PAYEE RULES ===
+Default payee is "Personal".
+EXCEPTIONS (use these exact payee values):
+- PTT (Fuel) → payee = "Ashira"
+- MINI BIG C (only when bought near Lamphun/for someone else) → payee = "Ashira" (if unsure, use "Personal")
